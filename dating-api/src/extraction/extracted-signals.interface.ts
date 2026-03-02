@@ -1,5 +1,6 @@
 export type ExtractionDomain = 'self' | 'partner' | 'relationship';
 
+/** Official signal keys only. Legacy/alias keys are mapped before validation; unknown keys are dropped. */
 export const EXTRACTION_SIGNAL_KEYS = [
   'ambition',
   'socialBattery',
@@ -11,14 +12,10 @@ export const EXTRACTION_SIGNAL_KEYS = [
   'traditionalism',
   'financialMindset',
   'relationshipClarity',
-  'appearancePriority',
-  'statusOrientation',
-  'materialAmbition',
-  'spiritualOrientation',
+  'spirituality',
   'lifestylePace',
-  'partnerObjectificationRisk',
-  'instrumentalRelationshipView',
-  'emotionalIntimacyPriority',
+  'physicalPriority',
+  'statusOrientation',
 ] as const;
 
 export type ExtractionSignalKey = (typeof EXTRACTION_SIGNAL_KEYS)[number];

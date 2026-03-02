@@ -9,23 +9,43 @@ import {
   type ExtractionDomain,
 } from './extracted-signals.interface';
 
+const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(EXTRACTION_SIGNAL_KEYS);
+
+/** Alias -> official key. emotionalIntimacyPriority not mapped (lossy; skip for now). */
+const KEY_ALIASES: Record<string, string> = {
+  spiritualOrientation: 'spirituality',
+  appearancePriority: 'physicalPriority',
+  materialAmbition: 'financialMindset',
+  partnerObjectificationRisk: 'physicalPriority',
+  instrumentalRelationshipView: 'statusOrientation',
+};
+
 const SIGNAL_KEYS_LIST = EXTRACTION_SIGNAL_KEYS.join(', ');
 
 const EXTRACTOR_SYSTEM_PROMPT = `You are a professional psychological profiler extracting exactly the predefined signals for domains: self, relationship, partner.
-CRITICAL: Use inference. Do not be literal.
-If there is any hint, output a 1-10 score. Use null ONLY if the topic is completely absent.
-For every score, include a short direct snippet as evidence (5-15 words).
-When cues are strong, do not return empty signals.
+Use inference when evidence is clear and specific. Do not over-infer from vague or generic wording.
+Use null when evidence is weak, generic, or ambiguous. Do not assign many signals from one generic phrase.
+Generic phrases like "nice", "good people", "positive vibes", "fun" should support at most 1-2 low-confidence signals unless stronger context exists.
+For every non-null score, include a short direct snippet as evidence (5-15 words).
+When cues are strong and specific, do not return empty signals.
 
-Signal meanings (all 0–10 or null):
-- appearancePriority: importance of physical appearance in self/partner.
-- statusOrientation: focus on social status, prestige, image.
-- materialAmbition: drive for wealth, possessions, material success.
-- spiritualOrientation: importance of meaning, spirituality, inner life.
+DO NOT create new keys. Use only EXTRACTION_SIGNAL_KEYS. Unknown keys will be dropped.
+
+Signal meanings (official keys only, 1–10 or null):
+- ambition: drive, competitiveness, achievement orientation.
+- socialBattery: preference for social vs solitary time.
+- healthBodyConsciousness: focus on fitness, health, body.
+- emotionalDepth: importance of emotional depth and vulnerability.
+- attachmentSecurity: secure vs anxious/avoidant attachment style.
+- directness: direct communication vs indirect.
+- independence: need for autonomy and space.
+- traditionalism: traditional vs non-traditional values.
+- financialMindset: attitudes toward money, wealth, material success.
+- relationshipClarity: clarity about relationship goals and expectations.
+- spirituality: importance of meaning, spirituality, inner life.
 - lifestylePace: slow (low) ↔ fast-paced life (high).
-- partnerObjectificationRisk: tendency to see partner in objectifying terms.
-- instrumentalRelationshipView: relationship as project/business (utility, goals).
-- emotionalIntimacyPriority: importance of emotional closeness and vulnerability.
+- physicalPriority: importance of physical attraction and appearance.
+- statusOrientation: focus on social status, prestige, image.
 
 Return JSON only. No explanations.
 Signals (use exactly these keys, integer 1–10 or null): ${SIGNAL_KEYS_LIST}
@@ -42,6 +62,49 @@ const SYSTEM_PROMPT_HASH = createHash('sha256')
 
 /** Minimal retry prompt when first pass returned empty signals but text has content. */
 const EXTRACTOR_RETRY_PROMPT = `Same domain and signal keys. The previous extraction returned no scores. Use inference: from the text below, assign 1-10 to at least 2-3 signals that have any hint. Evidence: short quote (5-15 words) per score. JSON only: { "domain": "...", "signals": {...}, "evidence": [...], "confidence": 0.5, "version": "v1" }.`;
+
+/** Sparse-text guard: max non-null signals when input is very short/generic. */
+const SPARSE_MAX_NON_NULL = 3;
+/** Sparse-text guard: max confidence when input is sparse. */
+const SPARSE_CONFIDENCE_CAP = 0.45;
+/** Input is treated as sparse if under this character count (trimmed). */
+const SPARSE_INPUT_LENGTH_THRESHOLD = 80;
+/** Input is treated as sparse if under this word count. */
+const SPARSE_INPUT_WORD_THRESHOLD = 12;
+
+function isSparseInput(text: string): boolean {
+  const t = text.trim();
+  const wordCount = t.split(/\s+/).filter(Boolean).length;
+  return t.length < SPARSE_INPUT_LENGTH_THRESHOLD || wordCount < SPARSE_INPUT_WORD_THRESHOLD;
+}
+
+/**
+ * When input is very short/generic, cap non-null signals and confidence so we do not over-claim.
+ * Deterministic; no extra LLM call.
+ */
+function applySparseTextGuard(
+  data: ExtractedSignals,
+  inputText: string,
+): ExtractedSignals {
+  if (!isSparseInput(inputText)) return data;
+  const nonNullKeys = EXTRACTION_SIGNAL_KEYS.filter((k) => data.signals[k] != null);
+  if (nonNullKeys.length <= SPARSE_MAX_NON_NULL && data.confidence <= SPARSE_CONFIDENCE_CAP)
+    return data;
+
+  const signals = { ...data.signals };
+  const keepKeys = new Set<string>(nonNullKeys.slice(0, SPARSE_MAX_NON_NULL));
+  for (const k of EXTRACTION_SIGNAL_KEYS) {
+    if (signals[k] != null && !keepKeys.has(k)) signals[k] = null;
+  }
+  const evidence = (data.evidence ?? []).filter((e) => keepKeys.has(e.signal));
+  const confidence = Math.min(data.confidence, SPARSE_CONFIDENCE_CAP);
+  return {
+    ...data,
+    signals,
+    evidence,
+    confidence,
+  };
+}
 
 /** Normalize raw LLM JSON so we can run validateAndClean even when schema parse fails. */
 function normalizeRawExtraction(
@@ -111,6 +174,48 @@ function normalizeRawExtraction(
   };
 }
 
+export interface NormalizeKeysTelemetry {
+  aliasesSeen: string[];
+  aliasesMapped: string[];
+  aliasesDroppedBecauseOfficialExists: string[];
+  unknownSignalKeysDropped: string[];
+}
+
+/**
+ * Convert legacy/LLM-invented signal keys to official keys. If both alias and official exist, keep official.
+ * Only normalizes keys; values are preserved. validateAndClean remains final authority.
+ */
+function normalizeKeys(
+  rawSignals: Record<string, number | null>,
+): { normalizedSignals: Record<string, number | null>; telemetry: NormalizeKeysTelemetry } {
+  const telemetry: NormalizeKeysTelemetry = {
+    aliasesSeen: [],
+    aliasesMapped: [],
+    aliasesDroppedBecauseOfficialExists: [],
+    unknownSignalKeysDropped: [],
+  };
+  const normalizedSignals: Record<string, number | null> = {};
+
+  for (const [key, value] of Object.entries(rawSignals)) {
+    if (EXTRACTION_SIGNAL_KEYS_SET.has(key)) {
+      normalizedSignals[key] = value;
+    } else if (key in KEY_ALIASES) {
+      const officialKey = KEY_ALIASES[key];
+      telemetry.aliasesSeen.push(key);
+      if (!(officialKey in normalizedSignals)) {
+        normalizedSignals[officialKey] = value;
+        telemetry.aliasesMapped.push(key);
+      } else {
+        telemetry.aliasesDroppedBecauseOfficialExists.push(key);
+      }
+    } else {
+      telemetry.unknownSignalKeysDropped.push(key);
+    }
+  }
+
+  return { normalizedSignals, telemetry };
+}
+
 @Injectable()
 export class ExtractionService {
   constructor(
@@ -119,20 +224,25 @@ export class ExtractionService {
   ) {}
 
   /**
-   * Round to int, enforce 1–10 or null. Do NOT delete a scored signal if evidence exists for it (clamp instead). Log what got stripped.
+   * Build output from allowlist only. Round to int, enforce 1–10 or null. Evidence filtered to official keys; alias rewritten to official.
    */
   private validateAndClean(
     data: ExtractedSignals,
     requestedDomain: ExtractionDomain,
   ): ExtractedSignals {
     let corrected = false;
-    const signals: Record<string, number | null> = {};
+    const normalizedSignals = data.signals ?? {};
     const evidenceSignals = new Set(
-      (data.evidence ?? []).map((e) => String(e.signal).trim()),
+      (data.evidence ?? []).map((e) => {
+        const s = String(e.signal).trim();
+        return (KEY_ALIASES[s] ?? s) as string;
+      }),
     );
 
-    for (const [key, value] of Object.entries(data.signals ?? {})) {
-      if (value === null) {
+    const signals: Record<string, number | null> = {};
+    for (const key of EXTRACTION_SIGNAL_KEYS) {
+      const value = normalizedSignals[key];
+      if (value === null || value === undefined) {
         signals[key] = null;
         continue;
       }
@@ -173,7 +283,14 @@ export class ExtractionService {
       confidence = Math.max(0, confidence * 0.8);
     }
 
-    const evidence = (data.evidence ?? []).slice(0, 10);
+    const evidence = (data.evidence ?? [])
+      .map((item) => {
+        const s = String(item.signal).trim();
+        const officialSignal = KEY_ALIASES[s] ?? s;
+        return { ...item, signal: officialSignal };
+      })
+      .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
+      .slice(0, 10);
 
     return {
       domain: requestedDomain,
@@ -244,6 +361,18 @@ export class ExtractionService {
     );
 
     const normalized = normalizeRawExtraction(value, domain);
+    const { normalizedSignals, telemetry } = normalizeKeys(normalized.signals);
+    normalized.signals = normalizedSignals;
+    this.logger.debug(
+      JSON.stringify({
+        event: 'normalizeKeys_telemetry',
+        aliasesSeen: telemetry.aliasesSeen,
+        aliasesMapped: telemetry.aliasesMapped,
+        aliasesDroppedBecauseOfficialExists:
+          telemetry.aliasesDroppedBecauseOfficialExists,
+        unknownSignalKeysDropped: telemetry.unknownSignalKeysDropped,
+      }),
+    );
     let cleaned = this.validateAndClean(normalized, domain);
 
     const nonNullCount = Object.values(cleaned.signals).filter(
@@ -280,6 +409,8 @@ export class ExtractionService {
           retryPayload.value,
           domain,
         );
+        const retryNorm = normalizeKeys(retryNormalized.signals);
+        retryNormalized.signals = retryNorm.normalizedSignals;
         const retryCleaned = this.validateAndClean(retryNormalized, domain);
         const retryNonNull = Object.values(retryCleaned.signals).filter(
           (v) => v != null,
@@ -318,6 +449,7 @@ export class ExtractionService {
       };
     }
 
+    cleaned = applySparseTextGuard(cleaned, text);
     return cleaned;
   }
 
