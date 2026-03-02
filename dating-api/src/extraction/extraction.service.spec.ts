@@ -209,6 +209,8 @@ describe('ExtractionService', () => {
   });
 
   it('compatibility coverage improves for known legacy payload shape', async () => {
+    const legacyInput =
+      'Legacy payload with spiritual orientation, appearance priority, and material ambition.';
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse('self', {
         spiritualOrientation: 6,
@@ -221,7 +223,7 @@ describe('ExtractionService', () => {
       ]),
     );
 
-    const result = await service.extract('self', 'Legacy payload text.');
+    const result = await service.extract('self', legacyInput);
 
     expect(result.signals['spirituality']).toBe(6);
     expect(result.signals['physicalPriority']).toBe(7);
@@ -269,7 +271,7 @@ describe('ExtractionService', () => {
     expect(result.signals['hedonism']).toBeUndefined();
   });
 
-  it('generic short self text gets sparse guard: at most 3 non-null, confidence capped', async () => {
+  it('generic aboutMe yields fewer non-null signals; very generic text capped at 2', async () => {
     const genericShort = 'nice, fun, positive vibes';
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse('self', {
@@ -290,11 +292,36 @@ describe('ExtractionService', () => {
     const result = await service.extract('self', genericShort);
 
     const nonNullCount = Object.values(result.signals).filter((v) => v != null).length;
+    expect(nonNullCount).toBeLessThanOrEqual(2);
+    expect(result.confidence).toBeLessThanOrEqual(0.45);
+  });
+
+  it('short but not very generic text gets max 3 non-null, confidence capped', async () => {
+    const shortText = 'I like going out and meeting good people. Pretty relaxed.';
+    llmCompleteJSON.mockResolvedValue(
+      mockExtractionResponse('self', {
+        socialBattery: 7,
+        lifestylePace: 5,
+        emotionalDepth: 5,
+        directness: 4,
+        ambition: 6,
+      }, [
+        { signal: 'socialBattery', quote: 'going out' },
+        { signal: 'lifestylePace', quote: 'relaxed' },
+        { signal: 'emotionalDepth', quote: 'good people' },
+        { signal: 'directness', quote: 'pretty' },
+        { signal: 'ambition', quote: 'relaxed' },
+      ]),
+    );
+
+    const result = await service.extract('self', shortText);
+
+    const nonNullCount = Object.values(result.signals).filter((v) => v != null).length;
     expect(nonNullCount).toBeLessThanOrEqual(3);
     expect(result.confidence).toBeLessThanOrEqual(0.45);
   });
 
-  it('rich partner text is not over-penalized: no sparse guard applied', async () => {
+  it('rich aboutPartner remains expressive: no sparse guard applied', async () => {
     const richPartnerText =
       'Looking for someone fit, attractive, and health-conscious. Physical chemistry matters. ' +
       'I value emotional depth and direct communication. We should share an active lifestyle and similar goals.';

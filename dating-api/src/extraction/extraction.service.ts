@@ -23,9 +23,8 @@ const KEY_ALIASES: Record<string, string> = {
 const SIGNAL_KEYS_LIST = EXTRACTION_SIGNAL_KEYS.join(', ');
 
 const EXTRACTOR_SYSTEM_PROMPT = `You are a professional psychological profiler extracting exactly the predefined signals for domains: self, relationship, partner.
-Use inference when evidence is clear and specific. Do not over-infer from vague or generic wording.
-Use null when evidence is weak, generic, or ambiguous. Do not assign many signals from one generic phrase.
-Generic phrases like "nice", "good people", "positive vibes", "fun" should support at most 1-2 low-confidence signals unless stronger context exists.
+Use inference when evidence is specific enough. Use null when evidence is generic or ambiguous.
+Do not assign many signals from one generic phrase. Generic phrases like "nice", "good people", "positive vibes", "fun" support at most 1-2 low-confidence signals unless stronger context exists.
 For every non-null score, include a short direct snippet as evidence (5-15 words).
 When cues are strong and specific, do not return empty signals.
 
@@ -63,14 +62,19 @@ const SYSTEM_PROMPT_HASH = createHash('sha256')
 /** Minimal retry prompt when first pass returned empty signals but text has content. */
 const EXTRACTOR_RETRY_PROMPT = `Same domain and signal keys. The previous extraction returned no scores. Use inference: from the text below, assign 1-10 to at least 2-3 signals that have any hint. Evidence: short quote (5-15 words) per score. JSON only: { "domain": "...", "signals": {...}, "evidence": [...], "confidence": 0.5, "version": "v1" }.`;
 
-/** Sparse-text guard: max non-null signals when input is very short/generic. */
+/** Sparse-text guard: max non-null for short text. */
 const SPARSE_MAX_NON_NULL = 3;
+/** Very generic/short text: stricter cap (max 2 non-null). */
+const VERY_SPARSE_MAX_NON_NULL = 2;
 /** Sparse-text guard: max confidence when input is sparse. */
 const SPARSE_CONFIDENCE_CAP = 0.45;
 /** Input is treated as sparse if under this character count (trimmed). */
 const SPARSE_INPUT_LENGTH_THRESHOLD = 80;
 /** Input is treated as sparse if under this word count. */
 const SPARSE_INPUT_WORD_THRESHOLD = 12;
+/** Very generic: under this length or word count gets max 2 non-null. */
+const VERY_SPARSE_INPUT_LENGTH_THRESHOLD = 50;
+const VERY_SPARSE_INPUT_WORD_THRESHOLD = 6;
 
 function isSparseInput(text: string): boolean {
   const t = text.trim();
@@ -78,8 +82,14 @@ function isSparseInput(text: string): boolean {
   return t.length < SPARSE_INPUT_LENGTH_THRESHOLD || wordCount < SPARSE_INPUT_WORD_THRESHOLD;
 }
 
+function isVerySparseInput(text: string): boolean {
+  const t = text.trim();
+  const wordCount = t.split(/\s+/).filter(Boolean).length;
+  return t.length < VERY_SPARSE_INPUT_LENGTH_THRESHOLD || wordCount < VERY_SPARSE_INPUT_WORD_THRESHOLD;
+}
+
 /**
- * When input is very short/generic, cap non-null signals and confidence so we do not over-claim.
+ * When input is short/generic, cap non-null signals and confidence. Very generic text: max 2; short: max 3.
  * Deterministic; no extra LLM call.
  */
 function applySparseTextGuard(
@@ -87,12 +97,13 @@ function applySparseTextGuard(
   inputText: string,
 ): ExtractedSignals {
   if (!isSparseInput(inputText)) return data;
+  const maxNonNull = isVerySparseInput(inputText) ? VERY_SPARSE_MAX_NON_NULL : SPARSE_MAX_NON_NULL;
   const nonNullKeys = EXTRACTION_SIGNAL_KEYS.filter((k) => data.signals[k] != null);
-  if (nonNullKeys.length <= SPARSE_MAX_NON_NULL && data.confidence <= SPARSE_CONFIDENCE_CAP)
+  if (nonNullKeys.length <= maxNonNull && data.confidence <= SPARSE_CONFIDENCE_CAP)
     return data;
 
   const signals = { ...data.signals };
-  const keepKeys = new Set<string>(nonNullKeys.slice(0, SPARSE_MAX_NON_NULL));
+  const keepKeys = new Set<string>(nonNullKeys.slice(0, maxNonNull));
   for (const k of EXTRACTION_SIGNAL_KEYS) {
     if (signals[k] != null && !keepKeys.has(k)) signals[k] = null;
   }

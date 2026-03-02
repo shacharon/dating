@@ -81,8 +81,40 @@ describe('EvaluateService', () => {
       aboutPartner: 'fun',
     });
 
-    expect(result.display.summary).toMatch(/^Based on limited information,/);
-    expect(result.display.insight).toMatch(/^Limited signal\./);
+    expect(result.display.summary).toMatch(/^Based on limited information/);
+    expect(result.display.summary).toMatch(/may suggest tendencies/);
+    expect(result.display.insight).toMatch(/^Limited signal/);
+    expect(result.display.note).toBe(
+      'Limited information provided; score confidence is lower.',
+    );
+  });
+
+  it('rich high-confidence case remains direct; no cautious wording or note', async () => {
+    const self = mockExtracted('self', 0.8, 12);
+    const partner = mockExtracted('partner', 0.8, 12);
+    const relationship = mockExtracted('relationship', 0.8, 10);
+    jest.spyOn(extractionService, 'extractAllThree').mockResolvedValue({
+      self,
+      partner,
+      relationship,
+    });
+    llmCompleteJSON.mockResolvedValue({
+      value: {
+        summary: 'The person is driven and values emotional depth.',
+        insight: 'Self and partner align on key dimensions.',
+      },
+    });
+
+    const { result } = await service.evaluateBatch({
+      aboutMe: 'Detailed self.',
+      aboutRelationship: 'Relationship.',
+      aboutPartner: 'Partner.',
+    });
+
+    expect(result.display.summary).not.toMatch(/^Based on limited information/);
+    expect(result.display.summary).not.toMatch(/may suggest tendencies/);
+    expect(result.display.insight).not.toMatch(/^Limited signal/);
+    expect(result.display.note).toBeUndefined();
   });
 
   it('response includes all existing fields and new productScores with 0-100 values', async () => {
@@ -159,5 +191,53 @@ describe('EvaluateService', () => {
     expect(a.productScores.coverageScore).toBe(b.productScores.coverageScore);
     expect(a.productScores.frictionRiskScore).toBe(b.productScores.frictionRiskScore);
     expect(a.productScores.overallDecisionScore).toBe(b.productScores.overallDecisionScore);
+  });
+
+  it('low coverage + moderate fit produces capped overallDecisionScore (LOW_COVERAGE respected)', async () => {
+    const self = mockExtracted('self', 0.6, 2);
+    const partner = mockExtracted('partner', 0.6, 2);
+    const relationship = mockExtracted('relationship', 0.6, 2);
+    jest.spyOn(extractionService, 'extractAllThree').mockResolvedValue({
+      self,
+      partner,
+      relationship,
+    });
+    llmCompleteJSON.mockResolvedValue({
+      value: { summary: 'Summary.', insight: 'Insight.' },
+    });
+
+    const { result } = await service.evaluateBatch({
+      aboutMe: 'x',
+      aboutRelationship: 'y',
+      aboutPartner: 'z',
+    });
+
+    expect(result.flags).toContain('LOW_COVERAGE');
+    expect(result.productScores.coverageScore).toBeLessThan(40);
+    expect(result.productScores.overallDecisionScore).toBeLessThanOrEqual(49);
+  });
+
+  it('high coverage case is not over-penalized; overall can be high', async () => {
+    const self = mockExtracted('self', 0.7, 12);
+    const partner = mockExtracted('partner', 0.7, 12);
+    const relationship = mockExtracted('relationship', 0.7, 10);
+    jest.spyOn(extractionService, 'extractAllThree').mockResolvedValue({
+      self,
+      partner,
+      relationship,
+    });
+    llmCompleteJSON.mockResolvedValue({
+      value: { summary: 'Summary.', insight: 'Insight.' },
+    });
+
+    const { result } = await service.evaluateBatch({
+      aboutMe: 'Detailed text.',
+      aboutRelationship: 'Relationship.',
+      aboutPartner: 'Partner.',
+    });
+
+    expect(result.productScores.coverageScore).toBeGreaterThanOrEqual(55);
+    expect(result.flags).not.toContain('LOW_COVERAGE');
+    expect(result.productScores.overallDecisionScore).toBeGreaterThanOrEqual(60);
   });
 });

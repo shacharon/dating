@@ -61,13 +61,18 @@ function applyHonestyFraming(
   useCautious: boolean,
 ): { summary: string; insight: string } {
   if (!useCautious) return { summary, insight };
-  const summaryPrefix = 'Based on limited information, ';
-  const insightPrefix = 'Limited signal. ';
+  const summaryPrefix =
+    'Based on limited information; the following may suggest tendencies rather than definitive traits. ';
+  const insightPrefix = 'Limited signal; interpret with caution. ';
   return {
     summary: summary.startsWith(summaryPrefix) ? summary : summaryPrefix + summary,
     insight: insight.startsWith(insightPrefix) ? insight : insightPrefix + insight,
   };
 }
+
+/** UI-safe note when data quality is low (no extra LLM call). */
+const DISPLAY_NOTE_LOW_QUALITY =
+  'Limited information provided; score confidence is lower.';
 
 const SUMMARY_SYSTEM_PROMPT = `
 You receive extracted relationship data: signals (scores 1-10 or null) and evidence (quotes from the profile) for self, partner, and relationship.
@@ -142,7 +147,7 @@ function computeProductScores(
 
   const avgConfidence =
     (self.confidence + partner.confidence + relationship.confidence) / 3;
-  const overallDecisionScore = Math.round(
+  let overallDecisionScore = Math.round(
     Math.max(
       0,
       Math.min(
@@ -151,6 +156,13 @@ function computeProductScores(
       ),
     ),
   );
+
+  /** v1 gating: low coverage cannot produce a misleadingly confident overall score. */
+  if (coverageScore < 40) {
+    overallDecisionScore = Math.min(overallDecisionScore, 49);
+  } else if (coverageScore < 55) {
+    overallDecisionScore = Math.min(overallDecisionScore, 64);
+  }
 
   const productScores: ProductScores = {
     partnerFitScore,
@@ -193,6 +205,8 @@ export interface EvaluateBatchResult {
   display: {
     summary: string;
     insight: string;
+    /** Present when LOW_COVERAGE or LOW_CONFIDENCE; UI-safe honesty note. */
+    note?: string;
   };
   productScores: ProductScores;
   flags: EvaluateFlag[];
@@ -330,6 +344,11 @@ export class EvaluateService {
       selfVsRelationship,
     );
 
+    const displayNote =
+      flags.includes('LOW_COVERAGE') || flags.includes('LOW_CONFIDENCE')
+        ? DISPLAY_NOTE_LOW_QUALITY
+        : undefined;
+
     return {
       ok: true,
       result: {
@@ -343,6 +362,7 @@ export class EvaluateService {
         display: {
           summary,
           insight,
+          ...(displayNote && { note: displayNote }),
         },
         productScores,
         flags,
