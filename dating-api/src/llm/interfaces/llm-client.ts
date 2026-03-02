@@ -10,6 +10,8 @@ export interface CompleteJSONArgs<T> {
   maxTokens?: number;
   requestId: string;
   purpose: string;
+  /** If set, on truncation/empty output the client retries once with this system prompt and maxTokens. */
+  secondAttemptOnTruncation?: { system: string; maxTokens: number };
 }
 
 export interface CompleteJSONResult<T> {

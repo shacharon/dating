@@ -5,6 +5,8 @@
 
 # Logs
 logs
+/logs
+LOGS_ARE_HERE.txt
 *.log
 npm-debug.log*
 pnpm-debug.log*

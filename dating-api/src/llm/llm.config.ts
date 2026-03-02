@@ -7,7 +7,7 @@ export interface LLMModelEntry {
   modelName: string;
 }
 
-const DEFAULT_MODELS = 'default:gpt-4o-mini';
+const DEFAULT_MODELS = 'default:gpt-4o-mini;mini:gpt-4o-mini;fast:gpt-4o-mini';
 
 function parseModelsEnv(
   envValue: string | undefined,

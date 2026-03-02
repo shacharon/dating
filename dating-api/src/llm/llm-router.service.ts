@@ -29,7 +29,11 @@ export class LLMRouterService {
     args: RouterCompleteJSONArgs<T>,
   ): Promise<CompleteJSONResult<T>> {
     const { modelKey, model: modelOverride, ...rest } = args;
-    const entry = this.config.models.get(modelKey);
+    const resolvedKey =
+      modelKey === 'fast' && !this.config.models.has('fast')
+        ? 'mini'
+        : modelKey;
+    const entry = this.config.models.get(resolvedKey);
     if (!entry) {
       throw new Error(`Unknown LLM modelKey: ${modelKey}`);
     }
