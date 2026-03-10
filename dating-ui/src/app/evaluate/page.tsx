@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 
-const API_BATCH_URL = 'http://localhost:3001/api/evaluate/batch';
+const API_PROFILES_EVALUATE_URL =
+  'http://localhost:3001/api/v1/profiles/evaluate';
 
 const SECTIONS = [
   { id: 'aboutMe' as const, label: 'About me', placeholder: 'Describe yourself…' },
@@ -46,11 +47,14 @@ function formatSignalKey(key: string): string {
 }
 
 export default function EvaluatePage() {
+  const [name, setName] = useState('');
+  const [profileId, setProfileId] = useState('');
   const [aboutMe, setAboutMe] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedProfileId, setSavedProfileId] = useState<string | null>(null);
   const [result, setResult] = useState<EvaluateBatchResult | null>(null);
 
   const texts: Record<SectionId, string> = {
@@ -64,11 +68,17 @@ export default function EvaluatePage() {
     setError(null);
     setResult(null);
 
+    const trimmedName = name.trim();
     const trimmed: Record<SectionId, string> = {
       aboutMe: aboutMe.trim(),
       aboutRelationship: aboutRelationship.trim(),
       aboutPartner: aboutPartner.trim(),
     };
+
+    if (!trimmedName) {
+      setError('Name is required.');
+      return;
+    }
 
     const empty = SECTIONS.filter((s) => !trimmed[s.id]);
     if (empty.length > 0) {
@@ -78,17 +88,33 @@ export default function EvaluatePage() {
 
     setLoading(true);
     try {
-      const res = await fetch(API_BATCH_URL, {
+      const payload: {
+        name: string;
+        aboutMe: string;
+        aboutPartner: string;
+        aboutRelationship: string;
+        id?: string;
+      } = {
+        name: trimmedName,
+        aboutMe: trimmed.aboutMe,
+        aboutPartner: trimmed.aboutPartner,
+        aboutRelationship: trimmed.aboutRelationship,
+      };
+      if (profileId.trim()) {
+        payload.id = profileId.trim();
+      }
+
+      const res = await fetch(API_PROFILES_EVALUATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aboutMe: trimmed.aboutMe,
-          aboutRelationship: trimmed.aboutRelationship,
-          aboutPartner: trimmed.aboutPartner,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      let data: { ok?: boolean; result?: EvaluateBatchResult; message?: string };
+      let data: {
+        profileId?: string;
+        evaluation?: EvaluateBatchResult;
+        message?: string;
+      };
       try {
         data = await res.json();
       } catch {
@@ -101,11 +127,14 @@ export default function EvaluatePage() {
         );
         return;
       }
-      if (!data.ok || !data.result) {
+      if (!data.profileId || !data.evaluation) {
         setError('Invalid response from server.');
         return;
       }
-      setResult(data.result);
+
+      setSavedProfileId(data.profileId);
+      setProfileId(data.profileId);
+      setResult(data.evaluation);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed.');
     } finally {
@@ -171,6 +200,40 @@ export default function EvaluatePage() {
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="name"
+              className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400"
+              placeholder="Your name"
+              disabled={loading}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="profileId"
+              className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              Profile ID <span className="text-zinc-400">(optional)</span>
+            </label>
+            <input
+              id="profileId"
+              type="text"
+              value={profileId}
+              onChange={(e) => setProfileId(e.target.value)}
+              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400"
+              placeholder="Leave empty to create new"
+              disabled={loading}
+            />
+          </div>
           {SECTIONS.map(({ id, label, placeholder }) => (
             <div key={id}>
               <label
@@ -211,6 +274,12 @@ export default function EvaluatePage() {
           >
             {error}
           </div>
+        )}
+
+        {savedProfileId && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Saved. Profile ID: <code className="rounded bg-zinc-200 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">{savedProfileId}</code>
+          </p>
         )}
 
         {result && (

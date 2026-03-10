@@ -110,7 +110,7 @@ export class AppLogger implements LoggerService {
                     : typeof context === 'object'
                       ? JSON.stringify(context)
                       : // eslint-disable-next-line @typescript-eslint/no-base-to-string -- primitive context
-                      String(context);
+                        String(context);
                 const ctx = ctxStr ? ` [${ctxStr}]` : '';
                 const msgStr =
                   typeof message === 'string'

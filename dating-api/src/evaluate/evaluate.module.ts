@@ -8,5 +8,6 @@ import { EvaluateService } from './evaluate.service';
   imports: [LlmModule, ExtractionModule],
   controllers: [EvaluateController],
   providers: [EvaluateService],
+  exports: [EvaluateService],
 })
 export class EvaluateModule {}

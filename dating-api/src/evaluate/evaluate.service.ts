@@ -2,10 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ExtractionService } from '../extraction/extraction.service';
-import type { ExtractedSignals } from '../extraction/extracted-signals.interface';
+import type { ExtractedSignals, LLMUsageStats } from '../extraction/extracted-signals.interface';
 import { LLMRouterService } from '../llm/llm-router.service';
 import type { CompatibilityResult } from '../compatibility/compatibility-score';
 import { computeCompatibility } from '../compatibility/compatibility-score';
+import {
+  detectLifestyleConflicts,
+  type LifestyleConflictsResult,
+} from '../compatibility/lifestyle-conflicts';
+import type { ProductScores } from '../domain/scoring/product-scores.types';
 
 function takeString(v: unknown, ...keys: string[]): string {
   const obj = v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
@@ -65,8 +70,12 @@ function applyHonestyFraming(
     'Based on limited information; the following may suggest tendencies rather than definitive traits. ';
   const insightPrefix = 'Limited signal; interpret with caution. ';
   return {
-    summary: summary.startsWith(summaryPrefix) ? summary : summaryPrefix + summary,
-    insight: insight.startsWith(insightPrefix) ? insight : insightPrefix + insight,
+    summary: summary.startsWith(summaryPrefix)
+      ? summary
+      : summaryPrefix + summary,
+    insight: insight.startsWith(insightPrefix)
+      ? insight
+      : insightPrefix + insight,
   };
 }
 
@@ -93,25 +102,177 @@ Never return generic text like "insufficient information" if meaningful evidence
 Always extract the strongest visible relational theme.
 `;
 
+/** Primary relationship motivation: one dominant category. */
+export const RELATIONSHIP_MOTIVATION_VALUES = [
+  'family_builder',
+  'emotional_connection',
+  'status_power',
+  'freedom_independence',
+] as const;
+export type RelationshipMotivation =
+  (typeof RELATIONSHIP_MOTIVATION_VALUES)[number];
+
+export const RelationshipMotivationResultSchema = z.object({
+  relationshipMotivation: z.enum(RELATIONSHIP_MOTIVATION_VALUES),
+  confidence: z.number().min(0).max(1),
+  evidence: z.array(z.string()).default([]),
+});
+export type RelationshipMotivationResult = z.infer<
+  typeof RelationshipMotivationResultSchema
+>;
+
+const MOTIVATION_SYSTEM_PROMPT = `
+You infer the PRIMARY relationship motivation from profile texts.
+
+Input: aboutMe, aboutPartner, aboutRelationship (three text blocks).
+
+Reply with ONLY a single JSON object. No markdown, no explanation.
+
+Required keys:
+- "relationshipMotivation": exactly one of: family_builder | emotional_connection | status_power | freedom_independence
+- "confidence": number between 0 and 1
+- "evidence": array of short quotes from the texts that support the chosen motivation (1-4 quotes)
+
+Rules:
+- Choose ONE dominant motivation only.
+- family_builder → kids, home, stability, long-term commitment, building a life together
+- emotional_connection → intimacy, feelings, deep bond, soulmate, connection
+- status_power → power couple, image, status, ambition, social standing
+- freedom_independence → autonomy, distance, independence, space, non-traditional
+- Use exact or near-exact short quotes from the input as evidence.
+- If unclear or mixed signals → choose the best inference and set confidence < 0.6.
+`;
+
+/** What attracts this person: inferred from partner description. Each dimension 0–10. */
+export const AttractionProfileSchema = z.object({
+  ambition: z.number().min(0).max(10),
+  appearance: z.number().min(0).max(10),
+  kindness: z.number().min(0).max(10),
+  status: z.number().min(0).max(10),
+  stability: z.number().min(0).max(10),
+});
+export type AttractionProfile = z.infer<typeof AttractionProfileSchema>;
+
+export const AttractionResultSchema = z.object({
+  attractionProfile: AttractionProfileSchema,
+  confidence: z.number().min(0).max(1),
+  evidence: z.array(z.string()).default([]),
+});
+export type AttractionResult = z.infer<typeof AttractionResultSchema>;
+
+const ATTRACTION_SYSTEM_PROMPT = `
+You infer what attracts this person based on how they describe their ideal partner.
+
+Input: aboutMe, aboutPartner (two text blocks). Focus on the "aboutPartner" (ideal partner) description.
+
+Reply with ONLY a single JSON object. No markdown, no explanation.
+
+Required keys:
+- "attractionProfile": object with exactly these keys, each a number 0–10:
+  - "ambition": how much they are attracted to drive/achievement (0 = not mentioned, 10 = central)
+  - "appearance": how much they emphasize looks/physical attraction (0 = not mentioned, 10 = central)
+  - "kindness": how much they value warmth/kindness (0 = not mentioned, 10 = central)
+  - "status": how much they value image/prestige/elite (0 = not mentioned, 10 = central)
+  - "stability": how much they value family/stable home (0 = not mentioned, 10 = central)
+- "confidence": number between 0 and 1 (overall confidence in the inference)
+- "evidence": array of short quotes from the input that support the scores (optional but helpful)
+
+Mapping hints:
+- "successful / high achiever / driven / ambitious" → ambition
+- "beautiful / attractive / appearance / looks" → appearance
+- "kind / warm / caring / gentle" → kindness
+- "image / prestige / elite / status" → status
+- "family / stable home / settled / reliable" → stability
+
+If a dimension is not mentioned, use 0. Use 0–10 to reflect strength of emphasis.
+`;
+
+/** Attraction traits (9 dimensions, integers 0–10). Primary source: aboutPartner. */
+export const ATTRACTION_TRAITS_KEYS = [
+  'ambition',
+  'statusOrientation',
+  'physicalPriority',
+  'kindnessWarmth',
+  'stabilityReliability',
+  'independenceAutonomy',
+  'emotionalDepth',
+  'traditionalismValues',
+  'financialPrudence',
+] as const;
+
+export const AttractionTraitsSchema = z.object({
+  ambition: z.number().min(0).max(10),
+  statusOrientation: z.number().min(0).max(10),
+  physicalPriority: z.number().min(0).max(10),
+  kindnessWarmth: z.number().min(0).max(10),
+  stabilityReliability: z.number().min(0).max(10),
+  independenceAutonomy: z.number().min(0).max(10),
+  emotionalDepth: z.number().min(0).max(10),
+  traditionalismValues: z.number().min(0).max(10),
+  financialPrudence: z.number().min(0).max(10),
+});
+export type AttractionTraits = z.infer<typeof AttractionTraitsSchema>;
+
+export const AttractionTraitsEvidenceItemSchema = z.object({
+  dimension: z.string(),
+  quote: z.string(),
+});
+
+export const AttractionTraitsResultSchema = z.object({
+  attraction: AttractionTraitsSchema,
+  confidence: z.number().min(0).max(1),
+  evidence: z.array(AttractionTraitsEvidenceItemSchema).default([]),
+});
+export type AttractionTraitsResult = z.infer<typeof AttractionTraitsResultSchema>;
+
+const ATTRACTION_TRAITS_SYSTEM_PROMPT = `
+You are a strict feature-extractor. Output JSON only. No prose.
+
+TASK: Given profile text, infer what traits this person is attracted to in a partner.
+
+OUTPUT JSON SCHEMA (exact keys):
+{
+  "attraction": {
+    "ambition": 0-10,
+    "statusOrientation": 0-10,
+    "physicalPriority": 0-10,
+    "kindnessWarmth": 0-10,
+    "stabilityReliability": 0-10,
+    "independenceAutonomy": 0-10,
+    "emotionalDepth": 0-10,
+    "traditionalismValues": 0-10,
+    "financialPrudence": 0-10
+  },
+  "confidence": 0-1,
+  "evidence": [
+    { "dimension": "string", "quote": "string" }
+  ]
+}
+
+RULES:
+- Primary source is aboutPartner. Use aboutMe/aboutRelationship only if aboutPartner is thin.
+- Use integers only (no decimals). Always fill every dimension (never null).
+- If unclear: set 5 and lower confidence.
+- Evidence: 1-4 items, each quote <= 12 words, copied from input text.
+- Map hints:
+  - "high-achiever / ambition" -> ambition
+  - "image / dress code / etiquette" -> statusOrientation
+  - "appearance / looks" -> physicalPriority
+  - "kind / warm" -> kindnessWarmth
+  - "stable / reliable / responsible" -> stabilityReliability
+  - "independent / okay with schedule" -> independenceAutonomy
+  - "deep / emotionally available" -> emotionalDepth
+  - "traditional / values / kosher" -> traditionalismValues
+  - "save / invest / not spender" -> financialPrudence
+`;
+
 /** POC/UI flags for calibration and testing. */
 export type EvaluateFlag =
   | 'LOW_COVERAGE'
   | 'LOW_CONFIDENCE'
   | 'HIGH_FRICTION_RISK';
 
-export interface ProductScores {
-  partnerFitScore: number;
-  relationshipFitScore: number;
-  coverageScore: number;
-  frictionRiskScore: number;
-  overallDecisionScore: number;
-  policyVersion: 'product-score-v1';
-  debug?: {
-    totalHardMismatches: number;
-    avgConfidence: number;
-    totalNonNullSignals: number;
-  };
-}
+export type { ProductScores } from '../domain/scoring/product-scores.types';
 
 /** Deterministic product score bundle from compatibility + extraction. All scores 0–100. */
 function computeProductScores(
@@ -152,7 +313,11 @@ function computeProductScores(
       0,
       Math.min(
         100,
-        (partnerFitScore + relationshipFitScore + coverageScore + (100 - frictionRiskScore)) / 4,
+        (partnerFitScore +
+          relationshipFitScore +
+          coverageScore +
+          (100 - frictionRiskScore)) /
+          4,
       ),
     ),
   );
@@ -210,6 +375,7 @@ export interface EvaluateBatchResult {
   };
   productScores: ProductScores;
   flags: EvaluateFlag[];
+  _usage?: LLMUsageStats;
 }
 
 @Injectable()
@@ -217,7 +383,7 @@ export class EvaluateService {
   constructor(
     private readonly extractionService: ExtractionService,
     private readonly llm: LLMRouterService,
-  ) { }
+  ) {}
 
   /**
    * Generate display summary and insight from the three extracted signal sets only.
@@ -301,12 +467,165 @@ export class EvaluateService {
     return { summary, insight };
   }
 
+  /**
+   * Infer primary relationship motivation from the three profile texts.
+   * Returns one dominant motivation, confidence 0–1, and evidence quotes.
+   */
+  async inferRelationshipMotivation(
+    aboutMe: string,
+    aboutPartner: string,
+    aboutRelationship: string,
+  ): Promise<RelationshipMotivationResult> {
+    const user = [
+      'aboutMe:',
+      aboutMe.trim() || '(empty)',
+      '',
+      'aboutPartner:',
+      aboutPartner.trim() || '(empty)',
+      '',
+      'aboutRelationship:',
+      aboutRelationship.trim() || '(empty)',
+    ].join('\n');
+
+    const requestId = randomUUID();
+    const { value } = await this.llm.completeJSON<RelationshipMotivationResult>({
+      modelKey: 'fast',
+      system: MOTIVATION_SYSTEM_PROMPT,
+      user,
+      schema: RelationshipMotivationResultSchema,
+      temperature: 0.2,
+      maxTokens: 500,
+      timeoutMs: 15_000,
+      requestId,
+      purpose: 'evaluate-motivation',
+    });
+
+    return {
+      relationshipMotivation: value.relationshipMotivation,
+      confidence: Math.max(0, Math.min(1, value.confidence)),
+      evidence: Array.isArray(value.evidence) ? value.evidence : [],
+    };
+  }
+
+  /**
+   * Infer what attracts this person from aboutMe and aboutPartner (partner description).
+   * Returns attractionProfile (ambition, appearance, kindness, status, stability 0–10), confidence, evidence.
+   */
+  async inferAttractionProfile(
+    aboutMe: string,
+    aboutPartner: string,
+  ): Promise<AttractionResult> {
+    const user = [
+      'aboutMe:',
+      aboutMe.trim() || '(empty)',
+      '',
+      'aboutPartner (ideal partner description):',
+      aboutPartner.trim() || '(empty)',
+    ].join('\n');
+
+    const requestId = randomUUID();
+    const { value } = await this.llm.completeJSON<AttractionResult>({
+      modelKey: 'fast',
+      system: ATTRACTION_SYSTEM_PROMPT,
+      user,
+      schema: AttractionResultSchema,
+      temperature: 0.2,
+      maxTokens: 500,
+      timeoutMs: 15_000,
+      requestId,
+      purpose: 'evaluate-attraction',
+    });
+
+    const clamp = (n: number, lo: number, hi: number) =>
+      Math.max(lo, Math.min(hi, n));
+    return {
+      attractionProfile: {
+        ambition: clamp(value.attractionProfile.ambition, 0, 10),
+        appearance: clamp(value.attractionProfile.appearance, 0, 10),
+        kindness: clamp(value.attractionProfile.kindness, 0, 10),
+        status: clamp(value.attractionProfile.status, 0, 10),
+        stability: clamp(value.attractionProfile.stability, 0, 10),
+      },
+      confidence: Math.max(0, Math.min(1, value.confidence)),
+      evidence: Array.isArray(value.evidence) ? value.evidence : [],
+    };
+  }
+
+  /**
+   * Infer attraction traits (9 dimensions) from aboutPartner; optionally use aboutMe/aboutRelationship if aboutPartner is thin.
+   * Returns attraction (integers 0–10), confidence, evidence with dimension+quote.
+   */
+  async inferAttractionTraits(
+    aboutPartner: string,
+    aboutMe?: string,
+    aboutRelationship?: string,
+  ): Promise<AttractionTraitsResult> {
+    const parts: string[] = ['aboutPartner:', aboutPartner.trim() || '(empty)'];
+    if (aboutMe != null && aboutMe.trim()) {
+      parts.push('', '(optional) aboutMe:', aboutMe.trim());
+    }
+    if (aboutRelationship != null && aboutRelationship.trim()) {
+      parts.push('', '(optional) aboutRelationship:', aboutRelationship.trim());
+    }
+    const user = parts.join('\n');
+
+    const requestId = randomUUID();
+    const { value } = await this.llm.completeJSON<AttractionTraitsResult>({
+      modelKey: 'fast',
+      system: ATTRACTION_TRAITS_SYSTEM_PROMPT,
+      user,
+      schema: AttractionTraitsResultSchema,
+      temperature: 0.2,
+      maxTokens: 600,
+      timeoutMs: 15_000,
+      requestId,
+      purpose: 'evaluate-attraction-traits',
+    });
+
+    const clampInt = (n: number, lo: number, hi: number) =>
+      Math.round(Math.max(lo, Math.min(hi, n)));
+    const a = value.attraction;
+    const evidence = Array.isArray(value.evidence)
+      ? value.evidence.map((e) => ({
+          dimension: typeof e.dimension === 'string' ? e.dimension : String(e.dimension ?? ''),
+          quote: typeof e.quote === 'string' ? e.quote.slice(0, 200) : String(e.quote ?? ''),
+        }))
+      : [];
+
+    return {
+      attraction: {
+        ambition: clampInt(a.ambition, 0, 10),
+        statusOrientation: clampInt(a.statusOrientation, 0, 10),
+        physicalPriority: clampInt(a.physicalPriority, 0, 10),
+        kindnessWarmth: clampInt(a.kindnessWarmth, 0, 10),
+        stabilityReliability: clampInt(a.stabilityReliability, 0, 10),
+        independenceAutonomy: clampInt(a.independenceAutonomy, 0, 10),
+        emotionalDepth: clampInt(a.emotionalDepth, 0, 10),
+        traditionalismValues: clampInt(a.traditionalismValues, 0, 10),
+        financialPrudence: clampInt(a.financialPrudence, 0, 10),
+      },
+      confidence: Math.max(0, Math.min(1, value.confidence)),
+      evidence,
+    };
+  }
+
+  /**
+   * Detect structural lifestyle conflicts between two profiles' signal maps.
+   * Deterministic rules (pace, status, socialBattery, independence, Tier1 values).
+   */
+  detectLifestyleConflicts(
+    signalsA: Record<string, number | null>,
+    signalsB: Record<string, number | null>,
+  ): LifestyleConflictsResult {
+    return detectLifestyleConflicts(signalsA, signalsB);
+  }
+
   async evaluateBatch(
     input: EvaluateBatchInput,
   ): Promise<{ ok: true; result: EvaluateBatchResult }> {
     const { aboutMe, aboutRelationship, aboutPartner } = input;
 
-    const { self, relationship, partner } =
+    const { self, relationship, partner, _usage } =
       await this.extractionService.extractAllThree(
         aboutMe.trim(),
         aboutRelationship.trim(),
@@ -366,6 +685,7 @@ export class EvaluateService {
         },
         productScores,
         flags,
+        _usage,
       },
     };
   }

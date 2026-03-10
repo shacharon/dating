@@ -48,6 +48,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Local JSON persistence (profiles)
+/data
+
 # Runtime data
 pids
 *.pid

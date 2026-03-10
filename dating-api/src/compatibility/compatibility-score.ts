@@ -39,6 +39,35 @@ export const COMPATIBILITY_SIGNAL_KEYS: readonly SignalKey[] = [
   'statusOrientation',
 ] as const;
 
+/* ── Signal Tiers ────────────────────────────────────────────────────── */
+
+/** Tier 1 – core values: weighted highest in valuesAlignment. */
+export const TIER1_KEYS: readonly SignalKey[] = [
+  'traditionalism',
+  'financialMindset',
+  'relationshipClarity',
+  'lifestylePace',
+  'spirituality',
+  'attachmentSecurity',
+] as const;
+
+/** Tier 2 – personality traits. */
+export const TIER2_KEYS: readonly SignalKey[] = [
+  'emotionalDepth',
+  'independence',
+  'directness',
+  'socialBattery',
+] as const;
+
+/** Tier 3 – lifestyle / preferences. */
+export const TIER3_KEYS: readonly SignalKey[] = [
+  'physicalPriority',
+  'healthBodyConsciousness',
+  'statusOrientation',
+] as const;
+
+/* ── Weights ─────────────────────────────────────────────────────────── */
+
 /** Product policy: per-key weights (high = more impact on score). */
 export const COMPATIBILITY_WEIGHTS: Record<SignalKey, number> = {
   ambition: 1,
@@ -109,13 +138,20 @@ export interface CompatibilityResult {
   };
 }
 
-function pairScoreFromGap(gap: number): number {
-  return Math.max(0, 10 - gap);
+/**
+ * Per-signal similarity: Option B — stricter non-linear curve so small–medium gaps penalize more.
+ * Uses (1 - normalizedGap)^2 so exponent > 1 pulls scores down for small–medium gaps, reducing top-end compression.
+ */
+function pairScoreFromValues(a: number, b: number): number {
+  const gap = Math.abs(a - b);
+  const normalizedGap = Math.min(1, Math.max(0, gap / 10));
+  const pairScore = 10 * Math.pow(1 - normalizedGap, 2);
+  return Math.min(10, Math.max(0, pairScore));
 }
 
 /**
  * Compute compatibility between self and partner signal maps.
- * Ignores keys where either side is null. Per-key score = max(0, 10 - gap).
+ * Ignores keys where either side is null. Per-key similarity = 10 * (1 - gap/10)^2, clamped [0,10].
  * Applies light coverage penalty and hard mismatch penalties.
  */
 export function computeCompatibility(
@@ -140,7 +176,7 @@ export function computeCompatibility(
     if (!Number.isFinite(selfNum) || !Number.isFinite(partnerNum)) continue;
 
     const gap = Math.abs(selfNum - partnerNum);
-    const pairScore = pairScoreFromGap(gap);
+    const pairScore = pairScoreFromValues(selfNum, partnerNum);
     const weight = COMPATIBILITY_WEIGHTS[key];
     breakdown.push({ key, self: selfNum, partner: partnerNum, gap, pairScore });
     weightedSum += weight * pairScore;
@@ -162,13 +198,10 @@ export function computeCompatibility(
   const coverage = totalKeys > 0 ? comparedCount / totalKeys : 0;
   const avgScore =
     totalWeight > 0 ? weightedSum / totalWeight : 0;
-  const coveragePenaltyCap = MAX_COVERAGE_PENALTY_PERCENT / 100;
-  const coveragePenaltyRaw = 1 - coverage;
-  const coveragePenaltyApplied = Math.min(
-    coveragePenaltyCap,
-    Math.max(0, coveragePenaltyRaw),
-  );
-  const scoreAfterCoverage = avgScore * (1 - coveragePenaltyApplied);
+  // Coverage is applied once in the outer finalScore pipeline via coverageFactor.
+  // Do not apply an additional coverage reduction here.
+  const coveragePenaltyApplied = 0;
+  const scoreAfterCoverage = avgScore;
   const weightedScoreBeforePenalties100 = (avgScore / 10) * 100;
   let overallScore = Math.round(
     Math.max(0, Math.min(100, (scoreAfterCoverage / 10) * 100)),
@@ -199,6 +232,33 @@ export function computeCompatibility(
     breakdown,
     debug,
   };
+}
+
+/**
+ * Compute values-alignment score from Tier 1 (Values) signals only.
+ * Returns 0..100 (average pairScore mapped to percentage).
+ * Returns 0 when no Tier1 keys are comparable.
+ */
+export function computeValuesAlignment(
+  signalsA: SignalsMap | Record<string, SignalValue>,
+  signalsB: SignalsMap | Record<string, SignalValue>,
+): number {
+  let sumPairScores = 0;
+  let count = 0;
+
+  for (const key of TIER1_KEYS) {
+    const a = signalsA[key];
+    const b = signalsB[key];
+    if (a == null || b == null) continue;
+    const aNum = Number(a);
+    const bNum = Number(b);
+    if (!Number.isFinite(aNum) || !Number.isFinite(bNum)) continue;
+    sumPairScores += pairScoreFromValues(aNum, bNum);
+    count++;
+  }
+
+  if (count === 0) return 0;
+  return Math.round((sumPairScores / count / 10) * 100);
 }
 
 /*
