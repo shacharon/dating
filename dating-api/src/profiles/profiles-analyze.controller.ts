@@ -246,6 +246,7 @@ export class ProfilesAnalyzeController {
         aboutMe: profile.texts.aboutMe,
         aboutRelationship: profile.texts.aboutRelationship,
         aboutPartner: profile.texts.aboutPartner,
+        profileId: profile.id,
       });
 
     const signalCoverage = evaluation.productScores.coverageScore;

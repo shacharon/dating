@@ -20,8 +20,9 @@ export function coverageFactor(coveragePercent: number): number {
  * Softer low-coverage penalty (floor 0.88 vs 0.85) for calibration; ceiling remains 1.0.
  */
 export function scoreCoverageFactor(coveragePercent: number): number {
-  const coveragePercentNormalized = Math.max(0, Math.min(1, coveragePercent / 100));
-  return 0.88 + 0.12 * coveragePercentNormalized;
+  const c = Math.max(0, Math.min(100, coveragePercent));
+  if (c <= 50) return 0.9 + (0.06 * c) / 50;
+  return 0.96 + (0.04 * (c - 50)) / 50;
 }
 
 /**

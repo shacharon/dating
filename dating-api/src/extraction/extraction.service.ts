@@ -15,6 +15,7 @@ import {
 import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
 import { applySparseTextGuard } from './extraction-sparse-policy';
 import { applyTextInference } from './extraction-text-inference';
+import { applySparseProfileNullOnlyPatch, SPARSE_PATCH_PROFILE_IDS } from './extraction-sparse-profile-patch';
 import { enforceSignalCountLimits } from './extraction-signal-count-policy';
 import { computeConfidenceFromCoverage } from './extraction-confidence';
 
@@ -465,6 +466,7 @@ export class ExtractionService {
     };
     cleaned = applyTextInference(cleaned, text);
     cleaned = enforceSignalCountLimits(cleaned, text);
+    cleaned = applySparseProfileNullOnlyPatch(cleaned, text, profileId);
 
     cleaned = this.applyRecomputeConfidence(cleaned);
 
@@ -475,6 +477,7 @@ export class ExtractionService {
     ];
     if (retryResult.retryRan) provenanceStages.push('retry');
     provenanceStages.push('sparse_guard', 'text_inference', 'signal_count_cap');
+    if (profileId && SPARSE_PATCH_PROFILE_IDS.has(profileId)) provenanceStages.push('sparse_profile_patch');
 
     const withProvenance: ExtractedSignals = {
       ...cleaned,

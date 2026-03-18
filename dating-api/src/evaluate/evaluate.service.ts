@@ -357,6 +357,8 @@ export interface EvaluateBatchInput {
   aboutPartner: string;
   modelKey?: string;
   temperature?: number;
+  /** Optional profile id for extraction patches (e.g. SPARSE_PROFILE null-only recovery). */
+  profileId?: string;
 }
 
 export interface EvaluateBatchResult {
@@ -623,13 +625,14 @@ export class EvaluateService {
   async evaluateBatch(
     input: EvaluateBatchInput,
   ): Promise<{ ok: true; result: EvaluateBatchResult }> {
-    const { aboutMe, aboutRelationship, aboutPartner } = input;
+    const { aboutMe, aboutRelationship, aboutPartner, profileId } = input;
 
     const { self, relationship, partner, _usage } =
       await this.extractionService.extractAllThree(
         aboutMe.trim(),
         aboutRelationship.trim(),
         aboutPartner.trim(),
+        profileId,
       );
 
     const [display, selfVsPartner, selfVsRelationship] = await Promise.all([

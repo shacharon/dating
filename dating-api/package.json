@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "recompute-matches": "nest build && node dist/scripts/recompute-matches.js",
     "reanalyze-cohort": "nest build && node dist/scripts/reanalyze-cohort.js",
+    "reanalyze-ids": "nest build && node dist/scripts/reanalyze-ids.js",
     "reanalyze-week2": "nest build && node dist/scripts/reanalyze-week2.js",
     "debug:extraction-regression": "nest build && npx ts-node --transpile-only -r tsconfig-paths/register scripts/debug-extraction-regression.ts",
     "validate:golden-pairs": "nest build && node dist/scripts/validate-golden-pairs.js",

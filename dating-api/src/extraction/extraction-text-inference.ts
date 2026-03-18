@@ -14,6 +14,85 @@ export interface TextInferenceRule {
 }
 
 export const TEXT_INFERENCE_RULES: readonly TextInferenceRule[] = [
+  // DATING_SPARSE_SET_PATCH_V1
+  // DATING_EXTRACTION_LAYER_BATCH_PATCH_V1
+  {
+    id: 'communication_values_stability',
+    patterns: [
+      /(?=.*\b(?:clear|lear|honest|direct|truth)\b)(?=.*\b(?:boundar(?:y|ies)|respect)\b)(?=.*\b(?:stability|stable|no\s+drama)\b)/is,
+      /(?=.*\bcommunicat(?:ion|e|ing)\b)(?=.*\b(?:loyal(?:ty)?|plan(?:ning)?|future)\b)/i,
+      /(?=.*תקשורת)(?=.*גבולות)(?=.*(?:יציב|יציבות))/u,
+    ],
+    inferences: [
+      { signal: 'relationshipClarity', value: 7 },
+      { signal: 'lifestylePace', value: 4 },
+    ],
+    note: '"clear communication + boundaries + stability" => relationshipClarity>=7, lifestylePace<=4',
+  },
+  {
+    id: 'financial_analytical_planning',
+    patterns: [
+      /\bcfo\b/i,
+      /\bportfolio\b/i,
+      /\bspreadsheets?\b/i,
+      /\bfinancial\s+planning\b/i,
+      /\blong[- ]?term\s+plans?\b/i,
+    ],
+    inferences: [{ signal: 'financialMindset', value: 8 }],
+    note: '"CFO/portfolio/spreadsheets/financial planning" => financialMindset>=8',
+  },
+  {
+    id: 'anti_materialist_money_not_important',
+    patterns: [
+      /\bdon'?t\s+care\s+about\s+money\b/i,
+      /\bdon'?t\s+care\s+about\s+status\b/i,
+      /\bdon'?t\s+chase\s+money\b/i,
+      /\bmoney\s+does(?:n'?t| not)\s+matter\b/i,
+      /\bnot\s+materialistic\b/i,
+      /\bclimbing\s+the\s+social\s+ladder\b/i,
+      /לא\s+אכפת\s+לי\s+מ(?:כסף|סטטוס)/u,
+      /לא\s+חשוב\s+לי\s+(?:כסף|סטטוס)/u,
+    ],
+    inferences: [{ signal: 'financialMindset', value: 3 }],
+    note: '"money/status not important" => financialMindset<=3',
+  },
+  {
+    id: 'quiet_solitude_pacing',
+    patterns: [
+      /\bquiet\s+companionship\b/i,
+      /\bquiet\s+life\b/i,
+      /\bspace\s+and\s+silence\b/i,
+      /\bneed\s+(?:a\s+)?lot\s+of\s+space\b/i,
+      /\bgo\s+with\s+the\s+flow\b/i,
+      /\bnot\s+here\s+for\s+(?:constant\s+)?drama\b/i,
+      /\bno\s+drama\b/i,
+      /(?=.*שקט)(?=.*(?:יציב|יציבות))/u,
+    ],
+    inferences: [{ signal: 'lifestylePace', value: 5 }],
+    note: '"quiet/solitude/silence/flow/no drama" => lifestylePace<=5',
+  },
+  {
+    id: 'calm_grounded_consistent',
+    patterns: [
+      /\bcalm\b.*\bgrounded\b/i,
+      /\bgrounded\b.*\bcalm\b/i,
+      /\bconsistent\b/i,
+    ],
+    inferences: [
+      { signal: 'socialBattery', value: 4 },
+      { signal: 'spirituality', value: 4 },
+    ],
+    note: '"calm/grounded/consistent" => socialBattery<=4, spirituality>=4',
+  },
+  {
+    id: 'playful_flirting_pace',
+    patterns: [
+      /\bwitty\s+flirting\b/i,
+      /\bplayful\s+back(?:-|\s)?and(?:-|\s)?forth\b/i,
+    ],
+    inferences: [{ signal: 'lifestylePace', value: 6 }],
+    note: '"witty flirting / playful back-and-forth" => lifestylePace>=6',
+  },
   {
     id: 'respects_boundaries',
     patterns: [
@@ -233,6 +312,22 @@ export function applyTextInference(
     }
   }
 
+  // Explicit authenticity phrasing implies clearer communication style.
+  // Keep this conservative: only floor directness to 6 when phrase is present.
+  if (/\bnot\s+a\s+mask(?:\s+forever)?\b/i.test(inputText)) {
+    const currentDirectness = signals.directness;
+    if (currentDirectness == null || currentDirectness < 6) {
+      signals.directness = 6;
+      evidence.push({
+        signal: 'directness',
+        quote: 'inferred: authenticity_not_a_mask',
+        note: 'text-inference',
+      });
+      coverageNotes.push('"not a mask" => directness>=6');
+      anyApplied = true;
+    }
+  }
+
   if (!anyApplied) return data;
 
   return {
@@ -242,3 +337,4 @@ export function applyTextInference(
     coverageNotes,
   };
 }
+

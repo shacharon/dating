@@ -4,7 +4,7 @@
  */
 
 import { clamp, compatibility, finalScore, rawScore, FRICTION_SCALE } from './scoring';
-import { coverageFactor, coveragePercent } from './coverage';
+import { coverageFactor, coveragePercent, scoreCoverageFactor } from './coverage';
 import { frictionPenalty } from './friction';
 
 describe('engine scoring', () => {
@@ -21,10 +21,10 @@ describe('engine scoring', () => {
   });
 
   describe('compatibility', () => {
-    it('0.35*A_to_B + 0.35*B_to_A + 0.25*relationshipFit + 0.05*valuesAlignment', () => {
+    it('0.35*A_to_B + 0.35*B_to_A + 0.20*relationshipFit + 0.10*valuesAlignment', () => {
       const c = compatibility(80, 80, 60, 70);
-      expect(c).toBe(0.35 * 80 + 0.35 * 80 + 0.25 * 60 + 0.05 * 70);
-      expect(c).toBe(74.5);
+      expect(c).toBe(0.35 * 80 + 0.35 * 80 + 0.2 * 60 + 0.1 * 70);
+      expect(c).toBe(75);
     });
   });
 
@@ -48,6 +48,33 @@ describe('engine scoring', () => {
     it('round(100 * numComparableSignals / totalSignals)', () => {
       expect(coveragePercent(7, 10)).toBe(70);
       expect(coveragePercent(1, 14)).toBe(7);
+    });
+  });
+
+  describe('scoreCoverageFactor', () => {
+    it('is monotonic and gentler than previous low-coverage line', () => {
+      const p29 = scoreCoverageFactor(29);
+      const p36 = scoreCoverageFactor(36);
+      const p43 = scoreCoverageFactor(43);
+      const p50 = scoreCoverageFactor(50);
+      const p57 = scoreCoverageFactor(57);
+
+      // monotonic: more coverage should not reduce match score
+      expect(p29).toBeLessThanOrEqual(p36);
+      expect(p36).toBeLessThanOrEqual(p43);
+      expect(p43).toBeLessThanOrEqual(p50);
+      expect(p50).toBeLessThanOrEqual(p57);
+
+      // low coverage still penalizes score
+      expect(p29).toBeLessThan(1);
+      expect(p36).toBeLessThan(1);
+      expect(p43).toBeLessThan(1);
+
+      // but less aggressively than previous formula (0.88 + 0.12 * c)
+      const old = (c: number) => 0.88 + 0.12 * (c / 100);
+      expect(p29).toBeGreaterThan(old(29));
+      expect(p36).toBeGreaterThan(old(36));
+      expect(p43).toBeGreaterThan(old(43));
     });
   });
 

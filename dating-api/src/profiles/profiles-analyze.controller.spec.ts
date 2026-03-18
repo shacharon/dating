@@ -167,6 +167,7 @@ describe('ProfilesAnalyzeController', () => {
         aboutMe: 'about me text',
         aboutRelationship: 'about relationship text',
         aboutPartner: 'about partner text',
+        profileId: 'test-id',
       });
     });
 
