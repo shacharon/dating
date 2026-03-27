@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ExtractionService } from '../extraction/extraction.service';
 import type { ExtractedSignals, LLMUsageStats } from '../extraction/extracted-signals.interface';
+import { OFFICIAL_EXTRACTION_SIGNAL_KEYS } from '../extraction/extracted-signals.interface';
+import type { RawInterests } from '../extraction/extracted-interests.interface';
 import { LLMRouterService } from '../llm/llm-router.service';
+import { SimpleLogger } from '../logger/simple-logger.service';
 import type { CompatibilityResult } from '../compatibility/compatibility-score';
 import { computeCompatibility } from '../compatibility/compatibility-score';
 import {
@@ -11,6 +14,7 @@ import {
   type LifestyleConflictsResult,
 } from '../compatibility/lifestyle-conflicts';
 import type { ProductScores } from '../domain/scoring/product-scores.types';
+import { buildChips, type Chip, type ChipsBundle } from './chips-builder';
 
 function takeString(v: unknown, ...keys: string[]): string {
   const obj = v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
@@ -35,6 +39,17 @@ function normalizeDisplay(raw: unknown): { summary: string; insight: string } {
     takeString(obj, 'insight', 'Insight') ||
     'Signals reflect how self, partner, and relationship preferences align.';
   return { summary, insight };
+}
+
+/** Non-null official extraction keys only (excludes shadow / SIGNAL3 keys from coverage). */
+function countMatchedOfficialSignals(
+  signals: Record<string, number | null>,
+): number {
+  let n = 0;
+  for (const key of OFFICIAL_EXTRACTION_SIGNAL_KEYS) {
+    if (signals[key] != null) n += 1;
+  }
+  return n;
 }
 
 /** Threshold below which we use cautious display language (suggests, limited signal). */
@@ -266,13 +281,21 @@ RULES:
   - "save / invest / not spender" -> financialPrudence
 `;
 
-/** POC/UI flags for calibration and testing. */
+/** Product/UI flags for calibration and testing. */
 export type EvaluateFlag =
   | 'LOW_COVERAGE'
   | 'LOW_CONFIDENCE'
   | 'HIGH_FRICTION_RISK';
 
 export type { ProductScores } from '../domain/scoring/product-scores.types';
+
+/** v1 extended signals: additive sidecar under evaluation.extendedSignals. */
+export interface ExtendedSignals {
+  version: 'v1';
+  relationshipMotivation?: RelationshipMotivationResult;
+  attractionTraits?: AttractionTraitsResult;
+  _usage?: LLMUsageStats;
+}
 
 /** Deterministic product score bundle from compatibility + extraction. All scores 0–100. */
 function computeProductScores(
@@ -290,14 +313,13 @@ function computeProductScores(
   );
 
   const totalKeys = 14 * 3;
-  const totalNonNull =
-    Object.values(self.signals).filter((v) => v != null).length +
-    Object.values(partner.signals).filter((v) => v != null).length +
-    Object.values(relationship.signals).filter((v) => v != null).length;
-  const coverageRatio = totalKeys > 0 ? totalNonNull / totalKeys : 0;
-  const coverageScore = Math.round(
-    Math.max(0, Math.min(100, coverageRatio * 100)),
-  );
+  const matchedSignals =
+    countMatchedOfficialSignals(self.signals) +
+    countMatchedOfficialSignals(partner.signals) +
+    countMatchedOfficialSignals(relationship.signals);
+  const coveragePercentValue =
+    totalKeys > 0 ? Math.round((100 * matchedSignals) / totalKeys) : 0;
+  const coverageScore = Math.max(0, Math.min(100, coveragePercentValue));
 
   const totalHardMismatches =
     selfVsPartner.hardMismatches.length +
@@ -339,12 +361,12 @@ function computeProductScores(
     debug: {
       totalHardMismatches,
       avgConfidence: Math.round(avgConfidence * 100) / 100,
-      totalNonNullSignals: totalNonNull,
+      totalNonNullSignals: matchedSignals,
     },
   };
 
   const flags: EvaluateFlag[] = [];
-  if (coverageScore < 50 || totalNonNull < 6) flags.push('LOW_COVERAGE');
+  if (coverageScore < 50 || matchedSignals < 6) flags.push('LOW_COVERAGE');
   if (avgConfidence < LOW_CONFIDENCE_THRESHOLD) flags.push('LOW_CONFIDENCE');
   if (frictionRiskScore >= 60) flags.push('HIGH_FRICTION_RISK');
 
@@ -359,7 +381,11 @@ export interface EvaluateBatchInput {
   temperature?: number;
   /** Optional profile id for extraction patches (e.g. SPARSE_PROFILE null-only recovery). */
   profileId?: string;
+  /** Optional raw interests for chips generation (display-only). */
+  rawInterests?: RawInterests;
 }
+
+export type { Chip, ChipsBundle } from './chips-builder';
 
 export interface EvaluateBatchResult {
   self: ExtractedSignals;
@@ -378,6 +404,10 @@ export interface EvaluateBatchResult {
   productScores: ProductScores;
   flags: EvaluateFlag[];
   _usage?: LLMUsageStats;
+  /** v1 extended signals: additive sidecar, does not affect scoring. */
+  extendedSignals?: ExtendedSignals;
+  /** Display chips for UI explainability (read-only, no scoring impact). */
+  chips?: ChipsBundle;
 }
 
 @Injectable()
@@ -385,6 +415,7 @@ export class EvaluateService {
   constructor(
     private readonly extractionService: ExtractionService,
     private readonly llm: LLMRouterService,
+    private readonly logger: SimpleLogger,
   ) {}
 
   /**
@@ -625,7 +656,7 @@ export class EvaluateService {
   async evaluateBatch(
     input: EvaluateBatchInput,
   ): Promise<{ ok: true; result: EvaluateBatchResult }> {
-    const { aboutMe, aboutRelationship, aboutPartner, profileId } = input;
+    const { aboutMe, aboutRelationship, aboutPartner, profileId, rawInterests } = input;
 
     const { self, relationship, partner, _usage } =
       await this.extractionService.extractAllThree(
@@ -671,6 +702,44 @@ export class EvaluateService {
         ? DISPLAY_NOTE_LOW_QUALITY
         : undefined;
 
+    // v1 extended signals: run LLM inference for motivation + attraction traits (additive sidecar only)
+    let extendedSignals: ExtendedSignals | undefined;
+    try {
+      const [motivation, attraction] = await Promise.all([
+        this.inferRelationshipMotivation(
+          aboutMe.trim(),
+          aboutPartner.trim(),
+          aboutRelationship.trim(),
+        ),
+        this.inferAttractionTraits(
+          aboutPartner.trim(),
+          aboutMe.trim(),
+          aboutRelationship.trim(),
+        ),
+      ]);
+
+      extendedSignals = {
+        version: 'v1',
+        relationshipMotivation: motivation,
+        attractionTraits: attraction,
+      };
+    } catch (err) {
+      // Extended signals are optional; do not fail the entire evaluation if they fail
+      this.logger.warn(
+        `Extended signals inference failed: ${err instanceof Error ? err.message : String(err)}`,
+        'EvaluateService',
+      );
+    }
+
+    // Build display chips (deterministic, read-only, no scoring impact)
+    const chips = buildChips(
+      self,
+      partner,
+      relationship,
+      rawInterests,
+      extendedSignals,
+    );
+
     return {
       ok: true,
       result: {
@@ -689,6 +758,8 @@ export class EvaluateService {
         productScores,
         flags,
         _usage,
+        ...(extendedSignals && { extendedSignals }),
+        chips,
       },
     };
   }

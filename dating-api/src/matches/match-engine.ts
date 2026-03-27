@@ -13,6 +13,7 @@ import { compatibility as compatibilityFormula } from '../engine/scoring';
 import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
 import { deriveContextFromProfileTexts } from '../domain/deriveContext';
 import {
+  applyDealbreakerCap,
   computeDealbreakers,
   type CoreSignals,
   type Dealbreaker,
@@ -30,13 +31,17 @@ import {
   computeFrictionAndFrictionPenalties,
   type FrictionAndPenaltiesState,
 } from './friction-policy';
-import {
-  applyCapsAndCalibration,
-  type CapsCalibrationState,
-} from './calibration-policy';
+import type { CapsCalibrationState } from './calibration-policy';
 import { applyDirectionalDisplayCalibration } from './display-policy';
+import { buildMatchExplainability, type MatchExplainabilityDto } from './match-explainability';
+import {
+  buildMatchRecommendation,
+  type MatchRecommendationDto,
+} from './match-recommendation';
 
 export type { MatchInfoFlag };
+export type { MatchExplainabilityDto } from './match-explainability';
+export type { MatchRecommendationDto } from './match-recommendation';
 
 /** Single penalty or bonus entry for debug audit. */
 export interface MatchDebugPenaltyDto {
@@ -93,7 +98,7 @@ export interface CompareResultDto {
   /** New scoring model */
   compatibility: number;
   finalScore: number;
-  /** Raw score before clamp (compatibility * scoreCoverageFactor - frictionPenaltyScaled). */
+  /** Raw score before final clamp path (compatibility − friction penalty ± edge boost; no coverage multiplier). */
   rawScore: number;
   friction: number;
   frictionPenalty: number;
@@ -122,6 +127,10 @@ export interface CompareResultDto {
   debug?: MatchDebugDto;
   /** When coverage < 50%, score before sparse-match calibration (for reporting). */
   finalScoreBeforeSparseCalibration?: number;
+  /** Human-readable chips + one-line reason (deterministic; no scoring impact). */
+  explainability: MatchExplainabilityDto;
+  /** User-facing recommendation layer above explainability (deterministic; no scoring impact). */
+  recommendation: MatchRecommendationDto;
 }
 
 export interface CompareNotAnalyzedResultDto {
@@ -133,6 +142,34 @@ export interface CompareNotAnalyzedResultDto {
   coverage: null;
   friction: null;
   overall: null;
+}
+
+export interface CompareInsufficientDataResultDto {
+  status: 'INSUFFICIENT_DATA';
+  message: string;
+  compatibility: null;
+  partnerFit: null;
+  relationshipFit: null;
+  coverage: null;
+  friction: null;
+  overall: null;
+}
+
+export type CompareGuardFailureResultDto =
+  | CompareNotAnalyzedResultDto
+  | CompareInsufficientDataResultDto;
+
+function isEvaluationPending(profile: ProfileJsonPayload): boolean {
+  const s = profile.evaluationStatus;
+  return s != null && s !== 'DONE';
+}
+
+function hasNumericSelfSignals(profile: ProfileJsonPayload): boolean {
+  const signals = profile.evaluation?.self?.signals;
+  if (!signals || typeof signals !== 'object') return false;
+  return Object.values(signals).some(
+    (v) => typeof v === 'number' && Number.isFinite(v),
+  );
 }
 
 function formatSignalKey(key: string): string {
@@ -162,34 +199,35 @@ function applyLowInfoCap(
 }
 
 export function hasAnalyzedSignals(profile: ProfileJsonPayload): boolean {
-  if (profile.evaluationStatus != null && profile.evaluationStatus !== 'DONE') {
-    return false;
-  }
-
-  const signals = profile.evaluation?.self?.signals;
-  if (!signals || typeof signals !== 'object') return false;
-
-  return Object.values(signals).some(
-    (v) => typeof v === 'number' && Number.isFinite(v),
-  );
+  if (isEvaluationPending(profile)) return false;
+  return hasNumericSelfSignals(profile);
 }
+
+const GUARD_NULL_FIELDS = {
+  compatibility: null,
+  partnerFit: null,
+  relationshipFit: null,
+  coverage: null,
+  friction: null,
+  overall: null,
+} as const;
 
 export function compareWithStatus(
   profileA: ProfileJsonPayload,
   profileB: ProfileJsonPayload,
-): CompareResultDto | CompareNotAnalyzedResultDto {
-  const aAnalyzed = hasAnalyzedSignals(profileA);
-  const bAnalyzed = hasAnalyzedSignals(profileB);
-  if (!aAnalyzed || !bAnalyzed) {
+): CompareResultDto | CompareGuardFailureResultDto {
+  if (isEvaluationPending(profileA) || isEvaluationPending(profileB)) {
     return {
       status: 'NOT_ANALYZED',
       message: 'Run analyze for both profiles before compare',
-      compatibility: null,
-      partnerFit: null,
-      relationshipFit: null,
-      coverage: null,
-      friction: null,
-      overall: null,
+      ...GUARD_NULL_FIELDS,
+    };
+  }
+  if (!hasNumericSelfSignals(profileA) || !hasNumericSelfSignals(profileB)) {
+    return {
+      status: 'INSUFFICIENT_DATA',
+      message: 'Profile self signals are empty or non-numeric; cannot score match',
+      ...GUARD_NULL_FIELDS,
     };
   }
   return compare(profileA, profileB);
@@ -457,17 +495,6 @@ function buildDebugDto(
   if (balance.tier === 'GREEN') {
     bonuses.push({ reason: 'GREEN_TIER_RELATIONSHIP_BOOST', amount: 8 });
   }
-  const scoreAfterSparse =
-    coveragePercentValue <= 55
-      ? finalScoreValue *
-        Math.min(
-          1,
-          coveragePercentValue <= 50
-            ? 0.92 + (coveragePercentValue / 50) * 0.08
-            : 0.94 +
-                ((coveragePercentValue - 50) / 5) * 0.06,
-        )
-      : finalScoreValue;
   return {
     baseScore: raw,
     coveragePercent: coveragePercentValue,
@@ -480,7 +507,7 @@ function buildDebugDto(
     dealbreakers,
     penalties,
     bonuses,
-    finalScoreBeforeClamp: scoreAfterSparse,
+    finalScoreBeforeClamp: clampTo100(finalScoreValue),
     finalScore: finalScoreClamped,
     provenance,
   };
@@ -509,11 +536,14 @@ function buildFinalResultDto(
   caps: CapsCalibrationState,
 ): CompareResultDto {
   const { infoFlags } = coverageConfidence;
-  const {
+  let {
     scoreCoverageFactorValue,
     coverageFactorValue,
     confidenceValue,
   } = coverageConfidence;
+  if (coveragePercentValue < 25) {
+    confidenceValue = Math.min(confidenceValue, 0.75);
+  }
   const {
     frictionPenaltyValue,
     frictionPenaltyScaled,
@@ -521,21 +551,15 @@ function buildFinalResultDto(
     appliedFrictionPenaltyScaled,
     raw,
   } = frictionState;
-  const {
-    finalScoreClamped,
-    finalScoreBeforeSparseCalibration,
-    preCapFinalScore,
-    finalScoreValue,
-  } = caps;
+  const { finalScoreClamped, preCapFinalScore, finalScoreValue } = caps;
 
   const provenance: string[] = [
-    'base_compatibility',
-    'coverage_adjustment',
+    'compat_minus_friction_no_coverage_mult',
     'friction_adjustment',
-    'calibration',
+    'dealbreaker_optional',
+    'hard_cap_90',
   ];
   if (preCapFinalScore !== finalScoreValue) provenance.push('dealbreaker_cap');
-  if (finalScoreBeforeSparseCalibration !== undefined) provenance.push('sparse_calibration');
 
   const debug = buildDebugDto(
     raw,
@@ -594,6 +618,21 @@ function buildFinalResultDto(
     coveragePercentValue,
   );
 
+  const explainability = buildMatchExplainability({
+    compatibility: compatibilityValue,
+    finalScore: finalScoreClamped,
+    friction,
+    breakdown: compatAB.breakdown ?? [],
+    tensionMatrix,
+  });
+
+  const recommendation = buildMatchRecommendation({
+    finalScore: finalScoreClamped,
+    friction,
+    explainability,
+    dealbreakers: dealbreakers.map((d) => d.code),
+  });
+
   return {
     overallScore: finalScoreClamped,
     aToB: displayAToB,
@@ -629,9 +668,8 @@ function buildFinalResultDto(
     dealbreakers,
     balance,
     debug,
-    ...(finalScoreBeforeSparseCalibration !== undefined
-      ? { finalScoreBeforeSparseCalibration }
-      : {}),
+    explainability,
+    recommendation,
   };
 }
 
@@ -672,19 +710,24 @@ export function compare(profileA: ProfileJsonPayload, profileB: ProfileJsonPaylo
     step8.scoreCoverageFactorValue,
     step4.friction,
   );
-  const step9 = applyCapsAndCalibration(
-    step5.raw,
-    step2.dealbreakers,
-    step3.coveragePercentValue,
-  );
-  const finalScoreClamped = applyLowInfoCap(
-    step9.finalScoreClamped,
-    profileA.id,
-    profileB.id,
-  );
+  let rawScoreForPipeline = step5.raw;
+  if (step4.friction <= 1 && step7Compat >= 70 && step7Compat <= 75) {
+    rawScoreForPipeline += 2;
+  }
+  const preCapFinalScore = clampTo100(rawScoreForPipeline);
+  const finalScoreAfterDealbreakers = applyDealbreakerCap(preCapFinalScore, step2.dealbreakers);
+  let finalScoreClamped = Math.min(90, clampTo100(finalScoreAfterDealbreakers));
+  finalScoreClamped = applyLowInfoCap(finalScoreClamped, profileA.id, profileB.id);
+
+  const step5ForDto: FrictionAndPenaltiesState = {
+    ...step5,
+    raw: rawScoreForPipeline,
+  };
   const step9ForDto: CapsCalibrationState = {
-    ...step9,
+    finalScoreValue: finalScoreAfterDealbreakers,
+    finalScoreBeforeSparseCalibration: undefined,
     finalScoreClamped,
+    preCapFinalScore,
   };
   return buildFinalResultDto(
     profileA,
@@ -703,7 +746,7 @@ export function compare(profileA: ProfileJsonPayload, profileB: ProfileJsonPaylo
     step7Compat,
     step4.tensionMatrix,
     step8,
-    step5,
+    step5ForDto,
     step9ForDto,
   );
 }

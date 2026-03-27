@@ -41,6 +41,10 @@ export interface MatchRecordDto {
   balance?: CompareResultDto['balance'];
   /** Debug audit: baseScore, coverage, penalties, bonuses, finalScore breakdown. */
   debug?: MatchDebugDto;
+  /** Deterministic chips + short reason (omitted on older stored records). */
+  explainability?: CompareResultDto['explainability'];
+  /** User-facing recommendation layer (omitted on older stored records). */
+  recommendation?: CompareResultDto['recommendation'];
 }
 
 export interface MatchListItemDto {
@@ -57,6 +61,10 @@ export interface MatchListItemDto {
   dealbreakers: Array<{ code: string; severity?: string }>;
   /** Deterministic one-line reason from score/dealbreakers. */
   shortReason: string;
+  /** Engine explainability (omitted on older records). */
+  explainability?: CompareResultDto['explainability'];
+  /** User-facing recommendation layer (omitted on older records). */
+  recommendation?: CompareResultDto['recommendation'];
   /** Optional score breakdown for observability. */
   scoreMetadata?: {
     coveragePercent?: number;
@@ -101,6 +109,10 @@ export interface MatchIndexItemDto {
   tensionsTop: MatchIndexTensionsTopEntry[];
   tensionMatrix?: Array<{ id: string; name: string; penalty: number; explain: string }>;
   updatedAt: string;
+  /** Same slice as list/detail when index is rebuilt from records. */
+  explainability?: CompareResultDto['explainability'];
+  /** User-facing recommendation layer (omitted on older records). */
+  recommendation?: CompareResultDto['recommendation'];
 }
 
 export interface MatchIndexDto {

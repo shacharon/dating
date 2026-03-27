@@ -13,11 +13,11 @@ import {
   type LLMUsageStats,
 } from './extracted-signals.interface';
 import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
-import { applySparseTextGuard } from './extraction-sparse-policy';
-import { applyTextInference } from './extraction-text-inference';
-import { applySparseProfileNullOnlyPatch, SPARSE_PATCH_PROFILE_IDS } from './extraction-sparse-profile-patch';
-import { enforceSignalCountLimits } from './extraction-signal-count-policy';
-import { computeConfidenceFromCoverage } from './extraction-confidence';
+import { applySparseTextGuard } from '../engine/signal-post-processing/sparse-policy';
+import { applyTextInference } from '../engine/signal-post-processing/text-inference';
+import { applySparseProfileNullOnlyPatch, SPARSE_PATCH_PROFILE_IDS } from '../engine/signal-post-processing/sparse-profile-patch';
+import { enforceSignalCountLimits } from '../engine/signal-post-processing/signal-count-policy';
+import { computeConfidenceFromCoverage } from '../engine/signal-post-processing/confidence';
 
 const SIGNAL_KEYS_LIST = EXTRACTION_SIGNAL_KEYS.join(', ');
 
@@ -84,12 +84,15 @@ PROTECTED SIGNALS — NEVER infer unless the text explicitly contains cues from 
 - statusOrientation — ONLY score when text explicitly mentions at least one of: status, image, prestige, elite, high society, dress code, etiquette, appearance (in social/professional context), class, luxury brand, how we present, social standing, reputation.
 - traditionalism — ONLY score when text explicitly mentions at least one of: traditional, tradition, values, family values, kosher, religious, marriage, conventional, conservative (values), ceremony, how we do things, old-fashioned, modern (contrasted with traditional).
 
-WEEK 2 SHADOW SIGNAL (extract when evidence exists; do not use for scoring; 1–10 or null):
+SHADOW SIGNALS (extract when evidence exists; do not use for scoring; 1–10 or null):
 - intellectualCuriosity: drive to learn, explore ideas, ask questions, engage with complex topics. Trigger phrases: "curious", "love learning", "read", "books", "deep conversations", "interested in", "explore", "always asking", "intellectual", "discuss ideas". Distinct from: emotionalDepth (value on emotional openness); intellectualCuriosity is about ideas and learning, not feelings.
+- conflictStyle: how someone handles disagreement and conflict repair. 1 = avoidant/shutdown, 5 = collaborative/calm discussion, 10 = confrontational/hash-it-out. Trigger phrases: "talk things through", "no drama", "don't like confrontation", "hash it out", "need time to cool off", "avoid conflict", "direct when we disagree", "prefer to discuss calmly", "need space when upset". Distinct from: directness (day-to-day communication); conflictStyle is behavior under disagreement/stress.
+- noveltyVsRoutine: preference for novelty/spontaneity vs routine/predictability in daily life and plans. 1 = routine/predictability, 5 = balanced, 10 = novelty/spontaneity. LOW (1-4) triggers: "routine person", "need predictability", "settled", "same place", "structured week", "plan everything", "consistent schedule", "creature of habit", "like knowing what to expect". HIGH (7-10) triggers: "spontaneous", "trying new things", "adventure", "variety", "explore", "change it up", "flexible plans", "last-minute trips", "freelance", "no 9-to-5", "always something new", "surprise me", "go with the flow", "never the same". MID (4-6) triggers: "balanced", "mix of routine and new", "structured but flexible", "some spontaneity", "planned adventures". Distinct from: lifestylePace (speed); noveltyVsRoutine is content preference (same vs new).
+- structureChaosTolerance: tolerance for mess/unpredictability vs need for order/clarity. 1 = needs structure/order, 5 = balanced, 10 = chaos-tolerant/flexible. Trigger phrases: "organized", "need order", "mess doesn't bother me", "go with the flow", "structured", "flexible with plans", "clean home matters", "organized chaos", "last-minute plans are fine", "tidy", "spontaneous plans". Distinct from: lifestylePace (speed), noveltyVsRoutine (same vs new); structureChaosTolerance is about order/mess and plan rigidity.
 
 Return JSON only. No explanations.
 Signals (use exactly these keys, integer 1–10 or null): ${SIGNAL_KEYS_LIST}
-Evidence: for every non-null score, one item { "signal": "<key>", "quote": "<short grounded quote or paraphrase from the text>" }. Max 18 items.
+Evidence: for every non-null score, one item { "signal": "<key>", "quote": "<short grounded quote or paraphrase from the text>" }. Max 22 items.
 Confidence: decimal in range 0 to 1 inclusive (0..1). E.g. 0.3, 0.5, 0.8. Do not use values outside 0..1.
 Output: { "domain": "self|partner|relationship", "signals": { "<key>": number|null, ... }, "evidence": [...], "confidence": number (0..1), "version": "v1" }
 `;

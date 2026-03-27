@@ -3,7 +3,7 @@ import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
 import { ProfilesJsonService } from '../profiles/profiles-json.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { compareWithStatus } from './match-engine';
-import type { CompareNotAnalyzedResultDto, CompareResultDto } from './match-engine';
+import type { CompareGuardFailureResultDto, CompareResultDto } from './match-engine';
 import type {
   MatchIndexDto,
   MatchIndexItemDto,
@@ -48,6 +48,7 @@ function recordToIndexItem(record: MatchRecordDto): MatchIndexItemDto {
     })),
     tensionMatrix: record.tensionMatrix,
     updatedAt: record.updatedAt,
+    ...(record.explainability != null && { explainability: record.explainability }),
   };
 }
 
@@ -114,14 +115,16 @@ export class MatchDaemonService {
         if (!profileA || !profileB) continue;
 
         try {
-          const result: CompareResultDto | CompareNotAnalyzedResultDto =
-            compareWithStatus(
+          const result: CompareResultDto | CompareGuardFailureResultDto = compareWithStatus(
             profileA,
             profileB,
           );
-          if ('status' in result && result.status === 'NOT_ANALYZED') {
+          if (
+            'status' in result &&
+            (result.status === 'NOT_ANALYZED' || result.status === 'INSUFFICIENT_DATA')
+          ) {
             this.logger.debug(
-              `Skipping unanalyzed pair ${aId} / ${bId}: ${result.message}`,
+              `Skipping pair ${aId} / ${bId} (${result.status}): ${result.message}`,
               this.context,
             );
             continue;
@@ -161,6 +164,7 @@ export class MatchDaemonService {
             dealbreakers: compareResult.dealbreakers,
             balance: compareResult.balance,
             debug: compareResult.debug,
+            explainability: compareResult.explainability,
           };
 
           if (compareResult.balance != null) {

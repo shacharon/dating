@@ -7,15 +7,38 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
-import type {
-  CompareBodyDto,
-  CompareNotAnalyzedMatchDto,
-  MatchListItemDto,
-} from './matches.service';
+import type { CompareBodyDto, CompareGuardMatchDto, MatchListItemDto } from './matches.service';
 import type { MatchIndexDto, MatchRecordDto } from './match.types';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { MatchDaemonService } from './match-daemon.service';
 import { MatchesService } from './matches.service';
+import { mapMatchRecordToDetailUi, type MatchDetailUiDto } from './match-detail-ui.mapper';
+
+/** UI-friendly match preview for /dating/matches list. */
+export interface DatingMatchPreviewDto {
+  id: string;
+  name: string;
+  age: number;
+  summary: string;
+  compatibilityScore: number;
+  strongReason: string;
+  frictionPoint: string;
+  explainability?: {
+    positiveChips: string[];
+    tensionChip?: string;
+    reasonShort: string;
+  };
+  recommendation?: {
+    explainability: {
+      positiveChips: string[];
+      tensionChip?: string;
+      reasonShort: string;
+    };
+    primaryTakeaway: string;
+    caution?: string;
+    suggestedNextAction: string;
+  };
+}
 
 @Controller('api/v1/matches')
 export class MatchesController {
@@ -44,7 +67,13 @@ export class MatchesController {
     @Body() body: CompareBodyDto,
   ): Promise<
     | { ok: true; status: 'READY'; matchId: string; match: MatchRecordDto }
-    | { ok: true; status: 'NOT_ANALYZED'; matchId: string; message: string; match: CompareNotAnalyzedMatchDto }
+    | {
+        ok: true;
+        status: 'NOT_ANALYZED' | 'INSUFFICIENT_DATA';
+        matchId: string;
+        message: string;
+        match: CompareGuardMatchDto;
+      }
   > {
     const aId = body?.aId?.trim();
     const bId = body?.bId?.trim();
@@ -56,10 +85,10 @@ export class MatchesController {
     }
     try {
       const result = await this.matchesService.compare({ aId, bId });
-      if (result.status === 'NOT_ANALYZED') {
+      if (result.status === 'NOT_ANALYZED' || result.status === 'INSUFFICIENT_DATA') {
         return {
           ok: true,
-          status: 'NOT_ANALYZED',
+          status: result.status,
           matchId: result.matchId,
           message: result.match.message,
           match: result.match,
@@ -79,8 +108,35 @@ export class MatchesController {
     return { ok: true, items };
   }
 
+  @Get('top')
+  async getTop(): Promise<{ ok: true; matches: DatingMatchPreviewDto[] }> {
+    const items = await this.matchesService.list();
+    const sorted = items
+      .map((item) => {
+        const finalScore = item.finalScore ?? item.overall;
+        const otherPerson = item.b;
+        const chips = item.explainability?.positiveChips?.slice(0, 5) ?? [];
+        
+        const preview: DatingMatchPreviewDto = {
+          id: item.matchId,
+          name: otherPerson.name,
+          age: 30,
+          summary: `Match score: ${finalScore}`,
+          compatibilityScore: Math.round(finalScore),
+          strongReason: item.shortReason || 'Good compatibility',
+          frictionPoint: item.explainability?.tensionChip || 'No major tensions',
+          ...(item.explainability && { explainability: item.explainability }),
+          ...(item.recommendation && { recommendation: item.recommendation }),
+        };
+        return preview;
+      })
+      .sort((a, b) => b.compatibilityScore - a.compatibilityScore)
+      .slice(0, 20);
+    return { ok: true, matches: sorted };
+  }
+
   @Get(':id')
-  async getById(@Param('id') id: string): Promise<{ ok: true; match: MatchRecordDto }> {
+  async getById(@Param('id') id: string): Promise<MatchDetailUiDto> {
     const match = await this.matchesService.getById(id);
     if (!match) {
       throw new NotFoundException('Match not found');
@@ -89,6 +145,6 @@ export class MatchesController {
       ...match,
       finalScore: match.finalScore ?? match.overall,
     };
-    return { ok: true, match: normalized };
+    return mapMatchRecordToDetailUi(normalized);
   }
 }

@@ -26,8 +26,13 @@ export const OFFICIAL_EXTRACTION_SIGNAL_KEYS = [
   'statusOrientation',
 ] as const;
 
-/** Week 2 shadow signal: extracted and stored but NOT wired into compatibility, friction, or finalScore. Only intellectualCuriosity is active. */
-export const SHADOW_SIGNAL_KEYS = ['intellectualCuriosity'] as const;
+/** Shadow signals: extracted and stored but NOT wired into compatibility, friction, or finalScore. */
+export const SHADOW_SIGNAL_KEYS = [
+  'intellectualCuriosity',
+  'conflictStyle',
+  'noveltyVsRoutine',
+  'structureChaosTolerance',
+] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
 export const SHADOW_SIGNAL_KEYS_SET = new Set<string>(SHADOW_SIGNAL_KEYS);
@@ -44,8 +49,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 14 official + 1 shadow. */
-export const MAX_EVIDENCE_ITEMS = 18;
+/** Max number of evidence items kept in extraction output. Allows room for 14 official + 4 shadow. */
+export const MAX_EVIDENCE_ITEMS = 22;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

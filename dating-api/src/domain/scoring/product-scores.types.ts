@@ -1,9 +1,9 @@
 /**
- * POC domain types for product/UI scores (0–100) from the dating comparison system.
+ * Product domain types for UI scores (0–100) from the dating comparison system.
  * No framework decorators.
  */
 
-/** POC/UI scores for calibration and testing. All scores 0–100. */
+/** Product/UI scores for calibration and testing. All scores 0–100. */
 export interface ProductScores {
   partnerFitScore: number;
   relationshipFitScore: number;

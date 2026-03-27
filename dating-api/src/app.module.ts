@@ -9,10 +9,12 @@ import { SimpleLoggerModule } from './logger/simple-logger.module';
 import { LlmModule } from './llm/llm.module';
 import { MatchesModule } from './matches/matches.module';
 import { ProfilesModule } from './profiles/profiles.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    PrismaModule,
     SimpleLoggerModule,
     LlmModule,
     EvaluateModule,

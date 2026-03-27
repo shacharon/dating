@@ -194,6 +194,7 @@ async function main(): Promise<void> {
       dealbreakers: r.dealbreakers,
       balance: r.balance,
       debug: r.debug,
+      explainability: r.explainability,
     };
 
     await saveMatch(record);

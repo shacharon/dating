@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: dating-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dating
+      POSTGRES_USER: dating_user
+      POSTGRES_PASSWORD: dating_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - dating_pg_data:/var/lib/postgresql/data
+
+volumes:
+  dating_pg_data:

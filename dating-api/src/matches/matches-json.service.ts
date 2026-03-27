@@ -137,6 +137,8 @@ export class MatchesJsonService {
             tier,
             dealbreakers,
             shortReason,
+            ...(r.explainability != null && { explainability: r.explainability }),
+            ...(r.recommendation != null && { recommendation: r.recommendation }),
             ...(Object.keys(scoreMetadata).length > 0 && { scoreMetadata }),
           });
         }

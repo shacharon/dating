@@ -96,3 +96,56 @@ npm run validate:golden-pairs
 ```
 
 Ensure `PROFILES_DATA_DIR` is not set (or points to `data/profiles`) when running reanalyze-cohort so the script uses the project’s profile data.
+
+---
+
+## Debug-based prompt patch results
+
+**Date:** After applying the extraction-regression-debug patch (evidence relaxation, distinct-from rewrite, anti-double-count relaxation, partner short-text retry).
+
+### Prompt text changed
+
+1. **Evidence**
+   - **Before:** "Every non-null score SHOULD have one evidence item with a short quote or paraphrase from the text (3–15 words). Prefer a verbatim or near-verbatim snippet when possible…"
+   - **After:** "Every non-null score MUST have one evidence item: use a short grounded quote or a short grounded paraphrase from the text. Stay grounded in the text; do not invent. Prefer a direct quote when available; a short paraphrase is fine when the text is abstract or indirect."
+   - Output instruction: `"quote": "<short grounded quote or paraphrase from the text>"` (no strict 5–15 word requirement).
+
+2. **Distinct-from**
+   - Added lead-in: "Use the 'distinct from' notes to choose the best-fitting signal; when in doubt, assign the signal that fits best rather than leaving null."
+   - Shortened and de-dramatized per-signal distinct-from wording (e.g. "Distinct from: conflict behavior (not a signal yet)" instead of "do not infer conflict style from directness").
+
+3. **Anti-double-count**
+   - **Before:** "A single phrase or theme … should support at most 1–2 signals unless the text explicitly gives separate evidence for each."
+   - **After:** "One phrase or theme can support multiple signals when the text clearly justifies it (e.g. 'slow life, mindfulness' supports both lifestylePace and spirituality). Avoid assigning the same vague phrase to many signals; prefer 2–3 well-justified signals per phrase over 5–6 weak ones. Generic phrases … support at most 1–2 low-confidence signals."
+
+4. **Partner short-text fallback**
+   - Retry now runs when partner text is non-empty and (a) extraction is empty, or (b) partner text length < 150 chars and extraction has ≤2 signals.
+   - When (b), uses `PARTNER_SHORT_RETRY_PROMPT`: "extract 2–4 signals that have clear support … short grounded quote or paraphrase … Do not invent."
+   - Retry result replaces extraction only when `retryNonNull > nonNullCount`. `EXTRACTION_EMPTY` note added only when original was empty and retry did not help.
+
+5. **Retry prompt (general)**
+   - Evidence wording: "short grounded quote or paraphrase from the text" (aligned with main prompt).
+
+### EMPTY_MODEL_TEXT
+
+- **Before patch (from regression debug):** Observed on self (e.g. profile 37, 17) and relationship (e.g. merged_14); retry sometimes recovered.
+- **After patch:** *(Fill from reanalyze-cohort stdout: count of `event":"EMPTY_MODEL_TEXT"` or "none observed".)*
+
+### Coverage before vs after (patched)
+
+- **Pre–Week‑1 (baseline):** 60.4% (from extraction-regression-debug.md).
+- **After Week 1, before this patch:** ~41.9% reanalyze / ~33.7% recompute (regression doc).
+- **After this patch:** *(Fill from reanalyze-cohort final line: "Coverage after (avg %): X.X".)*
+
+### Golden pairs PASS/FAIL before vs after patch
+
+- **Before patch:** PASS 4, FAIL 16 (from `docs/golden-pairs.md` at patch time).
+- **After patch:** *(Run `npm run recompute-matches` then `npm run validate:golden-pairs` and fill from new `docs/golden-pairs.md` section 3.)*
+
+### Recommendation
+
+*(Set after filling the above. One of:)*
+
+- **PROCEED_TO_WEEK2** — Coverage recovered vs pre-patch, no new EMPTY_MODEL_TEXT (or clearly reduced), golden PASS count stable or improved, no hallucination observed.
+- **ADJUST_AND_REPEAT** — Coverage or golden PASS improved but not enough; or EMPTY_MODEL_TEXT still frequent; tune prompt or bands and re-run.
+- **REVERT** — Coverage or golden results worse than before patch; revert extraction prompt (and retry logic) and re-run cohort + validate.

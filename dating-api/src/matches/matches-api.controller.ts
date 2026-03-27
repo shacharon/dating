@@ -8,7 +8,11 @@ import type { MatchAnalyticsLog } from './matches-analytics.service';
 import type { FlaggedMatchEntry } from './matches-scan.service';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { buildShortReason } from './match-short-reason';
-import type { MatchDebugDto } from './match-engine';
+import type {
+  MatchDebugDto,
+  MatchExplainabilityDto,
+  MatchRecommendationDto,
+} from './match-engine';
 
 export interface MatchesApiItemDto {
   matchId: string;
@@ -33,6 +37,10 @@ export interface MatchesApiItemDto {
   updatedAt: string;
   /** Deterministic one-line reason for matches screen. */
   shortReason: string;
+  /** Engine explainability (omitted on older records). */
+  explainability?: MatchExplainabilityDto;
+  /** User-facing recommendation layer (omitted on older records). */
+  recommendation?: MatchRecommendationDto;
   derived?: {
     a: { occupationClass?: string; visibilityNeed?: number; lifeStage?: number };
     b: { occupationClass?: string; visibilityNeed?: number; lifeStage?: number };
@@ -110,6 +118,8 @@ export class MatchesApiController {
         policyVersion: r.policyVersion ?? null,
         updatedAt: r.updatedAt,
         shortReason,
+        ...(r.explainability != null && { explainability: r.explainability }),
+        ...(r.recommendation != null && { recommendation: r.recommendation }),
         ...(r.derived != null && { derived: r.derived }),
         ...(r.dealbreakers != null && { dealbreakers: r.dealbreakers }),
         ...(r.balance != null && { balance: r.balance }),

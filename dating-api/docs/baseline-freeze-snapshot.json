@@ -1,0 +1,32 @@
+{
+  "stage": "BASELINE_FREEZE",
+  "recordedAt": "2025-03-11",
+  "goldenClassificationManifest": "data/golden-pairs.json (20 pairs)",
+  "CORE_KPI": "all 20 golden pairs; pass count = 5",
+  "DIAGNOSTIC_ONLY": [],
+  "ARTIFACT_EXCLUDED": [],
+  "goldenValidationSummary": {
+    "totalPairs": 20,
+    "PASS": 5,
+    "FAIL": 15,
+    "MISSING_PROFILE": 0,
+    "MISSING_MATCH": 0,
+    "recommendation": "SCORING_PROBLEM"
+  },
+  "distributionSanityMetrics": {
+    "P90": 70,
+    "P95": 72,
+    "P99": 77,
+    "count90Plus": "see recompute output",
+    "totalMatches": 210,
+    "avgFinalScore": 48.43
+  },
+  "SPARSE_PROFILE_pairIndices": [5, 6, 9, 10, 16],
+  "SPARSE_PROFILE_pairLabels": [
+    "18↔21 Straight shooter ↔ הישיר/ה",
+    "16↔18 Cynical romantic ↔ Straight shooter",
+    "16↔21 Cynical romantic ↔ הישיר/ה",
+    "18↔8 Straight shooter ↔ Romantic boundaries",
+    "21↔8 הישיר/ה ↔ Romantic boundaries"
+  ]
+}

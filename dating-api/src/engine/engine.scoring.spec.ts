@@ -21,10 +21,10 @@ describe('engine scoring', () => {
   });
 
   describe('compatibility', () => {
-    it('0.35*A_to_B + 0.35*B_to_A + 0.20*relationshipFit + 0.10*valuesAlignment', () => {
+    it('0.35*A_to_B + 0.35*B_to_A + 0.25*relationshipFit + 0.05*valuesAlignment', () => {
       const c = compatibility(80, 80, 60, 70);
-      expect(c).toBe(0.35 * 80 + 0.35 * 80 + 0.2 * 60 + 0.1 * 70);
-      expect(c).toBe(75);
+      expect(c).toBe(0.35 * 80 + 0.35 * 80 + 0.25 * 60 + 0.05 * 70);
+      expect(c).toBe(74.5);
     });
   });
 
@@ -79,10 +79,11 @@ describe('engine scoring', () => {
   });
 
   describe('frictionPenalty', () => {
-    it('capped linear: Math.min(25, friction * 3)', () => {
+    it('capped linear with high-friction softening (friction>=4 => *0.9)', () => {
       expect(frictionPenalty(0)).toBe(0);
-      expect(frictionPenalty(7)).toBe(21);
-      expect(frictionPenalty(10)).toBe(25);
+      expect(frictionPenalty(3)).toBe(9);
+      expect(frictionPenalty(7)).toBeCloseTo(18.9, 10);
+      expect(frictionPenalty(10)).toBe(22.5);
     });
   });
 
@@ -122,8 +123,8 @@ describe('engine scoring', () => {
 
     it('compatibility ≈ 73–75', () => {
       const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
-      expect(c).toBe(75);
-      expect(c).toBeGreaterThanOrEqual(73);
+      expect(c).toBe(74.5);
+      expect(c).toBeGreaterThanOrEqual(74);
     });
     it('coverageFactor = 0.865 when coveragePercent = 55', () => {
       const cf = coverageFactor(coveragePercentValue);
@@ -148,11 +149,11 @@ describe('engine scoring', () => {
     const coveragePercentValue = 70;
     const frictionValue = 7;
 
-    it('finalScore reduced by capped penalty (max 25), not zeroed', () => {
+    it('finalScore reduced by softened high-friction penalty, not zeroed', () => {
       const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
       const cf = coverageFactor(coveragePercentValue);
       const fp = frictionPenalty(frictionValue);
-      expect(fp).toBe(21);
+      expect(fp).toBeCloseTo(18.9, 10);
       const raw = rawScore(c, cf, fp);
       const score = finalScore(raw);
       expect(score).toBeGreaterThanOrEqual(45);
@@ -198,3 +199,4 @@ describe('engine scoring', () => {
     });
   });
 });
+

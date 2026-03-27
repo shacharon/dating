@@ -1,0 +1,15 @@
+{
+  "id": "SPARSE_PATCH_001",
+  "type": "EXTRACTION_BATCH_PATCH",
+  "targetClass": "SPARSE_PROFILE",
+  "touchedProfiles": ["16", "18", "21", "8"],
+  "hypothesis": "Null-only high-evidence recovery for communication/boundaries/stability, anti-materialist language, and quiet/solitude pacing can improve sparse-pair stability.",
+  "successGates": [
+    "CORE_KPI pass count does not decrease",
+    "SPARSE_PROFILE improved pairs > worse pairs",
+    "No obvious collateral damage outside sparse class",
+    "No obvious inflation spike in P95/P99/count(90+)"
+  ],
+  "approved": true,
+  "createdAt": "2025-03-11"
+}

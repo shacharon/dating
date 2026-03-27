@@ -17,10 +17,12 @@ function makeProfile(
   name: string,
   signals: Record<string, number>,
   relationshipFitScore = 50,
+  evaluationStatus?: ProfileJsonPayload['evaluationStatus'],
 ): ProfileJsonPayload {
   return {
     id,
     name,
+    evaluationStatus,
     texts: { aboutMe: '', aboutPartner: '', aboutRelationship: '' },
     evaluation: {
       self: {
@@ -64,14 +66,14 @@ describe('match-engine compare', () => {
     expect(hasAnalyzedSignals(p)).toBe(false);
   });
 
-  it('returns NOT_ANALYZED when either profile has no analyzed signals', () => {
+  it('returns INSUFFICIENT_DATA when either profile has empty self signals (analysis not pending)', () => {
     const analyzed = makeProfile('a', 'A', makeSignals({}));
     const empty = makeProfile('b', 'B', {} as Record<string, number>);
 
     const result = compareWithStatus(analyzed, empty);
-    expect('status' in result ? result.status : 'READY').toBe('NOT_ANALYZED');
-    if ('status' in result && result.status === 'NOT_ANALYZED') {
-      expect(result.message).toBe('Run analyze for both profiles before compare');
+    expect('status' in result ? result.status : 'READY').toBe('INSUFFICIENT_DATA');
+    if ('status' in result && result.status === 'INSUFFICIENT_DATA') {
+      expect(result.message).toContain('empty or non-numeric');
       expect(result.compatibility).toBeNull();
       expect(result.partnerFit).toBeNull();
       expect(result.relationshipFit).toBeNull();
@@ -97,6 +99,8 @@ describe('match-engine compare', () => {
     expect(result).toHaveProperty('coverageFactor');
     expect(result).toHaveProperty('confidence');
     expect(result).toHaveProperty('infoFlags');
+    expect(result.explainability.positiveChips.length).toBeLessThanOrEqual(3);
+    expect(result.explainability.reasonShort.length).toBeGreaterThan(10);
     expect(typeof result.compatibility).toBe('number');
     expect(typeof result.finalScore).toBe('number');
     expect(typeof result.friction).toBe('number');
@@ -107,7 +111,7 @@ describe('match-engine compare', () => {
     expect(result.compatibility).toBeGreaterThanOrEqual(0);
     expect(result.compatibility).toBeLessThanOrEqual(100);
     expect(result.finalScore).toBeGreaterThanOrEqual(0);
-    expect(result.finalScore).toBeLessThanOrEqual(100);
+    expect(result.finalScore).toBeLessThanOrEqual(90);
     expect(result.friction).toBeGreaterThanOrEqual(0);
     expect(result.friction).toBeLessThanOrEqual(10);
     expect(result.coveragePercent).toBeGreaterThanOrEqual(0);
@@ -169,7 +173,6 @@ describe('match-engine compare', () => {
 
     const result = compare(profileA, profileB);
 
-    const totalSignals = COMPATIBILITY_SIGNAL_KEYS.length;
     expect(result.coveragePercent).toBe(100);
   });
 
@@ -268,21 +271,32 @@ describe('match-engine compare', () => {
 /* ─── Focused behavior guards (post-refactor: protect exact paths) ─────────── */
 
 describe('match-engine compare path coverage', () => {
-  it('1. NOT_ANALYZED guard: exact shape when either profile has no analyzed signals', () => {
+  it('1a. NOT_ANALYZED when evaluationStatus is not DONE', () => {
+    const pending = makeProfile('a', 'A', makeSignals({}), 50, 'PENDING');
+    const ready = makeProfile('b', 'B', makeSignals({}), 50);
+
+    const result = compareWithStatus(pending, ready);
+    expect(result).toHaveProperty('status', 'NOT_ANALYZED');
+    const notAnalyzed = result as import('./match-engine').CompareNotAnalyzedResultDto;
+    expect(notAnalyzed.message).toBe('Run analyze for both profiles before compare');
+    expect(notAnalyzed.compatibility).toBeNull();
+  });
+
+  it('1b. INSUFFICIENT_DATA guard: empty self signals when analysis is not pending', () => {
     const analyzed = makeProfile('a', 'A', makeSignals({}));
     const empty = makeProfile('b', 'B', {} as Record<string, number>);
 
     const result = compareWithStatus(analyzed, empty);
 
-    expect(result).toHaveProperty('status', 'NOT_ANALYZED');
-    const notAnalyzed = result as import('./match-engine').CompareNotAnalyzedResultDto;
-    expect(notAnalyzed.message).toBe('Run analyze for both profiles before compare');
-    expect(notAnalyzed.compatibility).toBeNull();
-    expect(notAnalyzed.partnerFit).toBeNull();
-    expect(notAnalyzed.relationshipFit).toBeNull();
-    expect(notAnalyzed.coverage).toBeNull();
-    expect(notAnalyzed.friction).toBeNull();
-    expect(notAnalyzed.overall).toBeNull();
+    expect(result).toHaveProperty('status', 'INSUFFICIENT_DATA');
+    const insufficient = result as import('./match-engine').CompareInsufficientDataResultDto;
+    expect(insufficient.message).toContain('empty or non-numeric');
+    expect(insufficient.compatibility).toBeNull();
+    expect(insufficient.partnerFit).toBeNull();
+    expect(insufficient.relationshipFit).toBeNull();
+    expect(insufficient.coverage).toBeNull();
+    expect(insufficient.friction).toBeNull();
+    expect(insufficient.overall).toBeNull();
   });
 
   it('2. Normal analyzed pair: full coverage, deterministic key fields', () => {
@@ -303,7 +317,7 @@ describe('match-engine compare path coverage', () => {
     expect(result.rawScore).toBeGreaterThanOrEqual(0);
     expect(result.rawScore).toBeLessThanOrEqual(100);
     expect(result.finalScore).toBeGreaterThanOrEqual(0);
-    expect(result.finalScore).toBeLessThanOrEqual(100);
+    expect(result.finalScore).toBeLessThanOrEqual(90);
     expect(result.aToB).toBeLessThanOrEqual(100);
     expect(result.bToA).toBeLessThanOrEqual(100);
     expect(result.compatibility).toBeLessThanOrEqual(100);
@@ -326,7 +340,7 @@ describe('match-engine compare path coverage', () => {
     expect(result.infoFlags).toContain('LOW_COVERAGE');
     expect(result.confidence).toBeLessThan(0.8);
     expect(result.infoFlags).toContain('LOW_CONFIDENCE');
-    expect(result.finalScoreBeforeSparseCalibration).toBeDefined();
+    expect(result.finalScoreBeforeSparseCalibration).toBeUndefined();
   });
 
   it('4. Asymmetry pair: one profile few signals, other many (minPresent <= 6, maxPresent >= 9)', () => {
@@ -367,9 +381,9 @@ describe('match-engine compare path coverage', () => {
     expect(dealbreakerCapPenalty!.amount).toBeGreaterThan(0);
   });
 
-  it('6. Sparse calibration path: coverage <= 55 sets finalScoreBeforeSparseCalibration and applies multiplier', () => {
+  it('6. Low coverage (<=55): score is not multiplied by coverage; flags still set', () => {
     const totalSignals = COMPATIBILITY_SIGNAL_KEYS.length;
-    const numComparable = 7;
+    const numComparable = 6;
     const keys = COMPATIBILITY_SIGNAL_KEYS.slice(0, numComparable);
     const signalsA: Record<string, number> = {};
     const signalsB: Record<string, number> = {};
@@ -385,23 +399,10 @@ describe('match-engine compare path coverage', () => {
     const expectedCoverage = Math.round(100 * (numComparable / totalSignals));
     expect(result.coveragePercent).toBe(expectedCoverage);
     expect(result.coveragePercent).toBeLessThanOrEqual(55);
-    expect(result.finalScoreBeforeSparseCalibration).toBeDefined();
-    expect(result.finalScore).toBeLessThanOrEqual(
-      result.finalScoreBeforeSparseCalibration! + 1,
-    );
-    const sparseMultiplier =
-      result.coveragePercent <= 50
-        ? 0.92 + (result.coveragePercent / 50) * 0.08
-        : 0.94 + ((result.coveragePercent - 50) / 5) * 0.06;
-    expect(result.finalScore).toBe(
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Math.round(result.finalScoreBeforeSparseCalibration! * Math.min(1, sparseMultiplier)),
-        ),
-      ),
-    );
+    expect(result.finalScoreBeforeSparseCalibration).toBeUndefined();
+    expect(result.infoFlags).toContain('LOW_COVERAGE');
+    expect(result.finalScore).toBeGreaterThanOrEqual(0);
+    expect(result.finalScore).toBeLessThanOrEqual(90);
   });
 
   it('7. Directional display inflation path: coverage <= 65 and high directionals get 0.96 scale', () => {

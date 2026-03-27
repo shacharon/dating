@@ -1,6 +1,7 @@
 import {
   COMPATIBILITY_SIGNAL_KEYS,
   TIER1_KEYS,
+  TIER2_KEYS,
   TIER3_KEYS,
   computeCompatibility,
   computeValuesAlignment,
@@ -156,14 +157,8 @@ describe('computeCompatibility', () => {
   });
 
   it('tier definitions cover all signal keys exactly once (plus ambition untiered)', () => {
-    const tiered = new Set([...TIER1_KEYS, ...TIER3_KEYS]);
-    const TIER2_KEYS_LOCAL: readonly SignalKey[] = [
-      'emotionalDepth',
-      'independence',
-      'directness',
-      'socialBattery',
-    ];
-    const all = new Set([...tiered, ...TIER2_KEYS_LOCAL, 'ambition']);
+    const tiered = new Set([...TIER1_KEYS, ...TIER2_KEYS, ...TIER3_KEYS]);
+    const all = new Set([...tiered, 'ambition']);
     expect(all.size).toBe(COMPATIBILITY_SIGNAL_KEYS.length);
     for (const k of COMPATIBILITY_SIGNAL_KEYS) {
       expect(all.has(k)).toBe(true);

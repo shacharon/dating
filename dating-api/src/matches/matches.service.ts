@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
 import { ProfilesJsonService } from '../profiles/profiles-json.service';
 import { compareWithStatus } from './match-engine';
-import type { CompareNotAnalyzedResultDto, CompareResultDto } from './match-engine';
+import type {
+  CompareGuardFailureResultDto,
+  CompareResultDto,
+} from './match-engine';
 import type { MatchListItemDto, MatchRecordDto } from './match.types';
 import { MatchesJsonService } from './matches-json.service';
 
@@ -14,13 +17,13 @@ export interface CompareBodyDto {
   bId: string;
 }
 
-export interface CompareNotAnalyzedMatchDto {
+export interface CompareGuardMatchDto {
   matchId: string;
   aId: string;
   bId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  status: 'NOT_ANALYZED';
+  status: 'NOT_ANALYZED' | 'INSUFFICIENT_DATA';
   message: string;
   compatibility: null;
   partnerFit: null;
@@ -31,9 +34,13 @@ export interface CompareNotAnalyzedMatchDto {
   finalScore: null;
 }
 
+/** @deprecated Use CompareGuardMatchDto */
+export type CompareNotAnalyzedMatchDto = CompareGuardMatchDto;
+
 export type CompareServiceResult =
   | { status: 'READY'; matchId: string; match: MatchRecordDto }
-  | { status: 'NOT_ANALYZED'; matchId: string; match: CompareNotAnalyzedMatchDto };
+  | { status: 'NOT_ANALYZED'; matchId: string; match: CompareGuardMatchDto }
+  | { status: 'INSUFFICIENT_DATA'; matchId: string; match: CompareGuardMatchDto };
 
 /** Deterministic matchId: minId__maxId (lexicographic). */
 function toMatchId(aId: string, bId: string): string {
@@ -62,7 +69,7 @@ export class MatchesService {
     if (!profileA) throw new NotFoundException(`Profile not found: ${aId}`);
     if (!profileB) throw new NotFoundException(`Profile not found: ${bId}`);
 
-    const result: CompareResultDto | CompareNotAnalyzedResultDto = compareWithStatus(
+    const result: CompareResultDto | CompareGuardFailureResultDto = compareWithStatus(
       profileA as ProfileJsonPayload,
       profileB as ProfileJsonPayload,
     );
@@ -79,6 +86,28 @@ export class MatchesService {
           a: { id: profileA.id, name: profileA.name },
           b: { id: profileB.id, name: profileB.name },
           status: 'NOT_ANALYZED',
+          message: result.message,
+          compatibility: null,
+          partnerFit: null,
+          relationshipFit: null,
+          coverage: null,
+          friction: null,
+          overall: null,
+          finalScore: null,
+        },
+      };
+    }
+    if ('status' in result && result.status === 'INSUFFICIENT_DATA') {
+      return {
+        status: 'INSUFFICIENT_DATA',
+        matchId,
+        match: {
+          matchId,
+          aId,
+          bId,
+          a: { id: profileA.id, name: profileA.name },
+          b: { id: profileB.id, name: profileB.name },
+          status: 'INSUFFICIENT_DATA',
           message: result.message,
           compatibility: null,
           partnerFit: null,
@@ -125,6 +154,8 @@ export class MatchesService {
       dealbreakers: compareResult.dealbreakers,
       balance: compareResult.balance,
       debug: compareResult.debug,
+      explainability: compareResult.explainability,
+      recommendation: compareResult.recommendation,
     };
 
     await this.matchesJson.save(record);

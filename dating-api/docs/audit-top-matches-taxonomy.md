@@ -1,6 +1,6 @@
 # Audit: Top dating matches — labels and failure taxonomy
 
-**Scope:** Top 15 pairs by `finalScore` in current `data/matches` (POC run).  
+**Scope:** Top 15 pairs by `finalScore` in current `data/matches` (product run).  
 **Goal:** Label each pair (FAIR / INFLATED / BROKEN), assign failure taxonomy, brief explanation, and summarize recurring patterns. No code changes — inspection only.
 
 ---
