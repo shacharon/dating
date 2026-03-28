@@ -521,17 +521,18 @@ export class EvaluateService {
     ].join('\n');
 
     const requestId = randomUUID();
-    const { value } = await this.llm.completeJSON<RelationshipMotivationResult>({
-      modelKey: 'fast',
-      system: MOTIVATION_SYSTEM_PROMPT,
-      user,
-      schema: RelationshipMotivationResultSchema,
-      temperature: 0.2,
-      maxTokens: 500,
-      timeoutMs: 15_000,
-      requestId,
-      purpose: 'evaluate-motivation',
-    });
+    const { value } =
+      await this.llm.completeJSON<RelationshipMotivationResult>({
+        modelKey: 'fast',
+        system: MOTIVATION_SYSTEM_PROMPT,
+        user,
+        schema: RelationshipMotivationResultSchema,
+        temperature: 0.2,
+        maxTokens: 500,
+        timeoutMs: 15_000,
+        requestId,
+        purpose: 'evaluate-motivation',
+      });
 
     return {
       relationshipMotivation: value.relationshipMotivation,
@@ -613,6 +614,11 @@ export class EvaluateService {
       timeoutMs: 15_000,
       requestId,
       purpose: 'evaluate-attraction-traits',
+      latencyStage: 'eval_traits',
+      inputTextLength:
+        (aboutPartner?.trim().length ?? 0) +
+        (aboutMe?.trim().length ?? 0) +
+        (aboutRelationship?.trim().length ?? 0),
     });
 
     const clampInt = (n: number, lo: number, hi: number) =>
@@ -657,6 +663,8 @@ export class EvaluateService {
     input: EvaluateBatchInput,
   ): Promise<{ ok: true; result: EvaluateBatchResult }> {
     const { aboutMe, aboutRelationship, aboutPartner, profileId, rawInterests } = input;
+    const evalRequestId = randomUUID();
+    const evalStartedAt = Date.now();
 
     const { self, relationship, partner, _usage } =
       await this.extractionService.extractAllThree(
@@ -666,8 +674,40 @@ export class EvaluateService {
         profileId,
       );
 
+    // Start all evaluation LLM calls together (summary + optional extended signals).
+    const displayPromise = this.generateSummaryFromSignals(self, partner, relationship);
+    const extendedSignalsPromise = (async (): Promise<ExtendedSignals | undefined> => {
+      try {
+        const [motivation, attraction] = await Promise.all([
+          this.inferRelationshipMotivation(
+            aboutMe.trim(),
+            aboutPartner.trim(),
+            aboutRelationship.trim(),
+          ),
+          this.inferAttractionTraits(
+            aboutPartner.trim(),
+            aboutMe.trim(),
+            aboutRelationship.trim(),
+          ),
+        ]);
+
+        return {
+          version: 'v1',
+          relationshipMotivation: motivation,
+          attractionTraits: attraction,
+        };
+      } catch (err) {
+        // Extended signals are optional; do not fail the entire evaluation if they fail
+        this.logger.warn(
+          `Extended signals inference failed: ${err instanceof Error ? err.message : String(err)}`,
+          'EvaluateService',
+        );
+        return undefined;
+      }
+    })();
+
     const [display, selfVsPartner, selfVsRelationship] = await Promise.all([
-      this.generateSummaryFromSignals(self, partner, relationship),
+      displayPromise,
       Promise.resolve(
         computeCompatibility(
           self.signals as Parameters<typeof computeCompatibility>[0],
@@ -702,34 +742,16 @@ export class EvaluateService {
         ? DISPLAY_NOTE_LOW_QUALITY
         : undefined;
 
-    // v1 extended signals: run LLM inference for motivation + attraction traits (additive sidecar only)
-    let extendedSignals: ExtendedSignals | undefined;
-    try {
-      const [motivation, attraction] = await Promise.all([
-        this.inferRelationshipMotivation(
-          aboutMe.trim(),
-          aboutPartner.trim(),
-          aboutRelationship.trim(),
-        ),
-        this.inferAttractionTraits(
-          aboutPartner.trim(),
-          aboutMe.trim(),
-          aboutRelationship.trim(),
-        ),
-      ]);
-
-      extendedSignals = {
-        version: 'v1',
-        relationshipMotivation: motivation,
-        attractionTraits: attraction,
-      };
-    } catch (err) {
-      // Extended signals are optional; do not fail the entire evaluation if they fail
-      this.logger.warn(
-        `Extended signals inference failed: ${err instanceof Error ? err.message : String(err)}`,
-        'EvaluateService',
-      );
-    }
+    // Await optional extended signals that started in parallel with summary.
+    const extendedSignals = await extendedSignalsPromise;
+    this.logger.log(
+      JSON.stringify({
+        event: 'eval_parallel_done',
+        durationMs: Date.now() - evalStartedAt,
+        requestId: evalRequestId,
+      }),
+      'EvaluateService',
+    );
 
     // Build display chips (deterministic, read-only, no scoring impact)
     const chips = buildChips(

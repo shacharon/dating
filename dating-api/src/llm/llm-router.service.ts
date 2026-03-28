@@ -15,6 +15,8 @@ export interface RouterCompleteJSONArgs<T> {
   maxTokens?: number;
   requestId: string;
   purpose: string;
+  latencyStage?: 'extraction_partner' | 'eval_traits';
+  inputTextLength?: number;
 }
 
 @Injectable()

@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
-import { ProfilesJsonService } from './profiles-json.service';
+import { ProfilesPrismaService } from './profiles-prisma.service';
 
 export interface ProfilesEvaluateBodyDto {
   id?: string;
@@ -33,7 +33,7 @@ function getErrorMessage(err: unknown): string {
 export class ProfilesController {
   constructor(
     private readonly evaluateService: EvaluateService,
-    private readonly profilesJson: ProfilesJsonService,
+    private readonly profilesStorage: ProfilesPrismaService,
     private readonly logger: SimpleLogger,
   ) {}
 
@@ -77,7 +77,7 @@ export class ProfilesController {
     const evaluation = result.result;
 
     try {
-      await this.profilesJson.save(id, {
+      await this.profilesStorage.save(id, {
         id,
         name,
         texts: {
@@ -88,7 +88,7 @@ export class ProfilesController {
         evaluation,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile to disk';
+      const message = err instanceof Error ? err.message : 'Failed to save profile';
       throw new ServiceUnavailableException(message);
     }
 

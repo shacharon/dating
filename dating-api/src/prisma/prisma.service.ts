@@ -16,7 +16,7 @@ export class PrismaService
     const url = config.get<string>('DATABASE_URL')?.trim();
     if (!url) {
       throw new Error(
-        'DATABASE_URL is missing or empty. Create dating-api/.env with DATABASE_URL (see .env.example).',
+        'DATABASE_URL is missing or empty. Create dating-api/.env with DATABASE_URL.',
       );
     }
     process.env.DATABASE_URL = url;

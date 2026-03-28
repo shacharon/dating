@@ -1,8 +1,30 @@
 import { Injectable, LoggerService } from '@nestjs/common';
-import { appendFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
+import { join, resolve } from 'node:path';
 
-const LOGS_DIR = join(process.cwd(), 'logs');
+function resolveLogsDir(): string {
+  const cwd = process.cwd();
+  const cwdLooksLikeApi = existsSync(join(cwd, 'package.json')) && cwd.endsWith('dating-api');
+  if (cwdLooksLikeApi) {
+    return join(cwd, 'logs');
+  }
+
+  const nestedApiDir = join(cwd, 'dating-api');
+  if (existsSync(join(nestedApiDir, 'package.json'))) {
+    return join(nestedApiDir, 'logs');
+  }
+
+  return join(cwd, 'logs');
+}
+
+const LOGS_DIR = resolveLogsDir();
+const LOG_POINTER_FILE = resolve(process.cwd(), 'LOGS_ARE_HERE.txt');
 
 function getTodayDateString(): string {
   const now = new Date();
@@ -23,6 +45,17 @@ export class SimpleLogger implements LoggerService {
     }
     this.currentDate = getTodayDateString();
     this.currentLogFile = join(LOGS_DIR, 'dating.log');
+    try {
+      // Ensure file exists even before first real log line.
+      appendFileSync(this.currentLogFile, '', 'utf8');
+      writeFileSync(
+        LOG_POINTER_FILE,
+        `BACKEND LOG FILE:\n${this.currentLogFile}\n`,
+        'utf8',
+      );
+    } catch {
+      // Best-effort only; logging continues even if pointer write fails.
+    }
     this.writeLog('=== SERVER STARTED ===');
   }
 

@@ -21,85 +21,106 @@ import { computeConfidenceFromCoverage } from '../engine/signal-post-processing/
 
 const SIGNAL_KEYS_LIST = EXTRACTION_SIGNAL_KEYS.join(', ');
 
-const EXTRACTOR_SYSTEM_PROMPT = `You are a professional psychological profiler extracting exactly the predefined signals for domains: self, relationship, partner.
-Use inference when evidence is specific enough. Prefer a low-confidence score (4–6) over null when weak but real evidence exists.
-Only use null when the text provides absolutely no hint for a signal.
-
-DO NOT carelessly double-count the same vibe across many signals. One phrase or theme can support multiple signals when the text clearly justifies it (e.g. "slow life, mindfulness" supports both lifestylePace and spirituality). Avoid assigning the same vague phrase to many signals; prefer 2–3 well-justified signals per phrase over 5–6 weak ones. Generic phrases like "nice", "good people", "positive vibes", "fun" support at most 1–2 low-confidence signals.
-
+const COMMON_EVIDENCE_RULES = `
 EVIDENCE RULES:
 - Every non-null score MUST have one evidence item: use a short grounded quote or a short grounded paraphrase from the text.
 - Stay grounded in the text; do not invent. Prefer a direct quote when available; a short paraphrase is fine when the text is abstract or indirect.
 - If you cannot point to any textual support for a score, use null for that signal.
-
-When cues are strong and specific, do not return empty signals.
-Aim for 8–12 non-null signals per profile when reasonable textual evidence exists. Minimum 6 when the text provides any meaningful content.
-
-DO NOT create new keys. Use only EXTRACTION_SIGNAL_KEYS. Unknown keys will be dropped.
-
-Signal meanings (official keys only, 1–10 or null). Use the "distinct from" notes to choose the best-fitting signal; when in doubt, assign the signal that fits best rather than leaving null.
-
-CORE RELATIONSHIP / EMOTIONAL (keep distinct):
-- emotionalDepth: how much someone VALUES emotional depth and vulnerability in a relationship (importance of deep feelings, sharing, being open). Distinct from: attachmentSecurity (style of bonding); emotionalDepth is about value, not behavior.
-- attachmentSecurity: secure vs anxious/avoidant attachment style; how comfortably they bond and trust. Distinct from: emotionalDepth (value placed on depth); attachment is style of connecting.
-- relationshipClarity: clarity about relationship goals and expectations (e.g. long-term, marriage, casual). Distinct from: traditionalism (values/convention); this is what kind of relationship they want.
-
-COMMUNICATION / STYLE:
-- directness: how directly someone communicates day-to-day (direct vs indirect, clear vs subtle). Distinct from: conflict behavior (not a signal yet).
-- independence: need for autonomy and space; self-sufficiency. Distinct from: socialBattery (social vs alone); independence is about space/autonomy.
-
-LIFESTYLE / PACE:
-- socialBattery: preference for social vs solitary time; recharge alone vs with people. Distinct from: lifestylePace (speed of life); socialBattery is quantity of social interaction.
-- lifestylePace: slow (low) ↔ fast-paced life (high); busy vs calm. Distinct from: socialBattery; pace is speed/activity level.
-- ambition: drive, competitiveness, achievement orientation.
-
-BODY / HEALTH / MONEY / VALUES:
-- healthBodyConsciousness: focus on fitness, health, body.
-- physicalPriority: importance of physical attraction and appearance.
-- financialMindset: attitudes toward money, wealth, material success. (PROTECTED — see cue list below.)
-- traditionalism: traditional vs non-traditional values. (PROTECTED — see cue list below.)
-- spirituality: importance of meaning, spirituality, inner life.
-- statusOrientation: focus on social status, prestige, image. (PROTECTED — see cue list below.)
-
-INFERENCE EXAMPLES (apply when evidence is strong and specific):
-1. "respects boundaries" / "needs space" → independence >= 7, directness >= 6
-2. "not into heavy partying" / "not a party person" → socialBattery <= 5, lifestylePace <= 6
-3. "shared habits" / "supporting growth" / "grow together" → relationshipClarity >= 7
-4. "training" / "gym" / "sleep + food discipline" → healthBodyConsciousness >= 8
-5. "quiet home" / "no drama" / "homebody" → lifestylePace <= 4
-6. "guided by stars" / "retreat" / "meditation" → spirituality >= 8
-7. "quiet" / "village" / "nature" / "cats" / "trees" → socialBattery <= 4, lifestylePace <= 4
-8. "startup" / "career" / "ambitious" / "driven" → ambition >= 7
-9. "clear communication" / "honest" / "direct" → directness >= 7
-10. "needs space" / "independence" / "autonomy" → independence >= 7
-11. "family oriented" / "long-term" / "serious relationship" → relationshipClarity >= 7
-12. "fitness" / "yoga" / "healthy eating" → healthBodyConsciousness >= 7
-
-PRIORITY SIGNALS — always try to score when any textual evidence exists (prefer a low-confidence value over null):
-lifestylePace, independence, socialBattery, relationshipClarity, directness, emotionalDepth, healthBodyConsciousness
-
-PROTECTED SIGNALS — NEVER infer unless the text explicitly contains cues from the cue list below. If no cue is present, use null.
-
-- financialMindset — ONLY score when text explicitly mentions at least one of: money, save, saving, spend, spending, invest, investment, wealth, rich, budget, financially, salary, income, cost, afford, debt, frugal, splurge, financial goals, material success.
-- statusOrientation — ONLY score when text explicitly mentions at least one of: status, image, prestige, elite, high society, dress code, etiquette, appearance (in social/professional context), class, luxury brand, how we present, social standing, reputation.
-- traditionalism — ONLY score when text explicitly mentions at least one of: traditional, tradition, values, family values, kosher, religious, marriage, conventional, conservative (values), ceremony, how we do things, old-fashioned, modern (contrasted with traditional).
-
-SHADOW SIGNALS (extract when evidence exists; do not use for scoring; 1–10 or null):
-- intellectualCuriosity: drive to learn, explore ideas, ask questions, engage with complex topics. Trigger phrases: "curious", "love learning", "read", "books", "deep conversations", "interested in", "explore", "always asking", "intellectual", "discuss ideas". Distinct from: emotionalDepth (value on emotional openness); intellectualCuriosity is about ideas and learning, not feelings.
-- conflictStyle: how someone handles disagreement and conflict repair. 1 = avoidant/shutdown, 5 = collaborative/calm discussion, 10 = confrontational/hash-it-out. Trigger phrases: "talk things through", "no drama", "don't like confrontation", "hash it out", "need time to cool off", "avoid conflict", "direct when we disagree", "prefer to discuss calmly", "need space when upset". Distinct from: directness (day-to-day communication); conflictStyle is behavior under disagreement/stress.
-- noveltyVsRoutine: preference for novelty/spontaneity vs routine/predictability in daily life and plans. 1 = routine/predictability, 5 = balanced, 10 = novelty/spontaneity. LOW (1-4) triggers: "routine person", "need predictability", "settled", "same place", "structured week", "plan everything", "consistent schedule", "creature of habit", "like knowing what to expect". HIGH (7-10) triggers: "spontaneous", "trying new things", "adventure", "variety", "explore", "change it up", "flexible plans", "last-minute trips", "freelance", "no 9-to-5", "always something new", "surprise me", "go with the flow", "never the same". MID (4-6) triggers: "balanced", "mix of routine and new", "structured but flexible", "some spontaneity", "planned adventures". Distinct from: lifestylePace (speed); noveltyVsRoutine is content preference (same vs new).
-- structureChaosTolerance: tolerance for mess/unpredictability vs need for order/clarity. 1 = needs structure/order, 5 = balanced, 10 = chaos-tolerant/flexible. Trigger phrases: "organized", "need order", "mess doesn't bother me", "go with the flow", "structured", "flexible with plans", "clean home matters", "organized chaos", "last-minute plans are fine", "tidy", "spontaneous plans". Distinct from: lifestylePace (speed), noveltyVsRoutine (same vs new); structureChaosTolerance is about order/mess and plan rigidity.
-
-Return JSON only. No explanations.
-Signals (use exactly these keys, integer 1–10 or null): ${SIGNAL_KEYS_LIST}
-Evidence: for every non-null score, one item { "signal": "<key>", "quote": "<short grounded quote or paraphrase from the text>" }. Max 22 items.
-Confidence: decimal in range 0 to 1 inclusive (0..1). E.g. 0.3, 0.5, 0.8. Do not use values outside 0..1.
-Output: { "domain": "self|partner|relationship", "signals": { "<key>": number|null, ... }, "evidence": [...], "confidence": number (0..1), "version": "v1" }
 `;
 
-/** Short hash of system prompt for debug logs. */
+const SELF_EXTRACTOR_PROMPT = `Extract psychological signals about the person.
+
+Rules:
+- Use inference when clear.
+- Prefer low score (4–6) over null if weak evidence exists.
+- Null only if no hint at all.
+- Aim for 6–9 non-null signals.
+
+Signals (1–10 or null):
+emotionalDepth, attachmentSecurity, independence, directness, ambition, lifestylePace, socialBattery, spirituality, healthBodyConsciousness
+
+Quick inference:
+- "needs space" → independence >= 7
+- "not into partying" → socialBattery <= 5
+- "gym"/"training" → healthBodyConsciousness >= 8
+- "career"/"ambitious" → ambition >= 7
+
+Shadow (only if clear):
+intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance
+
+Output JSON only:
+{ "domain": "self", "signals": {...}, "evidence": [...], "confidence": number, "version": "v1" }
+
+Evidence:
+- 1 short quote/paraphrase per signal
+- max 10 items
+`;
+
+const RELATIONSHIP_EXTRACTOR_PROMPT = `Extract relationship expectations.
+
+Rules:
+- Use inference when clear.
+- Prefer low score (4–6) over null.
+- Aim for 3–4 signals.
+
+Signals:
+relationshipClarity, emotionalDepth, traditionalism, spirituality
+
+Protected:
+- traditionalism ONLY if explicit (traditional, family values, marriage, religious)
+
+Quick inference:
+- "long-term"/"family" → relationshipClarity >= 7
+- "meditation" → spirituality >= 8
+
+Output JSON only:
+{ "domain": "relationship", "signals": {...}, "evidence": [...], "confidence": number, "version": "v1" }
+
+Evidence:
+- max 5 items
+`;
+
+const PARTNER_EXTRACTOR_PROMPT = `Extract partner preferences.
+
+Rules:
+- Use inference when clear.
+- Prefer low score (4–6) over null.
+- Aim for 4–6 signals.
+
+Signals:
+relationshipClarity, emotionalDepth, traditionalism, lifestylePace, socialBattery, physicalPriority
+
+Protected:
+- traditionalism ONLY if explicit
+
+Quick inference:
+- "wants kids"/"family" → relationshipClarity >= 7
+- "quiet/homebody" → lifestylePace <= 4
+
+Shadow (if clear):
+intellectualCuriosity, conflictStyle
+
+Output JSON only:
+{ "domain": "partner", "signals": {...}, "evidence": [...], "confidence": number, "version": "v1" }
+
+Evidence:
+- max 8 items
+`;
+
+function getSystemPromptForDomain(domain: ExtractionDomain): string {
+  switch (domain) {
+    case 'self':
+      return SELF_EXTRACTOR_PROMPT;
+    case 'relationship':
+      return RELATIONSHIP_EXTRACTOR_PROMPT;
+    case 'partner':
+      return PARTNER_EXTRACTOR_PROMPT;
+  }
+}
+
+/** Short hash of legacy system prompt for debug logs (kept for backward compat). */
 const SYSTEM_PROMPT_HASH = createHash('sha256')
-  .update(EXTRACTOR_SYSTEM_PROMPT)
+  .update(SELF_EXTRACTOR_PROMPT)
   .digest('hex')
   .slice(0, 12);
 
@@ -143,7 +164,7 @@ export class ExtractionService {
   constructor(
     private readonly llm: LLMRouterService,
     private readonly logger: SimpleLogger,
-  ) {}
+  ) { }
 
   /**
    * Build output from allowlist only. Round to int, enforce 1–10 or null. Evidence filtered to official keys; alias rewritten to official.
@@ -256,12 +277,15 @@ export class ExtractionService {
 
   /** Stage 2: Run first LLM extraction call. */
   private async runFirstLlmExtractionCall(
+    domain: ExtractionDomain,
     userPrompt: string,
     requestId: string,
+    inputTextLength: number,
   ): Promise<{ value: Record<string, unknown>; rawText: string | null; usage: unknown }> {
+    const systemPrompt = getSystemPromptForDomain(domain);
     const { value, rawText, usage } = await this.llm.completeJSON<Record<string, unknown>>({
       modelKey: 'fast',
-      system: EXTRACTOR_SYSTEM_PROMPT,
+      system: systemPrompt,
       user: userPrompt,
       schema: z.any(),
       temperature: 0.1,
@@ -269,6 +293,10 @@ export class ExtractionService {
       timeoutMs: 120_000,
       requestId,
       purpose: 'extraction',
+      ...(domain === 'partner' && {
+        latencyStage: 'extraction_partner' as const,
+        inputTextLength,
+      }),
     });
     return { value, rawText, usage };
   }
@@ -382,9 +410,9 @@ export class ExtractionService {
     const pid = profileId ?? requestId;
     this.logger.log(
       `[AnalyzeCost] profile=${pid} domain=${domain} model=gpt-4o-mini ` +
-        `promptTokens=${usageWithDuration.promptTokens} completionTokens=${usageWithDuration.completionTokens} ` +
-        `tokens=${usageWithDuration.totalTokens} cost=$${usageWithDuration.estimatedCostUSD.toFixed(5)} ` +
-        `duration=${usageWithDuration.durationMs}ms`,
+      `promptTokens=${usageWithDuration.promptTokens} completionTokens=${usageWithDuration.completionTokens} ` +
+      `tokens=${usageWithDuration.totalTokens} cost=$${usageWithDuration.estimatedCostUSD.toFixed(5)} ` +
+      `duration=${usageWithDuration.durationMs}ms`,
       ExtractionService.name,
     );
     return result;
@@ -399,12 +427,15 @@ export class ExtractionService {
       userPrompt,
       requestId,
       extractStart,
+      inputText,
       accUsage: initialAccUsage,
     } = this.buildRequestMetadata(domain, text);
 
     const { value, rawText, usage } = await this.runFirstLlmExtractionCall(
+      domain,
       userPrompt,
       requestId,
+      inputText.length,
     );
 
     const parsed = parseOpenAIUsage(usage);
@@ -518,11 +549,31 @@ export class ExtractionService {
     partner: ExtractedSignals;
     _usage: LLMUsageStats;
   }> {
+    const extractStartedAt = Date.now();
+    const batchRequestId = randomUUID();
+
     const [self, relationship, partner] = await Promise.all([
       this.extract('self', aboutMe.trim(), profileId),
       this.extract('relationship', aboutRelationship.trim(), profileId),
       this.extract('partner', aboutPartner.trim(), profileId),
     ]);
+
+    const durations = {
+      self: self._usage?.durationMs ?? 0,
+      relationship: relationship._usage?.durationMs ?? 0,
+      partner: partner._usage?.durationMs ?? 0,
+      totalMs: Date.now() - extractStartedAt,
+    };
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'extract_split_done',
+        durations,
+        requestId: batchRequestId,
+      }),
+      ExtractionService.name,
+    );
+
     const _usage = [self, relationship, partner].reduce(
       (acc, s) => mergeUsage(acc, s._usage ?? emptyUsage()),
       emptyUsage(),

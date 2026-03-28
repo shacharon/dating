@@ -15,4 +15,62 @@ model UserProfile {
   aboutRelationship String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  evaluation        ProfileEvaluation?
+  evaluationRaw     ProfileEvaluationRaw?
+  signalSnapshots   ProfileSignalSnapshot[]
+}
+
+model ProfileEvaluation {
+  id            String   @id @default(uuid())
+  profileId     String   @unique
+  evaluatedAt   DateTime?
+  promptVersion String?
+  policyVersion String?
+  textHash      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model ProfileEvaluationRaw {
+  id         String   @id @default(uuid())
+  profileId  String   @unique
+  evaluation Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model ProfileSignalSnapshot {
+  id                       String   @id @default(uuid())
+  profileId                String
+  domain                   String
+  ambition                 Float?
+  socialBattery            Float?
+  healthBodyConsciousness  Float?
+  emotionalDepth           Float?
+  attachmentSecurity       Float?
+  directness               Float?
+  independence             Float?
+  traditionalism           Float?
+  financialMindset         Float?
+  relationshipClarity      Float?
+  spirituality             Float?
+  lifestylePace            Float?
+  physicalPriority         Float?
+  statusOrientation        Float?
+  intellectualCuriosity    Float?
+  conflictStyle            Float?
+  noveltyVsRoutine         Float?
+  structureChaosTolerance  Float?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, domain])
+  @@index([profileId])
+  @@index([domain])
 }

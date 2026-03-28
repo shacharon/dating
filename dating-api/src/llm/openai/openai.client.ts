@@ -10,6 +10,23 @@ import type { LLMConfig } from '../llm.config';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_TOKENS = 4096;
 const OPENAI_DEBUG_RAW = process.env.OPENAI_DEBUG_RAW === '1';
+type LatencyStage = 'extraction_partner' | 'eval_traits';
+
+interface FetchTiming {
+  tOpenaiRequestSent: number;
+  tFirstByte: number;
+}
+
+interface StageLatencySnapshot {
+  stage: LatencyStage;
+  totalMs: number;
+  ttfbMs: number;
+  generationMs: number;
+  promptTokens: number;
+  completionTokens: number;
+  tokens: number;
+  inputSize: number;
+}
 
 /** Safe shape dump for raw SDK response: top-level keys + candidate field previews (no secrets, no full payload). */
 function summarizeOpenAIResponse(res: unknown): Record<string, unknown> {
@@ -276,11 +293,37 @@ function debugLogResponse(
 export class OpenAIClient implements LLMClient {
   private readonly logger = new Logger(OpenAIClient.name);
   private readonly client: OpenAI;
+  private readonly fetchTimingByRequestId = new Map<string, FetchTiming>();
+  private readonly stageSnapshots = new Map<LatencyStage, StageLatencySnapshot>();
 
   constructor(private readonly config: LLMConfig) {
+    const baseFetch: typeof fetch = (...args) => fetch(...args);
+    const instrumentedFetch = async (input: unknown, init?: unknown) => {
+      const requestHeaders = new Headers(
+        (init &&
+        typeof init === 'object' &&
+        'headers' in init
+          ? (init as { headers?: HeadersInit }).headers
+          : undefined) ?? {},
+      );
+      const requestId =
+        requestHeaders.get('x-request-id') ??
+        requestHeaders.get('x-codex-request-id');
+      const sentAt = Date.now();
+      const response = await baseFetch(input as Parameters<typeof fetch>[0], init as Parameters<typeof fetch>[1]);
+      const firstByteAt = Date.now();
+      if (requestId) {
+        this.fetchTimingByRequestId.set(requestId, {
+          tOpenaiRequestSent: sentAt,
+          tFirstByte: firstByteAt,
+        });
+      }
+      return response;
+    };
     this.client = new OpenAI({
       apiKey: config.openai.apiKey,
       baseURL: config.openai.baseURL,
+      fetch: instrumentedFetch as typeof fetch,
     });
   }
 
@@ -297,6 +340,8 @@ export class OpenAIClient implements LLMClient {
       maxTokens = DEFAULT_MAX_TOKENS,
       requestId,
       purpose,
+      latencyStage,
+      inputTextLength,
     } = args;
 
     const run = async (): Promise<CompleteJSONResult<T>> => {
@@ -316,7 +361,13 @@ export class OpenAIClient implements LLMClient {
             max_completion_tokens: maxTokens,
             // temperature omitted: this model only supports default (1).
           },
-          { signal: controller.signal },
+          {
+            signal: controller.signal,
+            headers: {
+              'x-request-id': requestId,
+              'x-codex-request-id': requestId,
+            },
+          },
         );
 
         clearTimeout(timeout);
@@ -396,7 +447,122 @@ export class OpenAIClient implements LLMClient {
           throw err;
         }
       }
-      const latencyMs = Date.now() - start;
+      const end = Date.now();
+      const latencyMs = end - start;
+      const usageObj = (result.usage as
+        | {
+            prompt_tokens?: unknown;
+            completion_tokens?: unknown;
+            total_tokens?: unknown;
+          }
+        | undefined) ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+      const promptTokens =
+        typeof usageObj.prompt_tokens === 'number' ? usageObj.prompt_tokens : 0;
+      const completionTokens =
+        typeof usageObj.completion_tokens === 'number'
+          ? usageObj.completion_tokens
+          : 0;
+      const totalTokens =
+        typeof usageObj.total_tokens === 'number'
+          ? usageObj.total_tokens
+          : promptTokens + completionTokens;
+      const fetchTiming = this.fetchTimingByRequestId.get(requestId);
+      const tOpenaiRequestSent = fetchTiming?.tOpenaiRequestSent ?? start;
+      const tFirstByte = fetchTiming?.tFirstByte ?? end;
+      const ttfbMs = Math.max(0, tFirstByte - tOpenaiRequestSent);
+      const generationMs = Math.max(0, end - tFirstByte);
+      const stage = latencyStage;
+      const isTargetStage = stage === 'extraction_partner' || stage === 'eval_traits';
+
+      if (isTargetStage) {
+        this.logger.log(
+          JSON.stringify({
+            event: 'llm_timing_breakdown',
+            stage,
+            requestId,
+            purpose,
+            model,
+            t_request_start: new Date(start).toISOString(),
+            t_openai_request_sent: new Date(tOpenaiRequestSent).toISOString(),
+            t_first_byte: new Date(tFirstByte).toISOString(),
+            t_response_end: new Date(end).toISOString(),
+            total_duration_ms: latencyMs,
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            input_text_length: inputTextLength ?? user.length,
+            system_prompt_length: system.length,
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        );
+        this.logger.log(
+          JSON.stringify({
+            event: 'llm_latency_breakdown',
+            stage,
+            totalMs: latencyMs,
+            ttfbMs,
+            generationMs,
+            tokens: totalTokens,
+            inputSize: inputTextLength ?? user.length,
+          }),
+        );
+
+        this.stageSnapshots.set(stage, {
+          stage,
+          totalMs: latencyMs,
+          ttfbMs,
+          generationMs,
+          promptTokens,
+          completionTokens,
+          tokens: totalTokens,
+          inputSize: inputTextLength ?? user.length,
+        });
+
+        const extraction = this.stageSnapshots.get('extraction_partner');
+        const traits = this.stageSnapshots.get('eval_traits');
+        if (extraction && traits) {
+          const largerPromptStage =
+            extraction.promptTokens >= traits.promptTokens
+              ? 'extraction_partner'
+              : 'eval_traits';
+          const longerGenerationStage =
+            extraction.generationMs >= traits.generationMs
+              ? 'extraction_partner'
+              : 'eval_traits';
+          const networkDelta = Math.abs(extraction.ttfbMs - traits.ttfbMs);
+          const generationDelta = Math.abs(
+            extraction.generationMs - traits.generationMs,
+          );
+          const promptDelta = Math.abs(
+            extraction.promptTokens - traits.promptTokens,
+          );
+          let bottleneck = 'mixed';
+          if (networkDelta > generationDelta && networkDelta > 250) {
+            bottleneck = 'network_or_upstream_queue';
+          } else if (
+            longerGenerationStage === largerPromptStage &&
+            promptDelta > 80
+          ) {
+            bottleneck = 'payload_size_or_model_compute';
+          } else if (generationDelta > 250) {
+            bottleneck = 'model_generation';
+          }
+
+          this.logger.log(
+            JSON.stringify({
+              event: 'llm_latency_comparison',
+              extraction_partner: extraction,
+              eval_traits: traits,
+              largerPromptStage,
+              longerServerProcessingStage: longerGenerationStage,
+              detectedDelaySource: bottleneck,
+            }),
+          );
+          this.stageSnapshots.clear();
+        }
+      }
+
+      this.fetchTimingByRequestId.delete(requestId);
       this.logger.log(
         `requestId=${requestId} purpose=${purpose} model=${model} provider=openai latencyMs=${latencyMs} ok=true`,
       );
@@ -406,6 +572,7 @@ export class OpenAIClient implements LLMClient {
       this.logger.log(
         `requestId=${requestId} purpose=${purpose} model=${model} provider=openai latencyMs=${latencyMs} ok=false`,
       );
+      this.fetchTimingByRequestId.delete(requestId);
       throw err;
     }
   }

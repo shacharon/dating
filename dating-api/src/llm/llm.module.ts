@@ -14,7 +14,15 @@ import type { LLMClient } from './interfaces/llm-client';
   providers: [
     {
       provide: LLM_CONFIG,
-      useFactory: (): LLMConfig => loadLLMConfig(),
+      useFactory: (): LLMConfig => {
+        const config = loadLLMConfig();
+        if (!config.openai.apiKey) {
+          throw new Error(
+            'Missing OPENAI_API_KEY. Set it in dating-api/.env before starting the API.',
+          );
+        }
+        return config;
+      },
     },
     {
       provide: OPENAI_LLM_CLIENT,
