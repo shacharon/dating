@@ -22,7 +22,10 @@ const SECTIONS = [
 interface ExtractionEvidenceItem {
   signal: string;
   quote: string;
+  reason?: string;
 }
+
+type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
 
 interface ExtractedSignals {
   domain: string;
@@ -31,6 +34,7 @@ interface ExtractedSignals {
   version: string;
   confidence: number;
   notes?: string;
+  domainStatus?: ExtractionDomainQualityStatus;
 }
 
 interface EvaluateBatchResult {
@@ -44,6 +48,15 @@ type SectionId = (typeof SECTIONS)[number]['id'];
 
 function formatSignalKey(key: string): string {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
+}
+
+function formatDomainConfidence(s: ExtractedSignals): string {
+  if (s.domainStatus === 'LOW_DATA' || s.domainStatus === 'UNRELIABLE') {
+    return 'Insufficient data';
+  }
+  const nonNull = Object.values(s.signals).filter((v) => v != null).length;
+  if (!s.domainStatus && nonNull < 2) return 'Insufficient data';
+  return `${(s.confidence * 100).toFixed(0)}%`;
 }
 
 export default function EvaluatePage() {
@@ -157,7 +170,10 @@ export default function EvaluatePage() {
         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
           {title}
           <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-            confidence {(data.confidence * 100).toFixed(0)}%
+            {(() => {
+              const c = formatDomainConfidence(data);
+              return c.includes('%') ? `confidence ${c}` : c;
+            })()}
           </span>
         </h2>
         <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
@@ -178,13 +194,24 @@ export default function EvaluatePage() {
             <h3 className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Evidence
             </h3>
-            <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {data.evidence.map((e, i) => (
-                <li key={i}>
-                  <span className="font-medium">{formatSignalKey(e.signal)}:</span>{' '}
-                  &ldquo;{e.quote}&rdquo;
-                </li>
-              ))}
+            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {data.evidence.map((e, i) => {
+                const score = data.signals[e.signal];
+                return (
+                  <li key={i}>
+                    <span className="font-medium">{formatSignalKey(e.signal)}</span>
+                    {score != null && (
+                      <span className="text-zinc-500 dark:text-zinc-500"> / {score}</span>
+                    )}
+                    <span className="block">&ldquo;{e.quote}&rdquo;</span>
+                    {e.reason ? (
+                      <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                        {e.reason}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

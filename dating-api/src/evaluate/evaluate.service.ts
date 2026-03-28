@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ExtractionService } from '../extraction/extraction.service';
 import type { ExtractedSignals, LLMUsageStats } from '../extraction/extracted-signals.interface';
-import { OFFICIAL_EXTRACTION_SIGNAL_KEYS } from '../extraction/extracted-signals.interface';
+import {
+  OFFICIAL_EXTRACTION_SIGNAL_KEYS,
+  effectiveDomainQualityStatus,
+} from '../extraction/extracted-signals.interface';
 import type { RawInterests } from '../extraction/extracted-interests.interface';
 import { LLMRouterService } from '../llm/llm-router.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
@@ -289,6 +292,44 @@ export type EvaluateFlag =
 
 export type { ProductScores } from '../domain/scoring/product-scores.types';
 
+/** UI-safe product score cell: numeric value or withheld (do not show as 0%). */
+export type ProductScorePresentationValue =
+  | { kind: 'numeric'; value: number }
+  | { kind: 'insufficient_data' };
+
+export interface ProductScoresPresentation {
+  partnerFitScore: ProductScorePresentationValue;
+  relationshipFitScore: ProductScorePresentationValue;
+  coverageScore: ProductScorePresentationValue;
+  frictionRiskScore: ProductScorePresentationValue;
+  overallDecisionScore: ProductScorePresentationValue;
+}
+
+function buildProductScoresPresentation(
+  scores: ProductScores,
+  self: ExtractedSignals,
+  partner: ExtractedSignals,
+  relationship: ExtractedSignals,
+): ProductScoresPresentation {
+  const sOk = effectiveDomainQualityStatus(self) === 'OK';
+  const pOk = effectiveDomainQualityStatus(partner) === 'OK';
+  const rOk = effectiveDomainQualityStatus(relationship) === 'OK';
+
+  const num = (v: number): ProductScorePresentationValue => ({
+    kind: 'numeric',
+    value: Math.round(v),
+  });
+  const ins: ProductScorePresentationValue = { kind: 'insufficient_data' };
+
+  return {
+    partnerFitScore: sOk && pOk ? num(scores.partnerFitScore) : ins,
+    relationshipFitScore: sOk && rOk ? num(scores.relationshipFitScore) : ins,
+    coverageScore: sOk && pOk && rOk ? num(scores.coverageScore) : ins,
+    frictionRiskScore: num(scores.frictionRiskScore),
+    overallDecisionScore: sOk && pOk && rOk ? num(scores.overallDecisionScore) : ins,
+  };
+}
+
 /** v1 extended signals: additive sidecar under evaluation.extendedSignals. */
 export interface ExtendedSignals {
   version: 'v1';
@@ -402,6 +443,8 @@ export interface EvaluateBatchResult {
     note?: string;
   };
   productScores: ProductScores;
+  /** Display mapping: use instead of raw productScores when rendering (avoids false zeros). */
+  productScoresPresentation: ProductScoresPresentation;
   flags: EvaluateFlag[];
   _usage?: LLMUsageStats;
   /** v1 extended signals: additive sidecar, does not affect scoring. */
@@ -736,6 +779,12 @@ export class EvaluateService {
       selfVsPartner,
       selfVsRelationship,
     );
+    const productScoresPresentation = buildProductScoresPresentation(
+      productScores,
+      self,
+      partner,
+      relationship,
+    );
 
     const displayNote =
       flags.includes('LOW_COVERAGE') || flags.includes('LOW_CONFIDENCE')
@@ -778,6 +827,7 @@ export class EvaluateService {
           ...(displayNote && { note: displayNote }),
         },
         productScores,
+        productScoresPresentation,
         flags,
         _usage,
         ...(extendedSignals && { extendedSignals }),

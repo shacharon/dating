@@ -302,6 +302,7 @@ export function applyTextInference(
       evidence.push({
         signal: inf.signal,
         quote: `inferred: ${rule.id}`,
+        reason: 'Heuristic text pattern',
         note: 'text-inference',
       });
       ruleFired = true;
@@ -321,6 +322,7 @@ export function applyTextInference(
       evidence.push({
         signal: 'directness',
         quote: 'inferred: authenticity_not_a_mask',
+        reason: 'Phrase implies direct communication',
         note: 'text-inference',
       });
       coverageNotes.push('"not a mask" => directness>=6');

@@ -27,7 +27,9 @@ function mockExtracted(domain: 'self' | 'partner' | 'relationship', confidence: 
   return {
     domain,
     signals,
-    evidence: keys.slice(0, nonNullCount).map((signal) => ({ signal, quote: 'quote' })),
+    evidence: keys
+      .slice(0, nonNullCount)
+      .map((signal) => ({ signal, quote: 'quote', reason: 'Synthetic test reason' })),
     version: 'v1',
     confidence,
   };
@@ -168,7 +170,46 @@ describe('EvaluateService', () => {
     expect(result.productScores.overallDecisionScore).toBeLessThanOrEqual(100);
     expect(result.productScores.policyVersion).toBe('product-score-v1');
 
+    expect(result.productScoresPresentation).toBeDefined();
+    expect(result.productScoresPresentation.partnerFitScore.kind).toBe('numeric');
+    expect(result.productScoresPresentation.relationshipFitScore.kind).toBe('numeric');
+    expect(result.productScoresPresentation.coverageScore.kind).toBe('numeric');
+    expect(result.productScoresPresentation.frictionRiskScore.kind).toBe('numeric');
+    expect(result.productScoresPresentation.overallDecisionScore.kind).toBe('numeric');
+
     expect(Array.isArray(result.flags)).toBe(true);
+  });
+
+  it('productScoresPresentation withholds fit and aggregate scores when a domain is not OK', async () => {
+    const self = mockExtracted('self', 0.7, 10);
+    const partner = mockExtracted('partner', 0.4, 1);
+    const relationship = mockExtracted('relationship', 0.7, 8);
+    jest.spyOn(extractionService, 'extractAllThree').mockResolvedValue({
+      self,
+      partner,
+      relationship,
+    });
+    llmCompleteJSON.mockResolvedValue({
+      value: { summary: 'Summary.', insight: 'Insight.' },
+    });
+
+    const { result } = await service.evaluateBatch({
+      aboutMe: 'x',
+      aboutRelationship: 'y',
+      aboutPartner: 'z',
+    });
+
+    expect(result.productScores.partnerFitScore).toBeGreaterThanOrEqual(0);
+    expect(result.productScoresPresentation.partnerFitScore).toEqual({
+      kind: 'insufficient_data',
+    });
+    expect(result.productScoresPresentation.coverageScore).toEqual({
+      kind: 'insufficient_data',
+    });
+    expect(result.productScoresPresentation.overallDecisionScore).toEqual({
+      kind: 'insufficient_data',
+    });
+    expect(result.productScoresPresentation.frictionRiskScore.kind).toBe('numeric');
   });
 
   it('productScores are deterministic for same extracted inputs', async () => {

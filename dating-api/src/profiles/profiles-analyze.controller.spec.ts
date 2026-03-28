@@ -14,7 +14,7 @@ function mockEvalResult(overrides?: { summary?: string }): EvaluateBatchResult {
     self: {
       domain: 'self',
       signals: { ambition: 8, socialBattery: 6, emotionalDepth: 7 },
-      evidence: [{ signal: 'ambition', quote: 'driven' }],
+      evidence: [{ signal: 'ambition', quote: 'driven', reason: 'Shows ambition drive' }],
       version: 'v1',
       confidence: 0.7,
     },
@@ -57,6 +57,13 @@ function mockEvalResult(overrides?: { summary?: string }): EvaluateBatchResult {
       overallDecisionScore: 40,
       policyVersion: 'product-score-v1',
     },
+    productScoresPresentation: {
+      partnerFitScore: { kind: 'insufficient_data' },
+      relationshipFitScore: { kind: 'insufficient_data' },
+      coverageScore: { kind: 'insufficient_data' },
+      frictionRiskScore: { kind: 'numeric', value: 0 },
+      overallDecisionScore: { kind: 'insufficient_data' },
+    },
     flags: [],
   } as EvaluateBatchResult;
 }
@@ -79,6 +86,13 @@ function mockEvalResultUnanalyzed(): EvaluateBatchResult {
       frictionRiskScore: 0,
       overallDecisionScore: 40,
       policyVersion: 'product-score-v1',
+    },
+    productScoresPresentation: {
+      partnerFitScore: { kind: 'insufficient_data' },
+      relationshipFitScore: { kind: 'insufficient_data' },
+      coverageScore: { kind: 'insufficient_data' },
+      frictionRiskScore: { kind: 'numeric', value: 0 },
+      overallDecisionScore: { kind: 'insufficient_data' },
     },
     flags: [],
   } as EvaluateBatchResult;

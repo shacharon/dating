@@ -30,14 +30,22 @@ interface ProfileListItem {
 interface ExtractionEvidenceItem {
   signal: string;
   quote: string;
+  reason?: string;
 }
+
+type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
 
 interface ExtractedSignals {
   domain: string;
   signals: Record<string, number | null>;
   evidence: ExtractionEvidenceItem[];
   confidence: number;
+  domainStatus?: ExtractionDomainQualityStatus;
 }
+
+type ProductScorePresentationValue =
+  | { kind: 'numeric'; value: number }
+  | { kind: 'insufficient_data' };
 
 interface ProductScores {
   partnerFitScore: number;
@@ -47,12 +55,21 @@ interface ProductScores {
   overallDecisionScore: number;
 }
 
+interface ProductScoresPresentation {
+  partnerFitScore: ProductScorePresentationValue;
+  relationshipFitScore: ProductScorePresentationValue;
+  coverageScore: ProductScorePresentationValue;
+  frictionRiskScore: ProductScorePresentationValue;
+  overallDecisionScore: ProductScorePresentationValue;
+}
+
 interface Evaluation {
   self: ExtractedSignals;
   partner: ExtractedSignals;
   relationship: ExtractedSignals;
   display: { summary: string; insight: string; note?: string };
   productScores: ProductScores;
+  productScoresPresentation?: ProductScoresPresentation;
   flags: string[];
 }
 
@@ -69,6 +86,31 @@ function formatSignalKey(key: string): string {
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
+}
+
+function formatProductScoreCell(
+  presentation: ProductScorePresentationValue | undefined,
+  rawFallback: number,
+): string {
+  if (presentation?.kind === 'insufficient_data') return 'Insufficient data';
+  if (presentation?.kind === 'numeric') return String(presentation.value);
+  return String(rawFallback);
+}
+
+function formatDomainConfidence(s: ExtractedSignals): string {
+  if (s.domainStatus === 'LOW_DATA' || s.domainStatus === 'UNRELIABLE') {
+    return 'Insufficient data';
+  }
+  const nonNull = Object.values(s.signals).filter((v) => v != null).length;
+  if (!s.domainStatus && nonNull < 2) return 'Insufficient data';
+  return `${(s.confidence * 100).toFixed(0)}%`;
+}
+
+function domainStatusLabel(s: ExtractedSignals): ExtractionDomainQualityStatus | null {
+  if (s.domainStatus) return s.domainStatus;
+  const nonNull = Object.values(s.signals).filter((v) => v != null).length;
+  if (nonNull < 2) return 'LOW_DATA';
+  return 'OK';
 }
 
 type SignalTab = 'self' | 'partner' | 'relationship';
@@ -292,7 +334,10 @@ export default function ProfilesPage() {
                     Partner fit
                   </span>
                   <span className="font-medium">
-                    {evaluation!.productScores.partnerFitScore}
+                    {formatProductScoreCell(
+                      evaluation!.productScoresPresentation?.partnerFitScore,
+                      evaluation!.productScores.partnerFitScore,
+                    )}
                   </span>
                 </li>
                 <li className="flex justify-between rounded bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
@@ -300,13 +345,19 @@ export default function ProfilesPage() {
                     Relationship fit
                   </span>
                   <span className="font-medium">
-                    {evaluation!.productScores.relationshipFitScore}
+                    {formatProductScoreCell(
+                      evaluation!.productScoresPresentation?.relationshipFitScore,
+                      evaluation!.productScores.relationshipFitScore,
+                    )}
                   </span>
                 </li>
                 <li className="flex justify-between rounded bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
                   <span className="text-zinc-600 dark:text-zinc-400">Coverage</span>
                   <span className="font-medium">
-                    {evaluation!.productScores.coverageScore}
+                    {formatProductScoreCell(
+                      evaluation!.productScoresPresentation?.coverageScore,
+                      evaluation!.productScores.coverageScore,
+                    )}
                   </span>
                 </li>
                 <li className="flex justify-between rounded bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
@@ -314,7 +365,10 @@ export default function ProfilesPage() {
                     Friction risk
                   </span>
                   <span className="font-medium">
-                    {evaluation!.productScores.frictionRiskScore}
+                    {formatProductScoreCell(
+                      evaluation!.productScoresPresentation?.frictionRiskScore,
+                      evaluation!.productScores.frictionRiskScore,
+                    )}
                   </span>
                 </li>
                 <li className="flex justify-between rounded bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
@@ -322,7 +376,10 @@ export default function ProfilesPage() {
                     Overall
                   </span>
                   <span className="font-medium">
-                    {evaluation!.productScores.overallDecisionScore}
+                    {formatProductScoreCell(
+                      evaluation!.productScoresPresentation?.overallDecisionScore,
+                      evaluation!.productScores.overallDecisionScore,
+                    )}
                   </span>
                 </li>
               </ul>
@@ -346,20 +403,34 @@ export default function ProfilesPage() {
                 Signals
               </h2>
               <div className="mb-3 flex gap-2 border-b border-zinc-200 dark:border-zinc-700">
-                {(['self', 'partner', 'relationship'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setSignalTab(tab)}
-                    className={`border-b-2 px-3 py-2 text-sm font-medium ${
-                      signalTab === tab
-                        ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300'
-                    }`}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                ))}
+                {(['self', 'partner', 'relationship'] as const).map((tab) => {
+                  const block =
+                    tab === 'self'
+                      ? evaluation!.self
+                      : tab === 'partner'
+                        ? evaluation!.partner
+                        : evaluation!.relationship;
+                  const st = domainStatusLabel(block);
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setSignalTab(tab)}
+                      className={`border-b-2 px-3 py-2 text-sm font-medium ${
+                        signalTab === tab
+                          ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
+                          : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300'
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {st && st !== 'OK' ? (
+                        <span className="ml-1 text-xs font-normal text-amber-700 dark:text-amber-300">
+                          ({st})
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
               {signalsBlock && (
                 <>
@@ -393,8 +464,10 @@ export default function ProfilesPage() {
                     </table>
                   </div>
                   <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                    confidence{' '}
-                    {((signalsBlock.confidence ?? 0) * 100).toFixed(0)}%
+                    {(() => {
+                      const c = formatDomainConfidence(signalsBlock);
+                      return c.includes('%') ? `confidence ${c}` : c;
+                    })()}
                   </p>
                   {signalsBlock.evidence?.length > 0 && (
                     <div className="mt-4">
@@ -402,14 +475,28 @@ export default function ProfilesPage() {
                         Evidence
                       </h3>
                       <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-                        {signalsBlock.evidence.map((e, i) => (
-                          <li key={i}>
-                            <span className="font-medium">
-                              {formatSignalKey(e.signal)}:
-                            </span>{' '}
-                            &ldquo;{e.quote}&rdquo;
-                          </li>
-                        ))}
+                        {signalsBlock.evidence.map((e, i) => {
+                          const score = signalsBlock.signals?.[e.signal];
+                          return (
+                            <li key={i}>
+                              <span className="font-medium">
+                                {formatSignalKey(e.signal)}
+                              </span>
+                              {score != null && (
+                                <span className="text-zinc-500 dark:text-zinc-500">
+                                  {' '}
+                                  / {score}
+                                </span>
+                              )}
+                              <span className="block">&ldquo;{e.quote}&rdquo;</span>
+                              {e.reason ? (
+                                <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                                  {e.reason}
+                                </span>
+                              ) : null}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}

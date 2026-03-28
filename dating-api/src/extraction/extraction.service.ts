@@ -13,99 +13,301 @@ import {
   type LLMUsageStats,
 } from './extracted-signals.interface';
 import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
-import { applySparseTextGuard } from '../engine/signal-post-processing/sparse-policy';
-import { applyTextInference } from '../engine/signal-post-processing/text-inference';
-import { applySparseProfileNullOnlyPatch, SPARSE_PATCH_PROFILE_IDS } from '../engine/signal-post-processing/sparse-profile-patch';
-import { enforceSignalCountLimits } from '../engine/signal-post-processing/signal-count-policy';
-import { computeConfidenceFromCoverage } from '../engine/signal-post-processing/confidence';
+import { validateExtraction } from './extraction-strict-validation';
 
-const SIGNAL_KEYS_LIST = EXTRACTION_SIGNAL_KEYS.join(', ');
+const SELF_EXTRACTOR_PROMPT = `You are a professional psychological profiler. Extract signals and interests for domain: self.
 
-const COMMON_EVIDENCE_RULES = `
+STRICT RULE:
+Only extract from explicit evidence in the text.
+If evidence is weak, vague, generic, or only loosely related, return null.
+Do not guess.
+
+SPARSITY SHUTDOWN:
+If input is shorter than 15 words OR contains no concrete self-descriptive, behavioral, or relational statements:
+- set all signals to null
+- set confidence to 0.1
+- evidence = []
+- still extract explicit interests if present
+
+SPARSITY REFINEMENT:
+Do NOT apply full-null output if the text contains even one clear behavioral, relational, or rule-based statement.
+In that case, extract only the clearly supported signals and leave the rest null.
+
+GENERIC TEXT EXAMPLES:
+- "I'm a nice guy"
+- "Looking for love"
+- "I want something real"
+- "Kind, loyal, funny"
+
+CONCRETE TEXT EXAMPLES:
+- habits, routines, boundaries, emotional patterns, social preferences, conflict behavior, explicit relationship principles
+
+INTERESTS:
+- Extract only explicit hobbies/passions into interests: string[]
+- Do not infer
+- "I like nature" -> "Nature"
+- "I'm a runner" -> "Running"
+
+ALLOWED KEYS:
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance
+
+RELATIONSHIP-AS-SELF RULE:
+If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
+
+LITERAL PRIORITY RULE:
+When explicit relational or behavioral phrases appear, prioritize them over weaker generic cues elsewhere in the text.
+
 EVIDENCE RULES:
-- Every non-null score MUST have one evidence item: use a short grounded quote or a short grounded paraphrase from the text.
-- Stay grounded in the text; do not invent. Prefer a direct quote when available; a short paraphrase is fine when the text is abstract or indirect.
-- If you cannot point to any textual support for a score, use null for that signal.
-`;
+- Every non-null signal must have:
+  - exact quote
+  - short reason (max 8 words)
+- No paraphrasing in quote
+- If no exact quote exists, set null
 
-const SELF_EXTRACTOR_PROMPT = `Extract psychological signals about the person.
+SIGNAL RULES:
+- emotionalDepth = explicit introspection, vulnerability, emotional self-awareness
+- attachmentSecurity = explicit closeness, fusion, anchor-like bond, inseparable emotional union
+- directness = explicit transparency, no secrets, clear communication
+- independence = explicit autonomy vs fusion; shared-everything / merged-life language = low
+- socialBattery = explicit social-energy preference only
+- lifestylePace = explicit pace/rhythm (calm vs high-action)
+- ambition = explicit goals, drive
+- healthBodyConsciousness = explicit health/fitness focus
+- spirituality = explicit spiritual/religious orientation
+- intellectualCuriosity = explicit learning/ideas
+- conflictStyle = explicit disagreement handling, repair, de-escalation
+- noveltyVsRoutine = explicit novelty vs routine preference
+- structureChaosTolerance = explicit order vs chaos preference
 
-Rules:
-- Use inference when clear.
-- Prefer low score (4–6) over null if weak evidence exists.
-- Null only if no hint at all.
-- Aim for 6–9 non-null signals.
+HARD SEMANTIC GUARD:
+Do NOT map generic personality or value language to deep traits.
+Reject signals derived only from:
+- adjectives (kind, sincere, mature)
+- vague emotional tone
+- job or logistics
+Only accept signals tied to clear behavior, pattern, preference, or personal rule.
 
-Signals (1–10 or null):
-emotionalDepth, attachmentSecurity, independence, directness, ambition, lifestylePace, socialBattery, spirituality, healthBodyConsciousness
+LOGISTICS GUARD:
+Do NOT derive signals from work, travel, or schedule unless explicit personal preference is stated.
 
-Quick inference:
-- "needs space" → independence >= 7
-- "not into partying" → socialBattery <= 5
-- "gym"/"training" → healthBodyConsciousness >= 8
-- "career"/"ambitious" → ambition >= 7
+VAGUE SELF-DESCRIPTION GUARD:
+Do NOT derive signals from vague self-labels unless tied to clear behavior or pattern.
 
-Shadow (only if clear):
-intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance
+MULTI-MAPPING:
+One quote -> one primary signal unless clearly split into distinct clauses.
 
-Output JSON only:
-{ "domain": "self", "signals": {...}, "evidence": [...], "confidence": number, "version": "v1" }
+STRICT EXCLUSIONS:
+Do not output keys outside the allowlist.
+Do not output relationshipClarity.
+Do not output traditionalism.
 
-Evidence:
-- 1 short quote/paraphrase per signal
-- max 10 items
-`;
+SCORING:
+- Default anchor = 5
+- Use 4-7 for moderate clear evidence
+- Use 1-2 or 9-10 only for explicit extreme wording
+- Prefer null over stretched scoring
 
-const RELATIONSHIP_EXTRACTOR_PROMPT = `Extract relationship expectations.
+CONFIDENCE:
+- sparse text -> 0.1
+- fewer than 2 non-null signals -> <= 0.3
+- high confidence only for literal, unambiguous evidence
 
-Rules:
-- Use inference when clear.
-- Prefer low score (4–6) over null.
-- Aim for 3–4 signals.
+FINAL OVERRIDE RULES (HIGHEST PRIORITY):
+1. A signal is valid ONLY if the quote directly expresses that signal.
+2. If the text contains a clear relational or behavioral rule, extract it even if the text is otherwise sparse.
+3. Do NOT suppress strong literal signals because of sparsity.
+4. Fusion / merger language should be treated as valid self evidence.
+5. Transparency / no-secrets language should be treated as valid self evidence.
+6. Shared-everything / merged-life language should be treated as valid self evidence.
 
-Signals:
-relationshipClarity, emotionalDepth, traditionalism, spirituality
+Output JSON:
+{ "domain": "self", "signals": { "key": int|null }, "interests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
 
-Protected:
-- traditionalism ONLY if explicit (traditional, family values, marriage, religious)
 
-Quick inference:
-- "long-term"/"family" → relationshipClarity >= 7
-- "meditation" → spirituality >= 8
+const RELATIONSHIP_EXTRACTOR_PROMPT = `You are a professional psychological profiler. Extract signals and interests for domain: relationship.
 
-Output JSON only:
-{ "domain": "relationship", "signals": {...}, "evidence": [...], "confidence": number, "version": "v1" }
+STRICT RULE:
+Only extract from explicit evidence in the text.
+If evidence is weak, vague, generic, or only loosely related, return null.
+Do not guess.
 
-Evidence:
-- max 5 items
-`;
+SPARSITY SHUTDOWN:
+If input is shorter than 15 words OR contains fewer than 2 concrete relationship-structure statements:
+- set all signals to null
+- set confidence to 0.1
+- evidence = []
+- still extract explicit interests if present
 
-const PARTNER_EXTRACTOR_PROMPT = `Extract partner preferences.
+GENERIC TEXT EXAMPLES:
+- "I want love"
+- "A real relationship"
+- "Someone loyal"
+- "Good vibes only"
 
-Rules:
-- Use inference when clear.
-- Prefer low score (4–6) over null.
-- Aim for 4–6 signals.
+CONCRETE TEXT EXAMPLES:
+- boundaries, commitment rules, exclusivity, repair style, communication norms, family goals, home-life expectations
 
-Signals:
-relationshipClarity, emotionalDepth, traditionalism, lifestylePace, socialBattery, physicalPriority
+INTERESTS:
+- Extract only explicit shared-bond or lifestyle interests into interests: string[]
+- Do not infer
 
-Protected:
-- traditionalism ONLY if explicit
+ALLOWED KEYS:
+emotionalDepth, attachmentSecurity, relationshipClarity, traditionalism, spirituality, lifestylePace, socialBattery
 
-Quick inference:
-- "wants kids"/"family" → relationshipClarity >= 7
-- "quiet/homebody" → lifestylePace <= 4
+CONTRACT RULE:
+Only extract when the text describes how the relationship should function.
+If the text is only romantic vibe with no structure, return nulls.
 
-Shadow (if clear):
-intellectualCuriosity, conflictStyle
+RELATIONSHIP RECALL OVERRIDE:
+If the text clearly describes bond, family intent, or shared lifestyle,
+extract supported signals even if phrased as partner preference.
 
-Output JSON only:
-{ "domain": "partner", "signals": {...}, "evidence": [...], "confidence": number, "version": "v1" }
+EVIDENCE RULES:
+- Every non-null signal must have:
+  - exact quote
+  - short reason (max 8 words)
+- No paraphrasing in quote
+- If no exact quote exists, set null
 
-Evidence:
-- max 8 items
-`;
+SIGNAL RULES:
+- emotionalDepth = explicit vulnerability, emotional honesty, naming feelings
+- attachmentSecurity = explicit closeness, fusion, anchor, inseparable bond
+- relationshipClarity = explicit boundaries, labels, transparency, exclusivity, commitment rules
+- traditionalism = explicit marriage, kids, religion, family path
+- spirituality = explicit spiritual or religious bond
+- lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher
+- socialBattery = explicit together-social-energy preference only
+
+FAMILY LANGUAGE RULE:
+Kids, family, marriage, traditional future -> traditionalism only.
+Do NOT map these phrases to relationshipClarity unless the quote is explicitly about rules, labels, boundaries, exclusivity, or transparency.
+
+HARD SEMANTIC GUARD:
+Do NOT map generic warmth, sincerity, maturity, or positive character language to deeper traits.
+Examples:
+- "warm", "nice", "good partner" -> ignore
+- "emotional maturity" -> NOT emotionalDepth unless behavior is explicit
+- "someone who wants kids" -> traditionalism, NOT relationshipClarity
+- "no drama" -> lifestylePace unless explicitly about conflict/repair rules
+
+MULTI-MAPPING:
+One quote -> one primary signal unless clearly split into distinct clauses.
+
+STRICT EXCLUSIONS:
+Do not output keys outside the allowlist.
+Do not invent conflictStyle here.
+
+SCORING:
+- Default anchor = 5
+- Use 4-7 for moderate clear evidence
+- Use 1-2 or 9-10 only for explicit extreme wording
+- Prefer null over stretched scoring
+
+
+CONFIDENCE:
+- sparse text -> 0.1
+- fewer than 2 non-null signals -> <= 0.3
+- high confidence only for literal, unambiguous evidence
+
+Output JSON:
+{ "domain": "relationship", "signals": { "key": int|null }, "interests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
+
+const PARTNER_EXTRACTOR_PROMPT = `You are a professional psychological profiler. Extract signals and interests for domain: partner.
+
+STRICT RULE:
+Only extract from explicit evidence in the text.
+If evidence is weak, vague, generic, or only loosely related, return null.
+Do not guess.
+
+SPARSITY SHUTDOWN:
+If input is shorter than 15 words OR contains fewer than 2 concrete partner-preference statements:
+- set all signals to null
+- set confidence to 0.1
+- evidence = []
+- still extract explicit interests if present
+
+GENERIC TEXT EXAMPLES:
+- "I want a good person"
+- "Someone nice"
+- "Kind, loyal, funny"
+- "Good values"
+
+CONCRETE TEXT EXAMPLES:
+- partner traits tied to behavior, communication, conflict, appearance, learning, family goals, home-life style
+
+INTERESTS:
+- Extract only explicit desired partner hobbies/interests into interests: string[]
+- Do not infer
+
+ALLOWED KEYS:
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle
+
+EVIDENCE RULES:
+- Every non-null signal must have:
+  - exact quote
+  - short reason (max 8 words)
+- No paraphrasing in quote
+- If no exact quote exists, set null
+STRUCTURE OVERRIDE:
+
+If the text defines any rule, boundary, expectation, or relational dynamic,
+you MUST extract the relevant signal.
+
+Do NOT nullify structured relationship descriptions due to sparsity.
+
+SIGNAL RULES:
+- emotionalDepth = explicit vulnerability, emotional openness, naming feelings
+- relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules
+- traditionalism = explicit desire for kids, marriage, religion, traditional family
+- lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher
+- socialBattery = explicit social-energy cues only
+- physicalPriority = explicit looks, attraction, chemistry, appearance
+- intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations
+- conflictStyle = explicit disagreement handling, repair, calm discussion, de-escalation
+
+DIRECTION LOCK:
+For lifestylePace:
+- calm, quiet, slow, peaceful, home-centered, low-drama -> LOWER scores
+- busy, packed, fast, adventurous, high-energy -> HIGHER scores
+Never reverse this direction.
+
+FAMILY LANGUAGE RULE:
+Kids, family, marriage, traditional future -> traditionalism only.
+Do NOT map these phrases to relationshipClarity unless the quote is explicitly about rules, labels, boundaries, exclusivity, or transparency.
+
+PHYSICAL GUARD:
+Do NOT infer physicalPriority from warmth, stability, emotional language, or family language.
+
+HARD SEMANTIC GUARD:
+Do NOT map generic warmth, sincerity, maturity, or positive character language to deeper traits.
+Examples:
+- "kind", "nice", "mature" -> ignore
+- "growth", "accountability" -> NOT emotionalDepth
+- "quiet home" -> lifestylePace only
+- "no drama" -> conflictStyle only if explicit conflict behavior
+- "open to kids later" -> traditionalism, NOT relationshipClarity
+
+MULTI-MAPPING:
+One quote -> one primary signal unless clearly split into distinct clauses.
+
+STRICT EXCLUSIONS:
+Do not output independence.
+Do not output attachmentSecurity.
+Do not invent signals outside the allowlist.
+
+SCORING:
+- Default anchor = 5
+- Use 4-7 for moderate clear evidence
+- Use 1-2 or 9-10 only for explicit extreme wording
+- Prefer null over stretched scoring
+
+CONFIDENCE:
+- sparse text -> 0.1
+- fewer than 2 non-null signals -> <= 0.3
+- high confidence only for literal, unambiguous evidence
+
+Output JSON:
+{ "domain": "partner", "signals": { "key": int|null }, "interests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
 
 function getSystemPromptForDomain(domain: ExtractionDomain): string {
   switch (domain) {
@@ -125,10 +327,10 @@ const SYSTEM_PROMPT_HASH = createHash('sha256')
   .slice(0, 12);
 
 /** Minimal retry prompt when first pass returned empty signals but text has content. */
-const EXTRACTOR_RETRY_PROMPT = `Same domain and signal keys. The previous extraction returned no scores. Use inference: from the text below, assign 1-10 to at least 2-3 signals that have any hint. Evidence: short grounded quote or paraphrase from the text per score. JSON only. Confidence must be in range 0..1 (e.g. 0.5). { "domain": "...", "signals": {...}, "evidence": [...], "confidence": 0.5, "version": "v1" }.`;
+const EXTRACTOR_RETRY_PROMPT = `Same domain and signal keys. The previous extraction returned no scores. From the text below, assign 1-10 only to signals you can support with evidence: each item must be { "signal", "quote", "reason" } where quote is an EXACT substring of the input and reason is max 8 words. If you cannot satisfy both, leave that signal null. JSON only. Confidence 0..1. { "domain": "...", "signals": {...}, "evidence": [...], "confidence": 0.5, "version": "v1" }.`;
 
 /** Retry prompt for partner domain when text is short: aim for 2–4 grounded signals, no hallucination. */
-const PARTNER_SHORT_RETRY_PROMPT = `Same domain and signal keys. The text is short; extract 2–4 signals that have clear support in the text. Use a short grounded quote or paraphrase for each score. Do not invent; only score when the text gives a real hint. JSON only. Confidence 0..1 (e.g. 0.4). { "domain": "partner", "signals": {...}, "evidence": [...], "confidence": 0.4, "version": "v1" }.`;
+const PARTNER_SHORT_RETRY_PROMPT = `Same domain and signal keys. The text is short; extract 2–4 signals only with clear support. Evidence per score: { "signal", "quote", "reason" } — quote must be an EXACT substring of the input; reason max 8 words; otherwise null for that signal. Do not invent. JSON only. Confidence 0..1 (e.g. 0.4). { "domain": "partner", "signals": {...}, "evidence": [...], "confidence": 0.4, "version": "v1" }.`;
 
 const GPT4O_MINI_INPUT_COST = 0.15 / 1_000_000;
 const GPT4O_MINI_OUTPUT_COST = 0.60 / 1_000_000;
@@ -167,20 +369,16 @@ export class ExtractionService {
   ) { }
 
   /**
-   * Build output from allowlist only. Round to int, enforce 1–10 or null. Evidence filtered to official keys; alias rewritten to official.
+   * Build output from allowlist only. Round to int, enforce 1–10 or null.
+   * Evidence filtered to official keys; alias rewritten to official.
+   * 
+   * Technical cleanup only: no semantic inference or context-based modification.
    */
   private validateAndClean(
     data: ExtractedSignals,
     requestedDomain: ExtractionDomain,
   ): ExtractedSignals {
-    let corrected = false;
     const normalizedSignals = data.signals ?? {};
-    const evidenceSignals = new Set(
-      (data.evidence ?? []).map((e) => {
-        const s = String(e.signal).trim();
-        return (KEY_ALIASES[s] ?? s) as string;
-      }),
-    );
 
     const signals: Record<string, number | null> = {};
     for (const key of EXTRACTION_SIGNAL_KEYS) {
@@ -192,42 +390,30 @@ export class ExtractionService {
       const n = Number(value);
       const rounded = Number.isFinite(n) ? Math.round(n) : NaN;
       if (Number.isNaN(rounded) || rounded < 1 || rounded > 10) {
-        if (evidenceSignals.has(key)) {
-          const clamped = Math.max(1, Math.min(10, rounded));
-          signals[key] = Number.isNaN(clamped) ? 5 : clamped;
-          this.logger.debug(
-            `validateAndClean kept signal (had evidence) signalName=${key} reason=outOfRange clamped=${signals[key]}`,
-          );
-        } else {
-          const reason = Number.isNaN(rounded) ? 'nan' : 'outOfRange';
-          signals[key] = null;
-          corrected = true;
-          this.logger.log(
-            JSON.stringify({
-              event: 'validateAndClean_stripped',
-              key,
-              value,
-              reason,
-            }),
-            ExtractionService.name,
-          );
-        }
+        signals[key] = null;
+        this.logger.log(
+          JSON.stringify({
+            event: 'validateAndClean_stripped',
+            key,
+            value,
+            reason: Number.isNaN(rounded) ? 'nan' : 'outOfRange',
+          }),
+          ExtractionService.name,
+        );
       } else {
         signals[key] = rounded;
       }
     }
 
-    if (data.domain !== requestedDomain) {
-      corrected = true;
-    }
-
-    let confidence = data.confidence ?? 0.5;
+    const confidence = data.confidence ?? 0.5;
 
     const evidence = (data.evidence ?? [])
       .map((item) => {
         const s = String(item.signal).trim();
         const officialSignal = KEY_ALIASES[s] ?? s;
-        return { ...item, signal: officialSignal };
+        const reason =
+          typeof item.reason === 'string' ? item.reason : '';
+        return { ...item, signal: officialSignal, reason };
       })
       .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
       .slice(0, MAX_EVIDENCE_ITEMS);
@@ -275,7 +461,7 @@ export class ExtractionService {
     return { userPrompt, requestId, inputText, inputPreview, extractStart, accUsage };
   }
 
-  /** Stage 2: Run first LLM extraction call. */
+  /** Stage 2: Run first LLM extraction call (primary proposal). */
   private async runFirstLlmExtractionCall(
     domain: ExtractionDomain,
     userPrompt: string,
@@ -301,7 +487,7 @@ export class ExtractionService {
     return { value, rawText, usage };
   }
 
-  /** Stage 4: Normalize alias keys and log telemetry. */
+  /** Stage 4: Normalize alias keys and log telemetry (technical mapping only). */
   private applyNormalizeAliasKeys(data: ExtractedSignals): ExtractedSignals {
     const { normalizedSignals, telemetry } = normalizeKeys(data.signals);
     this.logger.debug(
@@ -316,7 +502,7 @@ export class ExtractionService {
     return { ...data, signals: normalizedSignals };
   }
 
-  /** Stage 6: Optional retry when non-empty text returned zero signals; for partner with short text, also retry when extraction is sparse (≤2 signals). */
+  /** Stage 6: Optional second LLM call when first returns empty; still LLM authority. */
   private async runOptionalRetryWhenEmpty(
     domain: ExtractionDomain,
     text: string,
@@ -385,14 +571,6 @@ export class ExtractionService {
     }
   }
 
-  /** Stage 10: Recompute confidence from coverage and signal count factor. */
-  private applyRecomputeConfidence(data: ExtractedSignals): ExtractedSignals {
-    return {
-      ...data,
-      confidence: computeConfidenceFromCoverage(data.signals),
-    };
-  }
-
   /** Stage 11: Finalize usage and logging. */
   private finalizeUsageAndLogging(
     cleaned: ExtractedSignals,
@@ -418,6 +596,12 @@ export class ExtractionService {
     return result;
   }
 
+  /**
+   * Extract signals for one domain.
+   * 
+   * Strictly linear pipeline: LLM proposal → technical normalization → final validation gate.
+   * Semantic meaning comes ONLY from LLM; post-processing validates/nullifies only.
+   */
   async extract(
     domain: ExtractionDomain,
     text: string,
@@ -431,6 +615,7 @@ export class ExtractionService {
       accUsage: initialAccUsage,
     } = this.buildRequestMetadata(domain, text);
 
+    // [PIPELINE] LLM proposal
     const { value, rawText, usage } = await this.runFirstLlmExtractionCall(
       domain,
       userPrompt,
@@ -446,6 +631,14 @@ export class ExtractionService {
     });
 
     const rawModelOutputPreview = (rawText ?? '').trim().slice(0, 120);
+    const llmSignals =
+      value && typeof value === 'object' && (value as Record<string, unknown>).signals
+        ? ((value as Record<string, unknown>).signals as Record<string, unknown>)
+        : {};
+    const llmKeysPresent = Object.entries(llmSignals)
+      .filter(([, v]) => v != null)
+      .map(([k]) => k);
+    const llmNonNullCount = llmKeysPresent.length;
     if ((rawText ?? '').trim().length === 0) {
       this.logger.log(
         JSON.stringify({
@@ -458,6 +651,16 @@ export class ExtractionService {
     }
     this.logger.log(
       JSON.stringify({
+        stage: 'after_llm',
+        domain,
+        nonNullCount: llmNonNullCount,
+        keysPresent: llmKeysPresent,
+        raw: (rawText ?? '').slice(0, 500),
+      }),
+      ExtractionService.name,
+    );
+    this.logger.log(
+      JSON.stringify({
         event: 'extraction_after_llm',
         domain,
         requestId,
@@ -466,15 +669,37 @@ export class ExtractionService {
       ExtractionService.name,
     );
 
+    // [PIPELINE] Technical normalization
     const normalized = normalizeRawExtraction(value, domain);
+    const normalizedKeysPresent = Object.entries(normalized.signals ?? {})
+      .filter(([, v]) => v != null)
+      .map(([k]) => k);
+    this.logger.log(
+      JSON.stringify({
+        stage: 'after_normalize',
+        domain,
+        nonNullCount: normalizedKeysPresent.length,
+        keysPresent: normalizedKeysPresent,
+      }),
+      ExtractionService.name,
+    );
     let cleaned = this.applyNormalizeAliasKeys(normalized);
     cleaned = this.validateAndClean(cleaned, domain);
+    this.logger.log(
+      JSON.stringify({
+        stage: 'after_validate',
+        domain,
+        nonNullCount: countNonNullSignals(cleaned.signals),
+      }),
+      ExtractionService.name,
+    );
 
     const nonNullCount = countNonNullSignals(cleaned.signals);
     this.logger.debug(
       `extract domain=${domain} nonNullCount=${nonNullCount} confidence=${cleaned.confidence}`,
     );
 
+    // Optional: retry LLM when empty (still LLM authority, not inference)
     const retryResult = await this.runOptionalRetryWhenEmpty(
       domain,
       text,
@@ -494,24 +719,21 @@ export class ExtractionService {
       };
     }
 
-    cleaned = {
-      ...cleaned,
-      ...applySparseTextGuard(cleaned, text, EXTRACTION_SIGNAL_KEYS),
-    };
-    cleaned = applyTextInference(cleaned, text);
-    cleaned = enforceSignalCountLimits(cleaned, text);
-    cleaned = applySparseProfileNullOnlyPatch(cleaned, text, profileId);
+    // [PIPELINE] Final validation gate (strict quote/reason + quality floor)
+    cleaned = validateExtraction(text, cleaned);
+    if (cleaned.notes?.includes('EXTRACTION_EMPTY_DEBUG')) {
+      cleaned = { ...cleaned, domainStatus: 'UNRELIABLE' };
+    }
 
-    cleaned = this.applyRecomputeConfidence(cleaned);
-
+    // Pipeline provenance tracking
     const provenanceStages: string[] = [
       'llm',
       'alias_normalization',
       'validate_and_clean',
     ];
     if (retryResult.retryRan) provenanceStages.push('retry');
-    provenanceStages.push('sparse_guard', 'text_inference', 'signal_count_cap');
-    if (profileId && SPARSE_PATCH_PROFILE_IDS.has(profileId)) provenanceStages.push('sparse_profile_patch');
+    provenanceStages.push('strict_evidence_validation');
+    provenanceStages.push('quality_gate');
 
     const withProvenance: ExtractedSignals = {
       ...cleaned,
@@ -525,6 +747,16 @@ export class ExtractionService {
         requestId,
         stages: provenanceStages,
       }),
+    );
+    this.logger.log(
+      JSON.stringify({
+        stage: 'final',
+        domain,
+        nonNullCount: countNonNullSignals(withProvenance.signals),
+        confidence: withProvenance.confidence,
+        finalSignals: withProvenance.signals,
+      }),
+      ExtractionService.name,
     );
 
     return this.finalizeUsageAndLogging(

@@ -222,6 +222,36 @@ export function extractTextFromOpenAIResponse(response: unknown): string {
   return '';
 }
 
+/**
+ * Remove leading/trailing Markdown code fences so JSON.parse succeeds when models wrap output in ```json ... ```.
+ */
+function stripMarkdownCodeFences(text: string): string {
+  let s = text.trim();
+  if (!s) return s;
+  if (s.startsWith('```')) {
+    s = s.replace(/^```[a-zA-Z0-9_+-]*\s*\r?\n?/, '');
+    s = s.replace(/\r?\n?```\s*$/, '');
+  }
+  return s.trim();
+}
+
+/** Parse JSON from model text: strip fences, then parse; on failure, try substring between outermost { }. */
+function parseModelJsonText(rawText: string): unknown {
+  const s = stripMarkdownCodeFences(rawText || '');
+  if (!s) return {};
+  try {
+    return JSON.parse(s);
+  } catch (e) {
+    if (!(e instanceof SyntaxError)) throw e;
+    const i = s.indexOf('{');
+    const j = s.lastIndexOf('}');
+    if (i !== -1 && j > i) {
+      return JSON.parse(s.slice(i, j + 1));
+    }
+    throw e;
+  }
+}
+
 /** Debug log response shape and text preview (no keys, headers, or full payload). */
 function debugLogResponse(
   response: unknown,
@@ -297,7 +327,7 @@ export class OpenAIClient implements LLMClient {
   private readonly stageSnapshots = new Map<LatencyStage, StageLatencySnapshot>();
 
   constructor(private readonly config: LLMConfig) {
-    const baseFetch: typeof fetch = (...args) => fetch(...args);
+    const baseFetch: typeof fetch = (input, init) => fetch(input, init);
     const instrumentedFetch = async (input: unknown, init?: unknown) => {
       const requestHeaders = new Headers(
         (init &&
@@ -424,7 +454,7 @@ export class OpenAIClient implements LLMClient {
         //   }
         debugLogResponse(completion, requestId, purpose, this.logger);
         const rawText = extractTextFromOpenAIResponse(completion);
-        const value = schema.parse(JSON.parse(rawText || '{}'));
+        const value = schema.parse(parseModelJsonText(rawText));
         const usage = (completion as { usage?: unknown }).usage;
 
         return { value, rawText, usage };

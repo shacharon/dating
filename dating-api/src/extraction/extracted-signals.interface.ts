@@ -1,5 +1,8 @@
 export type ExtractionDomain = 'self' | 'partner' | 'relationship';
 
+/** Per-domain extraction quality for API/UI; orthogonal to numeric confidence after quality gate. */
+export type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
+
 export interface LLMUsageStats {
   promptTokens: number;
   completionTokens: number;
@@ -62,6 +65,8 @@ export function countNonNullSignals(
 export interface ExtractionEvidenceItem {
   signal: string;
   quote: string;
+  /** Max 8 words; required for a signal to be considered grounded. */
+  reason: string;
   note?: string;
 }
 
@@ -72,6 +77,11 @@ export interface ExtractedSignals {
   evidence: ExtractionEvidenceItem[];
   version: 'v1';
   confidence: number;
+  /**
+   * Set by validateExtraction / extract pipeline. OK = passed quality floor; LOW_DATA = insufficient
+   * grounded signals; UNRELIABLE = unusable input or empty-model path (see notes).
+   */
+  domainStatus?: ExtractionDomainQualityStatus;
   notes?: string;
   /** Tracks which signals were filled by post-LLM text-inference rules. */
   coverageNotes?: string[];
@@ -81,4 +91,15 @@ export interface ExtractedSignals {
   _usage?: LLMUsageStats;
   /** Internal: which pipeline stages contributed (debugging only). */
   _provenance?: { stages: string[] };
+}
+
+/**
+ * Effective status for display when reading legacy payloads without `domainStatus`.
+ * Does not infer UNRELIABLE (requires explicit marker from pipeline).
+ */
+export function effectiveDomainQualityStatus(
+  s: ExtractedSignals,
+): ExtractionDomainQualityStatus {
+  if (s.domainStatus) return s.domainStatus;
+  return countNonNullSignals(s.signals) >= 2 ? 'OK' : 'LOW_DATA';
 }
