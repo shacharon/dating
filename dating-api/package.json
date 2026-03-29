@@ -24,6 +24,8 @@
     "reanalyze-week2": "nest build && node dist/scripts/reanalyze-week2.js",
     "debug:extraction-regression": "nest build && npx ts-node --transpile-only -r tsconfig-paths/register scripts/debug-extraction-regression.ts",
     "validate:golden-pairs": "nest build && node dist/scripts/validate-golden-pairs.js",
+    "validate:v1-v2": "nest build && node dist/src/validate-v1-v2.js",
+    "batch:v2-from-folder": "nest build && node dist/src/scripts/batch-v2-from-folder.js",
     "match-diagnostics": "nest build && node dist/scripts/match-diagnostics.js",
     "score-stats": "nest build && node dist/src/scripts/score-stats.js",
     "seed-profiles": "nest build && node dist/scripts/seed-profiles.js",

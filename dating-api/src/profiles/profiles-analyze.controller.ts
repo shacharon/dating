@@ -8,6 +8,8 @@ import { ProfilesJsonService } from './profiles-json.service';
 import { AnalysisCacheService } from './analysis-cache.service';
 import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistence.service';
 import type { LLMUsageStats } from '../extraction/extracted-signals.interface';
+import { ExtractionV2Service } from '../extraction/extraction-v2.service';
+import { ExtractionV2PersistenceService } from '../extraction/extraction-v2-persistence.service';
 
 export interface AnalyzedProfileDto {
   id: string;
@@ -150,6 +152,8 @@ export class ProfilesAnalyzeController {
     private readonly analysisCache: AnalysisCacheService,
     private readonly analyzeFailures: AnalyzeFailuresPersistenceService,
     private readonly logger: SimpleLogger,
+    private readonly extractionV2Service: ExtractionV2Service,
+    private readonly extractionV2Persistence: ExtractionV2PersistenceService,
   ) {}
 
   /**
@@ -572,6 +576,54 @@ export class ProfilesAnalyzeController {
       nextOffset,
       done,
     };
+  }
+
+  @Post(':id/analyze-v2')
+  async analyzeOneV2(
+    @Param('id') id: string,
+    @Query('force') forceParam?: string,
+  ): Promise<{ ok: true; extraction: any; profileId: string }> {
+    const profile = await this.profilesJson.getById(id);
+    if (!profile) {
+      throw new NotFoundException(`Profile not found: ${id}`);
+    }
+
+    const force = forceParam === '1' || forceParam === 'true';
+
+    // Check if already extracted (unless force=true)
+    if (!force) {
+      const existing = await this.extractionV2Persistence.getByProfileId(id);
+      if (existing) {
+        this.logger.log(`[AnalyzeV2] skipped (exists) id=${id}`, 'ProfilesAnalyze');
+        return { ok: true, extraction: existing, profileId: id };
+      }
+    }
+
+    this.logger.log(`[AnalyzeV2] start id=${id}`, 'ProfilesAnalyze');
+
+    // Run V2 extraction (9 calls)
+    const extraction = await this.extractionV2Service.extractAll(
+      profile.texts.aboutMe,
+      profile.texts.aboutPartner,
+      profile.texts.aboutRelationship,
+      id,
+    );
+
+    // Persist to database
+    await this.extractionV2Persistence.save({
+      profileId: id,
+      aboutMe: profile.texts.aboutMe,
+      aboutPartner: profile.texts.aboutPartner,
+      aboutRelationship: profile.texts.aboutRelationship,
+      extraction,
+    });
+
+    this.logger.log(
+      `[AnalyzeV2] done id=${id} cost=${extraction._usage.estimatedCostUSD.toFixed(5)}`,
+      'ProfilesAnalyze',
+    );
+
+    return { ok: true, extraction, profileId: id };
   }
 
   @Post(':id/analyze')

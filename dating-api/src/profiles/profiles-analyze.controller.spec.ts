@@ -8,6 +8,8 @@ import { ProfilesJsonService } from './profiles-json.service';
 import { AnalysisCacheService } from './analysis-cache.service';
 import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistence.service';
 import { ProfilesAnalyzeController } from './profiles-analyze.controller';
+import { ExtractionV2Service } from '../extraction/extraction-v2.service';
+import { ExtractionV2PersistenceService } from '../extraction/extraction-v2-persistence.service';
 
 function mockEvalResult(overrides?: { summary?: string }): EvaluateBatchResult {
   return {
@@ -151,6 +153,20 @@ describe('ProfilesAnalyzeController', () => {
             error: jest.fn(),
             debug: jest.fn(),
             verbose: jest.fn(),
+          },
+        },
+        {
+          provide: ExtractionV2Service,
+          useValue: {
+            extractAll: jest.fn(),
+          },
+        },
+        {
+          provide: ExtractionV2PersistenceService,
+          useValue: {
+            save: jest.fn(),
+            getByProfileId: jest.fn(),
+            exists: jest.fn(),
           },
         },
       ],

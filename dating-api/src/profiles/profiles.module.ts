@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EvaluateModule } from '../evaluate/evaluate.module';
+import { ExtractionModule } from '../extraction/extraction.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { USER_PROFILES_REPOSITORY } from '../domain/repositories/user-profiles.repository';
 import { PrismaUserProfilesRepository } from './infrastructure/prisma-user-profiles.repository';
@@ -16,7 +17,7 @@ import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistenc
 import { SeedProfilesService } from './seed-profiles.service';
 
 @Module({
-  imports: [SimpleLoggerModule, EvaluateModule],
+  imports: [SimpleLoggerModule, EvaluateModule, ExtractionModule],
   controllers: [
     ProfilesController,
     ProfilesReadController,

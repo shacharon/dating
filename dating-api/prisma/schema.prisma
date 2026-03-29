@@ -18,6 +18,7 @@ model UserProfile {
   evaluation        ProfileEvaluation?
   evaluationRaw     ProfileEvaluationRaw?
   signalSnapshots   ProfileSignalSnapshot[]
+  extractionV2      ProfileExtractionV2?
 }
 
 model ProfileEvaluation {
@@ -73,4 +74,44 @@ model ProfileSignalSnapshot {
   @@unique([profileId, domain])
   @@index([profileId])
   @@index([domain])
+}
+
+model ProfileExtractionV2 {
+  id                  String   @id @default(uuid())
+  profileId           String   @unique
+  version             String   @default("v2")
+  extractedAt         DateTime @default(now())
+  
+  promptVersion       String
+  textHash            String
+  
+  extractionJson      Json
+  
+  selfSignals         Json
+  partnerSignals      Json
+  relationshipSignals Json
+  
+  coverageScore       Int
+  avgConfidence       Float
+  
+  interests_self      String[] @default([])
+  interests_partner   String[] @default([])
+  negatives_self      String[] @default([])
+  negatives_partner   String[] @default([])
+  soft_no             String[] @default([])
+  hard_no             String[] @default([])
+  
+  relationship_clarity_self         Int?
+  relationship_clarity_partner      Int?
+  relationship_clarity_relationship Int?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  profile             UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@index([profileId])
+  @@index([promptVersion, textHash])
+  @@index([interests_self], type: Gin)
+  @@index([negatives_self], type: Gin)
 }

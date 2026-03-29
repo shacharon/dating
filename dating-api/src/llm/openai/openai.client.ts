@@ -331,8 +331,8 @@ export class OpenAIClient implements LLMClient {
     const instrumentedFetch = async (input: unknown, init?: unknown) => {
       const requestHeaders = new Headers(
         (init &&
-        typeof init === 'object' &&
-        'headers' in init
+          typeof init === 'object' &&
+          'headers' in init
           ? (init as { headers?: HeadersInit }).headers
           : undefined) ?? {},
       );
@@ -481,10 +481,10 @@ export class OpenAIClient implements LLMClient {
       const latencyMs = end - start;
       const usageObj = (result.usage as
         | {
-            prompt_tokens?: unknown;
-            completion_tokens?: unknown;
-            total_tokens?: unknown;
-          }
+          prompt_tokens?: unknown;
+          completion_tokens?: unknown;
+          total_tokens?: unknown;
+        }
         | undefined) ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
       const promptTokens =
         typeof usageObj.prompt_tokens === 'number' ? usageObj.prompt_tokens : 0;
