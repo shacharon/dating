@@ -335,7 +335,136 @@ export interface ExtendedSignals {
   version: 'v1';
   relationshipMotivation?: RelationshipMotivationResult;
   attractionTraits?: AttractionTraitsResult;
+  interests: string[];
+  lifestyleTraits: string[];
+  preferences: string[];
+  boundaries: string[];
+  values: string[];
   _usage?: LLMUsageStats;
+}
+
+type ExtendedListKey =
+  | 'interests'
+  | 'lifestyleTraits'
+  | 'preferences'
+  | 'boundaries'
+  | 'values';
+
+interface ExplicitListRule {
+  value: string;
+  patterns: RegExp[];
+}
+
+const MAX_EXTENDED_LIST_ITEMS = 10;
+
+const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
+  interests: [
+    { value: 'gym', patterns: [/\bgym\b/i, /\bfitness\b/i] },
+    { value: 'walking', patterns: [/\bwalking\b/i, /\bwalks?\b/i] },
+    { value: 'journaling', patterns: [/\bjournaling\b/i, /\bjournal(?:ing)?\b/i] },
+    { value: 'running', patterns: [/\brunning\b/i, /\bruns?\b/i] },
+    { value: 'hiking', patterns: [/\bhiking\b/i, /\bhikes?\b/i] },
+    { value: 'yoga', patterns: [/\byoga\b/i] },
+    { value: 'cooking', patterns: [/\bcooking\b/i, /\bcook(?:s|ing)?\b/i] },
+    { value: 'travel', patterns: [/\btravel(?:ing|s)?\b/i, /\btravels?\b/i] },
+    { value: 'reading', patterns: [/\breading\b/i, /\bbooks?\b/i] },
+    { value: 'music', patterns: [/\bmusic\b/i] },
+  ],
+  lifestyleTraits: [
+    { value: 'balanced', patterns: [/\bbalanced\b/i] },
+    { value: 'reflective', patterns: [/\breflective\b/i, /\breflection\b/i] },
+    { value: 'health oriented', patterns: [/\bhealth[-\s]?oriented\b/i, /\bhealth conscious\b/i] },
+    { value: 'active', patterns: [/\bactive\b/i] },
+    { value: 'calm', patterns: [/\bcalm\b/i] },
+    { value: 'independent', patterns: [/\bindependent\b/i] },
+    { value: 'rational', patterns: [/\brational\b/i] },
+    { value: 'structured', patterns: [/\bstructured\b/i] },
+    { value: 'adventurous', patterns: [/\badventurous\b/i] },
+    { value: 'grounded', patterns: [/\bgrounded\b/i] },
+  ],
+  preferences: [
+    { value: 'emotional maturity', patterns: [/\bemotional maturity\b/i, /\bemotionally mature\b/i] },
+    { value: 'clear communication', patterns: [/\bclear communication\b/i, /\bdirect communication\b/i] },
+    { value: 'emotional depth', patterns: [/\bemotional depth\b/i, /\bdeep connection\b/i] },
+    { value: 'independence', patterns: [/\bindependent\b/i, /\bindependence\b/i] },
+    { value: 'stability', patterns: [/\bstability\b/i, /\bstable\b/i] },
+    { value: 'kindness', patterns: [/\bkind(?:ness)?\b/i] },
+    { value: 'honesty', patterns: [/\bhonest(?:y)?\b/i] },
+    { value: 'trust', patterns: [/\btrust\b/i] },
+    { value: 'commitment', patterns: [/\bcommitment\b/i, /\bcommitted\b/i] },
+    { value: 'growth mindset', patterns: [/\bgrowth\b/i] },
+  ],
+  boundaries: [
+    { value: 'not rushed', patterns: [/\bnot rushed\b/i, /\bno rush\b/i] },
+    { value: 'no drama', patterns: [/\bno drama\b/i, /\bnot .*drama\b/i] },
+    { value: 'emotional safety', patterns: [/\bemotional safety\b/i, /\bsafe space\b/i] },
+    { value: 'clear boundaries', patterns: [/\bclear boundaries\b/i, /\bboundaries\b/i] },
+    { value: 'no games', patterns: [/\bno games\b/i] },
+    { value: 'respect space', patterns: [/\bneed space\b/i, /\brespect.*space\b/i] },
+    { value: 'honest dialogue', patterns: [/\bhonest communication\b/i, /\bhonest dialogue\b/i] },
+    { value: 'steady pace', patterns: [/\bslow pace\b/i, /\bsteady pace\b/i] },
+    { value: 'mutual respect', patterns: [/\bmutual respect\b/i] },
+    { value: 'emotional clarity', patterns: [/\bemotional clarity\b/i] },
+  ],
+  values: [
+    { value: 'honesty', patterns: [/\bhonest(?:y)?\b/i] },
+    { value: 'growth', patterns: [/\bgrowth\b/i] },
+    { value: 'connection', patterns: [/\bconnection\b/i, /\bconnect(?:ion)?\b/i] },
+    { value: 'trust', patterns: [/\btrust\b/i] },
+    { value: 'respect', patterns: [/\brespect\b/i] },
+    { value: 'loyalty', patterns: [/\bloyal(?:ty)?\b/i] },
+    { value: 'kindness', patterns: [/\bkind(?:ness)?\b/i] },
+    { value: 'family', patterns: [/\bfamily\b/i] },
+    { value: 'stability', patterns: [/\bstability\b/i, /\bstable\b/i] },
+    { value: 'authenticity', patterns: [/\bauthentic(?:ity)?\b/i] },
+  ],
+};
+
+function normalizeListItem(value: string): string | null {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return null;
+  const words = normalized.split(' ').filter(Boolean);
+  if (words.length < 1 || words.length > 3) return null;
+  return normalized;
+}
+
+function buildExplicitList(text: string, key: ExtendedListKey): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const rule of EXPLICIT_LIST_RULES[key]) {
+    if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
+    const normalized = normalizeListItem(rule.value);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    out.push(normalized);
+    if (out.length >= MAX_EXTENDED_LIST_ITEMS) break;
+  }
+  return out;
+}
+
+function buildExplicitExtendedLists(
+  aboutMe: string,
+  aboutPartner: string,
+  aboutRelationship: string,
+): Pick<
+  ExtendedSignals,
+  'interests' | 'lifestyleTraits' | 'preferences' | 'boundaries' | 'values'
+> {
+  const text = [aboutMe, aboutPartner, aboutRelationship]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join('\n');
+  return {
+    interests: buildExplicitList(text, 'interests'),
+    lifestyleTraits: buildExplicitList(text, 'lifestyleTraits'),
+    preferences: buildExplicitList(text, 'preferences'),
+    boundaries: buildExplicitList(text, 'boundaries'),
+    values: buildExplicitList(text, 'values'),
+  };
 }
 
 /** Deterministic product score bundle from compatibility + extraction. All scores 0–100. */
@@ -719,7 +848,9 @@ export class EvaluateService {
 
     // Start all evaluation LLM calls together (summary + optional extended signals).
     const displayPromise = this.generateSummaryFromSignals(self, partner, relationship);
-    const extendedSignalsPromise = (async (): Promise<ExtendedSignals | undefined> => {
+    const extendedSignalsPromise = (async (): Promise<
+      Pick<ExtendedSignals, 'relationshipMotivation' | 'attractionTraits'> | undefined
+    > => {
       try {
         const [motivation, attraction] = await Promise.all([
           this.inferRelationshipMotivation(
@@ -735,7 +866,6 @@ export class EvaluateService {
         ]);
 
         return {
-          version: 'v1',
           relationshipMotivation: motivation,
           attractionTraits: attraction,
         };
@@ -792,7 +922,22 @@ export class EvaluateService {
         : undefined;
 
     // Await optional extended signals that started in parallel with summary.
-    const extendedSignals = await extendedSignalsPromise;
+    const inferredExtendedSignals = await extendedSignalsPromise;
+    const explicitExtendedLists = buildExplicitExtendedLists(
+      aboutMe.trim(),
+      aboutPartner.trim(),
+      aboutRelationship.trim(),
+    );
+    const extendedSignals: ExtendedSignals = {
+      version: 'v1',
+      ...explicitExtendedLists,
+      ...(inferredExtendedSignals?.relationshipMotivation && {
+        relationshipMotivation: inferredExtendedSignals.relationshipMotivation,
+      }),
+      ...(inferredExtendedSignals?.attractionTraits && {
+        attractionTraits: inferredExtendedSignals.attractionTraits,
+      }),
+    };
     this.logger.log(
       JSON.stringify({
         event: 'eval_parallel_done',
@@ -830,7 +975,7 @@ export class EvaluateService {
         productScoresPresentation,
         flags,
         _usage,
-        ...(extendedSignals && { extendedSignals }),
+        extendedSignals,
         chips,
       },
     };

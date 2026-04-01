@@ -4,12 +4,14 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
 import type { ProfileJsonPayload } from './profiles-json.service';
-import { ProfilesJsonService } from './profiles-json.service';
+import { ProfilesPrismaService } from './profiles-prisma.service';
 import { AnalysisCacheService } from './analysis-cache.service';
 import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistence.service';
 import type { LLMUsageStats } from '../extraction/extracted-signals.interface';
 import { ExtractionV2Service } from '../extraction/extraction-v2.service';
 import { ExtractionV2PersistenceService } from '../extraction/extraction-v2-persistence.service';
+import type { ExtractionV2Result } from '../extraction/extraction-v2.service';
+import { buildChips, type ChipsOutput } from '../evaluate/chips-layer-builder';
 
 export interface AnalyzedProfileDto {
   id: string;
@@ -26,6 +28,12 @@ export interface AnalyzeOneResponseDto {
   skippedCached?: boolean;
   skippedUpToDate?: boolean;
 }
+
+const EMPTY_CHIPS: ChipsOutput = {
+  attractionChips: [],
+  warningChips: [],
+  lifestyleChips: [],
+};
 
 /** Query params for POST /api/profiles/analyze-all */
 export interface AnalyzeAllQueryDto {
@@ -148,7 +156,7 @@ function isAnalyzed(profile: ProfileJsonPayload): boolean {
 export class ProfilesAnalyzeController {
   constructor(
     private readonly evaluateService: EvaluateService,
-    private readonly profilesJson: ProfilesJsonService,
+    private readonly profilesPrisma: ProfilesPrismaService,
     private readonly analysisCache: AnalysisCacheService,
     private readonly analyzeFailures: AnalyzeFailuresPersistenceService,
     private readonly logger: SimpleLogger,
@@ -161,11 +169,11 @@ export class ProfilesAnalyzeController {
    */
   @Get('stats')
   async getStats(): Promise<ProfilesStatsResponseDto> {
-    const items = await this.profilesJson.list();
+    const items = await this.profilesPrisma.list();
     let total = 0;
     let unanalyzed = 0;
     for (const item of items) {
-      const profile = await this.profilesJson.getById(item.id);
+      const profile = await this.profilesPrisma.getById(item.id);
       if (profile) {
         total++;
         if (!isAnalyzed(profile)) unanalyzed++;
@@ -212,7 +220,7 @@ export class ProfilesAnalyzeController {
       if (cached) {
         this.logger.log(`[Analyze] cache hit id=${profile.id}`, 'ProfilesAnalyze');
         const updatedAt = new Date().toISOString();
-        await this.profilesJson.save(profile.id, {
+        await this.profilesPrisma.save(profile.id, {
           id: profile.id,
           name: profile.name,
           texts: profile.texts,
@@ -274,7 +282,7 @@ export class ProfilesAnalyzeController {
     const updatedAt = new Date().toISOString();
     const policyVersionSaved = evaluation.productScores?.policyVersion ?? POLICY_VERSION;
 
-    await this.profilesJson.save(profile.id, {
+    await this.profilesPrisma.save(profile.id, {
       id: profile.id,
       name: profile.name,
       texts: profile.texts,
@@ -285,6 +293,13 @@ export class ProfilesAnalyzeController {
       policyVersion: policyVersionSaved,
       textHash,
       signals: evaluation.self.signals,
+    });
+    await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
+      profileId: profile.id,
+      aboutMe: profile.texts.aboutMe,
+      aboutPartner: profile.texts.aboutPartner,
+      aboutRelationship: profile.texts.aboutRelationship,
+      evaluation,
     });
 
     this.analysisCache.set(cacheKey, evaluation, ANALYSIS_CACHE_TTL_MS);
@@ -327,11 +342,11 @@ export class ProfilesAnalyzeController {
       : undefined;
     const recomputePolicyVersion = recomputePolicyVersionParam?.trim() || undefined;
 
-    const items = await this.profilesJson.list();
+    const items = await this.profilesPrisma.list();
     const profilesTotal = items.length;
     const profiles: ProfileJsonPayload[] = [];
     for (const item of items) {
-      const profile = await this.profilesJson.getById(item.id);
+      const profile = await this.profilesPrisma.getById(item.id);
       if (profile) profiles.push(profile);
     }
     const pool = onlyUnanalyzed
@@ -492,11 +507,11 @@ export class ProfilesAnalyzeController {
     const force = body?.force === true;
     const recomputePolicyVersion = typeof body?.recomputePolicyVersion === 'string' ? body.recomputePolicyVersion.trim() || undefined : undefined;
 
-    const items = await this.profilesJson.list();
+    const items = await this.profilesPrisma.list();
     const sortedItems = [...items].sort((a, b) => a.id.localeCompare(b.id));
     const profiles: ProfileJsonPayload[] = [];
     for (const item of sortedItems) {
-      const profile = await this.profilesJson.getById(item.id);
+      const profile = await this.profilesPrisma.getById(item.id);
       if (profile) profiles.push(profile);
     }
     const pool = onlyUnanalyzed
@@ -582,8 +597,8 @@ export class ProfilesAnalyzeController {
   async analyzeOneV2(
     @Param('id') id: string,
     @Query('force') forceParam?: string,
-  ): Promise<{ ok: true; extraction: any; profileId: string }> {
-    const profile = await this.profilesJson.getById(id);
+  ): Promise<{ ok: true; extraction: ExtractionV2Result | null; profileId: string; chips: ChipsOutput }> {
+    const profile = await this.profilesPrisma.getById(id);
     if (!profile) {
       throw new NotFoundException(`Profile not found: ${id}`);
     }
@@ -595,7 +610,8 @@ export class ProfilesAnalyzeController {
       const existing = await this.extractionV2Persistence.getByProfileId(id);
       if (existing) {
         this.logger.log(`[AnalyzeV2] skipped (exists) id=${id}`, 'ProfilesAnalyze');
-        return { ok: true, extraction: existing, profileId: id };
+        // Derived UI-facing layer from extraction only (non-persistent).
+        return { ok: true, extraction: existing, profileId: id, chips: buildChips(existing) };
       }
     }
 
@@ -623,7 +639,8 @@ export class ProfilesAnalyzeController {
       'ProfilesAnalyze',
     );
 
-    return { ok: true, extraction, profileId: id };
+    // Derived UI-facing layer from extraction only (non-persistent).
+    return { ok: true, extraction, profileId: id, chips: extraction ? buildChips(extraction) : EMPTY_CHIPS };
   }
 
   @Post(':id/analyze')
@@ -632,7 +649,7 @@ export class ProfilesAnalyzeController {
     @Query('force') forceParam?: string,
     @Query('recomputePolicyVersion') recomputePolicyVersionParam?: string,
   ): Promise<AnalyzeOneResponseDto> {
-    const profile = await this.profilesJson.getById(id);
+    const profile = await this.profilesPrisma.getById(id);
     if (!profile) {
       throw new NotFoundException(`Profile not found: ${id}`);
     }

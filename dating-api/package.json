@@ -31,7 +31,8 @@
     "seed-profiles": "nest build && node dist/scripts/seed-profiles.js",
     "merge-profiles": "npx ts-node --transpile-only scripts/merge-profiles.ts",
     "external-match": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/external-match.ts",
-    "review:explainability": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/review-explainability.ts"
+    "review:explainability": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/review-explainability.ts",
+    "backfill:chips": "npx ts-node --transpile-only scripts/backfill-evaluation-chips.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

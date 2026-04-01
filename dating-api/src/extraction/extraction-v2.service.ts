@@ -40,12 +40,21 @@ import type { NegativeItem } from './extracted-negatives.interface';
  * Only psychological signals extraction.
  */
 
-const SELF_BASE_SIGNALS_PROMPT_V2 = `You are a professional psychological profiler. Extract ONLY psychological signals for domain: self.
+const SELF_BASE_SIGNALS_PROMPT_V2 = `You are a professional psychological profiler. Extract two parallel outputs for domain: self:
+1) psychological signals
+2) rawInterests
 
 STRICT RULE:
 ONLY extract from EXPLICIT evidence in the text.
 NO inference. NO guessing.
 If evidence is weak, vague, generic, or only loosely related, return null.
+
+RAW INTERESTS RULES (rawInterests):
+- always include "rawInterests": [] in output
+- fill when explicit or strongly implied interests/topics/lifestyle preferences exist
+- lowercase, 1-3 words, no punctuation
+- max 10 items
+- no guessing
 
 SPARSITY SHUTDOWN:
 If input is shorter than 15 words OR contains no concrete self-descriptive, behavioral, or relational statements:
@@ -65,6 +74,13 @@ GENERIC TEXT EXAMPLES:
 
 CONCRETE TEXT EXAMPLES:
 - habits, routines, boundaries, emotional patterns, social preferences, conflict behavior, explicit relationship principles
+
+RAW INTERESTS (rawInterests):
+- Extract concrete interests/topics/lifestyle preferences from text.
+- Only explicit or strongly implied items.
+- No guessing.
+- Each item must be short (1-3 words), lowercase, no punctuation.
+- Max 10 items; prefer 5-8 high-quality.
 
 ALLOWED KEYS:
 emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance
@@ -138,18 +154,27 @@ FINAL OVERRIDE RULES (HIGHEST PRIORITY):
 5. Transparency / no-secrets language should be treated as valid self evidence.
 6. Shared-everything / merged-life language should be treated as valid self evidence.
 
-Output JSON:
-{ "domain": "self", "signals": { "key": int|null }, "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
+Output JSON (rawInterests is required, even if empty):
+{ "domain": "self", "signals": { "key": int|null }, "rawInterests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
 
-const RELATIONSHIP_BASE_SIGNALS_PROMPT_V2 = `You are a professional psychological profiler. Extract ONLY psychological signals for domain: relationship.
+const RELATIONSHIP_BASE_SIGNALS_PROMPT_V2 = `You are a professional psychological profiler. Extract two parallel outputs for domain: relationship:
+1) psychological signals
+2) rawInterests
 
 STRICT RULE:
 ONLY extract from EXPLICIT evidence in the text.
 NO inference. NO guessing.
 If evidence is weak, vague, generic, or only loosely related, return null.
 
+RAW INTERESTS RULES (rawInterests):
+- always include "rawInterests": [] in output
+- fill when explicit or strongly implied interests/topics/lifestyle preferences exist
+- lowercase, 1-3 words, no punctuation
+- max 10 items
+- no guessing
+
 SPARSITY SHUTDOWN:
-If input is shorter than 15 words OR contains fewer than 2 concrete relationship-structure statements:
+If input is shorter than 15 words AND contains no concrete relationship-structure statements:
 - set all signals to null
 - set confidence to 0.1
 - evidence = []
@@ -162,6 +187,13 @@ GENERIC TEXT EXAMPLES:
 
 CONCRETE TEXT EXAMPLES:
 - boundaries, commitment rules, exclusivity, repair style, communication norms, family goals, home-life expectations
+
+RAW INTERESTS (rawInterests):
+- Extract concrete interests/topics/lifestyle preferences from text.
+- Only explicit or strongly implied items.
+- No guessing.
+- Each item must be short (1-3 words), lowercase, no punctuation.
+- Max 10 items; prefer 5-8 high-quality.
 
 ALLOWED KEYS:
 emotionalDepth, attachmentSecurity, relationshipClarity, traditionalism, spirituality, lifestylePace, socialBattery
@@ -220,18 +252,27 @@ CONFIDENCE:
 - fewer than 2 non-null signals -> <= 0.3
 - high confidence only for literal, unambiguous evidence
 
-Output JSON:
-{ "domain": "relationship", "signals": { "key": int|null }, "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
+Output JSON (rawInterests is required, even if empty):
+{ "domain": "relationship", "signals": { "key": int|null }, "rawInterests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
 
-const PARTNER_BASE_SIGNALS_PROMPT_V2 = `You are a professional psychological profiler. Extract ONLY psychological signals for domain: partner.
+const PARTNER_BASE_SIGNALS_PROMPT_V2 = `You are a professional psychological profiler. Extract two parallel outputs for domain: partner:
+1) psychological signals
+2) rawInterests
 
 STRICT RULE:
 ONLY extract from EXPLICIT evidence in the text.
 NO inference. NO guessing.
 If evidence is weak, vague, generic, or only loosely related, return null.
 
+RAW INTERESTS RULES (rawInterests):
+- always include "rawInterests": [] in output
+- fill when explicit or strongly implied interests/topics/lifestyle preferences exist
+- lowercase, 1-3 words, no punctuation
+- max 10 items
+- no guessing
+
 SPARSITY SHUTDOWN:
-If input is shorter than 15 words OR contains fewer than 2 concrete partner-preference statements:
+If input is shorter than 15 words AND contains no concrete partner-preference statements:
 - set all signals to null
 - set confidence to 0.1
 - evidence = []
@@ -244,6 +285,13 @@ GENERIC TEXT EXAMPLES:
 
 CONCRETE TEXT EXAMPLES:
 - partner traits tied to behavior, communication, conflict, appearance, learning, family goals, home-life style
+
+RAW INTERESTS (rawInterests):
+- Extract concrete interests/topics/lifestyle preferences from text.
+- Only explicit or strongly implied items.
+- No guessing.
+- Each item must be short (1-3 words), lowercase, no punctuation.
+- Max 10 items; prefer 5-8 high-quality.
 
 ALLOWED KEYS:
 emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle
@@ -312,8 +360,8 @@ CONFIDENCE:
 - fewer than 2 non-null signals -> <= 0.3
 - high confidence only for literal, unambiguous evidence
 
-Output JSON:
-{ "domain": "partner", "signals": { "key": int|null }, "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
+Output JSON (rawInterests is required, even if empty):
+{ "domain": "partner", "signals": { "key": int|null }, "rawInterests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
 
 function getBaseSignalsPromptV2(domain: ExtractionDomain): string {
   switch (domain) {
@@ -334,6 +382,8 @@ const BASE_SIGNALS_PROMPT_HASH_V2 = createHash('sha256')
 
 const INTERESTS_PROMPT_HASH = 'interests_v1'; // placeholder, from InterestsExtractionService
 const NEGATIVES_PROMPT_HASH = 'negatives_v1'; // placeholder, from NegativesExtractionService
+const RAW_INTERESTS_PROMPT_HASH = 'raw_interests_v1';
+const RAW_NEGATIVES_PREFS_PROMPT_HASH = 'raw_negatives_prefs_v1';
 
 function emptyUsage(): LLMUsageStats {
   return { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCostUSD: 0, durationMs: 0 };
@@ -362,6 +412,181 @@ function parseOpenAIUsage(usage: unknown): { promptTokens: number; completionTok
   const completionTokens = typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
   const totalTokens = typeof u.total_tokens === 'number' ? u.total_tokens : promptTokens + completionTokens;
   return { promptTokens, completionTokens, totalTokens };
+}
+
+const RAW_INTERESTS_SCHEMA = z
+  .object({
+    rawInterests: z.array(z.string()).max(10),
+  })
+  .strict();
+
+const RAW_NEGATIVE_PREFERENCES_SCHEMA = z
+  .object({
+    negativePreferences: z.array(z.string()).max(10),
+    softNo: z.array(z.string()).max(10),
+    dealbreakers: z.array(z.string()).max(10),
+  })
+  .strict();
+
+function getRawInterestsPromptV2(domain: ExtractionDomain): string {
+  return `You extract interests for domain: ${domain}.
+
+Task:
+- Return only concrete interests/topics/lifestyle preferences from the given text.
+- Include only explicit or strongly implied items.
+- No guessing.
+
+Formatting rules:
+- output key must be exactly "rawInterests"
+- each item lowercase
+- each item 1-3 words
+- no punctuation
+- max 10 items
+
+Output JSON only:
+{ "rawInterests": [] }`;
+}
+
+function getRawNegativePreferencesPromptV2(domain: ExtractionDomain): string {
+  return `You extract boundaries and negative preferences for domain: ${domain}.
+
+Task:
+- Return explicit or strongly implied boundaries/preferences only.
+- No guessing.
+
+Output keys:
+- negativePreferences
+- softNo
+- dealbreakers
+
+Rules:
+- lowercase
+- short normalized items (1-3 words)
+- no punctuation
+- max 10 items per key
+
+Examples:
+- "no smokers" -> dealbreakers or negativePreferences
+- "no drama" -> softNo
+- "not controlling" -> negativePreferences
+- "doesnt want kids soon" -> dealbreakers if explicit
+
+Output JSON only:
+{
+  "negativePreferences": [],
+  "softNo": [],
+  "dealbreakers": []
+}`;
+}
+
+const BaseSignalsEvidenceItemSchema = z
+  .object({
+    signal: z.string(),
+    quote: z.string(),
+    reason: z.string().optional(),
+    note: z.string().optional(),
+  })
+  .strict();
+
+const BaseSignalsOutputSchemaByDomain: Record<ExtractionDomain, z.ZodType<Record<string, unknown>>> = {
+  self: z
+    .object({
+      domain: z.literal('self'),
+      signals: z.record(z.string(), z.union([z.number(), z.null()])),
+      rawInterests: z.array(z.string()).max(10),
+      evidence: z.array(BaseSignalsEvidenceItemSchema).max(MAX_EVIDENCE_ITEMS),
+      confidence: z.number(),
+      version: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .strict(),
+  partner: z
+    .object({
+      domain: z.literal('partner'),
+      signals: z.record(z.string(), z.union([z.number(), z.null()])),
+      rawInterests: z.array(z.string()).max(10),
+      evidence: z.array(BaseSignalsEvidenceItemSchema).max(MAX_EVIDENCE_ITEMS),
+      confidence: z.number(),
+      version: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .strict(),
+  relationship: z
+    .object({
+      domain: z.literal('relationship'),
+      signals: z.record(z.string(), z.union([z.number(), z.null()])),
+      rawInterests: z.array(z.string()).max(10),
+      evidence: z.array(BaseSignalsEvidenceItemSchema).max(MAX_EVIDENCE_ITEMS),
+      confidence: z.number(),
+      version: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .strict(),
+};
+
+const GENERIC_RAW_INTERESTS = new Set<string>([
+  'life',
+  'people',
+  'fun',
+  'love',
+  'relationship',
+  'relationships',
+  'dating',
+]);
+
+const GENERIC_NEGATIVE_ITEMS = new Set<string>([
+  'bad',
+  'toxic',
+  'issues',
+  'problems',
+  'people',
+  'person',
+]);
+
+function normalizeRawInterests(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (typeof item !== 'string') continue;
+    const normalized = item
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized) continue;
+    if (GENERIC_RAW_INTERESTS.has(normalized)) continue;
+    const words = normalized.split(' ').filter(Boolean);
+    if (words.length < 1 || words.length > 3) continue;
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    out.push(normalized);
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
+function normalizeNegativeItems(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (typeof item !== 'string') continue;
+    const normalized = item
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized) continue;
+    if (GENERIC_NEGATIVE_ITEMS.has(normalized)) continue;
+    const words = normalized.split(' ').filter(Boolean);
+    if (words.length < 1 || words.length > 3) continue;
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    out.push(normalized);
+    if (out.length >= 10) break;
+  }
+  return out;
 }
 
 export interface ExtractionV2Result {
@@ -393,6 +618,8 @@ export interface ExtractionV2Result {
       base: string;
       interests: string;
       negatives: string;
+      rawInterests?: string;
+      rawNegativePreferences?: string;
     };
   };
 }
@@ -481,11 +708,12 @@ export class ExtractionV2Service {
     );
 
     const systemPrompt = getBaseSignalsPromptV2(domain);
+    const outputSchema = BaseSignalsOutputSchemaByDomain[domain];
     const { value, rawText, usage } = await this.llm.completeJSON<Record<string, unknown>>({
       modelKey: 'fast',
       system: systemPrompt,
       user: userPrompt,
-      schema: z.any(),
+      schema: outputSchema,
       temperature: 0.1,
       maxTokens: 5000,
       timeoutMs: 120_000,
@@ -501,12 +729,73 @@ export class ExtractionV2Service {
     };
 
     const normalized = normalizeRawExtraction(value, domain);
+    if (domain === 'self') {
+      const rawSignals =
+        value && typeof value === 'object'
+          ? (value as Record<string, unknown>).signals
+          : undefined;
+      const rawSelfRelationshipClarity =
+        rawSignals && typeof rawSignals === 'object'
+          ? (rawSignals as Record<string, unknown>).relationshipClarity
+          : null;
+      this.logger.debug(
+        JSON.stringify({
+          event: 'self_relationship_clarity_trace',
+          stage: 'raw_llm_output',
+          domain,
+          requestId,
+          value: rawSelfRelationshipClarity ?? null,
+        }),
+      );
+      this.logger.debug(
+        JSON.stringify({
+          event: 'self_relationship_clarity_trace',
+          stage: 'normalizeRawExtraction',
+          domain,
+          requestId,
+          value: normalized.signals?.relationshipClarity ?? null,
+        }),
+      );
+    }
     const norm = normalizeKeys(normalized.signals);
+    if (domain === 'self') {
+      this.logger.debug(
+        JSON.stringify({
+          event: 'self_relationship_clarity_trace',
+          stage: 'normalizeKeys',
+          domain,
+          requestId,
+          value: norm.normalizedSignals.relationshipClarity ?? null,
+        }),
+      );
+    }
     normalized.signals = norm.normalizedSignals;
     let cleaned = this.validateAndClean(normalized, domain);
+    if (domain === 'self') {
+      this.logger.debug(
+        JSON.stringify({
+          event: 'self_relationship_clarity_trace',
+          stage: 'validateAndClean',
+          domain,
+          requestId,
+          value: cleaned.signals.relationshipClarity ?? null,
+        }),
+      );
+    }
     
     // Apply strict validation (same as V1)
     cleaned = validateExtraction(text, cleaned);
+    if (domain === 'self') {
+      this.logger.debug(
+        JSON.stringify({
+          event: 'self_relationship_clarity_trace',
+          stage: 'validateExtraction',
+          domain,
+          requestId,
+          value: cleaned.signals.relationshipClarity ?? null,
+        }),
+      );
+    }
     
     const withProvenance: ExtractedSignals = {
       ...cleaned,
@@ -517,6 +806,117 @@ export class ExtractionV2Service {
       ...withProvenance,
       _usage: accUsage,
     };
+  }
+
+  /**
+   * Dedicated rawInterests extractor for one domain.
+   * Separate from base signal extraction; no scoring impact.
+   */
+  private async extractRawInterestsForDomain(
+    domain: ExtractionDomain,
+    text: string,
+  ): Promise<string[]> {
+    const requestId = randomUUID();
+    const systemPrompt = getRawInterestsPromptV2(domain);
+    const userPrompt = `Domain: ${domain}\nText:\n"""\n${text}\n"""`;
+
+    try {
+      const { value } = await this.llm.completeJSON<{ rawInterests: string[] }>({
+        modelKey: 'fast',
+        system: systemPrompt,
+        user: userPrompt,
+        schema: RAW_INTERESTS_SCHEMA,
+        temperature: 0.1,
+        maxTokens: 1000,
+        timeoutMs: 90_000,
+        requestId,
+        purpose: 'extraction-v2-raw-interests',
+      });
+
+      const rawInterests = normalizeRawInterests(value.rawInterests);
+      this.logger.debug(
+        JSON.stringify({
+          event: 'raw_interests_extracted',
+          domain,
+          requestId,
+          rawInterests,
+        }),
+      );
+      return rawInterests;
+    } catch {
+      this.logger.debug(
+        JSON.stringify({
+          event: 'raw_interests_extracted',
+          domain,
+          requestId,
+          rawInterests: [],
+        }),
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Dedicated negatives/preferences extractor for one domain.
+   * Separate from base signal extraction; no scoring impact.
+   */
+  private async extractRawNegativePreferencesForDomain(
+    domain: ExtractionDomain,
+    text: string,
+  ): Promise<{
+    negativePreferences: string[];
+    softNo: string[];
+    dealbreakers: string[];
+  }> {
+    const requestId = randomUUID();
+    const systemPrompt = getRawNegativePreferencesPromptV2(domain);
+    const userPrompt = `Domain: ${domain}\nText:\n"""\n${text}\n"""`;
+
+    try {
+      const { value } = await this.llm.completeJSON<{
+        negativePreferences: string[];
+        softNo: string[];
+        dealbreakers: string[];
+      }>({
+        modelKey: 'fast',
+        system: systemPrompt,
+        user: userPrompt,
+        schema: RAW_NEGATIVE_PREFERENCES_SCHEMA,
+        temperature: 0.1,
+        maxTokens: 1200,
+        timeoutMs: 90_000,
+        requestId,
+        purpose: 'extraction-v2-negative-preferences',
+      });
+
+      const negativePreferences = normalizeNegativeItems(value.negativePreferences);
+      const softNo = normalizeNegativeItems(value.softNo);
+      const dealbreakers = normalizeNegativeItems(value.dealbreakers);
+
+      this.logger.debug(
+        JSON.stringify({
+          event: 'negative_preferences_extracted',
+          domain,
+          requestId,
+          negativePreferences,
+          softNo,
+          dealbreakers,
+        }),
+      );
+      return { negativePreferences, softNo, dealbreakers };
+    } catch {
+      this.logger.debug(
+        JSON.stringify({
+          event: 'negative_preferences_extracted',
+          domain,
+          requestId,
+          negativePreferences: [],
+          softNo: [],
+          dealbreakers: [],
+        }),
+      );
+      return { negativePreferences: [], softNo: [], dealbreakers: [] };
+    }
   }
 
   /**
@@ -573,6 +973,43 @@ export class ExtractionV2Service {
       this.negativesService.extractForDomain('relationship', aboutRelationship.trim()),
     ]);
 
+    // Dedicated rawInterests extraction (separate from base signal extraction)
+    const [selfRawInterests, partnerRawInterests, relationshipRawInterests] =
+      await Promise.all([
+        this.extractRawInterestsForDomain('self', aboutMe.trim()),
+        this.extractRawInterestsForDomain('partner', aboutPartner.trim()),
+        this.extractRawInterestsForDomain('relationship', aboutRelationship.trim()),
+      ]);
+
+    const [selfNegPrefs, partnerNegPrefs, relationshipNegPrefs] =
+      await Promise.all([
+        this.extractRawNegativePreferencesForDomain('self', aboutMe.trim()),
+        this.extractRawNegativePreferencesForDomain('partner', aboutPartner.trim()),
+        this.extractRawNegativePreferencesForDomain('relationship', aboutRelationship.trim()),
+      ]);
+
+    const selfBaseWithRaw: ExtractedSignals = {
+      ...selfBase,
+      rawInterests: selfRawInterests,
+      negativePreferences: selfNegPrefs.negativePreferences,
+      softNo: selfNegPrefs.softNo,
+      dealbreakers: selfNegPrefs.dealbreakers,
+    };
+    const partnerBaseWithRaw: ExtractedSignals = {
+      ...partnerBase,
+      rawInterests: partnerRawInterests,
+      negativePreferences: partnerNegPrefs.negativePreferences,
+      softNo: partnerNegPrefs.softNo,
+      dealbreakers: partnerNegPrefs.dealbreakers,
+    };
+    const relationshipBaseWithRaw: ExtractedSignals = {
+      ...relationshipBase,
+      rawInterests: relationshipRawInterests,
+      negativePreferences: relationshipNegPrefs.negativePreferences,
+      softNo: relationshipNegPrefs.softNo,
+      dealbreakers: relationshipNegPrefs.dealbreakers,
+    };
+
     const totalDurationMs = Date.now() - extractStart;
 
     // Merge usage stats
@@ -594,9 +1031,29 @@ export class ExtractionV2Service {
         requestId: batchRequestId,
         totalDurationMs,
         baseSignalsNonNull: {
-          self: countNonNullSignals(selfBase.signals),
-          partner: countNonNullSignals(partnerBase.signals),
-          relationship: countNonNullSignals(relationshipBase.signals),
+          self: countNonNullSignals(selfBaseWithRaw.signals),
+          partner: countNonNullSignals(partnerBaseWithRaw.signals),
+          relationship: countNonNullSignals(relationshipBaseWithRaw.signals),
+        },
+        rawInterestsCount: {
+          self: selfRawInterests.length,
+          partner: partnerRawInterests.length,
+          relationship: relationshipRawInterests.length,
+        },
+        negativePreferencesCount: {
+          self: selfNegPrefs.negativePreferences.length,
+          partner: partnerNegPrefs.negativePreferences.length,
+          relationship: relationshipNegPrefs.negativePreferences.length,
+        },
+        softNoCount: {
+          self: selfNegPrefs.softNo.length,
+          partner: partnerNegPrefs.softNo.length,
+          relationship: relationshipNegPrefs.softNo.length,
+        },
+        dealbreakersCount: {
+          self: selfNegPrefs.dealbreakers.length,
+          partner: partnerNegPrefs.dealbreakers.length,
+          relationship: relationshipNegPrefs.dealbreakers.length,
         },
         interestsCount: {
           self: selfInterests.length,
@@ -616,9 +1073,9 @@ export class ExtractionV2Service {
       version: 'v2',
       extractedAt: new Date().toISOString(),
       base: {
-        self: selfBase,
-        partner: partnerBase,
-        relationship: relationshipBase,
+        self: selfBaseWithRaw,
+        partner: partnerBaseWithRaw,
+        relationship: relationshipBaseWithRaw,
       },
       interests: {
         self: selfInterests,
@@ -637,6 +1094,8 @@ export class ExtractionV2Service {
           base: BASE_SIGNALS_PROMPT_HASH_V2,
           interests: INTERESTS_PROMPT_HASH,
           negatives: NEGATIVES_PROMPT_HASH,
+          rawInterests: RAW_INTERESTS_PROMPT_HASH,
+          rawNegativePreferences: RAW_NEGATIVES_PREFS_PROMPT_HASH,
         },
       },
     };

@@ -51,9 +51,9 @@ export function projectToCanonicalArrays(extraction: ExtractionV2Result): Canoni
  */
 export function projectToCanonicalSignalScalars(extraction: ExtractionV2Result): CanonicalSignalScalars {
   return {
-    relationship_clarity_self: extractSignalValue(extraction.signals.self, 'relationshipClarity'),
-    relationship_clarity_partner: extractSignalValue(extraction.signals.partner, 'relationshipClarity'),
-    relationship_clarity_relationship: extractSignalValue(extraction.signals.relationship, 'relationshipClarity'),
+    relationship_clarity_self: extractSignalValue(extraction.base.self.signals, 'relationshipClarity'),
+    relationship_clarity_partner: extractSignalValue(extraction.base.partner.signals, 'relationshipClarity'),
+    relationship_clarity_relationship: extractSignalValue(extraction.base.relationship.signals, 'relationshipClarity'),
   };
 }
 
@@ -71,7 +71,7 @@ export function projectToCanonical(extraction: ExtractionV2Result): CanonicalPro
  * Extract integer signal value from signals object.
  * Returns null if missing or invalid.
  */
-function extractSignalValue(signals: Record<string, number>, key: string): number | null {
+function extractSignalValue(signals: Record<string, number | null>, key: string): number | null {
   const value = signals?.[key];
   if (typeof value === 'number' && !isNaN(value)) {
     return Math.round(value);

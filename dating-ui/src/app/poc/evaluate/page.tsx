@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChipsSection, type ChipsViewModel } from '../../components/chips-section';
 
 const API_PROFILES_EVALUATE_URL =
   'http://localhost:3001/api/v1/profiles/evaluate';
@@ -44,6 +45,16 @@ interface EvaluateBatchResult {
   display: { summary: string; insight: string };
 }
 
+interface AnalyzeV2Response {
+  chips?: ChipsViewModel;
+}
+
+const EMPTY_CHIPS: ChipsViewModel = {
+  attractionChips: [],
+  warningChips: [],
+  lifestyleChips: [],
+};
+
 type SectionId = (typeof SECTIONS)[number]['id'];
 
 function formatSignalKey(key: string): string {
@@ -69,6 +80,7 @@ export default function EvaluatePage() {
   const [error, setError] = useState<string | null>(null);
   const [savedProfileId, setSavedProfileId] = useState<string | null>(null);
   const [result, setResult] = useState<EvaluateBatchResult | null>(null);
+  const [chips, setChips] = useState<ChipsViewModel>(EMPTY_CHIPS);
 
   const texts: Record<SectionId, string> = {
     aboutMe,
@@ -80,6 +92,7 @@ export default function EvaluatePage() {
     e.preventDefault();
     setError(null);
     setResult(null);
+    setChips(EMPTY_CHIPS);
 
     const trimmedName = name.trim();
     const trimmed: Record<SectionId, string> = {
@@ -148,6 +161,23 @@ export default function EvaluatePage() {
       setSavedProfileId(data.profileId);
       setProfileId(data.profileId);
       setResult(data.evaluation);
+
+      // Derived UI-facing layer only; read-only and non-persistent.
+      try {
+        const chipsRes = await fetch(
+          `http://localhost:3001/api/profiles/${encodeURIComponent(data.profileId)}/analyze-v2`,
+          { method: 'POST' },
+        );
+        if (chipsRes.ok) {
+          const chipsData = (await chipsRes.json()) as AnalyzeV2Response;
+          console.log('analyze-v2 response', chipsData);
+          setChips(chipsData?.chips ?? EMPTY_CHIPS);
+        } else {
+          setChips(EMPTY_CHIPS);
+        }
+      } catch {
+        setChips(EMPTY_CHIPS);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed.');
     } finally {
@@ -163,7 +193,7 @@ export default function EvaluatePage() {
     data: ExtractedSignals;
   }) {
     const entries = Object.entries(data.signals ?? {}).filter(
-      ([_, v]) => v != null,
+      ([, v]) => v != null,
     ) as [string, number][];
     return (
       <div className="space-y-3 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
@@ -325,6 +355,7 @@ export default function EvaluatePage() {
                 {result.display.insight}
               </p>
             </div>
+            <ChipsSection chips={chips} title="What stands out" />
             <SignalsCard title="Self" data={result.self} />
             <SignalsCard title="Partner" data={result.partner} />
             <SignalsCard title="Relationship" data={result.relationship} />

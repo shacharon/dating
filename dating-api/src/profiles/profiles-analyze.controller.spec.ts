@@ -4,12 +4,13 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import type { ProfileJsonPayload } from './profiles-json.service';
-import { ProfilesJsonService } from './profiles-json.service';
+import { ProfilesPrismaService } from './profiles-prisma.service';
 import { AnalysisCacheService } from './analysis-cache.service';
 import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistence.service';
 import { ProfilesAnalyzeController } from './profiles-analyze.controller';
 import { ExtractionV2Service } from '../extraction/extraction-v2.service';
 import { ExtractionV2PersistenceService } from '../extraction/extraction-v2-persistence.service';
+import type { ExtractionV2Result } from '../extraction/extraction-v2.service';
 
 function mockEvalResult(overrides?: { summary?: string }): EvaluateBatchResult {
   return {
@@ -110,6 +111,58 @@ function mockProfile(id: string, name: string, evalOverrides?: { summary?: strin
   } as ProfileJsonPayload;
 }
 
+function mockExtractionV2Result(): ExtractionV2Result {
+  return {
+    version: 'v2',
+    extractedAt: new Date().toISOString(),
+    base: {
+      self: {
+        domain: 'self',
+        signals: { emotionalDepth: 8, socialBattery: 2 },
+        rawInterests: ['hiking', 'travel'],
+        softNo: ['smoking'],
+        dealbreakers: [],
+        evidence: [{ signal: 'socialBattery', quote: 'prefer quiet nights', reason: 'explicit' }],
+        version: 'v1',
+        confidence: 0.8,
+      },
+      partner: {
+        domain: 'partner',
+        signals: { directness: 7 },
+        rawInterests: ['books'],
+        softNo: [],
+        dealbreakers: [],
+        evidence: [],
+        version: 'v1',
+        confidence: 0.7,
+      },
+      relationship: {
+        domain: 'relationship',
+        signals: { lifestylePace: 7 },
+        rawInterests: [],
+        softNo: [],
+        dealbreakers: ['dishonesty'],
+        evidence: [],
+        version: 'v1',
+        confidence: 0.7,
+      },
+    },
+    interests: { self: [], partner: [], relationship: [] },
+    negatives: { self: [], partner: [], relationship: [] },
+    _usage: {
+      promptTokens: 1,
+      completionTokens: 1,
+      totalTokens: 2,
+      estimatedCostUSD: 0.0001,
+      durationMs: 10,
+    },
+    _provenance: {
+      extractorVersion: 'test',
+      promptHashes: { base: 'a', interests: 'b', negatives: 'c' },
+    },
+  };
+}
+
 describe('ProfilesAnalyzeController', () => {
   let controller: ProfilesAnalyzeController;
   let evaluateBatch: jest.Mock;
@@ -119,6 +172,8 @@ describe('ProfilesAnalyzeController', () => {
   let cacheGet: jest.Mock;
   let cacheSet: jest.Mock;
   let failuresAppend: jest.Mock;
+  let extractAll: jest.Mock;
+  let extractionGetByProfileId: jest.Mock;
 
   beforeEach(async () => {
     evaluateBatch = jest.fn();
@@ -128,12 +183,14 @@ describe('ProfilesAnalyzeController', () => {
     cacheGet = jest.fn().mockReturnValue(null);
     cacheSet = jest.fn();
     failuresAppend = jest.fn().mockResolvedValue(undefined);
+    extractAll = jest.fn();
+    extractionGetByProfileId = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProfilesAnalyzeController],
       providers: [
         { provide: EvaluateService, useValue: { evaluateBatch } },
-        { provide: ProfilesJsonService, useValue: { getById, list, save } },
+        { provide: ProfilesPrismaService, useValue: { getById, list, save } },
         {
           provide: AnalysisCacheService,
           useValue: {
@@ -158,14 +215,15 @@ describe('ProfilesAnalyzeController', () => {
         {
           provide: ExtractionV2Service,
           useValue: {
-            extractAll: jest.fn(),
+            extractAll,
           },
         },
         {
           provide: ExtractionV2PersistenceService,
           useValue: {
             save: jest.fn(),
-            getByProfileId: jest.fn(),
+            saveExtendedSignalsFromEvaluation: jest.fn(),
+            getByProfileId: extractionGetByProfileId,
             exists: jest.fn(),
           },
         },
@@ -508,6 +566,26 @@ describe('ProfilesAnalyzeController', () => {
       expect(second.done).toBe(true);
       expect(save).toHaveBeenCalledTimes(2);
       expect(evaluateBatch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('POST /api/profiles/:id/analyze-v2', () => {
+    it('returns extraction with derived chips (non-persistent response field)', async () => {
+      const profile = mockProfile('v2-id', 'V2 User');
+      getById.mockResolvedValue(profile);
+      extractionGetByProfileId.mockResolvedValue(null);
+      extractAll.mockResolvedValue(mockExtractionV2Result());
+
+      const result = await controller.analyzeOneV2('v2-id');
+
+      expect(result.ok).toBe(true);
+      expect(result.profileId).toBe('v2-id');
+      expect(result.extraction).toBeDefined();
+      expect(result.chips).toEqual({
+        attractionChips: ['hiking', 'travel', 'books', 'emotional depth', 'directness', 'lifestyle pace'],
+        warningChips: ['smoking', 'dishonesty', 'social battery'],
+        lifestyleChips: [],
+      });
     });
   });
 });

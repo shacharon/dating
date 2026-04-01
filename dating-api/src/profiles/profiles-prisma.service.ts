@@ -18,12 +18,13 @@ interface UserProfileRow {
   aboutRelationship: string | null;
   createdAt: Date;
   updatedAt: Date;
-  evaluation: unknown;
-  signals: unknown;
-  evaluatedAt: Date | null;
-  promptVersion: string | null;
-  policyVersion: string | null;
-  textHash: string | null;
+  evaluationRaw?: { evaluation: unknown } | null;
+  evaluationMeta?: {
+    evaluatedAt: Date | null;
+    promptVersion: string | null;
+    policyVersion: string | null;
+    textHash: string | null;
+  } | null;
 }
 
 const SIGNAL_KEYS = [
@@ -234,8 +235,43 @@ export class ProfilesPrismaService {
   private async getFromPrisma(id: string): Promise<UserProfileRow | null> {
     const row = await this.prisma.userProfile.findUnique({
       where: { id },
+      include: {
+        evaluationRaw: {
+          select: {
+            evaluation: true,
+          },
+        },
+        evaluation: {
+          select: {
+            evaluatedAt: true,
+            promptVersion: true,
+            policyVersion: true,
+            textHash: true,
+          },
+        },
+      },
     });
-    return row as UserProfileRow | null;
+    if (!row) return null;
+    return {
+      id: row.id,
+      name: row.name,
+      aboutMe: row.aboutMe,
+      aboutPartner: row.aboutPartner,
+      aboutRelationship: row.aboutRelationship,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      evaluationRaw: row.evaluationRaw
+        ? { evaluation: row.evaluationRaw.evaluation }
+        : null,
+      evaluationMeta: row.evaluation
+        ? {
+            evaluatedAt: row.evaluation.evaluatedAt,
+            promptVersion: row.evaluation.promptVersion,
+            policyVersion: row.evaluation.policyVersion,
+            textHash: row.evaluation.textHash,
+          }
+        : null,
+    };
   }
 
   private async listFromPrisma(): Promise<ProfileListItem[]> {
@@ -256,6 +292,43 @@ export class ProfilesPrismaService {
   }
 
   private rowToPayload(row: UserProfileRow): ProfileJsonPayload {
+    const rawEvaluation =
+      (row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined) ??
+      ({
+        self: { domain: 'self', signals: {}, evidence: [], version: 'v1', confidence: 0 },
+        partner: { domain: 'partner', signals: {}, evidence: [], version: 'v1', confidence: 0 },
+        relationship: { domain: 'relationship', signals: {}, evidence: [], version: 'v1', confidence: 0 },
+        compatibility: {
+          selfVsPartner: { overallScore: 0, coverage: 0, matchedSignals: 0, hardMismatches: [], breakdown: [] },
+          selfVsRelationship: { overallScore: 0, coverage: 0, matchedSignals: 0, hardMismatches: [], breakdown: [] },
+        },
+        display: { summary: 'Not analyzed yet.', insight: '' },
+        productScores: {
+          partnerFitScore: 0,
+          relationshipFitScore: 0,
+          coverageScore: 0,
+          frictionRiskScore: 0,
+          overallDecisionScore: 0,
+          policyVersion: 'product-score-v1',
+        },
+        productScoresPresentation: {
+          partnerFitScore: { kind: 'insufficient_data' },
+          relationshipFitScore: { kind: 'insufficient_data' },
+          coverageScore: { kind: 'insufficient_data' },
+          frictionRiskScore: { kind: 'insufficient_data' },
+          overallDecisionScore: { kind: 'insufficient_data' },
+        },
+        flags: [],
+        chips: { self: [], partner: [], relationship: [] },
+      } as EvaluateBatchResult);
+
+    const evaluation: EvaluateBatchResult = rawEvaluation.chips
+      ? rawEvaluation
+      : {
+          ...rawEvaluation,
+          chips: { self: [], partner: [], relationship: [] },
+        };
+
     return {
       id: row.id,
       name: row.name,
@@ -264,14 +337,16 @@ export class ProfilesPrismaService {
         aboutPartner: row.aboutPartner || '',
         aboutRelationship: row.aboutRelationship || '',
       },
-      evaluation: row.evaluation as EvaluateBatchResult,
+      evaluation,
       savedAt: row.updatedAt.toISOString(),
-      evaluationStatus: row.evaluatedAt ? 'DONE' : undefined,
-      evaluatedAt: row.evaluatedAt?.toISOString(),
-      promptVersion: row.promptVersion || undefined,
-      policyVersion: row.policyVersion || undefined,
-      textHash: row.textHash || undefined,
-      signals: row.signals as Record<string, number | null> | undefined,
+      evaluationStatus: row.evaluationMeta?.evaluatedAt ? 'DONE' : undefined,
+      evaluatedAt: row.evaluationMeta?.evaluatedAt?.toISOString(),
+      promptVersion: row.evaluationMeta?.promptVersion || undefined,
+      policyVersion: row.evaluationMeta?.policyVersion || undefined,
+      textHash: row.evaluationMeta?.textHash || undefined,
+      signals:
+        ((row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined)?.self
+          ?.signals as Record<string, number | null> | undefined) ?? undefined,
     };
   }
 }

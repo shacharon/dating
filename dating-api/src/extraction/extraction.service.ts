@@ -132,7 +132,7 @@ If evidence is weak, vague, generic, or only loosely related, return null.
 Do not guess.
 
 SPARSITY SHUTDOWN:
-If input is shorter than 15 words OR contains fewer than 2 concrete relationship-structure statements:
+If input is shorter than 15 words AND contains no concrete relationship-structure statements:
 - set all signals to null
 - set confidence to 0.1
 - evidence = []
@@ -220,7 +220,7 @@ If evidence is weak, vague, generic, or only loosely related, return null.
 Do not guess.
 
 SPARSITY SHUTDOWN:
-If input is shorter than 15 words OR contains fewer than 2 concrete partner-preference statements:
+If input is shorter than 15 words AND contains no concrete partner-preference statements:
 - set all signals to null
 - set confidence to 0.1
 - evidence = []

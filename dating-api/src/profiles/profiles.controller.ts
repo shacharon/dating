@@ -10,6 +10,7 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
 import { ProfilesPrismaService } from './profiles-prisma.service';
+import { ExtractionV2PersistenceService } from '../extraction/extraction-v2-persistence.service';
 
 export interface ProfilesEvaluateBodyDto {
   id?: string;
@@ -35,6 +36,7 @@ export class ProfilesController {
     private readonly evaluateService: EvaluateService,
     private readonly profilesStorage: ProfilesPrismaService,
     private readonly logger: SimpleLogger,
+    private readonly extractionV2Persistence: ExtractionV2PersistenceService,
   ) {}
 
   @Post('evaluate')
@@ -85,6 +87,13 @@ export class ProfilesController {
           aboutPartner,
           aboutRelationship,
         },
+        evaluation,
+      });
+      await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
+        profileId: id,
+        aboutMe,
+        aboutPartner,
+        aboutRelationship,
         evaluation,
       });
     } catch (err) {

@@ -8,7 +8,8 @@ import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ExtractionV2Result } from '../extraction/extraction-v2.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { projectToCanonical } from '../canonical/canonical-projection';
+import { projectToCanonicalArrays, projectToCanonicalSignalScalars } from '../canonical/canonical-projection';
+import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 
 const PROMPT_VERSION_V2 = 'v2_9call_20260328';
 
@@ -18,6 +19,28 @@ export interface ExtractionV2PersistInput {
   aboutPartner: string;
   aboutRelationship: string;
   extraction: ExtractionV2Result;
+}
+
+function normalizeExtendedList(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (typeof item !== 'string') continue;
+    const normalized = item
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized) continue;
+    const words = normalized.split(' ').filter(Boolean);
+    if (words.length < 1 || words.length > 3) continue;
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    out.push(normalized);
+    if (out.length >= 10) break;
+  }
+  return out;
 }
 
 @Injectable()
@@ -56,8 +79,24 @@ export class ExtractionV2PersistenceService {
        extraction.base.partner.confidence +
        extraction.base.relationship.confidence) / 3;
 
-    // Project to canonical arrays and signal scalars
-    const canonical = projectToCanonical(extraction);
+    // Project to canonical arrays and signal scalars (source of truth for DB writes)
+    const canonicalArrays = projectToCanonicalArrays(extraction);
+    const scalars = projectToCanonicalSignalScalars(extraction);
+    this.logger.debug(
+      JSON.stringify({
+        event: 'self_relationship_clarity_trace',
+        stage: 'projectToCanonicalSignalScalars',
+        profileId,
+        extraction_self_relationshipClarity:
+          extraction.base.self.signals.relationshipClarity ?? null,
+        canonical_relationship_clarity_self: scalars.relationship_clarity_self,
+      }),
+    );
+
+    this.logger.debug(
+      'canonical_scalars_written',
+      JSON.stringify({ profileId, scalars }),
+    );
 
     this.logger.log(
       JSON.stringify({
@@ -67,15 +106,15 @@ export class ExtractionV2PersistenceService {
         avgConfidence: Math.round(avgConfidence * 100) / 100,
         textHash,
         canonical: {
-          interests_self: canonical.interests_self.length,
-          interests_partner: canonical.interests_partner.length,
-          negatives_self: canonical.negatives_self.length,
-          negatives_partner: canonical.negatives_partner.length,
-          soft_no: canonical.soft_no.length,
-          hard_no: canonical.hard_no.length,
-          relationship_clarity_self: canonical.relationship_clarity_self,
-          relationship_clarity_partner: canonical.relationship_clarity_partner,
-          relationship_clarity_relationship: canonical.relationship_clarity_relationship,
+          interests_self: canonicalArrays.interests_self.length,
+          interests_partner: canonicalArrays.interests_partner.length,
+          negatives_self: canonicalArrays.negatives_self.length,
+          negatives_partner: canonicalArrays.negatives_partner.length,
+          soft_no: canonicalArrays.soft_no.length,
+          hard_no: canonicalArrays.hard_no.length,
+          relationship_clarity_self: scalars.relationship_clarity_self,
+          relationship_clarity_partner: scalars.relationship_clarity_partner,
+          relationship_clarity_relationship: scalars.relationship_clarity_relationship,
         },
       }),
       ExtractionV2PersistenceService.name,
@@ -93,15 +132,15 @@ export class ExtractionV2PersistenceService {
         relationshipSignals: extraction.base.relationship.signals as any,
         coverageScore,
         avgConfidence,
-        interests_self: canonical.interests_self,
-        interests_partner: canonical.interests_partner,
-        negatives_self: canonical.negatives_self,
-        negatives_partner: canonical.negatives_partner,
-        soft_no: canonical.soft_no,
-        hard_no: canonical.hard_no,
-        relationship_clarity_self: canonical.relationship_clarity_self,
-        relationship_clarity_partner: canonical.relationship_clarity_partner,
-        relationship_clarity_relationship: canonical.relationship_clarity_relationship,
+        interests_self: canonicalArrays.interests_self,
+        interests_partner: canonicalArrays.interests_partner,
+        negatives_self: canonicalArrays.negatives_self,
+        negatives_partner: canonicalArrays.negatives_partner,
+        soft_no: canonicalArrays.soft_no,
+        hard_no: canonicalArrays.hard_no,
+        relationship_clarity_self: scalars.relationship_clarity_self,
+        relationship_clarity_partner: scalars.relationship_clarity_partner,
+        relationship_clarity_relationship: scalars.relationship_clarity_relationship,
       },
       update: {
         promptVersion: PROMPT_VERSION_V2,
@@ -114,15 +153,95 @@ export class ExtractionV2PersistenceService {
         avgConfidence,
         extractedAt: extraction.extractedAt,
         updatedAt: new Date(),
-        interests_self: canonical.interests_self,
-        interests_partner: canonical.interests_partner,
-        negatives_self: canonical.negatives_self,
-        negatives_partner: canonical.negatives_partner,
-        soft_no: canonical.soft_no,
-        hard_no: canonical.hard_no,
-        relationship_clarity_self: canonical.relationship_clarity_self,
-        relationship_clarity_partner: canonical.relationship_clarity_partner,
-        relationship_clarity_relationship: canonical.relationship_clarity_relationship,
+        interests_self: canonicalArrays.interests_self,
+        interests_partner: canonicalArrays.interests_partner,
+        negatives_self: canonicalArrays.negatives_self,
+        negatives_partner: canonicalArrays.negatives_partner,
+        soft_no: canonicalArrays.soft_no,
+        hard_no: canonicalArrays.hard_no,
+        relationship_clarity_self: scalars.relationship_clarity_self,
+        relationship_clarity_partner: scalars.relationship_clarity_partner,
+        relationship_clarity_relationship: scalars.relationship_clarity_relationship,
+      },
+    });
+
+    const persisted = await this.prisma.profileExtractionV2.findUnique({
+      where: { profileId },
+      select: { relationship_clarity_self: true },
+    });
+    this.logger.debug(
+      JSON.stringify({
+        event: 'self_relationship_clarity_trace',
+        stage: 'persisted',
+        profileId,
+        relationship_clarity_self: persisted?.relationship_clarity_self ?? null,
+      }),
+    );
+  }
+
+  /**
+   * Persist extendedSignals canonical arrays from evaluation into ProfileExtractionV2.
+   * Persistence-only side channel: does not affect scoring/API.
+   */
+  async saveExtendedSignalsFromEvaluation(input: {
+    profileId: string;
+    aboutMe: string;
+    aboutPartner: string;
+    aboutRelationship: string;
+    evaluation: EvaluateBatchResult;
+  }): Promise<void> {
+    const { profileId, aboutMe, aboutPartner, aboutRelationship, evaluation } = input;
+    const textHash = this.hashTexts(aboutMe, aboutPartner, aboutRelationship);
+    const ext = evaluation.extendedSignals;
+
+    const interests = normalizeExtendedList(ext?.interests);
+    const lifestyleTraits = normalizeExtendedList(ext?.lifestyleTraits);
+    const preferences = normalizeExtendedList(ext?.preferences);
+    const boundaries = normalizeExtendedList(ext?.boundaries);
+    const values = normalizeExtendedList(ext?.values);
+
+    const avgConfidence =
+      (evaluation.self.confidence +
+        evaluation.partner.confidence +
+        evaluation.relationship.confidence) / 3;
+
+    await this.prisma.profileExtractionV2.upsert({
+      where: { profileId },
+      create: {
+        profileId,
+        promptVersion: PROMPT_VERSION_V2,
+        textHash,
+        extractionJson: {} as any,
+        selfSignals: evaluation.self.signals as any,
+        partnerSignals: evaluation.partner.signals as any,
+        relationshipSignals: evaluation.relationship.signals as any,
+        coverageScore: evaluation.productScores.coverageScore,
+        avgConfidence,
+        interests_self: [],
+        interests_partner: [],
+        negatives_self: [],
+        negatives_partner: [],
+        soft_no: [],
+        hard_no: [],
+        interests,
+        lifestyleTraits,
+        preferences,
+        boundaries,
+        values,
+      },
+      update: {
+        textHash,
+        selfSignals: evaluation.self.signals as any,
+        partnerSignals: evaluation.partner.signals as any,
+        relationshipSignals: evaluation.relationship.signals as any,
+        coverageScore: evaluation.productScores.coverageScore,
+        avgConfidence,
+        interests,
+        lifestyleTraits,
+        preferences,
+        boundaries,
+        values,
+        updatedAt: new Date(),
       },
     });
   }

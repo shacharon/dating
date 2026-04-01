@@ -74,6 +74,12 @@ export interface ExtractedSignals {
   domain: ExtractionDomain;
   /** Scores 1–10 or null; keys are EXTRACTION_SIGNAL_KEYS. */
   signals: Record<string, number | null>;
+  /** JSON-first topic extraction for UI/debug only (no scoring impact). */
+  rawInterests?: string[];
+  /** JSON-first negatives extraction for UI/debug only (no scoring impact). */
+  negativePreferences?: string[];
+  softNo?: string[];
+  dealbreakers?: string[];
   evidence: ExtractionEvidenceItem[];
   version: 'v1';
   confidence: number;

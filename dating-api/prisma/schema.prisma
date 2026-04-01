@@ -100,6 +100,11 @@ model ProfileExtractionV2 {
   negatives_partner   String[] @default([])
   soft_no             String[] @default([])
   hard_no             String[] @default([])
+  interests           String[] @default([])
+  lifestyleTraits     String[] @default([])
+  preferences         String[] @default([])
+  boundaries          String[] @default([])
+  values              String[] @default([])
   
   relationship_clarity_self         Int?
   relationship_clarity_partner      Int?

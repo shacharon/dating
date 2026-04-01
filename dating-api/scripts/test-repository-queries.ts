@@ -53,10 +53,10 @@ async function testRepository() {
   );
   console.log('\n');
 
-  // Query 3: Min relationshipClarity >= 7
-  console.log('Query 3: Profiles with relationshipClarity >= 7\n');
+  // Query 3: Min relationship_clarity_self >= 7
+  console.log('Query 3: Profiles with relationship_clarity_self >= 7\n');
   const result3 = await repo.findByPreferences({
-    minSignals: { relationshipClarity: 7 },
+    minRelationshipClaritySelf: 7,
     limit: 10,
   });
 
@@ -72,11 +72,11 @@ async function testRepository() {
   console.log('\n');
 
   // Query 4: Combined - interest + exclude hard_no + signal threshold
-  console.log('Query 4: WITH "dancing", WITHOUT "smoking" hard_no, relationshipClarity >= 7\n');
+  console.log('Query 4: WITH "dancing", WITHOUT "smoking" hard_no, relationship_clarity_self >= 7\n');
   const result4 = await repo.findByPreferences({
     includeInterests: ['dancing'],
     excludeHardNo: ['smoking'],
-    minSignals: { relationshipClarity: 7 },
+    minRelationshipClaritySelf: 7,
     limit: 10,
   });
 

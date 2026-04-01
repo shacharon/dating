@@ -5,7 +5,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import type { ExtractionV2Result } from '../src/extraction/extraction-v2.service';
-import { projectToCanonicalArrays } from '../src/canonical/canonical-projection';
+import { projectToCanonicalArrays, projectToCanonicalSignalScalars } from '../src/canonical/canonical-projection';
 
 const prisma = new PrismaClient();
 
@@ -46,15 +46,15 @@ const sampleExtraction: ExtractionV2Result = {
   },
   interests: {
     self: [
-      { tag: 'HIKING', strength: 'explicit', evidence: 'I love hiking', ruleId: 'llm_v1' },
+      { tag: 'hiking', strength: 'explicit', evidence: 'I love hiking', ruleId: 'llm_v1' },
       { tag: 'hiking', strength: 'strong', evidence: 'hike every weekend', ruleId: 'llm_v1' },
       { tag: 'cooking', strength: 'explicit', evidence: 'I cook daily', ruleId: 'llm_v1' },
-      { tag: 'YOGA', strength: 'strong', evidence: 'yoga class', ruleId: 'llm_v1' },
-      { tag: 'unknown_tag', strength: 'explicit', evidence: 'test', ruleId: 'llm_v1' },
+      { tag: 'yoga', strength: 'strong', evidence: 'yoga class', ruleId: 'llm_v1' },
+      { tag: 'unknown_tag' as any, strength: 'explicit', evidence: 'test', ruleId: 'llm_v1' },
     ],
     partner: [
       { tag: 'gym', strength: 'explicit', evidence: 'wants gym partner', ruleId: 'llm_v1' },
-      { tag: 'GYM', strength: 'strong', evidence: 'duplicate test', ruleId: 'llm_v1' },
+      { tag: 'gym', strength: 'strong', evidence: 'duplicate test', ruleId: 'llm_v1' },
     ],
     relationship: [
       { tag: 'travel', strength: 'explicit', evidence: 'should be ignored', ruleId: 'llm_v1' },
@@ -100,6 +100,7 @@ async function testCanonicalMapper() {
   // Step 1: Project to canonical arrays
   console.log('1. Projecting extraction to canonical arrays...\n');
   const canonical = projectToCanonicalArrays(sampleExtraction);
+  const scalars = projectToCanonicalSignalScalars(sampleExtraction);
 
   console.log('Projected arrays:');
   console.log('  interests_self:', canonical.interests_self);
@@ -147,6 +148,9 @@ async function testCanonicalMapper() {
       negatives_partner: canonical.negatives_partner,
       soft_no: canonical.soft_no,
       hard_no: canonical.hard_no,
+      relationship_clarity_self: scalars.relationship_clarity_self,
+      relationship_clarity_partner: scalars.relationship_clarity_partner,
+      relationship_clarity_relationship: scalars.relationship_clarity_relationship,
     },
     update: {
       interests_self: canonical.interests_self,
@@ -155,6 +159,9 @@ async function testCanonicalMapper() {
       negatives_partner: canonical.negatives_partner,
       soft_no: canonical.soft_no,
       hard_no: canonical.hard_no,
+      relationship_clarity_self: scalars.relationship_clarity_self,
+      relationship_clarity_partner: scalars.relationship_clarity_partner,
+      relationship_clarity_relationship: scalars.relationship_clarity_relationship,
       updatedAt: new Date(),
     },
   });
@@ -174,6 +181,9 @@ async function testCanonicalMapper() {
       negatives_partner: true,
       soft_no: true,
       hard_no: true,
+      relationship_clarity_self: true,
+      relationship_clarity_partner: true,
+      relationship_clarity_relationship: true,
     },
   });
 
@@ -248,6 +258,24 @@ async function testCanonicalMapper() {
       expected: ['no_kids', 'smoking'],
       actual: stored.hard_no,
       pass: JSON.stringify(stored.hard_no) === JSON.stringify(['no_kids', 'smoking']),
+    },
+    {
+      rule: 'Signal scalar: relationshipClarity self',
+      expected: null,
+      actual: stored.relationship_clarity_self,
+      pass: stored.relationship_clarity_self === null,
+    },
+    {
+      rule: 'Signal scalar: relationshipClarity partner',
+      expected: 9,
+      actual: stored.relationship_clarity_partner,
+      pass: stored.relationship_clarity_partner === 9,
+    },
+    {
+      rule: 'Signal scalar: relationshipClarity relationship',
+      expected: 8,
+      actual: stored.relationship_clarity_relationship,
+      pass: stored.relationship_clarity_relationship === 8,
     },
   ];
 

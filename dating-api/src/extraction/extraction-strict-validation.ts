@@ -30,6 +30,7 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<ExtractionDomain, readonly strin
     'conflictStyle',
     'noveltyVsRoutine',
     'structureChaosTolerance',
+    'relationshipClarity',
   ],
   relationship: [
     'emotionalDepth',
@@ -201,9 +202,9 @@ export function validateExtraction(
   const nonNullInDomain = allowed.filter((k) => signals[k] != null).length;
   let confidence = recomputeConfidence(domain, nonNullInDomain, extraction.confidence);
 
-  // Quality gate: reject extractions below quality floor (display as LOW_DATA, not "scored zero")
-  // Self domain requires at least 1 valid signal; other domains require at least 2
-  const qualityFloor = domain === 'self' ? 1 : 2;
+  // Quality gate: reject truly empty extractions while preserving sparse-but-grounded outputs.
+  // A single validated signal with exact evidence is now sufficient in every domain.
+  const qualityFloor = 1;
   if (nonNullInDomain < qualityFloor) {
     for (const key of EXTRACTION_SIGNAL_KEYS) {
       signals[key] = null;

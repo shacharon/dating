@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
-import { ProfilesJsonService } from '../profiles/profiles-json.service';
+import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
 import { compareWithStatus } from './match-engine';
 import type {
   CompareGuardFailureResultDto,
@@ -8,6 +8,7 @@ import type {
 } from './match-engine';
 import type { MatchListItemDto, MatchRecordDto } from './match.types';
 import { MatchesJsonService } from './matches-json.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 export type { CompareResultDto } from './match-engine';
 export type { MatchListItemDto } from './match.types';
@@ -51,8 +52,9 @@ function toMatchId(aId: string, bId: string): string {
 @Injectable()
 export class MatchesService {
   constructor(
-    private readonly profilesJson: ProfilesJsonService,
+    private readonly profilesPrisma: ProfilesPrismaService,
     private readonly matchesJson: MatchesJsonService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async compare(body: CompareBodyDto): Promise<CompareServiceResult> {
@@ -62,12 +64,58 @@ export class MatchesService {
     if (aId === bId) throw new Error('aId and bId must be different');
 
     const [profileA, profileB] = await Promise.all([
-      this.profilesJson.getById(aId),
-      this.profilesJson.getById(bId),
+      this.profilesPrisma.getById(aId),
+      this.profilesPrisma.getById(bId),
     ]);
 
     if (!profileA) throw new NotFoundException(`Profile not found: ${aId}`);
     if (!profileB) throw new NotFoundException(`Profile not found: ${bId}`);
+
+    // Attach canonical V2 scalar signals for read-only consumption in the match pipeline.
+    // Intentionally not used in scoring yet.
+    const [v2A, v2B] = await Promise.all([
+      this.prisma.profileExtractionV2.findUnique({
+        where: { profileId: profileA.id },
+        select: {
+          relationship_clarity_self: true,
+          relationship_clarity_partner: true,
+          relationship_clarity_relationship: true,
+        },
+      }),
+      this.prisma.profileExtractionV2.findUnique({
+        where: { profileId: profileB.id },
+        select: {
+          relationship_clarity_self: true,
+          relationship_clarity_partner: true,
+          relationship_clarity_relationship: true,
+        },
+      }),
+    ]);
+
+    if (!v2A || !v2B) {
+      throw new NotFoundException(
+        `Canonical V2 extraction missing for one or both profiles: ${profileA.id}, ${profileB.id}`,
+      );
+    }
+
+    (profileA as any).canonicalScalarsV2 = {
+      relationship_clarity_self: v2A.relationship_clarity_self,
+      relationship_clarity_partner: v2A.relationship_clarity_partner,
+      relationship_clarity_relationship: v2A.relationship_clarity_relationship,
+    };
+    (profileB as any).canonicalScalarsV2 = {
+      relationship_clarity_self: v2B.relationship_clarity_self,
+      relationship_clarity_partner: v2B.relationship_clarity_partner,
+      relationship_clarity_relationship: v2B.relationship_clarity_relationship,
+    };
+
+    // Canonical scalar source-of-truth for filter/debug layer (no scoring changes here).
+    const canonicalClarityA = (profileA as any).canonicalScalarsV2
+      .relationship_clarity_self;
+    const canonicalClarityB = (profileB as any).canonicalScalarsV2
+      .relationship_clarity_self;
+    void canonicalClarityA;
+    void canonicalClarityB;
 
     const result: CompareResultDto | CompareGuardFailureResultDto = compareWithStatus(
       profileA as ProfileJsonPayload,

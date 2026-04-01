@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
-import { ProfilesJsonService } from '../profiles/profiles-json.service';
+import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { compareWithStatus } from './match-engine';
 import type { CompareGuardFailureResultDto, CompareResultDto } from './match-engine';
@@ -76,7 +76,7 @@ export class MatchDaemonService {
 
   constructor(
     private readonly logger: SimpleLogger,
-    private readonly profilesJson: ProfilesJsonService,
+    private readonly profilesPrisma: ProfilesPrismaService,
     private readonly matchesJson: MatchesJsonService,
   ) {}
 
@@ -88,10 +88,10 @@ export class MatchDaemonService {
   async runOnce(): Promise<RebuildStatsDto> {
     this.logger.log('Daemon run starting: loading profiles', this.context);
 
-    const list = await this.profilesJson.list();
+    const list = await this.profilesPrisma.list();
     const profiles: ProfileJsonPayload[] = [];
     for (const { id } of list) {
-      const full = await this.profilesJson.getById(id);
+      const full = await this.profilesPrisma.getById(id);
       if (full) {
         profiles.push(full);
       } else {

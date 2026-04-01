@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { MatchDetailApiResponse } from '../../_lib/types';
+import { ChipsSection } from '../../../components/chips-section';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -67,23 +68,10 @@ export default async function MatchDetailPage({ params }: Props) {
               </p>
             ) : null}
 
-            {match.chips.length > 0 ? (
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Highlights
-                </p>
-                <ul className="flex flex-wrap gap-2">
-                  {match.chips.map((chip) => (
-                    <li
-                      key={chip}
-                      className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-800 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
-                    >
-                      {chip}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            <ChipsSection
+              title="Highlights"
+              chips={{ attractionChips: match.chips }}
+            />
 
             {match.expandedExplainability.length > 0 ? (
               <section>

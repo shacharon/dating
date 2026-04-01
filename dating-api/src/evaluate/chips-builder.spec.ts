@@ -79,7 +79,7 @@ describe('buildChips', () => {
     expect(result.partner[0].source).toBe('interest');
 
     expect(result.relationship.length).toBeGreaterThan(0);
-    expect(result.relationship[0].label).toBe('Homebody');
+    expect(result.relationship[0].label).toBe('Home Comfort');
     expect(result.relationship[0].source).toBe('interest');
   });
 
@@ -112,8 +112,8 @@ describe('buildChips', () => {
     expect(result.partner.length).toBeGreaterThan(0);
     const labels = result.partner.map((c) => c.label);
     expect(labels).toContain('Kind & Warm');
-    expect(labels).toContain('Driven & Ambitious');
-    expect(labels).toContain('Deep Talks');
+    expect(labels).toContain('Ambitious');
+    expect(labels).toContain('Emotional Depth');
 
     const kindChip = result.partner.find((c) => c.label === 'Kind & Warm');
     expect(kindChip?.source).toBe('trait');
@@ -161,7 +161,7 @@ describe('buildChips', () => {
     expect(result.self.length).toBeGreaterThan(0);
     const selfLabels = result.self.map((c) => c.label);
     expect(selfLabels).toContain('Ambitious');
-    expect(selfLabels).toContain('Emotionally Deep');
+    expect(selfLabels).toContain('Emotional Depth');
 
     const ambitiousChip = result.self.find((c) => c.label === 'Ambitious');
     expect(ambitiousChip?.source).toBe('signal');
@@ -276,9 +276,9 @@ describe('buildChips', () => {
     const result = buildChips(self, partner, relationship, undefined, extendedSignals);
 
     const labels = result.partner.map((c) => c.label);
-    expect(labels).toContain('Deep Talks');
+    expect(labels).toContain('Emotional Depth');
     expect(labels).toContain('Kind & Warm');
-    expect(labels).not.toContain('Driven & Ambitious'); // score 6 < 7
+    expect(labels).not.toContain('Ambitious'); // score 6 < 7
   });
 
   it('uses adaptive fallback for signals with value=7 when < 2 chips', () => {
@@ -293,12 +293,12 @@ describe('buildChips', () => {
     const result = buildChips(self, partner, relationship);
 
     const labels = result.self.map((c) => c.label);
-    expect(labels).toContain('Emotionally Deep'); // value 8
+    expect(labels).toContain('Emotional Depth'); // value 8
     expect(labels).toContain('Ambitious'); // value 7, included via adaptive fallback
     expect(labels.length).toBe(2); // both chips present
 
     // Verify strength markers
-    const emotionalChip = result.self.find((c) => c.label === 'Emotionally Deep');
+    const emotionalChip = result.self.find((c) => c.label === 'Emotional Depth');
     const ambitiousChip = result.self.find((c) => c.label === 'Ambitious');
     expect(emotionalChip?.strength).toBeUndefined(); // value 8, not 9
     expect(ambitiousChip?.strength).toBeUndefined(); // fallback chip, no strength
@@ -317,7 +317,7 @@ describe('buildChips', () => {
     const result = buildChips(self, partner, relationship);
 
     const labels = result.self.map((c) => c.label);
-    expect(labels).toContain('Emotionally Deep');
+    expect(labels).toContain('Emotional Depth');
     expect(labels).toContain('Independent');
     expect(labels).not.toContain('Ambitious'); // not needed, already have 2 chips
     expect(labels.length).toBe(2);

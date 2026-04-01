@@ -349,6 +349,11 @@ describe('EvaluateService', () => {
 
     expect(result.extendedSignals).toBeDefined();
     expect(result.extendedSignals?.version).toBe('v1');
+    expect(Array.isArray(result.extendedSignals?.interests)).toBe(true);
+    expect(Array.isArray(result.extendedSignals?.lifestyleTraits)).toBe(true);
+    expect(Array.isArray(result.extendedSignals?.preferences)).toBe(true);
+    expect(Array.isArray(result.extendedSignals?.boundaries)).toBe(true);
+    expect(Array.isArray(result.extendedSignals?.values)).toBe(true);
     expect(result.extendedSignals?.relationshipMotivation).toBeDefined();
     expect(result.extendedSignals?.relationshipMotivation?.relationshipMotivation).toBe(
       'emotional_connection',
@@ -358,6 +363,91 @@ describe('EvaluateService', () => {
     expect(result.extendedSignals?.attractionTraits?.attraction.kindnessWarmth).toBe(9);
     expect(result.extendedSignals?.attractionTraits?.attraction.emotionalDepth).toBe(8);
     expect(result.extendedSignals?.attractionTraits?.confidence).toBe(0.75);
+  });
+
+  it('extendedSignals explicit lists are extracted with 1-3 words and max 10', async () => {
+    const self = mockExtracted('self', 0.7, 10);
+    const partner = mockExtracted('partner', 0.7, 10);
+    const relationship = mockExtracted('relationship', 0.7, 8);
+    jest.spyOn(extractionService, 'extractAllThree').mockResolvedValue({
+      self,
+      partner,
+      relationship,
+    });
+
+    llmCompleteJSON.mockImplementation(async ({ purpose }: { purpose: string }) => {
+      if (purpose === 'evaluate-summary') {
+        return { value: { summary: 'Summary.', insight: 'Insight.' } };
+      }
+      if (purpose === 'evaluate-motivation') {
+        return {
+          value: {
+            relationshipMotivation: 'emotional_connection',
+            confidence: 0.7,
+            evidence: ['deep connection'],
+          },
+        };
+      }
+      if (purpose === 'evaluate-attraction-traits') {
+        return {
+          value: {
+            attraction: {
+              ambition: 7,
+              statusOrientation: 4,
+              physicalPriority: 5,
+              kindnessWarmth: 8,
+              stabilityReliability: 7,
+              independenceAutonomy: 5,
+              emotionalDepth: 8,
+              traditionalismValues: 4,
+              financialPrudence: 5,
+            },
+            confidence: 0.75,
+            evidence: [],
+          },
+        };
+      }
+      return { value: {} };
+    });
+
+    const { result } = await service.evaluateBatch({
+      aboutMe:
+        'Gym, walking, journaling. I am balanced, reflective, health-oriented. Honesty and growth matter.',
+      aboutRelationship:
+        'I want emotional safety, no drama, and not rushed pacing.',
+      aboutPartner:
+        'I prefer emotional maturity and clear communication with strong connection.',
+    });
+
+    const ext = result.extendedSignals;
+    expect(ext).toBeDefined();
+    expect(ext?.interests).toEqual(
+      expect.arrayContaining(['gym', 'walking', 'journaling']),
+    );
+    expect(ext?.lifestyleTraits).toEqual(
+      expect.arrayContaining(['balanced', 'reflective', 'health oriented']),
+    );
+    expect(ext?.preferences).toEqual(
+      expect.arrayContaining(['emotional maturity', 'clear communication']),
+    );
+    expect(ext?.boundaries).toEqual(
+      expect.arrayContaining(['not rushed', 'no drama', 'emotional safety']),
+    );
+    expect(ext?.values).toEqual(expect.arrayContaining(['honesty', 'growth', 'connection']));
+
+    for (const arr of [
+      ext?.interests ?? [],
+      ext?.lifestyleTraits ?? [],
+      ext?.preferences ?? [],
+      ext?.boundaries ?? [],
+      ext?.values ?? [],
+    ]) {
+      expect(arr.length).toBeLessThanOrEqual(10);
+      for (const item of arr) {
+        expect(item.trim().split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(1);
+        expect(item.trim().split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(3);
+      }
+    }
   });
 
   it('productScores remain unchanged when extendedSignals are present (sidecar-only proof)', async () => {
@@ -457,9 +547,11 @@ describe('EvaluateService', () => {
       withoutExtended.productScores.overallDecisionScore,
     );
 
-    // Verify extendedSignals are present in first case and absent in second
+    // Verify extendedSignals sidecar is always present; inferred LLM parts may be absent on failure
     expect(withExtended.extendedSignals).toBeDefined();
-    expect(withoutExtended.extendedSignals).toBeUndefined();
+    expect(withoutExtended.extendedSignals).toBeDefined();
+    expect(withoutExtended.extendedSignals?.relationshipMotivation).toBeUndefined();
+    expect(withoutExtended.extendedSignals?.attractionTraits).toBeUndefined();
   });
 
   it('chips are populated from rawInterests and extendedSignals', async () => {
@@ -544,7 +636,7 @@ describe('EvaluateService', () => {
 
     // Verify motivation chips
     const relationshipLabels = result.chips?.relationship.map((c) => c.label) ?? [];
-    expect(relationshipLabels).toContain('Homebody'); // from interests
+    expect(relationshipLabels).toContain('Home Comfort'); // from interests
     expect(relationshipLabels).toContain('Family Builder'); // from motivation
   });
 
