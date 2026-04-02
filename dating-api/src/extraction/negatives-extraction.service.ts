@@ -13,6 +13,10 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import { LLMRouterService } from '../llm/llm-router.service';
 import type { ExtractionDomain } from './extracted-signals.interface';
 import {
+  buildEvaluateLlmTrace,
+  buildEvaluateRawLlmLogPayload,
+} from '../evaluate/evaluate-llm-pipeline';
+import {
   NEGATIVE_TAG_SET,
   type NegativeCategory,
   type NegativeItem,
@@ -181,7 +185,7 @@ export class NegativesExtractionService {
     );
 
     try {
-      const { value } = await this.llm.completeJSON<NegativesLLMOutput>({
+      const { value, rawText } = await this.llm.completeJSON<NegativesLLMOutput>({
         modelKey: 'fast',
         system: NEGATIVES_SYSTEM_PROMPT,
         user: userPrompt,
@@ -193,7 +197,37 @@ export class NegativesExtractionService {
         purpose: 'negatives-extraction',
       });
 
+      this.logger.log(
+        JSON.stringify(
+          buildEvaluateRawLlmLogPayload(
+            { purpose: 'negatives-extraction', domain, requestId },
+            value,
+            rawText,
+          ),
+        ),
+        NegativesExtractionService.name,
+      );
+
       const normalized = this.validateAndNormalize(value, domain);
+      const auxTrace = buildEvaluateLlmTrace({
+        purpose: 'negatives-extraction',
+        requestId,
+        parsedJson: value,
+        rawText,
+        afterStages: [
+          {
+            name: 'after_validateAndNormalize',
+            value: { domain, items: normalized, version: 'v1' as const },
+          },
+        ],
+      });
+      this.logger.log(
+        JSON.stringify({
+          event: 'evaluate_llm_pipeline_stage_diffs',
+          ...auxTrace,
+        }),
+        NegativesExtractionService.name,
+      );
 
       this.logger.log(
         JSON.stringify({

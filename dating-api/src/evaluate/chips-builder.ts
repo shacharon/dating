@@ -102,9 +102,17 @@ function chipsFromInterests(items: InterestItem[]): Chip[] {
     return 0;
   });
 
+  function interestLabel(tag: string): string {
+    const mapped = INTEREST_LABELS[tag];
+    if (mapped) return mapped;
+    return tag
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   for (const item of sorted) {
-    const label = INTEREST_LABELS[item.tag];
-    if (!label || seen.has(label)) continue;
+    const label = interestLabel(item.tag);
+    if (!label.trim() || seen.has(label)) continue;
 
     chips.push({
       label,

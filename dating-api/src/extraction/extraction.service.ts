@@ -14,6 +14,11 @@ import {
 } from './extracted-signals.interface';
 import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
+import {
+  buildExtractionPipelineTrace,
+  buildRawLlmPersistenceLogPayload,
+  toExtractionSnapshot,
+} from './pipeline-trace';
 
 const SELF_EXTRACTOR_PROMPT = `You are a professional psychological profiler. Extract signals and interests for domain: self.
 
@@ -326,12 +331,6 @@ const SYSTEM_PROMPT_HASH = createHash('sha256')
   .digest('hex')
   .slice(0, 12);
 
-/** Minimal retry prompt when first pass returned empty signals but text has content. */
-const EXTRACTOR_RETRY_PROMPT = `Same domain and signal keys. The previous extraction returned no scores. From the text below, assign 1-10 only to signals you can support with evidence: each item must be { "signal", "quote", "reason" } where quote is an EXACT substring of the input and reason is max 8 words. If you cannot satisfy both, leave that signal null. JSON only. Confidence 0..1. { "domain": "...", "signals": {...}, "evidence": [...], "confidence": 0.5, "version": "v1" }.`;
-
-/** Retry prompt for partner domain when text is short: aim for 2–4 grounded signals, no hallucination. */
-const PARTNER_SHORT_RETRY_PROMPT = `Same domain and signal keys. The text is short; extract 2–4 signals only with clear support. Evidence per score: { "signal", "quote", "reason" } — quote must be an EXACT substring of the input; reason max 8 words; otherwise null for that signal. Do not invent. JSON only. Confidence 0..1 (e.g. 0.4). { "domain": "partner", "signals": {...}, "evidence": [...], "confidence": 0.4, "version": "v1" }.`;
-
 const GPT4O_MINI_INPUT_COST = 0.15 / 1_000_000;
 const GPT4O_MINI_OUTPUT_COST = 0.60 / 1_000_000;
 
@@ -502,75 +501,6 @@ export class ExtractionService {
     return { ...data, signals: normalizedSignals };
   }
 
-  /** Stage 6: Optional second LLM call when first returns empty; still LLM authority. */
-  private async runOptionalRetryWhenEmpty(
-    domain: ExtractionDomain,
-    text: string,
-    cleaned: ExtractedSignals,
-    accUsage: LLMUsageStats,
-  ): Promise<{ cleaned: ExtractedSignals; accUsage: LLMUsageStats; retryRan: boolean }> {
-    const textTrimmed = text.trim();
-    const nonNullCount = countNonNullSignals(cleaned.signals);
-    const isPartnerShort = domain === 'partner' && textTrimmed.length > 0 && textTrimmed.length < 150;
-    const shouldRetry =
-      textTrimmed.length > 0 &&
-      (nonNullCount === 0 || (isPartnerShort && nonNullCount <= 2));
-    if (!shouldRetry) {
-      return { cleaned, accUsage, retryRan: false };
-    }
-    const retryPrompt = isPartnerShort ? PARTNER_SHORT_RETRY_PROMPT : EXTRACTOR_RETRY_PROMPT;
-    this.logger.debug(
-      `extraction ${nonNullCount === 0 ? 'empty' : 'sparse'} for non-empty text domain=${domain} length=${textTrimmed.length}, retrying with ${isPartnerShort ? 'partner-short' : 'minimal'} prompt`,
-    );
-    this.logger.log(
-      `[EXTRACTOR_RETRY_PROMPT]\n${retryPrompt}`,
-      ExtractionService.name,
-    );
-    try {
-      const retryPayload = await this.llm.completeJSON<Record<string, unknown>>({
-        modelKey: 'fast',
-        system: retryPrompt,
-        user: `Domain: ${domain}\nText:\n"""\n${textTrimmed}\n"""`,
-        schema: z.any(),
-        temperature: 0.2,
-        maxTokens: 4500,
-        timeoutMs: 90_000,
-        requestId: randomUUID(),
-        purpose: 'extraction-retry',
-      });
-      const retryParsed = parseOpenAIUsage(retryPayload.usage);
-      const mergedUsage = mergeUsage(accUsage, {
-        ...retryParsed,
-        estimatedCostUSD: estimateCost(retryParsed.promptTokens, retryParsed.completionTokens),
-        durationMs: 0,
-      });
-      const retryNormalized = normalizeRawExtraction(retryPayload.value, domain);
-      const retryNorm = normalizeKeys(retryNormalized.signals);
-      retryNormalized.signals = retryNorm.normalizedSignals;
-      const retryCleaned = this.validateAndClean(retryNormalized, domain);
-      const retryNonNull = countNonNullSignals(retryCleaned.signals);
-      if (retryNonNull > nonNullCount) {
-        this.logger.debug(
-          `extraction retry succeeded domain=${domain} nonNullCount=${retryNonNull} (was ${nonNullCount})`,
-        );
-        return { cleaned: retryCleaned, accUsage: mergedUsage, retryRan: true };
-      }
-      const note = nonNullCount === 0 ? (cleaned.notes ? `${cleaned.notes}; ` : '') + 'EXTRACTION_EMPTY' : cleaned.notes;
-      return {
-        cleaned: { ...cleaned, notes: note ?? undefined },
-        accUsage: mergedUsage,
-        retryRan: true,
-      };
-    } catch {
-      const note = nonNullCount === 0 ? (cleaned.notes ? `${cleaned.notes}; ` : '') + 'EXTRACTION_EMPTY' : cleaned.notes;
-      return {
-        cleaned: { ...cleaned, notes: note ?? undefined },
-        accUsage,
-        retryRan: true,
-      };
-    }
-  }
-
   /** Stage 11: Finalize usage and logging. */
   private finalizeUsageAndLogging(
     cleaned: ExtractedSignals,
@@ -598,9 +528,9 @@ export class ExtractionService {
 
   /**
    * Extract signals for one domain.
-   * 
-   * Strictly linear pipeline: LLM proposal → technical normalization → final validation gate.
-   * Semantic meaning comes ONLY from LLM; post-processing validates/nullifies only.
+   *
+   * LLM-first: one proposal → normalizeRawExtraction → normalizeKeys → validateAndClean
+   * → validateExtraction (evidence rows only; signals preserved).
    */
   async extract(
     domain: ExtractionDomain,
@@ -621,6 +551,22 @@ export class ExtractionService {
       userPrompt,
       requestId,
       inputText.length,
+    );
+
+    this.logger.log(
+      JSON.stringify(
+        buildRawLlmPersistenceLogPayload(
+          {
+            pipeline: 'extraction_v1',
+            domain,
+            requestId,
+            profileId: profileId ?? null,
+          },
+          value,
+          rawText,
+        ),
+      ),
+      ExtractionService.name,
     );
 
     const parsed = parseOpenAIUsage(usage);
@@ -683,8 +629,9 @@ export class ExtractionService {
       }),
       ExtractionService.name,
     );
-    let cleaned = this.applyNormalizeAliasKeys(normalized);
-    cleaned = this.validateAndClean(cleaned, domain);
+    const afterAlias = this.applyNormalizeAliasKeys(normalized);
+    let cleaned = this.validateAndClean(afterAlias, domain);
+    const snapAfterClean = toExtractionSnapshot(cleaned);
     this.logger.log(
       JSON.stringify({
         stage: 'after_validate',
@@ -693,21 +640,6 @@ export class ExtractionService {
       }),
       ExtractionService.name,
     );
-
-    const nonNullCount = countNonNullSignals(cleaned.signals);
-    this.logger.debug(
-      `extract domain=${domain} nonNullCount=${nonNullCount} confidence=${cleaned.confidence}`,
-    );
-
-    // Optional: retry LLM when empty (still LLM authority, not inference)
-    const retryResult = await this.runOptionalRetryWhenEmpty(
-      domain,
-      text,
-      cleaned,
-      accUsage,
-    );
-    cleaned = retryResult.cleaned;
-    accUsage = retryResult.accUsage;
 
     const finalNonNull = countNonNullSignals(cleaned.signals);
     if (finalNonNull === 0 && text.trim().length > 0) {
@@ -719,25 +651,50 @@ export class ExtractionService {
       };
     }
 
-    // [PIPELINE] Final validation gate (strict quote/reason + quality floor)
-    cleaned = validateExtraction(text, cleaned);
-    if (cleaned.notes?.includes('EXTRACTION_EMPTY_DEBUG')) {
-      cleaned = { ...cleaned, domainStatus: 'UNRELIABLE' };
-    }
+    const snapPreValidateExtraction = toExtractionSnapshot(cleaned);
 
-    // Pipeline provenance tracking
+    cleaned = validateExtraction(text, cleaned, (payload) =>
+      this.logger.debug(JSON.stringify(payload), ExtractionService.name),
+    );
+
+    const trace = buildExtractionPipelineTrace({
+      pipeline: 'extraction_v1',
+      domain,
+      requestId,
+      profileId,
+      parsedJson: value,
+      rawText,
+      stageSnapshots: [
+        { name: 'normalizeRawExtraction', snapshot: toExtractionSnapshot(normalized) },
+        { name: 'alias_normalization', snapshot: toExtractionSnapshot(afterAlias) },
+        { name: 'validate_and_clean', snapshot: snapAfterClean },
+        { name: 'pre_validateExtraction', snapshot: snapPreValidateExtraction },
+        { name: 'validateExtraction', snapshot: toExtractionSnapshot(cleaned) },
+      ],
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'extraction_pipeline_stage_diffs',
+        domain,
+        requestId,
+        profileId: profileId ?? null,
+        stageDiffs: trace.stageDiffs,
+      }),
+      ExtractionService.name,
+    );
+
     const provenanceStages: string[] = [
       'llm',
       'alias_normalization',
       'validate_and_clean',
+      'strict_evidence_validation',
     ];
-    if (retryResult.retryRan) provenanceStages.push('retry');
-    provenanceStages.push('strict_evidence_validation');
-    provenanceStages.push('quality_gate');
 
     const withProvenance: ExtractedSignals = {
       ...cleaned,
       _provenance: { stages: provenanceStages },
+      _pipelineTrace: trace,
     };
 
     this.logger.debug(

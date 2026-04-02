@@ -1,6 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  buildEnrichmentDisplayChipsV1,
+  labelAutonomy,
+  labelConflict,
+  labelDailyRhythm,
+  labelInterest,
+  labelKids,
+} from '@/lib/enrichment-display-v1';
 
 const API_BASE = 'http://localhost:3001/api/v1/profiles';
 
@@ -63,6 +72,19 @@ interface ProductScoresPresentation {
   overallDecisionScore: ProductScorePresentationValue;
 }
 
+interface EnrichmentSignalsV1 {
+  dailyRhythm: string | null;
+  autonomyTogethernessDepth: string | null;
+  kidsTimeline: string | null;
+  conflictStyleDetail: string | null;
+  interestsTop3: string[];
+}
+
+interface EnrichmentV1 {
+  version: 'v1';
+  signals: EnrichmentSignalsV1;
+}
+
 interface Evaluation {
   self: ExtractedSignals;
   partner: ExtractedSignals;
@@ -72,11 +94,12 @@ interface Evaluation {
   productScoresPresentation?: ProductScoresPresentation;
   flags: string[];
   chips?: ChipsBundle;
+  enrichment?: EnrichmentV1;
 }
 
 interface EvaluationChip {
   label: string;
-  source: 'interest' | 'motivation' | 'trait' | 'signal';
+  source: 'interest' | 'motivation' | 'trait' | 'signal' | 'enrichment';
 }
 type ChipDomain = 'self' | 'partner' | 'relationship';
 
@@ -141,8 +164,11 @@ function formatChipSource(source: EvaluationChip['source']): string {
   if (source === 'interest') return 'Interest';
   if (source === 'motivation') return 'Motivation';
   if (source === 'trait') return 'Trait';
+  if (source === 'enrichment') return 'Enrichment';
   return 'Signal';
 }
+
+const ENRICHMENT_DEBUG_STORAGE = 'profilesEnrichmentDebug';
 
 function prefixedChipLabel(domain: ChipDomain, label: string): string {
   const prefix = domain === 'self' ? 'Self' : domain === 'partner' ? 'Partner' : 'Relationship';
@@ -201,6 +227,13 @@ function toDisplayChips(domain: ChipDomain, chips: EvaluationChip[], sourceHint:
   }));
 }
 
+function toLegacyDisplayChips(chips: EvaluationChip[], sourceHint: string): DisplayChip[] {
+  return chips.map((chip) => ({
+    ...chip,
+    hint: `${formatChipSource(chip.source)} from ${sourceHint}.`,
+  }));
+}
+
 function buildChipsForUi(profile: ProfilePayload, evaluation: Evaluation): {
   self: DisplayChip[];
   partner: DisplayChip[];
@@ -231,12 +264,91 @@ function buildChipsForUi(profile: ProfilePayload, evaluation: Evaluation): {
   };
 }
 
+function enrichmentFieldHint(field: string): string {
+  const m: Record<string, string> = {
+    dailyRhythm: 'Routine and pace of day',
+    autonomyTogethernessDepth: 'Togetherness vs personal space',
+    kidsTimeline: 'Children intent and timing',
+    conflictStyleDetail: 'How they handle disagreement',
+    interestsTop3: 'Stated hobbies and interests',
+  };
+  return m[field] ?? 'Profile enrichment';
+}
+
+function pushEnrichmentChip(out: DisplayChip[], label: string, hintKey: string): void {
+  const trimmed = label.trim();
+  if (!trimmed) return;
+  out.push({
+    label: trimmed,
+    source: 'enrichment',
+    hint: enrichmentFieldHint(hintKey),
+  });
+}
+
+/** DISPLAY_LAYER_V1 — human labels, max 5 chips (interests combined). */
+function enrichmentGlanceDisplayChips(enrichment: EnrichmentV1 | undefined): DisplayChip[] {
+  if (!enrichment || enrichment.version !== 'v1' || !enrichment.signals) return [];
+  return buildEnrichmentDisplayChipsV1(enrichment.signals).map((c) => ({
+    label: c.label,
+    source: 'enrichment',
+    hint: enrichmentFieldHint(c.field),
+  }));
+}
+
+/** Debug: same glance row as default (human labels). */
+function enrichmentPrimaryDisplayChips(enrichment: EnrichmentV1 | undefined): DisplayChip[] {
+  return enrichmentGlanceDisplayChips(enrichment);
+}
+
+/** Debug: structural fields + each interest as its own chip (still human-readable). */
+function enrichmentDebugFullChips(enrichment: EnrichmentV1 | undefined): DisplayChip[] {
+  if (!enrichment || enrichment.version !== 'v1' || !enrichment.signals) return [];
+  const s = enrichment.signals;
+  const out: DisplayChip[] = [];
+  const r = labelDailyRhythm(s.dailyRhythm);
+  if (r) pushEnrichmentChip(out, r, 'dailyRhythm');
+  const a = labelAutonomy(s.autonomyTogethernessDepth);
+  if (a) pushEnrichmentChip(out, a, 'autonomyTogethernessDepth');
+  const k = labelKids(s.kidsTimeline);
+  if (k) pushEnrichmentChip(out, k, 'kidsTimeline');
+  const c = labelConflict(s.conflictStyleDetail);
+  if (c) pushEnrichmentChip(out, c, 'conflictStyleDetail');
+  for (const item of s.interestsTop3 ?? []) {
+    const L = labelInterest(typeof item === 'string' ? item : '');
+    if (L) pushEnrichmentChip(out, L, 'interestsTop3');
+  }
+  return out;
+}
+
+function flattenProfileChipsForMerge(
+  evaluation: Evaluation,
+  profile: ProfilePayload,
+  legacyChipsUx: boolean,
+): DisplayChip[] {
+  if (legacyChipsUx) {
+    return [
+      ...toLegacyDisplayChips(evaluation.chips?.self ?? [], 'about me'),
+      ...toLegacyDisplayChips(evaluation.chips?.partner ?? [], 'about partner'),
+      ...toLegacyDisplayChips(evaluation.chips?.relationship ?? [], 'about relationship'),
+      ...boundaryChipsFromTexts(profile.texts),
+    ];
+  }
+  const built = buildChipsForUi(profile, evaluation);
+  return [...built.self, ...built.partner, ...built.relationship, ...built.boundaries];
+}
+
 function ChipsDomainBlock({
   title,
   chips,
+  maxChips = 6,
+  hideSourceTag = false,
 }: {
   title: string;
   chips: DisplayChip[];
+  /** Default 6; use a high number for merged test rows. */
+  maxChips?: number;
+  /** Strip “Enrichment” suffix for compact at-a-glance rows. */
+  hideSourceTag?: boolean;
 }) {
   if (!chips.length) return null;
   return (
@@ -245,16 +357,18 @@ function ChipsDomainBlock({
         {title}
       </p>
       <ul className="flex flex-wrap gap-2">
-        {chips.slice(0, 6).map((chip, i) => (
+        {chips.slice(0, maxChips).map((chip, i) => (
           <li
             key={`${title}-${chip.label}-${i}`}
             className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100"
             title={chip.hint}
           >
             {chip.label}
-            <span className="ml-1 text-[10px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              {formatChipSource(chip.source)}
-            </span>
+            {!hideSourceTag && (
+              <span className="ml-1 text-[10px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {formatChipSource(chip.source)}
+              </span>
+            )}
           </li>
         ))}
       </ul>
@@ -275,6 +389,11 @@ export default function ProfilesPage() {
   const [analyzeMessage, setAnalyzeMessage] = useState<string | null>(null);
 
   const [signalTab, setSignalTab] = useState<SignalTab>('self');
+  /** POC: filter text for profile autocomplete (not the canonical selected label). */
+  const [profileSearch, setProfileSearch] = useState('');
+  const [profilePickerOpen, setProfilePickerOpen] = useState(false);
+  const [showEnrichmentChips, setShowEnrichmentChips] = useState(false);
+
   const preferredProfileId =
     typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('profileId')?.trim() || ''
@@ -311,11 +430,41 @@ export default function ProfilesPage() {
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [preferredProfileId]);
 
   useEffect(() => {
     fetchList();
+  }, [fetchList]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const q = new URLSearchParams(window.location.search).get('enrichmentDebug');
+    if (q === '1' || q === 'true') {
+      setShowEnrichmentChips(true);
+      return;
+    }
+    if (q === '0' || q === 'false') {
+      setShowEnrichmentChips(false);
+      return;
+    }
+    setShowEnrichmentChips(window.sessionStorage.getItem(ENRICHMENT_DEBUG_STORAGE) === '1');
   }, []);
+
+  const filteredProfileItems = useMemo(() => {
+    const q = profileSearch.trim().toLowerCase();
+    if (!q) return items.slice(0, 80);
+    return items
+      .filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) || item.id.toLowerCase().includes(q),
+      )
+      .slice(0, 80);
+  }, [items, profileSearch]);
+
+  const selectedListItem = useMemo(
+    () => items.find((i) => i.id === selectedId),
+    [items, selectedId],
+  );
 
   useEffect(() => {
     if (!selectedId) {
@@ -390,6 +539,25 @@ export default function ProfilesPage() {
   const evaluation = profile?.evaluation;
   const chipsOnlyMode = evaluation ? isSignalsEmpty(evaluation) : false;
   const chipsForUi = profile && evaluation ? buildChipsForUi(profile, evaluation) : null;
+  const enrichmentChipsGlance = useMemo(
+    () => enrichmentGlanceDisplayChips(evaluation?.enrichment),
+    [evaluation?.enrichment],
+  );
+  const enrichmentChipsPrimary = useMemo(
+    () => enrichmentPrimaryDisplayChips(evaluation?.enrichment),
+    [evaluation?.enrichment],
+  );
+  const enrichmentChipsDebugFull = useMemo(
+    () => enrichmentDebugFullChips(evaluation?.enrichment),
+    [evaluation?.enrichment],
+  );
+  const mergedProfileAndEnrichmentChips = useMemo(() => {
+    if (!evaluation || !profile) return [];
+    return [
+      ...flattenProfileChipsForMerge(evaluation, profile, legacyChipsUx),
+      ...enrichmentChipsGlance,
+    ];
+  }, [evaluation, profile, legacyChipsUx, enrichmentChipsGlance]);
   const signalsBlock =
     evaluation &&
     (signalTab === 'self'
@@ -401,13 +569,21 @@ export default function ProfilesPage() {
   return (
     <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
       <div className="mx-auto max-w-2xl space-y-6">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Profile Viewer
-        </h1>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Profile Viewer
+          </h1>
+          <Link
+            href="/profiles/compare"
+            className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Compare enrichment (side-by-side)
+          </Link>
+        </div>
 
         <div>
           <label
-            htmlFor="profile-select"
+            htmlFor="profile-search"
             className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
           >
             Saved profile
@@ -423,18 +599,61 @@ export default function ProfilesPage() {
               No saved profiles found.
             </p>
           ) : (
-            <select
-              id="profile-select"
-              value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-            >
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} (#{item.id})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                id="profile-search"
+                type="search"
+                autoComplete="off"
+                value={profileSearch}
+                onChange={(e) => {
+                  setProfileSearch(e.target.value);
+                  setProfilePickerOpen(true);
+                }}
+                onFocus={() => setProfilePickerOpen(true)}
+                onBlur={() => {
+                  window.setTimeout(() => setProfilePickerOpen(false), 120);
+                }}
+                placeholder="Type name or id…"
+                className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                aria-autocomplete="list"
+                aria-expanded={profilePickerOpen}
+                aria-controls="profile-picker-list"
+              />
+              {selectedListItem && (
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  Selected: {selectedListItem.name} (#{selectedListItem.id})
+                </p>
+              )}
+              {profilePickerOpen && filteredProfileItems.length > 0 && (
+                <ul
+                  id="profile-picker-list"
+                  role="listbox"
+                  className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-600 dark:bg-zinc-900"
+                >
+                  {filteredProfileItems.map((item) => (
+                    <li key={item.id} role="presentation">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={item.id === selectedId}
+                        className="w-full px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setSelectedId(item.id);
+                          setProfileSearch('');
+                          setProfilePickerOpen(false);
+                        }}
+                      >
+                        <span className="font-medium">{item.name}</span>{' '}
+                        <span className="text-zinc-500 dark:text-zinc-400">
+                          (#{item.id})
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {selectedId && (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -446,6 +665,12 @@ export default function ProfilesPage() {
               >
                 {analyzing ? 'Analyzing…' : 'Analyze selected profile'}
               </button>
+              <Link
+                href={`/profiles?profileId=${encodeURIComponent(selectedId)}`}
+                className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Open profile route
+              </Link>
               <a
                 href={`${API_BASE}/${encodeURIComponent(selectedId)}`}
                 target="_blank"
@@ -570,20 +795,15 @@ export default function ProfilesPage() {
                       <div className="space-y-4">
                         <ChipsDomainBlock
                           title="About me"
-                          chips={toDisplayChips('self', evaluation.chips?.self ?? [], 'about me')}
+                          chips={toLegacyDisplayChips(evaluation.chips?.self ?? [], 'about me')}
                         />
                         <ChipsDomainBlock
                           title="Partner preference"
-                          chips={toDisplayChips(
-                            'partner',
-                            evaluation.chips?.partner ?? [],
-                            'about partner',
-                          )}
+                          chips={toLegacyDisplayChips(evaluation.chips?.partner ?? [], 'about partner')}
                         />
                         <ChipsDomainBlock
                           title="Relationship style"
-                          chips={toDisplayChips(
-                            'relationship',
+                          chips={toLegacyDisplayChips(
                             evaluation.chips?.relationship ?? [],
                             'about relationship',
                           )}
@@ -595,6 +815,72 @@ export default function ProfilesPage() {
                         <ChipsDomainBlock title="Partner preference" chips={chipsForUi.partner} />
                         <ChipsDomainBlock title="Relationship style" chips={chipsForUi.relationship} />
                         <ChipsDomainBlock title="Boundary chips" chips={chipsForUi.boundaries} />
+                      </div>
+                    )}
+                    {enrichmentChipsGlance.length > 0 ? (
+                      <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                        <ChipsDomainBlock
+                          title="At a glance"
+                          chips={enrichmentChipsGlance}
+                          maxChips={5}
+                          hideSourceTag
+                        />
+                        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                          Routine, togetherness, kids, conflict, and top interests (up to five chips).
+                        </p>
+                      </div>
+                    ) : null}
+                    <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={showEnrichmentChips}
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          setShowEnrichmentChips(v);
+                          if (typeof window !== 'undefined') {
+                            window.sessionStorage.setItem(ENRICHMENT_DEBUG_STORAGE, v ? '1' : '0');
+                          }
+                        }}
+                      />
+                      Show enrichment chips (debug)
+                    </label>
+                    {showEnrichmentChips && (
+                      <div className="mt-4 space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                        {!evaluation.enrichment ? (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            No enrichment data on this evaluation.
+                          </p>
+                        ) : (
+                          <>
+                            {enrichmentChipsPrimary.length > 0 ? (
+                              <ChipsDomainBlock
+                                title="Enrichment — same as at-a-glance (debug)"
+                                chips={enrichmentChipsPrimary}
+                                maxChips={5}
+                                hideSourceTag
+                              />
+                            ) : (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                No enrichment chips for this profile.
+                              </p>
+                            )}
+                            {enrichmentChipsDebugFull.length > 0 ? (
+                              <ChipsDomainBlock
+                                title="Enrichment — expanded interests (debug)"
+                                chips={enrichmentChipsDebugFull}
+                                maxChips={12}
+                                hideSourceTag
+                              />
+                            ) : null}
+                          </>
+                        )}
+                        {mergedProfileAndEnrichmentChips.length > 0 ? (
+                          <ChipsDomainBlock
+                            title="Merged: profile + structural enrichment (preview)"
+                            chips={mergedProfileAndEnrichmentChips}
+                            maxChips={200}
+                          />
+                        ) : null}
                       </div>
                     )}
                   </div>

@@ -37,6 +37,12 @@ export default function RootLayout({
               Home
             </Link>
             <Link
+              href="/profiles"
+              className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+            >
+              Profile viewer
+            </Link>
+            <Link
               href="/dating/onboarding"
               className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
             >

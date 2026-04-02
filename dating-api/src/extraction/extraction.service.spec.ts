@@ -613,40 +613,28 @@ describe('ExtractionService behavior locks', () => {
     expect(result.signals['directness']).toBeNull();
   });
 
-  it('4a. zero-signal retry path: first call empty, retry returns signals → use retry result', async () => {
+  it('4a. single LLM call only: no retry when first pass is empty', async () => {
     const textWithContent = 'I am ambitious and value direct communication.';
-    llmCompleteJSON
-      .mockResolvedValueOnce(
-        mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
-      )
-      .mockResolvedValueOnce(
-        mockResponse('self', { ambition: 7, directness: 6 }, [
-          { signal: 'ambition', quote: 'ambitious', reason: 'Drive indicator' },
-          { signal: 'directness', quote: 'direct communication', reason: 'Communication style' },
-        ]),
-      );
+    llmCompleteJSON.mockResolvedValueOnce(
+      mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
+    );
 
     const result = await service.extract('self', textWithContent);
 
-    expect(llmCompleteJSON).toHaveBeenCalledTimes(2);
-    expect(Object.values(result.signals).filter((v) => v != null).length).toBe(2);
-    expect(result.signals['ambition']).toBe(7);
-    expect(result.signals['directness']).toBe(6);
+    expect(llmCompleteJSON).toHaveBeenCalledTimes(1);
+    expect(Object.values(result.signals).filter((v) => v != null).length).toBe(0);
+    expect(result.notes).toContain('EXTRACTION_EMPTY_DEBUG');
   });
 
-  it('4b. zero-signal retry path: first empty, retry returns empty → notes contain EXTRACTION_EMPTY', async () => {
-    llmCompleteJSON
-      .mockResolvedValueOnce(
-        mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
-      )
-      .mockResolvedValueOnce(
-        mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.4),
-      );
+  it('4b. empty first pass: one LLM call, debug note only', async () => {
+    llmCompleteJSON.mockResolvedValueOnce(
+      mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
+    );
 
     const result = await service.extract('self', 'Some meaningful text here.');
 
-    expect(llmCompleteJSON).toHaveBeenCalledTimes(2);
-    expect(result.notes).toContain('EXTRACTION_EMPTY');
+    expect(llmCompleteJSON).toHaveBeenCalledTimes(1);
+    expect(result.notes).toContain('EXTRACTION_EMPTY_DEBUG');
   });
 
   it('LLM-provided non-null signals are kept when evidence is valid', async () => {
@@ -671,7 +659,7 @@ describe('ExtractionService behavior locks', () => {
     expect(result.signals['ambition']).toBe(6);
   });
 
-  it('8. final confidence follows strict evidence validation (nonNull / allowed keys when nonNull >= 3)', async () => {
+  it('8. preserves LLM confidence (not recomputed from evidence coverage)', async () => {
     const text =
       'I am ambitious and social with emotional depth. I value direct communication and independence. ' +
       'I prefer a calm lifestyle and clear relationship goals. I care about health and fitness.';
@@ -702,12 +690,11 @@ describe('ExtractionService behavior locks', () => {
 
     const result = await service.extract('self', text);
 
-    const allowedSelf = DOMAIN_ALLOWED_SIGNAL_KEYS.self.length;
     const nonNull = DOMAIN_ALLOWED_SIGNAL_KEYS.self.filter(
       (k) => result.signals[k] != null,
     ).length;
     expect(nonNull).toBe(7);
-    expect(result.confidence).toBeCloseTo(nonNull / allowedSelf, 5);
+    expect(result.confidence).toBe(0.9);
   });
 
   describe('SIGNAL3 shadow signals', () => {

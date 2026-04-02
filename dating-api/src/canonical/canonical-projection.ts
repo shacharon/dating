@@ -6,7 +6,6 @@
 import type { ExtractionV2Result } from '../extraction/extraction-v2.service';
 import type { InterestItem } from '../extraction/extracted-interests.interface';
 import type { NegativeItem } from '../extraction/extracted-negatives.interface';
-import { INTEREST_CANONICAL_TAG_SET } from '../extraction/extracted-interests.interface';
 
 export interface CanonicalArrays {
   interests_self: string[];
@@ -26,12 +25,7 @@ export interface CanonicalSignalScalars {
 export interface CanonicalProjection extends CanonicalArrays, CanonicalSignalScalars {}
 
 /**
- * Project V2 extraction to canonical array fields.
- * Rules:
- * - Interests: extract tags only, lowercase, dedupe
- * - Negatives: filter confidence >= 0.3, extract tags, lowercase, dedupe
- * - soft_no: negatives with strength 'soft', confidence >= 0.3
- * - hard_no: negatives with strength 'hard', confidence >= 0.3
+ * Project V2 extraction to canonical array fields (dedupe/normalize only; no model-output drops).
  */
 export function projectToCanonicalArrays(extraction: ExtractionV2Result): CanonicalArrays {
   return {
@@ -79,85 +73,49 @@ function extractSignalValue(signals: Record<string, number | null>, key: string)
   return null;
 }
 
-/**
- * Normalize interest items to canonical tag array.
- * - Extract tag field only
- * - Lowercase and trim
- * - Filter to canonical tags only
- * - Deduplicate
- * - Sort alphabetically
- */
 function normalizeInterestTags(items: InterestItem[]): string[] {
   const tags = new Set<string>();
 
   for (const item of items) {
     const tag = item.tag.toLowerCase().trim();
-    if (INTEREST_CANONICAL_TAG_SET.has(tag)) {
-      tags.add(tag);
-    }
+    if (tag) tags.add(tag);
   }
 
   return Array.from(tags).sort();
 }
 
-/**
- * Normalize negative items to canonical tag array.
- * - Filter by confidence >= 0.3
- * - Extract tag field only
- * - Lowercase and trim
- * - Deduplicate
- * - Sort alphabetically
- */
 function normalizeNegativeTags(items: NegativeItem[]): string[] {
   const tags = new Set<string>();
 
   for (const item of items) {
-    if (item.confidence < 0.3) continue;
-
     const tag = item.tag.toLowerCase().trim();
-    if (tag) {
-      tags.add(tag);
-    }
+    if (tag) tags.add(tag);
   }
 
   return Array.from(tags).sort();
 }
 
-/**
- * Extract soft negatives (strength = 'soft') from self + partner domains.
- * Confidence filter: >= 0.3
- */
 function normalizeSoftNo(selfItems: NegativeItem[], partnerItems: NegativeItem[]): string[] {
   const tags = new Set<string>();
 
   for (const item of [...selfItems, ...partnerItems]) {
-    if (item.confidence < 0.3) continue;
     if (item.strength !== 'soft') continue;
 
     const tag = item.tag.toLowerCase().trim();
-    if (tag) {
-      tags.add(tag);
-    }
+    if (tag) tags.add(tag);
   }
 
   return Array.from(tags).sort();
 }
 
-/**
- * Extract hard negatives (strength = 'hard') from self + partner domains.
- * Confidence filter: >= 0.3
- */
 function normalizeHardNo(selfItems: NegativeItem[], partnerItems: NegativeItem[]): string[] {
   const tags = new Set<string>();
 
   for (const item of [...selfItems, ...partnerItems]) {
-    if (item.confidence < 0.3) continue;
     if (item.strength !== 'hard') continue;
 
     const tag = item.tag.toLowerCase().trim();
-    if (tag) {
-      tags.add(tag);
-    }
+    if (tag) tags.add(tag);
   }
 
   return Array.from(tags).sort();

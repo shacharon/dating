@@ -1,6 +1,6 @@
 /**
  * Profile interests / hobbies — explicit structured layer, separate from compatibility signals.
- * Versioned schema; canonical tags only; weak or ambiguous mentions are dropped.
+ * Versioned schema; tags reflect model output (canonical list is guidance for prompts/UI).
  * 
  * LLM-first extraction: interests are extracted via structured LLM output only.
  * No regex fallback, no deterministic inference, no hybrid mode.
@@ -40,7 +40,8 @@ export const INTEREST_CANONICAL_TAG_SET = new Set<string>(INTEREST_CANONICAL_TAG
 export type InterestStrength = 'explicit' | 'strong';
 
 export interface InterestItem {
-  tag: InterestCanonicalTag;
+  /** Model output preserved (canonical when the model complies). */
+  tag: string;
   strength: InterestStrength;
   /** Short evidence text from the original input (optional). */
   evidence?: string;

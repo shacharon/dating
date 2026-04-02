@@ -1,8 +1,7 @@
 /**
- * Strict post-parse validation: every persisted non-null signal must have
- * evidence with exact quote substring, banned-marker-free quote, and a short reason (≤8 words).
- * 
- * Final validation gate: can null invalid signals, never infers or invents values.
+ * Evidence integrity validation after LLM extraction.
+ * Filters evidence rows that fail format/substring/reason contracts.
+ * Does not null signals for missing or invalid evidence (LLM-first).
  */
 
 import { KEY_ALIASES } from './extraction-normalization';
@@ -99,7 +98,7 @@ function evidenceQuoteIsValid(quote: string, originalText: string): boolean {
   return quoteIsExactSubstringOf(quote, originalText);
 }
 
-function evidenceItemIsFullyValid(
+export function evidenceItemIsFullyValid(
   e: ExtractionEvidenceItem,
   originalText: string,
 ): boolean {
@@ -109,72 +108,38 @@ function evidenceItemIsFullyValid(
   );
 }
 
-function hasValidMatchingEvidence(
-  signalKey: string,
-  evidence: ExtractionEvidenceItem[],
-  originalText: string,
-): boolean {
-  return evidence.some(
-    (e) =>
-      officializeEvidenceSignal(e.signal) === signalKey &&
-      evidenceItemIsFullyValid(e, originalText),
-  );
+function countNonNullInAllowed(
+  signals: Record<string, number | null>,
+  allowed: readonly string[],
+): number {
+  return allowed.filter((k) => signals[k] != null).length;
 }
 
-function recomputeConfidence(
-  domain: ExtractionDomain,
-  nonNullInDomain: number,
-  previous: number,
-): number {
-  const total = allowedSignalKeyCountForDomain(domain);
-  let confidence = typeof previous === 'number' && Number.isFinite(previous) ? previous : 0;
-  if (nonNullInDomain < 3) {
-    confidence = Math.min(confidence, 0.3);
-  } else {
-    confidence = total > 0 ? nonNullInDomain / total : 0;
-  }
-  return confidence;
-}
+export type ValidateExtractionDebugLog = (payload: Record<string, unknown>) => void;
 
 /**
- * Drop invalid non-null signals and orphan evidence; recompute confidence from grounded coverage.
- * 
- * Validation rules:
- * - Null signals outside domain allowlist
- * - Null signals lacking valid evidence (exact quote + reason ≤8 words)
- * - Drop evidence rows that fail quote/reason checks
- * - Recompute confidence from final non-null count
- * - Quality gate: if non-null count < 1 (self) or < 2 (other domains) after evidence checks, null all signals and set domainStatus LOW_DATA
- * - Whitespace-only input: all null, domainStatus UNRELIABLE
- * 
- * Authority: can null, never invents or infers.
+ * Evidence-only validation: drop evidence rows that fail integrity checks.
+ * Technical: null signals for keys outside this domain's allowlist (wrong slot).
+ * Preserves LLM signal values even when no valid evidence row remains.
  */
 export function validateExtraction(
   originalText: string,
   extraction: ExtractedSignals,
+  debugLog?: ValidateExtractionDebugLog,
 ): ExtractedSignals {
   const domain = extraction.domain;
   const allowed = DOMAIN_ALLOWED_SIGNAL_KEYS[domain];
   const allowedSet = new Set<string>(allowed);
 
-  if (!originalText.trim()) {
-    const signalsEmpty: Record<string, number | null> = {};
-    for (const key of EXTRACTION_SIGNAL_KEYS) {
-      signalsEmpty[key] = null;
-    }
-    return {
-      ...extraction,
-      signals: signalsEmpty,
-      evidence: [],
-      confidence: 0,
-      domainStatus: 'UNRELIABLE',
-    };
-  }
-
   const signals: Record<string, number | null> = { ...extraction.signals };
 
+  const nonNullSignalsBefore = countNonNullInAllowed(signals, allowed);
+  const evidenceRowsBefore = (extraction.evidence ?? []).length;
+
+  let misplacedDomainSignalsCleared = 0;
   for (const key of EXTRACTION_SIGNAL_KEYS) {
-    if (!allowedSet.has(key)) {
+    if (!allowedSet.has(key) && signals[key] != null) {
+      misplacedDomainSignalsCleared += 1;
       signals[key] = null;
     }
   }
@@ -184,47 +149,36 @@ export function validateExtraction(
     signal: officializeEvidenceSignal(e.signal),
   }));
 
-  for (const key of allowed) {
-    if (signals[key] == null) continue;
-    if (!hasValidMatchingEvidence(key, normalizedEvidence, originalText)) {
-      signals[key] = null;
-    }
-  }
-
   let evidence = normalizedEvidence.filter(
-    (e) =>
-      allowedSet.has(e.signal) &&
-      signals[e.signal] != null &&
-      evidenceItemIsFullyValid(e, originalText),
+    (e) => allowedSet.has(e.signal) && evidenceItemIsFullyValid(e, originalText),
   );
   evidence = evidence.slice(0, MAX_EVIDENCE_ITEMS);
 
-  const nonNullInDomain = allowed.filter((k) => signals[k] != null).length;
-  let confidence = recomputeConfidence(domain, nonNullInDomain, extraction.confidence);
+  const nonNullSignalsAfter = countNonNullInAllowed(signals, allowed);
+  const droppedEvidenceRows = evidenceRowsBefore - evidence.length;
 
-  // Quality gate: reject truly empty extractions while preserving sparse-but-grounded outputs.
-  // A single validated signal with exact evidence is now sufficient in every domain.
-  const qualityFloor = 1;
-  if (nonNullInDomain < qualityFloor) {
-    for (const key of EXTRACTION_SIGNAL_KEYS) {
-      signals[key] = null;
-    }
-    evidence = [];
-    confidence = 0;
-    return {
-      ...extraction,
-      signals,
-      evidence,
-      confidence,
-      domainStatus: 'LOW_DATA',
-    };
-  }
+  debugLog?.({
+    event: 'validateExtraction',
+    domain,
+    before: {
+      nonNullSignalsInDomain: nonNullSignalsBefore,
+      evidenceRows: evidenceRowsBefore,
+    },
+    after: {
+      nonNullSignalsInDomain: nonNullSignalsAfter,
+      evidenceRows: evidence.length,
+    },
+    /** Wrong-domain keys nulled (schema); LLM scores for this domain are unchanged. */
+    misplacedDomainSignalsCleared,
+    droppedEvidenceRows,
+    /** Always 0: signals are not nulled for evidence failures. */
+    signalsDroppedForEvidenceMismatch: 0,
+  });
 
   return {
     ...extraction,
     signals,
     evidence,
-    confidence,
-    domainStatus: 'OK',
+    confidence: extraction.confidence,
   };
 }

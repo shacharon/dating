@@ -98,6 +98,14 @@ describe('EvaluateService', () => {
     expect(result.display.note).toBe(
       'Limited information provided; score confidence is lower.',
     );
+    expect(result.enrichment?.version).toBe('v1');
+    expect(result.enrichment?.signals).toMatchObject({
+      dailyRhythm: null,
+      autonomyTogethernessDepth: null,
+      kidsTimeline: null,
+      conflictStyleDetail: null,
+      interestsTop3: [],
+    });
   });
 
   it('rich high-confidence case remains direct; no cautious wording or note', async () => {
@@ -365,7 +373,7 @@ describe('EvaluateService', () => {
     expect(result.extendedSignals?.attractionTraits?.confidence).toBe(0.75);
   });
 
-  it('extendedSignals explicit lists are extracted with 1-3 words and max 10', async () => {
+  it('extendedSignals explicit lists are concrete, deduped across arrays, max 5 each', async () => {
     const self = mockExtracted('self', 0.7, 10);
     const partner = mockExtracted('partner', 0.7, 10);
     const relationship = mockExtracted('relationship', 0.7, 8);
@@ -412,9 +420,9 @@ describe('EvaluateService', () => {
 
     const { result } = await service.evaluateBatch({
       aboutMe:
-        'Gym, walking, journaling. I am balanced, reflective, health-oriented. Honesty and growth matter.',
+        'Gym, walking, journaling. Reflective and health-oriented. Honesty and growth matter.',
       aboutRelationship:
-        'I want emotional safety, no drama, and not rushed pacing.',
+        'I want emotional safety, no drama, and not rushed pacing. Honest communication matters.',
       aboutPartner:
         'I prefer emotional maturity and clear communication with strong connection.',
     });
@@ -425,15 +433,17 @@ describe('EvaluateService', () => {
       expect.arrayContaining(['gym', 'walking', 'journaling']),
     );
     expect(ext?.lifestyleTraits).toEqual(
-      expect.arrayContaining(['balanced', 'reflective', 'health oriented']),
+      expect.arrayContaining(['health oriented', 'reflective']),
     );
     expect(ext?.preferences).toEqual(
-      expect.arrayContaining(['emotional maturity', 'clear communication']),
+      expect.arrayContaining(['emotional maturity']),
     );
+    // "clear communication" shares semantic bucket with "honest communication"; boundaries win first.
+    expect(ext?.preferences).not.toContain('clear communication');
     expect(ext?.boundaries).toEqual(
-      expect.arrayContaining(['not rushed', 'no drama', 'emotional safety']),
+      expect.arrayContaining(['not rushed', 'no drama', 'emotional safety', 'honest communication']),
     );
-    expect(ext?.values).toEqual(expect.arrayContaining(['honesty', 'growth', 'connection']));
+    expect(ext?.values?.length ?? 0).toBe(0);
 
     for (const arr of [
       ext?.interests ?? [],
@@ -442,12 +452,80 @@ describe('EvaluateService', () => {
       ext?.boundaries ?? [],
       ext?.values ?? [],
     ]) {
-      expect(arr.length).toBeLessThanOrEqual(10);
+      expect(arr.length).toBeLessThanOrEqual(5);
       for (const item of arr) {
         expect(item.trim().split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(1);
         expect(item.trim().split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(3);
       }
     }
+  });
+
+  it('explicit extended lists: recall phrases for interests, values, boundaries, lifestyle', async () => {
+    const self = mockExtracted('self', 0.7, 10);
+    const partner = mockExtracted('partner', 0.7, 10);
+    const relationship = mockExtracted('relationship', 0.7, 8);
+    jest.spyOn(extractionService, 'extractAllThree').mockResolvedValue({
+      self,
+      partner,
+      relationship,
+    });
+
+    llmCompleteJSON.mockImplementation(async ({ purpose }: { purpose: string }) => {
+      if (purpose === 'evaluate-summary') {
+        return { value: { summary: 'Summary.', insight: 'Insight.' } };
+      }
+      if (purpose === 'evaluate-motivation') {
+        return {
+          value: {
+            relationshipMotivation: 'emotional_connection',
+            confidence: 0.7,
+            evidence: [],
+          },
+        };
+      }
+      if (purpose === 'evaluate-attraction-traits') {
+        return {
+          value: {
+            attraction: {
+              ambition: 5,
+              statusOrientation: 5,
+              physicalPriority: 5,
+              kindnessWarmth: 5,
+              stabilityReliability: 5,
+              independenceAutonomy: 5,
+              emotionalDepth: 5,
+              traditionalismValues: 5,
+              financialPrudence: 5,
+            },
+            confidence: 0.7,
+            evidence: [],
+          },
+        };
+      }
+      return { value: {} };
+    });
+
+    const { result } = await service.evaluateBatch({
+      aboutMe:
+        'I read nightly. I read, garden on weekends. I restore old doors. I build furniture on weekends.',
+      aboutPartner: 'Family is everything. I give to causes. I am a high-school teacher.',
+      aboutRelationship:
+        'I want children. No games. Not into performance. I am spontaneous. A quiet home matters.',
+    });
+
+    const ext = result.extendedSignals;
+    expect(ext?.interests).toEqual(
+      expect.arrayContaining(['reading', 'gardening', 'restoration', 'woodworking']),
+    );
+    expect(ext?.values).toEqual(
+      expect.arrayContaining(['family first', 'giving', 'education']),
+    );
+    expect(ext?.boundaries).toEqual(
+      expect.arrayContaining(['wants children', 'no games', 'authenticity']),
+    );
+    expect(ext?.lifestyleTraits).toEqual(
+      expect.arrayContaining(['spontaneous', 'home oriented']),
+    );
   });
 
   it('productScores remain unchanged when extendedSignals are present (sidecar-only proof)', async () => {

@@ -33,12 +33,11 @@ function normalizeExtendedList(items: unknown): string[] {
       .replace(/\s+/g, ' ')
       .trim();
     if (!normalized) continue;
-    const words = normalized.split(' ').filter(Boolean);
-    if (words.length < 1 || words.length > 3) continue;
+    if (normalized.length > 200) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
     out.push(normalized);
-    if (out.length >= 10) break;
+    if (out.length >= 50) break;
   }
   return out;
 }

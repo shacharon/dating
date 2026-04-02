@@ -70,6 +70,39 @@ export interface ExtractionEvidenceItem {
   note?: string;
 }
 
+/** Snapshot for pipeline diffing (observability). */
+export interface ExtractionSnapshot {
+  domain: ExtractionDomain;
+  signals: Record<string, number | null>;
+  evidence: ExtractionEvidenceItem[];
+  confidence: number;
+}
+
+export interface ExtractionStageDiff {
+  fromStage: string;
+  toStage: string;
+  signalKeysWithChangedValues: string[];
+  nonNullSignalsBefore: number;
+  nonNullSignalsAfter: number;
+  evidenceCountBefore: number;
+  evidenceCountAfter: number;
+  confidenceBefore: number;
+  confidenceAfter: number;
+}
+
+export interface ExtractionPipelineTrace {
+  pipeline: 'extraction_v1' | 'extraction_v2_base';
+  domain: ExtractionDomain;
+  requestId: string;
+  profileId?: string;
+  rawLlmOutput: {
+    parsedJson: unknown;
+    rawTextPreview: string;
+    rawTextCharLength: number;
+  };
+  stageDiffs: ExtractionStageDiff[];
+}
+
 export interface ExtractedSignals {
   domain: ExtractionDomain;
   /** Scores 1–10 or null; keys are EXTRACTION_SIGNAL_KEYS. */
@@ -83,10 +116,7 @@ export interface ExtractedSignals {
   evidence: ExtractionEvidenceItem[];
   version: 'v1';
   confidence: number;
-  /**
-   * Set by validateExtraction / extract pipeline. OK = passed quality floor; LOW_DATA = insufficient
-   * grounded signals; UNRELIABLE = unusable input or empty-model path (see notes).
-   */
+  /** Optional domain quality hint from callers or legacy payloads (not set by strict validation). */
   domainStatus?: ExtractionDomainQualityStatus;
   notes?: string;
   /** Tracks which signals were filled by post-LLM text-inference rules. */
@@ -97,6 +127,8 @@ export interface ExtractedSignals {
   _usage?: LLMUsageStats;
   /** Internal: which pipeline stages contributed (debugging only). */
   _provenance?: { stages: string[] };
+  /** Raw LLM payload + per-stage signal/evidence diffs (observability; does not affect scores). */
+  _pipelineTrace?: ExtractionPipelineTrace;
 }
 
 /**

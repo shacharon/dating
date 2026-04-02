@@ -30,10 +30,19 @@ import {
 } from './extracted-signals.interface';
 import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
+import {
+  buildExtractionPipelineTrace,
+  buildRawLlmPersistenceLogPayload,
+  toExtractionSnapshot,
+} from './pipeline-trace';
 import { InterestsExtractionService } from './interests-extraction.service';
 import { NegativesExtractionService } from './negatives-extraction.service';
 import type { InterestItem } from './extracted-interests.interface';
 import type { NegativeItem } from './extracted-negatives.interface';
+import {
+  buildEvaluateLlmTrace,
+  buildEvaluateRawLlmLogPayload,
+} from '../evaluate/evaluate-llm-pipeline';
 
 /**
  * V2 Base Signal Extractor Prompts - NO INTERESTS SECTION
@@ -721,6 +730,22 @@ export class ExtractionV2Service {
       purpose: 'extraction-v2-base',
     });
 
+    this.logger.log(
+      JSON.stringify(
+        buildRawLlmPersistenceLogPayload(
+          {
+            pipeline: 'extraction_v2_base',
+            domain,
+            requestId,
+            profileId: profileId ?? null,
+          },
+          value,
+          rawText,
+        ),
+      ),
+      ExtractionV2Service.name,
+    );
+
     const parsed = parseOpenAIUsage(usage);
     const accUsage: LLMUsageStats = {
       ...parsed,
@@ -729,6 +754,7 @@ export class ExtractionV2Service {
     };
 
     const normalized = normalizeRawExtraction(value, domain);
+    const snapAfterNormalizeRaw = toExtractionSnapshot(normalized);
     if (domain === 'self') {
       const rawSignals =
         value && typeof value === 'object'
@@ -770,7 +796,9 @@ export class ExtractionV2Service {
       );
     }
     normalized.signals = norm.normalizedSignals;
+    const snapAfterAlias = toExtractionSnapshot(normalized);
     let cleaned = this.validateAndClean(normalized, domain);
+    const snapAfterValidateAndClean = toExtractionSnapshot(cleaned);
     if (domain === 'self') {
       this.logger.debug(
         JSON.stringify({
@@ -783,8 +811,9 @@ export class ExtractionV2Service {
       );
     }
     
-    // Apply strict validation (same as V1)
-    cleaned = validateExtraction(text, cleaned);
+    cleaned = validateExtraction(text, cleaned, (payload) =>
+      this.logger.debug(JSON.stringify(payload), ExtractionV2Service.name),
+    );
     if (domain === 'self') {
       this.logger.debug(
         JSON.stringify({
@@ -796,10 +825,38 @@ export class ExtractionV2Service {
         }),
       );
     }
+
+    const trace = buildExtractionPipelineTrace({
+      pipeline: 'extraction_v2_base',
+      domain,
+      requestId,
+      profileId,
+      parsedJson: value,
+      rawText,
+      stageSnapshots: [
+        { name: 'normalizeRawExtraction', snapshot: snapAfterNormalizeRaw },
+        { name: 'alias_normalization', snapshot: snapAfterAlias },
+        { name: 'validate_and_clean', snapshot: snapAfterValidateAndClean },
+        { name: 'validateExtraction', snapshot: toExtractionSnapshot(cleaned) },
+      ],
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'extraction_pipeline_stage_diffs',
+        pipeline: 'extraction_v2_base',
+        domain,
+        requestId,
+        profileId: profileId ?? null,
+        stageDiffs: trace.stageDiffs,
+      }),
+      ExtractionV2Service.name,
+    );
     
     const withProvenance: ExtractedSignals = {
       ...cleaned,
       _provenance: { stages: ['llm', 'alias_normalization', 'validate_and_clean', 'strict_evidence_validation'] },
+      _pipelineTrace: trace,
     };
 
     return {
@@ -821,7 +878,7 @@ export class ExtractionV2Service {
     const userPrompt = `Domain: ${domain}\nText:\n"""\n${text}\n"""`;
 
     try {
-      const { value } = await this.llm.completeJSON<{ rawInterests: string[] }>({
+      const { value, rawText } = await this.llm.completeJSON<{ rawInterests: string[] }>({
         modelKey: 'fast',
         system: systemPrompt,
         user: userPrompt,
@@ -833,7 +890,32 @@ export class ExtractionV2Service {
         purpose: 'extraction-v2-raw-interests',
       });
 
+      this.logger.log(
+        JSON.stringify(
+          buildEvaluateRawLlmLogPayload(
+            { purpose: 'extraction-v2-raw-interests', domain, requestId },
+            value,
+            rawText,
+          ),
+        ),
+        ExtractionV2Service.name,
+      );
+
       const rawInterests = normalizeRawInterests(value.rawInterests);
+      const auxTrace = buildEvaluateLlmTrace({
+        purpose: 'extraction-v2-raw-interests',
+        requestId,
+        parsedJson: value,
+        rawText,
+        afterStages: [{ name: 'after_normalizeRawInterests', value: { rawInterests } }],
+      });
+      this.logger.log(
+        JSON.stringify({
+          event: 'evaluate_llm_pipeline_stage_diffs',
+          ...auxTrace,
+        }),
+        ExtractionV2Service.name,
+      );
       this.logger.debug(
         JSON.stringify({
           event: 'raw_interests_extracted',
@@ -873,7 +955,7 @@ export class ExtractionV2Service {
     const userPrompt = `Domain: ${domain}\nText:\n"""\n${text}\n"""`;
 
     try {
-      const { value } = await this.llm.completeJSON<{
+      const { value, rawText } = await this.llm.completeJSON<{
         negativePreferences: string[];
         softNo: string[];
         dealbreakers: string[];
@@ -889,9 +971,35 @@ export class ExtractionV2Service {
         purpose: 'extraction-v2-negative-preferences',
       });
 
+      this.logger.log(
+        JSON.stringify(
+          buildEvaluateRawLlmLogPayload(
+            { purpose: 'extraction-v2-negative-preferences', domain, requestId },
+            value,
+            rawText,
+          ),
+        ),
+        ExtractionV2Service.name,
+      );
+
       const negativePreferences = normalizeNegativeItems(value.negativePreferences);
       const softNo = normalizeNegativeItems(value.softNo);
       const dealbreakers = normalizeNegativeItems(value.dealbreakers);
+      const normalizedOut = { negativePreferences, softNo, dealbreakers };
+      const auxTrace = buildEvaluateLlmTrace({
+        purpose: 'extraction-v2-negative-preferences',
+        requestId,
+        parsedJson: value,
+        rawText,
+        afterStages: [{ name: 'after_normalizeNegativeItems', value: normalizedOut }],
+      });
+      this.logger.log(
+        JSON.stringify({
+          event: 'evaluate_llm_pipeline_stage_diffs',
+          ...auxTrace,
+        }),
+        ExtractionV2Service.name,
+      );
 
       this.logger.debug(
         JSON.stringify({
@@ -903,7 +1011,7 @@ export class ExtractionV2Service {
           dealbreakers,
         }),
       );
-      return { negativePreferences, softNo, dealbreakers };
+      return normalizedOut;
     } catch {
       this.logger.debug(
         JSON.stringify({

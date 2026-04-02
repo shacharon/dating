@@ -30,7 +30,7 @@ function baseSelf(partial: Partial<ExtractedSignals> = {}): ExtractedSignals {
 describe('extraction-strict-validation', () => {
   const text = 'I love slow Sundays and long walks in the park.';
 
-  it('removes signal when quote contains inferred:', () => {
+  it('keeps signal when quote contains inferred: invalid evidence row is dropped only', () => {
     const extraction = baseSelf({
       signals: { ambition: 7 },
       evidence: [
@@ -42,12 +42,11 @@ describe('extraction-strict-validation', () => {
       ],
     });
     const out = validateExtraction(text, extraction);
-    expect(out.signals['ambition']).toBeNull();
+    expect(out.signals['ambition']).toBe(7);
     expect(out.evidence).toHaveLength(0);
-    expect(out.domainStatus).toBe('LOW_DATA');
   });
 
-  it('whitespace-only input yields UNRELIABLE and clears signals', () => {
+  it('whitespace-only input: keeps LLM signals; drops evidence that fails substring check', () => {
     const extraction = baseSelf({
       signals: { ambition: 8, directness: 6 },
       evidence: [
@@ -56,13 +55,13 @@ describe('extraction-strict-validation', () => {
       ],
     });
     const out = validateExtraction(' \t\n ', extraction);
-    expect(out.domainStatus).toBe('UNRELIABLE');
-    expect(out.confidence).toBe(0);
+    expect(out.signals['ambition']).toBe(8);
+    expect(out.signals['directness']).toBe(6);
+    expect(out.confidence).toBe(0.8);
     expect(out.evidence).toHaveLength(0);
-    expect(out.signals['ambition']).toBeNull();
   });
 
-  it('removes signal when quote is paraphrase (not substring of originalText)', () => {
+  it('keeps signal when quote is paraphrase; drops only invalid evidence rows', () => {
     const extraction = baseSelf({
       signals: { ambition: 6, emotionalDepth: 5, directness: 6 },
       evidence: [
@@ -84,12 +83,12 @@ describe('extraction-strict-validation', () => {
       ],
     });
     const out = validateExtraction(text, extraction);
-    expect(out.signals['ambition']).toBeNull();
+    expect(out.signals['ambition']).toBe(6);
     expect(out.signals['emotionalDepth']).toBe(5);
     expect(out.signals['directness']).toBe(6);
     expect(out.evidence.map((e) => e.signal)).toContain('emotionalDepth');
     expect(out.evidence.map((e) => e.signal)).toContain('directness');
-    expect(out.domainStatus).toBe('OK');
+    expect(out.evidence.map((e) => e.signal)).not.toContain('ambition');
   });
 
   it('keeps signal when quote is exact substring and reason is valid', () => {
@@ -115,18 +114,17 @@ describe('extraction-strict-validation', () => {
     expect(out.evidence[0].reason).toBe('Mentions relaxed weekend pace');
   });
 
-  it('nullifies signal when quote is valid but reason is missing', () => {
+  it('keeps signal when reason is missing; drops invalid evidence row', () => {
     const extraction = baseSelf({
       signals: { ambition: 8 },
       evidence: [{ signal: 'ambition', quote: 'slow Sundays', reason: '' }],
     });
     const out = validateExtraction(text, extraction);
-    expect(out.signals['ambition']).toBeNull();
+    expect(out.signals['ambition']).toBe(8);
     expect(out.evidence).toHaveLength(0);
-    expect(out.domainStatus).toBe('LOW_DATA');
   });
 
-  it('nullifies signal when reason exceeds max word count', () => {
+  it('keeps signal when reason exceeds max word count; drops evidence row', () => {
     const longReason = Array(MAX_EVIDENCE_REASON_WORDS + 1)
       .fill('word')
       .join(' ');
@@ -137,11 +135,11 @@ describe('extraction-strict-validation', () => {
       evidence: [{ signal: 'ambition', quote: 'slow Sundays', reason: longReason }],
     });
     const out = validateExtraction(text, extraction);
-    expect(out.signals['ambition']).toBeNull();
+    expect(out.signals['ambition']).toBe(8);
     expect(out.evidence).toHaveLength(0);
   });
 
-  it('removes signal when quote contains implies:', () => {
+  it('keeps signal when quote contains implies: evidence dropped only', () => {
     const extraction = baseSelf({
       signals: { ambition: 7 },
       evidence: [
@@ -153,10 +151,28 @@ describe('extraction-strict-validation', () => {
       ],
     });
     const out = validateExtraction(text, extraction);
-    expect(out.signals['ambition']).toBeNull();
+    expect(out.signals['ambition']).toBe(7);
     expect(out.evidence).toHaveLength(0);
-    expect(out.domainStatus).toBe('LOW_DATA');
     expect(quoteContainsBannedMarkers('IMPLIES: something')).toBe(true);
+  });
+
+  it('emits debug payload with droppedEvidenceRows', () => {
+    const extraction = baseSelf({
+      signals: { ambition: 8 },
+      evidence: [
+        { signal: 'ambition', quote: 'slow Sundays', reason: 'ok' },
+        { signal: 'ambition', quote: 'bad paraphrase', reason: 'ok' },
+      ],
+    });
+    const dbg = jest.fn();
+    validateExtraction(text, extraction, dbg);
+    expect(dbg).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'validateExtraction',
+        droppedEvidenceRows: 1,
+        signalsDroppedForEvidenceMismatch: 0,
+      }),
+    );
   });
 
   it('quoteContainsBannedMarkers is case-insensitive for suggests:', () => {

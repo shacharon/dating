@@ -93,7 +93,7 @@ describe('InterestsExtractionService', () => {
       });
     });
 
-    it('should filter out unknown tags', async () => {
+    it('should preserve non-canonical tags from the model', async () => {
       mockLlm.completeJSON.mockResolvedValue({
         value: {
           items: [
@@ -108,11 +108,8 @@ describe('InterestsExtractionService', () => {
 
       const result = await service.extractForDomain('self', 'test text');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].tag).toBe('hiking');
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('dropping unknown tag'),
-      );
+      expect(result).toHaveLength(3);
+      expect(result.map((r) => r.tag).sort()).toEqual(['hiking', 'invalid', 'unknown_tag']);
     });
 
     it('should truncate evidence to 60 chars', async () => {

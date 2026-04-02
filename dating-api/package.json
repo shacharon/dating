@@ -32,7 +32,12 @@
     "merge-profiles": "npx ts-node --transpile-only scripts/merge-profiles.ts",
     "external-match": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/external-match.ts",
     "review:explainability": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/review-explainability.ts",
-    "backfill:chips": "npx ts-node --transpile-only scripts/backfill-evaluation-chips.ts"
+    "backfill:chips": "npx ts-node --transpile-only scripts/backfill-evaluation-chips.ts",
+    "backfill:enrichment": "npx ts-node --transpile-only scripts/backfill-evaluation-enrichment.ts",
+    "seed:handmade": "npx ts-node --transpile-only scripts/seed-handmade-profiles.ts",
+    "audit:extraction-purity": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/audit-extraction-purity.ts",
+    "audit:match-15": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/match-audit-15.ts",
+    "reanalyze:real-and-matches": "npx ts-node --transpile-only -r tsconfig-paths/register scripts/reanalyze-real-and-rebuild-matches.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

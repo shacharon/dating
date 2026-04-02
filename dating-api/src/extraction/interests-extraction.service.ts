@@ -11,14 +11,16 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import { LLMRouterService } from '../llm/llm-router.service';
 import {
   INTEREST_CANONICAL_TAGS,
-  INTEREST_CANONICAL_TAG_SET,
-  type InterestCanonicalTag,
   type InterestStrength,
   type InterestItem,
   type RawInterests,
   type ProfileTextsForInterests,
   type ExtractionDomain,
 } from './extracted-interests.interface';
+import {
+  buildEvaluateLlmTrace,
+  buildEvaluateRawLlmLogPayload,
+} from '../evaluate/evaluate-llm-pipeline';
 
 const CANONICAL_TAGS_LIST = INTEREST_CANONICAL_TAGS.join(', ');
 
@@ -81,27 +83,17 @@ export class InterestsExtractionService {
   ) {}
 
   /**
-   * Validate and normalize LLM output.
-   * - Filter to canonical tags only
-   * - Validate strength values
-   * - Truncate evidence to 60 chars
-   * - Set default ruleId if missing
+   * Validate and normalize LLM output (format only; keep non-canonical tags).
    */
   private validateAndNormalize(
     data: InterestsLLMOutput,
-    domain: ExtractionDomain,
+    _domain: ExtractionDomain,
   ): InterestItem[] {
     const items: InterestItem[] = [];
 
     for (const item of data.items) {
       const tag = item.tag.trim().toLowerCase();
-      
-      if (!INTEREST_CANONICAL_TAG_SET.has(tag)) {
-        this.logger.debug(
-          `validateAndNormalize: dropping unknown tag domain=${domain} tag=${tag}`,
-        );
-        continue;
-      }
+      if (!tag) continue;
 
       const strength = item.strength === 'explicit' || item.strength === 'strong' 
         ? item.strength 
@@ -114,7 +106,7 @@ export class InterestsExtractionService {
       const ruleId = item.ruleId || 'llm_v1';
 
       items.push({
-        tag: tag as InterestCanonicalTag,
+        tag,
         strength,
         evidence,
         ruleId,
@@ -150,7 +142,7 @@ export class InterestsExtractionService {
     );
 
     try {
-      const { value } = await this.llm.completeJSON<InterestsLLMOutput>({
+      const { value, rawText } = await this.llm.completeJSON<InterestsLLMOutput>({
         modelKey: 'fast',
         system: INTERESTS_SYSTEM_PROMPT,
         user: userPrompt,
@@ -162,7 +154,32 @@ export class InterestsExtractionService {
         purpose: 'interests-extraction',
       });
 
+      this.logger.log(
+        JSON.stringify(
+          buildEvaluateRawLlmLogPayload(
+            { purpose: 'interests-extraction', domain, requestId },
+            value,
+            rawText,
+          ),
+        ),
+        InterestsExtractionService.name,
+      );
+
       const normalized = this.validateAndNormalize(value, domain);
+      const auxTrace = buildEvaluateLlmTrace({
+        purpose: 'interests-extraction',
+        requestId,
+        parsedJson: value,
+        rawText,
+        afterStages: [{ name: 'after_validateAndNormalize', value: { items: normalized } }],
+      });
+      this.logger.log(
+        JSON.stringify({
+          event: 'evaluate_llm_pipeline_stage_diffs',
+          ...auxTrace,
+        }),
+        InterestsExtractionService.name,
+      );
 
       this.logger.log(
         JSON.stringify({

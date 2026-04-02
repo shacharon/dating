@@ -18,6 +18,17 @@ import {
 } from '../compatibility/lifestyle-conflicts';
 import type { ProductScores } from '../domain/scoring/product-scores.types';
 import { buildChips, type Chip, type ChipsBundle } from './chips-builder';
+import { buildEnrichmentSignalsV4 } from './enrichment-v4';
+import {
+  sanitizeEnrichmentSignalsV1ForPersist,
+  wrapEnrichmentV1,
+  type EnrichmentV1,
+} from './enrichment-signals';
+import {
+  buildEvaluateLlmTrace,
+  buildEvaluateRawLlmLogPayload,
+  type EvaluateLlmCallTrace,
+} from './evaluate-llm-pipeline';
 
 function takeString(v: unknown, ...keys: string[]): string {
   const obj = v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
@@ -330,7 +341,10 @@ function buildProductScoresPresentation(
   };
 }
 
-/** v1 extended signals: additive sidecar under evaluation.extendedSignals. */
+/**
+ * v1 extended signals: additive sidecar under evaluation.extendedSignals.
+ * Explicit-list fields are capped at 5 items each, deduped semantically and across categories.
+ */
 export interface ExtendedSignals {
   version: 'v1';
   relationshipMotivation?: RelationshipMotivationResult;
@@ -353,70 +367,230 @@ type ExtendedListKey =
 interface ExplicitListRule {
   value: string;
   patterns: RegExp[];
+  /**
+   * Semantic bucket: synonyms and cross-array equivalents collapse here.
+   * First winning array (by priority) keeps the phrase; others drop duplicates.
+   */
+  semanticId: string;
 }
 
-const MAX_EXTENDED_LIST_ITEMS = 10;
+/** Max items per extended list; quality over coverage. */
+const MAX_EXTENDED_LIST_ITEMS = 5;
+
+/**
+ * Process order: stricter relationship rules first, then partner asks, principles, self-style, activities.
+ * Same semanticId appears at most once across all five arrays.
+ */
+const EXTENDED_LIST_PRIORITY: ExtendedListKey[] = [
+  'boundaries',
+  'preferences',
+  'values',
+  'lifestyleTraits',
+  'interests',
+];
 
 const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
   interests: [
-    { value: 'gym', patterns: [/\bgym\b/i, /\bfitness\b/i] },
-    { value: 'walking', patterns: [/\bwalking\b/i, /\bwalks?\b/i] },
-    { value: 'journaling', patterns: [/\bjournaling\b/i, /\bjournal(?:ing)?\b/i] },
-    { value: 'running', patterns: [/\brunning\b/i, /\bruns?\b/i] },
-    { value: 'hiking', patterns: [/\bhiking\b/i, /\bhikes?\b/i] },
-    { value: 'yoga', patterns: [/\byoga\b/i] },
-    { value: 'cooking', patterns: [/\bcooking\b/i, /\bcook(?:s|ing)?\b/i] },
-    { value: 'travel', patterns: [/\btravel(?:ing|s)?\b/i, /\btravels?\b/i] },
-    { value: 'reading', patterns: [/\breading\b/i, /\bbooks?\b/i] },
-    { value: 'music', patterns: [/\bmusic\b/i] },
+    { value: 'gym', semanticId: 'activity-gym', patterns: [/\bgym\b/i, /\bweightlifting\b/i] },
+    { value: 'running', semanticId: 'activity-running', patterns: [/\brunning\b/i, /\bruns?\b/i] },
+    { value: 'hiking', semanticId: 'activity-hiking', patterns: [/\bhiking\b/i, /\bhikes?\b/i] },
+    { value: 'yoga', semanticId: 'activity-yoga', patterns: [/\byoga\b/i] },
+    { value: 'cooking', semanticId: 'activity-cooking', patterns: [/\bcooking\b/i, /\bcooks at home\b/i] },
+    { value: 'travel', semanticId: 'activity-travel', patterns: [/\btravel(?:ing|s)?\b/i, /\btravels?\b/i] },
+    {
+      value: 'reading',
+      semanticId: 'activity-reading',
+      patterns: [/\bI read\b/i, /\breading\b/i, /\bbooks?\b/i],
+    },
+    { value: 'music', semanticId: 'activity-music', patterns: [/\bmusic\b/i, /\bconcerts?\b/i] },
+    { value: 'walking', semanticId: 'activity-walking', patterns: [/\bwalking\b/i, /\bwalks?\b/i] },
+    { value: 'journaling', semanticId: 'activity-journaling', patterns: [/\bjournaling\b/i, /\bjournal(?:ing)?\b/i] },
+    { value: 'swimming', semanticId: 'activity-swimming', patterns: [/\bswimming\b/i, /\bswims?\b/i] },
+    { value: 'cycling', semanticId: 'activity-cycling', patterns: [/\bcycling\b/i, /\bbike rides?\b/i] },
+    {
+      value: 'gardening',
+      semanticId: 'activity-gardening',
+      patterns: [
+        /\bgardening\b/i,
+        /\b(?:I |we )garden\b/i,
+        /(?:,|\band)\s+garden\b/i,
+      ],
+    },
+    {
+      value: 'restoration',
+      semanticId: 'activity-restoration',
+      patterns: [/\brestoration\b/i, /\brestoring\b/i, /\bI restore\b/i, /\brestore old\b/i],
+    },
+    {
+      value: 'woodworking',
+      semanticId: 'activity-woodworking',
+      patterns: [/\bwoodworking\b/i, /\bbuild(?:s|ing)? furniture\b/i],
+    },
   ],
   lifestyleTraits: [
-    { value: 'balanced', patterns: [/\bbalanced\b/i] },
-    { value: 'reflective', patterns: [/\breflective\b/i, /\breflection\b/i] },
-    { value: 'health oriented', patterns: [/\bhealth[-\s]?oriented\b/i, /\bhealth conscious\b/i] },
-    { value: 'active', patterns: [/\bactive\b/i] },
-    { value: 'calm', patterns: [/\bcalm\b/i] },
-    { value: 'independent', patterns: [/\bindependent\b/i] },
-    { value: 'rational', patterns: [/\brational\b/i] },
-    { value: 'structured', patterns: [/\bstructured\b/i] },
-    { value: 'adventurous', patterns: [/\badventurous\b/i] },
-    { value: 'grounded', patterns: [/\bgrounded\b/i] },
+    {
+      value: 'health oriented',
+      semanticId: 'lifestyle-health',
+      patterns: [/\bhealth[-\s]?oriented\b/i, /\bhealth conscious\b/i],
+    },
+    {
+      value: 'structured routine',
+      semanticId: 'lifestyle-structure',
+      patterns: [/\bstructured (?:life|routine|days?)\b/i, /\blike(?:s)? structure\b/i],
+    },
+    {
+      value: 'night owl',
+      semanticId: 'lifestyle-sleep-late',
+      patterns: [/\bnight owl\b/i, /\bup late\b/i],
+    },
+    {
+      value: 'early bird',
+      semanticId: 'lifestyle-sleep-early',
+      patterns: [/\bearly bird\b/i, /\bearly riser\b/i, /\bmorning person\b/i],
+    },
+    {
+      value: 'reflective',
+      semanticId: 'lifestyle-reflective',
+      patterns: [/\breflective\b/i],
+    },
+    {
+      value: 'rational thinker',
+      semanticId: 'lifestyle-rational',
+      patterns: [/\brational\b/i],
+    },
+    {
+      value: 'social bursts recharge',
+      semanticId: 'lifestyle-social-rhythm',
+      patterns: [/\bsocial bursts?\b/i, /\balternating social\b/i],
+    },
+    {
+      value: 'spontaneous',
+      semanticId: 'lifestyle-spontaneous',
+      patterns: [/\bspontaneous\b/i],
+    },
+    {
+      value: 'home oriented',
+      semanticId: 'lifestyle-quiet-home',
+      patterns: [/\bquiet home\b/i, /\bquiet at home\b/i],
+    },
   ],
   preferences: [
-    { value: 'emotional maturity', patterns: [/\bemotional maturity\b/i, /\bemotionally mature\b/i] },
-    { value: 'clear communication', patterns: [/\bclear communication\b/i, /\bdirect communication\b/i] },
-    { value: 'emotional depth', patterns: [/\bemotional depth\b/i, /\bdeep connection\b/i] },
-    { value: 'independence', patterns: [/\bindependent\b/i, /\bindependence\b/i] },
-    { value: 'stability', patterns: [/\bstability\b/i, /\bstable\b/i] },
-    { value: 'kindness', patterns: [/\bkind(?:ness)?\b/i] },
-    { value: 'honesty', patterns: [/\bhonest(?:y)?\b/i] },
-    { value: 'trust', patterns: [/\btrust\b/i] },
-    { value: 'commitment', patterns: [/\bcommitment\b/i, /\bcommitted\b/i] },
-    { value: 'growth mindset', patterns: [/\bgrowth\b/i] },
+    {
+      value: 'emotional maturity',
+      semanticId: 'pref-em-maturity',
+      patterns: [/\bemotional maturity\b/i, /\bemotionally mature\b/i],
+    },
+    {
+      value: 'clear communication',
+      semanticId: 'comm-direct',
+      patterns: [/\bclear communication\b/i, /\bdirect communication\b/i],
+    },
+    {
+      value: 'emotional literacy',
+      semanticId: 'pref-em-literacy',
+      patterns: [/\bemotional(?:ly)? literate\b/i, /\bemotional literacy\b/i],
+    },
+    {
+      value: 'financial prudence',
+      semanticId: 'pref-money-care',
+      patterns: [
+        /\bstrict with budgets?\b/i,
+        /\bsaver\b/i,
+        /\bfinancial(?:ly)? responsible\b/i,
+        /\bmoney smart\b/i,
+        /\bresponsib(?:le|ility) with money\b/i,
+      ],
+    },
+    {
+      value: 'values independence',
+      semanticId: 'pref-autonomy',
+      patterns: [/\bvalues (?:freedom|independence|autonomy)\b/i, /\bfreedom and autonomy\b/i],
+    },
   ],
   boundaries: [
-    { value: 'not rushed', patterns: [/\bnot rushed\b/i, /\bno rush\b/i] },
-    { value: 'no drama', patterns: [/\bno drama\b/i, /\bnot .*drama\b/i] },
-    { value: 'emotional safety', patterns: [/\bemotional safety\b/i, /\bsafe space\b/i] },
-    { value: 'clear boundaries', patterns: [/\bclear boundaries\b/i, /\bboundaries\b/i] },
-    { value: 'no games', patterns: [/\bno games\b/i] },
-    { value: 'respect space', patterns: [/\bneed space\b/i, /\brespect.*space\b/i] },
-    { value: 'honest dialogue', patterns: [/\bhonest communication\b/i, /\bhonest dialogue\b/i] },
-    { value: 'steady pace', patterns: [/\bslow pace\b/i, /\bsteady pace\b/i] },
-    { value: 'mutual respect', patterns: [/\bmutual respect\b/i] },
-    { value: 'emotional clarity', patterns: [/\bemotional clarity\b/i] },
+    {
+      value: 'not rushed',
+      semanticId: 'boundary-pacing',
+      patterns: [/\bnot rushed\b/i, /\bno rush\b/i, /\bnot rushing\b/i],
+    },
+    {
+      value: 'steady pace',
+      semanticId: 'boundary-pacing',
+      patterns: [/\bsteady pace\b/i, /\bslow pace\b/i],
+    },
+    {
+      value: 'no drama',
+      semanticId: 'boundary-no-drama',
+      patterns: [/\bno drama\b/i, /\bavoid drama\b/i, /\bavoids drama\b/i],
+    },
+    {
+      value: 'emotional safety',
+      semanticId: 'boundary-em-safety',
+      patterns: [/\bemotional safety\b/i, /\bsafe space\b/i],
+    },
+    { value: 'no games', semanticId: 'boundary-no-games', patterns: [/\bno games\b/i] },
+    {
+      value: 'wants children',
+      semanticId: 'boundary-wants-children',
+      patterns: [
+        /(?<!\bdon't )\bwant(?:s)? (?:kids|children)\b/i,
+        /(?<!\bdo not )\bwant(?:s)? (?:kids|children)\b/i,
+      ],
+    },
+    {
+      value: 'authenticity',
+      semanticId: 'boundary-not-performance',
+      patterns: [/\bnot into performance\b/i],
+    },
+    {
+      value: 'needs personal space',
+      semanticId: 'boundary-space',
+      patterns: [/\bneed (?:my |a lot of )?space\b/i, /\bneed space\b/i, /\brespect.*space\b/i],
+    },
+    {
+      value: 'honest communication',
+      semanticId: 'comm-direct',
+      patterns: [/\bhonest communication\b/i, /\bhonest dialogue\b/i],
+    },
+    {
+      value: 'emotional clarity',
+      semanticId: 'boundary-em-clarity',
+      patterns: [/\bemotional clarity\b/i],
+    },
   ],
   values: [
-    { value: 'honesty', patterns: [/\bhonest(?:y)?\b/i] },
-    { value: 'growth', patterns: [/\bgrowth\b/i] },
-    { value: 'connection', patterns: [/\bconnection\b/i, /\bconnect(?:ion)?\b/i] },
-    { value: 'trust', patterns: [/\btrust\b/i] },
-    { value: 'respect', patterns: [/\brespect\b/i] },
-    { value: 'loyalty', patterns: [/\bloyal(?:ty)?\b/i] },
-    { value: 'kindness', patterns: [/\bkind(?:ness)?\b/i] },
-    { value: 'family', patterns: [/\bfamily\b/i] },
-    { value: 'stability', patterns: [/\bstability\b/i, /\bstable\b/i] },
-    { value: 'authenticity', patterns: [/\bauthentic(?:ity)?\b/i] },
+    { value: 'loyalty', semanticId: 'value-loyalty', patterns: [/\bloyal(?:ty)?\b/i] },
+    { value: 'authenticity', semanticId: 'value-authenticity', patterns: [/\bauthentic(?:ity)?\b/i] },
+    {
+      value: 'faith or tradition',
+      semanticId: 'value-faith-tradition',
+      patterns: [/\bfaith\b/i, /\btradition(?:al)?\b/i, /\bspiritual practice\b/i],
+    },
+    {
+      value: 'family first',
+      semanticId: 'value-family-priority',
+      patterns: [
+        /\bfamily is everything\b/i,
+        /\bfamily (?:first|comes first)\b/i,
+        /\bputs family first\b/i,
+      ],
+    },
+    {
+      value: 'giving',
+      semanticId: 'value-giving',
+      patterns: [/\bgive to causes\b/i, /\bgiving to causes\b/i],
+    },
+    {
+      value: 'education',
+      semanticId: 'value-education',
+      patterns: [
+        /\bI teach\b/i,
+        /\bhigh[-\s]?school teacher\b/i,
+        /\bmiddle school teacher\b/i,
+        /\beducation matters\b/i,
+        /\bvalues? education\b/i,
+      ],
+    },
   ],
 };
 
@@ -432,20 +606,6 @@ function normalizeListItem(value: string): string | null {
   return normalized;
 }
 
-function buildExplicitList(text: string, key: ExtendedListKey): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const rule of EXPLICIT_LIST_RULES[key]) {
-    if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
-    const normalized = normalizeListItem(rule.value);
-    if (!normalized || seen.has(normalized)) continue;
-    seen.add(normalized);
-    out.push(normalized);
-    if (out.length >= MAX_EXTENDED_LIST_ITEMS) break;
-  }
-  return out;
-}
-
 function buildExplicitExtendedLists(
   aboutMe: string,
   aboutPartner: string,
@@ -458,12 +618,34 @@ function buildExplicitExtendedLists(
     .map((s) => s.trim())
     .filter(Boolean)
     .join('\n');
+
+  const claimedSemantic = new Set<string>();
+  const results: Record<ExtendedListKey, string[]> = {
+    boundaries: [],
+    preferences: [],
+    values: [],
+    lifestyleTraits: [],
+    interests: [],
+  };
+
+  for (const key of EXTENDED_LIST_PRIORITY) {
+    for (const rule of EXPLICIT_LIST_RULES[key]) {
+      if (results[key].length >= MAX_EXTENDED_LIST_ITEMS) break;
+      if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
+      const normalized = normalizeListItem(rule.value);
+      if (!normalized) continue;
+      if (claimedSemantic.has(rule.semanticId)) continue;
+      claimedSemantic.add(rule.semanticId);
+      results[key].push(normalized);
+    }
+  }
+
   return {
-    interests: buildExplicitList(text, 'interests'),
-    lifestyleTraits: buildExplicitList(text, 'lifestyleTraits'),
-    preferences: buildExplicitList(text, 'preferences'),
-    boundaries: buildExplicitList(text, 'boundaries'),
-    values: buildExplicitList(text, 'values'),
+    interests: results.interests,
+    lifestyleTraits: results.lifestyleTraits,
+    preferences: results.preferences,
+    boundaries: results.boundaries,
+    values: results.values,
   };
 }
 
@@ -580,6 +762,18 @@ export interface EvaluateBatchResult {
   extendedSignals?: ExtendedSignals;
   /** Display chips for UI explainability (read-only, no scoring impact). */
   chips?: ChipsBundle;
+  /**
+   * Additive text-derived signals only; never used for scoring, matching, or core extraction.
+   * Omitted on legacy stored evaluations until re-run.
+   */
+  enrichment?: EnrichmentV1;
+  /** Raw LLM payloads + post-process stage diffs for evaluate-time LLM calls (observability only). */
+  _evaluateLlmTraces?: {
+    evalRequestId: string;
+    summary?: EvaluateLlmCallTrace;
+    relationshipMotivation?: EvaluateLlmCallTrace;
+    attractionTraits?: EvaluateLlmCallTrace;
+  };
 }
 
 @Injectable()
@@ -598,7 +792,11 @@ export class EvaluateService {
     self: ExtractedSignals,
     partner: ExtractedSignals,
     relationship: ExtractedSignals,
-  ): Promise<{ summary: string; insight: string }> {
+  ): Promise<{
+    summary: string;
+    insight: string;
+    _evaluateLlmTrace: EvaluateLlmCallTrace;
+  }> {
     const payload = JSON.stringify(
       {
         self: {
@@ -622,7 +820,7 @@ export class EvaluateService {
     );
 
     const requestId = randomUUID();
-    const { value } = await this.llm.completeJSON<Record<string, unknown>>({
+    const { value, rawText } = await this.llm.completeJSON<Record<string, unknown>>({
       modelKey: 'fast',
       system: SUMMARY_SYSTEM_PROMPT,
       user: `Extracted data:\n${payload}`,
@@ -634,42 +832,27 @@ export class EvaluateService {
       purpose: 'evaluate-summary',
     });
 
+    this.logger.log(
+      JSON.stringify(
+        buildEvaluateRawLlmLogPayload({ purpose: 'evaluate-summary', requestId }, value, rawText),
+      ),
+      'EvaluateService',
+    );
+
     const normalized = normalizeDisplay(value);
-    if (
-      normalized.summary ===
-        'Profile and relationship view based on the extracted signals.' &&
-      normalized.insight ===
-        'Signals reflect how self, partner, and relationship preferences align.'
-    ) {
-      return this.fallbackSummaryFromEvidence(self, partner, relationship);
-    }
-    return normalized;
-  }
+    const trace = buildEvaluateLlmTrace({
+      purpose: 'evaluate-summary',
+      requestId,
+      parsedJson: value,
+      rawText,
+      afterStages: [{ name: 'after_normalizeDisplay', value: normalized }],
+    });
+    this.logger.log(
+      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
+      'EvaluateService',
+    );
 
-  /** Build a short summary and insight from evidence when the LLM returns nothing useful. */
-  private fallbackSummaryFromEvidence(
-    self: ExtractedSignals,
-    partner: ExtractedSignals,
-    relationship: ExtractedSignals,
-  ): { summary: string; insight: string } {
-    const quotes: string[] = [];
-    for (const block of [self, partner, relationship]) {
-      for (const e of block.evidence ?? []) {
-        if (e.quote?.trim()) quotes.push(e.quote.trim());
-      }
-    }
-
-    const summary =
-      quotes.length > 0
-        ? `Based on the profile: ${quotes.slice(0, 3).join('; ')}${quotes.length > 3 ? '...' : ''}`
-        : 'Profile is brief; add more detail for a richer summary.';
-
-    const insight =
-      quotes.length > 0
-        ? 'Summary is based on the quoted highlights from your self, partner, and relationship descriptions.'
-        : 'Add more to each section to get a clearer picture.';
-
-    return { summary, insight };
+    return { ...normalized, _evaluateLlmTrace: trace };
   }
 
   /**
@@ -680,7 +863,10 @@ export class EvaluateService {
     aboutMe: string,
     aboutPartner: string,
     aboutRelationship: string,
-  ): Promise<RelationshipMotivationResult> {
+    opts?: { collectTrace?: boolean },
+  ): Promise<
+    RelationshipMotivationResult & { _evaluateLlmTrace?: EvaluateLlmCallTrace }
+  > {
     const user = [
       'aboutMe:',
       aboutMe.trim() || '(empty)',
@@ -693,7 +879,7 @@ export class EvaluateService {
     ].join('\n');
 
     const requestId = randomUUID();
-    const { value } =
+    const { value, rawText } =
       await this.llm.completeJSON<RelationshipMotivationResult>({
         modelKey: 'fast',
         system: MOTIVATION_SYSTEM_PROMPT,
@@ -706,11 +892,33 @@ export class EvaluateService {
         purpose: 'evaluate-motivation',
       });
 
-    return {
+    this.logger.log(
+      JSON.stringify(
+        buildEvaluateRawLlmLogPayload({ purpose: 'evaluate-motivation', requestId }, value, rawText),
+      ),
+      'EvaluateService',
+    );
+
+    const out: RelationshipMotivationResult = {
       relationshipMotivation: value.relationshipMotivation,
       confidence: Math.max(0, Math.min(1, value.confidence)),
       evidence: Array.isArray(value.evidence) ? value.evidence : [],
     };
+    const trace = buildEvaluateLlmTrace({
+      purpose: 'evaluate-motivation',
+      requestId,
+      parsedJson: value,
+      rawText,
+      afterStages: [{ name: 'after_clamp_and_normalize', value: out }],
+    });
+    this.logger.log(
+      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
+      'EvaluateService',
+    );
+    if (opts?.collectTrace) {
+      return { ...out, _evaluateLlmTrace: trace };
+    }
+    return out;
   }
 
   /**
@@ -720,7 +928,8 @@ export class EvaluateService {
   async inferAttractionProfile(
     aboutMe: string,
     aboutPartner: string,
-  ): Promise<AttractionResult> {
+    opts?: { collectTrace?: boolean },
+  ): Promise<AttractionResult & { _evaluateLlmTrace?: EvaluateLlmCallTrace }> {
     const user = [
       'aboutMe:',
       aboutMe.trim() || '(empty)',
@@ -730,7 +939,7 @@ export class EvaluateService {
     ].join('\n');
 
     const requestId = randomUUID();
-    const { value } = await this.llm.completeJSON<AttractionResult>({
+    const { value, rawText } = await this.llm.completeJSON<AttractionResult>({
       modelKey: 'fast',
       system: ATTRACTION_SYSTEM_PROMPT,
       user,
@@ -742,9 +951,16 @@ export class EvaluateService {
       purpose: 'evaluate-attraction',
     });
 
+    this.logger.log(
+      JSON.stringify(
+        buildEvaluateRawLlmLogPayload({ purpose: 'evaluate-attraction', requestId }, value, rawText),
+      ),
+      'EvaluateService',
+    );
+
     const clamp = (n: number, lo: number, hi: number) =>
       Math.max(lo, Math.min(hi, n));
-    return {
+    const out: AttractionResult = {
       attractionProfile: {
         ambition: clamp(value.attractionProfile.ambition, 0, 10),
         appearance: clamp(value.attractionProfile.appearance, 0, 10),
@@ -755,6 +971,21 @@ export class EvaluateService {
       confidence: Math.max(0, Math.min(1, value.confidence)),
       evidence: Array.isArray(value.evidence) ? value.evidence : [],
     };
+    const trace = buildEvaluateLlmTrace({
+      purpose: 'evaluate-attraction',
+      requestId,
+      parsedJson: value,
+      rawText,
+      afterStages: [{ name: 'after_clamp_and_normalize', value: out }],
+    });
+    this.logger.log(
+      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
+      'EvaluateService',
+    );
+    if (opts?.collectTrace) {
+      return { ...out, _evaluateLlmTrace: trace };
+    }
+    return out;
   }
 
   /**
@@ -765,7 +996,10 @@ export class EvaluateService {
     aboutPartner: string,
     aboutMe?: string,
     aboutRelationship?: string,
-  ): Promise<AttractionTraitsResult> {
+    opts?: { collectTrace?: boolean },
+  ): Promise<
+    AttractionTraitsResult & { _evaluateLlmTrace?: EvaluateLlmCallTrace }
+  > {
     const parts: string[] = ['aboutPartner:', aboutPartner.trim() || '(empty)'];
     if (aboutMe != null && aboutMe.trim()) {
       parts.push('', '(optional) aboutMe:', aboutMe.trim());
@@ -776,7 +1010,7 @@ export class EvaluateService {
     const user = parts.join('\n');
 
     const requestId = randomUUID();
-    const { value } = await this.llm.completeJSON<AttractionTraitsResult>({
+    const { value, rawText } = await this.llm.completeJSON<AttractionTraitsResult>({
       modelKey: 'fast',
       system: ATTRACTION_TRAITS_SYSTEM_PROMPT,
       user,
@@ -793,6 +1027,17 @@ export class EvaluateService {
         (aboutRelationship?.trim().length ?? 0),
     });
 
+    this.logger.log(
+      JSON.stringify(
+        buildEvaluateRawLlmLogPayload(
+          { purpose: 'evaluate-attraction-traits', requestId },
+          value,
+          rawText,
+        ),
+      ),
+      'EvaluateService',
+    );
+
     const clampInt = (n: number, lo: number, hi: number) =>
       Math.round(Math.max(lo, Math.min(hi, n)));
     const a = value.attraction;
@@ -803,7 +1048,7 @@ export class EvaluateService {
         }))
       : [];
 
-    return {
+    const out: AttractionTraitsResult = {
       attraction: {
         ambition: clampInt(a.ambition, 0, 10),
         statusOrientation: clampInt(a.statusOrientation, 0, 10),
@@ -818,6 +1063,21 @@ export class EvaluateService {
       confidence: Math.max(0, Math.min(1, value.confidence)),
       evidence,
     };
+    const trace = buildEvaluateLlmTrace({
+      purpose: 'evaluate-attraction-traits',
+      requestId,
+      parsedJson: value,
+      rawText,
+      afterStages: [{ name: 'after_clamp_and_truncate', value: out }],
+    });
+    this.logger.log(
+      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
+      'EvaluateService',
+    );
+    if (opts?.collectTrace) {
+      return { ...out, _evaluateLlmTrace: trace };
+    }
+    return out;
   }
 
   /**
@@ -849,25 +1109,41 @@ export class EvaluateService {
     // Start all evaluation LLM calls together (summary + optional extended signals).
     const displayPromise = this.generateSummaryFromSignals(self, partner, relationship);
     const extendedSignalsPromise = (async (): Promise<
-      Pick<ExtendedSignals, 'relationshipMotivation' | 'attractionTraits'> | undefined
+      | (Pick<ExtendedSignals, 'relationshipMotivation' | 'attractionTraits'> & {
+          motTrace?: EvaluateLlmCallTrace;
+          attTrace?: EvaluateLlmCallTrace;
+        })
+      | undefined
     > => {
       try {
-        const [motivation, attraction] = await Promise.all([
+        const [motivationPack, attractionPack] = await Promise.all([
           this.inferRelationshipMotivation(
             aboutMe.trim(),
             aboutPartner.trim(),
             aboutRelationship.trim(),
+            { collectTrace: true },
           ),
           this.inferAttractionTraits(
             aboutPartner.trim(),
             aboutMe.trim(),
             aboutRelationship.trim(),
+            { collectTrace: true },
           ),
         ]);
+        const {
+          _evaluateLlmTrace: motTrace,
+          ...motivation
+        } = motivationPack;
+        const {
+          _evaluateLlmTrace: attTrace,
+          ...attraction
+        } = attractionPack;
 
         return {
           relationshipMotivation: motivation,
           attractionTraits: attraction,
+          motTrace,
+          attTrace,
         };
       } catch (err) {
         // Extended signals are optional; do not fail the entire evaluation if they fail
@@ -879,7 +1155,7 @@ export class EvaluateService {
       }
     })();
 
-    const [display, selfVsPartner, selfVsRelationship] = await Promise.all([
+    const [displayPack, selfVsPartner, selfVsRelationship] = await Promise.all([
       displayPromise,
       Promise.resolve(
         computeCompatibility(
@@ -895,10 +1171,16 @@ export class EvaluateService {
       ),
     ]);
 
+    const {
+      summary: summaryPre,
+      insight: insightPre,
+      _evaluateLlmTrace: summaryLlmTrace,
+    } = displayPack;
+
     const useCautious = isLowCoverageOrConfidence(self, partner, relationship);
     const { summary, insight } = applyHonestyFraming(
-      display.summary,
-      display.insight,
+      summaryPre,
+      insightPre,
       useCautious,
     );
 
@@ -956,6 +1238,18 @@ export class EvaluateService {
       extendedSignals,
     );
 
+    const enrichmentMapped = buildEnrichmentSignalsV4(
+      aboutMe.trim(),
+      aboutPartner.trim(),
+      aboutRelationship.trim(),
+    );
+    const enrichmentSignals = sanitizeEnrichmentSignalsV1ForPersist(enrichmentMapped, {
+      profileId: profileId ?? null,
+      onDropped: (e) =>
+        this.logger.warn(JSON.stringify({ event: 'enrichment_field_dropped', ...e }), EvaluateService.name),
+    });
+    const enrichment: EnrichmentV1 = wrapEnrichmentV1(enrichmentSignals);
+
     return {
       ok: true,
       result: {
@@ -977,6 +1271,17 @@ export class EvaluateService {
         _usage,
         extendedSignals,
         chips,
+        enrichment,
+        _evaluateLlmTraces: {
+          evalRequestId,
+          summary: summaryLlmTrace,
+          ...(inferredExtendedSignals?.motTrace && {
+            relationshipMotivation: inferredExtendedSignals.motTrace,
+          }),
+          ...(inferredExtendedSignals?.attTrace && {
+            attractionTraits: inferredExtendedSignals.attTrace,
+          }),
+        },
       },
     };
   }

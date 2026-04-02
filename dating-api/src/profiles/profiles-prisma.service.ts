@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import { sanitizeEnrichmentSignalsV1ForPersist, wrapEnrichmentV1 } from '../evaluate/enrichment-signals';
 import type { ProfileJsonPayload, ProfileListItem } from './profiles-json.service';
 
 interface UserProfileRow {
@@ -108,11 +109,39 @@ export class ProfilesPrismaService {
     return this.listFromPrisma();
   }
 
+  private evaluationWithSanitizedEnrichment(
+    evaluation: EvaluateBatchResult,
+    opts?: { profileId?: string; logDropped?: boolean },
+  ): EvaluateBatchResult {
+    const en = evaluation.enrichment;
+    if (!en || en.version !== 'v1' || !en.signals) return evaluation;
+    const logDropped = opts?.logDropped === true;
+    const profileId = opts?.profileId ?? null;
+    const signals = sanitizeEnrichmentSignalsV1ForPersist(en.signals, {
+      profileId,
+      onDropped: logDropped
+        ? (e) =>
+            this.logger.warn(
+              JSON.stringify({ event: 'enrichment_field_dropped', ...e }),
+              'ProfilesPrisma',
+            )
+        : undefined,
+    });
+    return {
+      ...evaluation,
+      enrichment: wrapEnrichmentV1(signals),
+    };
+  }
+
   private async saveToPrisma(
     id: string,
     payload: Omit<ProfileJsonPayload, 'savedAt'>,
   ): Promise<void> {
-    const evaluationJson = payload.evaluation as unknown as Prisma.InputJsonValue;
+    const evaluation = this.evaluationWithSanitizedEnrichment(payload.evaluation, {
+      profileId: id,
+      logDropped: true,
+    });
+    const evaluationJson = evaluation as unknown as Prisma.InputJsonValue;
     const evaluatedAt = payload.evaluatedAt ? new Date(payload.evaluatedAt) : null;
     const promptVersion = payload.promptVersion || null;
     const policyVersion = payload.policyVersion || null;
@@ -322,12 +351,17 @@ export class ProfilesPrismaService {
         chips: { self: [], partner: [], relationship: [] },
       } as EvaluateBatchResult);
 
-    const evaluation: EvaluateBatchResult = rawEvaluation.chips
+    let evaluation: EvaluateBatchResult = rawEvaluation.chips
       ? rawEvaluation
       : {
           ...rawEvaluation,
           chips: { self: [], partner: [], relationship: [] },
         };
+
+    evaluation = this.evaluationWithSanitizedEnrichment(evaluation, {
+      profileId: row.id,
+      logDropped: false,
+    });
 
     return {
       id: row.id,
