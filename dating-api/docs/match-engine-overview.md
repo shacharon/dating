@@ -39,10 +39,10 @@ Assumes both profiles are scoreable (callers that skip guards must ensure this).
 Stages are applied in order:
 
 1. **Contexts & enriched signals** — keyword triggers on texts; raw + enriched signal maps.
-2. **Dealbreakers & relationship balance** — `computeDealbreakers`, `computeRelationshipBalance` (tier GREEN / YELLOW / RED).
+2. **Dealbreakers & relationship balance** — `computeDealbreakers`, `computeRelationshipBalance` (positive/negative score and **ratio**).
 3. **Directional compatibility** — `computeCompatibility` each direction → `aToB`, `bToA`; **coverage %** = comparable signal keys / total keys.
-4. **Asymmetry / low-evidence friction floor** — scales directionals when asymmetric profiles; may raise friction floor from balance tier or low coverage; builds **tension matrix** from `computeFriction`.
-5. **Relationship fit & values alignment** — from product scores + signals; tier can nudge relationship fit.
+4. **Asymmetry / low-evidence friction floor** — scales directionals when asymmetric profiles; may raise friction floor from **balance ratio** (thresholds 4 / 2) or low coverage; builds **tension matrix** from `computeFriction`.
+5. **Relationship fit & values alignment** — from product scores + signals; **balance ratio** can nudge relationship fit (same thresholds).
 6. **Blended compatibility** — weighted formula + **coverage ceiling on compatibility** when coverage ≤ 55% (`min(compat, 50 + coverage%)`) + small nuance penalties (e.g. clarity/pace gap bands).
 7. **Confidence & flags** — from coverage only (`coverageFactor`, `scoreCoverageFactor` for **display/metadata**, `LOW_COVERAGE` / `LOW_CONFIDENCE`). **Extra rule:** if **coverage &lt; 25%**, **confidence is capped at 0.75** for the response.
 8. **Friction penalty & pre-raw score** — see §4.

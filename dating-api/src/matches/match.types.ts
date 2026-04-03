@@ -53,8 +53,6 @@ export interface MatchListItemDto {
   overall: number;
   finalScore?: number;
   updatedAt: string;
-  /** Balance tier (GREEN / YELLOW / RED) for observability. */
-  tier: string | null;
   /** Dealbreakers applied to this match. */
   dealbreakers: Array<{ code: string; severity?: string }>;
   /** Deterministic one-line reason from score/dealbreakers. */

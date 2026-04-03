@@ -213,7 +213,6 @@ export class MatchesService {
     return records
       .map((r) => {
         const finalScore = r.finalScore ?? r.overall;
-        const tier = r.balance?.tier ?? r.debug?.tier ?? null;
         const dealbreakersRaw = r.dealbreakers ?? r.debug?.dealbreakers ?? [];
         const dealbreakers = dealbreakersRaw.map((d) => ({
           code: d.code,
@@ -221,7 +220,6 @@ export class MatchesService {
         }));
         const shortReason = buildShortReason({
           finalScore,
-          tier: tier ?? 'UNKNOWN',
           dealbreakers,
         });
         const scoreMetadata: MatchListItemDto['scoreMetadata'] = {};
@@ -236,7 +234,6 @@ export class MatchesService {
           overall: r.overall,
           finalScore,
           updatedAt: r.updatedAt,
-          tier,
           dealbreakers,
           shortReason,
           ...(r.explainability != null && { explainability: r.explainability }),

@@ -5,7 +5,6 @@
 
 export interface ShortReasonInput {
   finalScore: number;
-  tier: 'GREEN' | 'YELLOW' | 'RED' | string;
   dealbreakers: Array<{ code: string; severity?: string }>;
 }
 
@@ -24,11 +23,11 @@ function labelForCode(code: string): string {
 }
 
 /**
- * Build one short reason string from score, tier, and dealbreakers.
+ * Build one short reason string from score and dealbreakers.
  * Deterministic and explainable: score bands + presence of HARD + dealbreaker labels.
  */
 export function buildShortReason(input: ShortReasonInput): string {
-  const { finalScore, tier, dealbreakers } = input;
+  const { finalScore, dealbreakers } = input;
   const hasHard = dealbreakers.some((d) => d.severity === 'HARD');
   const codes = dealbreakers.map((d) => d.code);
   const labels = [...new Set(codes.map(labelForCode))];

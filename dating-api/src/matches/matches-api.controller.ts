@@ -17,8 +17,6 @@ import type {
 export interface MatchesApiItemDto {
   matchId: string;
   finalScore: number;
-  /** Balance tier (GREEN / YELLOW / RED) for transparent reasons. */
-  tier: string | null;
   compatibility: number | null;
   coveragePercent: number | null;
   lowCoverage: boolean;
@@ -50,7 +48,6 @@ export interface MatchesApiItemDto {
     positiveScore: number;
     negativeScore: number;
     ratio: number;
-    tier: string;
     reasons: string[];
   };
   /** Present only when ?includeDebug=1 (admin/diagnostics). */
@@ -87,20 +84,17 @@ export class MatchesApiController {
 
     const items: MatchesApiItemDto[] = records.map((r) => {
       const finalScore = r.finalScore ?? r.overall;
-      const tier = r.balance?.tier ?? r.debug?.tier ?? null;
       const lowCoverage =
         (r.infoFlags ?? []).includes('LOW_COVERAGE') ||
         (r.coveragePercent != null && r.coveragePercent < 50);
       const dealbreakers = r.dealbreakers ?? [];
       const shortReason = buildShortReason({
         finalScore,
-        tier: tier ?? 'UNKNOWN',
         dealbreakers,
       });
       return {
         matchId: r.matchId,
         finalScore,
-        tier,
         compatibility: r.compatibility ?? null,
         coveragePercent: r.coveragePercent ?? null,
         lowCoverage,

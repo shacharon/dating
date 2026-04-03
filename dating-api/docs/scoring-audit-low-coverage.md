@@ -143,4 +143,4 @@ So low coverage **does** reduce the final score a bit, but **does not** limit th
 | Compatibility = 95 at low coverage | Compatibility blend has no cap; scoreCoverageFactor only mild | Cap compatibilityValue when coverage < 50 (Change 1). |
 | Friction = 0 with sparse data | Tension rules don’t fire on null; GREEN floor = 0 | Friction floor when coverage < 50 (Change 2). |
 
-Implementing **Change 1** and **Change 2** gives a minimal, non-invasive guardrail set without refactoring compatibility formula, pairScore curve, or GREEN/YELLOW/RED logic.
+Implementing **Change 1** and **Change 2** gives a minimal, non-invasive guardrail set without refactoring compatibility formula, pairScore curve, or relationship-balance ratio policy.

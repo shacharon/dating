@@ -1,17 +1,14 @@
 /**
- * Relationship balance ratio: positive/negative score and tier for match evaluation.
+ * Relationship balance ratio: positive/negative score for match evaluation.
  * Uses only existing signal keys; no new extraction keys. No framework decorators.
  */
 
 import type { CoreSignals, Dealbreaker } from './dealbreakers';
 
-export type BalanceTier = 'GREEN' | 'YELLOW' | 'RED';
-
 export interface RelationshipBalanceResult {
   positiveScore: number;
   negativeScore: number;
   ratio: number;
-  tier: BalanceTier;
   reasons: string[];
 }
 
@@ -32,7 +29,7 @@ function diff(a: number | null | undefined, b: number | null | undefined, fallba
 }
 
 /**
- * Compute relationship balance: positive score (0..10), negative score (0.5..10), ratio, tier, reasons.
+ * Compute relationship balance: positive score (0..10), negative score (0.5..10), ratio, reasons.
  */
 export function computeRelationshipBalance(input: RelationshipBalanceInput): RelationshipBalanceResult {
   const { signalsA, signalsB, motivationA, motivationB, dealbreakers } = input;
@@ -88,18 +85,12 @@ export function computeRelationshipBalance(input: RelationshipBalanceInput): Rel
 
   const ratio = negativeScore > 0 ? positiveScore / negativeScore : positiveScore;
 
-  let tier: BalanceTier;
-  if (ratio >= 4) tier = 'GREEN';
-  else if (ratio >= 2) tier = 'YELLOW';
-  else tier = 'RED';
-
   const topReasons = reasons.slice(0, 3);
 
   return {
     positiveScore,
     negativeScore,
     ratio,
-    tier,
     reasons: topReasons,
   };
 }

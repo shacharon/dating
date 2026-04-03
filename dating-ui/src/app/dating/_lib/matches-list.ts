@@ -9,7 +9,6 @@ export interface MatchListItemApi {
   overall: number;
   finalScore?: number;
   updatedAt: string;
-  tier: string | null;
   dealbreakers: Array<{ code: string; severity?: string }>;
   shortReason: string;
   explainability?: {

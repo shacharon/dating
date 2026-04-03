@@ -58,7 +58,6 @@ export interface MatchDebugDto {
   confidence: number;
   infoFlags: MatchInfoFlag[];
   balanceRatio: number;
-  tier: RelationshipBalanceResult['tier'];
   dealbreakers: Dealbreaker[];
   penalties: MatchDebugPenaltyDto[];
   bonuses: MatchDebugPenaltyDto[];
@@ -121,7 +120,7 @@ export interface CompareResultDto {
   };
   /** Dealbreaker codes and severity. */
   dealbreakers?: Dealbreaker[];
-  /** Relationship balance ratio and tier. */
+  /** Relationship balance (positive/negative score and ratio). */
   balance?: RelationshipBalanceResult;
   /** Debug audit: baseScore, coverage, balance, penalties, bonuses, finalScore breakdown. */
   debug?: MatchDebugDto;
@@ -372,11 +371,7 @@ function computeCoverageAsymmetryLowEvidenceAdjustments(
 ): CoverageAsymmetryLowEvidence {
   const { friction: baseFriction, tensions: tensionMatrix } = computeFriction(enrichedA, enrichedB);
   const frictionMinimum =
-    balance.tier === 'RED' && baseFriction > 0
-      ? 4
-      : balance.tier === 'YELLOW'
-        ? 2
-        : 0;
+    balance.ratio < 2 && baseFriction > 0 ? 4 : balance.ratio >= 2 && balance.ratio < 4 ? 2 : 0;
   const isAsymmetric = minPresent <= 6 && maxPresent >= 9;
   const asymmetryScale = isAsymmetric ? 0.92 : 1;
   let aToBForCompat = clampTo100(Math.round(aToB * asymmetryScale));
@@ -417,8 +412,8 @@ function computeRelationshipFitAndValuesAlignment(
       (profileB.evaluation?.productScores?.relationshipFitScore ?? 0)) /
       2,
   );
-  if (balance.tier === 'GREEN') relationshipFit = Math.min(100, relationshipFit + 8);
-  else if (balance.tier === 'RED') relationshipFit = Math.max(0, relationshipFit - 10);
+  if (balance.ratio >= 4) relationshipFit = Math.min(100, relationshipFit + 8);
+  else if (balance.ratio < 2) relationshipFit = Math.max(0, relationshipFit - 10);
   relationshipFit = clampTo100(relationshipFit);
   const signalsA = (profileA.evaluation?.self?.signals ?? {}) as Record<string, number | null>;
   const signalsB = (profileB.evaluation?.self?.signals ?? {}) as Record<string, number | null>;
@@ -492,7 +487,7 @@ function buildDebugDto(
     penalties.push({ reason: 'dealbreaker_cap', amount: dealbreakerCapAmount });
   }
   const bonuses: MatchDebugPenaltyDto[] = [];
-  if (balance.tier === 'GREEN') {
+  if (balance.ratio >= 4) {
     bonuses.push({ reason: 'GREEN_TIER_RELATIONSHIP_BOOST', amount: 8 });
   }
   return {
@@ -503,7 +498,6 @@ function buildDebugDto(
     confidence: confidenceValue,
     infoFlags,
     balanceRatio: balance.ratio,
-    tier: balance.tier,
     dealbreakers,
     penalties,
     bonuses,

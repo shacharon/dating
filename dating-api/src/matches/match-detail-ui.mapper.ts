@@ -58,11 +58,9 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
   }
 
   if (out.length < 2) {
-    const tier = m.balance?.tier ?? m.debug?.tier ?? 'UNKNOWN';
     const finalScore = m.finalScore ?? m.overall;
     const sr = buildShortReason({
       finalScore,
-      tier,
       dealbreakers: m.dealbreakers ?? [],
     });
     if (!out.includes(sr)) out.push(sr);
@@ -80,12 +78,11 @@ export function mapMatchRecordToDetailUi(m: MatchRecordDto): MatchDetailUiDto {
   const expl = effectiveExplainability(m);
   const rec = m.recommendation;
   const finalScore = m.finalScore ?? m.overall;
-  const tier = m.balance?.tier ?? m.debug?.tier ?? 'UNKNOWN';
 
   const primaryTakeaway =
     rec?.primaryTakeaway ??
     expl?.reasonShort ??
-    buildShortReason({ finalScore, tier, dealbreakers: m.dealbreakers ?? [] });
+    buildShortReason({ finalScore, dealbreakers: m.dealbreakers ?? [] });
 
   const tension = expl?.tensionChip?.trim();
   const caution =
