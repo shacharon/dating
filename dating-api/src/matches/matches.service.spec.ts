@@ -1,5 +1,5 @@
 import { MatchesService } from './matches.service';
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
+import type { ProfileJsonPayload } from '../profiles/profiles.types';
 
 function makeProfile(
   id: string,
@@ -53,23 +53,30 @@ function makeProfile(
   };
 }
 
+const canonicalV2Row = {
+  relationship_clarity_self: 5,
+  relationship_clarity_partner: 5,
+  relationship_clarity_relationship: 5,
+};
+
+function makePrismaMock() {
+  return {
+    profileExtractionV2: {
+      findUnique: jest.fn().mockResolvedValue(canonicalV2Row),
+    },
+  };
+}
+
 describe('MatchesService.compare', () => {
-  it('returns INSUFFICIENT_DATA and does not save when self signals are empty', async () => {
-    const profilesJson = {
-      getById: jest.fn(),
-    };
-    const matchesJson = {
-      save: jest.fn(),
-      list: jest.fn(),
-      listFull: jest.fn(),
-      getById: jest.fn(),
-    };
+  it('returns INSUFFICIENT_DATA when self signals are empty on one side', async () => {
+    const profilesPrisma = { getById: jest.fn() };
+    const prisma = makePrismaMock();
     const service = new MatchesService(
-      profilesJson as never,
-      matchesJson as never,
+      profilesPrisma as never,
+      prisma as never,
     );
 
-    profilesJson.getById
+    profilesPrisma.getById
       .mockResolvedValueOnce(makeProfile('a', 'A', {}))
       .mockResolvedValueOnce(makeProfile('b', 'B', { ambition: 8 }));
 
@@ -82,50 +89,37 @@ describe('MatchesService.compare', () => {
       expect(result.match.overall).toBeNull();
       expect(result.match.finalScore).toBeNull();
     }
-    expect(matchesJson.save).not.toHaveBeenCalled();
+    expect(prisma.profileExtractionV2.findUnique).toHaveBeenCalled();
   });
 
   it('returns NOT_ANALYZED when evaluationStatus is not DONE', async () => {
-    const profilesJson = { getById: jest.fn() };
-    const matchesJson = {
-      save: jest.fn(),
-      list: jest.fn(),
-      listFull: jest.fn(),
-      getById: jest.fn(),
-    };
+    const profilesPrisma = { getById: jest.fn() };
+    const prisma = makePrismaMock();
     const service = new MatchesService(
-      profilesJson as never,
-      matchesJson as never,
+      profilesPrisma as never,
+      prisma as never,
     );
 
-    profilesJson.getById
+    profilesPrisma.getById
       .mockResolvedValueOnce(
-        makeProfile('a', 'A', { ambition: 8 }, 'PENDING'),
+        makeProfile('a', 'A', { ambition: 8 }, 'FAILED'),
       )
       .mockResolvedValueOnce(makeProfile('b', 'B', { ambition: 8 }));
 
     const result = await service.compare({ aId: 'a', bId: 'b' });
 
     expect(result.status).toBe('NOT_ANALYZED');
-    expect(matchesJson.save).not.toHaveBeenCalled();
   });
 
-  it('returns READY and saves match when both profiles are analyzed', async () => {
-    const profilesJson = {
-      getById: jest.fn(),
-    };
-    const matchesJson = {
-      save: jest.fn(),
-      list: jest.fn(),
-      listFull: jest.fn(),
-      getById: jest.fn(),
-    };
+  it('returns READY when both profiles are analyzed and V2 rows exist', async () => {
+    const profilesPrisma = { getById: jest.fn() };
+    const prisma = makePrismaMock();
     const service = new MatchesService(
-      profilesJson as never,
-      matchesJson as never,
+      profilesPrisma as never,
+      prisma as never,
     );
 
-    profilesJson.getById
+    profilesPrisma.getById
       .mockResolvedValueOnce(makeProfile('a', 'A', { ambition: 8 }))
       .mockResolvedValueOnce(makeProfile('b', 'B', { ambition: 7 }));
 
@@ -136,6 +130,5 @@ describe('MatchesService.compare', () => {
       expect(result.match.finalScore).toBeGreaterThanOrEqual(0);
       expect(result.match.compatibility).toBeDefined();
     }
-    expect(matchesJson.save).toHaveBeenCalledTimes(1);
   });
 });

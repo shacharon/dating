@@ -5,7 +5,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { MatchesJsonService } from './matches-json.service';
+import { MatchesService } from './matches.service';
 import type { MatchRecordDto } from './match.types';
 import type { MatchPairSignals } from './matches-analytics.service';
 
@@ -60,7 +60,7 @@ function getReasons(r: MatchRecordDto): string[] {
 @Injectable()
 export class MatchesScanService {
   constructor(
-    private readonly matchesJson: MatchesJsonService,
+    private readonly matchesService: MatchesService,
     private readonly logger: SimpleLogger,
   ) {}
 
@@ -69,7 +69,7 @@ export class MatchesScanService {
    * Returns the list of flagged entries.
    */
   async scanAndLog(): Promise<FlaggedMatchEntry[]> {
-    const records = await this.matchesJson.getAllRecords();
+    const records = await this.matchesService.listAllComputed();
     const flagged: FlaggedMatchEntry[] = [];
 
     for (const r of records) {

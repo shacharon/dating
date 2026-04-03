@@ -14,7 +14,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ExtractionService } from './extraction/extraction.service';
 import { ExtractionV2Service } from './extraction/extraction-v2.service';
-import { ProfilesJsonService } from './profiles/profiles-json.service';
+import { ProfilesPrismaService } from './profiles/profiles-prisma.service';
 import { SimpleLogger } from './logger/simple-logger.service';
 
 interface ValidationResult {
@@ -76,7 +76,7 @@ function countNonNull(signals: Record<string, number | null>): number {
 
 async function validateProfile(
   profileId: string,
-  profilesService: ProfilesJsonService,
+  profilesService: ProfilesPrismaService,
   extractionV1Service: ExtractionService,
   extractionV2Service: ExtractionV2Service,
   logger: SimpleLogger,
@@ -177,7 +177,7 @@ async function main() {
     logger: ['error', 'warn'],
   });
 
-  const profilesService = app.get(ProfilesJsonService);
+  const profilesService = app.get(ProfilesPrismaService);
   const extractionV1Service = app.get(ExtractionService);
   const extractionV2Service = app.get(ExtractionV2Service);
   const logger = app.get(SimpleLogger);

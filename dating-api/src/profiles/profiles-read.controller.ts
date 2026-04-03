@@ -1,5 +1,5 @@
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
-import type { ProfileJsonPayload, ProfileListItem } from './profiles-json.service';
+import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 import { ProfilesPrismaService } from './profiles-prisma.service';
 
 export interface ProfilesListResponseDto {

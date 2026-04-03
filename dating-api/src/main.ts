@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { SimpleLogger, SIMPLE_LOG_FILE } from './logger/simple-logger.service';
+import { SimpleLogger } from './logger/simple-logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -55,6 +55,6 @@ async function bootstrap() {
 
   const url = await app.getUrl();
   logger.log(`Application is running on: ${url}`, 'Bootstrap');
-  logger.log(`LOG FILE: ${SIMPLE_LOG_FILE}`, 'Bootstrap');
+  logger.log('LOG TARGET: console', 'Bootstrap');
 }
 void bootstrap();

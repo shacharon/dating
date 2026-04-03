@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
-import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { compareWithStatus } from './match-engine';
-import type { CompareGuardFailureResultDto, CompareResultDto } from './match-engine';
 import type {
   MatchIndexDto,
   MatchIndexItemDto,
   MatchRecordDto,
 } from './match.types';
-import { MatchesJsonService } from './matches-json.service';
+import { MatchesService } from './matches.service';
 
 /** Deterministic matchId: minId__maxId (lexicographic). */
 function toMatchId(aId: string, bId: string): string {
@@ -73,119 +69,27 @@ export interface RebuildStatsDto {
 @Injectable()
 export class MatchDaemonService {
   private readonly context = 'MatchDaemonService';
+  private autoIndex: MatchIndexDto | null = null;
 
   constructor(
     private readonly logger: SimpleLogger,
-    private readonly profilesPrisma: ProfilesPrismaService,
-    private readonly matchesJson: MatchesJsonService,
+    private readonly matchesService: MatchesService,
   ) {}
 
   /**
-   * Runs the daemon once: load all profiles, compare every unique pair (i<j),
-   * save/update each match file, then build and write index.json.
+   * Runs the daemon once: load all profiles and compute every unique pair (i<j).
    * Returns stats. One bad profile pair does not break the run (try/catch per pair).
    */
   async runOnce(): Promise<RebuildStatsDto> {
-    this.logger.log('Daemon run starting: loading profiles', this.context);
-
-    const list = await this.profilesPrisma.list();
-    const profiles: ProfileJsonPayload[] = [];
-    for (const { id } of list) {
-      const full = await this.profilesPrisma.getById(id);
-      if (full) {
-        profiles.push(full);
-      } else {
-        this.logger.warn(`Skipping profile (load failed): ${id}`, this.context);
-      }
+    this.logger.log('Daemon run starting: computing matches from DB profiles', this.context);
+    const records = await this.matchesService.listAllComputed();
+    const profileIds = new Set<string>();
+    for (const r of records) {
+      profileIds.add(r.aId);
+      profileIds.add(r.bId);
     }
-
-    const profileCount = profiles.length;
-    this.logger.log(`Loaded ${profileCount} profiles`, this.context);
-
-    const ids = profiles.map((p) => p.id).sort((a, b) => a.localeCompare(b));
-    const records: MatchRecordDto[] = [];
-    let pairErrors = 0;
-
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        const aId = ids[i];
-        const bId = ids[j];
-        const profileA = profiles.find((p) => p.id === aId);
-        const profileB = profiles.find((p) => p.id === bId);
-        if (!profileA || !profileB) continue;
-
-        try {
-          const result: CompareResultDto | CompareGuardFailureResultDto = compareWithStatus(
-            profileA,
-            profileB,
-          );
-          if (
-            'status' in result &&
-            (result.status === 'NOT_ANALYZED' || result.status === 'INSUFFICIENT_DATA')
-          ) {
-            this.logger.debug(
-              `Skipping pair ${aId} / ${bId} (${result.status}): ${result.message}`,
-              this.context,
-            );
-            continue;
-          }
-          const compareResult = result as CompareResultDto;
-          const matchId = toMatchId(aId, bId);
-          const now = new Date().toISOString();
-
-          const record: MatchRecordDto = {
-            matchId,
-            aId,
-            bId,
-            a: { id: profileA.id, name: profileA.name },
-            b: { id: profileB.id, name: profileB.name },
-            overall: compareResult.finalScore,
-            createdAt: now,
-            updatedAt: now,
-            aToB: compareResult.aToB,
-            bToA: compareResult.bToA,
-            relationshipStyle: compareResult.relationshipStyle,
-            coverage: compareResult.coverage,
-            frictionRisk: compareResult.frictionRisk,
-            compatibility: compareResult.compatibility,
-            finalScore: compareResult.finalScore,
-            rawScore: compareResult.rawScore,
-            friction: compareResult.friction,
-            frictionPenalty: compareResult.frictionPenalty,
-            coveragePercent: compareResult.coveragePercent,
-            scoreCoverageFactor: compareResult.scoreCoverageFactor,
-            coverageFactor: compareResult.coverageFactor,
-            confidence: compareResult.confidence,
-            infoFlags: compareResult.infoFlags,
-            alignments: compareResult.alignments,
-            tensions: compareResult.tensions,
-            tensionMatrix: compareResult.tensionMatrix,
-            derived: compareResult.derived,
-            dealbreakers: compareResult.dealbreakers,
-            balance: compareResult.balance,
-            debug: compareResult.debug,
-            explainability: compareResult.explainability,
-          };
-
-          if (compareResult.balance != null) {
-            this.logger.debug(
-              `balance_ratio=${compareResult.balance.ratio.toFixed(2)} tier=${compareResult.balance.tier} dealbreakers=${(compareResult.dealbreakers ?? []).map((d) => d.code).join(',') || 'none'}`,
-              this.context,
-            );
-          }
-
-          await this.matchesJson.save(record);
-          records.push(record);
-        } catch (err) {
-          pairErrors++;
-          const msg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(
-            `Pair failed ${aId} / ${bId}: ${msg}`,
-            this.context,
-          );
-        }
-      }
-    }
+    const profileCount = profileIds.size;
+    const pairErrors = 0;
 
     const matchCount = records.length;
     this.logger.log(
@@ -205,8 +109,8 @@ export class MatchDaemonService {
       items,
     };
 
-    await this.matchesJson.saveIndex(index);
-    this.logger.log('Daemon run complete: index.json written', this.context);
+    this.autoIndex = index;
+    this.logger.log('Daemon run complete: in-memory index refreshed', this.context);
     this.logTopScoreAudit(records);
 
     return {
@@ -249,7 +153,7 @@ export class MatchDaemonService {
    * Returns current index (sorted by overall desc). Null if not yet built.
    */
   async getAutoIndex(): Promise<MatchIndexDto | null> {
-    const index = await this.matchesJson.getIndex();
+    const index = this.autoIndex;
     if (!index) return null;
     return {
       ...index,

@@ -1,4 +1,4 @@
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
+import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import { compare, compareWithStatus, hasAnalyzedSignals } from './match-engine';
 import { COMPATIBILITY_SIGNAL_KEYS, TIER1_KEYS } from '../compatibility/compatibility-score';
 import type { SignalKey } from '../compatibility/compatibility-score';

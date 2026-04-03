@@ -10,11 +10,21 @@ import { buildShortReason } from './match-short-reason';
 export interface MatchDetailUiDto {
   ok: true;
   id: string;
+  /** Legacy: same as profileB.name for older clients. */
   name: string;
+  profileA: { id: string; name: string };
+  profileB: { id: string; name: string };
+  score: number;
+  /** Match pipeline confidence (0–1) when present on the stored record. */
+  confidence?: number;
+  /** Explainability one-liner when present on the record. */
+  reasonShort?: string;
   primaryTakeaway: string;
   caution?: string;
   suggestedNextAction: string;
   chips: string[];
+  /** Raw tension label from explainability when present. */
+  tensionChip?: string;
   expandedExplainability: string[];
 }
 
@@ -86,15 +96,25 @@ export function mapMatchRecordToDetailUi(m: MatchRecordDto): MatchDetailUiDto {
     rec?.suggestedNextAction?.trim() || 'Start a conversation when it feels right.';
 
   const chips = (expl?.positiveChips ?? []).slice(0, 5);
+  const reasonShortRaw = expl?.reasonShort?.trim();
+  const tensionChipRaw = expl?.tensionChip?.trim();
 
   return {
     ok: true,
     id: m.matchId,
     name: m.b.name,
+    profileA: { id: m.a.id, name: m.a.name },
+    profileB: { id: m.b.id, name: m.b.name },
+    score: Math.round(finalScore),
+    ...(m.confidence != null && Number.isFinite(m.confidence)
+      ? { confidence: m.confidence }
+      : {}),
+    ...(reasonShortRaw ? { reasonShort: reasonShortRaw } : {}),
     primaryTakeaway,
     ...(caution ? { caution } : {}),
     suggestedNextAction,
     chips,
+    ...(tensionChipRaw ? { tensionChip: tensionChipRaw } : {}),
     expandedExplainability: buildExpandedExplainability(m),
   };
 }

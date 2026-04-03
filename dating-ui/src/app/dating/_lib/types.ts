@@ -49,10 +49,18 @@ export type DatingMatchDetail = DatingMatchPreview;
 export interface MatchDetailApiResponse {
   ok: true;
   id: string;
+  /** Legacy: same as profileB.name */
   name: string;
+  profileA?: { id: string; name: string };
+  profileB?: { id: string; name: string };
+  /** Rounded final match score when the API provides it. */
+  score?: number;
+  confidence?: number;
+  reasonShort?: string;
   primaryTakeaway: string;
   caution?: string;
   suggestedNextAction: string;
   chips: string[];
+  tensionChip?: string;
   expandedExplainability: string[];
 }

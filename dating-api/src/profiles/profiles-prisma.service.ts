@@ -9,7 +9,7 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { sanitizeEnrichmentSignalsV1ForPersist, wrapEnrichmentV1 } from '../evaluate/enrichment-signals';
-import type { ProfileJsonPayload, ProfileListItem } from './profiles-json.service';
+import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 
 interface UserProfileRow {
   id: string;

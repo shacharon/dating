@@ -1,55 +1,60 @@
 import { MatchCard } from './match-card';
-import type { DatingMatchPreview } from '../_lib/types';
+import {
+  mapListItemToCard,
+  sortMatchesByScoreDesc,
+  type MatchListItemApi,
+} from '../_lib/matches-list';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-async function fetchMatches(): Promise<DatingMatchPreview[]> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/matches/top`, {
-      cache: 'no-store',
-    });
+async function fetchMatchList(): Promise<MatchListItemApi[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/matches`, {
+    cache: 'no-store',
+  });
 
-    if (!res.ok) {
-      console.error('Failed to fetch matches:', res.status, res.statusText);
-      return [];
-    }
-
-    const data = await res.json();
-    return data.matches || [];
-  } catch (error) {
-    console.error('Error fetching matches:', error);
-    return [];
+  if (!res.ok) {
+    throw new Error(`Matches request failed: ${res.status} ${res.statusText}`);
   }
+
+  const data = (await res.json()) as { ok?: boolean; items?: MatchListItemApi[] };
+  if (!data?.ok || !Array.isArray(data.items)) {
+    throw new Error('Invalid matches list response');
+  }
+
+  return data.items;
 }
 
 export default async function MatchesPage() {
-  const matches = await fetchMatches();
+  const items = await fetchMatchList();
+  const cards = sortMatchesByScoreDesc(items.map(mapListItemToCard));
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Your matches
+            Matches
           </h1>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            People we think fit what you shared. Tap a profile to learn more—details
-            and chat will open here next.
+            Sorted by compatibility score, highest first. Open a match for full detail.
           </p>
         </header>
 
-        {matches.length === 0 ? (
-          <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+        {cards.length === 0 ? (
+          <div
+            className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900"
+            role="status"
+          >
+            <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
               No matches yet
             </p>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Complete your profile to start seeing potential matches.
+              When the index is built, pairs will appear here.
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-5">
-            {matches.map((match) => (
+          <ul className="flex flex-col gap-4">
+            {cards.map((match) => (
               <li key={match.id}>
                 <MatchCard match={match} />
               </li>

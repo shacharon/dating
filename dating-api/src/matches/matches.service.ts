@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
+import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
 import { compareWithStatus } from './match-engine';
 import type {
@@ -7,7 +7,7 @@ import type {
   CompareResultDto,
 } from './match-engine';
 import type { MatchListItemDto, MatchRecordDto } from './match.types';
-import { MatchesJsonService } from './matches-json.service';
+import { buildShortReason } from './match-short-reason';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type { CompareResultDto } from './match-engine';
@@ -53,7 +53,6 @@ function toMatchId(aId: string, bId: string): string {
 export class MatchesService {
   constructor(
     private readonly profilesPrisma: ProfilesPrismaService,
-    private readonly matchesJson: MatchesJsonService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -206,23 +205,132 @@ export class MatchesService {
       recommendation: compareResult.recommendation,
     };
 
-    await this.matchesJson.save(record);
-
     return { status: 'READY', matchId, match: record };
   }
 
   async list(): Promise<MatchListItemDto[]> {
-    return this.matchesJson.list();
+    const records = await this.listAllComputed();
+    return records
+      .map((r) => {
+        const finalScore = r.finalScore ?? r.overall;
+        const tier = r.balance?.tier ?? r.debug?.tier ?? null;
+        const dealbreakersRaw = r.dealbreakers ?? r.debug?.dealbreakers ?? [];
+        const dealbreakers = dealbreakersRaw.map((d) => ({
+          code: d.code,
+          ...(d.severity != null && { severity: d.severity }),
+        }));
+        const shortReason = buildShortReason({
+          finalScore,
+          tier: tier ?? 'UNKNOWN',
+          dealbreakers,
+        });
+        const scoreMetadata: MatchListItemDto['scoreMetadata'] = {};
+        if (r.coveragePercent != null) scoreMetadata.coveragePercent = r.coveragePercent;
+        if (r.coverageFactor != null) scoreMetadata.coverageFactor = r.coverageFactor;
+        if (r.friction != null) scoreMetadata.friction = r.friction;
+        if (r.rawScore != null) scoreMetadata.rawScore = r.rawScore;
+        return {
+          matchId: r.matchId,
+          a: r.a,
+          b: r.b,
+          overall: r.overall,
+          finalScore,
+          updatedAt: r.updatedAt,
+          tier,
+          dealbreakers,
+          shortReason,
+          ...(r.explainability != null && { explainability: r.explainability }),
+          ...(r.recommendation != null && { recommendation: r.recommendation }),
+          ...(Object.keys(scoreMetadata).length > 0 && { scoreMetadata }),
+        };
+      })
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   async listFull(opts: {
     policyVersion: string;
     minCoveragePercent?: number;
   }): Promise<MatchRecordDto[]> {
-    return this.matchesJson.listFull(opts);
+    const records = await this.listAllComputed();
+    return records
+      .filter((r) => (r.policyVersion ?? '') === opts.policyVersion)
+      .filter((r) =>
+        opts.minCoveragePercent != null
+          ? (r.coveragePercent ?? 0) >= opts.minCoveragePercent
+          : true,
+      )
+      .sort((a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall));
   }
 
   async getById(matchId: string): Promise<MatchRecordDto | null> {
-    return this.matchesJson.getById(matchId);
+    const [aId, bId] = matchId.split('__');
+    if (!aId || !bId) return null;
+    if (toMatchId(aId, bId) !== matchId) return null;
+    const result = await this.compare({ aId, bId });
+    return result.status === 'READY' ? result.match : null;
+  }
+
+  async listAllComputed(): Promise<MatchRecordDto[]> {
+    const list = await this.profilesPrisma.list();
+    const profiles: ProfileJsonPayload[] = [];
+    for (const { id } of list) {
+      const full = await this.profilesPrisma.getById(id);
+      if (full) profiles.push(full);
+    }
+    const ids = profiles.map((p) => p.id).sort((a, b) => a.localeCompare(b));
+    const records: MatchRecordDto[] = [];
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const aId = ids[i];
+        const bId = ids[j];
+        const profileA = profiles.find((p) => p.id === aId);
+        const profileB = profiles.find((p) => p.id === bId);
+        if (!profileA || !profileB) continue;
+        const result = compareWithStatus(profileA, profileB);
+        if (
+          'status' in result &&
+          (result.status === 'NOT_ANALYZED' || result.status === 'INSUFFICIENT_DATA')
+        ) {
+          continue;
+        }
+        const compareResult = result as CompareResultDto;
+        const now = new Date().toISOString();
+        records.push({
+          matchId: toMatchId(aId, bId),
+          aId,
+          bId,
+          a: { id: profileA.id, name: profileA.name },
+          b: { id: profileB.id, name: profileB.name },
+          overall: compareResult.finalScore,
+          createdAt: now,
+          updatedAt: now,
+          aToB: compareResult.aToB,
+          bToA: compareResult.bToA,
+          relationshipStyle: compareResult.relationshipStyle,
+          coverage: compareResult.coverage,
+          frictionRisk: compareResult.frictionRisk,
+          compatibility: compareResult.compatibility,
+          finalScore: compareResult.finalScore,
+          rawScore: compareResult.rawScore,
+          friction: compareResult.friction,
+          frictionPenalty: compareResult.frictionPenalty,
+          coveragePercent: compareResult.coveragePercent,
+          scoreCoverageFactor: compareResult.scoreCoverageFactor,
+          coverageFactor: compareResult.coverageFactor,
+          confidence: compareResult.confidence,
+          infoFlags: compareResult.infoFlags,
+          alignments: compareResult.alignments,
+          tensions: compareResult.tensions,
+          tensionMatrix: compareResult.tensionMatrix,
+          derived: compareResult.derived,
+          dealbreakers: compareResult.dealbreakers,
+          balance: compareResult.balance,
+          debug: compareResult.debug,
+          explainability: compareResult.explainability,
+          recommendation: compareResult.recommendation,
+        });
+      }
+    }
+    return records;
   }
 }

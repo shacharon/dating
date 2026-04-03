@@ -131,7 +131,7 @@ export class MatchesApiController {
   }
 
   /**
-   * Recompute all pairwise matches (load profiles, compare every pair, save + index).
+   * Recompute all pairwise matches from DB-backed profiles and persist results.
    * Logs before/after: matches count and average score. Does not change scoring logic.
    */
   @Post('recompute-all')

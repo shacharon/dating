@@ -3,7 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
-import type { ProfileJsonPayload } from './profiles-json.service';
+import type { ProfileJsonPayload } from './profiles.types';
 import { ProfilesPrismaService } from './profiles-prisma.service';
 import { AnalysisCacheService } from './analysis-cache.service';
 import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistence.service';

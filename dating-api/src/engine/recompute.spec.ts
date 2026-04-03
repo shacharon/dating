@@ -1,6 +1,6 @@
 import { COMPATIBILITY_SIGNAL_KEYS, type SignalKey } from '../compatibility/compatibility-score';
 import { recomputeAllMatches } from './recompute';
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
+import type { ProfileJsonPayload } from '../profiles/profiles.types';
 
 function makeSignals(overrides: Partial<Record<SignalKey, number>>): Record<string, number> {
   const signals: Record<string, number> = {};

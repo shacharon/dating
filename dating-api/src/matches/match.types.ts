@@ -1,6 +1,4 @@
-/**
- * Stored match record in data/matches/<matchId>.json
- */
+/** Match record used by API responses and in-memory indexing. */
 
 import type { CompareResultDto, MatchDebugDto } from './match-engine';
 
@@ -74,7 +72,7 @@ export interface MatchListItemDto {
   };
 }
 
-/** Index entry for data/matches/index.json (auto-generated). */
+/** In-memory index entry (auto-generated on rebuild). */
 export interface MatchIndexWhyTopEntry {
   key: string;
   text: string;

@@ -10,7 +10,7 @@ import { coveragePercent as coveragePercentFormula } from '../engine/coverage';
 import { applyKeywordTriggers, computeFriction } from '../engine/compute-friction';
 import type { EnrichedSignals } from '../engine/tension-rules';
 import { compatibility as compatibilityFormula } from '../engine/scoring';
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
+import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import { deriveContextFromProfileTexts } from '../domain/deriveContext';
 import {
   applyDealbreakerCap,

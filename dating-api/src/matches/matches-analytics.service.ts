@@ -5,7 +5,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { MatchesJsonService } from './matches-json.service';
+import { MatchesService } from './matches.service';
 import type { MatchRecordDto } from './match.types';
 
 export interface ScoreDistribution {
@@ -111,7 +111,7 @@ function toPairEntry(r: MatchRecordDto): MatchPairEntry {
 @Injectable()
 export class MatchesAnalyticsService {
   constructor(
-    private readonly matchesJson: MatchesJsonService,
+    private readonly matchesService: MatchesService,
     private readonly logger: SimpleLogger,
   ) {}
 
@@ -119,7 +119,7 @@ export class MatchesAnalyticsService {
    * Load all matches, compute analytics, log as JSON, and return the payload.
    */
   async computeAndLog(): Promise<MatchAnalyticsLog> {
-    const records = await this.matchesJson.getAllRecords();
+    const records = await this.matchesService.listAllComputed();
     const log = this.compute(records);
 
     this.logger.log(
