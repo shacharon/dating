@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { MatchDetailApiResponse } from '../../_lib/types';
+import type {
+  MatchDetailApiResponse,
+  MatchDetailChildrenUnsure,
+} from '../../_lib/types';
 import { ChipsSection } from '../../../components/chips-section';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -14,7 +17,11 @@ function formatConfidence(value: number): string {
   return String(value);
 }
 
-async function fetchMatchDetail(id: string): Promise<MatchDetailApiResponse> {
+type MatchDetailResolved = Omit<MatchDetailApiResponse, 'children_unsure'> & {
+  children_unsure: MatchDetailChildrenUnsure;
+};
+
+async function fetchMatchDetail(id: string): Promise<MatchDetailResolved> {
   const res = await fetch(
     `${API_BASE_URL}/api/v1/matches/${encodeURIComponent(id)}`,
     { cache: 'no-store' },
@@ -33,7 +40,12 @@ async function fetchMatchDetail(id: string): Promise<MatchDetailApiResponse> {
     throw new Error('Invalid match response');
   }
 
-  return data;
+  const children_unsure = data.children_unsure ?? {
+    profile_a_to_profile_b: false,
+    profile_b_to_profile_a: false,
+  };
+
+  return { ...data, children_unsure };
 }
 
 export default async function MatchDetailPage({ params }: Props) {
@@ -74,6 +86,18 @@ export default async function MatchDetailPage({ params }: Props) {
                 {match.name}
               </h1>
             )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {(match.children_unsure.profile_a_to_profile_b ||
+                match.children_unsure.profile_b_to_profile_a) && (
+                <span
+                  className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-900 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100"
+                  data-testid="match-badge-children-unsure"
+                >
+                  Not sure about kids
+                </span>
+              )}
+            </div>
 
             <div className="mt-5 flex flex-wrap items-end gap-6">
               {typeof match.score === 'number' ? (

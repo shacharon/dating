@@ -6,6 +6,12 @@
 import type { MatchRecordDto } from './match.types';
 import { buildShortReason } from './match-short-reason';
 
+/** Per-direction: profile A as searcher vs B as counterparty (Holy Grail internal). */
+export interface MatchDetailChildrenUnsureDto {
+  readonly profile_a_to_profile_b: boolean;
+  readonly profile_b_to_profile_a: boolean;
+}
+
 /** Response body for GET /api/v1/matches/:id (dating-ui). */
 export interface MatchDetailUiDto {
   ok: true;
@@ -14,6 +20,11 @@ export interface MatchDetailUiDto {
   name: string;
   profileA: { id: string; name: string };
   profileB: { id: string; name: string };
+  /**
+   * When either side has MUST_WANT children and the other answered UNSURE (SOFT_PASS).
+   * Does not affect stored scores or list ordering.
+   */
+  children_unsure: MatchDetailChildrenUnsureDto;
   score: number;
   /** Match pipeline confidence (0–1) when present on the stored record. */
   confidence?: number;
@@ -74,7 +85,10 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
   return out.slice(0, 3);
 }
 
-export function mapMatchRecordToDetailUi(m: MatchRecordDto): MatchDetailUiDto {
+export function mapMatchRecordToDetailUi(
+  m: MatchRecordDto,
+  childrenUnsure: MatchDetailChildrenUnsureDto,
+): MatchDetailUiDto {
   const expl = effectiveExplainability(m);
   const rec = m.recommendation;
   const finalScore = m.finalScore ?? m.overall;
@@ -102,6 +116,7 @@ export function mapMatchRecordToDetailUi(m: MatchRecordDto): MatchDetailUiDto {
     name: m.b.name,
     profileA: { id: m.a.id, name: m.a.name },
     profileB: { id: m.b.id, name: m.b.name },
+    children_unsure: childrenUnsure,
     score: Math.round(finalScore),
     ...(m.confidence != null && Number.isFinite(m.confidence)
       ? { confidence: m.confidence }

@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "validate:v1-v2": "nest build && node dist/src/validate-v1-v2.js"
+    "validate:v1-v2": "nest build && node dist/src/validate-v1-v2.js",
+    "holy-grail:backfill": "ts-node src/holy-grail-matching/backfill-holy-grail-structured.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -45,6 +45,12 @@ export interface DatingMatchPreview {
  */
 export type DatingMatchDetail = DatingMatchPreview;
 
+/** Holy Grail children soft-pass flags (per direction); additive, no scoring impact. */
+export interface MatchDetailChildrenUnsure {
+  profile_a_to_profile_b: boolean;
+  profile_b_to_profile_a: boolean;
+}
+
 /** GET /api/v1/matches/:id — dating-ui detail contract. */
 export interface MatchDetailApiResponse {
   ok: true;
@@ -53,6 +59,8 @@ export interface MatchDetailApiResponse {
   name: string;
   profileA?: { id: string; name: string };
   profileB?: { id: string; name: string };
+  /** Omitted on older API responses; client defaults to both false. */
+  children_unsure?: MatchDetailChildrenUnsure;
   /** Rounded final match score when the API provides it. */
   score?: number;
   confidence?: number;

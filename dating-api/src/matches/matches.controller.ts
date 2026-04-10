@@ -11,7 +11,9 @@ import type { CompareBodyDto, CompareGuardMatchDto, MatchListItemDto } from './m
 import type { MatchIndexDto, MatchRecordDto } from './match.types';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { MatchDaemonService } from './match-daemon.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { MatchesService } from './matches.service';
+import { computeMatchDetailChildrenUnsure } from './match-detail-children-unsure';
 import { mapMatchRecordToDetailUi, type MatchDetailUiDto } from './match-detail-ui.mapper';
 
 /** UI-friendly match preview for /dating/matches list. */
@@ -45,6 +47,7 @@ export class MatchesController {
   constructor(
     private readonly matchesService: MatchesService,
     private readonly matchDaemon: MatchDaemonService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post('rebuild')
@@ -145,6 +148,11 @@ export class MatchesController {
       ...match,
       finalScore: match.finalScore ?? match.overall,
     };
-    return mapMatchRecordToDetailUi(normalized);
+    const children_unsure = await computeMatchDetailChildrenUnsure(
+      this.prisma,
+      normalized.aId,
+      normalized.bId,
+    );
+    return mapMatchRecordToDetailUi(normalized, children_unsure);
   }
 }

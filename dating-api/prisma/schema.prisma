@@ -15,6 +15,10 @@ model UserProfile {
   aboutRelationship String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  /// Sparse Holy Grail facts (enum strings). See `holy-grail-structured-db-json.ts` for key set.
+  holyGrailStructuredFacts       Json?
+  /// Sparse Holy Grail preferences (enums, ints, string arrays). No maxDistanceKm in v1 JSON wire.
+  holyGrailStructuredPreferences Json?
   evaluation        ProfileEvaluation?
   evaluationRaw     ProfileEvaluationRaw?
   signalSnapshots   ProfileSignalSnapshot[]
