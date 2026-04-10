@@ -15,9 +15,9 @@ model UserProfile {
   aboutRelationship String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  /// Sparse Holy Grail facts (enum strings). See `holy-grail-structured-db-json.ts` for key set.
+  /// Sparse Holy Grail facts: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` only. Mapper-only fact fields are not stored here (`profile-sources.types.ts`).
   holyGrailStructuredFacts       Json?
-  /// Sparse Holy Grail preferences (enums, ints, string arrays, optional similarityPreference: similar|different|balanced|null). No maxDistanceKm in v1 JSON wire.
+  /// Sparse Holy Grail preferences: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` only (no maxDistanceKm until geo is persisted in this JSON).
   holyGrailStructuredPreferences Json?
   evaluation        ProfileEvaluation?
   evaluationRaw     ProfileEvaluationRaw?

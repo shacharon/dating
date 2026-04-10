@@ -15,7 +15,16 @@ import { rankHolyGrailCandidatesAfterHardFilter } from '../src/holy-grail-matchi
 import { buildHolyGrailProfileMappingInputFromRankingAwareDbRow } from '../src/holy-grail-matching/retrieval/holy-grail-structured-db-json';
 import { CHILDREN_UNSURE_PROFILE_ROW_SELECT } from '../src/matches/match-detail-children-unsure';
 
-const SYNTHETIC_ID_PREFIX_ALLOWLIST = ['synthetic-he-', 'synthetic-en-', 'synthetic-hg-gap-'] as const;
+const SYNTHETIC_ID_PREFIX_ALLOWLIST = [
+  'synthetic-he-',
+  'synthetic-en-',
+  'synthetic-hg-gap-',
+  'synthetic-ls-v2-',
+  'synthetic-pt-v2-',
+  'synthetic-personality-v2-',
+  'synthetic-it-v2-',
+  'synthetic-interest-tags-v2-',
+] as const;
 const VALIDATION_CANDIDATE_PREFIXES = SYNTHETIC_ID_PREFIX_ALLOWLIST;
 
 const OUTPUT_JSON = path.join(__dirname, '.hg-full-system-validation-output.json');

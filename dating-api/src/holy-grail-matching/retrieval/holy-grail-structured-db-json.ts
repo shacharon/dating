@@ -1,11 +1,13 @@
 /**
  * Deterministic parse of persisted JSON blobs → `HolyGrailProfileMappingInput` slices.
  * Invalid or unknown keys/values are omitted (sparse). No defaults.
+ * Mapper-only keys (see `holy-grail-structured-contract.ts` `*_MAPPER_ONLY_KEYS`) are **never** read here;
+ * if they appear in legacy JSON they are ignored (writes still reject them).
  *
  * **Canonical DB → matching path:** `buildHolyGrailProfileMappingInputFromDbRow` (this module) →
  * `mapProfileSourceToMatchingCanonical`. Do not add a second parser for `holyGrailStructured*` columns.
  * HG ranking five signals are read from `ProfileSignalSnapshot` self typed columns (`HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT`).
- * Canonical **personality**, **lifestyle (v1+v2 tags)**, and **interest tags (v1)** are merged from `aboutMe` / `aboutPartner` (deterministic extractors).
+ * Canonical **personality (v1+v2 trait tags)**, **lifestyle (v1+v2 tags)**, and **interest tags (v1+v2)** are merged from `aboutMe` / `aboutPartner` (deterministic extractors).
  */
 
 import {
@@ -28,8 +30,8 @@ import {
 } from '../../canonical/matching-canonical.types';
 import type {
   HolyGrailProfileMappingInput,
-  HolyGrailStructuredFactsInput,
-  HolyGrailStructuredPreferencesInput,
+  HolyGrailStructuredFactsPersisted,
+  HolyGrailStructuredPreferencesPersisted,
 } from '../profile-sources.types';
 import {
   buildHolyGrailRankingSignalsFromDbSelfRow,
@@ -104,7 +106,7 @@ function pickStringArray(v: unknown): string[] | undefined {
  */
 export function parseHolyGrailStructuredFactsFromJson(
   raw: unknown,
-): HolyGrailStructuredFactsInput | undefined {
+): HolyGrailStructuredFactsPersisted | undefined {
   const o = asPlainObject(raw);
   if (!o) return undefined;
 
@@ -133,7 +135,7 @@ export function parseHolyGrailStructuredFactsFromJson(
     ...(alcoholUse !== undefined ? { alcoholUse } : {}),
     ...(education !== undefined ? { education } : {}),
     ...(religion !== undefined ? { religion } : {}),
-  } as HolyGrailStructuredFactsInput;
+  } as HolyGrailStructuredFactsPersisted;
 
   return Object.keys(merged).length === 0 ? undefined : merged;
 }
@@ -167,11 +169,11 @@ function parseReligionListJson(v: unknown): ReligionSelf[] | undefined {
 
 /**
  * Parses `UserProfile.holyGrailStructuredPreferences` JSON.
- * Does not read maxDistanceKm (geo). Supported keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`.
+ * Supported keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` (excludes mapper-only `maxDistanceKm`).
  */
 export function parseHolyGrailStructuredPreferencesFromJson(
   raw: unknown,
-): HolyGrailStructuredPreferencesInput | undefined {
+): HolyGrailStructuredPreferencesPersisted | undefined {
   const o = asPlainObject(raw);
   if (!o) return undefined;
 
@@ -223,7 +225,7 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     ...(partnerHasChildren !== undefined ? { partnerHasChildren } : {}),
     ...(acceptedPartnerReligions !== undefined ? { acceptedPartnerReligions } : {}),
     ...(similarityPreference !== undefined ? { similarityPreference } : {}),
-  } as HolyGrailStructuredPreferencesInput;
+  } as HolyGrailStructuredPreferencesPersisted;
 
   return Object.keys(merged).length === 0 ? undefined : merged;
 }

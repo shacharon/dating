@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 /**
  * Structural validation for `structuredPreferencesPatch` request bodies before merge/value validation.
- * Values (e.g. `similarityPreference`) are enforced by `mergeHolyGrailStructuredPreferencesPatch`.
+ * Allowed keys are exactly `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` — enforced by
+ * `mergeHolyGrailStructuredPreferencesPatch` (mapper-only keys such as `maxDistanceKm` are rejected there).
  */
 export const holyGrailStructuredPreferencesPatchBodySchema = z.record(z.string(), z.unknown());
 

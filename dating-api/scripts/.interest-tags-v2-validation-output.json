@@ -1,0 +1,184 @@
+{
+  "validator": "interest-tags-v2",
+  "evaluatedAt": "2026-04-10T21:01:09.331Z",
+  "idPrefixes": [
+    "synthetic-interest-tags-v2-"
+  ],
+  "eligibilityInvariantVsStrippedRankingSignals": "eligibilityKeyJsonUtf8Identical",
+  "thresholds": {
+    "minCoveragePct": 70,
+    "minProfileRows": 20,
+    "minRankedSurvivors": 5,
+    "maxTop20ChurnEachWay": 4,
+    "minKendallTauTop20": 0.72,
+    "maxPositionMoveTop20Intersection": 8
+  },
+  "profileCount": 40,
+  "coveragePct": 80,
+  "withInterestTagCount": 32,
+  "checks": {
+    "coverageAtLeastMin": true,
+    "canonicalTagsOnly": true,
+    "eligibilityMatchesStrippedBaseline": true,
+    "groundedRankReasonsSubsetOfIntersection": true,
+    "rankStabilityTop20ChurnBounded": true,
+    "rankStabilityKendallTauBounded": true,
+    "rankStabilityMaxPositionMoveBounded": true
+  },
+  "eligibilityInvariantPairsChecked": 78,
+  "rankStability": {
+    "searcherId": "synthetic-interest-tags-v2-001",
+    "top20WithInterestTags": [
+      "synthetic-interest-tags-v2-012",
+      "synthetic-interest-tags-v2-029",
+      "synthetic-interest-tags-v2-031",
+      "synthetic-interest-tags-v2-011",
+      "synthetic-interest-tags-v2-018",
+      "synthetic-interest-tags-v2-006",
+      "synthetic-interest-tags-v2-021",
+      "synthetic-interest-tags-v2-004",
+      "synthetic-interest-tags-v2-005",
+      "synthetic-interest-tags-v2-028",
+      "synthetic-interest-tags-v2-015",
+      "synthetic-interest-tags-v2-007",
+      "synthetic-interest-tags-v2-009",
+      "synthetic-interest-tags-v2-022",
+      "synthetic-interest-tags-v2-010",
+      "synthetic-interest-tags-v2-033",
+      "synthetic-interest-tags-v2-002",
+      "synthetic-interest-tags-v2-032",
+      "synthetic-interest-tags-v2-024",
+      "synthetic-interest-tags-v2-036"
+    ],
+    "top20InterestTagsStripped": [
+      "synthetic-interest-tags-v2-012",
+      "synthetic-interest-tags-v2-029",
+      "synthetic-interest-tags-v2-031",
+      "synthetic-interest-tags-v2-011",
+      "synthetic-interest-tags-v2-018",
+      "synthetic-interest-tags-v2-006",
+      "synthetic-interest-tags-v2-021",
+      "synthetic-interest-tags-v2-004",
+      "synthetic-interest-tags-v2-005",
+      "synthetic-interest-tags-v2-028",
+      "synthetic-interest-tags-v2-015",
+      "synthetic-interest-tags-v2-007",
+      "synthetic-interest-tags-v2-009",
+      "synthetic-interest-tags-v2-010",
+      "synthetic-interest-tags-v2-022",
+      "synthetic-interest-tags-v2-033",
+      "synthetic-interest-tags-v2-036",
+      "synthetic-interest-tags-v2-002",
+      "synthetic-interest-tags-v2-032",
+      "synthetic-interest-tags-v2-024"
+    ],
+    "kendallTauTop20": 0.9789473684210527,
+    "maxPositionMoveTop20Intersection": 3,
+    "top20Left": 0,
+    "top20Entered": 0
+  },
+  "sampleProfiles": [
+    {
+      "profileId": "synthetic-interest-tags-v2-001",
+      "interestTagsSelf": [
+        "music"
+      ],
+      "interestTagsPartner": [
+        "film"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-002",
+      "interestTagsSelf": [
+        "film"
+      ],
+      "interestTagsPartner": [
+        "music"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-003",
+      "interestTagsSelf": [
+        "books_reading"
+      ],
+      "interestTagsPartner": [
+        "books_reading"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-004",
+      "interestTagsSelf": [
+        "sports_fitness"
+      ],
+      "interestTagsPartner": [
+        "sports_fitness"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-005",
+      "interestTagsSelf": [
+        "art_visual"
+      ],
+      "interestTagsPartner": [
+        "art_visual"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-006",
+      "interestTagsSelf": [
+        "gaming"
+      ],
+      "interestTagsPartner": [
+        "gaming"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-007",
+      "interestTagsSelf": [
+        "food_dining"
+      ],
+      "interestTagsPartner": [
+        "food_dining"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-008",
+      "interestTagsSelf": [
+        "travel"
+      ],
+      "interestTagsPartner": [
+        "travel"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-009",
+      "interestTagsSelf": [
+        "photography"
+      ],
+      "interestTagsPartner": [
+        "photography"
+      ]
+    },
+    {
+      "profileId": "synthetic-interest-tags-v2-010",
+      "interestTagsSelf": [
+        "technology"
+      ],
+      "interestTagsPartner": [
+        "technology"
+      ]
+    }
+  ],
+  "interestGroundedSamples": [
+    {
+      "pair": "synthetic-interest-tags-v2-001 vs synthetic-interest-tags-v2-012",
+      "rankReasonLine": "interestTags:+1(interestTags:grounded(film,O=0.5000))",
+      "note": "interestTags:grounded(film,O=0.5000)"
+    },
+    {
+      "pair": "synthetic-interest-tags-v2-001 vs synthetic-interest-tags-v2-022",
+      "rankReasonLine": "interestTags:+2(interestTags:grounded(film,O=1.0000))",
+      "note": "interestTags:grounded(film,O=1.0000)"
+    }
+  ]
+}

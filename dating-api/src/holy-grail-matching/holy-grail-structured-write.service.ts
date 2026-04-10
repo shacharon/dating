@@ -12,10 +12,11 @@ import {
 /**
  * Sparse partial updates for `UserProfile` Holy Grail JSON columns.
  * Omit `structuredFactsPatch` / `structuredPreferencesPatch` to leave that column unchanged.
+ * Patches must use only `HOLY_GRAIL_STRUCTURED_*_JSON_KEYS` (see `holy-grail-structured-contract.ts`).
  */
 export interface HolyGrailStructuredWriteRequest {
   readonly structuredFactsPatch?: Record<string, unknown>;
-  /** Parsed with Zod (`record<string, unknown>`) then merge-validated; omit to leave column unchanged. */
+  /** Parsed as `record<string, unknown>` then merge-validated against persisted preference keys only. */
   readonly structuredPreferencesPatch?: unknown;
 }
 

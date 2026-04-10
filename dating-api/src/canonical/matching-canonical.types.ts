@@ -324,9 +324,9 @@ export interface MatchingSearchOverrides {
 
 /**
  * Five deterministic HG rank signals parsed from DB (enrichment + self signal snapshot + interests),
- * plus optional **canonical** personality trait tags from allowlisted free-text extraction (`personality-traits-text.extract`),
+ * plus optional **canonical** personality trait tags (v1+v2 allowlist) from free-text extraction (`personality-traits-text.extract`),
  * optional **lifestyle signal** tags v1+v2 allowlist (`lifestyle-signals-text.extract`),
- * and optional **interest tags** v1 (`interest-tags-text.extract`: `music`, `film`).
+ * and optional **interest tags** v1+v2 allowlist (`interest-tags-text.extract`).
  * Used only for post-eligibility ranking — never for hard filters.
  */
 export interface MatchingRankingSignalsSnapshot {
@@ -343,9 +343,9 @@ export interface MatchingRankingSignalsSnapshot {
   readonly lifestyleSignalsSelf?: readonly string[];
   /** Lifestyle signals (v1+v2 allowlist) from `aboutPartner` (canonical ids). */
   readonly lifestyleSignalsPartner?: readonly string[];
-  /** Interest tags v1 from `aboutMe` (`music` \| `film`). */
+  /** Interest tags (v1+v2 allowlist) from `aboutMe`. */
   readonly interestTagsSelf?: readonly string[];
-  /** Interest tags v1 from `aboutPartner` (`music` \| `film`). */
+  /** Interest tags (v1+v2 allowlist) from `aboutPartner`. */
   readonly interestTagsPartner?: readonly string[];
 }
 

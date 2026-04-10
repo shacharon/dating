@@ -1,0 +1,185 @@
+{
+  "validator": "personality-v2",
+  "evaluatedAt": "2026-04-10T21:08:19.350Z",
+  "idPrefixes": [
+    "synthetic-personality-v2-",
+    "synthetic-pt-v2-"
+  ],
+  "eligibilityInvariantVsStrippedRankingSignals": "eligibilityKeyJsonUtf8Identical",
+  "thresholds": {
+    "minCoveragePct": 70,
+    "minProfileRows": 20,
+    "minRankedSurvivors": 5,
+    "maxTop20ChurnEachWay": 4,
+    "minKendallTauTop20": 0.72,
+    "maxPositionMoveTop20Intersection": 8
+  },
+  "profileCount": 80,
+  "coveragePct": 80,
+  "withPersonalityTagCount": 64,
+  "checks": {
+    "coverageAtLeastMin": true,
+    "canonicalTagsOnly": true,
+    "eligibilityMatchesStrippedBaseline": true,
+    "groundedRankReasonsSubsetOfIntersection": true,
+    "rankStabilityTop20ChurnBounded": true,
+    "rankStabilityKendallTauBounded": true,
+    "rankStabilityMaxPositionMoveBounded": true
+  },
+  "eligibilityInvariantPairsChecked": 158,
+  "rankStability": {
+    "searcherId": "synthetic-personality-v2-001",
+    "top20WithPersonalityTraits": [
+      "synthetic-personality-v2-004",
+      "synthetic-personality-v2-034",
+      "synthetic-personality-v2-033",
+      "synthetic-pt-v2-001",
+      "synthetic-pt-v2-032",
+      "synthetic-pt-v2-012",
+      "synthetic-pt-v2-031",
+      "synthetic-personality-v2-021",
+      "synthetic-personality-v2-016",
+      "synthetic-personality-v2-006",
+      "synthetic-pt-v2-011",
+      "synthetic-pt-v2-004",
+      "synthetic-pt-v2-013",
+      "synthetic-pt-v2-023",
+      "synthetic-personality-v2-007",
+      "synthetic-pt-v2-009",
+      "synthetic-pt-v2-005",
+      "synthetic-personality-v2-017",
+      "synthetic-personality-v2-013",
+      "synthetic-pt-v2-035"
+    ],
+    "top20PersonalityTraitsStripped": [
+      "synthetic-personality-v2-004",
+      "synthetic-personality-v2-034",
+      "synthetic-personality-v2-033",
+      "synthetic-pt-v2-001",
+      "synthetic-pt-v2-031",
+      "synthetic-personality-v2-021",
+      "synthetic-pt-v2-032",
+      "synthetic-pt-v2-012",
+      "synthetic-personality-v2-016",
+      "synthetic-personality-v2-006",
+      "synthetic-pt-v2-011",
+      "synthetic-pt-v2-004",
+      "synthetic-pt-v2-013",
+      "synthetic-pt-v2-023",
+      "synthetic-personality-v2-007",
+      "synthetic-pt-v2-009",
+      "synthetic-pt-v2-005",
+      "synthetic-personality-v2-017",
+      "synthetic-pt-v2-035",
+      "synthetic-personality-v2-008"
+    ],
+    "kendallTauTop20": 0.9766081871345029,
+    "maxPositionMoveTop20Intersection": 2,
+    "top20Left": 1,
+    "top20Entered": 1
+  },
+  "sampleProfiles": [
+    {
+      "profileId": "synthetic-personality-v2-001",
+      "personalityTraitsSelf": [
+        "humor_playful"
+      ],
+      "personalityTraitsPartner": [
+        "honesty_integrity"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-002",
+      "personalityTraitsSelf": [
+        "honesty_integrity"
+      ],
+      "personalityTraitsPartner": [
+        "humor_playful"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-003",
+      "personalityTraitsSelf": [
+        "kind_empathetic"
+      ],
+      "personalityTraitsPartner": [
+        "calm_steady"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-004",
+      "personalityTraitsSelf": [
+        "ambitious_driven"
+      ],
+      "personalityTraitsPartner": [
+        "loyal_committed"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-005",
+      "personalityTraitsSelf": [
+        "calm_steady"
+      ],
+      "personalityTraitsPartner": [
+        "kind_empathetic"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-006",
+      "personalityTraitsSelf": [
+        "curious_open_minded"
+      ],
+      "personalityTraitsPartner": [
+        "ambitious_driven"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-007",
+      "personalityTraitsSelf": [
+        "loyal_committed"
+      ],
+      "personalityTraitsPartner": [
+        "curious_open_minded"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-008",
+      "personalityTraitsSelf": [
+        "optimistic_positive"
+      ],
+      "personalityTraitsPartner": [
+        "optimistic_positive"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-009",
+      "personalityTraitsSelf": [
+        "introverted_reflective"
+      ],
+      "personalityTraitsPartner": [
+        "introverted_reflective"
+      ]
+    },
+    {
+      "profileId": "synthetic-personality-v2-010",
+      "personalityTraitsSelf": [
+        "extroverted_social"
+      ],
+      "personalityTraitsPartner": [
+        "extroverted_social"
+      ]
+    }
+  ],
+  "personalityGroundedSamples": [
+    {
+      "pair": "synthetic-personality-v2-001 vs synthetic-pt-v2-032",
+      "rankReasonLine": "personalityTraits:+2(personalityTraits:grounded(honesty_integrity;humor_playful,O=1.0000))",
+      "note": "personalityTraits:grounded(honesty_integrity;humor_playful,O=1.0000)"
+    },
+    {
+      "pair": "synthetic-personality-v2-001 vs synthetic-pt-v2-012",
+      "rankReasonLine": "personalityTraits:+2(personalityTraits:grounded(honesty_integrity;humor_playful,O=1.0000))",
+      "note": "personalityTraits:grounded(honesty_integrity;humor_playful,O=1.0000)"
+    }
+  ]
+}

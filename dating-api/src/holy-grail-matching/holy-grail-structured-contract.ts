@@ -1,6 +1,9 @@
 /**
  * Single source of truth for Holy Grail structured JSON key allow-lists (DB read/write + mapper)
  * and partner-age bounds for ingestion paths. DOB YMD helpers live in `holy-grail-dob-ymd.ts`.
+ *
+ * TypeScript shapes: `profile-sources.types.ts` splits **persisted JSON** (`*Persisted` / parse outputs)
+ * from **mapper-only** fields (`*MapperOnly`) and the combined mapper input (`*Input`).
  */
 
 export {

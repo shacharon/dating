@@ -29,6 +29,11 @@ export type LifestyleSignalTag = (typeof LIFESTYLE_SIGNAL_TAGS)[number];
 
 export const LIFESTYLE_SIGNAL_TAG_SET = new Set<string>(LIFESTYLE_SIGNAL_TAGS);
 
+/** First four allowlist ids (v1); remainder are v2 additive. */
+export const LIFESTYLE_SIGNAL_V1_TAG_SET = new Set<string>(LIFESTYLE_SIGNAL_TAGS.slice(0, 4));
+
+export const LIFESTYLE_SIGNAL_V2_TAG_SET = new Set<string>(LIFESTYLE_SIGNAL_TAGS.slice(4));
+
 export type LifestyleSignalEvidenceHit = {
   readonly tag: LifestyleSignalTag;
   readonly matchedPhrase: string;

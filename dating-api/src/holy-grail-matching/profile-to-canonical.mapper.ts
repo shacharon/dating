@@ -28,7 +28,7 @@ import {
   WorkStudySituationSelf,
 } from '../canonical/matching-canonical.types';
 import type { HolyGrailProfileMappingInput } from './profile-sources.types';
-import { INTEREST_TAG_V1_SET } from './interest-tags-text.extract';
+import { INTEREST_TAG_SET } from './interest-tags-text.extract';
 import { LIFESTYLE_SIGNAL_TAG_SET } from './lifestyle-signals-text.extract';
 import { PERSONALITY_TRAIT_TAG_SET } from './personality-traits-text.extract';
 import { matchingCanonicalEnumStringValues } from './holy-grail-canonical-enum';
@@ -161,8 +161,8 @@ function validateRankingSignalsSlice(rs: HolyGrailProfileMappingInput['rankingSi
       throw new Error(`HolyGrail map: rankingSignals.${key} must be an array when provided`);
     }
     for (let i = 0; i < arr.length; i++) {
-      if (typeof arr[i] !== 'string' || !INTEREST_TAG_V1_SET.has(arr[i])) {
-        throw new Error(`HolyGrail map: rankingSignals.${key}[${i}] must be a canonical v1 interest tag`);
+      if (typeof arr[i] !== 'string' || !INTEREST_TAG_SET.has(arr[i])) {
+        throw new Error(`HolyGrail map: rankingSignals.${key}[${i}] must be a canonical interest tag`);
       }
     }
   }

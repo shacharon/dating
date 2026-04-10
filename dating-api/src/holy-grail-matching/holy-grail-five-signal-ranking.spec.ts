@@ -285,6 +285,30 @@ describe('computeHolyGrailFiveSignalRank', () => {
     expect(reasonLine).toContain(row!.note);
   });
 
+  it('personalityTraits v2: grounded note lists only true intersections (extra v2 self tags omitted)', () => {
+    const empty = {
+      dailyRhythm: null,
+      autonomyTogetherness: null,
+      conflictStyle: null,
+      lifestylePace: null,
+      interestsTop: [] as string[],
+    };
+    const r = computeHolyGrailFiveSignalRank({
+      searcher: model('s-pt-v2', {
+        ...empty,
+        personalityTraitsPartner: ['kind_empathetic'],
+      }),
+      candidate: model('c-pt-v2', {
+        ...empty,
+        personalityTraitsSelf: ['kind_empathetic', 'ambitious_driven'],
+      }),
+    });
+    const row = r.rankBreakdown.find((b) => b.signal === 'personalityTraits');
+    expect(row).toBeDefined();
+    expect(row!.note).toMatch(/grounded\(kind_empathetic/);
+    expect(row!.note).not.toContain('ambitious_driven');
+  });
+
   it('lifestyleSignals adds bonus; note lists only intersecting lifestyle tags', () => {
     const empty = {
       dailyRhythm: null,
@@ -355,7 +379,7 @@ describe('computeHolyGrailFiveSignalRank', () => {
     expect(row!.note).toMatch(/grounded\(athletic_swimming,O=1\.0000\)/);
   });
 
-  it('interestTags adds bonus; note lists only intersecting v1 interest tags', () => {
+  it('interestTags adds bonus; note lists only intersecting canonical interest tags', () => {
     const empty = {
       dailyRhythm: null,
       autonomyTogetherness: null,
@@ -380,7 +404,7 @@ describe('computeHolyGrailFiveSignalRank', () => {
     expect(row!.points).toBeCloseTo(1, 5);
   });
 
-  it('interestTags emits no row when v1 interest tags do not intersect', () => {
+  it('interestTags emits no row when canonical interest tags do not intersect', () => {
     const empty = {
       dailyRhythm: null,
       autonomyTogetherness: null,
@@ -423,5 +447,30 @@ describe('computeHolyGrailFiveSignalRank', () => {
     const line = r.rankReasons.find((x) => x.startsWith('interestTags:'));
     expect(line).toContain(row!.note);
     expect(row!.note).toMatch(/grounded\(film,O=1\.0000\)/);
+  });
+
+  it('interestTags v2 grounded note lists only intersecting allowlist ids', () => {
+    const empty = {
+      dailyRhythm: null,
+      autonomyTogetherness: null,
+      conflictStyle: null,
+      lifestylePace: null,
+      interestsTop: [] as string[],
+    };
+    const r = computeHolyGrailFiveSignalRank({
+      searcher: model('itv2-s', {
+        ...empty,
+        interestTagsPartner: ['travel', 'music'],
+      }),
+      candidate: model('itv2-c', {
+        ...empty,
+        interestTagsSelf: ['travel', 'gaming'],
+      }),
+    });
+    const row = r.rankBreakdown.find((b) => b.signal === 'interestTags');
+    expect(row).toBeDefined();
+    expect(row!.note).toMatch(/interestTags:grounded\(travel/);
+    expect(row!.note).not.toContain('gaming');
+    expect(row!.note).not.toContain('music');
   });
 });

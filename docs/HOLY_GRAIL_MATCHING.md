@@ -12,7 +12,7 @@ Design notes for the matching contract and how it relates to storage.
 | Step 3 | **Done (spec + code)** — enum-based dimension outcomes documented below; **implemented** in `dating-api/src/holy-grail-matching/eligibility.evaluator.ts` (PASS / FAIL / SKIPPED / SOFT_PASS). Locked SOFT_PASS rules: [Layer 3 locked policy](#locked-layer-3-policy-implementation-aligned). |
 | Step 4 | **Done** — Phase 1 rules + Phase 2 mapper (`profile-to-canonical.mapper.ts`, structured input only). |
 | Step 5 | **Partial** — decision/audit + retrieval + post-filter ranking exist; **optional:** broader real-profile audit runs beyond current scripts. |
-| Database / Prisma | **Unchanged** — no migration/schema work until **after** steps 1–3 below; see roadmap. |
+| Database / Prisma | **Sparse HG JSON columns exist** on `UserProfile` (`holyGrailStructuredFacts` / `holyGrailStructuredPreferences`); contract keys are [documented below](#persisted-holy-grail-structured-json-userprofile-columns). Broader schema/index work remains roadmap. |
 | Legacy scoring / dealbreaker / ranking engine | **Out of scope** — legacy `match-engine` untouched. HG **post-filter** ranking is separate (`holy-grail-candidate-ranking.ts`) and does not affect eligibility. |
 
 ### Roadmap — actual execution order (next work)
@@ -93,6 +93,21 @@ Editing the canonical types **does not** change the database. Aligning the DB is
 - Splitting one JSON profile into normalized tables for reporting or constraints.
 
 Until then, the canonical file can evolve independently for API and application logic.
+
+### Persisted Holy Grail structured JSON (`UserProfile` columns)
+
+Two nullable JSON columns back the deterministic HG ingestion path:
+
+| Column | Round-trip (write + read) | TypeScript |
+|--------|---------------------------|------------|
+| `holyGrailStructuredFacts` | Keys: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` in `dating-api/src/holy-grail-matching/holy-grail-structured-contract.ts`. Merge: `mergeHolyGrailStructuredFactsPatch`. Parse: `parseHolyGrailStructuredFactsFromJson`. | Persisted slice: `HolyGrailStructuredFactsPersisted`. Full mapper slice: `HolyGrailStructuredFactsInput` (= persisted ∪ `HolyGrailStructuredFactsMapperOnly`). |
+| `holyGrailStructuredPreferences` | Keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` (same files as above). **Excludes** mapper-only `maxDistanceKm` until geo is intentionally added to this JSON. | Persisted slice: `HolyGrailStructuredPreferencesPersisted`. Full mapper slice: `HolyGrailStructuredPreferencesInput` (= persisted ∪ `HolyGrailStructuredPreferencesMapperOnly`). |
+
+**Mapper-only facts** (accepted on `HolyGrailProfileMappingInput.structuredFacts` only, not stored in `holyGrailStructuredFacts` JSON): `HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS` — e.g. `sexualOrientation`, `relationshipStatus`, `exerciseLevel`, `politics`, `livingSituation`, `workStudySituation`, `primaryLocationLabel`.
+
+**Mapper-only preferences:** `HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS` — currently `maxDistanceKm`. Supplied via tests, `searchOverrides`, or future APIs; **not** read from or written to `holyGrailStructuredPreferences` JSON (merge rejects unknown keys).
+
+**Retrieval wire DTOs:** `HolyGrailMatchingPreferencesWireDto` mirrors canonical `MatchingPreferences` and may therefore include `maxDistanceKm` after mapping. Fields that actually round-trip through the preferences JSON column are spelled out as `HolyGrailStructuredPreferencesPersistedWireDto` in `holy-grail-retrieval-wire.dto.ts`.
 
 ---
 

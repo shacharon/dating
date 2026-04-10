@@ -1,6 +1,11 @@
 /**
  * Sparse wire shapes for Holy Grail retrieval / API layers. Mirrors `MatchingCanonicalModel` slices
  * without injecting defaults — omitted keys stay absent.
+ *
+ * **vs DB JSON:** `HolyGrailMatchingPreferencesWireDto` follows the canonical `MatchingPreferences`
+ * object (e.g. may include `maxDistanceKm` after mapping). Only a subset of those fields round-trip
+ * through `UserProfile.holyGrailStructuredPreferences` JSON; see `HolyGrailStructuredPreferencesPersistedWireDto`
+ * and `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` in `holy-grail-structured-contract.ts`.
  */
 
 import type {
@@ -35,6 +40,13 @@ export interface HolyGrailMatchingPreferencesWireDto {
   readonly similarityPreference?: SimilarityPreference | null;
 }
 
+/** Preference fields that can be loaded from `holyGrailStructuredPreferences` JSON (merge + parse). */
+export type HolyGrailStructuredPreferencesPersistedWireDto = Omit<
+  HolyGrailMatchingPreferencesWireDto,
+  'maxDistanceKm'
+>;
+
+/** Session/search slice; not the same document as `holyGrailStructuredPreferences` (includes `validUntil`, mapper-only prefs). */
 export interface HolyGrailMatchingSearchOverridesWireDto {
   readonly acceptedPartnerGenders?: readonly AcceptedPartnerGender[];
   readonly partnerAgeMin?: number;

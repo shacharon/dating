@@ -1,6 +1,8 @@
 /**
  * Strict validation + shallow merge for persisted Holy Grail JSON columns.
- * Aligns with `holy-grail-structured-db-json.ts` read path (same keys, enums, no geo).
+ * Aligns with `holy-grail-structured-db-json.ts` read path (same `*_JSON_KEYS`, same enums).
+ * Patch bodies are `HolyGrailStructuredFactsPersisted` / `HolyGrailStructuredPreferencesPersisted` shapes
+ * (plain objects); mapper-only keys are rejected here, not stripped.
  */
 
 import { Prisma } from '@prisma/client';

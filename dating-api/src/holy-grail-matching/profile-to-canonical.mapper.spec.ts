@@ -204,7 +204,7 @@ describe('mapProfileSourceToMatchingCanonical', () => {
     ).toThrow(/canonical lifestyle signal tag/);
   });
 
-  it('maps v1 interest tag ranking slices when present', () => {
+  it('maps canonical interest tag ranking slices when present', () => {
     const m = mapProfileSourceToMatchingCanonical({
       profileId: 'p',
       rankingSignals: {
@@ -221,7 +221,7 @@ describe('mapProfileSourceToMatchingCanonical', () => {
     expect(m.rankingSignals?.interestTagsPartner).toEqual(['film']);
   });
 
-  it('throws on non-canonical v1 interest tag in rankingSignals', () => {
+  it('throws on non-canonical interest tag in rankingSignals', () => {
     expect(() =>
       mapProfileSourceToMatchingCanonical({
         profileId: 'p',
@@ -231,10 +231,10 @@ describe('mapProfileSourceToMatchingCanonical', () => {
           conflictStyle: null,
           lifestylePace: null,
           interestsTop: [],
-          interestTagsSelf: ['books'],
+          interestTagsSelf: ['not_a_canonical_interest'],
         },
       }),
-    ).toThrow(/canonical v1 interest tag/);
+    ).toThrow(/canonical interest tag/);
   });
 
   it('throws on unexpected structuredFacts key', () => {

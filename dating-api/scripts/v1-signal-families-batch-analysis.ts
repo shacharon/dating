@@ -1,8 +1,9 @@
 /**
- * Production-like batch: v1 free-text signal families (personalityTraits, lifestyleSignals, interestTags).
+ * Production-like batch: free-text signal families on real DB profiles (personalityTraits, lifestyleSignals v1+v2, interestTags).
  *
  * - Corpus coverage, per-tag counts, self vs partner, unmapped rates (text present but no tags for family).
- * - 20 searchers × fixed candidate pool: top-5 rank order before vs after stripping v1 tag fields from rankingSignals.
+ * - Lifestyle: v1 vs v2 tag split, top merged tags, pairwise `lifestyleSignals:grounded` frequency on searcher×pool pairs.
+ * - 20 searchers × fixed candidate pool: top-5 rank order before vs after stripping **all** v1 free-text tag fields; plus **lifestyle-only** strip vs full.
  *
  * Requires DATABASE_URL and applied Prisma migrations (HG ranking columns on `ProfileSignalSnapshot`).
  * Run from dating-api:
@@ -19,7 +20,11 @@ import { PrismaClient } from '@prisma/client';
 import type { MatchingCanonicalModel, MatchingRankingSignalsSnapshot } from '../src/canonical/matching-canonical.types';
 import { computeHolyGrailFiveSignalRank } from '../src/holy-grail-matching/holy-grail-five-signal-ranking';
 import { extractInterestTagsV1FromFreeText } from '../src/holy-grail-matching/interest-tags-text.extract';
-import { extractLifestyleSignalsFromFreeText } from '../src/holy-grail-matching/lifestyle-signals-text.extract';
+import {
+  extractLifestyleSignalsFromFreeText,
+  LIFESTYLE_SIGNAL_V1_TAG_SET,
+  LIFESTYLE_SIGNAL_V2_TAG_SET,
+} from '../src/holy-grail-matching/lifestyle-signals-text.extract';
 import { extractPersonalityTraitsFromFreeText } from '../src/holy-grail-matching/personality-traits-text.extract';
 import { mapProfileSourceToMatchingCanonical } from '../src/holy-grail-matching/profile-to-canonical.mapper';
 import {
@@ -68,6 +73,34 @@ function stripV1FromModel(m: MatchingCanonicalModel): MatchingCanonicalModel {
     ...m,
     rankingSignals: stripV1TagFamilies(m.rankingSignals),
   };
+}
+
+/** Strip only lifestyle free-text tags (personality + interest bonuses unchanged). */
+function stripLifestyleOnlyFromModel(m: MatchingCanonicalModel): MatchingCanonicalModel {
+  const rs = m.rankingSignals;
+  if (!rs) return m;
+  const next = { ...rs } as Record<string, unknown>;
+  delete next.lifestyleSignalsSelf;
+  delete next.lifestyleSignalsPartner;
+  return { ...m, rankingSignals: next as unknown as MatchingRankingSignalsSnapshot };
+}
+
+function mergeTagCounts(a: Map<string, number>, b: Map<string, number>): Map<string, number> {
+  const out = new Map(a);
+  for (const [k, v] of b) {
+    out.set(k, (out.get(k) ?? 0) + v);
+  }
+  return out;
+}
+
+function sumMap(m: Map<string, number>): number {
+  let t = 0;
+  for (const v of m.values()) t += v;
+  return t;
+}
+
+function mergedSortedRecord(m1: Map<string, number>, m2: Map<string, number>): Record<string, number> {
+  return Object.fromEntries([...mergeTagCounts(m1, m2).entries()].sort((a, b) => b[1] - a[1]));
 }
 
 function rowToCanonical(row: ChildrenUnsureProfileRow): MatchingCanonicalModel {
@@ -131,6 +164,10 @@ function main(): void {
     const persTagsPartner = new Map<string, number>();
     const lifeTagsSelf = new Map<string, number>();
     const lifeTagsPartner = new Map<string, number>();
+    const lifeV1TagsSelf = new Map<string, number>();
+    const lifeV1TagsPartner = new Map<string, number>();
+    const lifeV2TagsSelf = new Map<string, number>();
+    const lifeV2TagsPartner = new Map<string, number>();
     const intTagsSelf = new Map<string, number>();
     const intTagsPartner = new Map<string, number>();
 
@@ -183,8 +220,16 @@ function main(): void {
 
       for (const t of pt.self.tags) bump(persTagsSelf, t);
       for (const t of pt.partner.tags) bump(persTagsPartner, t);
-      for (const t of ls.self.tags) bump(lifeTagsSelf, t);
-      for (const t of ls.partner.tags) bump(lifeTagsPartner, t);
+      for (const t of ls.self.tags) {
+        bump(lifeTagsSelf, t);
+        if (LIFESTYLE_SIGNAL_V1_TAG_SET.has(t)) bump(lifeV1TagsSelf, t);
+        else if (LIFESTYLE_SIGNAL_V2_TAG_SET.has(t)) bump(lifeV2TagsSelf, t);
+      }
+      for (const t of ls.partner.tags) {
+        bump(lifeTagsPartner, t);
+        if (LIFESTYLE_SIGNAL_V1_TAG_SET.has(t)) bump(lifeV1TagsPartner, t);
+        else if (LIFESTYLE_SIGNAL_V2_TAG_SET.has(t)) bump(lifeV2TagsPartner, t);
+      }
       for (const t of it.self.tags) bump(intTagsSelf, t);
       for (const t of it.partner.tags) bump(intTagsPartner, t);
     }
@@ -229,6 +274,10 @@ function main(): void {
         partner: Object.fromEntries([...intTagsPartner.entries()].sort((a, b) => a[0].localeCompare(b[0]))),
       },
     };
+
+    const lifestyleTopMerged = [...mergeTagCounts(lifeTagsSelf, lifeTagsPartner).entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag, count]) => ({ tag, count }));
 
     const substantial = rows.filter((r) => {
       const me = (r.aboutMe ?? '').trim();
@@ -298,6 +347,67 @@ function main(): void {
       });
     }
 
+    let lifestylePairCount = 0;
+    let lifestylePairWithGroundedBonus = 0;
+    for (const { canonical: s } of searcherCanonicals) {
+      for (const c of poolCanonical) {
+        lifestylePairCount += 1;
+        const rank = computeHolyGrailFiveSignalRank({ searcher: s, candidate: c });
+        const lsRow = rank.rankBreakdown.find((b) => b.signal === 'lifestyleSignals');
+        if (
+          lsRow !== undefined &&
+          lsRow.points > 0 &&
+          lsRow.note.startsWith('lifestyleSignals:grounded(')
+        ) {
+          lifestylePairWithGroundedBonus += 1;
+        }
+      }
+    }
+
+    let lifeOnlyOrderedChanged = 0;
+    let lifeOnlySetChanged = 0;
+    let lifeOnlyRank1Changed = 0;
+    const lifestyleOnlyRankingComparisons: typeof rankingComparisons = [];
+
+    for (const { row, canonical: sFull } of searcherCanonicals) {
+      const sStrip = stripLifestyleOnlyFromModel(sFull);
+      const poolStrip = poolCanonical.map(stripLifestyleOnlyFromModel);
+
+      const after = rankTopK(sFull, poolCanonical, TOP_K);
+      const before = rankTopK(sStrip, poolStrip, TOP_K);
+
+      const setA = new Set(after.ids);
+      const setB = new Set(before.ids);
+      let inter = 0;
+      for (const x of setA) if (setB.has(x)) inter += 1;
+      const union = new Set([...setA, ...setB]).size;
+      const jacc = union > 0 ? inter / union : 1;
+
+      const identicalOrdered =
+        after.ids.length === before.ids.length && after.ids.every((id, i) => id === before.ids[i]);
+      const sameSet = setA.size === setB.size && inter === setA.size;
+
+      if (!identicalOrdered) lifeOnlyOrderedChanged += 1;
+      if (!sameSet) lifeOnlySetChanged += 1;
+
+      const r1b = before.ids[0] ?? null;
+      const r1a = after.ids[0] ?? null;
+      if (r1b !== r1a) lifeOnlyRank1Changed += 1;
+
+      lifestyleOnlyRankingComparisons.push({
+        searcherId: row.id,
+        top5Before: before.ids,
+        top5After: after.ids,
+        identicalOrdered,
+        sameSet,
+        jaccardTop5: Math.round(1e4 * jacc) / 1e4,
+        rank1ScoreBefore: r1b ? before.scores[r1b] ?? null : null,
+        rank1ScoreAfter: r1a ? after.scores[r1a] ?? null : null,
+        rank1IdBefore: r1b,
+        rank1IdAfter: r1a,
+      });
+    }
+
     const out = {
       generatedAt: new Date().toISOString(),
       rankingSignalMode: 'full_hg_columns' as const,
@@ -308,14 +418,39 @@ function main(): void {
       unmapped,
       selfVsPartnerNote:
         'Tag counts are occurrences per scope (one profile can contribute to both self and partner columns).',
+      lifestyleAnalytics: {
+        topTagsMergedSelfPlusPartner: lifestyleTopMerged.slice(0, 25),
+        v1TotalTagOccurrences: sumMap(lifeV1TagsSelf) + sumMap(lifeV1TagsPartner),
+        v2TotalTagOccurrences: sumMap(lifeV2TagsSelf) + sumMap(lifeV2TagsPartner),
+        v1ByTagSorted: mergedSortedRecord(lifeV1TagsSelf, lifeV1TagsPartner),
+        v2ByTagSorted: mergedSortedRecord(lifeV2TagsSelf, lifeV2TagsPartner),
+        groundedPairStats: {
+          pairsConsidered: lifestylePairCount,
+          pairsWithGroundedLifestyleBonus: lifestylePairWithGroundedBonus,
+          pctPairsWithGroundedLifestyleBonus: pct(lifestylePairWithGroundedBonus, lifestylePairCount),
+        },
+      },
       ranking: {
-        orderedTop5Changed_count: orderedChanged,
-        orderedTop5Changed_pctOfSearchers: pct(orderedChanged, searcherRows.length),
-        top5SetChanged_count: setChanged,
-        top5SetChanged_pctOfSearchers: pct(setChanged, searcherRows.length),
-        rank1CandidateChanged_count: rank1Changed,
-        rank1CandidateChanged_pctOfSearchers: pct(rank1Changed, searcherRows.length),
-        comparisons: rankingComparisons,
+        allFreeTextTagFamiliesStrip: {
+          note: 'Strip personality + lifestyle + interest v1 tag arrays from rankingSignals (original batch behavior).',
+          orderedTop5Changed_count: orderedChanged,
+          orderedTop5Changed_pctOfSearchers: pct(orderedChanged, searcherRows.length),
+          top5SetChanged_count: setChanged,
+          top5SetChanged_pctOfSearchers: pct(setChanged, searcherRows.length),
+          rank1CandidateChanged_count: rank1Changed,
+          rank1CandidateChanged_pctOfSearchers: pct(rank1Changed, searcherRows.length),
+          comparisons: rankingComparisons,
+        },
+        lifestyleStripOnly: {
+          note: 'Strip only lifestyleSignalsSelf/Partner; personality + interest bonuses unchanged.',
+          orderedTop5Changed_count: lifeOnlyOrderedChanged,
+          orderedTop5Changed_pctOfSearchers: pct(lifeOnlyOrderedChanged, searcherRows.length),
+          top5SetChanged_count: lifeOnlySetChanged,
+          top5SetChanged_pctOfSearchers: pct(lifeOnlySetChanged, searcherRows.length),
+          rank1CandidateChanged_count: lifeOnlyRank1Changed,
+          rank1CandidateChanged_pctOfSearchers: pct(lifeOnlyRank1Changed, searcherRows.length),
+          comparisons: lifestyleOnlyRankingComparisons,
+        },
       },
     };
 

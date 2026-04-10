@@ -10,7 +10,7 @@ import type {
   SimilarityPreference,
 } from '../canonical/matching-canonical.types';
 import { mergeEffectiveMatchingPreferences } from './eligibility.evaluator';
-import { INTEREST_TAG_V1_SET } from './interest-tags-text.extract';
+import { INTEREST_TAG_SET } from './interest-tags-text.extract';
 import { LIFESTYLE_SIGNAL_TAG_SET } from './lifestyle-signals-text.extract';
 import { PERSONALITY_TRAIT_TAG_SET } from './personality-traits-text.extract';
 
@@ -337,19 +337,19 @@ function computeLifestyleSignalsRankBonus(
   return { points, note };
 }
 
-function filterCanonicalInterestTagsV1(raw: readonly string[] | undefined): string[] {
+function filterCanonicalInterestTags(raw: readonly string[] | undefined): string[] {
   if (!raw?.length) return [];
   const out: string[] = [];
   for (const t of raw) {
     if (typeof t !== 'string') continue;
     const x = t.trim();
-    if (INTEREST_TAG_V1_SET.has(x)) out.push(x);
+    if (INTEREST_TAG_SET.has(x)) out.push(x);
   }
   return [...new Set(out)];
 }
 
 /**
- * Directional shared-interest alignment on v1 interest tags (`interestTagsSelf` / `interestTagsPartner`):
+ * Directional shared-interest alignment on canonical interest tags (`interestTagsSelf` / `interestTagsPartner`):
  * **J1** = Jaccard(searcher.partner, candidate.self), **J2** = Jaccard(searcher.self, candidate.partner).
  * **Explanation:** only intersecting canonical interest tags (`;`-separated).
  */
@@ -357,10 +357,10 @@ function computeInterestTagsRankBonus(
   s: MatchingRankingSignalsSnapshot,
   c: MatchingRankingSignalsSnapshot,
 ): { points: number; note: string } | null {
-  const sSelf = filterCanonicalInterestTagsV1(s.interestTagsSelf);
-  const sPartner = filterCanonicalInterestTagsV1(s.interestTagsPartner);
-  const cSelf = filterCanonicalInterestTagsV1(c.interestTagsSelf);
-  const cPartner = filterCanonicalInterestTagsV1(c.interestTagsPartner);
+  const sSelf = filterCanonicalInterestTags(s.interestTagsSelf);
+  const sPartner = filterCanonicalInterestTags(s.interestTagsPartner);
+  const cSelf = filterCanonicalInterestTags(c.interestTagsSelf);
+  const cPartner = filterCanonicalInterestTags(c.interestTagsPartner);
 
   const j1 = jaccardPersonality01(sPartner, cSelf);
   const j2 = jaccardPersonality01(sSelf, cPartner);
