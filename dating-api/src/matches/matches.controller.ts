@@ -6,15 +6,32 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 import type { CompareBodyDto, CompareGuardMatchDto, MatchListItemDto } from './matches.service';
-import type { MatchIndexDto, MatchRecordDto } from './match.types';
+import type { ChildrenUnsureDirectionsDto, MatchIndexDto, MatchRecordDto } from './match.types';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { MatchDaemonService } from './match-daemon.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesService } from './matches.service';
 import { computeMatchDetailChildrenUnsure } from './match-detail-children-unsure';
 import { mapMatchRecordToDetailUi, type MatchDetailUiDto } from './match-detail-ui.mapper';
+import {
+  ChildrenUnsureAnalyticsService,
+  type ChildrenUnsureDailySummary,
+} from './children-unsure-analytics.service';
+import {
+  CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_CLICK,
+  CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_IMPRESSION,
+  HIDE_CHILDREN_UNSURE_QUERY_PARAM,
+} from './children-unsure-analytics.constants';
+import {
+  MATCH_PREVIEW_AGE_PLACEHOLDER,
+  MATCH_PREVIEW_CHIPS_SLICE,
+  MATCH_TOP_PREVIEW_LIMIT,
+} from './children-unsure.product-policy';
+import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
+import { parseHideChildrenUnsure } from './children-unsure.query';
 
 /** UI-friendly match preview for /dating/matches list. */
 export interface DatingMatchPreviewDto {
@@ -40,6 +57,9 @@ export interface DatingMatchPreviewDto {
     caution?: string;
     suggestedNextAction: string;
   };
+  children_unsure?: ChildrenUnsureDirectionsDto;
+  /** Engine score before children_unsure ranking penalty (when enriched). */
+  engineCompatibilityScore?: number;
 }
 
 @Controller('api/v1/matches')
@@ -48,6 +68,7 @@ export class MatchesController {
     private readonly matchesService: MatchesService,
     private readonly matchDaemon: MatchDaemonService,
     private readonly prisma: PrismaService,
+    private readonly childrenUnsureAnalytics: ChildrenUnsureAnalyticsService,
   ) {}
 
   @Post('rebuild')
@@ -106,36 +127,83 @@ export class MatchesController {
   }
 
   @Get()
-  async list(): Promise<{ ok: true; items: MatchListItemDto[] }> {
-    const items = await this.matchesService.list();
+  async list(
+    @Query(HIDE_CHILDREN_UNSURE_QUERY_PARAM) hideChildrenUnsureRaw?: string,
+  ): Promise<{ ok: true; items: MatchListItemDto[] }> {
+    const hideChildrenUnsure = parseHideChildrenUnsure(hideChildrenUnsureRaw);
+    const items = await this.matchesService.list({ hideChildrenUnsure });
+    const withChildrenUnsureCount = items.filter((i) => anyChildrenUnsure(i.children_unsure)).length;
+    this.childrenUnsureAnalytics.recordListOrTopResponse({
+      returnedCount: items.length,
+      withChildrenUnsureCount,
+      hideFilterActive: hideChildrenUnsure,
+    });
     return { ok: true, items };
   }
 
   @Get('top')
-  async getTop(): Promise<{ ok: true; matches: DatingMatchPreviewDto[] }> {
-    const items = await this.matchesService.list();
+  async getTop(
+    @Query(HIDE_CHILDREN_UNSURE_QUERY_PARAM) hideChildrenUnsureRaw?: string,
+  ): Promise<{ ok: true; matches: DatingMatchPreviewDto[] }> {
+    const hideChildrenUnsure = parseHideChildrenUnsure(hideChildrenUnsureRaw);
+    const items = await this.matchesService.list({ hideChildrenUnsure });
+    const withChildrenUnsureCount = items.filter((i) => anyChildrenUnsure(i.children_unsure)).length;
+    this.childrenUnsureAnalytics.recordListOrTopResponse({
+      returnedCount: items.length,
+      withChildrenUnsureCount,
+      hideFilterActive: hideChildrenUnsure,
+    });
     const sorted = items
       .map((item) => {
-        const finalScore = item.finalScore ?? item.overall;
+        const engineScore = item.finalScore ?? item.overall;
+        const rankScore = getDisplayScore(item);
         const otherPerson = item.b;
-        const chips = item.explainability?.positiveChips?.slice(0, 5) ?? [];
-        
+        const chips =
+          item.explainability?.positiveChips?.slice(0, MATCH_PREVIEW_CHIPS_SLICE) ?? [];
+
+        const hasChildrenUnsure = anyChildrenUnsure(item.children_unsure);
+
         const preview: DatingMatchPreviewDto = {
           id: item.matchId,
           name: otherPerson.name,
-          age: 30,
-          summary: `Match score: ${finalScore}`,
-          compatibilityScore: Math.round(finalScore),
+          age: MATCH_PREVIEW_AGE_PLACEHOLDER,
+          summary: `Match score: ${Math.round(rankScore)}`,
+          compatibilityScore: Math.round(rankScore),
           strongReason: item.shortReason || 'Good compatibility',
           frictionPoint: item.explainability?.tensionChip || 'No major tensions',
           ...(item.explainability && { explainability: item.explainability }),
           ...(item.recommendation && { recommendation: item.recommendation }),
+          ...(item.children_unsure && { children_unsure: item.children_unsure }),
+          ...(hasChildrenUnsure && { engineCompatibilityScore: Math.round(engineScore) }),
         };
         return preview;
       })
       .sort((a, b) => b.compatibilityScore - a.compatibilityScore)
-      .slice(0, 20);
+      .slice(0, MATCH_TOP_PREVIEW_LIMIT);
     return { ok: true, matches: sorted };
+  }
+
+  @Get('analytics/children-unsure/daily')
+  async childrenUnsureDailySummary(
+    @Query('date') dateUtc?: string,
+  ): Promise<{ ok: true; summary: ChildrenUnsureDailySummary }> {
+    return { ok: true, summary: this.childrenUnsureAnalytics.getDailySummary(dateUtc) };
+  }
+
+  @Post('analytics/children-unsure/events')
+  async childrenUnsureAnalyticsEvent(
+    @Body() body: { event?: string },
+  ): Promise<{ ok: true; accepted: boolean }> {
+    const ev = body?.event;
+    if (ev === CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_IMPRESSION) {
+      this.childrenUnsureAnalytics.recordBadgeImpression();
+      return { ok: true, accepted: true };
+    }
+    if (ev === CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_CLICK) {
+      this.childrenUnsureAnalytics.recordBadgeClick();
+      return { ok: true, accepted: true };
+    }
+    return { ok: true, accepted: false };
   }
 
   @Get(':id')

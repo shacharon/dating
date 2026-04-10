@@ -57,6 +57,15 @@ describe('holy-grail structured write merge', () => {
     expect(out.partnerAgeMin).toBe(25);
     expect(out.acceptedPartnerReligions).toBeUndefined();
   });
+
+  it('similarityPreference null patch stores JSON null (does not delete key)', () => {
+    const out = mergeHolyGrailStructuredPreferencesPatch(
+      { acceptedPartnerGenders: ['MALE'] },
+      { similarityPreference: null },
+    ) as Record<string, unknown>;
+    expect(out.acceptedPartnerGenders).toEqual(['MALE']);
+    expect(out.similarityPreference).toBeNull();
+  });
 });
 
 describe('HolyGrailStructuredWriteService', () => {
@@ -87,6 +96,19 @@ describe('HolyGrailStructuredWriteService', () => {
         structuredFactsPatch: { genderIdentity: GenderIdentity.MALE },
       }),
     ).rejects.toThrow(NotFoundException);
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('throws BadRequest when structuredPreferencesPatch is not an object', async () => {
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      holyGrailStructuredFacts: null,
+      holyGrailStructuredPreferences: null,
+    });
+    await expect(
+      service.mergeStructuredLayers('p1', {
+        structuredPreferencesPatch: [] as unknown,
+      }),
+    ).rejects.toThrow(BadRequestException);
     expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 

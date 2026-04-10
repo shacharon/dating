@@ -2,15 +2,27 @@ import {
   AcceptedPartnerGender,
   GenderIdentity,
   MATCHING_CANONICAL_MODEL_VERSION,
+  type MatchingRankingSignalsSnapshot,
 } from '../canonical/matching-canonical.types';
 import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
 import { rankHolyGrailCandidatesAfterHardFilter } from './holy-grail-candidate-ranking';
 
 const AT = new Date('2020-06-15T12:00:00.000Z');
 
+const baseSignals = (over: Partial<MatchingRankingSignalsSnapshot>): MatchingRankingSignalsSnapshot => ({
+  dailyRhythm: null,
+  autonomyTogetherness: null,
+  conflictStyle: null,
+  lifestylePace: null,
+  interestsTop: [],
+  ...over,
+});
+
 function canon(
   profileId: string,
-  partial: Pick<MatchingCanonicalModel, 'facts' | 'preferences' | 'searchOverrides'>,
+  partial: Pick<MatchingCanonicalModel, 'facts' | 'preferences' | 'searchOverrides'> & {
+    rankingSignals?: MatchingRankingSignalsSnapshot;
+  },
 ): MatchingCanonicalModel {
   return {
     version: MATCHING_CANONICAL_MODEL_VERSION,
@@ -18,6 +30,7 @@ function canon(
     facts: partial.facts ?? {},
     preferences: partial.preferences ?? {},
     searchOverrides: partial.searchOverrides ?? {},
+    ...(partial.rankingSignals !== undefined ? { rankingSignals: partial.rankingSignals } : {}),
   };
 }
 
@@ -43,15 +56,15 @@ describe('rankHolyGrailCandidatesAfterHardFilter', () => {
     });
   });
 
-  it('closer age ranks higher (same ref date)', () => {
+  it('closer lifestylePace ranks higher when other signals equal', () => {
     const searcher = canon('s', {
-      facts: { dateOfBirth: '1990-01-01' },
+      rankingSignals: baseSignals({ lifestylePace: 5, conflictStyle: 5 }),
     });
     const close = canon('close', {
-      facts: { dateOfBirth: '1991-06-01' },
+      rankingSignals: baseSignals({ lifestylePace: 6, conflictStyle: 5 }),
     });
     const far = canon('far', {
-      facts: { dateOfBirth: '1970-01-01' },
+      rankingSignals: baseSignals({ lifestylePace: 9, conflictStyle: 5 }),
     });
     const r = rankHolyGrailCandidatesAfterHardFilter({
       searcher,
@@ -61,17 +74,18 @@ describe('rankHolyGrailCandidatesAfterHardFilter', () => {
     expect(r.rankedCandidates[0].candidate.profileId).toBe('close');
     expect(r.rankedCandidates[1].candidate.profileId).toBe('far');
     expect(r.rankedCandidates[0].rankScore).toBeGreaterThan(r.rankedCandidates[1].rankScore);
+    expect(r.rankedCandidates[0].rankReasons[0]).toMatch(/^hg_rank_total:/);
   });
 
-  it('more shared interests ranks higher', () => {
+  it('more interestsTop overlap ranks higher', () => {
     const searcher = canon('s', {
-      facts: { interestTags: ['a', 'b', 'c'] },
+      rankingSignals: baseSignals({ interestsTop: ['a', 'b', 'c'] }),
     });
     const many = canon('many', {
-      facts: { interestTags: ['a', 'b', 'x'] },
+      rankingSignals: baseSignals({ interestsTop: ['a', 'b', 'x'] }),
     });
     const few = canon('few', {
-      facts: { interestTags: ['c', 'z'] },
+      rankingSignals: baseSignals({ interestsTop: ['c', 'z'] }),
     });
     const r = rankHolyGrailCandidatesAfterHardFilter({
       searcher,
@@ -80,18 +94,20 @@ describe('rankHolyGrailCandidatesAfterHardFilter', () => {
     });
     expect(r.rankedCandidates[0].candidate.profileId).toBe('many');
     expect(r.rankedCandidates[0].rankScore).toBeGreaterThan(r.rankedCandidates[1].rankScore);
-    expect(r.rankedCandidates[0].rankReasons.some((x) => x.includes('shared_interests'))).toBe(true);
+    expect(
+      r.rankedCandidates[0].rankBreakdown.find((b) => b.signal === 'interestsTop')?.note,
+    ).toContain('jaccard');
   });
 
-  it('same primary location label adds bonus and can change order', () => {
+  it('matching dailyRhythm label ranks above mismatch when other signals empty', () => {
     const searcher = canon('s', {
-      facts: { primaryLocationLabel: '  Tel Aviv  ' },
+      rankingSignals: baseSignals({ dailyRhythm: 'early_bird' }),
     });
     const same = canon('same', {
-      facts: { primaryLocationLabel: 'tel aviv' },
+      rankingSignals: baseSignals({ dailyRhythm: 'early_bird' }),
     });
     const other = canon('other', {
-      facts: { primaryLocationLabel: 'London' },
+      rankingSignals: baseSignals({ dailyRhythm: 'night_owl' }),
     });
     const r = rankHolyGrailCandidatesAfterHardFilter({
       searcher,
@@ -99,14 +115,14 @@ describe('rankHolyGrailCandidatesAfterHardFilter', () => {
       evaluatedAt: AT,
     });
     expect(r.rankedCandidates[0].candidate.profileId).toBe('same');
-    expect(r.rankedCandidates[0].rankReasons.some((x) => x.startsWith('same_location_label:'))).toBe(
-      true,
+    expect(r.rankedCandidates[0].rankBreakdown.find((b) => b.signal === 'dailyRhythm')?.points).toBe(
+      17,
     );
   });
 
-  it('missing DOB / interests does not throw; no bonus for missing pairs', () => {
+  it('missing ranking sidecar uses deterministic empty spread; scores differ; higher spread ranks first', () => {
     const searcher = canon('s', { facts: {} });
-    const a = canon('a', { facts: { interestTags: ['x'] } });
+    const a = canon('a', { facts: {} });
     const b = canon('b', { facts: {} });
     const r = rankHolyGrailCandidatesAfterHardFilter({
       searcher,
@@ -114,9 +130,39 @@ describe('rankHolyGrailCandidatesAfterHardFilter', () => {
       evaluatedAt: AT,
     });
     expect(r.rankedCandidates).toHaveLength(2);
-    expect(r.rankedCandidates.every((row) => row.rankScore === 0)).toBe(true);
-    expect(
-      r.rankedCandidates[0].candidate.profileId <= r.rankedCandidates[1].candidate.profileId,
-    ).toBe(true);
+    const [first, second] = r.rankedCandidates;
+    expect(first.rankScore).toBeGreaterThan(0);
+    expect(second.rankScore).toBeGreaterThan(0);
+    expect(first.rankScore).not.toBe(second.rankScore);
+    expect(first.rankScore).toBeGreaterThanOrEqual(second.rankScore);
+    expect(first.rankBreakdown.some((x) => x.signal === 'deterministicSpread')).toBe(true);
+  });
+
+  it('exposes per-signal breakdown aligned with rankReasons', () => {
+    const searcher = canon('s', {
+      rankingSignals: baseSignals({
+        dailyRhythm: 'x',
+        autonomyTogetherness: 'y',
+        conflictStyle: 4,
+        lifestylePace: 4,
+        interestsTop: ['run'],
+      }),
+    });
+    const cand = canon('c', {
+      rankingSignals: baseSignals({
+        dailyRhythm: 'x',
+        autonomyTogetherness: 'y',
+        conflictStyle: 4,
+        lifestylePace: 4,
+        interestsTop: ['run'],
+      }),
+    });
+    const r = rankHolyGrailCandidatesAfterHardFilter({
+      searcher,
+      candidates: [cand],
+      evaluatedAt: AT,
+    });
+    expect(r.rankedCandidates[0].rankBreakdown).toHaveLength(5);
+    expect(r.rankedCandidates[0].rankScore).toBe(100);
   });
 });

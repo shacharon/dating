@@ -71,6 +71,40 @@ describe('holy-grail-structured-db-json / DB row → mapping input', () => {
     expect(input.extractionArrays?.interests_self).toEqual(['yoga']);
     expect(input.structuredFacts?.genderIdentity).toBe(GenderIdentity.NON_BINARY);
     expect(input.structuredPreferences?.acceptedPartnerSmoking).toBe('ANY');
+    expect(input.rankingSignals).toEqual({
+      dailyRhythm: null,
+      autonomyTogetherness: null,
+      conflictStyle: null,
+      lifestylePace: null,
+      interestsTop: [],
+    });
+  });
+
+  it('builds rankingSignals from self snapshot HG columns only (DB runtime)', () => {
+    const input = buildHolyGrailProfileMappingInputFromDbRow({
+      profileId: 'p2',
+      extractionV2: {
+        interests_self: ['fallback'],
+        interests: [],
+        lifestyleTraits: [],
+      },
+      holyGrailStructuredFacts: null,
+      holyGrailStructuredPreferences: null,
+      signalSelf: {
+        lifestylePace: 6,
+        conflictStyle: 5,
+        hgRankingDailyRhythm: 'early_bird',
+        hgRankingAutonomyTogetherness: 'solo_recovery_time_matters',
+        hgRankingInterestsTop: ['hiking', 'books'],
+      },
+    });
+    expect(input.rankingSignals).toEqual({
+      dailyRhythm: 'early_bird',
+      autonomyTogetherness: 'solo_recovery_time_matters',
+      conflictStyle: 5,
+      lifestylePace: 6,
+      interestsTop: ['hiking', 'books'],
+    });
   });
 
   it('hard filter blocks candidate when persisted prefs/facts disagree (full pipeline)', () => {

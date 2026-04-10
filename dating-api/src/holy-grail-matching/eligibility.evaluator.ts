@@ -13,6 +13,7 @@ import {
   SmokingFrequencySelf,
   WantsChildrenSelf,
 } from '../canonical/matching-canonical.types';
+import { ageWholeYearsUtcFromYmd } from './holy-grail-dob-ymd';
 import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from './holy-grail-dimensions';
 
 /**
@@ -40,7 +41,8 @@ export interface HolyGrailDirectionalEvaluationResult {
   readonly eligibilityFlags: HolyGrailEligibilityFlags;
 }
 
-function mergeEffectivePreferences(searcher: MatchingCanonicalModel): MatchingPreferences {
+/** Stored preferences overlaid with `searchOverrides` (same rules as Layer 3 effective prefs). */
+export function mergeEffectiveMatchingPreferences(searcher: MatchingCanonicalModel): MatchingPreferences {
   const p = searcher.preferences;
   const o = searcher.searchOverrides;
   const e: MatchingPreferences = { ...p };
@@ -54,6 +56,7 @@ function mergeEffectivePreferences(searcher: MatchingCanonicalModel): MatchingPr
   if (o.partnerHasChildren !== undefined) e.partnerHasChildren = o.partnerHasChildren;
   if (o.acceptedPartnerReligions !== undefined) e.acceptedPartnerReligions = o.acceptedPartnerReligions;
   if (o.maxDistanceKm !== undefined) e.maxDistanceKm = o.maxDistanceKm;
+  if (o.similarityPreference !== undefined) e.similarityPreference = o.similarityPreference;
   return e;
 }
 
@@ -61,19 +64,22 @@ function d(status: HolyGrailHardEligibilityStatus, reasonCode: string): HolyGrai
   return { status, reasonCode };
 }
 
-function ageWholeYearsUtc(dateOfBirthYmd: string, ref: Date): number | undefined {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirthYmd);
-  if (!m) return undefined;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const ty = ref.getUTCFullYear();
-  const tm = ref.getUTCMonth();
-  const td = ref.getUTCDate();
-  let age = ty - y;
-  if (tm < mo - 1 || (tm === mo - 1 && td < d)) age -= 1;
-  return age;
+/**
+ * Deterministic ~50/50 split for partial SOFT_PASS (Holy Grail `NONE_ONLY × RARE` alcohol).
+ * Stable for a given ordered pair `(searcherProfileId, counterpartyProfileId)`.
+ */
+export function holyGrailDeterministicHalfPass(
+  salt: string,
+  searcherProfileId: string,
+  counterpartyProfileId: string,
+): boolean {
+  const s = `${salt}|${searcherProfileId}|${counterpartyProfileId}`;
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0) % 2 === 0;
 }
+
+const ALCOHOL_NONE_ONLY_RARE_SOFT_SALT = 'ALCOHOL_NONE_ONLY_RARE';
 
 function educationRankFact(e: EducationLevelSelf | undefined): number | undefined {
   if (e === undefined) return undefined;
@@ -128,7 +134,7 @@ function evalAge(
   if (dob === undefined) {
     return d('FAIL', 'PARTNER_DOB_MISSING');
   }
-  const age = ageWholeYearsUtc(dob, evaluatedAt);
+  const age = ageWholeYearsUtcFromYmd(dob, evaluatedAt);
   if (age === undefined) {
     return d('FAIL', 'PARTNER_DOB_INVALID');
   }
@@ -231,7 +237,12 @@ function alcoholMatrix(
   return 'FAIL';
 }
 
-function evalAlcohol(pref: MatchingPreferences, facts: MatchingFacts): HolyGrailDimensionEvaluation {
+function evalAlcohol(
+  pref: MatchingPreferences,
+  facts: MatchingFacts,
+  searcherProfileId: string,
+  counterpartyProfileId: string,
+): HolyGrailDimensionEvaluation {
   const row = pref.acceptedPartnerAlcohol;
   if (row === undefined || row === AcceptedPartnerAlcohol.ANY) {
     return d('SKIPPED', 'ALCOHOL_PREF_INACTIVE');
@@ -244,7 +255,17 @@ function evalAlcohol(pref: MatchingPreferences, facts: MatchingFacts): HolyGrail
   if (cell === 'WITHHELD') {
     return d('FAIL', 'PARTNER_ALCOHOL_WITHHELD');
   }
-  return cell === 'PASS' ? d('PASS', 'ALCOHOL_MATRIX_PASS') : d('FAIL', 'ALCOHOL_MATRIX_FAIL');
+  if (cell === 'PASS') {
+    return d('PASS', 'ALCOHOL_MATRIX_PASS');
+  }
+  if (
+    row === AcceptedPartnerAlcohol.NONE_ONLY &&
+    col === AlcoholUseSelf.RARE &&
+    holyGrailDeterministicHalfPass(ALCOHOL_NONE_ONLY_RARE_SOFT_SALT, searcherProfileId, counterpartyProfileId)
+  ) {
+    return d('SOFT_PASS', 'ALCOHOL_NONE_ONLY_RARE_SOFT');
+  }
+  return d('FAIL', 'ALCOHOL_MATRIX_FAIL');
 }
 
 function evalPartnerWantsChildren(
@@ -317,6 +338,8 @@ function evaluateAll(
   pref: MatchingPreferences,
   counterpartyFacts: MatchingFacts,
   evaluatedAt: Date,
+  searcherProfileId: string,
+  counterpartyProfileId: string,
 ): Record<HolyGrailDimensionKey, HolyGrailDimensionEvaluation> {
   const out = {} as Record<HolyGrailDimensionKey, HolyGrailDimensionEvaluation>;
   out.GENDER = evalGender(pref, counterpartyFacts);
@@ -324,7 +347,7 @@ function evaluateAll(
   out.RELIGION = evalReligion(pref, counterpartyFacts);
   out.EDUCATION = evalEducation(pref, counterpartyFacts);
   out.SMOKING = evalSmoking(pref, counterpartyFacts);
-  out.ALCOHOL = evalAlcohol(pref, counterpartyFacts);
+  out.ALCOHOL = evalAlcohol(pref, counterpartyFacts, searcherProfileId, counterpartyProfileId);
   out.PARTNER_HAS_CHILDREN = evalPartnerHasChildren(pref, counterpartyFacts);
   out.PARTNER_WANTS_CHILDREN = evalPartnerWantsChildren(pref, counterpartyFacts);
   out.PROXIMITY = evalProximity(pref);
@@ -352,7 +375,13 @@ function eligibilityFlagsFromDimensions(
  * Layer 3 — Hard eligibility: searcher effective preferences vs counterparty facts.
  * Effective prefs = per-field override from `searchOverrides` when set, else stored `preferences`.
  * No widening; absent preference → SKIPPED. Explicit ANY / NO_REQUIREMENT → SKIPPED.
- * `SOFT_PASS` (currently only MUST_WANT × partner UNSURE on children) allows eligibility and sets `eligibilityFlags.children_unsure`.
+ *
+ * **SOFT_PASS (locked policy, HG only):**
+ * - `PARTNER_WANTS_CHILDREN`: `MUST_WANT` × partner `UNSURE` → SOFT_PASS (`children_unsure` flag).
+ *   `MUST_NOT_WANT` × partner `UNSURE` → FAIL (no softening).
+ * - `ALCOHOL`: `NONE_ONLY` × partner `RARE` → SOFT_PASS for a deterministic ~50% subset of ordered pairs
+ *   (`holyGrailDeterministicHalfPass`); otherwise FAIL. No other alcohol SOFT_PASS.
+ * - `AGE` and `RELIGION`: PASS / FAIL / SKIPPED only — no SOFT_PASS.
  */
 export function evaluateHolyGrailDirectional(args: {
   searcher: MatchingCanonicalModel;
@@ -360,8 +389,14 @@ export function evaluateHolyGrailDirectional(args: {
   evaluatedAt?: Date;
 }): HolyGrailDirectionalEvaluationResult {
   const evaluatedAt = args.evaluatedAt ?? new Date();
-  const pref = mergeEffectivePreferences(args.searcher);
-  const dimensions = evaluateAll(pref, args.counterparty.facts, evaluatedAt);
+  const pref = mergeEffectiveMatchingPreferences(args.searcher);
+  const dimensions = evaluateAll(
+    pref,
+    args.counterparty.facts,
+    evaluatedAt,
+    args.searcher.profileId,
+    args.counterparty.profileId,
+  );
   return {
     dimensions,
     overallHardEligibility: overallFromDimensions(dimensions),

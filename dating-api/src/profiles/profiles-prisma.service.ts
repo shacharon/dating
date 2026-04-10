@@ -8,7 +8,14 @@ import { Prisma } from '@prisma/client';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
-import { sanitizeEnrichmentSignalsV1ForPersist, wrapEnrichmentV1 } from '../evaluate/enrichment-signals';
+import {
+  sanitizeEnrichmentSignalsV1ForPersist,
+  wrapEnrichmentV1,
+  type EnrichmentSignalsV1,
+} from '../evaluate/enrichment-signals';
+import type { MatchingRankingSignalsSnapshot } from '../canonical/matching-canonical.types';
+import { HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT } from '../holy-grail-matching/holy-grail-ranking-signal-self.select';
+import { composeHolyGrailRankingSignalsForPersist } from '../holy-grail-matching/holy-grail-ranking-signals-from-db';
 import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 
 interface UserProfileRow {
@@ -20,6 +27,13 @@ interface UserProfileRow {
   createdAt: Date;
   updatedAt: Date;
   evaluationRaw?: { evaluation: unknown } | null;
+  signalSnapshots?: {
+    lifestylePace: number | null;
+    conflictStyle: number | null;
+    hgRankingDailyRhythm: string | null;
+    hgRankingAutonomyTogetherness: string | null;
+    hgRankingInterestsTop: string[];
+  }[];
   evaluationMeta?: {
     evaluatedAt: Date | null;
     promptVersion: string | null;
@@ -72,6 +86,9 @@ type SignalSnapshotRow = {
   conflictStyle: number | null;
   noveltyVsRoutine: number | null;
   structureChaosTolerance: number | null;
+  hgRankingDailyRhythm: string | null;
+  hgRankingAutonomyTogetherness: string | null;
+  hgRankingInterestsTop: string[];
 };
 
 @Injectable()
@@ -141,7 +158,6 @@ export class ProfilesPrismaService {
       profileId: id,
       logDropped: true,
     });
-    const evaluationJson = evaluation as unknown as Prisma.InputJsonValue;
     const evaluatedAt = payload.evaluatedAt ? new Date(payload.evaluatedAt) : null;
     const promptVersion = payload.promptVersion || null;
     const policyVersion = payload.policyVersion || null;
@@ -190,13 +206,30 @@ export class ProfilesPrismaService {
         where: { profileId: id },
       });
 
+      const extractionRow = await tx.profileExtractionV2.findUnique({
+        where: { profileId: id },
+        select: { interests_self: true },
+      });
+      const selfLp =
+        selfSignals && typeof selfSignals.lifestylePace === 'number' ? selfSignals.lifestylePace : null;
+      const selfCs =
+        selfSignals && typeof selfSignals.conflictStyle === 'number' ? selfSignals.conflictStyle : null;
+      const composedRanking = composeHolyGrailRankingSignalsForPersist({
+        evaluation,
+        interestsSelf: extractionRow?.interests_self,
+        signalSelfNumerics: { lifestylePace: selfLp, conflictStyle: selfCs },
+      });
+
       await tx.profileSignalSnapshot.createMany({
         data: [
-          this.toSignalSnapshotRow(id, 'self', selfSignals),
-          this.toSignalSnapshotRow(id, 'partner', partnerSignals),
-          this.toSignalSnapshotRow(id, 'relationship', relationshipSignals),
+          this.toSignalSnapshotRow(id, 'self', selfSignals, composedRanking),
+          this.toSignalSnapshotRow(id, 'partner', partnerSignals, null),
+          this.toSignalSnapshotRow(id, 'relationship', relationshipSignals, null),
         ],
       });
+
+      const evaluationForPersist = this.stripHgRankingEnrichmentFromEvaluationBeforePersist(evaluation);
+      const evaluationJson = evaluationForPersist as unknown as Prisma.InputJsonValue;
 
       await tx.profileEvaluationRaw.upsert({
         where: { profileId: id },
@@ -225,6 +258,7 @@ export class ProfilesPrismaService {
     profileId: string,
     domain: 'self' | 'partner' | 'relationship',
     signals: DomainSignals,
+    composedRanking: MatchingRankingSignalsSnapshot | null,
   ): SignalSnapshotRow {
     const row: SignalSnapshotRow = {
       profileId,
@@ -247,15 +281,31 @@ export class ProfilesPrismaService {
       conflictStyle: null,
       noveltyVsRoutine: null,
       structureChaosTolerance: null,
+      hgRankingDailyRhythm: null,
+      hgRankingAutonomyTogetherness: null,
+      hgRankingInterestsTop: [],
     };
 
-    if (!signals) return row;
+    if (!signals) {
+      if (domain === 'self' && composedRanking) {
+        row.hgRankingDailyRhythm = composedRanking.dailyRhythm;
+        row.hgRankingAutonomyTogetherness = composedRanking.autonomyTogetherness;
+        row.hgRankingInterestsTop = [...composedRanking.interestsTop];
+      }
+      return row;
+    }
 
     for (const key of SIGNAL_KEYS) {
       if (Object.prototype.hasOwnProperty.call(signals, key)) {
         const value = signals[key];
         row[key] = typeof value === 'number' ? value : null;
       }
+    }
+
+    if (domain === 'self' && composedRanking) {
+      row.hgRankingDailyRhythm = composedRanking.dailyRhythm;
+      row.hgRankingAutonomyTogetherness = composedRanking.autonomyTogetherness;
+      row.hgRankingInterestsTop = [...composedRanking.interestsTop];
     }
 
     return row;
@@ -269,6 +319,10 @@ export class ProfilesPrismaService {
           select: {
             evaluation: true,
           },
+        },
+        signalSnapshots: {
+          where: { domain: 'self' },
+          select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
         },
         evaluation: {
           select: {
@@ -292,6 +346,7 @@ export class ProfilesPrismaService {
       evaluationRaw: row.evaluationRaw
         ? { evaluation: row.evaluationRaw.evaluation }
         : null,
+      signalSnapshots: row.signalSnapshots,
       evaluationMeta: row.evaluation
         ? {
             evaluatedAt: row.evaluation.evaluatedAt,
@@ -363,6 +418,8 @@ export class ProfilesPrismaService {
       logDropped: false,
     });
 
+    evaluation = this.applySelfSnapshotHgRankingToEvaluationPayload(evaluation, row.signalSnapshots?.[0]);
+
     return {
       id: row.id,
       name: row.name,
@@ -382,5 +439,57 @@ export class ProfilesPrismaService {
         ((row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined)?.self
           ?.signals as Record<string, number | null> | undefined) ?? undefined,
     };
+  }
+
+  private static readonly _HG_RAW_JSON_OMIT_KEYS = [
+    'dailyRhythm',
+    'autonomyTogethernessDepth',
+    'interestsTop3',
+    'autonomyTogetherness',
+    'interestsTop',
+  ] as const;
+
+  private stripHgRankingEnrichmentFromEvaluationBeforePersist(evaluation: EvaluateBatchResult): EvaluateBatchResult {
+    const c = JSON.parse(JSON.stringify(evaluation)) as EvaluateBatchResult;
+    const en = c.enrichment;
+    if (!en || en.version !== 'v1' || !en.signals || typeof en.signals !== 'object') return c;
+    const sig = en.signals as unknown as Record<string, unknown>;
+    for (const k of ProfilesPrismaService._HG_RAW_JSON_OMIT_KEYS) {
+      delete sig[k];
+    }
+    return c;
+  }
+
+  private applySelfSnapshotHgRankingToEvaluationPayload(
+    evaluation: EvaluateBatchResult,
+    selfSnap:
+      | {
+          hgRankingDailyRhythm: string | null;
+          hgRankingAutonomyTogetherness: string | null;
+          hgRankingInterestsTop: string[];
+        }
+      | undefined,
+  ): EvaluateBatchResult {
+    if (!selfSnap) return evaluation;
+    const en = evaluation.enrichment;
+    if (!en || en.version !== 'v1') return evaluation;
+    const c = JSON.parse(JSON.stringify(evaluation)) as EvaluateBatchResult;
+    const signals = JSON.parse(JSON.stringify(c.enrichment!.signals)) as EnrichmentSignalsV1;
+    const dr = selfSnap.hgRankingDailyRhythm;
+    if (typeof dr === 'string' && dr.trim() !== '') {
+      signals.dailyRhythm = dr.trim() as EnrichmentSignalsV1['dailyRhythm'];
+    }
+    const at = selfSnap.hgRankingAutonomyTogetherness;
+    if (typeof at === 'string' && at.trim() !== '') {
+      signals.autonomyTogethernessDepth = at.trim() as EnrichmentSignalsV1['autonomyTogethernessDepth'];
+    }
+    const top = selfSnap.hgRankingInterestsTop;
+    if (Array.isArray(top) && top.length > 0) {
+      signals.interestsTop3 = top
+        .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+        .map((x) => x.trim());
+    }
+    c.enrichment = { version: 'v1', signals };
+    return c;
   }
 }

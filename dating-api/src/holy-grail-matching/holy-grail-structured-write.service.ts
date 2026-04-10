@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { ZodError } from 'zod';
 import { PrismaService } from '../prisma/prisma.service';
+import { parseHolyGrailStructuredPreferencesPatchBody } from './retrieval/holy-grail-preferences-patch.schema';
 import {
   HolyGrailStructuredWriteError,
   mergeHolyGrailStructuredFactsPatch,
@@ -13,7 +15,8 @@ import {
  */
 export interface HolyGrailStructuredWriteRequest {
   readonly structuredFactsPatch?: Record<string, unknown>;
-  readonly structuredPreferencesPatch?: Record<string, unknown>;
+  /** Parsed with Zod (`record<string, unknown>`) then merge-validated; omit to leave column unchanged. */
+  readonly structuredPreferencesPatch?: unknown;
 }
 
 @Injectable()
@@ -54,12 +57,16 @@ export class HolyGrailStructuredWriteService {
         );
       }
       if (hasPrefs) {
+        const prefsPatch = parseHolyGrailStructuredPreferencesPatchBody(request.structuredPreferencesPatch);
         data.holyGrailStructuredPreferences = mergeHolyGrailStructuredPreferencesPatch(
           row.holyGrailStructuredPreferences,
-          request.structuredPreferencesPatch,
+          prefsPatch,
         );
       }
     } catch (e) {
+      if (e instanceof ZodError) {
+        throw new BadRequestException(e.message);
+      }
       if (e instanceof HolyGrailStructuredWriteError) {
         throw new BadRequestException(e.message);
       }

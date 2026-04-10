@@ -1,4 +1,9 @@
+import Link from 'next/link';
 import { MatchCard } from './match-card';
+import {
+  HIDE_CHILDREN_UNSURE_QUERY_PARAM,
+  parseHideChildrenUnsure,
+} from '../_lib/children-unsure';
 import {
   mapListItemToCard,
   sortMatchesByScoreDesc,
@@ -7,8 +12,9 @@ import {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-async function fetchMatchList(): Promise<MatchListItemApi[]> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/matches`, {
+async function fetchMatchList(hideChildrenUnsure: boolean): Promise<MatchListItemApi[]> {
+  const qs = hideChildrenUnsure ? `?${HIDE_CHILDREN_UNSURE_QUERY_PARAM}=true` : '';
+  const res = await fetch(`${API_BASE_URL}/api/v1/matches${qs}`, {
     cache: 'no-store',
   });
 
@@ -24,8 +30,17 @@ async function fetchMatchList(): Promise<MatchListItemApi[]> {
   return data.items;
 }
 
-export default async function MatchesPage() {
-  const items = await fetchMatchList();
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function MatchesPage({ searchParams }: PageProps) {
+  const sp = (await searchParams) ?? {};
+  const rawHide = sp[HIDE_CHILDREN_UNSURE_QUERY_PARAM];
+  const hideChildrenUnsure = parseHideChildrenUnsure(
+    typeof rawHide === 'string' ? rawHide : undefined,
+  );
+  const items = await fetchMatchList(hideChildrenUnsure);
   const cards = sortMatchesByScoreDesc(items.map(mapListItemToCard));
 
   return (
@@ -36,8 +51,31 @@ export default async function MatchesPage() {
             Matches
           </h1>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Sorted by compatibility score, highest first. Open a match for full detail.
+            Sorted by ranking score (slight penalty when kids intent is unsure). Open a match for full
+            detail.
           </p>
+          <nav className="mt-4 flex flex-wrap gap-2 text-sm" aria-label="Match filters">
+            <Link
+              href="/dating/matches"
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                !hideChildrenUnsure
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'border border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              Show all
+            </Link>
+            <Link
+              href={`/dating/matches?${HIDE_CHILDREN_UNSURE_QUERY_PARAM}=true`}
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                hideChildrenUnsure
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'border border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              Hide kids-unsure pairs
+            </Link>
+          </nav>
         </header>
 
         {cards.length === 0 ? (

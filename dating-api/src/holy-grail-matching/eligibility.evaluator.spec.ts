@@ -1,6 +1,8 @@
 import {
+  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
   AcceptedPartnerSmoking,
+  AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
   GenderIdentity,
@@ -14,7 +16,7 @@ import {
 } from '../canonical/matching-canonical.types';
 import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
 import { HOLY_GRAIL_DIMENSION_KEYS } from './holy-grail-dimensions';
-import { evaluateHolyGrailDirectional } from './eligibility.evaluator';
+import { evaluateHolyGrailDirectional, holyGrailDeterministicHalfPass } from './eligibility.evaluator';
 
 const AT = new Date('2020-06-15T12:00:00.000Z');
 
@@ -190,6 +192,36 @@ describe('evaluateHolyGrailDirectional', () => {
     expect(r.dimensions.PARTNER_WANTS_CHILDREN.reasonCode).toBe('WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT');
     expect(r.overallHardEligibility).toBe('PASS');
     expect(r.eligibilityFlags.children_unsure).toBe(true);
+  });
+
+  it('NONE_ONLY alcohol + partner RARE => SOFT_PASS or FAIL from deterministic half-pass', () => {
+    const prefs = {
+      preferences: { acceptedPartnerAlcohol: AcceptedPartnerAlcohol.NONE_ONLY },
+    };
+    const facts = { facts: { alcoholUse: AlcoholUseSelf.RARE } };
+    let sawSoft = false;
+    let sawFail = false;
+    for (let i = 0; i < 80; i++) {
+      const sid = `s${i}`;
+      const r = evaluateHolyGrailDirectional({
+        searcher: model(sid, prefs),
+        counterparty: model('c', facts),
+        evaluatedAt: AT,
+      });
+      expect(['SOFT_PASS', 'FAIL']).toContain(r.dimensions.ALCOHOL.status);
+      if (r.dimensions.ALCOHOL.status === 'SOFT_PASS') {
+        expect(r.dimensions.ALCOHOL.reasonCode).toBe('ALCOHOL_NONE_ONLY_RARE_SOFT');
+        sawSoft = true;
+      } else {
+        expect(r.dimensions.ALCOHOL.reasonCode).toBe('ALCOHOL_MATRIX_FAIL');
+        sawFail = true;
+      }
+      expect(holyGrailDeterministicHalfPass('ALCOHOL_NONE_ONLY_RARE', sid, 'c')).toBe(
+        r.dimensions.ALCOHOL.status === 'SOFT_PASS',
+      );
+    }
+    expect(sawSoft).toBe(true);
+    expect(sawFail).toBe(true);
   });
 
   it('education floor active => PASS when partner meets rank', () => {

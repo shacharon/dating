@@ -218,6 +218,10 @@ export enum PartnerHasChildrenAcceptance {
   NO_REQUIREMENT = 'NO_REQUIREMENT',
 }
 
+/** Wire values for `MatchingPreferences.similarityPreference` (preference about partner sameness vs contrast). */
+export const SIMILARITY_PREFERENCE_VALUES = ['similar', 'different', 'balanced'] as const;
+export type SimilarityPreference = (typeof SIMILARITY_PREFERENCE_VALUES)[number];
+
 // ---------------------------------------------------------------------------
 // Layer 1 — Facts (user only; no filtering semantics)
 // ---------------------------------------------------------------------------
@@ -282,6 +286,11 @@ export interface MatchingPreferences {
    * Omit if distance is not a hard constraint.
    */
   maxDistanceKm?: number;
+  /**
+   * Preference for partner similarity vs difference (not a self fact).
+   * **Omit** when unset (sparse). **`null`** when explicitly stored as cleared/unknown wire shape.
+   */
+  similarityPreference?: SimilarityPreference | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -304,8 +313,40 @@ export interface MatchingSearchOverrides {
   partnerHasChildren?: PartnerHasChildrenAcceptance;
   acceptedPartnerReligions?: readonly ReligionSelf[];
   maxDistanceKm?: number;
+  similarityPreference?: SimilarityPreference | null;
   /** When set, overrides should not be applied after this instant (ISO 8601). */
   validUntil?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Post-eligibility ranking (optional sidecar; not read by HG hard filter / evaluator)
+// ---------------------------------------------------------------------------
+
+/**
+ * Five deterministic HG rank signals parsed from DB (enrichment + self signal snapshot + interests),
+ * plus optional **canonical** personality trait tags from allowlisted free-text extraction (`personality-traits-text.extract`),
+ * optional **lifestyle signal** tags v1+v2 allowlist (`lifestyle-signals-text.extract`),
+ * and optional **interest tags** v1 (`interest-tags-text.extract`: `music`, `film`).
+ * Used only for post-eligibility ranking — never for hard filters.
+ */
+export interface MatchingRankingSignalsSnapshot {
+  readonly dailyRhythm: string | null;
+  readonly autonomyTogetherness: string | null;
+  readonly conflictStyle: number | null;
+  readonly lifestylePace: number | null;
+  readonly interestsTop: readonly string[];
+  /** Traits grounded in `aboutMe` text (canonical ids). */
+  readonly personalityTraitsSelf?: readonly string[];
+  /** Traits grounded in `aboutPartner` text (canonical ids). */
+  readonly personalityTraitsPartner?: readonly string[];
+  /** Lifestyle signals (v1+v2 allowlist) from `aboutMe` (canonical ids). */
+  readonly lifestyleSignalsSelf?: readonly string[];
+  /** Lifestyle signals (v1+v2 allowlist) from `aboutPartner` (canonical ids). */
+  readonly lifestyleSignalsPartner?: readonly string[];
+  /** Interest tags v1 from `aboutMe` (`music` \| `film`). */
+  readonly interestTagsSelf?: readonly string[];
+  /** Interest tags v1 from `aboutPartner` (`music` \| `film`). */
+  readonly interestTagsPartner?: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -319,4 +360,6 @@ export interface MatchingCanonicalModel {
   preferences: MatchingPreferences;
   /** search_overrides — camelCase in TS; same conceptual layer. */
   searchOverrides: MatchingSearchOverrides;
+  /** Optional; used only after HG PASS for ordering. Never affects eligibility. */
+  readonly rankingSignals?: MatchingRankingSignalsSnapshot;
 }

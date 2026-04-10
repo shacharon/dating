@@ -13,6 +13,7 @@ import type {
   ExerciseLevelSelf,
   GenderIdentity,
   LivingSituationSelf,
+  MatchingRankingSignalsSnapshot,
   MatchingSearchOverrides,
   MinimumPartnerEducation,
   PartnerHasChildrenAcceptance,
@@ -24,6 +25,7 @@ import type {
   SmokingFrequencySelf,
   WantsChildrenSelf,
   WorkStudySituationSelf,
+  SimilarityPreference,
 } from '../canonical/matching-canonical.types';
 
 /** Prisma `String[]` slices (or copies) allowed into the mapper — strings only. */
@@ -65,6 +67,7 @@ export interface HolyGrailStructuredPreferencesInput {
   readonly partnerHasChildren?: PartnerHasChildrenAcceptance;
   readonly acceptedPartnerReligions?: readonly ReligionSelf[];
   readonly maxDistanceKm?: number;
+  readonly similarityPreference?: SimilarityPreference | null;
 }
 
 export interface HolyGrailProfileMappingInput {
@@ -74,6 +77,11 @@ export interface HolyGrailProfileMappingInput {
   readonly structuredPreferences?: HolyGrailStructuredPreferencesInput;
   /** Validated subset of `MatchingSearchOverrides`; same field rules as preferences where shared. */
   readonly searchOverrides?: Readonly<MatchingSearchOverrides>;
+  /**
+   * Optional ranking sidecar (DB-derived). Ignored by `mapProfileSourceToMatchingCanonical` for facts/prefs;
+   * copied onto `MatchingCanonicalModel.rankingSignals` only. Never affects HG eligibility.
+   */
+  readonly rankingSignals?: MatchingRankingSignalsSnapshot;
 }
 
 /** @deprecated Use `HolyGrailProfileMappingInput`; kept for short-term grep compatibility. */

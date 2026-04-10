@@ -13,8 +13,9 @@ export interface PairwiseHardEligibilityFilterResult {
 }
 
 /**
- * Pairwise hard eligibility: keep candidates where neither direction has a FAIL
- * (equivalent to no `NO_MATCH` after adapter). Does not use pair-decision / MUTUAL_MATCH.
+ * Pairwise hard eligibility: keep candidates where neither direction has a dimension `FAIL`
+ * (`PASS` and `SOFT_PASS` both count as surviving). Policy: `docs/HOLY_GRAIL_MATCHING.md` § “Locked Layer 3 policy”.
+ * Does not use pair-decision / MUTUAL_MATCH.
  */
 export function filterCandidatesByHardEligibility(args: {
   readonly searcher: MatchingCanonicalModel;

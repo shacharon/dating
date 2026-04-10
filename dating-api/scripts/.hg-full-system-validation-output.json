@@ -1,0 +1,1544 @@
+{
+  "meta": {
+    "evaluatedAtIso": "2026-04-10T16:02:32.247Z",
+    "pool": "same synthetic prefixes as hg-soft-pass-simulation",
+    "searchersLoaded": 5
+  },
+  "eligibility": {
+    "status": "OK",
+    "totalMutualPassPairsAcrossAllSearcherRuns": 120,
+    "totalDirectedCandidateSlotsConsidered": 120,
+    "canonicalMapFailures": 0,
+    "perSearcher": [
+      {
+        "searcherId": "synthetic-en-001",
+        "candidatesConsidered": 24,
+        "mutualPassSurvivors": 24,
+        "rankedCount": 24,
+        "debug": {
+          "inputTotal": 24,
+          "passedHardFilter": 24,
+          "failedHardFilter": 0,
+          "rankedCount": 24
+        }
+      },
+      {
+        "searcherId": "synthetic-en-002",
+        "candidatesConsidered": 24,
+        "mutualPassSurvivors": 24,
+        "rankedCount": 24,
+        "debug": {
+          "inputTotal": 24,
+          "passedHardFilter": 24,
+          "failedHardFilter": 0,
+          "rankedCount": 24
+        }
+      },
+      {
+        "searcherId": "synthetic-en-003",
+        "candidatesConsidered": 24,
+        "mutualPassSurvivors": 24,
+        "rankedCount": 24,
+        "debug": {
+          "inputTotal": 24,
+          "passedHardFilter": 24,
+          "failedHardFilter": 0,
+          "rankedCount": 24
+        }
+      },
+      {
+        "searcherId": "synthetic-en-004",
+        "candidatesConsidered": 24,
+        "mutualPassSurvivors": 24,
+        "rankedCount": 24,
+        "debug": {
+          "inputTotal": 24,
+          "passedHardFilter": 24,
+          "failedHardFilter": 0,
+          "rankedCount": 24
+        }
+      },
+      {
+        "searcherId": "synthetic-en-005",
+        "candidatesConsidered": 24,
+        "mutualPassSurvivors": 24,
+        "rankedCount": 24,
+        "debug": {
+          "inputTotal": 24,
+          "passedHardFilter": 24,
+          "failedHardFilter": 0,
+          "rankedCount": 24
+        }
+      }
+    ]
+  },
+  "ranking": {
+    "totalRankedRows": 120,
+    "tiePctAmongRankedScores": 0,
+    "scoreHistogram": {
+      "0_10": 0,
+      "10_25": 0,
+      "25_50": 45,
+      "50_75": 71,
+      "75_90": 4,
+      "90_100": 0,
+      "100_plus": 0
+    },
+    "scoreMin": 38.320482,
+    "scoreMax": 84.380977,
+    "scoreMean": 54.424132,
+    "top10VsLexicographicOrder": {
+      "searcherId": "synthetic-en-001",
+      "survivorCount": 24,
+      "top10ByRank": [
+        "synthetic-en-021",
+        "synthetic-en-006",
+        "synthetic-en-004",
+        "synthetic-en-017",
+        "synthetic-en-008",
+        "synthetic-en-020",
+        "synthetic-en-019",
+        "synthetic-en-018",
+        "synthetic-en-024",
+        "synthetic-en-016"
+      ],
+      "top10ByLexicographicId": [
+        "synthetic-en-002",
+        "synthetic-en-003",
+        "synthetic-en-004",
+        "synthetic-en-005",
+        "synthetic-en-006",
+        "synthetic-en-007",
+        "synthetic-en-008",
+        "synthetic-en-009",
+        "synthetic-en-010",
+        "synthetic-en-011"
+      ],
+      "positionMismatchesVsLexTop10": 9,
+      "setDifferenceCountTop10": 7
+    },
+    "deterministicSpreadRows": 0,
+    "deterministicSpreadPctOfRankedRows": 0
+  },
+  "signal_quality": {
+    "profileObservations": 125,
+    "countsAtLeastOne": {
+      "hasDaily": 125,
+      "hasAuto": 125,
+      "hasConflict": 125,
+      "hasPace": 125,
+      "hasInterests": 125,
+      "anySignal": 125
+    },
+    "pctAnyRankingSignal": 100,
+    "pctAtLeastOne": {
+      "dailyRhythm": 100,
+      "autonomyTogetherness": 100,
+      "conflictStyle": 100,
+      "lifestylePace": 100,
+      "interestsTop": 100
+    }
+  },
+  "tenMatchesFullBreakdown": [
+    {
+      "rank": 1,
+      "candidateId": "synthetic-en-021",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 79.540221,
+      "rankReasons": [
+        "hg_rank_total:79.540221",
+        "dailyRhythm:+17(dailyRhythm:match(homebody))",
+        "autonomyTogetherness:+17(autonomyTogetherness:match(independence_with_space))",
+        "conflictStyle:+18.04(conflictStyle:closer_better(gap=1.80))",
+        "lifestylePace:+16.5(lifestylePace:closer_better(gap=2.50))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 17,
+          "note": "dailyRhythm:match(homebody)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 17,
+          "note": "autonomyTogetherness:match(independence_with_space)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 18.04,
+          "note": "conflictStyle:closer_better(gap=1.80)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 16.5,
+          "note": "lifestylePace:closer_better(gap=2.50)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "homebody",
+        "autonomyTogetherness": "independence_with_space",
+        "conflictStyle": 5.3,
+        "lifestylePace": 5.9,
+        "interestsTop": [
+          "interest_21",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 2,
+      "candidateId": "synthetic-en-006",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 72.79027,
+      "rankReasons": [
+        "hg_rank_total:72.79027",
+        "dailyRhythm:+2.55(dailyRhythm:mismatch_partial(homebody|slow_mornings))",
+        "autonomyTogetherness:+17(autonomyTogetherness:match(independence_with_space))",
+        "conflictStyle:+20.68(conflictStyle:closer_better(gap=0.60))",
+        "lifestylePace:+21.56(lifestylePace:closer_better(gap=0.20))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 2.55,
+          "note": "dailyRhythm:mismatch_partial(homebody|slow_mornings)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 17,
+          "note": "autonomyTogetherness:match(independence_with_space)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 20.679999999999996,
+          "note": "conflictStyle:closer_better(gap=0.60)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 21.560000000000002,
+          "note": "lifestylePace:closer_better(gap=0.20)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "slow_mornings",
+        "autonomyTogetherness": "independence_with_space",
+        "conflictStyle": 7.7,
+        "lifestylePace": 8.6,
+        "interestsTop": [
+          "interest_6",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 3,
+      "candidateId": "synthetic-en-004",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 72.570164,
+      "rankReasons": [
+        "hg_rank_total:72.570164",
+        "dailyRhythm:+17(dailyRhythm:match(homebody))",
+        "autonomyTogetherness:+2.55(autonomyTogetherness:mismatch_partial(independence_with_space|closeness_individuality))",
+        "conflictStyle:+21.78(conflictStyle:closer_better(gap=0.10))",
+        "lifestylePace:+20.24(lifestylePace:closer_better(gap=0.80))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 17,
+          "note": "dailyRhythm:match(homebody)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 2.55,
+          "note": "autonomyTogetherness:mismatch_partial(independence_with_space|closeness_individuality)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 21.779999999999998,
+          "note": "conflictStyle:closer_better(gap=0.10)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 20.24,
+          "note": "lifestylePace:closer_better(gap=0.80)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "homebody",
+        "autonomyTogetherness": "closeness_individuality",
+        "conflictStyle": 7.2,
+        "lifestylePace": 7.6,
+        "interestsTop": [
+          "interest_4",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 4,
+      "candidateId": "synthetic-en-017",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 70.150152,
+      "rankReasons": [
+        "hg_rank_total:70.150152",
+        "dailyRhythm:+17(dailyRhythm:match(homebody))",
+        "autonomyTogetherness:+2.55(autonomyTogetherness:mismatch_partial(independence_with_space|interdependence))",
+        "conflictStyle:+18.92(conflictStyle:closer_better(gap=1.40))",
+        "lifestylePace:+20.68(lifestylePace:closer_better(gap=0.60))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 17,
+          "note": "dailyRhythm:match(homebody)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 2.55,
+          "note": "autonomyTogetherness:mismatch_partial(independence_with_space|interdependence)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 18.92,
+          "note": "conflictStyle:closer_better(gap=1.40)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 20.679999999999996,
+          "note": "lifestylePace:closer_better(gap=0.60)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "homebody",
+        "autonomyTogetherness": "interdependence",
+        "conflictStyle": 5.7,
+        "lifestylePace": 7.8,
+        "interestsTop": [
+          "interest_17",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 5,
+      "candidateId": "synthetic-en-008",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 68.390576,
+      "rankReasons": [
+        "hg_rank_total:68.390576",
+        "dailyRhythm:+2.55(dailyRhythm:mismatch_partial(homebody|startup_grind))",
+        "autonomyTogetherness:+17(autonomyTogetherness:match(independence_with_space))",
+        "conflictStyle:+20.02(conflictStyle:closer_better(gap=0.90))",
+        "lifestylePace:+17.82(lifestylePace:closer_better(gap=1.90))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 2.55,
+          "note": "dailyRhythm:mismatch_partial(homebody|startup_grind)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 17,
+          "note": "autonomyTogetherness:match(independence_with_space)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 20.020000000000003,
+          "note": "conflictStyle:closer_better(gap=0.90)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 17.82,
+          "note": "lifestylePace:closer_better(gap=1.90)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "startup_grind",
+        "autonomyTogetherness": "independence_with_space",
+        "conflictStyle": 6.2,
+        "lifestylePace": 6.5,
+        "interestsTop": [
+          "interest_8",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 6,
+      "candidateId": "synthetic-en-020",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 68.390254,
+      "rankReasons": [
+        "hg_rank_total:68.390254",
+        "dailyRhythm:+2.55(dailyRhythm:mismatch_partial(homebody|stable_nine_to_five))",
+        "autonomyTogetherness:+17(autonomyTogetherness:match(independence_with_space))",
+        "conflictStyle:+21.34(conflictStyle:closer_better(gap=0.30))",
+        "lifestylePace:+16.5(lifestylePace:closer_better(gap=2.50))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 2.55,
+          "note": "dailyRhythm:mismatch_partial(homebody|stable_nine_to_five)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 17,
+          "note": "autonomyTogetherness:match(independence_with_space)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 21.34,
+          "note": "conflictStyle:closer_better(gap=0.30)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 16.5,
+          "note": "lifestylePace:closer_better(gap=2.50)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "stable_nine_to_five",
+        "autonomyTogetherness": "independence_with_space",
+        "conflictStyle": 7.4,
+        "lifestylePace": 5.9,
+        "interestsTop": [
+          "interest_20",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 7,
+      "candidateId": "synthetic-en-019",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 68.170814,
+      "rankReasons": [
+        "hg_rank_total:68.170814",
+        "dailyRhythm:+17(dailyRhythm:match(homebody))",
+        "autonomyTogetherness:+2.55(autonomyTogetherness:mismatch_partial(independence_with_space|quality_over_quantity))",
+        "conflictStyle:+19.58(conflictStyle:closer_better(gap=1.10))",
+        "lifestylePace:+18.04(lifestylePace:closer_better(gap=1.80))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 17,
+          "note": "dailyRhythm:match(homebody)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 2.55,
+          "note": "autonomyTogetherness:mismatch_partial(independence_with_space|quality_over_quantity)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 19.580000000000002,
+          "note": "conflictStyle:closer_better(gap=1.10)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 18.04,
+          "note": "lifestylePace:closer_better(gap=1.80)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "homebody",
+        "autonomyTogetherness": "quality_over_quantity",
+        "conflictStyle": 6,
+        "lifestylePace": 6.6,
+        "interestsTop": [
+          "interest_19",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 8,
+      "candidateId": "synthetic-en-018",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 66.410621,
+      "rankReasons": [
+        "hg_rank_total:66.410621",
+        "dailyRhythm:+2.55(dailyRhythm:mismatch_partial(homebody|early_extreme))",
+        "autonomyTogetherness:+17(autonomyTogetherness:match(independence_with_space))",
+        "conflictStyle:+14.74(conflictStyle:closer_better(gap=3.30))",
+        "lifestylePace:+21.12(lifestylePace:closer_better(gap=0.40))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 2.55,
+          "note": "dailyRhythm:mismatch_partial(homebody|early_extreme)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 17,
+          "note": "autonomyTogetherness:match(independence_with_space)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 14.74,
+          "note": "conflictStyle:closer_better(gap=3.30)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 21.119999999999997,
+          "note": "lifestylePace:closer_better(gap=0.40)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "early_extreme",
+        "autonomyTogetherness": "independence_with_space",
+        "conflictStyle": 3.8,
+        "lifestylePace": 8,
+        "interestsTop": [
+          "interest_18",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 9,
+      "candidateId": "synthetic-en-024",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 59.81085,
+      "rankReasons": [
+        "hg_rank_total:59.81085",
+        "dailyRhythm:+17(dailyRhythm:match(homebody))",
+        "autonomyTogetherness:+2.55(autonomyTogetherness:mismatch_partial(independence_with_space|values_alone_time))",
+        "conflictStyle:+13.2(conflictStyle:closer_better(gap=4.00))",
+        "lifestylePace:+16.06(lifestylePace:closer_better(gap=2.70))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 17,
+          "note": "dailyRhythm:match(homebody)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 2.55,
+          "note": "autonomyTogetherness:mismatch_partial(independence_with_space|values_alone_time)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 13.2,
+          "note": "conflictStyle:closer_better(gap=4.00)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 16.06,
+          "note": "lifestylePace:closer_better(gap=2.70)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "homebody",
+        "autonomyTogetherness": "values_alone_time",
+        "conflictStyle": 3.1,
+        "lifestylePace": 5.7,
+        "interestsTop": [
+          "interest_24",
+          "hiking",
+          "music"
+        ]
+      }
+    },
+    {
+      "rank": 10,
+      "candidateId": "synthetic-en-016",
+      "hgSearcherToCandidate": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "hgCandidateToSearcher": {
+        "overall": "PASS",
+        "children_unsure": false,
+        "dimensions": {
+          "GENDER": {
+            "status": "SKIPPED",
+            "reasonCode": "GENDER_PREF_ABSENT"
+          },
+          "AGE": {
+            "status": "SKIPPED",
+            "reasonCode": "AGE_PREF_ABSENT"
+          },
+          "RELIGION": {
+            "status": "SKIPPED",
+            "reasonCode": "RELIGION_PREF_ABSENT"
+          },
+          "EDUCATION": {
+            "status": "SKIPPED",
+            "reasonCode": "EDUCATION_PREF_INACTIVE"
+          },
+          "SMOKING": {
+            "status": "SKIPPED",
+            "reasonCode": "SMOKING_PREF_INACTIVE"
+          },
+          "ALCOHOL": {
+            "status": "SKIPPED",
+            "reasonCode": "ALCOHOL_PREF_INACTIVE"
+          },
+          "PARTNER_HAS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "HAS_CHILDREN_PREF_INACTIVE"
+          },
+          "PARTNER_WANTS_CHILDREN": {
+            "status": "SKIPPED",
+            "reasonCode": "WANTS_CHILDREN_PREF_INACTIVE"
+          },
+          "PROXIMITY": {
+            "status": "SKIPPED",
+            "reasonCode": "DISTANCE_PREF_ABSENT"
+          }
+        }
+      },
+      "rankScore": 58.560519,
+      "rankReasons": [
+        "hg_rank_total:58.560519",
+        "dailyRhythm:+2.55(dailyRhythm:mismatch_partial(homebody|quiet_evenings))",
+        "autonomyTogetherness:+2.55(autonomyTogetherness:mismatch_partial(independence_with_space|enmeshment))",
+        "conflictStyle:+21.34(conflictStyle:closer_better(gap=0.30))",
+        "lifestylePace:+21.12(lifestylePace:closer_better(gap=0.40))",
+        "interestsTop:+11(interestsTop:jaccard(2/4))"
+      ],
+      "rankBreakdown": [
+        {
+          "signal": "dailyRhythm",
+          "weight": 17,
+          "points": 2.55,
+          "note": "dailyRhythm:mismatch_partial(homebody|quiet_evenings)"
+        },
+        {
+          "signal": "autonomyTogetherness",
+          "weight": 17,
+          "points": 2.55,
+          "note": "autonomyTogetherness:mismatch_partial(independence_with_space|enmeshment)"
+        },
+        {
+          "signal": "conflictStyle",
+          "weight": 22,
+          "points": 21.34,
+          "note": "conflictStyle:closer_better(gap=0.30)"
+        },
+        {
+          "signal": "lifestylePace",
+          "weight": 22,
+          "points": 21.119999999999997,
+          "note": "lifestylePace:closer_better(gap=0.40)"
+        },
+        {
+          "signal": "interestsTop",
+          "weight": 22,
+          "points": 11,
+          "note": "interestsTop:jaccard(2/4)"
+        }
+      ],
+      "candidateRankingSignals": {
+        "dailyRhythm": "quiet_evenings",
+        "autonomyTogetherness": "enmeshment",
+        "conflictStyle": 7.4,
+        "lifestylePace": 8,
+        "interestsTop": [
+          "interest_16",
+          "hiking",
+          "music"
+        ]
+      }
+    }
+  ]
+}

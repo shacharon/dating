@@ -17,7 +17,7 @@ model UserProfile {
   updatedAt         DateTime @updatedAt
   /// Sparse Holy Grail facts (enum strings). See `holy-grail-structured-db-json.ts` for key set.
   holyGrailStructuredFacts       Json?
-  /// Sparse Holy Grail preferences (enums, ints, string arrays). No maxDistanceKm in v1 JSON wire.
+  /// Sparse Holy Grail preferences (enums, ints, string arrays, optional similarityPreference: similar|different|balanced|null). No maxDistanceKm in v1 JSON wire.
   holyGrailStructuredPreferences Json?
   evaluation        ProfileEvaluation?
   evaluationRaw     ProfileEvaluationRaw?
@@ -70,6 +70,10 @@ model ProfileSignalSnapshot {
   conflictStyle            Float?
   noveltyVsRoutine         Float?
   structureChaosTolerance  Float?
+  /// Holy Grail five-signal ranking: daily rhythm label (see `holy-grail-ranking-signals-from-db.ts`).
+  hgRankingDailyRhythm            String?
+  hgRankingAutonomyTogetherness   String?
+  hgRankingInterestsTop           String[] @default([])
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -78,6 +82,21 @@ model ProfileSignalSnapshot {
   @@unique([profileId, domain])
   @@index([profileId])
   @@index([domain])
+}
+
+/// Persisted HG pair snapshot (`matchId` = lexicographic `aId__bId`). Written on match rebuild; list/detail read when policy version matches, else live eval.
+model MatchPairHgSnapshot {
+  matchId              String   @id @map("match_id")
+  childrenUnsure       Boolean? @map("children_unsure")
+  hgChildrenStatus     String?  @map("hg_children_status")
+  hgOverallStatus      String?  @map("hg_overall_status")
+  hgSoftPassCount      Int?     @map("hg_soft_pass_count")
+  hgRankPenaltyApplied Boolean? @map("hg_rank_penalty_applied")
+  hgPolicyVersion      String?  @map("hg_policy_version")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("match_pair_hg_snapshot")
 }
 
 model ProfileExtractionV2 {

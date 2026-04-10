@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { HolyGrailProfileMappingInput } from '../profile-sources.types';
 import type { HolyGrailProfileSourceRepository } from './holy-grail-profile-source.repository';
-import { buildHolyGrailProfileMappingInputFromDbRow } from './holy-grail-structured-db-json';
+import { buildHolyGrailProfileMappingInputFromRankingAwareDbRow } from './holy-grail-structured-db-json';
+import { HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT } from '../holy-grail-ranking-signal-self.select';
 
 const DEFAULT_CANDIDATE_POOL_LIMIT = 500;
 
@@ -19,15 +20,13 @@ export class PrismaHolyGrailProfileSourceRepository implements HolyGrailProfileS
   async getMappingInputByProfileId(profileId: string): Promise<HolyGrailProfileMappingInput | null> {
     const row = await this.prisma.userProfile.findUnique({
       where: { id: profileId },
-      include: { extractionV2: { select: EXTRACTION_SELECT } },
+      include: {
+        extractionV2: { select: EXTRACTION_SELECT },
+        signalSnapshots: { where: { domain: 'self' }, select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT },
+      },
     });
     if (!row) return null;
-    return buildHolyGrailProfileMappingInputFromDbRow({
-      profileId: row.id,
-      extractionV2: row.extractionV2,
-      holyGrailStructuredFacts: row.holyGrailStructuredFacts,
-      holyGrailStructuredPreferences: row.holyGrailStructuredPreferences,
-    });
+    return buildHolyGrailProfileMappingInputFromRankingAwareDbRow(row);
   }
 
   async listCandidateMappingInputs(args: {
@@ -39,15 +38,11 @@ export class PrismaHolyGrailProfileSourceRepository implements HolyGrailProfileS
       where: { id: { not: args.excludeProfileId } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       take: take === 0 ? 0 : take,
-      include: { extractionV2: { select: EXTRACTION_SELECT } },
+      include: {
+        extractionV2: { select: EXTRACTION_SELECT },
+        signalSnapshots: { where: { domain: 'self' }, select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT },
+      },
     });
-    return rows.map((row) =>
-      buildHolyGrailProfileMappingInputFromDbRow({
-        profileId: row.id,
-        extractionV2: row.extractionV2,
-        holyGrailStructuredFacts: row.holyGrailStructuredFacts,
-        holyGrailStructuredPreferences: row.holyGrailStructuredPreferences,
-      }),
-    );
+    return rows.map((row) => buildHolyGrailProfileMappingInputFromRankingAwareDbRow(row));
   }
 }

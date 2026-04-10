@@ -9,20 +9,20 @@ Design notes for the matching contract and how it relates to storage.
 | Canonical contract | **Done:** `dating-api/src/canonical/matching-canonical.types.ts` — source of truth. **Enum vocabularies** stay stable unless a deliberate contract revision; **`MatchingPreferences`** uses **optional** fields so absent prefs are representable (mapper + evaluator `SKIPPED`). |
 | Step 1 | **Done** — canonical types only; no engine in that file. |
 | Step 2 | **Locked** — taxonomy + MVP dimensions; see below. |
-| Step 3 | **Done (spec)** — enum-based dimension outcomes, compatibility tables, shared result enum documented below. **Code:** `MatchingDimensionResults` + dimension keys live in `holy-grail-matching/`; **`eligibility.evaluator.ts` not implemented yet** (throws). |
+| Step 3 | **Done (spec + code)** — enum-based dimension outcomes documented below; **implemented** in `dating-api/src/holy-grail-matching/eligibility.evaluator.ts` (PASS / FAIL / SKIPPED / SOFT_PASS). Locked SOFT_PASS rules: [Layer 3 locked policy](#locked-layer-3-policy-implementation-aligned). |
 | Step 4 | **Done** — Phase 1 rules + Phase 2 mapper (`profile-to-canonical.mapper.ts`, structured input only). |
-| Step 5 | **Partial** — package skeleton + mapper; **not done:** `eligibility.evaluator.ts` body, real-profile audit run. |
+| Step 5 | **Partial** — decision/audit + retrieval + post-filter ranking exist; **optional:** broader real-profile audit runs beyond current scripts. |
 | Database / Prisma | **Unchanged** — no migration/schema work until **after** steps 1–3 below; see roadmap. |
-| Scoring / ranking / dealbreaker engine | **Out of scope** — legacy engine untouched. |
+| Legacy scoring / dealbreaker / ranking engine | **Out of scope** — legacy `match-engine` untouched. HG **post-filter** ranking is separate (`holy-grail-candidate-ranking.ts`) and does not affect eligibility. |
 
 ### Roadmap — actual execution order (next work)
 
 1. ~~**Implement** `profile-to-canonical.mapper.ts`~~ **Done** — structured-input mapper per Step 4 Phase 1/2 (no raw text).  
-2. **Implement** `dating-api/src/holy-grail-matching/eligibility.evaluator.ts` per Step 3 (directional dimension results only).  
-3. **Run audit on real profiles** — use `buildHolyGrailEligibilityAuditV1` / `buildHolyGrailPairDecisionV1` after evaluator exists; callers must build `HolyGrailProfileMappingInput` from DB columns.  
+2. ~~**Implement** `dating-api/src/holy-grail-matching/eligibility.evaluator.ts`~~ **Done** — directional Layer 3 per Step 3 + [locked SOFT_PASS policy](#locked-layer-3-policy-implementation-aligned).  
+3. **Run / extend audits** — `buildHolyGrailEligibilityAuditV1`, `buildHolyGrailPairDecisionV1`, scripts such as `dating-api/scripts/hg-soft-pass-simulation.ts` (read-only pool stats); callers build `HolyGrailProfileMappingInput` from DB columns.  
 4. **Only later** — discuss and apply **DB / Prisma / persistence** for `structuredFacts` / preferences if desired.
 
-**End-to-end flow (target, once 2 is done):** LLM (existing) → load rows → **map** (structured DTO) → merge overrides → **evaluate** (both directions) → **decide / audit**.
+**End-to-end flow (current):** LLM (existing) → load rows → **map** (structured DTO) → merge overrides → **evaluate** (both directions) → **decide / audit** (and optional **post-filter ranking**, which does **not** change eligibility).
 
 ---
 
@@ -60,7 +60,7 @@ This section clarifies **product semantics** for Layer 2 output and Layer 3 eval
 **Extended dimension outcome (conceptual):** In addition to `MATCH`, `NO_MATCH`, `UNKNOWN`, and `NOT_ENFORCEABLE`, the evaluator uses **`SKIPPED`** when **no effective preference** exists for that dimension.
 
 - **`SKIPPED`:** Dimension **not applied**; counterparty facts for that slice are **not** used to accept or reject for that preference (for that direction).
-- **Strict directional eligibility (revised):** A direction **passes strict filtering** iff **every dimension that is not `SKIPPED`** resolves to **`MATCH`**, and **no** such dimension is **`NO_MATCH`**, **`UNKNOWN`**, or **`NOT_ENFORCEABLE`** (per existing Step 3 policy for the latter). **`SKIPPED` dimensions do not vote**—they neither help nor hurt pass/fail.
+- **Strict directional eligibility (revised):** In the **conceptual** enum below, a direction **passes** iff **every dimension that is not `SKIPPED`** resolves to an outcome that **allows** the direction (**`MATCH`**, including cases that map from implementation **`SOFT_PASS`**), and **no** such dimension is **`NO_MATCH`**, **`UNKNOWN`**, or **`NOT_ENFORCEABLE`** (per Step 3 policy). **In code** (`eligibility.evaluator.ts`), the same rule is: **no** dimension **`FAIL`**; **`PASS`** and **`SOFT_PASS`** both allow; **`SKIPPED`** is inert. See [Layer 3 locked policy](#locked-layer-3-policy-implementation-aligned).
 - **Audit:** Log `SKIPPED` explicitly so support and debug UIs can distinguish “user did not set this” from “matched.”
 
 **Step 3 doc alignment:** Rows that previously said **inactive → `MATCH`** should be read as **inactive → `SKIPPED`** under this section. `MATCH` is reserved for **active** rules that are **satisfied**.
@@ -178,7 +178,7 @@ Apply at API validation or ingest—not a scoring or dealbreaker engine.
 - **Unknown counterparty facts:** single product policy for dimensions 1–8 when a required fact is missing or `PREFER_NOT_TO_SAY` (e.g. exclude vs review queue)—must be consistent across dimensions.
 - **hard_block support tables (in app, not in DB):** ordinal rank for `EducationLevelSelf` vs `MinimumPartnerEducation`; inclusive age from `dateOfBirth` vs `partnerAgeMin` / `partnerAgeMax`.
 - **matrix_based:** document enum-to-enum compatibility for `(acceptedPartnerSmoking × SmokingFrequencySelf)` and `(acceptedPartnerAlcohol × AlcoholUseSelf)` → shared dimension result enum (Step 3); no scoring.
-- **Children intent:** fixed mapping for `childrenStatus` / `wantsChildren` vs `partnerHasChildren` / `partnerWantsChildren`—including `UNSURE`, `NOT_APPLICABLE` handling.
+- **Children intent:** fixed mapping for `childrenStatus` / `wantsChildren` vs `partnerHasChildren` / `partnerWantsChildren`—including **`UNSURE`** handling per [locked Layer 3 policy](#locked-layer-3-policy-implementation-aligned) (`MUST_WANT`×`UNSURE` → **`SOFT_PASS`**; `MUST_NOT_WANT`×`UNSURE` → **`FAIL`** in code).
 
 ### 4. Database
 
@@ -190,9 +190,30 @@ Apply at API validation or ingest—not a scoring or dealbreaker engine.
 
 **Scope:** One-direction **evaluation**: **searcher** preferences (merged with `searchOverrides` per field) against **counterparty** facts. **Mutual** fit = run the same contract in both directions. Step 2 taxonomy: `hard_block`, `matrix_based`, `informational` (dimensions 10–12 produce **no dimension result**—display-only).
 
-**Principles:** Outcomes are **enumerated** per dimension (see below). Rules use **enum equality**, **set membership**, **numeric range**, and **ordered rank** comparisons only—no scores, no candidate ordering.
+**Principles:** Outcomes are **enumerated** per dimension (see below). Rules use **enum equality**, **set membership**, **numeric range**, and **ordered rank** comparisons only—no scores, no candidate ordering at Layer 3.
 
-**Implementation status:** Rules below are **authoritative spec**. TypeScript literals live in `holy-grail-matching/matching-dimension-result.ts`. **`eligibility.evaluator.ts` does not implement them yet** (throws). Next work: [Roadmap](#roadmap--actual-execution-order-next-work) step 2 (after mapper).
+**Implementation status:** **`eligibility.evaluator.ts` implements** Layer 3 with statuses **`PASS`**, **`FAIL`**, **`SKIPPED`**, **`SOFT_PASS`**. The tables below use the **conceptual** Step 3 labels **`MATCH`** / **`NO_MATCH`** / **`UNKNOWN`** / **`NOT_ENFORCEABLE`** / **`SKIPPED`**; see [Locked Layer 3 policy](#locked-layer-3-policy-implementation-aligned) for **`SOFT_PASS`** and the doc↔code mapping. `matching-dimension-result.ts` holds legacy **`MATCH`**-style literals for bridges/audit shapes.
+
+---
+
+### Locked Layer 3 policy (implementation-aligned)
+
+**Source of truth:** `dating-api/src/holy-grail-matching/eligibility.evaluator.ts` (this section documents behavior only; do not treat it as a second implementation).
+
+**Per-dimension statuses in code:** `PASS` \| `FAIL` \| `SKIPPED` \| `SOFT_PASS`. **Directional overall** `overallHardEligibility` is **`PASS`** iff **no** dimension has **`FAIL`** (`SKIPPED`, `PASS`, and `SOFT_PASS` do not block).
+
+**Doc ↔ code (conceptual `MATCH` / `NO_MATCH`):** In this document, **`MATCH`** means “active rule satisfied **or** softly allowed”: implementation **`PASS`** or **`SOFT_PASS`**. **`NO_MATCH`** corresponds to implementation **`FAIL`**. **`UNKNOWN`** / **`NOT_ENFORCEABLE`** map to evaluator outcomes that **block** the direction when the implementation returns **`FAIL`** for that dimension. **`SKIPPED`** is the same in both.
+
+**`SOFT_PASS` is limited to exactly these cases (no other softening):**
+
+| Dimension | Policy |
+|-----------|--------|
+| **PARTNER_WANTS_CHILDREN** | **`MUST_WANT`** × counterparty **`wantsChildren === UNSURE`** → **`SOFT_PASS`** (`WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT`); sets flag **`children_unsure`**. **`MUST_NOT_WANT`** × **`UNSURE`** → **`FAIL`** (`WANTS_CHILDREN_MUST_NOT_WANT_FAIL`). All other active combinations → **`PASS`** or **`FAIL`** per explicit branches only. |
+| **ALCOHOL** | Preference **`NONE_ONLY`** × counterparty **`RARE`**: the static matrix would **`FAIL`**; implementation upgrades to **`SOFT_PASS`** (`ALCOHOL_NONE_ONLY_RARE_SOFT`) for **~50%** of **ordered** `(searcherProfileId, counterpartyProfileId)` pairs, using **`holyGrailDeterministicHalfPass('ALCOHOL_NONE_ONLY_RARE', …)`**; otherwise **`FAIL`**. No other alcohol **`SOFT_PASS`**. |
+
+**AGE** and **RELIGION:** only **`PASS`**, **`FAIL`**, or **`SKIPPED`** — **no** **`SOFT_PASS`**.
+
+**Read-only pool check:** `dating-api/scripts/hg-soft-pass-simulation.ts` calls production **`evaluateHolyGrailDirectional`** and embeds the same policy text in its JSON report.
 
 ---
 
@@ -221,11 +242,11 @@ When **no effective preference** exists for a dimension (field absent after merg
 | # | Dimension | Fact field(s) | Preference field(s) | Evaluation rule | Result |
 |---|-----------|---------------|---------------------|-------------------|--------|
 | 1 | Gender eligibility | `genderIdentity` | `acceptedPartnerGenders` | **`SKIPPED`** if effective `acceptedPartnerGenders` absent or empty. Else **active**: **MATCH** iff `genderIdentity` present, not `PREFER_NOT_TO_SAY`, and `genderIdentity ∈ acceptedPartnerGenders`. **NO_MATCH** if in set check fails. **UNKNOWN** if `genderIdentity` absent or `PREFER_NOT_TO_SAY`. | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
-| 2 | Age window | `dateOfBirth` | `partnerAgeMin`, `partnerAgeMax` | **`SKIPPED`** if **both** effective bounds absent. Else **active**: age `a` = whole years (UTC) from `YYYY-MM-DD`. **MATCH** iff every specified bound holds. **NO_MATCH** if violated. **UNKNOWN** if `dateOfBirth` missing / invalid / future per mapper policy. | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
-| 3 | Religion acceptance | `religion` | `acceptedPartnerReligions` | **`SKIPPED`** if effective list absent or **empty** (no religion filter defined). Else **active**: **MATCH** iff `religion` present, not `PREFER_NOT_TO_SAY`, and `religion ∈ acceptedPartnerReligions`. **NO_MATCH** / **UNKNOWN** as before. | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
+| 2 | Age window | `dateOfBirth` | `partnerAgeMin`, `partnerAgeMax` | **`SKIPPED`** if **both** effective bounds absent. Else **active**: age `a` = whole years (UTC) from `YYYY-MM-DD`. **MATCH** iff every specified bound holds. **NO_MATCH** if violated. **UNKNOWN** if `dateOfBirth` missing / invalid / future per mapper policy. **No `SOFT_PASS`** (see [locked policy](#locked-layer-3-policy-implementation-aligned)). | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
+| 3 | Religion acceptance | `religion` | `acceptedPartnerReligions` | **`SKIPPED`** if effective list absent or **empty** (no religion filter defined). Else **active**: **MATCH** iff `religion` present, not `PREFER_NOT_TO_SAY`, and `religion ∈ acceptedPartnerReligions`. **NO_MATCH** / **UNKNOWN** as before. **No `SOFT_PASS`**. | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
 | 4 | Education floor | `education` | `minimumPartnerEducation` | **`SKIPPED`** if effective `minimumPartnerEducation` **absent**. **`ANY` stored explicitly** → no floor: treat as **`SKIPPED`** (same as “not filtering on education”). **Concrete floor** (`HIGH_SCHOOL` … `GRADUATE`): **active**; rank rules per [table below](#education-rank-mapping-hard_block-4). | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
 | 7 | Partner already has children | `childrenStatus` | `partnerHasChildren` | **`SKIPPED`** if effective value **absent** or **`NO_REQUIREMENT`** (no constraint). **`ACCEPT`** / **`DOES_NOT_ACCEPT`**: **active**; rules unchanged. | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
-| 8 | Partner wants (more) children | `wantsChildren` | `partnerWantsChildren` | **`SKIPPED`** if absent or **`NO_REQUIREMENT`**. **`MUST_WANT`** / **`MUST_NOT_WANT`**: **active**; rules unchanged. | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` |
+| 8 | Partner wants (more) children | `wantsChildren` | `partnerWantsChildren` | **`SKIPPED`** if absent or **`NO_REQUIREMENT`**. If **`MUST_WANT`**: **MATCH** iff `YES`; **`SOFT_PASS`** iff **`UNSURE`** (only soft case on this dimension); **NO_MATCH** iff **`NO`**. If **`MUST_NOT_WANT`**: **MATCH** iff **`NO`**; **NO_MATCH** iff **`YES`** or **`UNSURE`**. Missing / `PREFER_NOT_TO_SAY` on fact → **FAIL** path in code when preference active. Full detail: [locked policy](#locked-layer-3-policy-implementation-aligned). | `SKIPPED` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` \| `SOFT_PASS` *(impl)* |
 | 9 | Proximity cap | *(none in v1 for geo)* | `maxDistanceKm` | **`SKIPPED`** if effective `maxDistanceKm` **absent**. If set: v1 → **NOT_ENFORCEABLE** without geo facts. | `SKIPPED` \| `NOT_ENFORCEABLE` \| `MATCH` \| `NO_MATCH` \| `UNKNOWN` *(when geo exists)* |
 
 #### Education rank mapping (hard_block #4)
@@ -280,9 +301,11 @@ If effective `acceptedPartnerAlcohol` is **absent** after merge → dimension **
 
 |  | `NEVER` | `RARE` | `MODERATE` | `FREQUENT` | `PREFER_NOT_TO_SAY` |
 |--|-------|--------|------------|------------|---------------------|
-| **`NONE_ONLY`** | MATCH | NO_MATCH | NO_MATCH | NO_MATCH | UNKNOWN |
+| **`NONE_ONLY`** | MATCH | NO_MATCH* | NO_MATCH | NO_MATCH | UNKNOWN |
 | **`MODERATE_OK`** | MATCH | MATCH | MATCH | NO_MATCH | UNKNOWN |
 | **`ANY`** | MATCH | MATCH | MATCH | MATCH | UNKNOWN |
+
+\* **`NONE_ONLY`** × **`RARE`:** the table cell is **NO_MATCH** for the strict matrix, but the **implementation** turns a subset of those cases into **`SOFT_PASS`** (~50% of ordered pairs via `holyGrailDeterministicHalfPass`); otherwise **`FAIL`**. See [locked policy](#locked-layer-3-policy-implementation-aligned).
 
 **Narrative:** `MODERATE_OK` allows up to `MODERATE`; `FREQUENT` is outside that band. Declined to answer → **UNKNOWN**.
 
@@ -292,7 +315,7 @@ If effective `acceptedPartnerAlcohol` is **absent** after merge → dimension **
 
 **UNKNOWN (single rule across active dimensions):** When a dimension is **not** `SKIPPED`, and an active rule requires a fact or enum value to distinguish `MATCH` vs `NO_MATCH` and that information is missing or withheld (`PREFER_NOT_TO_SAY`, unranked `OTHER` for education, etc.), the dimension result is **`UNKNOWN`**.
 
-**Strict directional eligibility (revised):** Consider only dimensions that are **not** `SKIPPED`. Among those, **every** must be **`MATCH`** for a strict pass. Any **`NO_MATCH`**, **`UNKNOWN`**, or **`NOT_ENFORCEABLE`** (per policy below) fails strict. **`SKIPPED` dimensions are omitted from the conjunction**—they neither help nor hurt.
+**Strict directional eligibility (revised):** Consider only dimensions that are **not** `SKIPPED`. Among those, **every** must **allow** the direction (**`MATCH`** in this doc, including implementation **`SOFT_PASS`** on alcohol / wants-children where applicable). Any **`NO_MATCH`**, **`UNKNOWN`**, or **`NOT_ENFORCEABLE`** (per policy below) fails strict. In **code**, equivalently: **no** **`FAIL`**. **`SKIPPED` dimensions are omitted from the conjunction**—they neither help nor hurt.
 
 **`NOT_ENFORCEABLE`:** When **`maxDistanceKm` is present** in effective prefs but geo is missing → **`NOT_ENFORCEABLE`**. When **`maxDistanceKm` is absent** → dimension **9** is **`SKIPPED`**, not `NOT_ENFORCEABLE`.
 
@@ -318,7 +341,7 @@ If effective `acceptedPartnerAlcohol` is **absent** after merge → dimension **
 
 **Authority:** Step 3 dimension outcomes are evaluated **after** this mapping produces a `MatchingCanonicalModel` (sparse `preferences` where keys are omitted—**no** widest injected defaults). This section defines **where** each canonical field may come from in the **current** codebase/storage; it does **not** implement mappers or change Prisma.
 
-**Implementation status:** Step 4 **Phase 2** is implemented in `profile-to-canonical.mapper.ts` (deterministic; structured input only). Next roadmap step: [Roadmap](#roadmap--actual-execution-order-next-work) — implement `eligibility.evaluator.ts`, then audit on real profiles.
+**Implementation status:** Step 4 **Phase 2** is implemented in `profile-to-canonical.mapper.ts` (deterministic; structured input only). Layer 3 **`eligibility.evaluator.ts`** is implemented; optional follow-up: broader audits ([Roadmap](#roadmap--actual-execution-order-next-work)).
 
 **Current persistence (relevant):**
 
@@ -327,7 +350,12 @@ If effective `acceptedPartnerAlcohol` is **absent** after merge → dimension **
 | Profile text | `UserProfile.aboutMe`, `aboutPartner?`, `aboutRelationship?` | Free text; no typed enums. |
 | Profile identity | `UserProfile.id`, `name` | Ids and display. |
 | V2 extraction | `ProfileExtractionV2` — `interests_self`, `interests_partner`, `negatives_self`, `negatives_partner`, `soft_no`, `hard_no`, `interests`, `lifestyleTraits`, `preferences`, `boundaries`, `values` (`String[]`); `extractionJson`, `selfSignals`, `partnerSignals`, `relationshipSignals` (`Json`); `relationship_clarity_*` (`Int?`) | Tags + LLM pipeline output; **not** aligned 1:1 with canonical enums. |
-| Legacy signals | `ProfileSignalSnapshot` (per-domain floats), `ProfileEvaluationRaw.evaluation` | Compatibility / legacy evaluate; **out of scope** for canonical enum mapping unless a future spec ties a key to a fact. |
+| Evaluate JSON (raw) | `ProfileEvaluationRaw.evaluation` | Persisted evaluate batch (self/partner/relationship blocks, product scores, chips, and other enrichment fields such as `kidsTimeline` / `conflictStyleDetail` where stored). **Not** the runtime source of truth for HG **post-eligibility ranking** inputs (see below). |
+| Signal snapshots | `ProfileSignalSnapshot` (per-domain rows) | Per-domain numeric signals from evaluate; the **self** row also holds typed HG ranking columns (`hgRankingDailyRhythm`, `hgRankingAutonomyTogetherness`, `hgRankingInterestsTop`, plus `lifestylePace` and `conflictStyle` used by the five-signal ranker). |
+
+### HG ranking signals (DB-only at runtime)
+
+The five inputs used only for ordering after hard eligibility (`MatchingCanonicalModel.rankingSignals`: `dailyRhythm`, `autonomyTogetherness`, `conflictStyle`, `lifestylePace`, `interestsTop`) are **read exclusively from typed columns on the self `ProfileSignalSnapshot` row** (see `holy-grail-ranking-signals-from-db.ts`, `buildHolyGrailRankingSignalsFromDbSelfRow`, and `HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT`). **Holy Grail retrieval, pair-direction evaluation, and post-filter ranking do not read these values from `ProfileEvaluationRaw.evaluation` or from persisted `enrichment.signals` JSON at runtime.** Enrichment may still be produced in memory during evaluate to populate DB columns on save; profile APIs may still return an enrichment-shaped payload for clients, but that is separate from the ranking source of truth. Other uses of `ProfileEvaluationRaw` / snapshots for legacy evaluate and non-HG flows remain **out of scope** for canonical enum mapping unless a future spec ties a key to a fact.
 
 **Mapping class (required label on every row):**
 
@@ -493,7 +521,7 @@ dating-api/src/
     holy-grail-dimensions.ts
     profile-sources.types.ts             ← Inputs: DB rows + extraction DTOs (post-LLM)
     profile-to-canonical.mapper.ts       ← Layer 2 — **implemented** (structured `HolyGrailProfileMappingInput` only)
-    eligibility.evaluator.ts             ← Layer 3 — Step 3 spec done; **evaluator body not implemented** (throws)
+    eligibility.evaluator.ts             ← Layer 3 — **implemented** (PASS/FAIL/SKIPPED/SOFT_PASS; see doc § locked policy)
     eligibility-audit.types.ts
     build-eligibility-audit.ts           ← Layer 4 — per-direction audit DTO
     decision/
@@ -501,7 +529,7 @@ dating-api/src/
       build-holy-grail-pair-decision.ts  ← Layer 4 — MUTUAL_MATCH / NO_MATCH / INDETERMINATE
 ```
 
-**Intentionally omitted:** imports from `match-engine`, dealbreakers, friction, recommendation, ranking; `MatchesModule` wiring.
+**Intentionally omitted:** imports from **legacy** `match-engine`, dealbreakers, friction, recommendation, and legacy ranking; **`MatchesModule`** wiring to HG is a separate cutover. **HG-only** post-eligibility ranking (`holy-grail-candidate-ranking.ts`) does not use the legacy engine.
 
 ### 2. Responsibility of each layer
 
@@ -509,8 +537,9 @@ dating-api/src/
 |-------|----------|----------------|
 | **1. LLM extraction / interpretation** | `src/extraction/*` | Turn profile text (and future inputs) into **structured, versioned** artifacts (`ExtractionV2Result`, JSON columns, tags). Probabilistic; prompt- and model-dependent. |
 | **2. Canonical mapping** | `profile-to-canonical.mapper.ts` (+ types) | **Deterministic** projection from persisted LLM output + metadata → `MatchingCanonicalModel` (Step 4). No scores; field-level rules only. |
-| **3. Enum-based evaluator** | `eligibility.evaluator.ts` | **Deterministic** directional evaluation: merge stored prefs + overrides → **`SKIPPED`** if no effective preference; else `MATCH` / `NO_MATCH` / `UNKNOWN` / `NOT_ENFORCEABLE` per Step 3 (see [Mapping vs search](#mapping-vs-search-behavior-stored-preferences-vs-searchoverrides)). |
-| **4. Decision / output** | `decision/*`, `build-eligibility-audit.ts` | **Deterministic** aggregation: pair decision (`MUTUAL_MATCH` / `NO_MATCH` / `INDETERMINATE`), audit payloads for logging and debug UI. No ranking keys. |
+| **3. Enum-based evaluator** | `eligibility.evaluator.ts` | **Deterministic** directional evaluation: merge stored prefs + overrides → **`SKIPPED`** if no effective preference; else **`PASS`** / **`FAIL`** / **`SOFT_PASS`** per Step 3 + [locked SOFT_PASS rules](#locked-layer-3-policy-implementation-aligned) (conceptual doc: `MATCH` / `NO_MATCH` / `UNKNOWN` / `NOT_ENFORCEABLE`; see [Mapping vs search](#mapping-vs-search-behavior-stored-preferences-vs-searchoverrides)). |
+| **4. Decision / output** | `decision/*`, `build-eligibility-audit.ts` | **Deterministic** aggregation: pair decision (`MUTUAL_MATCH` / `NO_MATCH` / `INDETERMINATE`), audit payloads for logging and debug UI. |
+| **Post-filter ordering (optional)** | `holy-grail-candidate-ranking.ts` | After hard eligibility, **rank survivors only**; does not change PASS/FAIL. Uses `MatchingCanonicalModel.rankingSignals`, which is populated from **self `ProfileSignalSnapshot` DB columns only** — **not** from `ProfileEvaluationRaw` or persisted enrichment JSON at runtime (see [HG ranking signals (DB-only at runtime)](#hg-ranking-signals-db-only-at-runtime)). |
 
 ### 3. Boundaries: LLM vs deterministic code
 
@@ -523,16 +552,17 @@ dating-api/src/
 
 ### 4. Execution order
 
-**Target pipeline (when mapper + evaluator exist):**
+**Pipeline (current):**
 
 1. **LLM (existing)** — Run extraction; persist `ProfileExtractionV2` / JSON as today.  
 2. **Load** — Read rows + extraction DTOs (caller).  
 3. **Map (Layer 2)** — `mapProfileSourceToMatchingCanonical` → `MatchingCanonicalModel` per user.  
-4. **Merge overrides** — Apply `searchOverrides` onto preferences (helper or inside evaluator).  
-5. **Evaluate (Layer 3)** — `evaluateHolyGrailDirectional` for A→B and B→A.  
-6. **Decide / audit (Layer 4)** — `buildHolyGrailPairDecisionV1`; optional `buildHolyGrailEligibilityAuditV1` per direction.
+4. **Merge overrides** — Apply `searchOverrides` onto preferences (inside evaluator).  
+5. **Evaluate (Layer 3)** — `evaluateHolyGrailDirectional` for A→B and B→A ([locked policy](#locked-layer-3-policy-implementation-aligned)).  
+6. **Decide / audit (Layer 4)** — `buildHolyGrailPairDecisionV1`; optional `buildHolyGrailEligibilityAuditV1` per direction.  
+7. **Optional** — `rankHolyGrailCandidatesAfterHardFilter` (ordering only; after mutual PASS pool).
 
-**Actual next steps** match the [Roadmap](#roadmap--actual-execution-order-next-work) at the top of this doc: implement mapper → implement evaluator → audit on real profiles → schema discussion later.
+**Next steps:** see [Roadmap](#roadmap--actual-execution-order-next-work) (audits / persistence), not greenfield evaluator work.
 
 ### 5. Boundary: old engine vs new engine
 
@@ -540,7 +570,7 @@ dating-api/src/
 |---------|-------------------------|--------------------------------|
 | **Location** | `src/matches/*`, compatibility scoring | `src/holy-grail-matching/*` + `src/canonical/matching-canonical.types.ts` |
 | **Role** | Product scores, dealbreakers, recommendations, ranking | Enum dimension outcomes, pair decision, audit |
-| **Imports** | Unchanged | No `match-engine`, dealbreakers, ranking |
+| **Imports** | Unchanged | No **legacy** `match-engine` / dealbreakers / legacy ranking imports |
 
 **Rule of thumb:** If it computes `finalScore` or applies dealbreaker **engine** rules from the legacy stack, it is **out of bounds** for holy-grail-matching.
 

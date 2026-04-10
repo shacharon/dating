@@ -2,6 +2,12 @@
 
 import type { CompareResultDto, MatchDebugDto } from './match-engine';
 
+/** Holy Grail children soft-pass flags (both directions on the stored pair a|b). */
+export interface ChildrenUnsureDirectionsDto {
+  readonly profile_a_to_profile_b: boolean;
+  readonly profile_b_to_profile_a: boolean;
+}
+
 export interface MatchRecordDto {
   matchId: string;
   aId: string;
@@ -68,6 +74,12 @@ export interface MatchListItemDto {
     friction?: number;
     rawScore?: number;
   };
+  /** Present when list() enriches from HG structured JSON. */
+  children_unsure?: ChildrenUnsureDirectionsDto;
+  /** Engine score (unchanged). Same as finalScore when not enriched. */
+  engineFinalScore?: number;
+  /** Score used for ordering / display after optional children_unsure penalty. */
+  rankingScore?: number;
 }
 
 /** In-memory index entry (auto-generated on rebuild). */

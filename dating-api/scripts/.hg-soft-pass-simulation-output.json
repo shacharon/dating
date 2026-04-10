@@ -8,700 +8,113 @@
       "synthetic-en-004",
       "synthetic-en-005"
     ],
-    "ageBufferDeltaYears": 2,
-    "evaluatedAtIso": "2026-04-10T11:28:50.148Z"
+    "evaluatedAtIso": "2026-04-10T14:50:57.685Z",
+    "totalDirectedPairEvaluations": 990
+  },
+  "policy": {
+    "scope": "Holy Grail Layer 3 hard eligibility only (not ranking).",
+    "age": "Hard PASS/FAIL/SKIPPED only — no SOFT_PASS.",
+    "religion": "Hard PASS/FAIL/SKIPPED only — no SOFT_PASS.",
+    "alcohol": {
+      "matrix": "Production PASS/FAIL matrix; WITHHELD and missing → FAIL.",
+      "softPass": "NONE_ONLY × partner RARE: SOFT_PASS only when holyGrailDeterministicHalfPass(ALCOHOL_NONE_ONLY_RARE, searcherProfileId, counterpartyProfileId) is true (~50% of ordered pairs); reason ALCOHOL_NONE_ONLY_RARE_SOFT. Otherwise FAIL.",
+      "excluded": "No SOFT_PASS for MODERATE_OK×FREQUENT, PREFER_NOT_TO_SAY, missing, or any cell other than NONE_ONLY×RARE."
+    },
+    "partnerWantsChildren": {
+      "softPass": "MUST_WANT × partner UNSURE → SOFT_PASS; reason WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT; sets children_unsure.",
+      "hard": "All other combinations use hard PASS/FAIL/SKIPPED (including MUST_NOT_WANT × UNSURE → FAIL)."
+    }
   },
   "pairStats": {
-    "baselineSurvivingPairs": 73,
-    "simulatedSurvivingPairs": 118,
-    "newlyAdmittedPairs": 46,
-    "directionalImprovementsOnSoftDims": 288,
-    "searchersWithMoreSimulatedCandidates": 4
+    "mutualPassPairs": 95,
+    "orderedPairEvaluationsConsidered": 495
   },
   "perDimension": {
-    "AGE": {
-      "baseline": {
-        "PASS": 198,
-        "FAIL": 275,
-        "SKIPPED": 517,
-        "total": 990
-      },
-      "simulated": {
-        "PASS": 198,
-        "SOFT_PASS": 73,
-        "FAIL": 202,
-        "SKIPPED": 517,
-        "total": 990
-      },
-      "delta": {
-        "PASS": 0,
-        "FAIL": -73,
-        "SKIPPED": 0,
-        "SOFT_PASS_new": 73
-      },
-      "topBaselineFailReasonsReducedBySoftPass": [
-        {
-          "baselineFailReason": "AGE_BELOW_MIN",
-          "countNowSoftPass": 41
-        },
-        {
-          "baselineFailReason": "AGE_ABOVE_MAX",
-          "countNowSoftPass": 32
-        }
-      ],
-      "directionalFailToSoftPass": 73,
-      "directionalFailToPass": 0,
-      "recommendation": "keep"
+    "GENDER": {
+      "PASS": 526,
+      "FAIL": 464,
+      "SOFT_PASS": 0,
+      "SKIPPED": 0,
+      "totalDirected": 990,
+      "activeDirected": 990,
+      "pctFailOrSoftThatAreSoftPass": 0
     },
-    "ALCOHOL": {
-      "baseline": {
-        "PASS": 200,
-        "FAIL": 105,
-        "SKIPPED": 685,
-        "total": 990
-      },
-      "simulated": {
-        "PASS": 200,
-        "SOFT_PASS": 0,
-        "FAIL": 105,
-        "SKIPPED": 685,
-        "total": 990
-      },
-      "delta": {
-        "PASS": 0,
-        "FAIL": 0,
-        "SKIPPED": 0,
-        "SOFT_PASS_new": 0
-      },
-      "topBaselineFailReasonsReducedBySoftPass": [],
-      "directionalFailToSoftPass": 0,
-      "directionalFailToPass": 0,
-      "recommendation": "reject"
+    "AGE": {
+      "PASS": 198,
+      "FAIL": 275,
+      "SOFT_PASS": 0,
+      "SKIPPED": 517,
+      "totalDirected": 990,
+      "activeDirected": 473,
+      "pctFailOrSoftThatAreSoftPass": 0
     },
     "RELIGION": {
-      "baseline": {
-        "PASS": 325,
-        "FAIL": 98,
-        "SKIPPED": 567,
-        "total": 990
-      },
-      "simulated": {
-        "PASS": 325,
-        "SOFT_PASS": 80,
-        "FAIL": 18,
-        "SKIPPED": 567,
-        "total": 990
-      },
-      "delta": {
-        "PASS": 0,
-        "FAIL": -80,
-        "SKIPPED": 0,
-        "SOFT_PASS_new": 80
-      },
-      "topBaselineFailReasonsReducedBySoftPass": [
-        {
-          "baselineFailReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "countNowSoftPass": 80
-        }
-      ],
-      "directionalFailToSoftPass": 80,
-      "directionalFailToPass": 0,
-      "recommendation": "keep"
+      "PASS": 325,
+      "FAIL": 98,
+      "SOFT_PASS": 0,
+      "SKIPPED": 567,
+      "totalDirected": 990,
+      "activeDirected": 423,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "EDUCATION": {
+      "PASS": 300,
+      "FAIL": 0,
+      "SOFT_PASS": 0,
+      "SKIPPED": 690,
+      "totalDirected": 990,
+      "activeDirected": 300,
+      "pctFailOrSoftThatAreSoftPass": null
+    },
+    "SMOKING": {
+      "PASS": 557,
+      "FAIL": 4,
+      "SOFT_PASS": 0,
+      "SKIPPED": 429,
+      "totalDirected": 990,
+      "activeDirected": 561,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "ALCOHOL": {
+      "PASS": 200,
+      "FAIL": 53,
+      "SOFT_PASS": 52,
+      "SKIPPED": 685,
+      "totalDirected": 990,
+      "activeDirected": 305,
+      "pctFailOrSoftThatAreSoftPass": 49.5
+    },
+    "PARTNER_HAS_CHILDREN": {
+      "PASS": 453,
+      "FAIL": 48,
+      "SOFT_PASS": 0,
+      "SKIPPED": 489,
+      "totalDirected": 990,
+      "activeDirected": 501,
+      "pctFailOrSoftThatAreSoftPass": 0
     },
     "PARTNER_WANTS_CHILDREN": {
-      "baseline": {
-        "PASS": 0,
-        "FAIL": 235,
-        "SKIPPED": 755,
-        "total": 990
-      },
-      "simulated": {
-        "PASS": 0,
-        "SOFT_PASS": 135,
-        "FAIL": 100,
-        "SKIPPED": 755,
-        "total": 990
-      },
-      "delta": {
-        "PASS": 0,
-        "FAIL": -135,
-        "SKIPPED": 0,
-        "SOFT_PASS_new": 135
-      },
-      "topBaselineFailReasonsReducedBySoftPass": [
-        {
-          "baselineFailReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "countNowSoftPass": 135
-        }
-      ],
-      "directionalFailToSoftPass": 135,
-      "directionalFailToPass": 0,
-      "recommendation": "keep"
+      "PASS": 0,
+      "FAIL": 100,
+      "SOFT_PASS": 135,
+      "SKIPPED": 755,
+      "totalDirected": 990,
+      "activeDirected": 235,
+      "pctFailOrSoftThatAreSoftPass": 57.4
+    },
+    "PROXIMITY": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SOFT_PASS": 0,
+      "SKIPPED": 990,
+      "totalDirected": 990,
+      "activeDirected": 0,
+      "pctFailOrSoftThatAreSoftPass": null
     }
   },
-  "newlyAdmittedPairsTop20": [
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-en-002",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-en-006",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-he-002",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-he-006",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-001",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-006",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-009",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-016",
-      "dimensionsTouched": [
-        "AGE",
-        "RELIGION",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER; cts AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER; cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-019",
-      "dimensionsTouched": [
-        "RELIGION",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-022",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-023",
-      "dimensionsTouched": [
-        "RELIGION"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        }
-      ],
-      "summaryReason": "cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-027",
-      "dimensionsTouched": [
-        "AGE",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-en-029",
-      "dimensionsTouched": [
-        "AGE",
-        "RELIGION",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER; cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-he-001",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-he-009",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-he-019",
-      "dimensionsTouched": [
-        "RELIGION",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-he-023",
-      "dimensionsTouched": [
-        "RELIGION",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-he-027",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "stc",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        }
-      ],
-      "summaryReason": "stc AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-001",
-      "candidateId": "synthetic-hg-gap-he-029",
-      "dimensionsTouched": [
-        "AGE",
-        "RELIGION"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "RELIGION",
-          "oldStatus": "FAIL",
-          "oldReason": "RELIGION_NOT_IN_ALLOWLIST",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER; cts RELIGION: FAIL/RELIGION_NOT_IN_ALLOWLIST → SOFT_PASS/SIM_RELIGION_NONE_ONLY_JEWISH_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-002",
-      "candidateId": "synthetic-en-001",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-002",
-      "candidateId": "synthetic-he-001",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-002",
-      "candidateId": "synthetic-hg-gap-en-002",
-      "dimensionsTouched": [
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-002",
-      "candidateId": "synthetic-hg-gap-he-004",
-      "dimensionsTouched": [
-        "AGE",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    },
-    {
-      "searcherId": "synthetic-en-002",
-      "candidateId": "synthetic-hg-gap-he-012",
-      "dimensionsTouched": [
-        "AGE"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_ABOVE_MAX",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_ABOVE_MAX_BUFFER"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_ABOVE_MAX → SOFT_PASS/SIM_AGE_ABOVE_MAX_BUFFER"
-    },
-    {
-      "searcherId": "synthetic-en-003",
-      "candidateId": "synthetic-hg-gap-en-001",
-      "dimensionsTouched": [
-        "AGE",
-        "PARTNER_WANTS_CHILDREN"
-      ],
-      "changes": [
-        {
-          "direction": "cts",
-          "dimension": "AGE",
-          "oldStatus": "FAIL",
-          "oldReason": "AGE_BELOW_MIN",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_AGE_BELOW_MIN_BUFFER"
-        },
-        {
-          "direction": "cts",
-          "dimension": "PARTNER_WANTS_CHILDREN",
-          "oldStatus": "FAIL",
-          "oldReason": "WANTS_CHILDREN_MUST_WANT_FAIL",
-          "newStatus": "SOFT_PASS",
-          "newReason": "SIM_MUST_WANT_UNSURE_SOFT"
-        }
-      ],
-      "summaryReason": "cts AGE: FAIL/AGE_BELOW_MIN → SOFT_PASS/SIM_AGE_BELOW_MIN_BUFFER; cts PARTNER_WANTS_CHILDREN: FAIL/WANTS_CHILDREN_MUST_WANT_FAIL → SOFT_PASS/SIM_MUST_WANT_UNSURE_SOFT"
-    }
-  ],
-  "recommendations": {
-    "AGE": "keep",
-    "ALCOHOL": "reject",
-    "RELIGION": "keep",
-    "PARTNER_WANTS_CHILDREN": "keep"
+  "versusPermissiveExperimentSummary": {
+    "note": "Earlier experiments used simulated AGE buffer, RELIGION SOFT_PASS, 100% ALCOHOL matrix softening, and/or MUST_NOT×UNSURE softening — all removed from production and from this script.",
+    "alcoholVersusUltraPermissive": "Ultra treated every NONE_ONLY×RARE matrix FAIL as SOFT_PASS (~100% of those fails). Locked policy uses deterministic partial softening (~50% of ordered searcher→counterparty pairs).",
+    "partnerWantsChildrenVersusUltraPermissive": "Ultra softened all hard fails on this dimension. Locked policy: only MUST_WANT×UNSURE is SOFT_PASS; MUST_NOT×UNSURE remains FAIL."
   }
 }

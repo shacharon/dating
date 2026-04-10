@@ -3,14 +3,11 @@
  * No scoring changes — only field selection and deterministic string assembly.
  */
 
-import type { MatchRecordDto } from './match.types';
+import type { ChildrenUnsureDirectionsDto, MatchRecordDto } from './match.types';
 import { buildShortReason } from './match-short-reason';
 
-/** Per-direction: profile A as searcher vs B as counterparty (Holy Grail internal). */
-export interface MatchDetailChildrenUnsureDto {
-  readonly profile_a_to_profile_b: boolean;
-  readonly profile_b_to_profile_a: boolean;
-}
+/** @inline — same shape as list/detail `children_unsure`. */
+export type MatchDetailChildrenUnsureDto = ChildrenUnsureDirectionsDto;
 
 /** Response body for GET /api/v1/matches/:id (dating-ui). */
 export interface MatchDetailUiDto {
@@ -22,7 +19,7 @@ export interface MatchDetailUiDto {
   profileB: { id: string; name: string };
   /**
    * When either side has MUST_WANT children and the other answered UNSURE (SOFT_PASS).
-   * Does not affect stored scores or list ordering.
+   * Stored scores unchanged; list uses a small ranking penalty when this applies.
    */
   children_unsure: MatchDetailChildrenUnsureDto;
   score: number;

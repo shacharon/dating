@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "generatedAtIso": "2026-04-10T12:33:41.779Z",
+    "poolNote": "HG counts: first 5 synthetic searchers × all other synthetic candidates (same slice as hg-validation-report). Engine matches: all DB profiles that compare READY."
+  },
+  "matchEngine": {
+    "profileCount": 502,
+    "matchCountAfterRebuild": 125751,
+    "matchRecordsLength": 125751
+  },
+  "holyGrailValidationPool": {
+    "orderedSearcherCandidatePairs": 495,
+    "mutualPassPairsCurrent": 93,
+    "mutualPassPairsBaselineStrictChildren": 78,
+    "newlyAdmittedPairsVsBaseline": 15
+  },
+  "childrenUnsureAmongEngineMatches": {
+    "engineMatchCount": 125751,
+    "matchesWithAnyChildrenUnsure": 0
+  },
+  "top20SampleMatchesChildrenUnsure": []
+}

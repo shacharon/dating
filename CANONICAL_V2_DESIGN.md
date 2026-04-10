@@ -932,7 +932,7 @@ dating-api/src/canonical/
 
 **Phase 3:**
 - Update match-engine to read canonical
-- Deprecate `ProfileEvaluationRaw.evaluation` JSON
+- Deprecate `ProfileEvaluationRaw.evaluation` JSON (broader product migration; **Holy Grail post-eligibility ranking** already uses **DB-only** inputs: the five ranking signals are read at runtime from **`ProfileSignalSnapshot` self row** typed columns, not from `ProfileEvaluationRaw` or persisted `enrichment.signals` JSON — see `docs/HOLY_GRAIL_MATCHING.md`, Step 4 persistence note.)
 - Remove redundant signal snapshot columns
 - Switch to canonical as primary serving layer
 

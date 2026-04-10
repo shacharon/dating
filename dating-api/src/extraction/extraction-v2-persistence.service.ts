@@ -10,6 +10,7 @@ import type { ExtractionV2Result } from '../extraction/extraction-v2.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { projectToCanonicalArrays, projectToCanonicalSignalScalars } from '../canonical/canonical-projection';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import { syncProfileHgRankingSignalColumns } from '../holy-grail-matching/holy-grail-ranking-signals-sync';
 
 const PROMPT_VERSION_V2 = 'v2_9call_20260328';
 
@@ -176,6 +177,8 @@ export class ExtractionV2PersistenceService {
         relationship_clarity_self: persisted?.relationship_clarity_self ?? null,
       }),
     );
+
+    await syncProfileHgRankingSignalColumns(this.prisma, profileId);
   }
 
   /**
@@ -243,6 +246,8 @@ export class ExtractionV2PersistenceService {
         updatedAt: new Date(),
       },
     });
+
+    await syncProfileHgRankingSignalColumns(this.prisma, profileId);
   }
 
   /**

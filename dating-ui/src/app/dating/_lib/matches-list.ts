@@ -2,12 +2,20 @@
  * Maps GET /api/v1/matches list items to generic match cards (no scoring logic).
  */
 
+import { anyChildrenUnsure, getDisplayScore } from './children-unsure';
+
 export interface MatchListItemApi {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
   overall: number;
   finalScore?: number;
+  rankingScore?: number;
+  engineFinalScore?: number;
+  children_unsure?: {
+    profile_a_to_profile_b: boolean;
+    profile_b_to_profile_a: boolean;
+  };
   updatedAt: string;
   dealbreakers: Array<{ code: string; severity?: string }>;
   shortReason: string;
@@ -36,6 +44,8 @@ export interface GenericMatchCardModel {
   reasonShort: string;
   chips: string[];
   primaryTakeaway: string;
+  /** True if HG children_unsure applies in either direction. */
+  childrenUnsure?: boolean;
 }
 
 function effectiveExplainability(item: MatchListItemApi) {
@@ -44,7 +54,8 @@ function effectiveExplainability(item: MatchListItemApi) {
 
 export function mapListItemToCard(item: MatchListItemApi): GenericMatchCardModel {
   const expl = effectiveExplainability(item);
-  const score = Math.round(item.finalScore ?? item.overall);
+  const score = Math.round(getDisplayScore(item));
+  const childrenUnsure = anyChildrenUnsure(item.children_unsure);
   const reasonShort =
     expl?.reasonShort?.trim() || item.shortReason?.trim() || '';
   const chips = (expl?.positiveChips ?? []).slice(0, 5);
@@ -61,6 +72,7 @@ export function mapListItemToCard(item: MatchListItemApi): GenericMatchCardModel
     reasonShort,
     chips,
     primaryTakeaway,
+    ...(childrenUnsure ? { childrenUnsure: true } : {}),
   };
 }
 

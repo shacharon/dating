@@ -108,6 +108,135 @@ describe('mapProfileSourceToMatchingCanonical', () => {
     ).toThrow(/unexpected key .* in map input/);
   });
 
+  it('maps rankingSignals onto canonical model without touching facts', () => {
+    const m = mapProfileSourceToMatchingCanonical({
+      profileId: 'p',
+      rankingSignals: {
+        dailyRhythm: 'early',
+        autonomyTogetherness: 'deep',
+        conflictStyle: 4,
+        lifestylePace: 5,
+        interestsTop: ['a', 'b'],
+      },
+    });
+    expect(m.rankingSignals).toEqual({
+      dailyRhythm: 'early',
+      autonomyTogetherness: 'deep',
+      conflictStyle: 4,
+      lifestylePace: 5,
+      interestsTop: ['a', 'b'],
+    });
+    expect(m.facts).toEqual({});
+  });
+
+  it('throws on unexpected rankingSignals key', () => {
+    expect(() =>
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        rankingSignals: { evil: true } as Record<string, unknown>,
+      } as HolyGrailProfileMappingInput),
+    ).toThrow(/unexpected key .* in rankingSignals/);
+  });
+
+  it('maps personality trait ranking slices when present', () => {
+    const m = mapProfileSourceToMatchingCanonical({
+      profileId: 'p',
+      rankingSignals: {
+        dailyRhythm: null,
+        autonomyTogetherness: null,
+        conflictStyle: null,
+        lifestylePace: null,
+        interestsTop: [],
+        personalityTraitsSelf: ['humor_playful'],
+        personalityTraitsPartner: ['honesty_integrity'],
+      },
+    });
+    expect(m.rankingSignals?.personalityTraitsSelf).toEqual(['humor_playful']);
+    expect(m.rankingSignals?.personalityTraitsPartner).toEqual(['honesty_integrity']);
+  });
+
+  it('throws on non-canonical personality trait tag in rankingSignals', () => {
+    expect(() =>
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        rankingSignals: {
+          dailyRhythm: null,
+          autonomyTogetherness: null,
+          conflictStyle: null,
+          lifestylePace: null,
+          interestsTop: [],
+          personalityTraitsSelf: ['not_a_tag'],
+        },
+      }),
+    ).toThrow(/canonical personality trait tag/);
+  });
+
+  it('maps lifestyle signal ranking slices when present', () => {
+    const m = mapProfileSourceToMatchingCanonical({
+      profileId: 'p',
+      rankingSignals: {
+        dailyRhythm: null,
+        autonomyTogetherness: null,
+        conflictStyle: null,
+        lifestylePace: null,
+        interestsTop: [],
+        lifestyleSignalsSelf: ['homebody'],
+        lifestyleSignalsPartner: ['outdoors_nature'],
+      },
+    });
+    expect(m.rankingSignals?.lifestyleSignalsSelf).toEqual(['homebody']);
+    expect(m.rankingSignals?.lifestyleSignalsPartner).toEqual(['outdoors_nature']);
+  });
+
+  it('throws on non-canonical lifestyle signal tag in rankingSignals', () => {
+    expect(() =>
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        rankingSignals: {
+          dailyRhythm: null,
+          autonomyTogetherness: null,
+          conflictStyle: null,
+          lifestylePace: null,
+          interestsTop: [],
+          lifestyleSignalsSelf: ['beach_bum'],
+        },
+      }),
+    ).toThrow(/canonical lifestyle signal tag/);
+  });
+
+  it('maps v1 interest tag ranking slices when present', () => {
+    const m = mapProfileSourceToMatchingCanonical({
+      profileId: 'p',
+      rankingSignals: {
+        dailyRhythm: null,
+        autonomyTogetherness: null,
+        conflictStyle: null,
+        lifestylePace: null,
+        interestsTop: [],
+        interestTagsSelf: ['music'],
+        interestTagsPartner: ['film'],
+      },
+    });
+    expect(m.rankingSignals?.interestTagsSelf).toEqual(['music']);
+    expect(m.rankingSignals?.interestTagsPartner).toEqual(['film']);
+  });
+
+  it('throws on non-canonical v1 interest tag in rankingSignals', () => {
+    expect(() =>
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        rankingSignals: {
+          dailyRhythm: null,
+          autonomyTogetherness: null,
+          conflictStyle: null,
+          lifestylePace: null,
+          interestsTop: [],
+          interestTagsSelf: ['books'],
+        },
+      }),
+    ).toThrow(/canonical v1 interest tag/);
+  });
+
   it('throws on unexpected structuredFacts key', () => {
     expect(() =>
       mapProfileSourceToMatchingCanonical({
@@ -182,5 +311,23 @@ describe('mapProfileSourceToMatchingCanonical', () => {
       minimumPartnerEducation: MinimumPartnerEducation.BACHELORS,
       acceptedPartnerSmoking: AcceptedPartnerSmoking.NONE_ONLY,
     });
+  });
+
+  it('maps similarityPreference when set; preserves null; sparse when omitted', () => {
+    expect(
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        structuredPreferences: { similarityPreference: 'different' },
+      }).preferences.similarityPreference,
+    ).toBe('different');
+    expect(
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        structuredPreferences: { similarityPreference: null },
+      }).preferences.similarityPreference,
+    ).toBeNull();
+    expect(
+      mapProfileSourceToMatchingCanonical({ profileId: 'p' }).preferences.similarityPreference,
+    ).toBeUndefined();
   });
 });

@@ -7,12 +7,6 @@ import type {
 } from './match.types';
 import { MatchesService } from './matches.service';
 
-/** Deterministic matchId: minId__maxId (lexicographic). */
-function toMatchId(aId: string, bId: string): string {
-  const [minId, maxId] = [aId, bId].sort((x, y) => x.localeCompare(y));
-  return `${minId}__${maxId}`;
-}
-
 function recordToIndexItem(record: MatchRecordDto): MatchIndexItemDto {
   const score = record.finalScore ?? record.overall;
   return {
@@ -77,12 +71,10 @@ export class MatchDaemonService {
   ) {}
 
   /**
-   * Runs the daemon once: load all profiles and compute every unique pair (i<j).
-   * Returns stats. One bad profile pair does not break the run (try/catch per pair).
+   * Refresh in-memory auto index from an existing full pairwise computation.
+   * Use with `listAllComputed()` when the caller already has records (avoids double compute).
    */
-  async runOnce(): Promise<RebuildStatsDto> {
-    this.logger.log('Daemon run starting: computing matches from DB profiles', this.context);
-    const records = await this.matchesService.listAllComputed();
+  refreshIndexFromRecords(records: MatchRecordDto[]): RebuildStatsDto {
     const profileIds = new Set<string>();
     for (const r of records) {
       profileIds.add(r.aId);
@@ -93,7 +85,7 @@ export class MatchDaemonService {
 
     const matchCount = records.length;
     this.logger.log(
-      `Daemon: ${matchCount} matches saved, ${pairErrors} pair errors`,
+      `Daemon: ${matchCount} matches indexed, ${pairErrors} pair errors`,
       this.context,
     );
 
@@ -110,7 +102,7 @@ export class MatchDaemonService {
     };
 
     this.autoIndex = index;
-    this.logger.log('Daemon run complete: in-memory index refreshed', this.context);
+    this.logger.log('Daemon: in-memory index refreshed', this.context);
     this.logTopScoreAudit(records);
 
     return {
@@ -119,6 +111,21 @@ export class MatchDaemonService {
       matchCount,
       pairErrors,
     };
+  }
+
+  /**
+   * Runs the daemon once: load all profiles and compute every unique pair (i<j).
+   * Returns stats. One bad profile pair does not break the run (try/catch per pair).
+   */
+  async runOnce(): Promise<RebuildStatsDto> {
+    this.logger.log('Daemon run starting: computing matches from DB profiles', this.context);
+    const records = await this.matchesService.listAllComputed();
+    const snap = await this.matchesService.persistMatchPairHgSnapshots(records);
+    this.logger.log(
+      `HG snapshots: ${snap.written} written, ${snap.skipped} skipped`,
+      this.context,
+    );
+    return this.refreshIndexFromRecords(records);
   }
 
   /**

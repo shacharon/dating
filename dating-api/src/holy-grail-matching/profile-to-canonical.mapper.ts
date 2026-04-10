@@ -16,15 +16,30 @@ import {
   ReligionSelf,
   RelationshipStatusSelf,
   SexualOrientationSelf,
+  SIMILARITY_PREFERENCE_VALUES,
   SmokingFrequencySelf,
   type MatchingCanonicalModel,
   type MatchingFacts,
   type MatchingPreferences,
+  type MatchingRankingSignalsSnapshot,
   type MatchingSearchOverrides,
+  type SimilarityPreference,
   WantsChildrenSelf,
   WorkStudySituationSelf,
 } from '../canonical/matching-canonical.types';
 import type { HolyGrailProfileMappingInput } from './profile-sources.types';
+import { INTEREST_TAG_V1_SET } from './interest-tags-text.extract';
+import { LIFESTYLE_SIGNAL_TAG_SET } from './lifestyle-signals-text.extract';
+import { PERSONALITY_TRAIT_TAG_SET } from './personality-traits-text.extract';
+import { matchingCanonicalEnumStringValues } from './holy-grail-canonical-enum';
+import {
+  assertHolyGrailCalendarDateYmd,
+  assertHolyGrailDateOfBirthNotFuture,
+  assertHolyGrailStructuredMapPartnerAgeInteger,
+  HOLY_GRAIL_SEARCH_OVERRIDE_KEY_SET,
+  HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_KEY_SET,
+  HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET,
+} from './holy-grail-structured-contract';
 
 /** Top-level keys allowed on `HolyGrailProfileMappingInput` at runtime. */
 const MAPPING_INPUT_KEYS = new Set<string>([
@@ -33,58 +48,30 @@ const MAPPING_INPUT_KEYS = new Set<string>([
   'structuredFacts',
   'structuredPreferences',
   'searchOverrides',
+  'rankingSignals',
+]);
+
+const RANKING_SIGNALS_KEYS = new Set<string>([
+  'dailyRhythm',
+  'autonomyTogetherness',
+  'conflictStyle',
+  'lifestylePace',
+  'interestsTop',
+  'personalityTraitsSelf',
+  'personalityTraitsPartner',
+  'lifestyleSignalsSelf',
+  'lifestyleSignalsPartner',
+  'interestTagsSelf',
+  'interestTagsPartner',
 ]);
 
 const EXTRACTION_ARRAYS_KEYS = new Set<string>(['interests_self', 'interests', 'lifestyleTraits']);
 
-const STRUCTURED_FACTS_KEYS = new Set<string>([
-  'genderIdentity',
-  'sexualOrientation',
-  'relationshipStatus',
-  'childrenStatus',
-  'wantsChildren',
-  'smoking',
-  'alcoholUse',
-  'exerciseLevel',
-  'religion',
-  'politics',
-  'education',
-  'livingSituation',
-  'workStudySituation',
-  'dateOfBirth',
-  'primaryLocationLabel',
-]);
+const STRUCTURED_FACTS_KEYS = HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_KEY_SET;
+const STRUCTURED_PREFERENCES_KEYS = HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET;
+const SEARCH_OVERRIDE_KEYS = HOLY_GRAIL_SEARCH_OVERRIDE_KEY_SET;
 
-const STRUCTURED_PREFERENCES_KEYS = new Set<string>([
-  'acceptedPartnerGenders',
-  'partnerAgeMin',
-  'partnerAgeMax',
-  'minimumPartnerEducation',
-  'acceptedPartnerSmoking',
-  'acceptedPartnerAlcohol',
-  'partnerWantsChildren',
-  'partnerHasChildren',
-  'acceptedPartnerReligions',
-  'maxDistanceKm',
-]);
-
-const SEARCH_OVERRIDE_KEYS = new Set<string>([
-  'acceptedPartnerGenders',
-  'partnerAgeMin',
-  'partnerAgeMax',
-  'minimumPartnerEducation',
-  'acceptedPartnerSmoking',
-  'acceptedPartnerAlcohol',
-  'partnerWantsChildren',
-  'partnerHasChildren',
-  'acceptedPartnerReligions',
-  'maxDistanceKm',
-  'validUntil',
-]);
-
-function enumValues<E extends Record<string, string>>(e: E): string[] {
-  return Object.values(e).filter((v) => typeof v === 'string');
-}
+const SIMILARITY_PREFERENCE_STRINGS = [...SIMILARITY_PREFERENCE_VALUES];
 
 function assertPlainRecord(value: unknown, context: string): asserts value is Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -103,6 +90,82 @@ function assertNoExtraKeys(obj: Record<string, unknown>, allowed: ReadonlySet<st
 function validateMappingInputShape(input: HolyGrailProfileMappingInput): void {
   assertPlainRecord(input, 'map input');
   assertNoExtraKeys(input as Record<string, unknown>, MAPPING_INPUT_KEYS, 'map input');
+}
+
+function validateRankingSignalsSlice(rs: HolyGrailProfileMappingInput['rankingSignals']): void {
+  if (rs === undefined) {
+    return;
+  }
+  assertPlainRecord(rs as unknown as Record<string, unknown>, 'rankingSignals');
+  assertNoExtraKeys(rs as unknown as Record<string, unknown>, RANKING_SIGNALS_KEYS, 'rankingSignals');
+  const o = rs as unknown as Record<string, unknown>;
+  const dr = o.dailyRhythm;
+  const at = o.autonomyTogetherness;
+  if (dr !== null && dr !== undefined && typeof dr !== 'string') {
+    throw new Error('HolyGrail map: rankingSignals.dailyRhythm must be string or null');
+  }
+  if (at !== null && at !== undefined && typeof at !== 'string') {
+    throw new Error('HolyGrail map: rankingSignals.autonomyTogetherness must be string or null');
+  }
+  const cs = o.conflictStyle;
+  const lp = o.lifestylePace;
+  if (cs !== null && cs !== undefined && (typeof cs !== 'number' || !Number.isFinite(cs))) {
+    throw new Error('HolyGrail map: rankingSignals.conflictStyle must be a finite number or null');
+  }
+  if (lp !== null && lp !== undefined && (typeof lp !== 'number' || !Number.isFinite(lp))) {
+    throw new Error('HolyGrail map: rankingSignals.lifestylePace must be a finite number or null');
+  }
+  const it = o.interestsTop;
+  if (!Array.isArray(it)) {
+    throw new Error('HolyGrail map: rankingSignals.interestsTop must be an array');
+  }
+  for (let i = 0; i < it.length; i++) {
+    if (typeof it[i] !== 'string') {
+      throw new Error(`HolyGrail map: rankingSignals.interestsTop[${i}] must be a string`);
+    }
+  }
+  for (const key of ['personalityTraitsSelf', 'personalityTraitsPartner'] as const) {
+    const arr = o[key];
+    if (arr === undefined) {
+      continue;
+    }
+    if (!Array.isArray(arr)) {
+      throw new Error(`HolyGrail map: rankingSignals.${key} must be an array when provided`);
+    }
+    for (let i = 0; i < arr.length; i++) {
+      if (typeof arr[i] !== 'string' || !PERSONALITY_TRAIT_TAG_SET.has(arr[i])) {
+        throw new Error(`HolyGrail map: rankingSignals.${key}[${i}] must be a canonical personality trait tag`);
+      }
+    }
+  }
+  for (const key of ['lifestyleSignalsSelf', 'lifestyleSignalsPartner'] as const) {
+    const arr = o[key];
+    if (arr === undefined) {
+      continue;
+    }
+    if (!Array.isArray(arr)) {
+      throw new Error(`HolyGrail map: rankingSignals.${key} must be an array when provided`);
+    }
+    for (let i = 0; i < arr.length; i++) {
+      if (typeof arr[i] !== 'string' || !LIFESTYLE_SIGNAL_TAG_SET.has(arr[i])) {
+        throw new Error(`HolyGrail map: rankingSignals.${key}[${i}] must be a canonical lifestyle signal tag`);
+      }
+    }
+  }
+  for (const key of ['interestTagsSelf', 'interestTagsPartner'] as const) {
+    const arr = o[key];
+    if (arr === undefined) {
+      continue;
+    }
+    if (!Array.isArray(arr)) {
+      throw new Error(`HolyGrail map: rankingSignals.${key} must be an array when provided`);
+    }
+    for (let i = 0; i < arr.length; i++) {
+      if (typeof arr[i] !== 'string' || !INTEREST_TAG_V1_SET.has(arr[i])) {
+        throw new Error(`HolyGrail map: rankingSignals.${key}[${i}] must be a canonical v1 interest tag`);
+      }
+    }
+  }
 }
 
 function validateExtractionArraysSlice(ex: HolyGrailProfileMappingInput['extractionArrays']): void {
@@ -211,43 +274,6 @@ function buildInterestTags(input: HolyGrailProfileMappingInput): string[] | unde
   return out.length > 0 ? out : undefined;
 }
 
-const DOB_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-function assertDateYmd(s: string): string {
-  const m = DOB_RE.exec(s);
-  if (!m) {
-    throw new Error(`HolyGrail map: dateOfBirth must be YYYY-MM-DD, got ${JSON.stringify(s)}`);
-  }
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const dt = new Date(Date.UTC(y, mo - 1, d));
-  if (
-    dt.getUTCFullYear() !== y ||
-    dt.getUTCMonth() !== mo - 1 ||
-    dt.getUTCDate() !== d
-  ) {
-    throw new Error(`HolyGrail map: invalid calendar date dateOfBirth ${JSON.stringify(s)}`);
-  }
-  return s;
-}
-
-function assertDateOfBirthNotFuture(ymd: string): void {
-  const m = DOB_RE.exec(ymd);
-  if (!m) {
-    return;
-  }
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const dobUtc = Date.UTC(y, mo - 1, d);
-  const now = new Date();
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  if (dobUtc > todayUtc) {
-    throw new Error(`HolyGrail map: dateOfBirth must not be in the future, got ${JSON.stringify(ymd)}`);
-  }
-}
-
 function buildFacts(input: HolyGrailProfileMappingInput): MatchingFacts {
   const sf = input.structuredFacts;
   const facts: MatchingFacts = {};
@@ -257,19 +283,19 @@ function buildFacts(input: HolyGrailProfileMappingInput): MatchingFacts {
     return facts;
   }
 
-  const g = enumValues(GenderIdentity);
-  const so = enumValues(SexualOrientationSelf);
-  const rs = enumValues(RelationshipStatusSelf);
-  const cs = enumValues(ChildrenStatusSelf);
-  const wc = enumValues(WantsChildrenSelf);
-  const sm = enumValues(SmokingFrequencySelf);
-  const al = enumValues(AlcoholUseSelf);
-  const ex = enumValues(ExerciseLevelSelf);
-  const rel = enumValues(ReligionSelf);
-  const pol = enumValues(PoliticsSelf);
-  const ed = enumValues(EducationLevelSelf);
-  const liv = enumValues(LivingSituationSelf);
-  const ws = enumValues(WorkStudySituationSelf);
+  const g = matchingCanonicalEnumStringValues(GenderIdentity);
+  const so = matchingCanonicalEnumStringValues(SexualOrientationSelf);
+  const rs = matchingCanonicalEnumStringValues(RelationshipStatusSelf);
+  const cs = matchingCanonicalEnumStringValues(ChildrenStatusSelf);
+  const wc = matchingCanonicalEnumStringValues(WantsChildrenSelf);
+  const sm = matchingCanonicalEnumStringValues(SmokingFrequencySelf);
+  const al = matchingCanonicalEnumStringValues(AlcoholUseSelf);
+  const ex = matchingCanonicalEnumStringValues(ExerciseLevelSelf);
+  const rel = matchingCanonicalEnumStringValues(ReligionSelf);
+  const pol = matchingCanonicalEnumStringValues(PoliticsSelf);
+  const ed = matchingCanonicalEnumStringValues(EducationLevelSelf);
+  const liv = matchingCanonicalEnumStringValues(LivingSituationSelf);
+  const ws = matchingCanonicalEnumStringValues(WorkStudySituationSelf);
 
   if (sf.genderIdentity !== undefined) {
     facts.genderIdentity = assertStringInEnum(sf.genderIdentity, g, 'structuredFacts.genderIdentity') as GenderIdentity;
@@ -338,8 +364,8 @@ function buildFacts(input: HolyGrailProfileMappingInput): MatchingFacts {
     if (typeof sf.dateOfBirth !== 'string') {
       throw new Error('HolyGrail map: structuredFacts.dateOfBirth must be a string');
     }
-    const ymd = assertDateYmd(sf.dateOfBirth);
-    assertDateOfBirthNotFuture(ymd);
+    const ymd = assertHolyGrailCalendarDateYmd(sf.dateOfBirth);
+    assertHolyGrailDateOfBirthNotFuture(ymd);
     facts.dateOfBirth = ymd;
   }
   if (sf.primaryLocationLabel !== undefined) {
@@ -359,16 +385,6 @@ function buildFacts(input: HolyGrailProfileMappingInput): MatchingFacts {
   return facts;
 }
 
-function assertIntegerAge(n: unknown, field: string): number {
-  if (typeof n !== 'number' || !Number.isInteger(n)) {
-    throw new Error(`HolyGrail map: ${field} must be an integer`);
-  }
-  if (n < 18 || n > 120) {
-    throw new Error(`HolyGrail map: ${field} must be in [18, 120], got ${n}`);
-  }
-  return n;
-}
-
 function assertPositiveFiniteKm(n: unknown, field: string): number {
   if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) {
     throw new Error(`HolyGrail map: ${field} must be a finite number > 0`);
@@ -377,7 +393,7 @@ function assertPositiveFiniteKm(n: unknown, field: string): number {
 }
 
 function dedupeReligions(list: readonly string[], ctx: string): ReligionSelf[] {
-  const allowed = new Set(enumValues(ReligionSelf));
+  const allowed = new Set(matchingCanonicalEnumStringValues(ReligionSelf));
   const out: ReligionSelf[] = [];
   const seen = new Set<string>();
   for (const x of list) {
@@ -405,7 +421,7 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
         'HolyGrail map: structuredPreferences.acceptedPartnerGenders must be a non-empty array when provided',
       );
     }
-    const allowed = new Set(enumValues(AcceptedPartnerGender));
+    const allowed = new Set(matchingCanonicalEnumStringValues(AcceptedPartnerGender));
     out.acceptedPartnerGenders = list.map((g, i) => {
       if (typeof g !== 'string' || !allowed.has(g)) {
         throw new Error(
@@ -417,10 +433,16 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
   }
 
   if (p.partnerAgeMin !== undefined) {
-    out.partnerAgeMin = assertIntegerAge(p.partnerAgeMin, 'structuredPreferences.partnerAgeMin');
+    out.partnerAgeMin = assertHolyGrailStructuredMapPartnerAgeInteger(
+      p.partnerAgeMin,
+      'structuredPreferences.partnerAgeMin',
+    );
   }
   if (p.partnerAgeMax !== undefined) {
-    out.partnerAgeMax = assertIntegerAge(p.partnerAgeMax, 'structuredPreferences.partnerAgeMax');
+    out.partnerAgeMax = assertHolyGrailStructuredMapPartnerAgeInteger(
+      p.partnerAgeMax,
+      'structuredPreferences.partnerAgeMax',
+    );
   }
   if (
     out.partnerAgeMin !== undefined &&
@@ -433,7 +455,7 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
   if (p.minimumPartnerEducation !== undefined) {
     out.minimumPartnerEducation = assertStringInEnum(
       p.minimumPartnerEducation,
-      enumValues(MinimumPartnerEducation),
+      matchingCanonicalEnumStringValues(MinimumPartnerEducation),
       'structuredPreferences.minimumPartnerEducation',
     ) as MinimumPartnerEducation;
   }
@@ -441,7 +463,7 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
   if (p.acceptedPartnerSmoking !== undefined) {
     out.acceptedPartnerSmoking = assertStringInEnum(
       p.acceptedPartnerSmoking,
-      enumValues(AcceptedPartnerSmoking),
+      matchingCanonicalEnumStringValues(AcceptedPartnerSmoking),
       'structuredPreferences.acceptedPartnerSmoking',
     ) as AcceptedPartnerSmoking;
   }
@@ -449,7 +471,7 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
   if (p.acceptedPartnerAlcohol !== undefined) {
     out.acceptedPartnerAlcohol = assertStringInEnum(
       p.acceptedPartnerAlcohol,
-      enumValues(AcceptedPartnerAlcohol),
+      matchingCanonicalEnumStringValues(AcceptedPartnerAlcohol),
       'structuredPreferences.acceptedPartnerAlcohol',
     ) as AcceptedPartnerAlcohol;
   }
@@ -457,7 +479,7 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
   if (p.partnerWantsChildren !== undefined) {
     out.partnerWantsChildren = assertStringInEnum(
       p.partnerWantsChildren,
-      enumValues(PartnerWantsChildrenRequirement),
+      matchingCanonicalEnumStringValues(PartnerWantsChildrenRequirement),
       'structuredPreferences.partnerWantsChildren',
     ) as PartnerWantsChildrenRequirement;
   }
@@ -465,7 +487,7 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
   if (p.partnerHasChildren !== undefined) {
     out.partnerHasChildren = assertStringInEnum(
       p.partnerHasChildren,
-      enumValues(PartnerHasChildrenAcceptance),
+      matchingCanonicalEnumStringValues(PartnerHasChildrenAcceptance),
       'structuredPreferences.partnerHasChildren',
     ) as PartnerHasChildrenAcceptance;
   }
@@ -487,6 +509,18 @@ function buildPreferences(sp: HolyGrailProfileMappingInput['structuredPreference
 
   if (p.maxDistanceKm !== undefined) {
     out.maxDistanceKm = assertPositiveFiniteKm(p.maxDistanceKm, 'structuredPreferences.maxDistanceKm');
+  }
+
+  if (p.similarityPreference !== undefined) {
+    if (p.similarityPreference === null) {
+      out.similarityPreference = null;
+    } else {
+      out.similarityPreference = assertStringInEnum(
+        p.similarityPreference,
+        SIMILARITY_PREFERENCE_STRINGS,
+        'structuredPreferences.similarityPreference',
+      ) as SimilarityPreference;
+    }
   }
 
   return out;
@@ -515,7 +549,7 @@ function parseSearchOverrides(raw: unknown): MatchingSearchOverrides {
     if (!Array.isArray(list) || list.length === 0) {
       throw new Error('HolyGrail map: searchOverrides.acceptedPartnerGenders must be a non-empty array when provided');
     }
-    const allowed = new Set(enumValues(AcceptedPartnerGender));
+    const allowed = new Set(matchingCanonicalEnumStringValues(AcceptedPartnerGender));
     out.acceptedPartnerGenders = list.map((g, i) => {
       if (typeof g !== 'string' || !allowed.has(g)) {
         throw new Error(
@@ -526,10 +560,16 @@ function parseSearchOverrides(raw: unknown): MatchingSearchOverrides {
     });
   }
   if (o.partnerAgeMin !== undefined) {
-    out.partnerAgeMin = assertIntegerAge(o.partnerAgeMin, 'searchOverrides.partnerAgeMin');
+    out.partnerAgeMin = assertHolyGrailStructuredMapPartnerAgeInteger(
+      o.partnerAgeMin,
+      'searchOverrides.partnerAgeMin',
+    );
   }
   if (o.partnerAgeMax !== undefined) {
-    out.partnerAgeMax = assertIntegerAge(o.partnerAgeMax, 'searchOverrides.partnerAgeMax');
+    out.partnerAgeMax = assertHolyGrailStructuredMapPartnerAgeInteger(
+      o.partnerAgeMax,
+      'searchOverrides.partnerAgeMax',
+    );
   }
   if (out.partnerAgeMin !== undefined && out.partnerAgeMax !== undefined && out.partnerAgeMin > out.partnerAgeMax) {
     throw new Error('HolyGrail map: searchOverrides.partnerAgeMin must be <= partnerAgeMax');
@@ -537,35 +577,35 @@ function parseSearchOverrides(raw: unknown): MatchingSearchOverrides {
   if (o.minimumPartnerEducation !== undefined) {
     out.minimumPartnerEducation = assertStringInEnum(
       o.minimumPartnerEducation,
-      enumValues(MinimumPartnerEducation),
+      matchingCanonicalEnumStringValues(MinimumPartnerEducation),
       'searchOverrides.minimumPartnerEducation',
     ) as MinimumPartnerEducation;
   }
   if (o.acceptedPartnerSmoking !== undefined) {
     out.acceptedPartnerSmoking = assertStringInEnum(
       o.acceptedPartnerSmoking,
-      enumValues(AcceptedPartnerSmoking),
+      matchingCanonicalEnumStringValues(AcceptedPartnerSmoking),
       'searchOverrides.acceptedPartnerSmoking',
     ) as AcceptedPartnerSmoking;
   }
   if (o.acceptedPartnerAlcohol !== undefined) {
     out.acceptedPartnerAlcohol = assertStringInEnum(
       o.acceptedPartnerAlcohol,
-      enumValues(AcceptedPartnerAlcohol),
+      matchingCanonicalEnumStringValues(AcceptedPartnerAlcohol),
       'searchOverrides.acceptedPartnerAlcohol',
     ) as AcceptedPartnerAlcohol;
   }
   if (o.partnerWantsChildren !== undefined) {
     out.partnerWantsChildren = assertStringInEnum(
       o.partnerWantsChildren,
-      enumValues(PartnerWantsChildrenRequirement),
+      matchingCanonicalEnumStringValues(PartnerWantsChildrenRequirement),
       'searchOverrides.partnerWantsChildren',
     ) as PartnerWantsChildrenRequirement;
   }
   if (o.partnerHasChildren !== undefined) {
     out.partnerHasChildren = assertStringInEnum(
       o.partnerHasChildren,
-      enumValues(PartnerHasChildrenAcceptance),
+      matchingCanonicalEnumStringValues(PartnerHasChildrenAcceptance),
       'searchOverrides.partnerHasChildren',
     ) as PartnerHasChildrenAcceptance;
   }
@@ -580,6 +620,17 @@ function parseSearchOverrides(raw: unknown): MatchingSearchOverrides {
   }
   if (o.maxDistanceKm !== undefined) {
     out.maxDistanceKm = assertPositiveFiniteKm(o.maxDistanceKm, 'searchOverrides.maxDistanceKm');
+  }
+  if (o.similarityPreference !== undefined) {
+    if (o.similarityPreference === null) {
+      out.similarityPreference = null;
+    } else {
+      out.similarityPreference = assertStringInEnum(
+        o.similarityPreference,
+        SIMILARITY_PREFERENCE_STRINGS,
+        'searchOverrides.similarityPreference',
+      ) as SimilarityPreference;
+    }
   }
   if (o.validUntil !== undefined) {
     if (typeof o.validUntil !== 'string' || o.validUntil.trim().length === 0) {
@@ -601,13 +652,46 @@ export function mapProfileSourceToMatchingCanonical(input: HolyGrailProfileMappi
   validateExtractionArraysSlice(input.extractionArrays);
   validateStructuredFactsSlice(input.structuredFacts);
   validateStructuredPreferencesSlice(input.structuredPreferences);
+  validateRankingSignalsSlice(input.rankingSignals);
 
   const profileId = assertNonEmptyProfileId(input.profileId);
-  return {
+  const base: MatchingCanonicalModel = {
     version: MATCHING_CANONICAL_MODEL_VERSION,
     profileId,
     facts: buildFacts(input),
     preferences: buildPreferences(input.structuredPreferences),
     searchOverrides: parseSearchOverrides(input.searchOverrides),
   };
+  if (input.rankingSignals !== undefined) {
+    const rs = input.rankingSignals as MatchingRankingSignalsSnapshot;
+    return {
+      ...base,
+      rankingSignals: {
+        dailyRhythm: rs.dailyRhythm,
+        autonomyTogetherness: rs.autonomyTogetherness,
+        conflictStyle: rs.conflictStyle,
+        lifestylePace: rs.lifestylePace,
+        interestsTop: [...rs.interestsTop],
+        ...(rs.personalityTraitsSelf !== undefined && rs.personalityTraitsSelf.length > 0
+          ? { personalityTraitsSelf: [...rs.personalityTraitsSelf] }
+          : {}),
+        ...(rs.personalityTraitsPartner !== undefined && rs.personalityTraitsPartner.length > 0
+          ? { personalityTraitsPartner: [...rs.personalityTraitsPartner] }
+          : {}),
+        ...(rs.lifestyleSignalsSelf !== undefined && rs.lifestyleSignalsSelf.length > 0
+          ? { lifestyleSignalsSelf: [...rs.lifestyleSignalsSelf] }
+          : {}),
+        ...(rs.lifestyleSignalsPartner !== undefined && rs.lifestyleSignalsPartner.length > 0
+          ? { lifestyleSignalsPartner: [...rs.lifestyleSignalsPartner] }
+          : {}),
+        ...(rs.interestTagsSelf !== undefined && rs.interestTagsSelf.length > 0
+          ? { interestTagsSelf: [...rs.interestTagsSelf] }
+          : {}),
+        ...(rs.interestTagsPartner !== undefined && rs.interestTagsPartner.length > 0
+          ? { interestTagsPartner: [...rs.interestTagsPartner] }
+          : {}),
+      },
+    };
+  }
+  return base;
 }

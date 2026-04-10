@@ -5,6 +5,7 @@ import type {
   MatchDetailChildrenUnsure,
 } from '../../_lib/types';
 import { ChipsSection } from '../../../components/chips-section';
+import { ChildrenUnsureBadge } from '../children-unsure-badge';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -88,15 +89,13 @@ export default async function MatchDetailPage({ params }: Props) {
             )}
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              {(match.children_unsure.profile_a_to_profile_b ||
-                match.children_unsure.profile_b_to_profile_a) && (
-                <span
-                  className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-900 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100"
-                  data-testid="match-badge-children-unsure"
-                >
-                  Not sure about kids
-                </span>
-              )}
+              <ChildrenUnsureBadge
+                apiBaseUrl={API_BASE_URL}
+                visible={
+                  Boolean(match.children_unsure?.profile_a_to_profile_b) ||
+                  Boolean(match.children_unsure?.profile_b_to_profile_a)
+                }
+              />
             </div>
 
             <div className="mt-5 flex flex-wrap items-end gap-6">

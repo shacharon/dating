@@ -11,6 +11,7 @@ import { HolyGrailStructuredWriteService } from './holy-grail-structured-write.s
 import { HolyGrailRetrievalService } from './retrieval/holy-grail-retrieval.service';
 import { PrismaHolyGrailProfileSourceRepository } from './retrieval/prisma-holy-grail-profile-source.repository';
 import { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapper';
+import { extractSimilarityPreferenceFromFreeText } from './similarity-preference-text.extract';
 import { evaluateHolyGrailDirectional } from './eligibility.evaluator';
 import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from './holy-grail-dimensions';
 
@@ -29,6 +30,7 @@ const TARGET_PREF_KEYS = new Set([
   'acceptedPartnerReligions',
   'acceptedPartnerAlcohol',
   'partnerHasChildren',
+  'similarityPreference',
 ]);
 
 const TARGET_DIMENSIONS: HolyGrailDimensionKey[] = [
@@ -200,6 +202,11 @@ function buildInferredPreferencePatch(
   const partnerContext = `${aboutPartner}\n${aboutRelationship}`;
   const selfAge = inferSelfAge(aboutMe);
   const age = inferPartnerAgeRange(partnerContext, selfAge);
+  const similarityPreference = extractSimilarityPreferenceFromFreeText({
+    aboutMe,
+    aboutPartner,
+    aboutRelationship,
+  }).value;
   return {
     partnerAgeMin: age.min,
     partnerAgeMax: age.max,
@@ -207,6 +214,7 @@ function buildInferredPreferencePatch(
     acceptedPartnerReligions: inferAcceptedPartnerReligions(partnerContext),
     acceptedPartnerAlcohol: inferAcceptedPartnerAlcohol(partnerContext),
     partnerHasChildren: inferPartnerHasChildren(partnerContext),
+    similarityPreference,
   };
 }
 

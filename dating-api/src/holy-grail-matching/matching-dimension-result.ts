@@ -1,6 +1,7 @@
 /**
- * HOLY_GRAIL_MATCHING — per-dimension outcome (Step 3 doc).
- * Lives outside matching-canonical.types.ts until promoted.
+ * HOLY_GRAIL_MATCHING — per-dimension outcome labels used in audit/legacy bridges (Step 3 doc vocabulary: MATCH / NO_MATCH / …).
+ * Layer 3 runtime evaluation uses `HolyGrailHardEligibilityStatus` in `eligibility.evaluator.ts` (PASS / FAIL / SKIPPED / SOFT_PASS).
+ * See `docs/HOLY_GRAIL_MATCHING.md` § “Locked Layer 3 policy” for SOFT_PASS rules and doc↔code mapping.
  */
 
 /** Runtime literals for comparisons and audit (type is `MatchingDimensionResult`). */

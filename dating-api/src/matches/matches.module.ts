@@ -7,6 +7,7 @@ import { MatchesApiController } from './matches-api.controller';
 import { MatchesController } from './matches.controller';
 import { MatchesScanService } from './matches-scan.service';
 import { MatchesService } from './matches.service';
+import { ChildrenUnsureAnalyticsService } from './children-unsure-analytics.service';
 
 @Module({
   imports: [SimpleLoggerModule, ProfilesModule],
@@ -16,6 +17,7 @@ import { MatchesService } from './matches.service';
     MatchDaemonService,
     MatchesAnalyticsService,
     MatchesScanService,
+    ChildrenUnsureAnalyticsService,
   ],
   exports: [MatchesService],
 })

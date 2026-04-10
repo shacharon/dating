@@ -16,21 +16,26 @@ import {
   PartnerHasChildrenAcceptance,
   PartnerWantsChildrenRequirement,
   ReligionSelf,
+  SIMILARITY_PREFERENCE_VALUES,
   SmokingFrequencySelf,
   WantsChildrenSelf,
 } from '../canonical/matching-canonical.types';
+import { matchingCanonicalEnumMemberSet } from './holy-grail-canonical-enum';
+import {
+  HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX,
+  HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN,
+  HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET,
+  HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET,
+  isHolyGrailDobYmdString,
+} from './holy-grail-structured-contract';
 
-const DOB_RE = /^\d{4}-\d{2}-\d{2}$/;
+const SIMILARITY_PREFERENCE_SET = new Set<string>(SIMILARITY_PREFERENCE_VALUES);
 
 export class HolyGrailStructuredWriteError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'HolyGrailStructuredWriteError';
   }
-}
-
-function enumSet<T extends string>(e: Record<string, T>): Set<string> {
-  return new Set(Object.values(e));
 }
 
 function asPlainObject(v: unknown): Record<string, unknown> | null {
@@ -60,56 +65,33 @@ function requireIntegerAge(v: unknown, field: string): number {
   if (typeof v !== 'number' || !Number.isInteger(v)) {
     throw new HolyGrailStructuredWriteError(`${field} must be an integer`);
   }
-  if (v < 18 || v > 120) {
+  if (v < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN || v > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX) {
     throw new HolyGrailStructuredWriteError(`${field} must be in [18, 120]`);
   }
   return v;
 }
 
-const FACT_KEYS = new Set([
-  'genderIdentity',
-  'dateOfBirth',
-  'childrenStatus',
-  'wantsChildren',
-  'smoking',
-  'alcoholUse',
-  'education',
-  'religion',
-]);
-
-const PREF_KEYS = new Set([
-  'acceptedPartnerGenders',
-  'partnerAgeMin',
-  'partnerAgeMax',
-  'minimumPartnerEducation',
-  'acceptedPartnerSmoking',
-  'acceptedPartnerAlcohol',
-  'partnerWantsChildren',
-  'partnerHasChildren',
-  'acceptedPartnerReligions',
-]);
-
 function normalizeFactValue(key: string, v: unknown): unknown {
   switch (key) {
     case 'genderIdentity':
-      return requireEnum(v, enumSet(GenderIdentity), 'genderIdentity');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(GenderIdentity), 'genderIdentity');
     case 'dateOfBirth':
-      if (typeof v !== 'string' || !DOB_RE.test(v)) {
+      if (typeof v !== 'string' || !isHolyGrailDobYmdString(v)) {
         throw new HolyGrailStructuredWriteError(`Invalid dateOfBirth: ${JSON.stringify(v)}`);
       }
       return v;
     case 'childrenStatus':
-      return requireEnum(v, enumSet(ChildrenStatusSelf), 'childrenStatus');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(ChildrenStatusSelf), 'childrenStatus');
     case 'wantsChildren':
-      return requireEnum(v, enumSet(WantsChildrenSelf), 'wantsChildren');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(WantsChildrenSelf), 'wantsChildren');
     case 'smoking':
-      return requireEnum(v, enumSet(SmokingFrequencySelf), 'smoking');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(SmokingFrequencySelf), 'smoking');
     case 'alcoholUse':
-      return requireEnum(v, enumSet(AlcoholUseSelf), 'alcoholUse');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(AlcoholUseSelf), 'alcoholUse');
     case 'education':
-      return requireEnum(v, enumSet(EducationLevelSelf), 'education');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(EducationLevelSelf), 'education');
     case 'religion':
-      return requireEnum(v, enumSet(ReligionSelf), 'religion');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(ReligionSelf), 'religion');
     default:
       throw new HolyGrailStructuredWriteError(`Unsupported fact key: ${key}`);
   }
@@ -122,7 +104,7 @@ function normalizeGenders(v: unknown): string[] {
   if (v.length === 0) {
     throw new HolyGrailStructuredWriteError('acceptedPartnerGenders must be non-empty when set');
   }
-  const allowed = enumSet(AcceptedPartnerGender);
+  const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerGender);
   const out: string[] = [];
   for (let i = 0; i < v.length; i++) {
     const x = v[i];
@@ -143,7 +125,7 @@ function normalizeReligionList(v: unknown): string[] {
   if (v.length === 0) {
     return [];
   }
-  const allowed = enumSet(ReligionSelf);
+  const allowed = matchingCanonicalEnumMemberSet(ReligionSelf);
   const out: string[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < v.length; i++) {
@@ -169,17 +151,20 @@ function normalizePrefValue(key: string, v: unknown): unknown {
     case 'partnerAgeMax':
       return requireIntegerAge(v, 'partnerAgeMax');
     case 'minimumPartnerEducation':
-      return requireEnum(v, enumSet(MinimumPartnerEducation), 'minimumPartnerEducation');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(MinimumPartnerEducation), 'minimumPartnerEducation');
     case 'acceptedPartnerSmoking':
-      return requireEnum(v, enumSet(AcceptedPartnerSmoking), 'acceptedPartnerSmoking');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking), 'acceptedPartnerSmoking');
     case 'acceptedPartnerAlcohol':
-      return requireEnum(v, enumSet(AcceptedPartnerAlcohol), 'acceptedPartnerAlcohol');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol), 'acceptedPartnerAlcohol');
     case 'partnerWantsChildren':
-      return requireEnum(v, enumSet(PartnerWantsChildrenRequirement), 'partnerWantsChildren');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement), 'partnerWantsChildren');
     case 'partnerHasChildren':
-      return requireEnum(v, enumSet(PartnerHasChildrenAcceptance), 'partnerHasChildren');
+      return requireEnum(v, matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance), 'partnerHasChildren');
     case 'acceptedPartnerReligions':
       return normalizeReligionList(v);
+    case 'similarityPreference':
+      if (v === null) return null;
+      return requireEnum(v, SIMILARITY_PREFERENCE_SET, 'similarityPreference');
     default:
       throw new HolyGrailStructuredWriteError(`Unsupported preference key: ${key}`);
   }
@@ -205,7 +190,7 @@ export function mergeHolyGrailStructuredFactsPatch(
   const base: Record<string, unknown> = { ...(asPlainObject(existing) ?? {}) };
 
   for (const [key, raw] of Object.entries(p)) {
-    if (!FACT_KEYS.has(key)) {
+    if (!HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET.has(key)) {
       throw new HolyGrailStructuredWriteError(`Unknown holyGrailStructuredFacts key: ${key}`);
     }
     if (raw === null) {
@@ -226,11 +211,15 @@ export function mergeHolyGrailStructuredPreferencesPatch(
   const base: Record<string, unknown> = { ...(asPlainObject(existing) ?? {}) };
 
   for (const [key, raw] of Object.entries(p)) {
-    if (!PREF_KEYS.has(key)) {
+    if (!HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET.has(key)) {
       throw new HolyGrailStructuredWriteError(`Unknown holyGrailStructuredPreferences key: ${key}`);
     }
     if (raw === null) {
-      delete base[key];
+      if (key === 'similarityPreference') {
+        base[key] = null;
+      } else {
+        delete base[key];
+      }
       continue;
     }
     if (key === 'acceptedPartnerReligions' && Array.isArray(raw) && raw.length === 0) {

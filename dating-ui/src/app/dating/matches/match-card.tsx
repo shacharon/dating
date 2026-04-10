@@ -16,6 +16,13 @@ export function MatchCard({ match }: Props) {
           <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             {match.pairLabel}
           </h2>
+          {match.childrenUnsure ? (
+            <p className="mt-2">
+              <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-900 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100">
+                Kids intent unclear
+              </span>
+            </p>
+          ) : null}
           {match.reasonShort ? (
             <p
               className="mt-1.5 text-sm leading-snug text-zinc-600 dark:text-zinc-400"

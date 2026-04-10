@@ -9,9 +9,27 @@ import type {
 import type { MatchListItemDto, MatchRecordDto } from './match.types';
 import { buildShortReason } from './match-short-reason';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadChildrenUnsureProfileRowMap } from './match-detail-children-unsure';
+import {
+  anyChildrenUnsure,
+  applyChildrenUnsurePenalty,
+  getDisplayScore,
+} from './children-unsure.helpers';
+import { toCanonicalMatchId } from './match-id';
+import {
+  loadMatchPairHgSnapshotMap,
+  resolveChildrenUnsureForPair,
+  upsertMatchPairHgSnapshots,
+} from './match-pair-hg-snapshot';
 
 export type { CompareResultDto } from './match-engine';
 export type { MatchListItemDto } from './match.types';
+
+export { CHILDREN_UNSURE_RANKING_PENALTY_RATE } from './children-unsure.product-policy';
+
+export interface ListMatchesOptions {
+  readonly hideChildrenUnsure?: boolean;
+}
 
 export interface CompareBodyDto {
   aId: string;
@@ -43,11 +61,6 @@ export type CompareServiceResult =
   | { status: 'NOT_ANALYZED'; matchId: string; match: CompareGuardMatchDto }
   | { status: 'INSUFFICIENT_DATA'; matchId: string; match: CompareGuardMatchDto };
 
-/** Deterministic matchId: minId__maxId (lexicographic). */
-function toMatchId(aId: string, bId: string): string {
-  const [minId, maxId] = [aId, bId].sort((x, y) => x.localeCompare(y));
-  return `${minId}__${maxId}`;
-}
 
 @Injectable()
 export class MatchesService {
@@ -121,7 +134,7 @@ export class MatchesService {
       profileB as ProfileJsonPayload,
     );
 
-    const matchId = toMatchId(aId, bId);
+    const matchId = toCanonicalMatchId(aId, bId);
     if ('status' in result && result.status === 'NOT_ANALYZED') {
       return {
         status: 'NOT_ANALYZED',
@@ -208,40 +221,76 @@ export class MatchesService {
     return { status: 'READY', matchId, match: record };
   }
 
-  async list(): Promise<MatchListItemDto[]> {
+  /**
+   * Upserts `match_pair_hg_snapshot` for every computed pair (called after full recompute / rebuild).
+   */
+  async persistMatchPairHgSnapshots(records: MatchRecordDto[]): Promise<{ written: number; skipped: number }> {
+    const profileMap = await loadChildrenUnsureProfileRowMap(this.prisma);
+    return upsertMatchPairHgSnapshots(this.prisma, records, profileMap);
+  }
+
+  async list(opts?: ListMatchesOptions): Promise<MatchListItemDto[]> {
+    const hideChildrenUnsure = opts?.hideChildrenUnsure === true;
     const records = await this.listAllComputed();
-    return records
-      .map((r) => {
-        const finalScore = r.finalScore ?? r.overall;
-        const dealbreakersRaw = r.dealbreakers ?? r.debug?.dealbreakers ?? [];
-        const dealbreakers = dealbreakersRaw.map((d) => ({
-          code: d.code,
-          ...(d.severity != null && { severity: d.severity }),
-        }));
-        const shortReason = buildShortReason({
-          finalScore,
-          dealbreakers,
-        });
-        const scoreMetadata: MatchListItemDto['scoreMetadata'] = {};
-        if (r.coveragePercent != null) scoreMetadata.coveragePercent = r.coveragePercent;
-        if (r.coverageFactor != null) scoreMetadata.coverageFactor = r.coverageFactor;
-        if (r.friction != null) scoreMetadata.friction = r.friction;
-        if (r.rawScore != null) scoreMetadata.rawScore = r.rawScore;
-        return {
-          matchId: r.matchId,
-          a: r.a,
-          b: r.b,
-          overall: r.overall,
-          finalScore,
-          updatedAt: r.updatedAt,
-          dealbreakers,
-          shortReason,
-          ...(r.explainability != null && { explainability: r.explainability }),
-          ...(r.recommendation != null && { recommendation: r.recommendation }),
-          ...(Object.keys(scoreMetadata).length > 0 && { scoreMetadata }),
-        };
-      })
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const profileMap = await loadChildrenUnsureProfileRowMap(this.prisma);
+    const snapshotMap = await loadMatchPairHgSnapshotMap(
+      this.prisma,
+      records.map((r) => r.matchId),
+    );
+
+    const mapped: MatchListItemDto[] = records.map((r) => {
+      const finalScore = r.finalScore ?? r.overall;
+      const dealbreakersRaw = r.dealbreakers ?? r.debug?.dealbreakers ?? [];
+      const dealbreakers = dealbreakersRaw.map((d) => ({
+        code: d.code,
+        ...(d.severity != null && { severity: d.severity }),
+      }));
+      const shortReason = buildShortReason({
+        finalScore,
+        dealbreakers,
+      });
+      const scoreMetadata: MatchListItemDto['scoreMetadata'] = {};
+      if (r.coveragePercent != null) scoreMetadata.coveragePercent = r.coveragePercent;
+      if (r.coverageFactor != null) scoreMetadata.coverageFactor = r.coverageFactor;
+      if (r.friction != null) scoreMetadata.friction = r.friction;
+      if (r.rawScore != null) scoreMetadata.rawScore = r.rawScore;
+
+      const rowA = profileMap.get(r.aId);
+      const rowB = profileMap.get(r.bId);
+      const children_unsure = resolveChildrenUnsureForPair({
+        snapshot: snapshotMap.get(r.matchId),
+        rowA,
+        rowB,
+      });
+      const engineFinalScore = finalScore;
+      const rankingScore = applyChildrenUnsurePenalty(
+        engineFinalScore,
+        anyChildrenUnsure(children_unsure),
+      );
+
+      return {
+        matchId: r.matchId,
+        a: r.a,
+        b: r.b,
+        overall: r.overall,
+        finalScore,
+        engineFinalScore,
+        rankingScore,
+        children_unsure,
+        updatedAt: r.updatedAt,
+        dealbreakers,
+        shortReason,
+        ...(r.explainability != null && { explainability: r.explainability }),
+        ...(r.recommendation != null && { recommendation: r.recommendation }),
+        ...(Object.keys(scoreMetadata).length > 0 && { scoreMetadata }),
+      };
+    });
+
+    const filtered = hideChildrenUnsure
+      ? mapped.filter((row) => !anyChildrenUnsure(row.children_unsure))
+      : mapped;
+
+    return filtered.sort((a, b) => getDisplayScore(b) - getDisplayScore(a));
   }
 
   async listFull(opts: {
@@ -262,7 +311,7 @@ export class MatchesService {
   async getById(matchId: string): Promise<MatchRecordDto | null> {
     const [aId, bId] = matchId.split('__');
     if (!aId || !bId) return null;
-    if (toMatchId(aId, bId) !== matchId) return null;
+    if (toCanonicalMatchId(aId, bId) !== matchId) return null;
     const result = await this.compare({ aId, bId });
     return result.status === 'READY' ? result.match : null;
   }
@@ -293,7 +342,7 @@ export class MatchesService {
         const compareResult = result as CompareResultDto;
         const now = new Date().toISOString();
         records.push({
-          matchId: toMatchId(aId, bId),
+          matchId: toCanonicalMatchId(aId, bId),
           aId,
           bId,
           a: { id: profileA.id, name: profileA.name },

@@ -2,7 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from '../src/holy-grail-matching/holy-grail-dimensions';
 import { mapProfileSourceToMatchingCanonical } from '../src/holy-grail-matching/profile-to-canonical.mapper';
 import { evaluateHolyGrailDirectional } from '../src/holy-grail-matching/eligibility.evaluator';
-import { buildHolyGrailProfileMappingInputFromDbRow } from '../src/holy-grail-matching/retrieval/holy-grail-structured-db-json';
+import { buildHolyGrailProfileMappingInputFromRankingAwareDbRow } from '../src/holy-grail-matching/retrieval/holy-grail-structured-db-json';
+import { CHILDREN_UNSURE_PROFILE_ROW_SELECT } from '../src/matches/match-detail-children-unsure';
 
 type DimCounts = Record<HolyGrailDimensionKey, number>;
 const SYNTHETIC_ID_PREFIX_ALLOWLIST = ['synthetic-he-', 'synthetic-en-', 'synthetic-hg-gap-'] as const;
@@ -43,15 +44,10 @@ async function main(): Promise<void> {
     for (const searcherId of searcherIds) {
       const sRow = await prisma.userProfile.findUnique({
         where: { id: searcherId },
-        include: { extractionV2: { select: { interests_self: true, interests: true, lifestyleTraits: true } } },
+        select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
       });
       if (!sRow) continue;
-      const sInput = buildHolyGrailProfileMappingInputFromDbRow({
-        profileId: sRow.id,
-        extractionV2: sRow.extractionV2,
-        holyGrailStructuredFacts: sRow.holyGrailStructuredFacts,
-        holyGrailStructuredPreferences: sRow.holyGrailStructuredPreferences,
-      });
+      const sInput = buildHolyGrailProfileMappingInputFromRankingAwareDbRow(sRow);
       let sCanon;
       try {
         sCanon = mapProfileSourceToMatchingCanonical(sInput);
@@ -65,18 +61,13 @@ async function main(): Promise<void> {
           OR: VALIDATION_CANDIDATE_PREFIXES.map((prefix) => ({ id: { startsWith: prefix } })),
         },
         orderBy: [{ id: 'asc' }],
-        include: { extractionV2: { select: { interests_self: true, interests: true, lifestyleTraits: true } } },
+        select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
       });
 
       let passedHardFilter = 0;
       let canonicalMapFailed = 0;
       for (const cRow of candidateRows) {
-        const cInput = buildHolyGrailProfileMappingInputFromDbRow({
-          profileId: cRow.id,
-          extractionV2: cRow.extractionV2,
-          holyGrailStructuredFacts: cRow.holyGrailStructuredFacts,
-          holyGrailStructuredPreferences: cRow.holyGrailStructuredPreferences,
-        });
+        const cInput = buildHolyGrailProfileMappingInputFromRankingAwareDbRow(cRow);
         let cCanon;
         try {
           cCanon = mapProfileSourceToMatchingCanonical(cInput);

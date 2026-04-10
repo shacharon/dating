@@ -1,7 +1,7 @@
 /**
- * HOLY_GRAIL_MATCHING — new engine above the LLM: map → evaluate → decision/audit.
- * LLM stays in extraction services; deterministic code lives here only.
- * Do not register in MatchesModule or wire to ranking until explicitly approved.
+ * HOLY_GRAIL_MATCHING — deterministic stack above the LLM: map → evaluate → decision/audit (+ optional post-filter rank).
+ * LLM stays in extraction services. `HolyGrailMatchingModule` is wired from `app.module.ts`; legacy `MatchesModule` / `match-engine` remains separate until cutover.
+ * Eligibility SOFT_PASS rules: see `docs/HOLY_GRAIL_MATCHING.md` § “Locked Layer 3 policy” and `eligibility.evaluator.ts` docblock.
  */
 
 export { MatchingDimensionResults, type MatchingDimensionResult } from './matching-dimension-result';
@@ -16,6 +16,7 @@ export type {
 export { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapper';
 export {
   evaluateHolyGrailDirectional,
+  mergeEffectiveMatchingPreferences,
   type HolyGrailDirectionalEvaluationResult,
   type HolyGrailDimensionEvaluation,
   type HolyGrailEligibilityFlags,
@@ -58,6 +59,23 @@ export {
   parseHolyGrailStructuredPreferencesFromJson,
 } from './retrieval/holy-grail-structured-db-json';
 export {
+  holyGrailStructuredPreferencesPatchBodySchema,
+  parseHolyGrailStructuredPreferencesPatchBody,
+  type HolyGrailStructuredPreferencesPatchBody,
+} from './retrieval/holy-grail-preferences-patch.schema';
+export {
+  mapHolyGrailRetrievalResponseToWireDto,
+  mapMatchingCanonicalToRetrievalCandidateWireDto,
+  mapMatchingPreferencesToWireDto,
+  mapMatchingSearchOverridesToWireDto,
+  mapRankedHolyGrailCandidateToWireDto,
+  type HolyGrailMatchingPreferencesWireDto,
+  type HolyGrailMatchingSearchOverridesWireDto,
+  type HolyGrailRankedCandidateWireDto,
+  type HolyGrailRetrievalCandidateWireDto,
+  type HolyGrailRetrievalWireResponse,
+} from './retrieval/holy-grail-retrieval-wire.dto';
+export {
   HolyGrailStructuredWriteError,
   mergeHolyGrailStructuredFactsPatch,
   mergeHolyGrailStructuredPreferencesPatch,
@@ -66,3 +84,34 @@ export {
   HolyGrailStructuredWriteService,
   type HolyGrailStructuredWriteRequest,
 } from './holy-grail-structured-write.service';
+export {
+  extractSimilarityPreferenceFromFreeText,
+  type SimilarityPreferenceTextExtraction,
+} from './similarity-preference-text.extract';
+export {
+  extractPersonalityTraitsFromFreeText,
+  PERSONALITY_TRAIT_TAGS,
+  PERSONALITY_TRAIT_TAG_SET,
+  type PersonalityTraitEvidenceHit,
+  type PersonalityTraitTag,
+  type PersonalityTraitsScopeExtraction,
+  type PersonalityTraitsTextExtraction,
+} from './personality-traits-text.extract';
+export {
+  extractLifestyleSignalsFromFreeText,
+  LIFESTYLE_SIGNAL_TAGS,
+  LIFESTYLE_SIGNAL_TAG_SET,
+  type LifestyleSignalEvidenceHit,
+  type LifestyleSignalTag,
+  type LifestyleSignalsScopeExtraction,
+  type LifestyleSignalsTextExtraction,
+} from './lifestyle-signals-text.extract';
+export {
+  extractInterestTagsV1FromFreeText,
+  INTEREST_TAGS_V1,
+  INTEREST_TAG_V1_SET,
+  type InterestTagEvidenceHit,
+  type InterestTagV1,
+  type InterestTagsScopeExtraction,
+  type InterestTagsTextExtraction,
+} from './interest-tags-text.extract';
