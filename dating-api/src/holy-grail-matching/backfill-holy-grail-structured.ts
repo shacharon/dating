@@ -13,7 +13,10 @@ import { PrismaHolyGrailProfileSourceRepository } from './retrieval/prisma-holy-
 import { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapper';
 import { extractSimilarityPreferenceFromFreeText } from './similarity-preference-text.extract';
 import { evaluateHolyGrailDirectional } from './eligibility.evaluator';
-import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from './holy-grail-dimensions';
+import {
+  HOLY_GRAIL_DIMENSION_KEYS,
+  type HolyGrailDimensionKey,
+} from './holy-grail-dimensions';
 
 type JsonRecord = Record<string, unknown>;
 type DimStats = Record<HolyGrailDimensionKey, number>;
@@ -21,7 +24,9 @@ type DimStats = Record<HolyGrailDimensionKey, number>;
 const TARGET_UPDATES = Number(process.env.HG_BACKFILL_TARGET ?? '30');
 const SCAN_LIMIT = Number(process.env.HG_BACKFILL_SCAN_LIMIT ?? '500');
 const VALIDATION_SEARCHERS = Number(process.env.HG_VALIDATE_SEARCHERS ?? '5');
-const VALIDATION_CANDIDATE_LIMIT = Number(process.env.HG_VALIDATE_CANDIDATES ?? '300');
+const VALIDATION_CANDIDATE_LIMIT = Number(
+  process.env.HG_VALIDATE_CANDIDATES ?? '300',
+);
 
 const TARGET_PREF_KEYS = new Set([
   'partnerAgeMin',
@@ -48,7 +53,12 @@ function asObject(v: unknown): JsonRecord {
   return {};
 }
 
-function addIfMissing(target: JsonRecord, existing: JsonRecord, key: string, value: unknown): void {
+function addIfMissing(
+  target: JsonRecord,
+  existing: JsonRecord,
+  key: string,
+  value: unknown,
+): void {
   if (value === undefined) return;
   if (existing[key] !== undefined) return;
   target[key] = value;
@@ -59,7 +69,9 @@ function clampAdultAge(n: number): number {
 }
 
 function inferSelfAge(aboutMe: string): number | undefined {
-  const explicit = aboutMe.match(/\b(i am|i'?m)\s+(\d{2})\s*(?:years old|yo|y\/o)?\b/i);
+  const explicit = aboutMe.match(
+    /\b(i am|i'?m)\s+(\d{2})\s*(?:years old|yo|y\/o)?\b/i,
+  );
   if (explicit) {
     const age = Number(explicit[2]);
     if (Number.isInteger(age) && age >= 18 && age <= 120) return age;
@@ -72,13 +84,24 @@ function inferSelfAge(aboutMe: string): number | undefined {
   return undefined;
 }
 
-function inferPartnerAgeRange(partnerText: string, selfAge: number | undefined): { min?: number; max?: number } {
+function inferPartnerAgeRange(
+  partnerText: string,
+  selfAge: number | undefined,
+): { min?: number; max?: number } {
   const out: { min?: number; max?: number } = {};
-  const between = partnerText.match(/\b(?:between|ages?)\s+(\d{2})\s*(?:-|to|and)\s*(\d{2})\b/i);
+  const between = partnerText.match(
+    /\b(?:between|ages?)\s+(\d{2})\s*(?:-|to|and)\s*(\d{2})\b/i,
+  );
   if (between) {
     const a = Number(between[1]);
     const b = Number(between[2]);
-    if (Number.isInteger(a) && Number.isInteger(b) && a >= 18 && b <= 120 && a <= b) {
+    if (
+      Number.isInteger(a) &&
+      Number.isInteger(b) &&
+      a >= 18 &&
+      b <= 120 &&
+      a <= b
+    ) {
       out.min = a;
       out.max = b;
       return out;
@@ -89,7 +112,13 @@ function inferPartnerAgeRange(partnerText: string, selfAge: number | undefined):
   if (dashRange) {
     const a = Number(dashRange[1]);
     const b = Number(dashRange[2]);
-    if (Number.isInteger(a) && Number.isInteger(b) && a >= 18 && b <= 120 && a <= b) {
+    if (
+      Number.isInteger(a) &&
+      Number.isInteger(b) &&
+      a >= 18 &&
+      b <= 120 &&
+      a <= b
+    ) {
       return { min: a, max: b };
     }
   }
@@ -104,20 +133,31 @@ function inferPartnerAgeRange(partnerText: string, selfAge: number | undefined):
 
   if (selfAge !== undefined) {
     if (/\b(around my age|close to my age|similar age)\b/i.test(partnerText)) {
-      return { min: clampAdultAge(selfAge - 3), max: clampAdultAge(selfAge + 3) };
+      return {
+        min: clampAdultAge(selfAge - 3),
+        max: clampAdultAge(selfAge + 3),
+      };
     }
     if (/\b(a bit|slightly)?\s*older than me\b/i.test(partnerText)) {
-      return { min: clampAdultAge(selfAge + 1), max: clampAdultAge(selfAge + 5) };
+      return {
+        min: clampAdultAge(selfAge + 1),
+        max: clampAdultAge(selfAge + 5),
+      };
     }
     if (/\b(a bit|slightly)?\s*younger than me\b/i.test(partnerText)) {
-      return { min: clampAdultAge(selfAge - 5), max: clampAdultAge(selfAge - 1) };
+      return {
+        min: clampAdultAge(selfAge - 5),
+        max: clampAdultAge(selfAge - 1),
+      };
     }
   }
 
   return out;
 }
 
-function inferPartnerHasChildren(text: string): PartnerHasChildrenAcceptance | undefined {
+function inferPartnerHasChildren(
+  text: string,
+): PartnerHasChildrenAcceptance | undefined {
   if (
     /\b(no kids|must not have kids|without kids|childfree only|prefer childfree|prefer no kids|no children)\b/i.test(
       text,
@@ -135,8 +175,14 @@ function inferPartnerHasChildren(text: string): PartnerHasChildrenAcceptance | u
   return undefined;
 }
 
-function inferAcceptedPartnerAlcohol(text: string): AcceptedPartnerAlcohol | undefined {
-  if (/\b(non[- ]drinker only|no alcohol|must not drink|doesn'?t drink only)\b/i.test(text)) {
+function inferAcceptedPartnerAlcohol(
+  text: string,
+): AcceptedPartnerAlcohol | undefined {
+  if (
+    /\b(non[- ]drinker only|no alcohol|must not drink|doesn'?t drink only)\b/i.test(
+      text,
+    )
+  ) {
     return AcceptedPartnerAlcohol.NONE_ONLY;
   }
   if (
@@ -156,7 +202,9 @@ function inferAcceptedPartnerAlcohol(text: string): AcceptedPartnerAlcohol | und
   return undefined;
 }
 
-function inferMinimumPartnerEducation(text: string): MinimumPartnerEducation | undefined {
+function inferMinimumPartnerEducation(
+  text: string,
+): MinimumPartnerEducation | undefined {
   if (/\b(phd|doctorate|master'?s or higher|graduate degree)\b/i.test(text)) {
     return MinimumPartnerEducation.GRADUATE;
   }
@@ -167,7 +215,11 @@ function inferMinimumPartnerEducation(text: string): MinimumPartnerEducation | u
   ) {
     return MinimumPartnerEducation.BACHELORS;
   }
-  if (/\b(at least some college|college educated|educated|college|university)\b/i.test(text)) {
+  if (
+    /\b(at least some college|college educated|educated|college|university)\b/i.test(
+      text,
+    )
+  ) {
     return MinimumPartnerEducation.SOME_COLLEGE;
   }
   if (/\b(high school minimum|at least high school)\b/i.test(text)) {
@@ -176,16 +228,23 @@ function inferMinimumPartnerEducation(text: string): MinimumPartnerEducation | u
   return undefined;
 }
 
-function inferAcceptedPartnerReligions(text: string): ReligionSelf[] | undefined {
+function inferAcceptedPartnerReligions(
+  text: string,
+): ReligionSelf[] | undefined {
   if (/\b(not religious|secular)\b/i.test(text)) return [ReligionSelf.NONE];
   if (/\b(keeps kosher|kosher)\b/i.test(text)) return [ReligionSelf.JEWISH];
 
   const out: ReligionSelf[] = [];
-  if (/\b(jewish only|prefer jewish|jewish partner)\b/i.test(text)) out.push(ReligionSelf.JEWISH);
-  if (/\b(christian only|prefer christian|christian partner)\b/i.test(text)) out.push(ReligionSelf.CHRISTIAN);
-  if (/\b(muslim only|prefer muslim|muslim partner)\b/i.test(text)) out.push(ReligionSelf.MUSLIM);
-  if (/\b(hindu only|prefer hindu|hindu partner)\b/i.test(text)) out.push(ReligionSelf.HINDU);
-  if (/\b(buddhist only|prefer buddhist|buddhist partner)\b/i.test(text)) out.push(ReligionSelf.BUDDHIST);
+  if (/\b(jewish only|prefer jewish|jewish partner)\b/i.test(text))
+    out.push(ReligionSelf.JEWISH);
+  if (/\b(christian only|prefer christian|christian partner)\b/i.test(text))
+    out.push(ReligionSelf.CHRISTIAN);
+  if (/\b(muslim only|prefer muslim|muslim partner)\b/i.test(text))
+    out.push(ReligionSelf.MUSLIM);
+  if (/\b(hindu only|prefer hindu|hindu partner)\b/i.test(text))
+    out.push(ReligionSelf.HINDU);
+  if (/\b(buddhist only|prefer buddhist|buddhist partner)\b/i.test(text))
+    out.push(ReligionSelf.BUDDHIST);
   if (/\b(religious|faith|traditional)\b/i.test(text)) {
     // Explicitly religious language without denomination is too ambiguous.
     return undefined;
@@ -219,16 +278,16 @@ function buildInferredPreferencePatch(
 }
 
 function emptyDimStats(): DimStats {
-  return HOLY_GRAIL_DIMENSION_KEYS.reduce(
-    (acc, k) => {
-      acc[k] = 0;
-      return acc;
-    },
-    {} as DimStats,
-  );
+  return HOLY_GRAIL_DIMENSION_KEYS.reduce((acc, k) => {
+    acc[k] = 0;
+    return acc;
+  }, {} as DimStats);
 }
 
-function topEntries(map: Record<string, number>, n: number): Array<{ key: string; count: number }> {
+function topEntries(
+  map: Record<string, number>,
+  n: number,
+): Array<{ key: string; count: number }> {
   return Object.entries(map)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, n)
@@ -269,7 +328,8 @@ async function runValidation(args: {
       canonicalMapFailed: retrievalResult.debug.canonicalMapFailed,
     });
 
-    const searcherInput = await args.sources.getMappingInputByProfileId(searcherId);
+    const searcherInput =
+      await args.sources.getMappingInputByProfileId(searcherId);
     if (!searcherInput) continue;
 
     let searcherCanonical;
@@ -287,7 +347,8 @@ async function runValidation(args: {
     for (const candidateInput of candidateInputs) {
       let candidateCanonical;
       try {
-        candidateCanonical = mapProfileSourceToMatchingCanonical(candidateInput);
+        candidateCanonical =
+          mapProfileSourceToMatchingCanonical(candidateInput);
       } catch {
         continue;
       }
@@ -309,17 +370,24 @@ async function runValidation(args: {
         if (b.status === 'SKIPPED') skippedByDimension[dim] += 1;
         if (a.status === 'FAIL') {
           const key = `${dim}:${a.reasonCode}`;
-          failReasonCountsByDimension[key] = (failReasonCountsByDimension[key] ?? 0) + 1;
+          failReasonCountsByDimension[key] =
+            (failReasonCountsByDimension[key] ?? 0) + 1;
         }
         if (b.status === 'FAIL') {
           const key = `${dim}:${b.reasonCode}`;
-          failReasonCountsByDimension[key] = (failReasonCountsByDimension[key] ?? 0) + 1;
+          failReasonCountsByDimension[key] =
+            (failReasonCountsByDimension[key] ?? 0) + 1;
         }
       }
     }
   }
 
-  return { perSearcher, failReasonCountsByDimension, skippedByDimension, totalByDimension };
+  return {
+    perSearcher,
+    failReasonCountsByDimension,
+    skippedByDimension,
+    totalByDimension,
+  };
 }
 
 async function main() {
@@ -345,7 +413,9 @@ async function main() {
     },
   });
 
-  const baseSearchers = rows.slice(0, Math.max(1, VALIDATION_SEARCHERS)).map((r) => r.id);
+  const baseSearchers = rows
+    .slice(0, Math.max(1, VALIDATION_SEARCHERS))
+    .map((r) => r.id);
   const before = await runValidation({
     searchers: baseSearchers,
     retrieval,
@@ -380,7 +450,8 @@ async function main() {
     });
 
     touchedProfiles.push(row.id);
-    for (const k of Object.keys(prefPatch)) prefCoverageAdds[k] = (prefCoverageAdds[k] ?? 0) + 1;
+    for (const k of Object.keys(prefPatch))
+      prefCoverageAdds[k] = (prefCoverageAdds[k] ?? 0) + 1;
   }
 
   const after = await runValidation({
@@ -394,13 +465,17 @@ async function main() {
   for (const dim of TARGET_DIMENSIONS) {
     const beforeTotal = before.totalByDimension[dim];
     const afterTotal = after.totalByDimension[dim];
-    const beforePct = beforeTotal === 0 ? 0 : before.skippedByDimension[dim] / beforeTotal;
-    const afterPct = afterTotal === 0 ? 0 : after.skippedByDimension[dim] / afterTotal;
-    const relReduction = beforePct === 0 ? 0 : (beforePct - afterPct) / beforePct;
+    const beforePct =
+      beforeTotal === 0 ? 0 : before.skippedByDimension[dim] / beforeTotal;
+    const afterPct =
+      afterTotal === 0 ? 0 : after.skippedByDimension[dim] / afterTotal;
+    const relReduction =
+      beforePct === 0 ? 0 : (beforePct - afterPct) / beforePct;
     if (relReduction >= 0.3) reducedBy30Count += 1;
-    skippedReductionByTargetDimension[dim] = `${(beforePct * 100).toFixed(1)}% -> ${(afterPct * 100).toFixed(1)}% (${(
-      relReduction * 100
-    ).toFixed(1)}% relative reduction)`;
+    skippedReductionByTargetDimension[dim] =
+      `${(beforePct * 100).toFixed(1)}% -> ${(afterPct * 100).toFixed(1)}% (${(
+        relReduction * 100
+      ).toFixed(1)}% relative reduction)`;
   }
 
   console.log('=== HOLY GRAIL BACKFILL SUMMARY ===');
@@ -438,7 +513,9 @@ async function main() {
     `targeted_dimensions_with_at_least_30pct_relative_skipped_reduction=${reducedBy30Count}/${TARGET_DIMENSIONS.length}`,
   );
 
-  const allSearchersHavePasses = after.perSearcher.every((x) => x.passedHardFilter > 0);
+  const allSearchersHavePasses = after.perSearcher.every(
+    (x) => x.passedHardFilter > 0,
+  );
   console.log(`all_searchers_passedHardFilter_gt_0=${allSearchersHavePasses}`);
 
   const weakCoverageDims = HOLY_GRAIL_DIMENSION_KEYS.filter((dim) => {

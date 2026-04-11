@@ -105,7 +105,7 @@ const POSITIVE_TIERS: TierPredicate[] = [
 function tierIndexForEntry(e: BreakdownEntry): number {
   if (!isSignalKey(e.key)) return -1;
   for (let i = 0; i < POSITIVE_TIERS.length; i++) {
-    if (POSITIVE_TIERS[i]!(e)) return i;
+    if (POSITIVE_TIERS[i](e)) return i;
   }
   return -1;
 }
@@ -122,13 +122,15 @@ interface ScoredLabelCandidate {
   composite: number;
 }
 
-function buildLabelCandidates(breakdown: BreakdownEntry[]): ScoredLabelCandidate[] {
+function buildLabelCandidates(
+  breakdown: BreakdownEntry[],
+): ScoredLabelCandidate[] {
   const bestByLabel = new Map<string, ScoredLabelCandidate>();
 
   for (const e of breakdown) {
     const ti = tierIndexForEntry(e);
     if (ti < 0) continue;
-    const key = e.key as SignalKey;
+    const key = e.key;
     const label = POSITIVE_CHIP_BY_SIGNAL[key];
     const domain = SIGNAL_DOMAIN[key];
     const composite = baseCompositeScore(ti, e.pairScore);
@@ -166,15 +168,18 @@ export function pickPositiveChips(breakdown: BreakdownEntry[]): string[] {
     let bestI = 0;
     let bestAdj = -Infinity;
     for (let i = 0; i < candidates.length; i++) {
-      const c = candidates[i]!;
+      const c = candidates[i];
       const already = domainCounts.get(c.domain) ?? 0;
       const adj = c.composite - DOMAIN_REPEAT_PENALTY * Math.max(0, already);
-      if (adj > bestAdj || (adj === bestAdj && c.key.localeCompare(candidates[bestI]!.key) < 0)) {
+      if (
+        adj > bestAdj ||
+        (adj === bestAdj && c.key.localeCompare(candidates[bestI].key) < 0)
+      ) {
         bestAdj = adj;
         bestI = i;
       }
     }
-    const pick = candidates.splice(bestI, 1)[0]!;
+    const pick = candidates.splice(bestI, 1)[0];
     selected.push(pick);
     domainCounts.set(pick.domain, (domainCounts.get(pick.domain) ?? 0) + 1);
   }
@@ -198,7 +203,7 @@ function topTensionChip(
 
 function joinChips(chips: string[]): string {
   if (chips.length === 0) return '';
-  if (chips.length === 1) return chips[0]!;
+  if (chips.length === 1) return chips[0];
   if (chips.length === 2) return `${chips[0]} and ${chips[1]}`;
   return `${chips[0]}, ${chips[1]}, and ${chips[2]}`;
 }
@@ -227,9 +232,9 @@ function pickSecondaryLabelWithMinPairScore(
   const candidates = breakdown
     .filter((e) => isSignalKey(e.key) && e.pairScore >= minPairScore)
     .map((e) => ({
-      label: POSITIVE_CHIP_BY_SIGNAL[e.key as SignalKey],
+      label: POSITIVE_CHIP_BY_SIGNAL[e.key],
       pairScore: e.pairScore,
-      key: e.key as SignalKey,
+      key: e.key,
     }))
     .filter((c) => !excludeLabels.has(c.label))
     .sort((a, b) => {
@@ -427,7 +432,7 @@ export function pickFallbackReasonLabels(
   const out: string[] = [];
   for (const e of batch) {
     if (out.length >= max) break;
-    const label = POSITIVE_CHIP_BY_SIGNAL[e.key as SignalKey];
+    const label = POSITIVE_CHIP_BY_SIGNAL[e.key];
     if (!seenLabels.has(label)) {
       seenLabels.add(label);
       out.push(label);
@@ -462,7 +467,8 @@ export function buildReasonShort(
       body = `Overall this looks weak; there's a small overlap on ${positiveChips[0]}, but it's outweighed by gaps.`;
     } else if (chipCount === 1 && finalScore >= 50 && finalScore < 60) {
       const hint =
-        pickMidSecondaryHint(breakdown, chipSet) ?? 'other areas that score softer';
+        pickMidSecondaryHint(breakdown, chipSet) ??
+        'other areas that score softer';
       body = `Primary overlap on ${positiveChips[0]}; there's also some alignment on ${hint}, but overall it stays moderate.`;
     } else {
       const variantBase = vk + (Math.floor(finalScore / 13) % 3) * 5;
@@ -483,7 +489,9 @@ export function buildReasonShort(
   return body;
 }
 
-export function buildMatchExplainability(input: MatchExplainabilityInput): MatchExplainabilityDto {
+export function buildMatchExplainability(
+  input: MatchExplainabilityInput,
+): MatchExplainabilityDto {
   const positiveChips = pickPositiveChips(input.breakdown);
   const tensionChip = topTensionChip(input.friction, input.tensionMatrix);
   const reasonShort = buildReasonShort(

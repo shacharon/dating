@@ -18,18 +18,30 @@ export const HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN = 18;
 export const HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX = 120;
 
 /** Sparse JSON read path: omit non-integers and values outside [18, 120]. */
-export function tryParseHolyGrailPartnerAgeInteger(v: unknown): number | undefined {
+export function tryParseHolyGrailPartnerAgeInteger(
+  v: unknown,
+): number | undefined {
   if (typeof v !== 'number' || !Number.isInteger(v)) return undefined;
-  if (v < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN || v > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX) return undefined;
+  if (
+    v < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN ||
+    v > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX
+  )
+    return undefined;
   return v;
 }
 
 /** Strict mapper path for partner age bounds on preferences / search overrides. */
-export function assertHolyGrailStructuredMapPartnerAgeInteger(n: unknown, field: string): number {
+export function assertHolyGrailStructuredMapPartnerAgeInteger(
+  n: unknown,
+  field: string,
+): number {
   if (typeof n !== 'number' || !Number.isInteger(n)) {
     throw new Error(`HolyGrail map: ${field} must be an integer`);
   }
-  if (n < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN || n > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX) {
+  if (
+    n < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN ||
+    n > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX
+  ) {
     throw new Error(`HolyGrail map: ${field} must be in [18, 120], got ${n}`);
   }
   return n;
@@ -59,7 +71,9 @@ export const HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS = [
   'primaryLocationLabel',
 ] as const;
 
-export const HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET = new Set<string>(HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS);
+export const HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET = new Set<string>(
+  HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS,
+);
 
 export const HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_KEY_SET = new Set<string>([
   ...HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS,
@@ -87,11 +101,14 @@ export const HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET = new Set<string>(
 );
 
 /** Same as persisted JSON keys — no separate mapper-only slice for preferences. */
-export const HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET = HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET;
+export const HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET =
+  HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET;
 
 export const HOLY_GRAIL_SEARCH_OVERRIDE_KEYS = [
   ...HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
   'validUntil',
 ] as const;
 
-export const HOLY_GRAIL_SEARCH_OVERRIDE_KEY_SET = new Set<string>(HOLY_GRAIL_SEARCH_OVERRIDE_KEYS);
+export const HOLY_GRAIL_SEARCH_OVERRIDE_KEY_SET = new Set<string>(
+  HOLY_GRAIL_SEARCH_OVERRIDE_KEYS,
+);

@@ -129,7 +129,10 @@ export function analyzeExplainabilityRow(
     flags.push('narrative_strong_vs_low_final_score');
   }
 
-  if (ex.tensionChip != null && !KNOWN_TENSION_CHIP_LABELS.has(ex.tensionChip)) {
+  if (
+    ex.tensionChip != null &&
+    !KNOWN_TENSION_CHIP_LABELS.has(ex.tensionChip)
+  ) {
     flags.push('unknown_tension_chip_label');
   }
 

@@ -3,12 +3,45 @@
  * No scoring changes — only field selection and deterministic string assembly.
  */
 
-import {
-  tryPickHolyGrailMatchDiagnosticsDto,
-  type HolyGrailMatchDiagnosticsDto,
-} from './holy-grail-match-diagnostics.wire';
-import type { ChildrenUnsureDirectionsDto, MatchRecordDto } from './match.types';
+import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
+import type { HolyGrailMatchDiagnosticsPickSource } from './holy-grail-match-diagnostics.wire';
 import { buildShortReason } from './match-short-reason';
+import type {
+  ChildrenUnsureDirectionsDto,
+  MatchRecordDto,
+} from './match.types';
+
+/** Detail UI HG triple — local structural type so ESLint/TS never sees a broken re-exported symbol. */
+type HolyGrailDetailSlice = Readonly<{
+  hgMutualPass: boolean;
+  hgOverallStatus: string;
+  hgRankScore: number;
+}>;
+
+function pickHolyGrailDetailSlice(
+  source: HolyGrailMatchDiagnosticsPickSource | undefined,
+): HolyGrailDetailSlice | undefined {
+  // Bridge: `tryPick` return type can resolve as an ESLint `error` symbol in some graphs; narrow from `unknown`.
+  const raw = tryPickHolyGrailMatchDiagnosticsDto(source) as unknown;
+  if (raw == null || typeof raw !== 'object') {
+    return undefined;
+  }
+  const o = raw as Record<string, unknown>;
+  if (typeof o.hgMutualPass !== 'boolean') {
+    return undefined;
+  }
+  if (typeof o.hgOverallStatus !== 'string') {
+    return undefined;
+  }
+  if (typeof o.hgRankScore !== 'number' || !Number.isFinite(o.hgRankScore)) {
+    return undefined;
+  }
+  return {
+    hgMutualPass: o.hgMutualPass,
+    hgOverallStatus: o.hgOverallStatus,
+    hgRankScore: o.hgRankScore,
+  };
+}
 
 /** @inline — same shape as list/detail `children_unsure`. */
 export type MatchDetailChildrenUnsureDto = ChildrenUnsureDirectionsDto;
@@ -97,7 +130,7 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
 export function mapMatchRecordToDetailUi(
   m: MatchRecordDto,
   childrenUnsure: MatchDetailChildrenUnsureDto,
-  holyGrail?: HolyGrailMatchDiagnosticsDto,
+  holyGrail?: HolyGrailMatchDiagnosticsPickSource,
 ): MatchDetailUiDto {
   const expl = effectiveExplainability(m);
   const rec = m.recommendation;
@@ -119,8 +152,19 @@ export function mapMatchRecordToDetailUi(
   const chips = (expl?.positiveChips ?? []).slice(0, 5);
   const reasonShortRaw = expl?.reasonShort?.trim();
   const tensionChipRaw = expl?.tensionChip?.trim();
-  const hgWire: HolyGrailMatchDiagnosticsDto | undefined =
-    tryPickHolyGrailMatchDiagnosticsDto(holyGrail);
+  const hgWire: HolyGrailDetailSlice | undefined =
+    pickHolyGrailDetailSlice(holyGrail);
+
+  const hgDetailFields: Pick<
+    MatchDetailUiDto,
+    'hgMutualPass' | 'hgOverallStatus' | 'hgRankScore'
+  > | null = hgWire
+    ? {
+        hgMutualPass: hgWire.hgMutualPass,
+        hgOverallStatus: hgWire.hgOverallStatus,
+        hgRankScore: hgWire.hgRankScore,
+      }
+    : null;
 
   return {
     ok: true,
@@ -140,12 +184,6 @@ export function mapMatchRecordToDetailUi(
     chips,
     ...(tensionChipRaw ? { tensionChip: tensionChipRaw } : {}),
     expandedExplainability: buildExpandedExplainability(m),
-    ...(hgWire
-      ? {
-          hgMutualPass: hgWire.hgMutualPass,
-          hgOverallStatus: hgWire.hgOverallStatus,
-          hgRankScore: hgWire.hgRankScore,
-        }
-      : {}),
+    ...(hgDetailFields ?? {}),
   };
 }

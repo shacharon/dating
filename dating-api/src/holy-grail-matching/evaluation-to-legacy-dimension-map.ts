@@ -1,6 +1,12 @@
 import type { HolyGrailDirectionalEvaluationResult } from './eligibility.evaluator';
-import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from './holy-grail-dimensions';
-import { MatchingDimensionResults, type MatchingDimensionResult } from './matching-dimension-result';
+import {
+  HOLY_GRAIL_DIMENSION_KEYS,
+  type HolyGrailDimensionKey,
+} from './holy-grail-dimensions';
+import {
+  MatchingDimensionResults,
+  type MatchingDimensionResult,
+} from './matching-dimension-result';
 
 /**
  * Layer 3 → Layer 4 bridge: maps evaluator outcomes to the legacy `MatchingDimensionResult`

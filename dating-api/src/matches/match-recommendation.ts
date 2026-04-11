@@ -93,8 +93,8 @@ function buildPrimaryTakeaway(
 
   // Multi-chip: use top 2 when available
   if (chipCount >= 2) {
-    const chip1 = chips[0]!.toLowerCase();
-    const chip2 = chips[1]!.toLowerCase();
+    const chip1 = chips[0].toLowerCase();
+    const chip2 = chips[1].toLowerCase();
     const both = `${chip1} and ${chip2}`;
 
     if (finalScore >= 80) {
@@ -122,7 +122,7 @@ function buildPrimaryTakeaway(
 
   // Single chip
   if (chipCount === 1) {
-    const chip = chips[0]!.toLowerCase();
+    const chip = chips[0].toLowerCase();
     if (finalScore >= 80) {
       if (variant === 0) return `Strong clear fit, especially around ${chip}.`;
       if (variant === 1) return `Excellent match on ${chip}.`;
@@ -187,8 +187,10 @@ function buildCaution(
     }
     // Pick first family alphabetically for determinism
     const sorted = Array.from(families).sort();
-    const family = sorted[0]!;
-    return DEALBREAKER_CAUTION_BY_FAMILY[family] ?? 'Note compatibility differences.';
+    const family = sorted[0];
+    return (
+      DEALBREAKER_CAUTION_BY_FAMILY[family] ?? 'Note compatibility differences.'
+    );
   }
 
   // Generic friction warning (last resort)
@@ -235,7 +237,11 @@ export function buildMatchRecommendation(
     input.explainability,
     stableId,
   );
-  const caution = buildCaution(input.friction, input.explainability, input.dealbreakers);
+  const caution = buildCaution(
+    input.friction,
+    input.explainability,
+    input.dealbreakers,
+  );
   const suggestedNextAction = buildSuggestedNextAction(input.finalScore);
 
   return {

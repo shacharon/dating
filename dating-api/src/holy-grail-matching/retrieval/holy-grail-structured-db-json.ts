@@ -55,7 +55,10 @@ import {
 } from '../holy-grail-structured-contract';
 
 /** Compile-time guard: extend parser when `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` grows. */
-const _holyGrailDbJsonFactsCoverage: Record<(typeof HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS)[number], true> = {
+const _holyGrailDbJsonFactsCoverage: Record<
+  (typeof HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS)[number],
+  true
+> = {
   genderIdentity: true,
   dateOfBirth: true,
   childrenStatus: true,
@@ -87,7 +90,9 @@ const _holyGrailDbJsonPrefsCoverage: Record<
 void _holyGrailDbJsonFactsCoverage;
 void _holyGrailDbJsonPrefsCoverage;
 
-const SIMILARITY_PREFERENCE_PARSE_SET = new Set<string>(SIMILARITY_PREFERENCE_VALUES);
+const SIMILARITY_PREFERENCE_PARSE_SET = new Set<string>(
+  SIMILARITY_PREFERENCE_VALUES,
+);
 
 function asPlainObject(v: unknown): Record<string, unknown> | null {
   if (v === null || typeof v !== 'object' || Array.isArray(v)) return null;
@@ -110,7 +115,9 @@ export function parseHolyGrailStructuredFactsFromJson(
 
   for (const k of Object.keys(o)) {
     if (!HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET.has(k)) {
-      throw new Error(`HolyGrail structured facts JSON: unknown key ${JSON.stringify(k)}`);
+      throw new Error(
+        `HolyGrail structured facts JSON: unknown key ${JSON.stringify(k)}`,
+      );
     }
   }
 
@@ -130,8 +137,13 @@ export function parseHolyGrailStructuredFactsFromJson(
   }
 
   if (Object.prototype.hasOwnProperty.call(o, 'dateOfBirth')) {
-    if (typeof o.dateOfBirth !== 'string' || !isHolyGrailDobYmdString(o.dateOfBirth)) {
-      throw new Error(`HolyGrail structured facts JSON: invalid dateOfBirth ${JSON.stringify(o.dateOfBirth)}`);
+    if (
+      typeof o.dateOfBirth !== 'string' ||
+      !isHolyGrailDobYmdString(o.dateOfBirth)
+    ) {
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid dateOfBirth ${JSON.stringify(o.dateOfBirth)}`,
+      );
     }
     merged.dateOfBirth = o.dateOfBirth;
   }
@@ -168,7 +180,9 @@ export function parseHolyGrailStructuredFactsFromJson(
       matchingCanonicalEnumMemberSet(SmokingFrequencySelf),
     ) as SmokingFrequencySelf | undefined;
     if (smoking === undefined) {
-      throw new Error(`HolyGrail structured facts JSON: invalid smoking ${JSON.stringify(o.smoking)}`);
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid smoking ${JSON.stringify(o.smoking)}`,
+      );
     }
     merged.smoking = smoking;
   }
@@ -179,7 +193,9 @@ export function parseHolyGrailStructuredFactsFromJson(
       matchingCanonicalEnumMemberSet(AlcoholUseSelf),
     ) as AlcoholUseSelf | undefined;
     if (alcoholUse === undefined) {
-      throw new Error(`HolyGrail structured facts JSON: invalid alcoholUse ${JSON.stringify(o.alcoholUse)}`);
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid alcoholUse ${JSON.stringify(o.alcoholUse)}`,
+      );
     }
     merged.alcoholUse = alcoholUse;
   }
@@ -190,7 +206,9 @@ export function parseHolyGrailStructuredFactsFromJson(
       matchingCanonicalEnumMemberSet(EducationLevelSelf),
     ) as EducationLevelSelf | undefined;
     if (education === undefined) {
-      throw new Error(`HolyGrail structured facts JSON: invalid education ${JSON.stringify(o.education)}`);
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid education ${JSON.stringify(o.education)}`,
+      );
     }
     merged.education = education;
   }
@@ -201,7 +219,9 @@ export function parseHolyGrailStructuredFactsFromJson(
       matchingCanonicalEnumMemberSet(ReligionSelf),
     ) as ReligionSelf | undefined;
     if (religion === undefined) {
-      throw new Error(`HolyGrail structured facts JSON: invalid religion ${JSON.stringify(o.religion)}`);
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid religion ${JSON.stringify(o.religion)}`,
+      );
     }
     merged.religion = religion;
   }
@@ -209,7 +229,9 @@ export function parseHolyGrailStructuredFactsFromJson(
   return Object.keys(merged).length === 0 ? undefined : merged;
 }
 
-function parseAcceptedPartnerGendersDbJson(v: unknown): AcceptedPartnerGender[] {
+function parseAcceptedPartnerGendersDbJson(
+  v: unknown,
+): AcceptedPartnerGender[] {
   if (!Array.isArray(v) || v.length === 0) {
     throw new Error(
       'HolyGrail structured preferences JSON: acceptedPartnerGenders must be a non-empty array when set',
@@ -230,9 +252,13 @@ function parseAcceptedPartnerGendersDbJson(v: unknown): AcceptedPartnerGender[] 
 }
 
 /** When key is present: empty array → undefined (sparse); invalid member → throw. */
-function parseAcceptedPartnerReligionsDbJson(v: unknown): ReligionSelf[] | undefined {
+function parseAcceptedPartnerReligionsDbJson(
+  v: unknown,
+): ReligionSelf[] | undefined {
   if (!Array.isArray(v)) {
-    throw new Error('HolyGrail structured preferences JSON: acceptedPartnerReligions must be an array when set');
+    throw new Error(
+      'HolyGrail structured preferences JSON: acceptedPartnerReligions must be an array when set',
+    );
   }
   if (v.length === 0) return undefined;
   const allowed = matchingCanonicalEnumMemberSet(ReligionSelf);
@@ -254,7 +280,9 @@ function parseAcceptedPartnerReligionsDbJson(v: unknown): ReligionSelf[] | undef
 
 function parseMaxDistanceKmDbJson(v: unknown): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
-    throw new Error(`HolyGrail structured preferences JSON: invalid maxDistanceKm ${JSON.stringify(v)}`);
+    throw new Error(
+      `HolyGrail structured preferences JSON: invalid maxDistanceKm ${JSON.stringify(v)}`,
+    );
   }
   return v;
 }
@@ -269,13 +297,17 @@ export function parseHolyGrailStructuredPreferencesFromJson(
   if (raw === null || raw === undefined) return undefined;
   const o = asPlainObject(raw);
   if (!o) {
-    throw new Error('HolyGrail structured preferences JSON: expected a plain object');
+    throw new Error(
+      'HolyGrail structured preferences JSON: expected a plain object',
+    );
   }
   if (Object.keys(o).length === 0) return undefined;
 
   for (const k of Object.keys(o)) {
     if (!HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET.has(k)) {
-      throw new Error(`HolyGrail structured preferences JSON: unknown key ${JSON.stringify(k)}`);
+      throw new Error(
+        `HolyGrail structured preferences JSON: unknown key ${JSON.stringify(k)}`,
+      );
     }
   }
 
@@ -298,12 +330,16 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     partnerAgeMax !== undefined &&
     partnerAgeMin > partnerAgeMax
   ) {
-    throw new Error('HolyGrail structured preferences JSON: partnerAgeMin must be <= partnerAgeMax');
+    throw new Error(
+      'HolyGrail structured preferences JSON: partnerAgeMin must be <= partnerAgeMax',
+    );
   }
 
   let acceptedPartnerGenders: AcceptedPartnerGender[] | undefined;
   if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerGenders')) {
-    acceptedPartnerGenders = parseAcceptedPartnerGendersDbJson(o.acceptedPartnerGenders);
+    acceptedPartnerGenders = parseAcceptedPartnerGendersDbJson(
+      o.acceptedPartnerGenders,
+    );
   }
 
   let minimumPartnerEducation: MinimumPartnerEducation | undefined;
@@ -373,7 +409,9 @@ export function parseHolyGrailStructuredPreferencesFromJson(
 
   let acceptedPartnerReligions: ReligionSelf[] | undefined;
   if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerReligions')) {
-    acceptedPartnerReligions = parseAcceptedPartnerReligionsDbJson(o.acceptedPartnerReligions);
+    acceptedPartnerReligions = parseAcceptedPartnerReligionsDbJson(
+      o.acceptedPartnerReligions,
+    );
   }
 
   let maxDistanceKm: number | undefined;
@@ -387,7 +425,10 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     if (sp === null) {
       similarityPreference = null;
     } else {
-      const picked = pickMatchingCanonicalEnumMember<SimilarityPreference>(sp, SIMILARITY_PREFERENCE_PARSE_SET);
+      const picked = pickMatchingCanonicalEnumMember<SimilarityPreference>(
+        sp,
+        SIMILARITY_PREFERENCE_PARSE_SET,
+      );
       if (picked === undefined) {
         throw new Error(
           `HolyGrail structured preferences JSON: invalid similarityPreference ${JSON.stringify(sp)}`,
@@ -401,12 +442,16 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     ...(acceptedPartnerGenders !== undefined ? { acceptedPartnerGenders } : {}),
     ...(partnerAgeMin !== undefined ? { partnerAgeMin } : {}),
     ...(partnerAgeMax !== undefined ? { partnerAgeMax } : {}),
-    ...(minimumPartnerEducation !== undefined ? { minimumPartnerEducation } : {}),
+    ...(minimumPartnerEducation !== undefined
+      ? { minimumPartnerEducation }
+      : {}),
     ...(acceptedPartnerSmoking !== undefined ? { acceptedPartnerSmoking } : {}),
     ...(acceptedPartnerAlcohol !== undefined ? { acceptedPartnerAlcohol } : {}),
     ...(partnerWantsChildren !== undefined ? { partnerWantsChildren } : {}),
     ...(partnerHasChildren !== undefined ? { partnerHasChildren } : {}),
-    ...(acceptedPartnerReligions !== undefined ? { acceptedPartnerReligions } : {}),
+    ...(acceptedPartnerReligions !== undefined
+      ? { acceptedPartnerReligions }
+      : {}),
     ...(maxDistanceKm !== undefined ? { maxDistanceKm } : {}),
     ...(similarityPreference !== undefined ? { similarityPreference } : {}),
   } as HolyGrailStructuredPreferencesPersisted;
@@ -429,10 +474,16 @@ export function buildHolyGrailProfileMappingInputFromDbRow(args: {
   aboutMe?: string | null;
   aboutPartner?: string | null;
 }): HolyGrailProfileMappingInput {
-  const sf = parseHolyGrailStructuredFactsFromJson(args.holyGrailStructuredFacts);
-  const sp = parseHolyGrailStructuredPreferencesFromJson(args.holyGrailStructuredPreferences);
+  const sf = parseHolyGrailStructuredFactsFromJson(
+    args.holyGrailStructuredFacts,
+  );
+  const sp = parseHolyGrailStructuredPreferencesFromJson(
+    args.holyGrailStructuredPreferences,
+  );
 
-  const baseRanking = buildHolyGrailRankingSignalsFromDbSelfRow(args.signalSelf ?? null);
+  const baseRanking = buildHolyGrailRankingSignalsFromDbSelfRow(
+    args.signalSelf ?? null,
+  );
   const pt = extractPersonalityTraitsFromFreeText({
     aboutMe: args.aboutMe,
     aboutPartner: args.aboutPartner,
@@ -447,12 +498,24 @@ export function buildHolyGrailProfileMappingInputFromDbRow(args: {
   });
   const rankingSignals: MatchingRankingSignalsSnapshot = {
     ...baseRanking,
-    ...(pt.self.tags.length > 0 ? { personalityTraitsSelf: [...pt.self.tags] } : {}),
-    ...(pt.partner.tags.length > 0 ? { personalityTraitsPartner: [...pt.partner.tags] } : {}),
-    ...(ls.self.tags.length > 0 ? { lifestyleSignalsSelf: [...ls.self.tags] } : {}),
-    ...(ls.partner.tags.length > 0 ? { lifestyleSignalsPartner: [...ls.partner.tags] } : {}),
-    ...(interestV1.self.tags.length > 0 ? { interestTagsSelf: [...interestV1.self.tags] } : {}),
-    ...(interestV1.partner.tags.length > 0 ? { interestTagsPartner: [...interestV1.partner.tags] } : {}),
+    ...(pt.self.tags.length > 0
+      ? { personalityTraitsSelf: [...pt.self.tags] }
+      : {}),
+    ...(pt.partner.tags.length > 0
+      ? { personalityTraitsPartner: [...pt.partner.tags] }
+      : {}),
+    ...(ls.self.tags.length > 0
+      ? { lifestyleSignalsSelf: [...ls.self.tags] }
+      : {}),
+    ...(ls.partner.tags.length > 0
+      ? { lifestyleSignalsPartner: [...ls.partner.tags] }
+      : {}),
+    ...(interestV1.self.tags.length > 0
+      ? { interestTagsSelf: [...interestV1.self.tags] }
+      : {}),
+    ...(interestV1.partner.tags.length > 0
+      ? { interestTagsPartner: [...interestV1.partner.tags] }
+      : {}),
   };
 
   return {

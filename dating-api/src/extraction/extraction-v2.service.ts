@@ -1,17 +1,17 @@
 /**
  * V2 Extraction Service - 9-call split architecture.
- * 
+ *
  * Architecture:
  * - 3 domains (self, partner, relationship)
  * - 3 extractors per domain (base signals, interests, negatives)
  * - Total: 9 parallel LLM calls via Promise.all()
- * 
+ *
  * Key changes from V1:
  * - Base signals prompts: NO interests extraction (removed)
  * - Interests: Separate dedicated extractor
  * - Negatives: NEW layer (explicit dealbreakers)
  * - All calls independent, failure-tolerant
- * 
+ *
  * STRICT RULE: All extractors use ONLY explicit evidence. NO inference.
  */
 
@@ -28,7 +28,11 @@ import {
   type ExtractionDomain,
   type LLMUsageStats,
 } from './extracted-signals.interface';
-import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
+import {
+  KEY_ALIASES,
+  normalizeKeys,
+  normalizeRawExtraction,
+} from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
 import {
   buildExtractionPipelineTrace,
@@ -395,7 +399,13 @@ const RAW_INTERESTS_PROMPT_HASH = 'raw_interests_v1';
 const RAW_NEGATIVES_PREFS_PROMPT_HASH = 'raw_negatives_prefs_v1';
 
 function emptyUsage(): LLMUsageStats {
-  return { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCostUSD: 0, durationMs: 0 };
+  return {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    estimatedCostUSD: 0,
+    durationMs: 0,
+  };
 }
 
 function mergeUsage(a: LLMUsageStats, b: LLMUsageStats): LLMUsageStats {
@@ -409,17 +419,32 @@ function mergeUsage(a: LLMUsageStats, b: LLMUsageStats): LLMUsageStats {
 }
 
 const GPT4O_MINI_INPUT_COST = 0.15 / 1_000_000;
-const GPT4O_MINI_OUTPUT_COST = 0.60 / 1_000_000;
+const GPT4O_MINI_OUTPUT_COST = 0.6 / 1_000_000;
 
 function estimateCost(promptTokens: number, completionTokens: number): number {
-  return promptTokens * GPT4O_MINI_INPUT_COST + completionTokens * GPT4O_MINI_OUTPUT_COST;
+  return (
+    promptTokens * GPT4O_MINI_INPUT_COST +
+    completionTokens * GPT4O_MINI_OUTPUT_COST
+  );
 }
 
-function parseOpenAIUsage(usage: unknown): { promptTokens: number; completionTokens: number; totalTokens: number } {
-  const u = usage && typeof usage === 'object' ? (usage as Record<string, unknown>) : {};
-  const promptTokens = typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0;
-  const completionTokens = typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
-  const totalTokens = typeof u.total_tokens === 'number' ? u.total_tokens : promptTokens + completionTokens;
+function parseOpenAIUsage(usage: unknown): {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+} {
+  const u =
+    usage && typeof usage === 'object'
+      ? (usage as Record<string, unknown>)
+      : {};
+  const promptTokens =
+    typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0;
+  const completionTokens =
+    typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
+  const totalTokens =
+    typeof u.total_tokens === 'number'
+      ? u.total_tokens
+      : promptTokens + completionTokens;
   return { promptTokens, completionTokens, totalTokens };
 }
 
@@ -497,7 +522,10 @@ const BaseSignalsEvidenceItemSchema = z
   })
   .strict();
 
-const BaseSignalsOutputSchemaByDomain: Record<ExtractionDomain, z.ZodType<Record<string, unknown>>> = {
+const BaseSignalsOutputSchemaByDomain: Record<
+  ExtractionDomain,
+  z.ZodType<Record<string, unknown>>
+> = {
   self: z
     .object({
       domain: z.literal('self'),
@@ -601,25 +629,25 @@ function normalizeNegativeItems(items: unknown): string[] {
 export interface ExtractionV2Result {
   version: 'v2';
   extractedAt: string;
-  
+
   base: {
     self: ExtractedSignals;
     partner: ExtractedSignals;
     relationship: ExtractedSignals;
   };
-  
+
   interests: {
     self: InterestItem[];
     partner: InterestItem[];
     relationship: InterestItem[];
   };
-  
+
   negatives: {
     self: NegativeItem[];
     partner: NegativeItem[];
     relationship: NegativeItem[];
   };
-  
+
   _usage: LLMUsageStats;
   _provenance: {
     extractorVersion: string;
@@ -640,7 +668,7 @@ export class ExtractionV2Service {
     private readonly logger: SimpleLogger,
     private readonly interestsService: InterestsExtractionService,
     private readonly negativesService: NegativesExtractionService,
-  ) { }
+  ) {}
 
   /**
    * Validate and clean base signals output (same as V1).
@@ -654,7 +682,7 @@ export class ExtractionV2Service {
     const signals: Record<string, number | null> = {};
     for (const key of Object.keys(normalizedSignals)) {
       if (!EXTRACTION_SIGNAL_KEYS_SET.has(key)) continue;
-      
+
       const value = normalizedSignals[key];
       if (value === null || value === undefined) {
         signals[key] = null;
@@ -675,8 +703,7 @@ export class ExtractionV2Service {
       .map((item) => {
         const s = String(item.signal).trim();
         const officialSignal = KEY_ALIASES[s] ?? s;
-        const reason =
-          typeof item.reason === 'string' ? item.reason : '';
+        const reason = typeof item.reason === 'string' ? item.reason : '';
         return { ...item, signal: officialSignal, reason };
       })
       .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
@@ -704,7 +731,7 @@ export class ExtractionV2Service {
     const userPrompt = `Domain: ${domain}\nText:\n"""\n${text}\n"""`;
     const requestId = randomUUID();
     const inputText = text;
-    
+
     this.logger.log(
       JSON.stringify({
         event: 'extraction_v2_base_before_llm',
@@ -718,7 +745,9 @@ export class ExtractionV2Service {
 
     const systemPrompt = getBaseSignalsPromptV2(domain);
     const outputSchema = BaseSignalsOutputSchemaByDomain[domain];
-    const { value, rawText, usage } = await this.llm.completeJSON<Record<string, unknown>>({
+    const { value, rawText, usage } = await this.llm.completeJSON<
+      Record<string, unknown>
+    >({
       modelKey: 'fast',
       system: systemPrompt,
       user: userPrompt,
@@ -749,7 +778,10 @@ export class ExtractionV2Service {
     const parsed = parseOpenAIUsage(usage);
     const accUsage: LLMUsageStats = {
       ...parsed,
-      estimatedCostUSD: estimateCost(parsed.promptTokens, parsed.completionTokens),
+      estimatedCostUSD: estimateCost(
+        parsed.promptTokens,
+        parsed.completionTokens,
+      ),
       durationMs: Date.now() - extractStart,
     };
 
@@ -757,9 +789,7 @@ export class ExtractionV2Service {
     const snapAfterNormalizeRaw = toExtractionSnapshot(normalized);
     if (domain === 'self') {
       const rawSignals =
-        value && typeof value === 'object'
-          ? (value as Record<string, unknown>).signals
-          : undefined;
+        value && typeof value === 'object' ? value.signals : undefined;
       const rawSelfRelationshipClarity =
         rawSignals && typeof rawSignals === 'object'
           ? (rawSignals as Record<string, unknown>).relationshipClarity
@@ -810,7 +840,7 @@ export class ExtractionV2Service {
         }),
       );
     }
-    
+
     cleaned = validateExtraction(text, cleaned, (payload) =>
       this.logger.debug(JSON.stringify(payload), ExtractionV2Service.name),
     );
@@ -852,10 +882,17 @@ export class ExtractionV2Service {
       }),
       ExtractionV2Service.name,
     );
-    
+
     const withProvenance: ExtractedSignals = {
       ...cleaned,
-      _provenance: { stages: ['llm', 'alias_normalization', 'validate_and_clean', 'strict_evidence_validation'] },
+      _provenance: {
+        stages: [
+          'llm',
+          'alias_normalization',
+          'validate_and_clean',
+          'strict_evidence_validation',
+        ],
+      },
       _pipelineTrace: trace,
     };
 
@@ -878,7 +915,9 @@ export class ExtractionV2Service {
     const userPrompt = `Domain: ${domain}\nText:\n"""\n${text}\n"""`;
 
     try {
-      const { value, rawText } = await this.llm.completeJSON<{ rawInterests: string[] }>({
+      const { value, rawText } = await this.llm.completeJSON<{
+        rawInterests: string[];
+      }>({
         modelKey: 'fast',
         system: systemPrompt,
         user: userPrompt,
@@ -907,7 +946,9 @@ export class ExtractionV2Service {
         requestId,
         parsedJson: value,
         rawText,
-        afterStages: [{ name: 'after_normalizeRawInterests', value: { rawInterests } }],
+        afterStages: [
+          { name: 'after_normalizeRawInterests', value: { rawInterests } },
+        ],
       });
       this.logger.log(
         JSON.stringify({
@@ -974,7 +1015,11 @@ export class ExtractionV2Service {
       this.logger.log(
         JSON.stringify(
           buildEvaluateRawLlmLogPayload(
-            { purpose: 'extraction-v2-negative-preferences', domain, requestId },
+            {
+              purpose: 'extraction-v2-negative-preferences',
+              domain,
+              requestId,
+            },
             value,
             rawText,
           ),
@@ -982,7 +1027,9 @@ export class ExtractionV2Service {
         ExtractionV2Service.name,
       );
 
-      const negativePreferences = normalizeNegativeItems(value.negativePreferences);
+      const negativePreferences = normalizeNegativeItems(
+        value.negativePreferences,
+      );
       const softNo = normalizeNegativeItems(value.softNo);
       const dealbreakers = normalizeNegativeItems(value.dealbreakers);
       const normalizedOut = { negativePreferences, softNo, dealbreakers };
@@ -991,7 +1038,9 @@ export class ExtractionV2Service {
         requestId,
         parsedJson: value,
         rawText,
-        afterStages: [{ name: 'after_normalizeNegativeItems', value: normalizedOut }],
+        afterStages: [
+          { name: 'after_normalizeNegativeItems', value: normalizedOut },
+        ],
       });
       this.logger.log(
         JSON.stringify({
@@ -1029,7 +1078,7 @@ export class ExtractionV2Service {
 
   /**
    * Run all 9 extractions in parallel and return combined result.
-   * 
+   *
    * Architecture:
    * - 3 domains × 3 extractors = 9 parallel calls
    * - Failure-tolerant: each call independent
@@ -1069,16 +1118,26 @@ export class ExtractionV2Service {
       this.extractBaseSignals('self', aboutMe.trim(), profileId),
       this.interestsService.extractForDomain('self', aboutMe.trim()),
       this.negativesService.extractForDomain('self', aboutMe.trim()),
-      
+
       // PARTNER domain
       this.extractBaseSignals('partner', aboutPartner.trim(), profileId),
       this.interestsService.extractForDomain('partner', aboutPartner.trim()),
       this.negativesService.extractForDomain('partner', aboutPartner.trim()),
-      
+
       // RELATIONSHIP domain
-      this.extractBaseSignals('relationship', aboutRelationship.trim(), profileId),
-      this.interestsService.extractForDomain('relationship', aboutRelationship.trim()),
-      this.negativesService.extractForDomain('relationship', aboutRelationship.trim()),
+      this.extractBaseSignals(
+        'relationship',
+        aboutRelationship.trim(),
+        profileId,
+      ),
+      this.interestsService.extractForDomain(
+        'relationship',
+        aboutRelationship.trim(),
+      ),
+      this.negativesService.extractForDomain(
+        'relationship',
+        aboutRelationship.trim(),
+      ),
     ]);
 
     // Dedicated rawInterests extraction (separate from base signal extraction)
@@ -1086,14 +1145,23 @@ export class ExtractionV2Service {
       await Promise.all([
         this.extractRawInterestsForDomain('self', aboutMe.trim()),
         this.extractRawInterestsForDomain('partner', aboutPartner.trim()),
-        this.extractRawInterestsForDomain('relationship', aboutRelationship.trim()),
+        this.extractRawInterestsForDomain(
+          'relationship',
+          aboutRelationship.trim(),
+        ),
       ]);
 
     const [selfNegPrefs, partnerNegPrefs, relationshipNegPrefs] =
       await Promise.all([
         this.extractRawNegativePreferencesForDomain('self', aboutMe.trim()),
-        this.extractRawNegativePreferencesForDomain('partner', aboutPartner.trim()),
-        this.extractRawNegativePreferencesForDomain('relationship', aboutRelationship.trim()),
+        this.extractRawNegativePreferencesForDomain(
+          'partner',
+          aboutPartner.trim(),
+        ),
+        this.extractRawNegativePreferencesForDomain(
+          'relationship',
+          aboutRelationship.trim(),
+        ),
       ]);
 
     const selfBaseWithRaw: ExtractedSignals = {

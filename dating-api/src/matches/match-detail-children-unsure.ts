@@ -78,14 +78,19 @@ export async function computeMatchDetailPairHg(
   prisma: PrismaService,
   profileIdA: string,
   profileIdB: string,
-  preloadedRows?: { rowA: ChildrenUnsureProfileRow; rowB: ChildrenUnsureProfileRow },
+  preloadedRows?: {
+    rowA: ChildrenUnsureProfileRow;
+    rowB: ChildrenUnsureProfileRow;
+  },
 ): Promise<{
   readonly children_unsure: MatchDetailChildrenUnsureFlags;
   readonly holyGrail?: HolyGrailMatchDiagnosticsDto;
   readonly telemetry: HgPairResolutionTelemetry;
 }> {
   const matchId = toCanonicalMatchId(profileIdA, profileIdB);
-  const snap = await prisma.matchPairHgSnapshot.findUnique({ where: { matchId } });
+  const snap = await prisma.matchPairHgSnapshot.findUnique({
+    where: { matchId },
+  });
   const childClass = classifyChildrenUnsureFromSnapshot(snap);
   const diagClass = classifyHolyGrailDiagnosticsFromSnapshot(snap);
   if (childClass.ok && diagClass.ok) {
@@ -99,7 +104,11 @@ export async function computeMatchDetailPairHg(
       snapshotChildrenReject: undefined,
       snapshotDiagnosticsReject: undefined,
     };
-    return { children_unsure: childClass.dto, holyGrail: diagClass.dto, telemetry };
+    return {
+      children_unsure: childClass.dto,
+      holyGrail: diagClass.dto,
+      telemetry,
+    };
   }
 
   let rowA: ChildrenUnsureProfileRow | undefined;
@@ -112,14 +121,18 @@ export async function computeMatchDetailPairHg(
       where: { id: { in: [profileIdA, profileIdB] } },
       select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
     });
-    rowA = rows.find((r) => r.id === profileIdA) as ChildrenUnsureProfileRow | undefined;
-    rowB = rows.find((r) => r.id === profileIdB) as ChildrenUnsureProfileRow | undefined;
+    rowA = rows.find((r) => r.id === profileIdA) as
+      | ChildrenUnsureProfileRow
+      | undefined;
+    rowB = rows.find((r) => r.id === profileIdB) as
+      | ChildrenUnsureProfileRow
+      | undefined;
   }
   const resolved = resolvePairHgFieldsFromSnapshotClassifications({
     matchId,
     snapshot: snap,
-    rowA: rowA as ChildrenUnsureProfileRow | undefined,
-    rowB: rowB as ChildrenUnsureProfileRow | undefined,
+    rowA: rowA,
+    rowB: rowB,
     childClass,
     diagClass,
   });
@@ -135,6 +148,10 @@ export async function computeMatchDetailChildrenUnsure(
   profileIdA: string,
   profileIdB: string,
 ): Promise<MatchDetailChildrenUnsureFlags> {
-  const { children_unsure } = await computeMatchDetailPairHg(prisma, profileIdA, profileIdB);
+  const { children_unsure } = await computeMatchDetailPairHg(
+    prisma,
+    profileIdA,
+    profileIdB,
+  );
   return children_unsure;
 }

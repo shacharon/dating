@@ -51,7 +51,10 @@ import {
 export type { CompareResultDto } from './match-engine';
 export type { MatchListItemDto } from './match.types';
 
-export { MATCH_RANKING_CONTRACT, type MatchRankingContractId } from './match-ranking-contract';
+export {
+  MATCH_RANKING_CONTRACT,
+  type MatchRankingContractId,
+} from './match-ranking-contract';
 export { ENABLE_HG_LIST_ADMISSION_GATE_ENV } from './hg-list-admission-gate.constants';
 export type { ShadowHgVsLegacyMetricsReport } from './shadow-hg-vs-legacy-metrics';
 
@@ -84,7 +87,11 @@ export interface CompareGuardMatchDto {
 export type CompareServiceResult =
   | { status: 'READY'; matchId: string; match: MatchRecordDto }
   | { status: 'NOT_ANALYZED'; matchId: string; match: CompareGuardMatchDto }
-  | { status: 'INSUFFICIENT_DATA'; matchId: string; match: CompareGuardMatchDto };
+  | {
+      status: 'INSUFFICIENT_DATA';
+      matchId: string;
+      match: CompareGuardMatchDto;
+    };
 
 /** HG-only diagnostic compare: no legacy engine, no ProfileExtractionV2 gate. */
 export type CompareHgDiagnosticSuccess = {
@@ -113,7 +120,9 @@ export type CompareHgDiagnosticFailure = {
   readonly b: { readonly id: string; readonly name: string };
 };
 
-export type CompareHgDiagnosticResult = CompareHgDiagnosticSuccess | CompareHgDiagnosticFailure;
+export type CompareHgDiagnosticResult =
+  | CompareHgDiagnosticSuccess
+  | CompareHgDiagnosticFailure;
 
 @Injectable()
 export class MatchesService {
@@ -151,15 +160,22 @@ export class MatchesService {
    * Holy Grail pair diagnostics from DB HG row slice only: structured JSON + extractionV2 tags + self signal snapshot.
    * Does not call `compareWithStatus`, attach canonical V2 scalars, or run the legacy match engine.
    */
-  async compareHgDiagnostic(body: CompareBodyDto): Promise<CompareHgDiagnosticResult> {
+  async compareHgDiagnostic(
+    body: CompareBodyDto,
+  ): Promise<CompareHgDiagnosticResult> {
     const aId = body.aId?.trim();
     const bId = body.bId?.trim();
     if (!aId || !bId) throw new Error('aId and bId are required');
     if (aId === bId) throw new Error('aId and bId must be different');
 
-    const bundle = await this.profilesPrisma.loadMatchPairRuntimeBundle(aId, bId);
+    const bundle = await this.profilesPrisma.loadMatchPairRuntimeBundle(
+      aId,
+      bId,
+    );
     if (!bundle) {
-      throw new NotFoundException(`One or both profiles not found: ${aId}, ${bId}`);
+      throw new NotFoundException(
+        `One or both profiles not found: ${aId}, ${bId}`,
+      );
     }
     const { rowA, rowB, profileA, profileB } = bundle;
 
@@ -167,7 +183,11 @@ export class MatchesService {
     const matchId = toCanonicalMatchId(aId, bId);
     const name = (p: ProfileJsonPayload) => ({ id: p.id, name: p.name ?? '' });
 
-    const dirs = evaluateHolyGrailPairDirections(rowA, rowB, new Date(evaluatedAt));
+    const dirs = evaluateHolyGrailPairDirections(
+      rowA,
+      rowB,
+      new Date(evaluatedAt),
+    );
     if (!dirs) {
       return {
         ok: false,
@@ -187,7 +207,10 @@ export class MatchesService {
       profile_a_to_profile_b: dirs.aToB.eligibilityFlags.children_unsure,
       profile_b_to_profile_a: dirs.bToA.eligibilityFlags.children_unsure,
     };
-    const holyGrail = holyGrailMatchDiagnosticsFromDirections(dirs.aToB, dirs.bToA);
+    const holyGrail = holyGrailMatchDiagnosticsFromDirections(
+      dirs.aToB,
+      dirs.bToA,
+    );
 
     return {
       ok: true,
@@ -214,7 +237,10 @@ export class MatchesService {
     const [aId, bId] = matchId.split('__');
     if (!aId || !bId) return null;
     if (toCanonicalMatchId(aId, bId) !== matchId) return null;
-    const bundle = await this.profilesPrisma.loadMatchPairRuntimeBundle(aId, bId);
+    const bundle = await this.profilesPrisma.loadMatchPairRuntimeBundle(
+      aId,
+      bId,
+    );
     if (!bundle) return null;
     const result = await this.runCompareOnLoadedBundle(bundle);
     if (result.status !== 'READY') return null;
@@ -227,20 +253,30 @@ export class MatchesService {
     if (!aId || !bId) throw new Error('aId and bId are required');
     if (aId === bId) throw new Error('aId and bId must be different');
 
-    const bundle = await this.profilesPrisma.loadMatchPairRuntimeBundle(aId, bId);
+    const bundle = await this.profilesPrisma.loadMatchPairRuntimeBundle(
+      aId,
+      bId,
+    );
     if (!bundle) {
-      throw new NotFoundException(`One or both profiles not found: ${aId}, ${bId}`);
+      throw new NotFoundException(
+        `One or both profiles not found: ${aId}, ${bId}`,
+      );
     }
     return this.runCompareOnLoadedBundle(bundle);
   }
 
-  private async runCompareOnLoadedBundle(bundle: MatchPairRuntimeBundle): Promise<CompareServiceResult> {
+  private async runCompareOnLoadedBundle(
+    bundle: MatchPairRuntimeBundle,
+  ): Promise<CompareServiceResult> {
     const profileA = bundle.profileA;
     const profileB = bundle.profileB;
     const aId = profileA.id;
     const bId = profileB.id;
 
-    const hgDirections = evaluateHolyGrailPairDirections(bundle.rowA, bundle.rowB);
+    const hgDirections = evaluateHolyGrailPairDirections(
+      bundle.rowA,
+      bundle.rowB,
+    );
 
     // Canonical V2 scalars are optional: neutral defaults when rows are absent (no 404 gate).
     const [v2A, v2B] = await Promise.all([
@@ -265,22 +301,23 @@ export class MatchesService {
     const v2Scalars = (row: typeof v2A) => ({
       relationship_clarity_self: row?.relationship_clarity_self ?? 5,
       relationship_clarity_partner: row?.relationship_clarity_partner ?? 5,
-      relationship_clarity_relationship: row?.relationship_clarity_relationship ?? 5,
+      relationship_clarity_relationship:
+        row?.relationship_clarity_relationship ?? 5,
     });
 
     (profileA as any).canonicalScalarsV2 = v2Scalars(v2A);
     (profileB as any).canonicalScalarsV2 = v2Scalars(v2B);
 
     // Canonical scalar source-of-truth for filter/debug layer (no scoring changes here).
-    const canonicalClarityA = (profileA as any).canonicalScalarsV2.relationship_clarity_self;
-    const canonicalClarityB = (profileB as any).canonicalScalarsV2.relationship_clarity_self;
+    const canonicalClarityA = (profileA as any).canonicalScalarsV2
+      .relationship_clarity_self;
+    const canonicalClarityB = (profileB as any).canonicalScalarsV2
+      .relationship_clarity_self;
     void canonicalClarityA;
     void canonicalClarityB;
 
-    let result: CompareResultDto | CompareGuardFailureResultDto = compareWithStatus(
-      profileA as ProfileJsonPayload,
-      profileB as ProfileJsonPayload,
-    );
+    let result: CompareResultDto | CompareGuardFailureResultDto =
+      compareWithStatus(profileA, profileB);
 
     if (
       'status' in result &&
@@ -288,8 +325,8 @@ export class MatchesService {
       hgDirections &&
       directionsMutualHardPass(hgDirections)
     ) {
-      const aP = profileWithNeutralSelfSignalsFallback(profileA as ProfileJsonPayload);
-      const bP = profileWithNeutralSelfSignalsFallback(profileB as ProfileJsonPayload);
+      const aP = profileWithNeutralSelfSignalsFallback(profileA);
+      const bP = profileWithNeutralSelfSignalsFallback(profileB);
       const retry = compareWithStatus(aP, bP);
       if (!('status' in retry)) {
         result = retry;
@@ -350,7 +387,7 @@ export class MatchesService {
         },
       };
     }
-    const compareResult = result as CompareResultDto;
+    const compareResult = result;
 
     const now = new Date().toISOString();
 
@@ -395,7 +432,9 @@ export class MatchesService {
   /**
    * Upserts `match_pair_hg_snapshot` for every computed pair (called after full recompute / rebuild).
    */
-  async persistMatchPairHgSnapshots(records: MatchRecordDto[]): Promise<{ written: number; skipped: number }> {
+  async persistMatchPairHgSnapshots(
+    records: MatchRecordDto[],
+  ): Promise<{ written: number; skipped: number }> {
     const profileMap = await loadChildrenUnsureProfileRowMap(this.prisma);
     return upsertMatchPairHgSnapshots(this.prisma, records, profileMap);
   }
@@ -408,7 +447,8 @@ export class MatchesService {
    */
   async list(opts?: ListMatchesOptions): Promise<MatchListItemDto[]> {
     const hideChildrenUnsure = opts?.hideChildrenUnsure === true;
-    const { records, holyGrailRowsById } = await this.loadPairwiseMatchRecordsAndHolyGrailRows();
+    const { records, holyGrailRowsById } =
+      await this.loadPairwiseMatchRecordsAndHolyGrailRows();
     const snapshotMap = await loadMatchPairHgSnapshotMap(
       this.prisma,
       records.map((r) => r.matchId),
@@ -428,19 +468,22 @@ export class MatchesService {
         dealbreakers,
       });
       const scoreMetadata: MatchListItemDto['scoreMetadata'] = {};
-      if (r.coveragePercent != null) scoreMetadata.coveragePercent = r.coveragePercent;
-      if (r.coverageFactor != null) scoreMetadata.coverageFactor = r.coverageFactor;
+      if (r.coveragePercent != null)
+        scoreMetadata.coveragePercent = r.coveragePercent;
+      if (r.coverageFactor != null)
+        scoreMetadata.coverageFactor = r.coverageFactor;
       if (r.friction != null) scoreMetadata.friction = r.friction;
       if (r.rawScore != null) scoreMetadata.rawScore = r.rawScore;
 
       const rowA = holyGrailRowsById.get(r.aId);
       const rowB = holyGrailRowsById.get(r.bId);
-      const { children_unsure, holyGrail, telemetry } = resolvePairHgFieldsFromSnapshotAndRows({
-        matchId: r.matchId,
-        snapshot: snapshotMap.get(r.matchId),
-        rowA,
-        rowB,
-      });
+      const { children_unsure, holyGrail, telemetry } =
+        resolvePairHgFieldsFromSnapshotAndRows({
+          matchId: r.matchId,
+          snapshot: snapshotMap.get(r.matchId),
+          rowA,
+          rowB,
+        });
       this.hgPairSnapshotTelemetry.recordListPair(telemetry);
       const hgWire = tryPickHolyGrailMatchDiagnosticsDto(holyGrail);
       const engineFinalScore = finalScore;
@@ -509,7 +552,8 @@ export class MatchesService {
     readonly records: MatchRecordDto[];
     readonly holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
   }> {
-    const { records, holyGrailRowsById } = await this.loadPairwiseMatchRecordsAndHolyGrailRows();
+    const { records, holyGrailRowsById } =
+      await this.loadPairwiseMatchRecordsAndHolyGrailRows();
     let filtered = records
       .filter((r) => (r.policyVersion ?? '') === opts.policyVersion)
       .filter((r) =>
@@ -517,7 +561,9 @@ export class MatchesService {
           ? (r.coveragePercent ?? 0) >= opts.minCoveragePercent
           : true,
       )
-      .sort((a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall));
+      .sort(
+        (a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall),
+      );
     if (this.isHgListAdmissionGateEnabled()) {
       const snapshotMap = await loadMatchPairHgSnapshotMap(
         this.prisma,
@@ -563,7 +609,9 @@ export class MatchesService {
               where: { id: { in: [...idSet] } },
               select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
             });
-      rowMap = new Map(rows.map((row) => [row.id, row as ChildrenUnsureProfileRow]));
+      rowMap = new Map(
+        rows.map((row) => [row.id, row as ChildrenUnsureProfileRow]),
+      );
     }
     const out = new Map<string, HolyGrailMatchDiagnosticsDto | undefined>();
     for (const r of records) {
@@ -590,12 +638,16 @@ export class MatchesService {
     records: MatchRecordDto[];
     holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
   }> {
-    const { profiles, holyGrailRowsById } = await this.profilesPrisma.loadMatchListProfileData();
-    const records = MatchesService.buildMatchRecordsFromLoadedProfiles(profiles);
+    const { profiles, holyGrailRowsById } =
+      await this.profilesPrisma.loadMatchListProfileData();
+    const records =
+      MatchesService.buildMatchRecordsFromLoadedProfiles(profiles);
     return { records, holyGrailRowsById };
   }
 
-  private static buildMatchRecordsFromLoadedProfiles(profiles: ProfileJsonPayload[]): MatchRecordDto[] {
+  private static buildMatchRecordsFromLoadedProfiles(
+    profiles: ProfileJsonPayload[],
+  ): MatchRecordDto[] {
     const profileById = new Map(profiles.map((p) => [p.id, p] as const));
     const ids = profiles.map((p) => p.id).sort((a, b) => a.localeCompare(b));
     const records: MatchRecordDto[] = [];
@@ -609,11 +661,12 @@ export class MatchesService {
         const result = compareWithStatus(profileA, profileB);
         if (
           'status' in result &&
-          (result.status === 'NOT_ANALYZED' || result.status === 'INSUFFICIENT_DATA')
+          (result.status === 'NOT_ANALYZED' ||
+            result.status === 'INSUFFICIENT_DATA')
         ) {
           continue;
         }
-        const compareResult = result as CompareResultDto;
+        const compareResult = result;
         const now = new Date().toISOString();
         records.push({
           matchId: toCanonicalMatchId(aId, bId),

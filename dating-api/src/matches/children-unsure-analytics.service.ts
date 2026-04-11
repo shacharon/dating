@@ -80,7 +80,8 @@ export class ChildrenUnsureAnalyticsService {
       listAndTopRequests: b.listAndTopRequests,
       matchesWithChildrenUnsureCount: b.matchesWithChildrenUnsureCount,
       totalMatchesReturned: b.totalMatchesReturned,
-      hideChildrenUnsureFilterInvocations: b.hideChildrenUnsureFilterInvocations,
+      hideChildrenUnsureFilterInvocations:
+        b.hideChildrenUnsureFilterInvocations,
       badgeImpressionEvents: b.badgeImpressionEvents,
       badgeClickEvents: b.badgeClickEvents,
     };

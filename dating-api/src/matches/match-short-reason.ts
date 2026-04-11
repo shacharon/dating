@@ -45,7 +45,7 @@ export function buildShortReason(input: ShortReasonInput): string {
 
   // Good fit with one main concern (e.g. kids timeline)
   if (finalScore >= 50 && finalScore < 70 && labels.length === 1) {
-    const label = labels[0]!;
+    const label = labels[0];
     if (label === 'relationship clarity gap') {
       return 'Good fit, but relationship clarity gap';
     }
@@ -65,7 +65,7 @@ export function buildShortReason(input: ShortReasonInput): string {
       return `Low fit due to ${labels.slice(0, 2).join(' and ').toLowerCase()}`;
     }
     if (labels.length === 1) {
-      return `Low fit: ${labels[0]!.toLowerCase()}`;
+      return `Low fit: ${labels[0].toLowerCase()}`;
     }
     return 'Low fit';
   }
@@ -76,7 +76,7 @@ export function buildShortReason(input: ShortReasonInput): string {
       return `Moderate fit; ${labels.slice(0, 2).join(' and ').toLowerCase()} mismatch`;
     }
     if (labels.length === 1) {
-      return `Moderate fit; ${labels[0]!.toLowerCase()} mismatch`;
+      return `Moderate fit; ${labels[0].toLowerCase()} mismatch`;
     }
     return 'Moderate fit';
   }

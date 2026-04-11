@@ -1,4 +1,12 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
@@ -37,10 +45,10 @@ const EMPTY_CHIPS: ChipsOutput = {
 
 /** Query params for POST /api/profiles/analyze-all */
 export interface AnalyzeAllQueryDto {
-  limit: number;       // default 25, max 200
-  offset: number;      // default 0
-  onlyUnanalyzed: boolean;  // default true
-  delayMs: number;     // default 150, max 2000
+  limit: number; // default 25, max 200
+  offset: number; // default 0
+  onlyUnanalyzed: boolean; // default true
+  delayMs: number; // default 150, max 2000
   continueOnError: boolean; // default true
   maxSeconds?: number; // optional: stop gracefully after N seconds
 }
@@ -190,16 +198,28 @@ export class ProfilesAnalyzeController {
     const force = opts?.force === true;
     const recomputePolicyVersion = opts?.recomputePolicyVersion?.trim();
     const textConcat =
-      (profile.texts.aboutMe ?? '') + '|' + (profile.texts.aboutPartner ?? '') + '|' + (profile.texts.aboutRelationship ?? '');
+      (profile.texts.aboutMe ?? '') +
+      '|' +
+      (profile.texts.aboutPartner ?? '') +
+      '|' +
+      (profile.texts.aboutRelationship ?? '');
     const textHash = hashText(textConcat);
     const policyVersion = recomputePolicyVersion ?? POLICY_VERSION;
-    const cacheKey = this.analysisCache.buildKey(profile.id, textHash, PROMPT_VERSION, policyVersion);
+    const cacheKey = this.analysisCache.buildKey(
+      profile.id,
+      textHash,
+      PROMPT_VERSION,
+      policyVersion,
+    );
 
     if (!force && !recomputePolicyVersion) {
       if (isAnalyzed(profile)) {
         const ev = profile.evaluation;
         const confidence =
-          (ev.self.confidence + ev.partner.confidence + ev.relationship.confidence) / 3;
+          (ev.self.confidence +
+            ev.partner.confidence +
+            ev.relationship.confidence) /
+          3;
         return {
           dto: {
             id: profile.id,
@@ -209,7 +229,14 @@ export class ProfilesAnalyzeController {
             confidence,
             updatedAt: profile.evaluatedAt ?? profile.savedAt,
           },
-          signalCount: Object.values(ev.self.signals ?? {}).filter((v) => v != null).length + Object.values(ev.partner.signals ?? {}).filter((v) => v != null).length + Object.values(ev.relationship.signals ?? {}).filter((v) => v != null).length,
+          signalCount:
+            Object.values(ev.self.signals ?? {}).filter((v) => v != null)
+              .length +
+            Object.values(ev.partner.signals ?? {}).filter((v) => v != null)
+              .length +
+            Object.values(ev.relationship.signals ?? {}).filter(
+              (v) => v != null,
+            ).length,
           signalCoverage: ev.productScores?.coverageScore ?? 0,
           confidence,
           usage: ev._usage,
@@ -218,7 +245,10 @@ export class ProfilesAnalyzeController {
       }
       const cached = this.analysisCache.get(cacheKey);
       if (cached) {
-        this.logger.log(`[Analyze] cache hit id=${profile.id}`, 'ProfilesAnalyze');
+        this.logger.log(
+          `[Analyze] cache hit id=${profile.id}`,
+          'ProfilesAnalyze',
+        );
         const updatedAt = new Date().toISOString();
         await this.profilesPrisma.save(profile.id, {
           id: profile.id,
@@ -232,7 +262,11 @@ export class ProfilesAnalyzeController {
           textHash,
           signals: cached.self.signals,
         });
-        const confidence = (cached.self.confidence + cached.partner.confidence + cached.relationship.confidence) / 3;
+        const confidence =
+          (cached.self.confidence +
+            cached.partner.confidence +
+            cached.relationship.confidence) /
+          3;
         return {
           dto: {
             id: profile.id,
@@ -242,7 +276,12 @@ export class ProfilesAnalyzeController {
             confidence: cached.self.confidence,
             updatedAt,
           },
-          signalCount: Object.values(cached.self.signals).filter((v) => v != null).length + Object.values(cached.partner.signals).filter((v) => v != null).length + Object.values(cached.relationship.signals).filter((v) => v != null).length,
+          signalCount:
+            Object.values(cached.self.signals).filter((v) => v != null).length +
+            Object.values(cached.partner.signals).filter((v) => v != null)
+              .length +
+            Object.values(cached.relationship.signals).filter((v) => v != null)
+              .length,
           signalCoverage: cached.productScores.coverageScore,
           confidence,
           usage: cached._usage,
@@ -270,8 +309,10 @@ export class ProfilesAnalyzeController {
 
     const signalCount =
       Object.values(evaluation.self.signals).filter((v) => v != null).length +
-      Object.values(evaluation.partner.signals).filter((v) => v != null).length +
-      Object.values(evaluation.relationship.signals).filter((v) => v != null).length;
+      Object.values(evaluation.partner.signals).filter((v) => v != null)
+        .length +
+      Object.values(evaluation.relationship.signals).filter((v) => v != null)
+        .length;
     const cost = evaluation._usage?.estimatedCostUSD ?? 0;
 
     this.logger.log(
@@ -280,7 +321,8 @@ export class ProfilesAnalyzeController {
     );
 
     const updatedAt = new Date().toISOString();
-    const policyVersionSaved = evaluation.productScores?.policyVersion ?? POLICY_VERSION;
+    const policyVersionSaved =
+      evaluation.productScores?.policyVersion ?? POLICY_VERSION;
 
     await this.profilesPrisma.save(profile.id, {
       id: profile.id,
@@ -331,16 +373,26 @@ export class ProfilesAnalyzeController {
     @Query('maxSeconds') maxSecondsParam?: string,
     @Query('recomputePolicyVersion') recomputePolicyVersionParam?: string,
   ): Promise<AnalyzeAllResponseDto> {
-    const limit = Math.max(1, Math.min(200, parseInt(String(limitParam ?? '25'), 10) || 25));
+    const limit = Math.max(
+      1,
+      Math.min(200, parseInt(String(limitParam ?? '25'), 10) || 25),
+    );
     const offset = Math.max(0, parseInt(String(offsetParam ?? '0'), 10) || 0);
-    const onlyUnanalyzed = onlyUnanalyzedParam !== 'false' && onlyUnanalyzedParam !== '0';
-    const delayMsBetween = Math.max(0, Math.min(2000, parseInt(String(delayMsParam ?? '150'), 10) || 150));
-    const continueOnError = continueOnErrorParam !== 'false' && continueOnErrorParam !== '0';
+    const onlyUnanalyzed =
+      onlyUnanalyzedParam !== 'false' && onlyUnanalyzedParam !== '0';
+    const delayMsBetween = Math.max(
+      0,
+      Math.min(2000, parseInt(String(delayMsParam ?? '150'), 10) || 150),
+    );
+    const continueOnError =
+      continueOnErrorParam !== 'false' && continueOnErrorParam !== '0';
     const force = forceParam === '1' || forceParam === 'true';
-    const maxSeconds = maxSecondsParam != null && maxSecondsParam !== ''
-      ? Math.max(1, parseInt(String(maxSecondsParam), 10) || 0)
-      : undefined;
-    const recomputePolicyVersion = recomputePolicyVersionParam?.trim() || undefined;
+    const maxSeconds =
+      maxSecondsParam != null && maxSecondsParam !== ''
+        ? Math.max(1, parseInt(String(maxSecondsParam), 10) || 0)
+        : undefined;
+    const recomputePolicyVersion =
+      recomputePolicyVersionParam?.trim() || undefined;
 
     const items = await this.profilesPrisma.list();
     const profilesTotal = items.length;
@@ -355,7 +407,14 @@ export class ProfilesAnalyzeController {
     const poolTotal = pool.length;
     const batch = pool.slice(offset, offset + limit);
 
-    this.logger.log(JSON.stringify({ poolTotal, profilesTotal, msg: 'analyze_all_pool_size' }), 'ProfilesAnalyze');
+    this.logger.log(
+      JSON.stringify({
+        poolTotal,
+        profilesTotal,
+        msg: 'analyze_all_pool_size',
+      }),
+      'ProfilesAnalyze',
+    );
 
     this.logger.log(
       `analyze_all_batch_start offset=${offset} limit=${limit} poolTotal=${poolTotal} batchSize=${batch.length} maxSeconds=${maxSeconds ?? 'none'}`,
@@ -364,13 +423,16 @@ export class ProfilesAnalyzeController {
 
     const failures: AnalyzeAllFailureItem[] = [];
     let analyzed = 0;
-    let skipped = 0;
+    const skipped = 0;
     let skippedCached = 0;
     let skippedUpToDate = 0;
     const startTimeMs = Date.now();
 
     for (let i = 0; i < batch.length; i++) {
-      if (maxSeconds != null && (Date.now() - startTimeMs) / 1000 >= maxSeconds) {
+      if (
+        maxSeconds != null &&
+        (Date.now() - startTimeMs) / 1000 >= maxSeconds
+      ) {
         this.logger.log(
           `analyze_all_max_seconds_reached elapsed=${Math.round((Date.now() - startTimeMs) / 1000)}s nextOffset=${offset + i}`,
           'ProfilesAnalyze',
@@ -412,7 +474,10 @@ export class ProfilesAnalyzeController {
       }
 
       try {
-        const meta = await this.analyzeAndPersist(profile, { force, recomputePolicyVersion });
+        const meta = await this.analyzeAndPersist(profile, {
+          force,
+          recomputePolicyVersion,
+        });
         if (meta.skippedCached) skippedCached++;
         else if (meta.skippedUpToDate) skippedUpToDate++;
         else analyzed++;
@@ -503,9 +568,15 @@ export class ProfilesAnalyzeController {
     const offset = Math.max(0, Number(body?.offset) || 0);
     const onlyUnanalyzed = body?.onlyUnanalyzed !== false;
     const continueOnError = body?.continueOnError !== false;
-    const delayMsBetween = Math.max(0, Math.min(2000, Number(body?.delayMs) ?? 150));
+    const delayMsBetween = Math.max(
+      0,
+      Math.min(2000, Number(body?.delayMs) ?? 150),
+    );
     const force = body?.force === true;
-    const recomputePolicyVersion = typeof body?.recomputePolicyVersion === 'string' ? body.recomputePolicyVersion.trim() || undefined : undefined;
+    const recomputePolicyVersion =
+      typeof body?.recomputePolicyVersion === 'string'
+        ? body.recomputePolicyVersion.trim() || undefined
+        : undefined;
 
     const items = await this.profilesPrisma.list();
     const sortedItems = [...items].sort((a, b) => a.id.localeCompare(b.id));
@@ -526,7 +597,7 @@ export class ProfilesAnalyzeController {
     );
 
     let processed = 0;
-    let skipped = 0;
+    const skipped = 0;
     let skippedCached = 0;
     let skippedUpToDate = 0;
     const failures: AnalyzeAllFailureItem[] = [];
@@ -541,7 +612,10 @@ export class ProfilesAnalyzeController {
       }
 
       try {
-        const meta = await this.analyzeAndPersist(profile, { force, recomputePolicyVersion });
+        const meta = await this.analyzeAndPersist(profile, {
+          force,
+          recomputePolicyVersion,
+        });
         if (meta.skippedCached) skippedCached++;
         else if (meta.skippedUpToDate) skippedUpToDate++;
         else processed++;
@@ -597,7 +671,12 @@ export class ProfilesAnalyzeController {
   async analyzeOneV2(
     @Param('id') id: string,
     @Query('force') forceParam?: string,
-  ): Promise<{ ok: true; extraction: ExtractionV2Result | null; profileId: string; chips: ChipsOutput }> {
+  ): Promise<{
+    ok: true;
+    extraction: ExtractionV2Result | null;
+    profileId: string;
+    chips: ChipsOutput;
+  }> {
     const profile = await this.profilesPrisma.getById(id);
     if (!profile) {
       throw new NotFoundException(`Profile not found: ${id}`);
@@ -609,9 +688,17 @@ export class ProfilesAnalyzeController {
     if (!force) {
       const existing = await this.extractionV2Persistence.getByProfileId(id);
       if (existing) {
-        this.logger.log(`[AnalyzeV2] skipped (exists) id=${id}`, 'ProfilesAnalyze');
+        this.logger.log(
+          `[AnalyzeV2] skipped (exists) id=${id}`,
+          'ProfilesAnalyze',
+        );
         // Derived UI-facing layer from extraction only (non-persistent).
-        return { ok: true, extraction: existing, profileId: id, chips: buildChips(existing) };
+        return {
+          ok: true,
+          extraction: existing,
+          profileId: id,
+          chips: buildChips(existing),
+        };
       }
     }
 
@@ -640,7 +727,12 @@ export class ProfilesAnalyzeController {
     );
 
     // Derived UI-facing layer from extraction only (non-persistent).
-    return { ok: true, extraction, profileId: id, chips: extraction ? buildChips(extraction) : EMPTY_CHIPS };
+    return {
+      ok: true,
+      extraction,
+      profileId: id,
+      chips: extraction ? buildChips(extraction) : EMPTY_CHIPS,
+    };
   }
 
   @Post(':id/analyze')
@@ -655,11 +747,13 @@ export class ProfilesAnalyzeController {
     }
 
     const force = forceParam === '1' || forceParam === 'true';
-    const recomputePolicyVersion = recomputePolicyVersionParam?.trim() || undefined;
-    const { dto, skippedCached, skippedUpToDate } = await this.analyzeAndPersist(profile, {
-      force,
-      recomputePolicyVersion,
-    });
+    const recomputePolicyVersion =
+      recomputePolicyVersionParam?.trim() || undefined;
+    const { dto, skippedCached, skippedUpToDate } =
+      await this.analyzeAndPersist(profile, {
+        force,
+        recomputePolicyVersion,
+      });
     const response: AnalyzeOneResponseDto = { ok: true, profile: dto };
     if (skippedCached) response.skippedCached = true;
     if (skippedUpToDate) response.skippedUpToDate = true;

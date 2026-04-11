@@ -55,10 +55,12 @@ export const ENRICHMENT_CONFLICT_STYLE_DETAIL_LABELS = [
   'avoids_conflict',
 ] as const;
 
-export type EnrichmentDailyRhythmLabel = (typeof ENRICHMENT_DAILY_RHYTHM_LABELS)[number];
+export type EnrichmentDailyRhythmLabel =
+  (typeof ENRICHMENT_DAILY_RHYTHM_LABELS)[number];
 export type EnrichmentAutonomyTogethernessLabel =
   (typeof ENRICHMENT_AUTONOMY_TOGETHERNESS_LABELS)[number];
-export type EnrichmentKidsTimelineLabel = (typeof ENRICHMENT_KIDS_TIMELINE_LABELS)[number];
+export type EnrichmentKidsTimelineLabel =
+  (typeof ENRICHMENT_KIDS_TIMELINE_LABELS)[number];
 export type EnrichmentConflictStyleDetailLabel =
   (typeof ENRICHMENT_CONFLICT_STYLE_DETAIL_LABELS)[number];
 
@@ -73,7 +75,10 @@ function normalizePhraseKey(s: string): string {
 
 /** Map spaces/hyphens to underscores for canonical snake_case labels. */
 function normalizeSnakeish(s: string): string {
-  return s.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
 }
 
 function coerceToClosedSet(
@@ -97,28 +102,44 @@ function coerceToClosedSet(
 export function coerceEnrichmentDailyRhythm(
   raw: string | null | undefined,
 ): EnrichmentDailyRhythmLabel | null {
-  const v = coerceToClosedSet(raw, DAILY_SET, LEGACY_ENRICHMENT_PHRASE_TO_DAILY_RHYTHM);
+  const v = coerceToClosedSet(
+    raw,
+    DAILY_SET,
+    LEGACY_ENRICHMENT_PHRASE_TO_DAILY_RHYTHM,
+  );
   return v as EnrichmentDailyRhythmLabel | null;
 }
 
 export function coerceEnrichmentAutonomyTogetherness(
   raw: string | null | undefined,
 ): EnrichmentAutonomyTogethernessLabel | null {
-  const v = coerceToClosedSet(raw, AUTONOMY_SET, LEGACY_ENRICHMENT_PHRASE_TO_AUTONOMY);
+  const v = coerceToClosedSet(
+    raw,
+    AUTONOMY_SET,
+    LEGACY_ENRICHMENT_PHRASE_TO_AUTONOMY,
+  );
   return v as EnrichmentAutonomyTogethernessLabel | null;
 }
 
 export function coerceEnrichmentKidsTimeline(
   raw: string | null | undefined,
 ): EnrichmentKidsTimelineLabel | null {
-  const v = coerceToClosedSet(raw, KIDS_SET, LEGACY_ENRICHMENT_PHRASE_TO_KIDS_TIMELINE);
+  const v = coerceToClosedSet(
+    raw,
+    KIDS_SET,
+    LEGACY_ENRICHMENT_PHRASE_TO_KIDS_TIMELINE,
+  );
   return v as EnrichmentKidsTimelineLabel | null;
 }
 
 export function coerceEnrichmentConflictStyleDetail(
   raw: string | null | undefined,
 ): EnrichmentConflictStyleDetailLabel | null {
-  const v = coerceToClosedSet(raw, CONFLICT_SET, LEGACY_ENRICHMENT_PHRASE_TO_CONFLICT_STYLE);
+  const v = coerceToClosedSet(
+    raw,
+    CONFLICT_SET,
+    LEGACY_ENRICHMENT_PHRASE_TO_CONFLICT_STYLE,
+  );
   return v as EnrichmentConflictStyleDetailLabel | null;
 }
 
@@ -136,11 +157,17 @@ export interface EnrichmentCoreScalars {
   conflictStyleDetail: EnrichmentConflictStyleDetailLabel | null;
 }
 
-export function sanitizeEnrichmentCoreScalars(input: EnrichmentCoreScalarsInput): EnrichmentCoreScalars {
+export function sanitizeEnrichmentCoreScalars(
+  input: EnrichmentCoreScalarsInput,
+): EnrichmentCoreScalars {
   return {
     dailyRhythm: coerceEnrichmentDailyRhythm(input.dailyRhythm),
-    autonomyTogethernessDepth: coerceEnrichmentAutonomyTogetherness(input.autonomyTogethernessDepth),
+    autonomyTogethernessDepth: coerceEnrichmentAutonomyTogetherness(
+      input.autonomyTogethernessDepth,
+    ),
     kidsTimeline: coerceEnrichmentKidsTimeline(input.kidsTimeline),
-    conflictStyleDetail: coerceEnrichmentConflictStyleDetail(input.conflictStyleDetail),
+    conflictStyleDetail: coerceEnrichmentConflictStyleDetail(
+      input.conflictStyleDetail,
+    ),
   };
 }

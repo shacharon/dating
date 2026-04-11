@@ -4,11 +4,15 @@
  */
 
 /** All string values of a string enum object (TS `Object.values` on const string enums). */
-export function matchingCanonicalEnumStringValues<E extends Record<string, string>>(e: E): string[] {
+export function matchingCanonicalEnumStringValues<
+  E extends Record<string, string>,
+>(e: E): string[] {
   return Object.values(e).filter((v): v is string => typeof v === 'string');
 }
 
-export function matchingCanonicalEnumMemberSet(e: Record<string, string>): Set<string> {
+export function matchingCanonicalEnumMemberSet(
+  e: Record<string, string>,
+): Set<string> {
   return new Set(matchingCanonicalEnumStringValues(e));
 }
 

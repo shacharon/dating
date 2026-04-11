@@ -12,7 +12,11 @@ import {
   type ExtractionDomain,
   type LLMUsageStats,
 } from './extracted-signals.interface';
-import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
+import {
+  KEY_ALIASES,
+  normalizeKeys,
+  normalizeRawExtraction,
+} from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
 import {
   buildExtractionPipelineTrace,
@@ -127,7 +131,6 @@ FINAL OVERRIDE RULES (HIGHEST PRIORITY):
 
 Output JSON:
 { "domain": "self", "signals": { "key": int|null }, "interests": [], "evidence": [{ "signal": "key", "quote": "...", "reason": "..." }], "confidence": 0..1 }`;
-
 
 const RELATIONSHIP_EXTRACTOR_PROMPT = `You are a professional psychological profiler. Extract signals and interests for domain: relationship.
 
@@ -332,22 +335,43 @@ const SYSTEM_PROMPT_HASH = createHash('sha256')
   .slice(0, 12);
 
 const GPT4O_MINI_INPUT_COST = 0.15 / 1_000_000;
-const GPT4O_MINI_OUTPUT_COST = 0.60 / 1_000_000;
+const GPT4O_MINI_OUTPUT_COST = 0.6 / 1_000_000;
 
 function estimateCost(promptTokens: number, completionTokens: number): number {
-  return promptTokens * GPT4O_MINI_INPUT_COST + completionTokens * GPT4O_MINI_OUTPUT_COST;
+  return (
+    promptTokens * GPT4O_MINI_INPUT_COST +
+    completionTokens * GPT4O_MINI_OUTPUT_COST
+  );
 }
 
-function parseOpenAIUsage(usage: unknown): { promptTokens: number; completionTokens: number; totalTokens: number } {
-  const u = usage && typeof usage === 'object' ? (usage as Record<string, unknown>) : {};
-  const promptTokens = typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0;
-  const completionTokens = typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
-  const totalTokens = typeof u.total_tokens === 'number' ? u.total_tokens : promptTokens + completionTokens;
+function parseOpenAIUsage(usage: unknown): {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+} {
+  const u =
+    usage && typeof usage === 'object'
+      ? (usage as Record<string, unknown>)
+      : {};
+  const promptTokens =
+    typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0;
+  const completionTokens =
+    typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
+  const totalTokens =
+    typeof u.total_tokens === 'number'
+      ? u.total_tokens
+      : promptTokens + completionTokens;
   return { promptTokens, completionTokens, totalTokens };
 }
 
 function emptyUsage(): LLMUsageStats {
-  return { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCostUSD: 0, durationMs: 0 };
+  return {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    estimatedCostUSD: 0,
+    durationMs: 0,
+  };
 }
 
 function mergeUsage(a: LLMUsageStats, b: LLMUsageStats): LLMUsageStats {
@@ -365,12 +389,12 @@ export class ExtractionService {
   constructor(
     private readonly llm: LLMRouterService,
     private readonly logger: SimpleLogger,
-  ) { }
+  ) {}
 
   /**
    * Build output from allowlist only. Round to int, enforce 1–10 or null.
    * Evidence filtered to official keys; alias rewritten to official.
-   * 
+   *
    * Technical cleanup only: no semantic inference or context-based modification.
    */
   private validateAndClean(
@@ -410,8 +434,7 @@ export class ExtractionService {
       .map((item) => {
         const s = String(item.signal).trim();
         const officialSignal = KEY_ALIASES[s] ?? s;
-        const reason =
-          typeof item.reason === 'string' ? item.reason : '';
+        const reason = typeof item.reason === 'string' ? item.reason : '';
         return { ...item, signal: officialSignal, reason };
       })
       .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
@@ -457,7 +480,14 @@ export class ExtractionService {
       }),
       ExtractionService.name,
     );
-    return { userPrompt, requestId, inputText, inputPreview, extractStart, accUsage };
+    return {
+      userPrompt,
+      requestId,
+      inputText,
+      inputPreview,
+      extractStart,
+      accUsage,
+    };
   }
 
   /** Stage 2: Run first LLM extraction call (primary proposal). */
@@ -466,9 +496,15 @@ export class ExtractionService {
     userPrompt: string,
     requestId: string,
     inputTextLength: number,
-  ): Promise<{ value: Record<string, unknown>; rawText: string | null; usage: unknown }> {
+  ): Promise<{
+    value: Record<string, unknown>;
+    rawText: string | null;
+    usage: unknown;
+  }> {
     const systemPrompt = getSystemPromptForDomain(domain);
-    const { value, rawText, usage } = await this.llm.completeJSON<Record<string, unknown>>({
+    const { value, rawText, usage } = await this.llm.completeJSON<
+      Record<string, unknown>
+    >({
       modelKey: 'fast',
       system: systemPrompt,
       user: userPrompt,
@@ -494,7 +530,8 @@ export class ExtractionService {
         event: 'normalizeKeys_telemetry',
         aliasesSeen: telemetry.aliasesSeen,
         aliasesMapped: telemetry.aliasesMapped,
-        aliasesDroppedBecauseOfficialExists: telemetry.aliasesDroppedBecauseOfficialExists,
+        aliasesDroppedBecauseOfficialExists:
+          telemetry.aliasesDroppedBecauseOfficialExists,
         unknownSignalKeysDropped: telemetry.unknownSignalKeysDropped,
       }),
     );
@@ -518,9 +555,9 @@ export class ExtractionService {
     const pid = profileId ?? requestId;
     this.logger.log(
       `[AnalyzeCost] profile=${pid} domain=${domain} model=gpt-4o-mini ` +
-      `promptTokens=${usageWithDuration.promptTokens} completionTokens=${usageWithDuration.completionTokens} ` +
-      `tokens=${usageWithDuration.totalTokens} cost=$${usageWithDuration.estimatedCostUSD.toFixed(5)} ` +
-      `duration=${usageWithDuration.durationMs}ms`,
+        `promptTokens=${usageWithDuration.promptTokens} completionTokens=${usageWithDuration.completionTokens} ` +
+        `tokens=${usageWithDuration.totalTokens} cost=$${usageWithDuration.estimatedCostUSD.toFixed(5)} ` +
+        `duration=${usageWithDuration.durationMs}ms`,
       ExtractionService.name,
     );
     return result;
@@ -570,16 +607,19 @@ export class ExtractionService {
     );
 
     const parsed = parseOpenAIUsage(usage);
-    let accUsage = mergeUsage(initialAccUsage, {
+    const accUsage = mergeUsage(initialAccUsage, {
       ...parsed,
-      estimatedCostUSD: estimateCost(parsed.promptTokens, parsed.completionTokens),
+      estimatedCostUSD: estimateCost(
+        parsed.promptTokens,
+        parsed.completionTokens,
+      ),
       durationMs: 0,
     });
 
     const rawModelOutputPreview = (rawText ?? '').trim().slice(0, 120);
     const llmSignals =
-      value && typeof value === 'object' && (value as Record<string, unknown>).signals
-        ? ((value as Record<string, unknown>).signals as Record<string, unknown>)
+      value && typeof value === 'object' && value.signals
+        ? (value.signals as Record<string, unknown>)
         : {};
     const llmKeysPresent = Object.entries(llmSignals)
       .filter(([, v]) => v != null)
@@ -646,7 +686,8 @@ export class ExtractionService {
       cleaned = {
         ...cleaned,
         notes:
-          (cleaned.notes ? `${cleaned.notes}; ` : '') + 'EXTRACTION_EMPTY_DEBUG',
+          (cleaned.notes ? `${cleaned.notes}; ` : '') +
+          'EXTRACTION_EMPTY_DEBUG',
         debug: { rawModelOutput: (rawText ?? '').slice(0, 1000) },
       };
     }
@@ -665,8 +706,14 @@ export class ExtractionService {
       parsedJson: value,
       rawText,
       stageSnapshots: [
-        { name: 'normalizeRawExtraction', snapshot: toExtractionSnapshot(normalized) },
-        { name: 'alias_normalization', snapshot: toExtractionSnapshot(afterAlias) },
+        {
+          name: 'normalizeRawExtraction',
+          snapshot: toExtractionSnapshot(normalized),
+        },
+        {
+          name: 'alias_normalization',
+          snapshot: toExtractionSnapshot(afterAlias),
+        },
         { name: 'validate_and_clean', snapshot: snapAfterClean },
         { name: 'pre_validateExtraction', snapshot: snapPreValidateExtraction },
         { name: 'validateExtraction', snapshot: toExtractionSnapshot(cleaned) },

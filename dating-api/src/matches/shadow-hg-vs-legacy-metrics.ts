@@ -48,7 +48,9 @@ export interface ShadowHgVsLegacyMetricsReport {
   };
   readonly kidsFamily: {
     readonly byCase: Record<KidsFamilyShadowCase, number>;
-    readonly sampleMatchIdsByCase: Partial<Record<KidsFamilyShadowCase, readonly string[]>>;
+    readonly sampleMatchIdsByCase: Partial<
+      Record<KidsFamilyShadowCase, readonly string[]>
+    >;
   };
 }
 
@@ -63,7 +65,9 @@ function dealbreakerCodes(item: MatchListItemDto): readonly string[] {
 
 function hasLegacyClarityProxy(item: MatchListItemDto): boolean {
   const codes = new Set(dealbreakerCodes(item));
-  return LEGACY_RELATIONSHIP_CLARITY_DEALBREAKER_CODES.some((c) => codes.has(c));
+  return LEGACY_RELATIONSHIP_CLARITY_DEALBREAKER_CODES.some((c) =>
+    codes.has(c),
+  );
 }
 
 function hgWireComplete(item: MatchListItemDto): boolean {
@@ -75,14 +79,18 @@ function hgWireComplete(item: MatchListItemDto): boolean {
   );
 }
 
-function kidsFamilyCase(item: MatchListItemDto, complete: boolean): KidsFamilyShadowCase {
+function kidsFamilyCase(
+  item: MatchListItemDto,
+  complete: boolean,
+): KidsFamilyShadowCase {
   if (!complete) return 'HG_WIRE_INCOMPLETE';
   const legacyP = hasLegacyClarityProxy(item);
   const cu = anyChildrenUnsure(item.children_unsure);
   const mutual = item.hgMutualPass === true;
   if (legacyP && cu) return 'LEGACY_CLARITY_PROXY_AND_HG_CHILDREN_UNSURE';
   if (legacyP && !cu) return 'LEGACY_CLARITY_PROXY_ONLY';
-  if (!legacyP && cu && !mutual) return 'HG_CHILDREN_UNSURE_AND_NOT_MUTUAL_PASS';
+  if (!legacyP && cu && !mutual)
+    return 'HG_CHILDREN_UNSURE_AND_NOT_MUTUAL_PASS';
   if (!legacyP && cu) return 'HG_CHILDREN_UNSURE_ONLY';
   return 'NONE';
 }
@@ -97,14 +105,20 @@ function pushSample(
 }
 
 /** Stable sort: legacy production list comparator (descending display score). */
-export function legacyListComparator(a: MatchListItemDto, b: MatchListItemDto): number {
+export function legacyListComparator(
+  a: MatchListItemDto,
+  b: MatchListItemDto,
+): number {
   const sa = getDisplayScore(a);
   const sb = getDisplayScore(b);
   if (sb !== sa) return sb - sa;
   return a.matchId.localeCompare(b.matchId);
 }
 
-function shadowHgRankComparator(a: MatchListItemDto, b: MatchListItemDto): number {
+function shadowHgRankComparator(
+  a: MatchListItemDto,
+  b: MatchListItemDto,
+): number {
   const aPass = a.hgMutualPass === true;
   const bPass = b.hgMutualPass === true;
   if (aPass !== bPass) return aPass ? -1 : 1;
@@ -114,14 +128,20 @@ function shadowHgRankComparator(a: MatchListItemDto, b: MatchListItemDto): numbe
   return legacyListComparator(a, b);
 }
 
-function sortedIds(items: MatchListItemDto[], cmp: (a: MatchListItemDto, b: MatchListItemDto) => number): string[] {
+function sortedIds(
+  items: MatchListItemDto[],
+  cmp: (a: MatchListItemDto, b: MatchListItemDto) => number,
+): string[] {
   return [...items].sort(cmp).map((x) => x.matchId);
 }
 
 /**
  * Counts inversions: pairs (i,j) with i<j in `orderA` but inverted order in `orderB` (both permutations of same ids).
  */
-function inversionCountBetweenOrders(orderA: readonly string[], orderB: readonly string[]): {
+function inversionCountBetweenOrders(
+  orderA: readonly string[],
+  orderB: readonly string[],
+): {
   count: number;
   denominator: number;
 } {
@@ -131,11 +151,11 @@ function inversionCountBetweenOrders(orderA: readonly string[], orderB: readonly
   const posB = new Map(orderB.map((id, idx) => [id, idx]));
   let inv = 0;
   for (let i = 0; i < n; i++) {
-    const idi = orderA[i]!;
+    const idi = orderA[i];
     const pi = posB.get(idi);
     if (pi === undefined) continue;
     for (let j = i + 1; j < n; j++) {
-      const idj = orderA[j]!;
+      const idj = orderA[j];
       const pj = posB.get(idj);
       if (pj === undefined) continue;
       if (pi > pj) inv++;
@@ -144,7 +164,10 @@ function inversionCountBetweenOrders(orderA: readonly string[], orderB: readonly
   return { count: inv, denominator: denom };
 }
 
-function rankIndexChangedCount(legacyOrder: readonly string[], otherOrder: readonly string[]): number {
+function rankIndexChangedCount(
+  legacyOrder: readonly string[],
+  otherOrder: readonly string[],
+): number {
   const posOther = new Map(otherOrder.map((id, idx) => [id, idx]));
   let changed = 0;
   legacyOrder.forEach((id, idx) => {
@@ -174,7 +197,10 @@ export function computeShadowHgVsLegacyMetricsFromListItems(
   const hgCompleteItems = sortedLegacy.filter(hgWireComplete);
   const shadowOrderHg = sortedIds(hgCompleteItems, shadowHgRankComparator);
   const legacyOrderHgSubset = hgCompleteItems.map((x) => x.matchId);
-  const invVsShadow = inversionCountBetweenOrders(legacyOrderHgSubset, shadowOrderHg);
+  const invVsShadow = inversionCountBetweenOrders(
+    legacyOrderHgSubset,
+    shadowOrderHg,
+  );
   const reordered = rankIndexChangedCount(legacyOrderHgSubset, shadowOrderHg);
 
   const byCase: Record<KidsFamilyShadowCase, number> = { ...EMPTY_CASES };
@@ -191,8 +217,12 @@ export function computeShadowHgVsLegacyMetricsFromListItems(
     legacyListSurfaceCount: items.length,
     hgWireCompleteCount: hgCompleteItems.length,
     hgWireIncompleteCount: items.length - hgCompleteItems.length,
-    keptUnderShadowMutualPassGate: hgCompleteItems.filter((x) => x.hgMutualPass === true).length,
-    droppedUnderShadowMutualPassGate: hgCompleteItems.filter((x) => x.hgMutualPass === false).length,
+    keptUnderShadowMutualPassGate: hgCompleteItems.filter(
+      (x) => x.hgMutualPass === true,
+    ).length,
+    droppedUnderShadowMutualPassGate: hgCompleteItems.filter(
+      (x) => x.hgMutualPass === false,
+    ).length,
   };
 
   return {

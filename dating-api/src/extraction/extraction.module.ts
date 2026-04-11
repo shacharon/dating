@@ -10,14 +10,14 @@ import { ExtractionV2PersistenceService } from './extraction-v2-persistence.serv
 @Module({
   imports: [LlmModule, PrismaModule],
   providers: [
-    ExtractionService, 
+    ExtractionService,
     InterestsExtractionService,
     NegativesExtractionService,
     ExtractionV2Service,
     ExtractionV2PersistenceService,
   ],
   exports: [
-    ExtractionService, 
+    ExtractionService,
     InterestsExtractionService,
     NegativesExtractionService,
     ExtractionV2Service,

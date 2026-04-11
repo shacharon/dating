@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { PrismaService } from '../prisma/prisma.service';
@@ -58,11 +62,14 @@ export class HolyGrailStructuredWriteService {
         );
       }
       if (hasPrefs) {
-        const prefsPatch = parseHolyGrailStructuredPreferencesPatchBody(request.structuredPreferencesPatch);
-        data.holyGrailStructuredPreferences = mergeHolyGrailStructuredPreferencesPatch(
-          row.holyGrailStructuredPreferences,
-          prefsPatch,
+        const prefsPatch = parseHolyGrailStructuredPreferencesPatchBody(
+          request.structuredPreferencesPatch,
         );
+        data.holyGrailStructuredPreferences =
+          mergeHolyGrailStructuredPreferencesPatch(
+            row.holyGrailStructuredPreferences,
+            prefsPatch,
+          );
       }
     } catch (e) {
       if (e instanceof ZodError) {

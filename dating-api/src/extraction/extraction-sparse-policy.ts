@@ -55,8 +55,11 @@ export function applySparseTextGuard(
   evidence: ExtractionEvidenceItem[];
   confidence: number;
 } {
-  if (!isSparseInput(inputText)) return { ...data, evidence: data.evidence ?? [] };
-  const maxNonNull = isVerySparseInput(inputText) ? VERY_SPARSE_MAX_NON_NULL : SPARSE_MAX_NON_NULL;
+  if (!isSparseInput(inputText))
+    return { ...data, evidence: data.evidence ?? [] };
+  const maxNonNull = isVerySparseInput(inputText)
+    ? VERY_SPARSE_MAX_NON_NULL
+    : SPARSE_MAX_NON_NULL;
   const nonNullKeys = signalKeys.filter((k) => data.signals[k] != null);
   if (
     nonNullKeys.length <= maxNonNull &&

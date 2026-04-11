@@ -22,4 +22,5 @@
  * Wire code emitted by `computeDealbreakers` for the relationshipClarity-only rule (legacy engine).
  * Historical rows may still carry `KIDS_TIMELINE_MISMATCH`; `match-short-reason` maps that code for display parity.
  */
-export const RELATIONSHIP_CLARITY_MISMATCH_CODE = 'RELATIONSHIP_CLARITY_MISMATCH' as const;
+export const RELATIONSHIP_CLARITY_MISMATCH_CODE =
+  'RELATIONSHIP_CLARITY_MISMATCH' as const;

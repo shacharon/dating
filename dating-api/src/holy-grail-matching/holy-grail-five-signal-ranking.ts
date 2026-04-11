@@ -116,8 +116,13 @@ function fnv1a32(input: string): number {
 /**
  * Strictly positive spread for empty-signal pairs; stable for (searcherId, candidateId).
  */
-export function deterministicRankingSpread(searcherProfileId: string, candidateProfileId: string): number {
-  const h = fnv1a32(`${searcherProfileId}\0${candidateProfileId}\0HG_RANK_EMPTY`);
+export function deterministicRankingSpread(
+  searcherProfileId: string,
+  candidateProfileId: string,
+): number {
+  const h = fnv1a32(
+    `${searcherProfileId}\0${candidateProfileId}\0HG_RANK_EMPTY`,
+  );
   const u = h / 4294967296;
   return EMPTY_SPREAD_MAX * (0.001 + u * 0.999);
 }
@@ -163,13 +168,13 @@ function numericPairScore(
   const okA = a !== null && Number.isFinite(a);
   const okB = b !== null && Number.isFinite(b);
   if (okA && okB) {
-    const gap = Math.abs(a! - b!);
+    const gap = Math.abs(a - b);
     const raw = Math.max(0, NUMERIC_SCALE - gap);
     const points = (raw / NUMERIC_SCALE) * weight;
     return { points, note: `${signal}:closer_better(gap=${gap.toFixed(2)})` };
   }
   if (okA || okB) {
-    const v = okA ? a! : b!;
+    const v = okA ? a : b!;
     const pts = weight * NUMERIC_ONE_SIDED_FRACTION * normNumeric(v);
     return { points: pts, note: `${signal}:one_side_numeric(v=${v})` };
   }
@@ -218,11 +223,14 @@ function numericOverlap01(a: number | null, b: number | null): number | null {
   const okA = a !== null && Number.isFinite(a);
   const okB = b !== null && Number.isFinite(b);
   if (!okA || !okB) return null;
-  const gap = Math.abs(a! - b!);
+  const gap = Math.abs(a - b);
   return Math.max(0, NUMERIC_SCALE - gap) / NUMERIC_SCALE;
 }
 
-function jaccardOverlap01(ta: readonly string[], tb: readonly string[]): number | null {
+function jaccardOverlap01(
+  ta: readonly string[],
+  tb: readonly string[],
+): number | null {
   const setA = new Set(ta.map(normTag).filter((x) => x.length > 0));
   const setB = new Set(tb.map(normTag).filter((x) => x.length > 0));
   if (setA.size === 0 || setB.size === 0) return null;
@@ -234,7 +242,9 @@ function jaccardOverlap01(ta: readonly string[], tb: readonly string[]): number 
   return union > 0 ? inter / union : null;
 }
 
-function filterCanonicalPersonalityTags(raw: readonly string[] | undefined): string[] {
+function filterCanonicalPersonalityTags(
+  raw: readonly string[] | undefined,
+): string[] {
   if (!raw?.length) return [];
   const out: string[] = [];
   for (const t of raw) {
@@ -306,7 +316,9 @@ function computePersonalityTraitRankBonus(
   return { points, note };
 }
 
-function filterCanonicalLifestyleTags(raw: readonly string[] | undefined): string[] {
+function filterCanonicalLifestyleTags(
+  raw: readonly string[] | undefined,
+): string[] {
   if (!raw?.length) return [];
   const out: string[] = [];
   for (const t of raw) {
@@ -355,7 +367,9 @@ function computeLifestyleSignalsRankBonus(
   return { points, note };
 }
 
-function filterCanonicalInterestTags(raw: readonly string[] | undefined): string[] {
+function filterCanonicalInterestTags(
+  raw: readonly string[] | undefined,
+): string[] {
   if (!raw?.length) return [];
   const out: string[] = [];
   for (const t of raw) {
@@ -409,7 +423,10 @@ function computeInterestTagsRankBonus(
  * Mean overlap in \[0,1\] over ranking dimensions that have **pairwise** data on both profiles.
  * Omits one-sided or missing dimensions (no imputed facts). Returns `null` if nothing is comparable.
  */
-function meanPairwiseOverlap01(s: MatchingRankingSignalsSnapshot, c: MatchingRankingSignalsSnapshot): number | null {
+function meanPairwiseOverlap01(
+  s: MatchingRankingSignalsSnapshot,
+  c: MatchingRankingSignalsSnapshot,
+): number | null {
   const parts: number[] = [];
   const r1 = labelOverlap01(s.dailyRhythm, c.dailyRhythm);
   if (r1 !== null) parts.push(r1);
@@ -425,7 +442,10 @@ function meanPairwiseOverlap01(s: MatchingRankingSignalsSnapshot, c: MatchingRan
   return parts.reduce((acc, x) => acc + x, 0) / parts.length;
 }
 
-function similarityPreferenceDelta(pref: SimilarityPreference, o: number): number {
+function similarityPreferenceDelta(
+  pref: SimilarityPreference,
+  o: number,
+): number {
   const B = SIMILARITY_RANK_BONUS_MAX;
   if (pref === 'similar') {
     return B * (2 * o - 1);
@@ -436,9 +456,17 @@ function similarityPreferenceDelta(pref: SimilarityPreference, o: number): numbe
   return B * (1 - 2 * Math.abs(o - 0.5));
 }
 
-function similarityPreferenceRankNote(pref: SimilarityPreference, o: number, delta: number): string {
+function similarityPreferenceRankNote(
+  pref: SimilarityPreference,
+  o: number,
+  delta: number,
+): string {
   const kind =
-    pref === 'similar' ? 'reward_overlap' : pref === 'different' ? 'reward_contrast' : 'reward_mid_overlap';
+    pref === 'similar'
+      ? 'reward_overlap'
+      : pref === 'different'
+        ? 'reward_contrast'
+        : 'reward_mid_overlap';
   const sign = delta >= 0 ? '+' : '';
   return `similarityPreference:${kind}(O=${o.toFixed(4)},${sign}${delta.toFixed(4)})`;
 }
@@ -475,14 +503,28 @@ function computeHolyGrailFiveSignalRankInternal(
     readonly candidate: MatchingCanonicalModel;
   },
   includeNonDbRankingOverlays: boolean,
-): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
+): {
+  rankScore: number;
+  rankReasons: string[];
+  rankBreakdown: HolyGrailRankSignalBreakdown[];
+} {
   const s = snapshotOf(args.searcher);
   const c = snapshotOf(args.candidate);
 
   const breakdown: HolyGrailRankSignalBreakdown[] = [];
 
-  const w1 = labelPairScore(s.dailyRhythm, c.dailyRhythm, WEIGHTS.dailyRhythm, 'dailyRhythm');
-  breakdown.push({ signal: 'dailyRhythm', weight: WEIGHTS.dailyRhythm, points: w1.points, note: w1.note });
+  const w1 = labelPairScore(
+    s.dailyRhythm,
+    c.dailyRhythm,
+    WEIGHTS.dailyRhythm,
+    'dailyRhythm',
+  );
+  breakdown.push({
+    signal: 'dailyRhythm',
+    weight: WEIGHTS.dailyRhythm,
+    points: w1.points,
+    note: w1.note,
+  });
 
   const w2 = labelPairScore(
     s.autonomyTogetherness,
@@ -497,20 +539,52 @@ function computeHolyGrailFiveSignalRankInternal(
     note: w2.note,
   });
 
-  const w3 = numericPairScore(s.conflictStyle, c.conflictStyle, WEIGHTS.conflictStyle, 'conflictStyle');
-  breakdown.push({ signal: 'conflictStyle', weight: WEIGHTS.conflictStyle, points: w3.points, note: w3.note });
+  const w3 = numericPairScore(
+    s.conflictStyle,
+    c.conflictStyle,
+    WEIGHTS.conflictStyle,
+    'conflictStyle',
+  );
+  breakdown.push({
+    signal: 'conflictStyle',
+    weight: WEIGHTS.conflictStyle,
+    points: w3.points,
+    note: w3.note,
+  });
 
-  const w4 = numericPairScore(s.lifestylePace, c.lifestylePace, WEIGHTS.lifestylePace, 'lifestylePace');
-  breakdown.push({ signal: 'lifestylePace', weight: WEIGHTS.lifestylePace, points: w4.points, note: w4.note });
+  const w4 = numericPairScore(
+    s.lifestylePace,
+    c.lifestylePace,
+    WEIGHTS.lifestylePace,
+    'lifestylePace',
+  );
+  breakdown.push({
+    signal: 'lifestylePace',
+    weight: WEIGHTS.lifestylePace,
+    points: w4.points,
+    note: w4.note,
+  });
 
-  const w5 = interestsPairScore(s.interestsTop, c.interestsTop, WEIGHTS.interestsTop);
-  breakdown.push({ signal: 'interestsTop', weight: WEIGHTS.interestsTop, points: w5.points, note: w5.note });
+  const w5 = interestsPairScore(
+    s.interestsTop,
+    c.interestsTop,
+    WEIGHTS.interestsTop,
+  );
+  breakdown.push({
+    signal: 'interestsTop',
+    weight: WEIGHTS.interestsTop,
+    points: w5.points,
+    note: w5.note,
+  });
 
   const primaryFive = breakdown.reduce((acc, x) => acc + x.points, 0);
   let rankScore: number;
 
   if (primaryFive < 1e-9) {
-    const spread = deterministicRankingSpread(args.searcher.profileId, args.candidate.profileId);
+    const spread = deterministicRankingSpread(
+      args.searcher.profileId,
+      args.candidate.profileId,
+    );
     breakdown.push({
       signal: 'deterministicSpread',
       weight: EMPTY_SPREAD_MAX,
@@ -578,7 +652,11 @@ function computeHolyGrailFiveSignalRankInternal(
    * Deterministic tie-break on the total (max ~0.001); skipped for perfect 100 so golden “full match” stays 100.
    */
   const tieMicro =
-    (fnv1a32(`${args.searcher.profileId}|${args.candidate.profileId}|HG_RANK_TIE_MICRO`) % 1000) / 1_000_000;
+    (fnv1a32(
+      `${args.searcher.profileId}|${args.candidate.profileId}|HG_RANK_TIE_MICRO`,
+    ) %
+      1000) /
+    1_000_000;
   if (rankScore < 100 - 1e-9) {
     rankScore = Math.round((rankScore + tieMicro) * 1_000_000) / 1_000_000;
   } else {
@@ -586,7 +664,9 @@ function computeHolyGrailFiveSignalRankInternal(
   }
   const rankReasons = [
     `hg_rank_total:${rankScore}`,
-    ...breakdown.map((b) => `${b.signal}:+${Math.round(b.points * 10000) / 10000}(${b.note})`),
+    ...breakdown.map(
+      (b) => `${b.signal}:+${Math.round(b.points * 10000) / 10000}(${b.note})`,
+    ),
   ];
 
   return { rankScore, rankReasons, rankBreakdown: breakdown };
@@ -599,7 +679,11 @@ function computeHolyGrailFiveSignalRankInternal(
 export function computeHolyGrailRankingPurityRank(args: {
   readonly searcher: MatchingCanonicalModel;
   readonly candidate: MatchingCanonicalModel;
-}): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
+}): {
+  rankScore: number;
+  rankReasons: string[];
+  rankBreakdown: HolyGrailRankSignalBreakdown[];
+} {
   return computeHolyGrailFiveSignalRankInternal(args, false);
 }
 
@@ -610,6 +694,10 @@ export function computeHolyGrailRankingPurityRank(args: {
 export function computeHolyGrailFiveSignalRank(args: {
   readonly searcher: MatchingCanonicalModel;
   readonly candidate: MatchingCanonicalModel;
-}): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
+}): {
+  rankScore: number;
+  rankReasons: string[];
+  rankBreakdown: HolyGrailRankSignalBreakdown[];
+} {
   return computeHolyGrailFiveSignalRankInternal(args, true);
 }

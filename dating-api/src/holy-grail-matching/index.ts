@@ -4,8 +4,14 @@
  * Eligibility SOFT_PASS rules: see `docs/HOLY_GRAIL_MATCHING.md` § “Locked Layer 3 policy” and `eligibility.evaluator.ts` docblock.
  */
 
-export { MatchingDimensionResults, type MatchingDimensionResult } from './matching-dimension-result';
-export { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from './holy-grail-dimensions';
+export {
+  MatchingDimensionResults,
+  type MatchingDimensionResult,
+} from './matching-dimension-result';
+export {
+  HOLY_GRAIL_DIMENSION_KEYS,
+  type HolyGrailDimensionKey,
+} from './holy-grail-dimensions';
 export type {
   HolyGrailExtractionArraysInput,
   HolyGrailProfileMappingInput,
@@ -30,7 +36,10 @@ export {
 } from './eligibility.evaluator';
 export { adaptHolyGrailEvaluationToLegacyDimensionMap } from './evaluation-to-legacy-dimension-map';
 export { buildHolyGrailEligibilityAuditV1 } from './build-eligibility-audit';
-export type { HolyGrailEligibilityAuditV1, HolyGrailDimensionAuditRow } from './eligibility-audit.types';
+export type {
+  HolyGrailEligibilityAuditV1,
+  HolyGrailDimensionAuditRow,
+} from './eligibility-audit.types';
 export {
   HolyGrailPairDecisions,
   type HolyGrailPairDecision,

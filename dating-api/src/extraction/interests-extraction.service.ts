@@ -95,12 +95,13 @@ export class InterestsExtractionService {
       const tag = item.tag.trim().toLowerCase();
       if (!tag) continue;
 
-      const strength = item.strength === 'explicit' || item.strength === 'strong' 
-        ? item.strength 
-        : 'explicit';
+      const strength =
+        item.strength === 'explicit' || item.strength === 'strong'
+          ? item.strength
+          : 'explicit';
 
-      const evidence = item.evidence 
-        ? item.evidence.slice(0, 60).trim() 
+      const evidence = item.evidence
+        ? item.evidence.slice(0, 60).trim()
         : undefined;
 
       const ruleId = item.ruleId || 'llm_v1';
@@ -142,17 +143,18 @@ export class InterestsExtractionService {
     );
 
     try {
-      const { value, rawText } = await this.llm.completeJSON<InterestsLLMOutput>({
-        modelKey: 'fast',
-        system: INTERESTS_SYSTEM_PROMPT,
-        user: userPrompt,
-        schema: InterestsOutputSchema,
-        temperature: 0.1,
-        maxTokens: 2000,
-        timeoutMs: 60_000,
-        requestId,
-        purpose: 'interests-extraction',
-      });
+      const { value, rawText } =
+        await this.llm.completeJSON<InterestsLLMOutput>({
+          modelKey: 'fast',
+          system: INTERESTS_SYSTEM_PROMPT,
+          user: userPrompt,
+          schema: InterestsOutputSchema,
+          temperature: 0.1,
+          maxTokens: 2000,
+          timeoutMs: 60_000,
+          requestId,
+          purpose: 'interests-extraction',
+        });
 
       this.logger.log(
         JSON.stringify(
@@ -171,7 +173,9 @@ export class InterestsExtractionService {
         requestId,
         parsedJson: value,
         rawText,
-        afterStages: [{ name: 'after_validateAndNormalize', value: { items: normalized } }],
+        afterStages: [
+          { name: 'after_validateAndNormalize', value: { items: normalized } },
+        ],
       });
       this.logger.log(
         JSON.stringify({

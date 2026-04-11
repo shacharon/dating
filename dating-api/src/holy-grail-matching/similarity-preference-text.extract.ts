@@ -12,11 +12,7 @@ export type SimilarityPreferenceTextExtraction = {
   readonly evidence: readonly string[];
 };
 
-const BALANCED_PHRASES_EN = [
-  'not exactly like me',
-  'mix',
-  'balanced',
-] as const;
+const BALANCED_PHRASES_EN = ['not exactly like me', 'mix', 'balanced'] as const;
 
 const DIFFERENT_PHRASES_EN = ['different from me', 'opposite of me'] as const;
 const DIFFERENT_PHRASES_HE = ['שונה ממני', 'הפכים'] as const;
@@ -36,7 +32,11 @@ function combineFields(input: {
   return { full, lower: full.toLowerCase() };
 }
 
-function findEnglishPhrases(lower: string, phrases: readonly string[], wordBoundary: Set<string>): string[] {
+function findEnglishPhrases(
+  lower: string,
+  phrases: readonly string[],
+  wordBoundary: Set<string>,
+): string[] {
   const found: string[] = [];
   for (const p of phrases) {
     if (wordBoundary.has(p)) {
@@ -56,11 +56,18 @@ function escapeRegExp(s: string): string {
 function collectBalanced(lower: string): string[] {
   const wordBoundary = new Set<string>(['mix', 'balanced']);
   const multiWord = BALANCED_PHRASES_EN.filter((p) => !wordBoundary.has(p));
-  return [...findEnglishPhrases(lower, multiWord, new Set()), ...findEnglishPhrases(lower, [...wordBoundary], wordBoundary)];
+  return [
+    ...findEnglishPhrases(lower, multiWord, new Set()),
+    ...findEnglishPhrases(lower, [...wordBoundary], wordBoundary),
+  ];
 }
 
 function collectDifferent(full: string, lower: string): string[] {
-  const en = findEnglishPhrases(lower, [...DIFFERENT_PHRASES_EN], new Set([...DIFFERENT_PHRASES_EN]));
+  const en = findEnglishPhrases(
+    lower,
+    [...DIFFERENT_PHRASES_EN],
+    new Set([...DIFFERENT_PHRASES_EN]),
+  );
   const he: string[] = [];
   for (const p of DIFFERENT_PHRASES_HE) {
     if (full.includes(p)) he.push(p);

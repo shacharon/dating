@@ -1,6 +1,6 @@
 /**
  * Extraction normalization: raw LLM output → structured ExtractedSignals, alias key mapping.
- * 
+ *
  * Technical coercion only: parses JSON, maps known aliases, provides fallbacks.
  * No semantic inference or policy-based modifications.
  */
@@ -73,8 +73,7 @@ export function normalizeRawExtraction(
         const signal = String((item as { signal: unknown }).signal);
         const quote = String((item as { quote: unknown }).quote);
         const reasonRaw = (item as { reason?: unknown }).reason;
-        const reason =
-          typeof reasonRaw === 'string' ? reasonRaw : '';
+        const reason = typeof reasonRaw === 'string' ? reasonRaw : '';
         const note =
           typeof (item as { note?: unknown }).note === 'string'
             ? (item as { note: string }).note

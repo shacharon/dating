@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
+import { AuthSessionConfigService } from './config/auth-session-config.service';
 import { AppModule } from './app.module';
 import { SimpleLogger } from './logger/simple-logger.service';
 
@@ -7,13 +9,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = app.get(SimpleLogger);
   app.useLogger(logger);
+  // `cookie-parser` types depend on Express v4 merges; middleware is standard RequestHandler.
+
+  app.use(cookieParser());
 
   const config = app.get(ConfigService);
+  const authSessionConfig = app.get(AuthSessionConfigService);
   const port = config.get<number>('PORT', 3001);
-  const corsOrigin = config.get<string>(
-    'CORS_ORIGIN',
-    'http://localhost:3000,http://127.0.0.1:3000',
-  );
+  const corsOrigin = authSessionConfig.corsOrigin;
   const origins = corsOrigin
     .split(',')
     .map((o) => o.trim())

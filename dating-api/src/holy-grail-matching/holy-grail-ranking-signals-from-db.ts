@@ -25,14 +25,19 @@ function readEnrichmentRankingSliceForCompose(
   if (!evaluation?.enrichment || evaluation.enrichment.version !== 'v1') {
     return { dailyRhythm: null, autonomyTogetherness: null, interestsTop3: [] };
   }
-  const s = evaluation.enrichment.signals as EnrichmentSignalsV1 & Record<string, unknown>;
+  const s = evaluation.enrichment.signals as EnrichmentSignalsV1 &
+    Record<string, unknown>;
   const dr = s.dailyRhythm;
   const atRaw = s.autonomyTogethernessDepth ?? s.autonomyTogetherness;
-  const dailyRhythm = typeof dr === 'string' && dr.trim() !== '' ? dr.trim() : null;
-  const autonomyTogetherness = typeof atRaw === 'string' && atRaw.trim() !== '' ? atRaw.trim() : null;
+  const dailyRhythm =
+    typeof dr === 'string' && dr.trim() !== '' ? dr.trim() : null;
+  const autonomyTogetherness =
+    typeof atRaw === 'string' && atRaw.trim() !== '' ? atRaw.trim() : null;
   const itRaw = s.interestsTop3 ?? s.interestsTop;
   const interestsTop3 = Array.isArray(itRaw)
-    ? itRaw.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim())
+    ? itRaw
+        .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+        .map((x) => x.trim())
     : [];
   return { dailyRhythm, autonomyTogetherness, interestsTop3 };
 }
@@ -74,7 +79,10 @@ function toFiniteNumber(v: unknown): number | null {
 export function composeHolyGrailRankingSignalsForPersist(args: {
   readonly evaluation: EvaluateBatchResult | null | undefined;
   readonly interestsSelf: readonly string[] | undefined;
-  readonly signalSelfNumerics: { lifestylePace: number | null; conflictStyle: number | null } | null | undefined;
+  readonly signalSelfNumerics:
+    | { lifestylePace: number | null; conflictStyle: number | null }
+    | null
+    | undefined;
 }): MatchingRankingSignalsSnapshot {
   const en = readEnrichmentRankingSliceForCompose(args.evaluation ?? undefined);
   const lifestylePace = toFiniteNumber(args.signalSelfNumerics?.lifestylePace);
@@ -83,7 +91,9 @@ export function composeHolyGrailRankingSignalsForPersist(args: {
   const fallbackTop = interestsTopFallbackFromInterestsSelf(args.interestsSelf);
 
   const interestsTop =
-    en.interestsTop3.length > 0 ? en.interestsTop3.map(normInterest).filter((t) => t.length > 0) : fallbackTop;
+    en.interestsTop3.length > 0
+      ? en.interestsTop3.map(normInterest).filter((t) => t.length > 0)
+      : fallbackTop;
 
   return {
     dailyRhythm: en.dailyRhythm,
@@ -111,11 +121,15 @@ export function buildHolyGrailRankingSignalsFromDbSelfRow(
   }
   const dr = signalSelf.hgRankingDailyRhythm;
   const at = signalSelf.hgRankingAutonomyTogetherness;
-  const dailyRhythm = typeof dr === 'string' && dr.trim() !== '' ? dr.trim() : null;
-  const autonomyTogetherness = typeof at === 'string' && at.trim() !== '' ? at.trim() : null;
+  const dailyRhythm =
+    typeof dr === 'string' && dr.trim() !== '' ? dr.trim() : null;
+  const autonomyTogetherness =
+    typeof at === 'string' && at.trim() !== '' ? at.trim() : null;
   const rawTop = signalSelf.hgRankingInterestsTop;
   const interestsTop = Array.isArray(rawTop)
-    ? rawTop.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim())
+    ? rawTop
+        .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+        .map((x) => x.trim())
     : [];
 
   return {

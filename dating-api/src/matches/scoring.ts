@@ -29,10 +29,7 @@ export function computeCompatibilityFromComponents(
   valuesAlignment: number,
 ): number {
   return (
-    0.35 * aToB +
-    0.35 * bToA +
-    0.2 * relationshipFit +
-    0.1 * valuesAlignment
+    0.35 * aToB + 0.35 * bToA + 0.2 * relationshipFit + 0.1 * valuesAlignment
   );
 }
 

@@ -61,14 +61,14 @@ function summarizeOpenAIResponse(res: unknown): Record<string, unknown> {
         ? o0.content
         : Array.isArray(o0.content)
           ? (o0.content as unknown[])
-            .map((p) =>
-              p &&
+              .map((p) =>
+                p &&
                 typeof p === 'object' &&
                 typeof (p as { text?: unknown }).text === 'string'
-                ? (p as { text: string }).text
-                : '',
-            )
-            .join('')
+                  ? (p as { text: string }).text
+                  : '',
+              )
+              .join('')
           : '';
     if (output0Text !== '') {
       shape.output0_content_text_preview = output0Text.slice(0, 120);
@@ -96,14 +96,14 @@ function summarizeOpenAIResponse(res: unknown): Record<string, unknown> {
             ? content
             : Array.isArray(content)
               ? (content as unknown[])
-                .map((p) =>
-                  p &&
+                  .map((p) =>
+                    p &&
                     typeof p === 'object' &&
                     typeof (p as { text?: unknown }).text === 'string'
-                    ? (p as { text: string }).text
-                    : '',
-                )
-                .join('')
+                      ? (p as { text: string }).text
+                      : '',
+                  )
+                  .join('')
               : '';
         shape.choices0_message_content_preview =
           typeof msgText === 'string' ? msgText.slice(0, 120) : msgText;
@@ -121,8 +121,8 @@ function contentToString(c: unknown): string {
     return c
       .map((p) =>
         p &&
-          typeof p === 'object' &&
-          typeof (p as { text?: unknown }).text === 'string'
+        typeof p === 'object' &&
+        typeof (p as { text?: unknown }).text === 'string'
           ? (p as { text: string }).text
           : '',
       )
@@ -174,14 +174,14 @@ export function extractTextFromOpenAIResponse(response: unknown): string {
       : {};
   const output0 =
     Array.isArray(obj.output) &&
-      obj.output.length > 0 &&
-      typeof obj.output[0] === 'object'
+    obj.output.length > 0 &&
+    typeof obj.output[0] === 'object'
       ? (obj.output[0] as Record<string, unknown>).content
       : undefined;
   const choice0 =
     Array.isArray(obj.choices) &&
-      obj.choices.length > 0 &&
-      typeof obj.choices[0] === 'object'
+    obj.choices.length > 0 &&
+    typeof obj.choices[0] === 'object'
       ? (obj.choices[0] as Record<string, unknown>)
       : undefined;
   const msg =
@@ -198,8 +198,8 @@ export function extractTextFromOpenAIResponse(response: unknown): string {
     | undefined;
   const dataChoices0 =
     Array.isArray(dataChoices) &&
-      dataChoices.length > 0 &&
-      typeof dataChoices[0] === 'object'
+    dataChoices.length > 0 &&
+    typeof dataChoices[0] === 'object'
       ? (dataChoices[0] as Record<string, unknown>)
       : undefined;
   const dataMsg =
@@ -324,15 +324,16 @@ export class OpenAIClient implements LLMClient {
   private readonly logger = new Logger(OpenAIClient.name);
   private readonly client: OpenAI;
   private readonly fetchTimingByRequestId = new Map<string, FetchTiming>();
-  private readonly stageSnapshots = new Map<LatencyStage, StageLatencySnapshot>();
+  private readonly stageSnapshots = new Map<
+    LatencyStage,
+    StageLatencySnapshot
+  >();
 
   constructor(private readonly config: LLMConfig) {
     const baseFetch: typeof fetch = (input, init) => fetch(input, init);
     const instrumentedFetch = async (input: unknown, init?: unknown) => {
       const requestHeaders = new Headers(
-        (init &&
-          typeof init === 'object' &&
-          'headers' in init
+        (init && typeof init === 'object' && 'headers' in init
           ? (init as { headers?: HeadersInit }).headers
           : undefined) ?? {},
       );
@@ -340,7 +341,10 @@ export class OpenAIClient implements LLMClient {
         requestHeaders.get('x-request-id') ??
         requestHeaders.get('x-codex-request-id');
       const sentAt = Date.now();
-      const response = await baseFetch(input as Parameters<typeof fetch>[0], init as Parameters<typeof fetch>[1]);
+      const response = await baseFetch(
+        input as Parameters<typeof fetch>[0],
+        init as Parameters<typeof fetch>[1],
+      );
       const firstByteAt = Date.now();
       if (requestId) {
         this.fetchTimingByRequestId.set(requestId, {
@@ -408,19 +412,29 @@ export class OpenAIClient implements LLMClient {
           res && typeof res === 'object'
             ? (res as Record<string, unknown>)
             : undefined;
-        const choice0 = ro?.choices?.[0] as
-          | Record<string, unknown>
-          | undefined;
-        const co =
-          choice0 && typeof choice0 === 'object'
-            ? choice0
+        const choice0 = ro?.choices?.[0] as Record<string, unknown> | undefined;
+        const co = choice0 && typeof choice0 === 'object' ? choice0 : undefined;
+        const msg0 =
+          co?.message && typeof co.message === 'object'
+            ? (co.message as Record<string, unknown>)
             : undefined;
-        const msg0 = co?.message && typeof co.message === 'object' ? (co.message as Record<string, unknown>) : undefined;
         const toolCalls = msg0?.tool_calls;
-        const tool0 = Array.isArray(toolCalls) && toolCalls.length > 0 ? toolCalls[0] : undefined;
-        const to = tool0 && typeof tool0 === 'object' ? (tool0 as Record<string, unknown>) : undefined;
-        const func0 = to?.function && typeof to.function === 'object' ? (to.function as Record<string, unknown>) : undefined;
-        const fc = msg0?.function_call && typeof msg0.function_call === 'object' ? (msg0.function_call as Record<string, unknown>) : undefined;
+        const tool0 =
+          Array.isArray(toolCalls) && toolCalls.length > 0
+            ? toolCalls[0]
+            : undefined;
+        const to =
+          tool0 && typeof tool0 === 'object'
+            ? (tool0 as Record<string, unknown>)
+            : undefined;
+        const func0 =
+          to?.function && typeof to.function === 'object'
+            ? (to.function as Record<string, unknown>)
+            : undefined;
+        const fc =
+          msg0?.function_call && typeof msg0.function_call === 'object'
+            ? (msg0.function_call as Record<string, unknown>)
+            : undefined;
         const msgContent = msg0?.content;
         const shape = {
           topKeys: ro ? Object.keys(ro) : [],
@@ -440,7 +454,9 @@ export class OpenAIClient implements LLMClient {
               : undefined,
           function_call_keys: fc ? Object.keys(fc) : [],
           function_call_args_preview:
-            typeof fc?.arguments === 'string' ? fc.arguments.slice(0, 300) : undefined,
+            typeof fc?.arguments === 'string'
+              ? fc.arguments.slice(0, 300)
+              : undefined,
         };
         this.logger.log(
           JSON.stringify({
@@ -481,11 +497,15 @@ export class OpenAIClient implements LLMClient {
       const latencyMs = end - start;
       const usageObj = (result.usage as
         | {
-          prompt_tokens?: unknown;
-          completion_tokens?: unknown;
-          total_tokens?: unknown;
-        }
-        | undefined) ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+            prompt_tokens?: unknown;
+            completion_tokens?: unknown;
+            total_tokens?: unknown;
+          }
+        | undefined) ?? {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+      };
       const promptTokens =
         typeof usageObj.prompt_tokens === 'number' ? usageObj.prompt_tokens : 0;
       const completionTokens =
@@ -502,7 +522,8 @@ export class OpenAIClient implements LLMClient {
       const ttfbMs = Math.max(0, tFirstByte - tOpenaiRequestSent);
       const generationMs = Math.max(0, end - tFirstByte);
       const stage = latencyStage;
-      const isTargetStage = stage === 'extraction_partner' || stage === 'eval_traits';
+      const isTargetStage =
+        stage === 'extraction_partner' || stage === 'eval_traits';
 
       if (isTargetStage) {
         this.logger.log(

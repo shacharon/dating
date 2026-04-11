@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ExtractionService } from '../extraction/extraction.service';
-import type { ExtractedSignals, LLMUsageStats } from '../extraction/extracted-signals.interface';
+import type {
+  ExtractedSignals,
+  LLMUsageStats,
+} from '../extraction/extracted-signals.interface';
 import {
   OFFICIAL_EXTRACTION_SIGNAL_KEYS,
   effectiveDomainQualityStatus,
@@ -252,7 +255,9 @@ export const AttractionTraitsResultSchema = z.object({
   confidence: z.number().min(0).max(1),
   evidence: z.array(AttractionTraitsEvidenceItemSchema).default([]),
 });
-export type AttractionTraitsResult = z.infer<typeof AttractionTraitsResultSchema>;
+export type AttractionTraitsResult = z.infer<
+  typeof AttractionTraitsResultSchema
+>;
 
 const ATTRACTION_TRAITS_SYSTEM_PROMPT = `
 You are a strict feature-extractor. Output JSON only. No prose.
@@ -337,7 +342,8 @@ function buildProductScoresPresentation(
     relationshipFitScore: sOk && rOk ? num(scores.relationshipFitScore) : ins,
     coverageScore: sOk && pOk && rOk ? num(scores.coverageScore) : ins,
     frictionRiskScore: num(scores.frictionRiskScore),
-    overallDecisionScore: sOk && pOk && rOk ? num(scores.overallDecisionScore) : ins,
+    overallDecisionScore:
+      sOk && pOk && rOk ? num(scores.overallDecisionScore) : ins,
   };
 }
 
@@ -391,22 +397,62 @@ const EXTENDED_LIST_PRIORITY: ExtendedListKey[] = [
 
 const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
   interests: [
-    { value: 'gym', semanticId: 'activity-gym', patterns: [/\bgym\b/i, /\bweightlifting\b/i] },
-    { value: 'running', semanticId: 'activity-running', patterns: [/\brunning\b/i, /\bruns?\b/i] },
-    { value: 'hiking', semanticId: 'activity-hiking', patterns: [/\bhiking\b/i, /\bhikes?\b/i] },
+    {
+      value: 'gym',
+      semanticId: 'activity-gym',
+      patterns: [/\bgym\b/i, /\bweightlifting\b/i],
+    },
+    {
+      value: 'running',
+      semanticId: 'activity-running',
+      patterns: [/\brunning\b/i, /\bruns?\b/i],
+    },
+    {
+      value: 'hiking',
+      semanticId: 'activity-hiking',
+      patterns: [/\bhiking\b/i, /\bhikes?\b/i],
+    },
     { value: 'yoga', semanticId: 'activity-yoga', patterns: [/\byoga\b/i] },
-    { value: 'cooking', semanticId: 'activity-cooking', patterns: [/\bcooking\b/i, /\bcooks at home\b/i] },
-    { value: 'travel', semanticId: 'activity-travel', patterns: [/\btravel(?:ing|s)?\b/i, /\btravels?\b/i] },
+    {
+      value: 'cooking',
+      semanticId: 'activity-cooking',
+      patterns: [/\bcooking\b/i, /\bcooks at home\b/i],
+    },
+    {
+      value: 'travel',
+      semanticId: 'activity-travel',
+      patterns: [/\btravel(?:ing|s)?\b/i, /\btravels?\b/i],
+    },
     {
       value: 'reading',
       semanticId: 'activity-reading',
       patterns: [/\bI read\b/i, /\breading\b/i, /\bbooks?\b/i],
     },
-    { value: 'music', semanticId: 'activity-music', patterns: [/\bmusic\b/i, /\bconcerts?\b/i] },
-    { value: 'walking', semanticId: 'activity-walking', patterns: [/\bwalking\b/i, /\bwalks?\b/i] },
-    { value: 'journaling', semanticId: 'activity-journaling', patterns: [/\bjournaling\b/i, /\bjournal(?:ing)?\b/i] },
-    { value: 'swimming', semanticId: 'activity-swimming', patterns: [/\bswimming\b/i, /\bswims?\b/i] },
-    { value: 'cycling', semanticId: 'activity-cycling', patterns: [/\bcycling\b/i, /\bbike rides?\b/i] },
+    {
+      value: 'music',
+      semanticId: 'activity-music',
+      patterns: [/\bmusic\b/i, /\bconcerts?\b/i],
+    },
+    {
+      value: 'walking',
+      semanticId: 'activity-walking',
+      patterns: [/\bwalking\b/i, /\bwalks?\b/i],
+    },
+    {
+      value: 'journaling',
+      semanticId: 'activity-journaling',
+      patterns: [/\bjournaling\b/i, /\bjournal(?:ing)?\b/i],
+    },
+    {
+      value: 'swimming',
+      semanticId: 'activity-swimming',
+      patterns: [/\bswimming\b/i, /\bswims?\b/i],
+    },
+    {
+      value: 'cycling',
+      semanticId: 'activity-cycling',
+      patterns: [/\bcycling\b/i, /\bbike rides?\b/i],
+    },
     {
       value: 'gardening',
       semanticId: 'activity-gardening',
@@ -419,7 +465,12 @@ const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
     {
       value: 'restoration',
       semanticId: 'activity-restoration',
-      patterns: [/\brestoration\b/i, /\brestoring\b/i, /\bI restore\b/i, /\brestore old\b/i],
+      patterns: [
+        /\brestoration\b/i,
+        /\brestoring\b/i,
+        /\bI restore\b/i,
+        /\brestore old\b/i,
+      ],
     },
     {
       value: 'woodworking',
@@ -436,7 +487,10 @@ const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
     {
       value: 'structured routine',
       semanticId: 'lifestyle-structure',
-      patterns: [/\bstructured (?:life|routine|days?)\b/i, /\blike(?:s)? structure\b/i],
+      patterns: [
+        /\bstructured (?:life|routine|days?)\b/i,
+        /\blike(?:s)? structure\b/i,
+      ],
     },
     {
       value: 'night owl',
@@ -504,7 +558,10 @@ const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
     {
       value: 'values independence',
       semanticId: 'pref-autonomy',
-      patterns: [/\bvalues (?:freedom|independence|autonomy)\b/i, /\bfreedom and autonomy\b/i],
+      patterns: [
+        /\bvalues (?:freedom|independence|autonomy)\b/i,
+        /\bfreedom and autonomy\b/i,
+      ],
     },
   ],
   boundaries: [
@@ -528,7 +585,11 @@ const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
       semanticId: 'boundary-em-safety',
       patterns: [/\bemotional safety\b/i, /\bsafe space\b/i],
     },
-    { value: 'no games', semanticId: 'boundary-no-games', patterns: [/\bno games\b/i] },
+    {
+      value: 'no games',
+      semanticId: 'boundary-no-games',
+      patterns: [/\bno games\b/i],
+    },
     {
       value: 'wants children',
       semanticId: 'boundary-wants-children',
@@ -545,7 +606,11 @@ const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
     {
       value: 'needs personal space',
       semanticId: 'boundary-space',
-      patterns: [/\bneed (?:my |a lot of )?space\b/i, /\bneed space\b/i, /\brespect.*space\b/i],
+      patterns: [
+        /\bneed (?:my |a lot of )?space\b/i,
+        /\bneed space\b/i,
+        /\brespect.*space\b/i,
+      ],
     },
     {
       value: 'honest communication',
@@ -559,12 +624,24 @@ const EXPLICIT_LIST_RULES: Record<ExtendedListKey, ExplicitListRule[]> = {
     },
   ],
   values: [
-    { value: 'loyalty', semanticId: 'value-loyalty', patterns: [/\bloyal(?:ty)?\b/i] },
-    { value: 'authenticity', semanticId: 'value-authenticity', patterns: [/\bauthentic(?:ity)?\b/i] },
+    {
+      value: 'loyalty',
+      semanticId: 'value-loyalty',
+      patterns: [/\bloyal(?:ty)?\b/i],
+    },
+    {
+      value: 'authenticity',
+      semanticId: 'value-authenticity',
+      patterns: [/\bauthentic(?:ity)?\b/i],
+    },
     {
       value: 'faith or tradition',
       semanticId: 'value-faith-tradition',
-      patterns: [/\bfaith\b/i, /\btradition(?:al)?\b/i, /\bspiritual practice\b/i],
+      patterns: [
+        /\bfaith\b/i,
+        /\btradition(?:al)?\b/i,
+        /\bspiritual practice\b/i,
+      ],
     },
     {
       value: 'family first',
@@ -820,7 +897,9 @@ export class EvaluateService {
     );
 
     const requestId = randomUUID();
-    const { value, rawText } = await this.llm.completeJSON<Record<string, unknown>>({
+    const { value, rawText } = await this.llm.completeJSON<
+      Record<string, unknown>
+    >({
       modelKey: 'fast',
       system: SUMMARY_SYSTEM_PROMPT,
       user: `Extracted data:\n${payload}`,
@@ -834,7 +913,11 @@ export class EvaluateService {
 
     this.logger.log(
       JSON.stringify(
-        buildEvaluateRawLlmLogPayload({ purpose: 'evaluate-summary', requestId }, value, rawText),
+        buildEvaluateRawLlmLogPayload(
+          { purpose: 'evaluate-summary', requestId },
+          value,
+          rawText,
+        ),
       ),
       'EvaluateService',
     );
@@ -894,7 +977,11 @@ export class EvaluateService {
 
     this.logger.log(
       JSON.stringify(
-        buildEvaluateRawLlmLogPayload({ purpose: 'evaluate-motivation', requestId }, value, rawText),
+        buildEvaluateRawLlmLogPayload(
+          { purpose: 'evaluate-motivation', requestId },
+          value,
+          rawText,
+        ),
       ),
       'EvaluateService',
     );
@@ -953,7 +1040,11 @@ export class EvaluateService {
 
     this.logger.log(
       JSON.stringify(
-        buildEvaluateRawLlmLogPayload({ purpose: 'evaluate-attraction', requestId }, value, rawText),
+        buildEvaluateRawLlmLogPayload(
+          { purpose: 'evaluate-attraction', requestId },
+          value,
+          rawText,
+        ),
       ),
       'EvaluateService',
     );
@@ -1010,22 +1101,23 @@ export class EvaluateService {
     const user = parts.join('\n');
 
     const requestId = randomUUID();
-    const { value, rawText } = await this.llm.completeJSON<AttractionTraitsResult>({
-      modelKey: 'fast',
-      system: ATTRACTION_TRAITS_SYSTEM_PROMPT,
-      user,
-      schema: AttractionTraitsResultSchema,
-      temperature: 0.2,
-      maxTokens: 600,
-      timeoutMs: 15_000,
-      requestId,
-      purpose: 'evaluate-attraction-traits',
-      latencyStage: 'eval_traits',
-      inputTextLength:
-        (aboutPartner?.trim().length ?? 0) +
-        (aboutMe?.trim().length ?? 0) +
-        (aboutRelationship?.trim().length ?? 0),
-    });
+    const { value, rawText } =
+      await this.llm.completeJSON<AttractionTraitsResult>({
+        modelKey: 'fast',
+        system: ATTRACTION_TRAITS_SYSTEM_PROMPT,
+        user,
+        schema: AttractionTraitsResultSchema,
+        temperature: 0.2,
+        maxTokens: 600,
+        timeoutMs: 15_000,
+        requestId,
+        purpose: 'evaluate-attraction-traits',
+        latencyStage: 'eval_traits',
+        inputTextLength:
+          (aboutPartner?.trim().length ?? 0) +
+          (aboutMe?.trim().length ?? 0) +
+          (aboutRelationship?.trim().length ?? 0),
+      });
 
     this.logger.log(
       JSON.stringify(
@@ -1043,8 +1135,14 @@ export class EvaluateService {
     const a = value.attraction;
     const evidence = Array.isArray(value.evidence)
       ? value.evidence.map((e) => ({
-          dimension: typeof e.dimension === 'string' ? e.dimension : String(e.dimension ?? ''),
-          quote: typeof e.quote === 'string' ? e.quote.slice(0, 200) : String(e.quote ?? ''),
+          dimension:
+            typeof e.dimension === 'string'
+              ? e.dimension
+              : String(e.dimension ?? ''),
+          quote:
+            typeof e.quote === 'string'
+              ? e.quote.slice(0, 200)
+              : String(e.quote ?? ''),
         }))
       : [];
 
@@ -1094,7 +1192,13 @@ export class EvaluateService {
   async evaluateBatch(
     input: EvaluateBatchInput,
   ): Promise<{ ok: true; result: EvaluateBatchResult }> {
-    const { aboutMe, aboutRelationship, aboutPartner, profileId, rawInterests } = input;
+    const {
+      aboutMe,
+      aboutRelationship,
+      aboutPartner,
+      profileId,
+      rawInterests,
+    } = input;
     const evalRequestId = randomUUID();
     const evalStartedAt = Date.now();
 
@@ -1107,9 +1211,16 @@ export class EvaluateService {
       );
 
     // Start all evaluation LLM calls together (summary + optional extended signals).
-    const displayPromise = this.generateSummaryFromSignals(self, partner, relationship);
+    const displayPromise = this.generateSummaryFromSignals(
+      self,
+      partner,
+      relationship,
+    );
     const extendedSignalsPromise = (async (): Promise<
-      | (Pick<ExtendedSignals, 'relationshipMotivation' | 'attractionTraits'> & {
+      | (Pick<
+          ExtendedSignals,
+          'relationshipMotivation' | 'attractionTraits'
+        > & {
           motTrace?: EvaluateLlmCallTrace;
           attTrace?: EvaluateLlmCallTrace;
         })
@@ -1130,14 +1241,8 @@ export class EvaluateService {
             { collectTrace: true },
           ),
         ]);
-        const {
-          _evaluateLlmTrace: motTrace,
-          ...motivation
-        } = motivationPack;
-        const {
-          _evaluateLlmTrace: attTrace,
-          ...attraction
-        } = attractionPack;
+        const { _evaluateLlmTrace: motTrace, ...motivation } = motivationPack;
+        const { _evaluateLlmTrace: attTrace, ...attraction } = attractionPack;
 
         return {
           relationshipMotivation: motivation,
@@ -1243,11 +1348,17 @@ export class EvaluateService {
       aboutPartner.trim(),
       aboutRelationship.trim(),
     );
-    const enrichmentSignals = sanitizeEnrichmentSignalsV1ForPersist(enrichmentMapped, {
-      profileId: profileId ?? null,
-      onDropped: (e) =>
-        this.logger.warn(JSON.stringify({ event: 'enrichment_field_dropped', ...e }), EvaluateService.name),
-    });
+    const enrichmentSignals = sanitizeEnrichmentSignalsV1ForPersist(
+      enrichmentMapped,
+      {
+        profileId: profileId ?? null,
+        onDropped: (e) =>
+          this.logger.warn(
+            JSON.stringify({ event: 'enrichment_field_dropped', ...e }),
+            EvaluateService.name,
+          ),
+      },
+    );
     const enrichment: EnrichmentV1 = wrapEnrichmentV1(enrichmentSignals);
 
     return {

@@ -15,13 +15,20 @@ import type {
   CompareHgDiagnosticResult,
   MatchListItemDto,
 } from './matches.service';
-import type { ChildrenUnsureDirectionsDto, MatchIndexDto, MatchRecordDto } from './match.types';
+import type {
+  ChildrenUnsureDirectionsDto,
+  MatchIndexDto,
+  MatchRecordDto,
+} from './match.types';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { MatchDaemonService } from './match-daemon.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesService } from './matches.service';
 import { computeMatchDetailPairHg } from './match-detail-children-unsure';
-import { mapMatchRecordToDetailUi, type MatchDetailUiDto } from './match-detail-ui.mapper';
+import {
+  mapMatchRecordToDetailUi,
+  type MatchDetailUiDto,
+} from './match-detail-ui.mapper';
 import {
   ChildrenUnsureAnalyticsService,
   type ChildrenUnsureDailySummary,
@@ -93,10 +100,16 @@ export class MatchesController {
   }
 
   @Get('auto')
-  async getAuto(): Promise<{ ok: true; index: MatchIndexDto } | { ok: false; message: string }> {
+  async getAuto(): Promise<
+    { ok: true; index: MatchIndexDto } | { ok: false; message: string }
+  > {
     const index = await this.matchDaemon.getAutoIndex();
     if (!index) {
-      return { ok: false, message: 'Auto index not built. Call POST /api/v1/matches/rebuild first.' };
+      return {
+        ok: false,
+        message:
+          'Auto index not built. Call POST /api/v1/matches/rebuild first.',
+      };
     }
     return { ok: true, index };
   }
@@ -106,16 +119,20 @@ export class MatchesController {
    * No legacy `compareWithStatus`, no ProfileExtractionV2 requirement, no match engine score.
    */
   @Post('compare/hg-diagnostic')
-  async compareHgDiagnostic(@Body() body: CompareBodyDto): Promise<CompareHgDiagnosticResult> {
+  async compareHgDiagnostic(
+    @Body() body: CompareBodyDto,
+  ): Promise<CompareHgDiagnosticResult> {
     if (!this.matchesService.isHgCompareDiagnosticEnabled()) {
       throw new ForbiddenException({
-        message: 'HG compare diagnostic is disabled (set ENABLE_HG_COMPARE_DIAGNOSTIC=1).',
+        message:
+          'HG compare diagnostic is disabled (set ENABLE_HG_COMPARE_DIAGNOSTIC=1).',
       });
     }
     try {
       return await this.matchesService.compareHgDiagnostic(body);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'compareHgDiagnostic failed';
+      const message =
+        err instanceof Error ? err.message : 'compareHgDiagnostic failed';
       if (err && typeof err === 'object' && 'status' in err) throw err;
       throw new BadRequestException(message);
     }
@@ -127,9 +144,7 @@ export class MatchesController {
    * Response shape unchanged (`READY` | `NOT_ANALYZED` | `INSUFFICIENT_DATA` + nested `match` fields).
    */
   @Post('compare')
-  async compare(
-    @Body() body: CompareBodyDto,
-  ): Promise<
+  async compare(@Body() body: CompareBodyDto): Promise<
     | { ok: true; status: 'READY'; matchId: string; match: MatchRecordDto }
     | {
         ok: true;
@@ -149,7 +164,10 @@ export class MatchesController {
     }
     try {
       const result = await this.matchesService.compare({ aId, bId });
-      if (result.status === 'NOT_ANALYZED' || result.status === 'INSUFFICIENT_DATA') {
+      if (
+        result.status === 'NOT_ANALYZED' ||
+        result.status === 'INSUFFICIENT_DATA'
+      ) {
         return {
           ok: true,
           status: result.status,
@@ -158,7 +176,12 @@ export class MatchesController {
           match: result.match,
         };
       }
-      return { ok: true, status: 'READY', matchId: result.matchId, match: result.match };
+      return {
+        ok: true,
+        status: 'READY',
+        matchId: result.matchId,
+        match: result.match,
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Compare failed';
       if (err && typeof err === 'object' && 'status' in err) throw err;
@@ -181,7 +204,9 @@ export class MatchesController {
   ): Promise<{ ok: true; items: MatchListItemDto[] }> {
     const hideChildrenUnsure = parseHideChildrenUnsure(hideChildrenUnsureRaw);
     const items = await this.matchesService.list({ hideChildrenUnsure });
-    const withChildrenUnsureCount = items.filter((i) => anyChildrenUnsure(i.children_unsure)).length;
+    const withChildrenUnsureCount = items.filter((i) =>
+      anyChildrenUnsure(i.children_unsure),
+    ).length;
     this.childrenUnsureAnalytics.recordListOrTopResponse({
       returnedCount: items.length,
       withChildrenUnsureCount,
@@ -197,7 +222,9 @@ export class MatchesController {
   ): Promise<{ ok: true; matches: DatingMatchPreviewDto[] }> {
     const hideChildrenUnsure = parseHideChildrenUnsure(hideChildrenUnsureRaw);
     const items = await this.matchesService.list({ hideChildrenUnsure });
-    const withChildrenUnsureCount = items.filter((i) => anyChildrenUnsure(i.children_unsure)).length;
+    const withChildrenUnsureCount = items.filter((i) =>
+      anyChildrenUnsure(i.children_unsure),
+    ).length;
     this.childrenUnsureAnalytics.recordListOrTopResponse({
       returnedCount: items.length,
       withChildrenUnsureCount,
@@ -209,7 +236,10 @@ export class MatchesController {
         const rankScore = getDisplayScore(item);
         const otherPerson = item.b;
         const chips =
-          item.explainability?.positiveChips?.slice(0, MATCH_PREVIEW_CHIPS_SLICE) ?? [];
+          item.explainability?.positiveChips?.slice(
+            0,
+            MATCH_PREVIEW_CHIPS_SLICE,
+          ) ?? [];
 
         const hasChildrenUnsure = anyChildrenUnsure(item.children_unsure);
         const hgPreview = tryPickHolyGrailMatchDiagnosticsDto(item);
@@ -221,11 +251,16 @@ export class MatchesController {
           summary: `Match score: ${Math.round(rankScore)}`,
           compatibilityScore: Math.round(rankScore),
           strongReason: item.shortReason || 'Good compatibility',
-          frictionPoint: item.explainability?.tensionChip || 'No major tensions',
+          frictionPoint:
+            item.explainability?.tensionChip || 'No major tensions',
           ...(item.explainability && { explainability: item.explainability }),
           ...(item.recommendation && { recommendation: item.recommendation }),
-          ...(item.children_unsure && { children_unsure: item.children_unsure }),
-          ...(hasChildrenUnsure && { engineCompatibilityScore: Math.round(engineScore) }),
+          ...(item.children_unsure && {
+            children_unsure: item.children_unsure,
+          }),
+          ...(hasChildrenUnsure && {
+            engineCompatibilityScore: Math.round(engineScore),
+          }),
           ...(hgPreview ? { ...hgPreview } : {}),
         };
         return preview;
@@ -239,14 +274,21 @@ export class MatchesController {
   async childrenUnsureDailySummary(
     @Query('date') dateUtc?: string,
   ): Promise<{ ok: true; summary: ChildrenUnsureDailySummary }> {
-    return { ok: true, summary: this.childrenUnsureAnalytics.getDailySummary(dateUtc) };
+    return {
+      ok: true,
+      summary: this.childrenUnsureAnalytics.getDailySummary(dateUtc),
+    };
   }
 
   @Get('analytics/hg-pair-snapshot/summary')
   async hgPairSnapshotSummary(): Promise<{
     ok: true;
-    cumulative: ReturnType<HolyGrailPairSnapshotTelemetryService['getCumulative']>;
-    lastListBatch: ReturnType<HolyGrailPairSnapshotTelemetryService['getLastListBatch']>;
+    cumulative: ReturnType<
+      HolyGrailPairSnapshotTelemetryService['getCumulative']
+    >;
+    lastListBatch: ReturnType<
+      HolyGrailPairSnapshotTelemetryService['getLastListBatch']
+    >;
   }> {
     return {
       ok: true,
@@ -303,12 +345,13 @@ export class MatchesController {
       ...match,
       finalScore: match.finalScore ?? match.overall,
     };
-    const { children_unsure, holyGrail, telemetry } = await computeMatchDetailPairHg(
-      this.prisma,
-      normalized.aId,
-      normalized.bId,
-      { rowA, rowB },
-    );
+    const { children_unsure, holyGrail, telemetry } =
+      await computeMatchDetailPairHg(
+        this.prisma,
+        normalized.aId,
+        normalized.bId,
+        { rowA, rowB },
+      );
     this.hgPairSnapshotTelemetry.recordDetailResolution(telemetry);
     return mapMatchRecordToDetailUi(normalized, children_unsure, holyGrail);
   }

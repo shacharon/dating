@@ -1,7 +1,7 @@
 /**
  * Profile interests / hobbies — explicit structured layer, separate from compatibility signals.
  * Versioned schema; tags reflect model output (canonical list is guidance for prompts/UI).
- * 
+ *
  * LLM-first extraction: interests are extracted via structured LLM output only.
  * No regex fallback, no deterministic inference, no hybrid mode.
  */
@@ -31,7 +31,9 @@ export const INTEREST_CANONICAL_TAGS = [
 
 export type InterestCanonicalTag = (typeof INTEREST_CANONICAL_TAGS)[number];
 
-export const INTEREST_CANONICAL_TAG_SET = new Set<string>(INTEREST_CANONICAL_TAGS);
+export const INTEREST_CANONICAL_TAG_SET = new Set<string>(
+  INTEREST_CANONICAL_TAGS,
+);
 
 /**
  * explicit: direct hobby/activity noun or clear "I love X" style (LLM-determined).

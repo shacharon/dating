@@ -5,7 +5,11 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 import { HG_LIST_PRODUCT_POLICY_VERSION } from './children-unsure.product-policy';
 import { evaluateHolyGrailPairDirections } from './holy-grail-pair-directions';
-import type { ChildrenUnsureDirectionsDto, HolyGrailMatchDiagnosticsDto, MatchRecordDto } from './match.types';
+import type {
+  ChildrenUnsureDirectionsDto,
+  HolyGrailMatchDiagnosticsDto,
+  MatchRecordDto,
+} from './match.types';
 import { anyChildrenUnsure } from './children-unsure.helpers';
 
 const HG_CHILDREN_STATUS_SEP = ':';
@@ -74,7 +78,10 @@ export type PairHgSnapshotUpsertInput = {
   readonly hgPolicyVersion: string;
 };
 
-function countSoftPasses(aToB: HolyGrailDirectionalEvaluationResult, bToA: HolyGrailDirectionalEvaluationResult): number {
+function countSoftPasses(
+  aToB: HolyGrailDirectionalEvaluationResult,
+  bToA: HolyGrailDirectionalEvaluationResult,
+): number {
   let n = 0;
   for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
     if (aToB.dimensions[k].status === 'SOFT_PASS') n += 1;
@@ -125,8 +132,13 @@ function parseOverallHardPairFromSnapshot(
   return { a: x as 'PASS' | 'FAIL', b: y as 'PASS' | 'FAIL' };
 }
 
-export function isMatchPairHgSnapshotPolicyCurrent(row: MatchPairHgSnapshot | null | undefined): boolean {
-  return Boolean(row?.hgPolicyVersion && row.hgPolicyVersion === HG_LIST_PRODUCT_POLICY_VERSION);
+export function isMatchPairHgSnapshotPolicyCurrent(
+  row: MatchPairHgSnapshot | null | undefined,
+): boolean {
+  return Boolean(
+    row?.hgPolicyVersion &&
+    row.hgPolicyVersion === HG_LIST_PRODUCT_POLICY_VERSION,
+  );
 }
 
 /**
@@ -142,15 +154,24 @@ export function classifyChildrenUnsureFromSnapshot(
     return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.POLICY_MISMATCH };
   }
   if (row.hgChildrenStatus == null || row.hgChildrenStatus === '') {
-    return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.CHILDREN_STATUS_MISSING };
+    return {
+      ok: false,
+      reason: HG_PAIR_SNAPSHOT_REJECT.CHILDREN_STATUS_MISSING,
+    };
   }
   const parts = row.hgChildrenStatus.split(HG_CHILDREN_STATUS_SEP);
   if (parts.length !== 2) {
-    return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.CHILDREN_STATUS_MALFORMED };
+    return {
+      ok: false,
+      reason: HG_PAIR_SNAPSHOT_REJECT.CHILDREN_STATUS_MALFORMED,
+    };
   }
   const [a, b] = parts;
   if (!VALID_CHILD_DIM.has(a) || !VALID_CHILD_DIM.has(b)) {
-    return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.CHILDREN_STATUS_MALFORMED };
+    return {
+      ok: false,
+      reason: HG_PAIR_SNAPSHOT_REJECT.CHILDREN_STATUS_MALFORMED,
+    };
   }
   return {
     ok: true,
@@ -176,10 +197,16 @@ export function classifyHolyGrailDiagnosticsFromSnapshot(
   }
   const parsed = parseOverallHardPairFromSnapshot(row.hgOverallStatus);
   if (!parsed) {
-    return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.DIAGNOSTICS_OVERALL_INVALID };
+    return {
+      ok: false,
+      reason: HG_PAIR_SNAPSHOT_REJECT.DIAGNOSTICS_OVERALL_INVALID,
+    };
   }
   if (row.hgSoftPassCount == null || !Number.isFinite(row.hgSoftPassCount)) {
-    return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.DIAGNOSTICS_SOFT_PASS_COUNT_INVALID };
+    return {
+      ok: false,
+      reason: HG_PAIR_SNAPSHOT_REJECT.DIAGNOSTICS_SOFT_PASS_COUNT_INVALID,
+    };
   }
   return {
     ok: true,
@@ -197,7 +224,9 @@ export function holyGrailMatchDiagnosticsFromDirections(
 ): HolyGrailMatchDiagnosticsDto {
   const hgOverallStatus = `${aToB.overallHardEligibility}${HG_CHILDREN_STATUS_SEP}${bToA.overallHardEligibility}`;
   return {
-    hgMutualPass: aToB.overallHardEligibility === 'PASS' && bToA.overallHardEligibility === 'PASS',
+    hgMutualPass:
+      aToB.overallHardEligibility === 'PASS' &&
+      bToA.overallHardEligibility === 'PASS',
     hgOverallStatus,
     hgRankScore: countSoftPasses(aToB, bToA),
   };
@@ -232,10 +261,16 @@ export function resolvePairHgFieldsFromSnapshotClassifications(args: {
   const childrenFromSnap = args.childClass.ok ? args.childClass.dto : null;
   const diagFromSnap = args.diagClass.ok ? args.diagClass.dto : null;
 
-  const snapshotChildrenReject = args.childClass.ok ? undefined : args.childClass.reason;
-  const snapshotDiagnosticsReject = args.diagClass.ok ? undefined : args.diagClass.reason;
+  const snapshotChildrenReject = args.childClass.ok
+    ? undefined
+    : args.childClass.reason;
+  const snapshotDiagnosticsReject = args.diagClass.ok
+    ? undefined
+    : args.diagClass.reason;
 
-  const baseTelemetry = (partial: Partial<HgPairResolutionTelemetry>): HgPairResolutionTelemetry => ({
+  const baseTelemetry = (
+    partial: Partial<HgPairResolutionTelemetry>,
+  ): HgPairResolutionTelemetry => ({
     matchId: args.matchId,
     snapshotRowPresent: rowPresent,
     snapshotPolicyCurrent: policyCurrent,
@@ -295,12 +330,13 @@ export function resolvePairHgFieldsFromSnapshotClassifications(args: {
     };
   }
 
-  const children_unsure =
-    childrenFromSnap ?? {
-      profile_a_to_profile_b: dirs.aToB.eligibilityFlags.children_unsure,
-      profile_b_to_profile_a: dirs.bToA.eligibilityFlags.children_unsure,
-    };
-  const holyGrail = diagFromSnap ?? holyGrailMatchDiagnosticsFromDirections(dirs.aToB, dirs.bToA);
+  const children_unsure = childrenFromSnap ?? {
+    profile_a_to_profile_b: dirs.aToB.eligibilityFlags.children_unsure,
+    profile_b_to_profile_a: dirs.bToA.eligibilityFlags.children_unsure,
+  };
+  const holyGrail =
+    diagFromSnap ??
+    holyGrailMatchDiagnosticsFromDirections(dirs.aToB, dirs.bToA);
 
   let liveFallbackReason: string;
   if (!childrenFromSnap && !diagFromSnap) {

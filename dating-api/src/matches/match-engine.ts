@@ -4,11 +4,21 @@
  * Legacy dealbreakers vs HG children: `../domain/kids-family-ownership.ts`.
  */
 
-import { COMPATIBILITY_SIGNAL_KEYS, computeValuesAlignment } from '../compatibility/compatibility-score';
+import {
+  COMPATIBILITY_SIGNAL_KEYS,
+  computeValuesAlignment,
+} from '../compatibility/compatibility-score';
 import { computeCompatibility } from '../compatibility/compatibility-score';
-import type { BreakdownEntry, CompatibilityResult, HardMismatch } from '../compatibility/compatibility-score';
+import type {
+  BreakdownEntry,
+  CompatibilityResult,
+  HardMismatch,
+} from '../compatibility/compatibility-score';
 import { coveragePercent as coveragePercentFormula } from '../engine/coverage';
-import { applyKeywordTriggers, computeFriction } from '../engine/compute-friction';
+import {
+  applyKeywordTriggers,
+  computeFriction,
+} from '../engine/compute-friction';
 import type { EnrichedSignals } from '../engine/tension-rules';
 import { compatibility as compatibilityFormula } from '../engine/scoring';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
@@ -34,7 +44,10 @@ import {
 } from './friction-policy';
 import type { CapsCalibrationState } from './calibration-policy';
 import { applyDirectionalDisplayCalibration } from './display-policy';
-import { buildMatchExplainability, type MatchExplainabilityDto } from './match-explainability';
+import {
+  buildMatchExplainability,
+  type MatchExplainabilityDto,
+} from './match-explainability';
 import {
   buildMatchRecommendation,
   type MatchRecommendationDto,
@@ -116,8 +129,16 @@ export interface CompareResultDto {
   tensionMatrix: TensionMatrixEntryDto[];
   /** Derived context per profile (occupationClass, visibilityNeed, lifeStage). */
   derived?: {
-    a: { occupationClass?: string; visibilityNeed?: number; lifeStage?: number };
-    b: { occupationClass?: string; visibilityNeed?: number; lifeStage?: number };
+    a: {
+      occupationClass?: string;
+      visibilityNeed?: number;
+      lifeStage?: number;
+    };
+    b: {
+      occupationClass?: string;
+      visibilityNeed?: number;
+      lifeStage?: number;
+    };
   };
   /** Dealbreaker codes and severity. */
   dealbreakers?: Dealbreaker[];
@@ -193,7 +214,9 @@ function applyLowInfoCap(
   profileAId: string,
   profileBId: string,
 ): number {
-  const isLowInfo = LOW_INFO_PROFILE_IDS.has(profileAId) || LOW_INFO_PROFILE_IDS.has(profileBId);
+  const isLowInfo =
+    LOW_INFO_PROFILE_IDS.has(profileAId) ||
+    LOW_INFO_PROFILE_IDS.has(profileBId);
   if (!isLowInfo) return finalScoreClamped;
   return Math.min(finalScoreClamped, LOW_INFO_FINAL_SCORE_CAP);
 }
@@ -226,7 +249,8 @@ export function compareWithStatus(
   if (!hasNumericSelfSignals(profileA) || !hasNumericSelfSignals(profileB)) {
     return {
       status: 'INSUFFICIENT_DATA',
-      message: 'Profile self signals are empty or non-numeric; cannot score match',
+      message:
+        'Profile self signals are empty or non-numeric; cannot score match',
       ...GUARD_NULL_FIELDS,
     };
   }
@@ -258,8 +282,8 @@ function deriveProfileContextsAndEnrichedSignals(
   profileA: ProfileJsonPayload,
   profileB: ProfileJsonPayload,
 ): ProfileContextsAndEnriched {
-  const signalsA = (profileA.evaluation?.self?.signals ?? {}) as Record<string, number | null>;
-  const signalsB = (profileB.evaluation?.self?.signals ?? {}) as Record<string, number | null>;
+  const signalsA = profileA.evaluation?.self?.signals ?? {};
+  const signalsB = profileB.evaluation?.self?.signals ?? {};
   const ctxA = deriveContextFromProfileTexts(profileA.texts ?? {});
   const ctxB = deriveContextFromProfileTexts(profileB.texts ?? {});
   const enrichedA = applyKeywordTriggers(signalsA, {
@@ -316,7 +340,10 @@ function computeDirectionalCompatibility(
   signalsA: Record<string, number | null>,
   signalsB: Record<string, number | null>,
 ): DirectionalCompatibility {
-  const compatAB: CompatibilityResult = computeCompatibility(signalsA, signalsB);
+  const compatAB: CompatibilityResult = computeCompatibility(
+    signalsA,
+    signalsB,
+  );
   const compatBA: CompatibilityResult = computeCompatibility(
     signalsB,
     signalsA,
@@ -325,7 +352,10 @@ function computeDirectionalCompatibility(
   const bToA = clampTo100(compatBA.overallScore);
   const totalSignals = COMPATIBILITY_SIGNAL_KEYS.length;
   const numComparableSignals = compatAB.matchedSignals;
-  const coveragePercentValue = coveragePercentFormula(numComparableSignals, totalSignals);
+  const coveragePercentValue = coveragePercentFormula(
+    numComparableSignals,
+    totalSignals,
+  );
   const countPresent = (s: Record<string, number | null>) =>
     COMPATIBILITY_SIGNAL_KEYS.filter(
       (k) => s[k] != null && Number.isFinite(Number(s[k])),
@@ -370,9 +400,16 @@ function computeCoverageAsymmetryLowEvidenceAdjustments(
   aToB: number,
   bToA: number,
 ): CoverageAsymmetryLowEvidence {
-  const { friction: baseFriction, tensions: tensionMatrix } = computeFriction(enrichedA, enrichedB);
+  const { friction: baseFriction, tensions: tensionMatrix } = computeFriction(
+    enrichedA,
+    enrichedB,
+  );
   const frictionMinimum =
-    balance.ratio < 2 && baseFriction > 0 ? 4 : balance.ratio >= 2 && balance.ratio < 4 ? 2 : 0;
+    balance.ratio < 2 && baseFriction > 0
+      ? 4
+      : balance.ratio >= 2 && balance.ratio < 4
+        ? 2
+        : 0;
   const isAsymmetric = minPresent <= 6 && maxPresent >= 9;
   const asymmetryScale = isAsymmetric ? 0.92 : 1;
   let aToBForCompat = clampTo100(Math.round(aToB * asymmetryScale));
@@ -414,13 +451,17 @@ function computeRelationshipFitAndValuesAlignment(
       2,
   );
   if (balance.ratio >= 4) relationshipFit = Math.min(100, relationshipFit + 8);
-  else if (balance.ratio < 2) relationshipFit = Math.max(0, relationshipFit - 10);
+  else if (balance.ratio < 2)
+    relationshipFit = Math.max(0, relationshipFit - 10);
   relationshipFit = clampTo100(relationshipFit);
-  const signalsA = (profileA.evaluation?.self?.signals ?? {}) as Record<string, number | null>;
-  const signalsB = (profileB.evaluation?.self?.signals ?? {}) as Record<string, number | null>;
+  const signalsA = profileA.evaluation?.self?.signals ?? {};
+  const signalsB = profileB.evaluation?.self?.signals ?? {};
   const valuesAlignment = computeValuesAlignment(signalsA, signalsB);
   const valuesAlignmentCap = 85;
-  const valuesAlignmentForCompat = Math.min(valuesAlignmentCap, valuesAlignment);
+  const valuesAlignmentForCompat = Math.min(
+    valuesAlignmentCap,
+    valuesAlignment,
+  );
   return { relationshipFit, valuesAlignment, valuesAlignmentForCompat };
 }
 
@@ -436,7 +477,12 @@ function computeCompatibilityAndNuancePenalties(
   signalsB: Record<string, number | null>,
 ): number {
   const compatibilityValueRaw = clampTo100(
-    compatibilityFormula(aToBForCompat, bToAForCompat, relationshipFit, valuesAlignmentForCompat),
+    compatibilityFormula(
+      aToBForCompat,
+      bToAForCompat,
+      relationshipFit,
+      valuesAlignmentForCompat,
+    ),
   );
   let compatibilityValue = compatibilityValueRaw;
   if (coveragePercentValue <= 55) {
@@ -455,7 +501,8 @@ function computeCompatibilityAndNuancePenalties(
   const clarityGap = getSignalGap('relationshipClarity');
   const paceGap = getSignalGap('lifestylePace');
   let nuancePenalty = 0;
-  if (clarityGap != null && clarityGap >= 3 && clarityGap <= 5) nuancePenalty = 2;
+  if (clarityGap != null && clarityGap >= 3 && clarityGap <= 5)
+    nuancePenalty = 2;
   else if (paceGap != null && paceGap >= 3 && paceGap <= 5) nuancePenalty = 2;
   compatibilityValue = Math.max(0, compatibilityValue - nuancePenalty);
   return compatibilityValue;
@@ -531,11 +578,8 @@ function buildFinalResultDto(
   caps: CapsCalibrationState,
 ): CompareResultDto {
   const { infoFlags } = coverageConfidence;
-  let {
-    scoreCoverageFactorValue,
-    coverageFactorValue,
-    confidenceValue,
-  } = coverageConfidence;
+  let { scoreCoverageFactorValue, coverageFactorValue, confidenceValue } =
+    coverageConfidence;
   if (coveragePercentValue < 25) {
     confidenceValue = Math.min(confidenceValue, 0.75);
   }
@@ -574,7 +618,6 @@ function buildFinalResultDto(
   );
 
   if (shouldLogMatchDebug()) {
-    // eslint-disable-next-line no-console -- MATCH_DEBUG=1 diagnostics
     console.debug({
       compatibility: compatibilityValue,
       scoreCoverageFactor: scoreCoverageFactorValue,
@@ -668,7 +711,10 @@ function buildFinalResultDto(
   };
 }
 
-export function compare(profileA: ProfileJsonPayload, profileB: ProfileJsonPayload): CompareResultDto {
+export function compare(
+  profileA: ProfileJsonPayload,
+  profileB: ProfileJsonPayload,
+): CompareResultDto {
   const step1 = deriveProfileContextsAndEnrichedSignals(profileA, profileB);
   const step2 = computeDealbreakersAndBalance(
     step1.signalsA,
@@ -689,7 +735,11 @@ export function compare(profileA: ProfileJsonPayload, profileB: ProfileJsonPaylo
     step3.aToB,
     step3.bToA,
   );
-  const step6 = computeRelationshipFitAndValuesAlignment(profileA, profileB, step2.balance);
+  const step6 = computeRelationshipFitAndValuesAlignment(
+    profileA,
+    profileB,
+    step2.balance,
+  );
   const step7Compat = computeCompatibilityAndNuancePenalties(
     step4.aToBForCompat,
     step4.bToAForCompat,
@@ -710,9 +760,16 @@ export function compare(profileA: ProfileJsonPayload, profileB: ProfileJsonPaylo
     rawScoreForPipeline += 2;
   }
   const preCapFinalScore = clampTo100(rawScoreForPipeline);
-  const finalScoreAfterDealbreakers = applyDealbreakerCap(preCapFinalScore, step2.dealbreakers);
+  const finalScoreAfterDealbreakers = applyDealbreakerCap(
+    preCapFinalScore,
+    step2.dealbreakers,
+  );
   let finalScoreClamped = Math.min(90, clampTo100(finalScoreAfterDealbreakers));
-  finalScoreClamped = applyLowInfoCap(finalScoreClamped, profileA.id, profileB.id);
+  finalScoreClamped = applyLowInfoCap(
+    finalScoreClamped,
+    profileA.id,
+    profileB.id,
+  );
 
   const step5ForDto: FrictionAndPenaltiesState = {
     ...step5,

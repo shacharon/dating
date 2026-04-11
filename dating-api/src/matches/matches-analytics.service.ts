@@ -143,12 +143,15 @@ export class MatchesAnalyticsService {
     const totalMatches = records.length;
     const averageScore =
       totalMatches > 0
-        ? Math.round((scores.reduce((s, x) => s + x, 0) / totalMatches) * 100) / 100
+        ? Math.round((scores.reduce((s, x) => s + x, 0) / totalMatches) * 100) /
+          100
         : 0;
     const medianScore =
       totalMatches > 0 ? Math.round(median(sorted) * 100) / 100 : 0;
-    const p90 = totalMatches > 0 ? Math.round(percentile(sorted, 90) * 100) / 100 : 0;
-    const p10 = totalMatches > 0 ? Math.round(percentile(sorted, 10) * 100) / 100 : 0;
+    const p90 =
+      totalMatches > 0 ? Math.round(percentile(sorted, 90) * 100) / 100 : 0;
+    const p10 =
+      totalMatches > 0 ? Math.round(percentile(sorted, 10) * 100) / 100 : 0;
 
     const score_distribution = toDistribution(scores);
 

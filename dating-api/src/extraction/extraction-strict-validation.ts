@@ -14,7 +14,10 @@ import {
 } from './extracted-signals.interface';
 
 /** Allowed signal keys per domain (must match extractor prompts). */
-export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<ExtractionDomain, readonly string[]> = {
+export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
+  ExtractionDomain,
+  readonly string[]
+> = {
   self: [
     'emotionalDepth',
     'attachmentSecurity',
@@ -52,7 +55,9 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<ExtractionDomain, readonly strin
   ],
 };
 
-export function allowedSignalKeyCountForDomain(domain: ExtractionDomain): number {
+export function allowedSignalKeyCountForDomain(
+  domain: ExtractionDomain,
+): number {
   return DOMAIN_ALLOWED_SIGNAL_KEYS[domain].length;
 }
 
@@ -74,10 +79,7 @@ export function quoteContainsBannedMarkers(quote: string): boolean {
 }
 
 export function reasonWordCount(reason: string): number {
-  return String(reason)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+  return String(reason).trim().split(/\s+/).filter(Boolean).length;
 }
 
 /** Non-empty trimmed reason and at most MAX_EVIDENCE_REASON_WORDS words. */
@@ -87,7 +89,10 @@ export function reasonMeetsContract(reason: string | undefined): boolean {
   return reasonWordCount(t) <= MAX_EVIDENCE_REASON_WORDS;
 }
 
-export function quoteIsExactSubstringOf(quote: string, originalText: string): boolean {
+export function quoteIsExactSubstringOf(
+  quote: string,
+  originalText: string,
+): boolean {
   const q = quote.trim();
   if (q.length === 0) return false;
   return originalText.includes(q);
@@ -103,8 +108,7 @@ export function evidenceItemIsFullyValid(
   originalText: string,
 ): boolean {
   return (
-    evidenceQuoteIsValid(e.quote, originalText) &&
-    reasonMeetsContract(e.reason)
+    evidenceQuoteIsValid(e.quote, originalText) && reasonMeetsContract(e.reason)
   );
 }
 
@@ -115,7 +119,9 @@ function countNonNullInAllowed(
   return allowed.filter((k) => signals[k] != null).length;
 }
 
-export type ValidateExtractionDebugLog = (payload: Record<string, unknown>) => void;
+export type ValidateExtractionDebugLog = (
+  payload: Record<string, unknown>,
+) => void;
 
 /**
  * Evidence-only validation: drop evidence rows that fail integrity checks.
@@ -144,13 +150,16 @@ export function validateExtraction(
     }
   }
 
-  const normalizedEvidence: ExtractionEvidenceItem[] = (extraction.evidence ?? []).map((e) => ({
+  const normalizedEvidence: ExtractionEvidenceItem[] = (
+    extraction.evidence ?? []
+  ).map((e) => ({
     ...e,
     signal: officializeEvidenceSignal(e.signal),
   }));
 
   let evidence = normalizedEvidence.filter(
-    (e) => allowedSet.has(e.signal) && evidenceItemIsFullyValid(e, originalText),
+    (e) =>
+      allowedSet.has(e.signal) && evidenceItemIsFullyValid(e, originalText),
   );
   evidence = evidence.slice(0, MAX_EVIDENCE_ITEMS);
 

@@ -16,7 +16,12 @@ export function getScoreStretch(): number {
   const n = raw != null && raw !== '' ? parseFloat(raw) : NaN;
   if (!_scoreStretchLogged) {
     _scoreStretchLogged = true;
-    console.debug('[getScoreStretch] raw env:', JSON.stringify(raw), '| parsed:', n);
+    console.debug(
+      '[getScoreStretch] raw env:',
+      JSON.stringify(raw),
+      '| parsed:',
+      n,
+    );
   }
   if (raw == null || raw === '') return 1;
   if (!Number.isFinite(n)) return 1;
@@ -42,7 +47,12 @@ export function getTopEndBoostSlope(): number {
   const n = raw != null && raw !== '' ? parseFloat(raw) : NaN;
   if (!_topEndBoostSlopeLogged) {
     _topEndBoostSlopeLogged = true;
-    console.debug('[getTopEndBoostSlope] raw env:', JSON.stringify(raw), '| parsed:', n);
+    console.debug(
+      '[getTopEndBoostSlope] raw env:',
+      JSON.stringify(raw),
+      '| parsed:',
+      n,
+    );
   }
   if (raw == null || raw === '') return 1;
   if (!Number.isFinite(n)) return 1;
@@ -84,7 +94,10 @@ export function applyCapsAndCalibration(
     finalScoreBeforeSparseCalibration = finalScoreValue;
     scoreAfterSparse = finalScoreValue * Math.min(1, sparseMultiplier);
   }
-  const finalScoreClamped = Math.max(0, Math.min(100, Math.round(scoreAfterSparse)));
+  const finalScoreClamped = Math.max(
+    0,
+    Math.min(100, Math.round(scoreAfterSparse)),
+  );
 
   return {
     finalScoreValue,

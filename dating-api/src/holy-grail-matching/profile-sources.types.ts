@@ -41,9 +41,13 @@ import {
 type TupleToUnion<T extends readonly string[]> = T[number];
 
 /** @see `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` */
-export type HolyGrailStructuredFactsPersistedKey = TupleToUnion<typeof HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS>;
+export type HolyGrailStructuredFactsPersistedKey = TupleToUnion<
+  typeof HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS
+>;
 /** @see `HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS` */
-export type HolyGrailStructuredFactsMapperOnlyKey = TupleToUnion<typeof HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS>;
+export type HolyGrailStructuredFactsMapperOnlyKey = TupleToUnion<
+  typeof HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS
+>;
 /** @see `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` */
 export type HolyGrailStructuredPreferencesPersistedKey = TupleToUnion<
   typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS
@@ -96,17 +100,22 @@ export type HolyGrailStructuredFactsMapperOnly = Partial<
 >;
 
 /** Full structured facts slice for `mapProfileSourceToMatchingCanonical` (persisted JSON ∪ mapper-only). */
-export type HolyGrailStructuredFactsInput = HolyGrailStructuredFactsPersisted & HolyGrailStructuredFactsMapperOnly;
+export type HolyGrailStructuredFactsInput = HolyGrailStructuredFactsPersisted &
+  HolyGrailStructuredFactsMapperOnly;
 
 /**
  * Sparse preferences read from `holyGrailStructuredPreferences` JSON (`parseHolyGrailStructuredPreferencesFromJson`).
  */
 export type HolyGrailStructuredPreferencesPersisted = Partial<
-  Pick<HolyGrailStructuredPreferencesFieldMap, HolyGrailStructuredPreferencesPersistedKey>
+  Pick<
+    HolyGrailStructuredPreferencesFieldMap,
+    HolyGrailStructuredPreferencesPersistedKey
+  >
 >;
 
 /** Structured preferences slice for the mapper (same fields as persisted JSON). */
-export type HolyGrailStructuredPreferencesInput = HolyGrailStructuredPreferencesPersisted;
+export type HolyGrailStructuredPreferencesInput =
+  HolyGrailStructuredPreferencesPersisted;
 
 /** Prisma `String[]` slices (or copies) allowed into the mapper — strings only. */
 export interface HolyGrailExtractionArraysInput {
@@ -132,4 +141,7 @@ export interface HolyGrailProfileMappingInput {
 }
 
 /** @deprecated Use `HolyGrailProfileMappingInput`; kept for short-term grep compatibility. */
-export type HolyGrailProfileSourceStub = Pick<HolyGrailProfileMappingInput, 'profileId'>;
+export type HolyGrailProfileSourceStub = Pick<
+  HolyGrailProfileMappingInput,
+  'profileId'
+>;

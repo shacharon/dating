@@ -45,10 +45,11 @@ export function rankHolyGrailCandidatesAfterHardFilter(args: {
 
   const passed = filterResult.filteredCandidates;
   const rows: RankedHolyGrailCandidate[] = passed.map((candidate) => {
-    const { rankScore, rankReasons, rankBreakdown } = computeHolyGrailRankingPurityRank({
-      searcher: args.searcher,
-      candidate,
-    });
+    const { rankScore, rankReasons, rankBreakdown } =
+      computeHolyGrailRankingPurityRank({
+        searcher: args.searcher,
+        candidate,
+      });
     return { candidate, rankScore, rankReasons, rankBreakdown };
   });
 

@@ -45,7 +45,10 @@ function asPlainObject(v: unknown): Record<string, unknown> | null {
   return v as Record<string, unknown>;
 }
 
-function requirePatchObject(patch: unknown, label: string): Record<string, unknown> {
+function requirePatchObject(
+  patch: unknown,
+  label: string,
+): Record<string, unknown> {
   if (patch === undefined) {
     throw new HolyGrailStructuredWriteError(`${label} is undefined`);
   }
@@ -58,7 +61,9 @@ function requirePatchObject(patch: unknown, label: string): Record<string, unkno
 
 function requireEnum(v: unknown, allowed: Set<string>, field: string): string {
   if (typeof v !== 'string' || !allowed.has(v)) {
-    throw new HolyGrailStructuredWriteError(`Invalid ${field}: ${JSON.stringify(v)}`);
+    throw new HolyGrailStructuredWriteError(
+      `Invalid ${field}: ${JSON.stringify(v)}`,
+    );
   }
   return v;
 }
@@ -67,7 +72,10 @@ function requireIntegerAge(v: unknown, field: string): number {
   if (typeof v !== 'number' || !Number.isInteger(v)) {
     throw new HolyGrailStructuredWriteError(`${field} must be an integer`);
   }
-  if (v < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN || v > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX) {
+  if (
+    v < HOLY_GRAIL_PARTNER_AGE_INTEGER_MIN ||
+    v > HOLY_GRAIL_PARTNER_AGE_INTEGER_MAX
+  ) {
     throw new HolyGrailStructuredWriteError(`${field} must be in [18, 120]`);
   }
   return v;
@@ -76,24 +84,54 @@ function requireIntegerAge(v: unknown, field: string): number {
 function normalizeFactValue(key: string, v: unknown): unknown {
   switch (key) {
     case 'genderIdentity':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(GenderIdentity), 'genderIdentity');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(GenderIdentity),
+        'genderIdentity',
+      );
     case 'dateOfBirth':
       if (typeof v !== 'string' || !isHolyGrailDobYmdString(v)) {
-        throw new HolyGrailStructuredWriteError(`Invalid dateOfBirth: ${JSON.stringify(v)}`);
+        throw new HolyGrailStructuredWriteError(
+          `Invalid dateOfBirth: ${JSON.stringify(v)}`,
+        );
       }
       return v;
     case 'childrenStatus':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(ChildrenStatusSelf), 'childrenStatus');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(ChildrenStatusSelf),
+        'childrenStatus',
+      );
     case 'wantsChildren':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(WantsChildrenSelf), 'wantsChildren');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(WantsChildrenSelf),
+        'wantsChildren',
+      );
     case 'smoking':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(SmokingFrequencySelf), 'smoking');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(SmokingFrequencySelf),
+        'smoking',
+      );
     case 'alcoholUse':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(AlcoholUseSelf), 'alcoholUse');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(AlcoholUseSelf),
+        'alcoholUse',
+      );
     case 'education':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(EducationLevelSelf), 'education');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(EducationLevelSelf),
+        'education',
+      );
     case 'religion':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(ReligionSelf), 'religion');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(ReligionSelf),
+        'religion',
+      );
     default:
       throw new HolyGrailStructuredWriteError(`Unsupported fact key: ${key}`);
   }
@@ -101,10 +139,14 @@ function normalizeFactValue(key: string, v: unknown): unknown {
 
 function normalizeGenders(v: unknown): string[] {
   if (!Array.isArray(v)) {
-    throw new HolyGrailStructuredWriteError('acceptedPartnerGenders must be an array');
+    throw new HolyGrailStructuredWriteError(
+      'acceptedPartnerGenders must be an array',
+    );
   }
   if (v.length === 0) {
-    throw new HolyGrailStructuredWriteError('acceptedPartnerGenders must be non-empty when set');
+    throw new HolyGrailStructuredWriteError(
+      'acceptedPartnerGenders must be non-empty when set',
+    );
   }
   const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerGender);
   const out: string[] = [];
@@ -122,7 +164,9 @@ function normalizeGenders(v: unknown): string[] {
 
 function normalizeReligionList(v: unknown): string[] {
   if (!Array.isArray(v)) {
-    throw new HolyGrailStructuredWriteError('acceptedPartnerReligions must be an array');
+    throw new HolyGrailStructuredWriteError(
+      'acceptedPartnerReligions must be an array',
+    );
   }
   if (v.length === 0) {
     return [];
@@ -146,7 +190,9 @@ function normalizeReligionList(v: unknown): string[] {
 
 function requirePositiveFiniteKm(v: unknown, field: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
-    throw new HolyGrailStructuredWriteError(`${field} must be a finite number > 0`);
+    throw new HolyGrailStructuredWriteError(
+      `${field} must be a finite number > 0`,
+    );
   }
   return v;
 }
@@ -160,15 +206,35 @@ function normalizePrefValue(key: string, v: unknown): unknown {
     case 'partnerAgeMax':
       return requireIntegerAge(v, 'partnerAgeMax');
     case 'minimumPartnerEducation':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(MinimumPartnerEducation), 'minimumPartnerEducation');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(MinimumPartnerEducation),
+        'minimumPartnerEducation',
+      );
     case 'acceptedPartnerSmoking':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking), 'acceptedPartnerSmoking');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking),
+        'acceptedPartnerSmoking',
+      );
     case 'acceptedPartnerAlcohol':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol), 'acceptedPartnerAlcohol');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol),
+        'acceptedPartnerAlcohol',
+      );
     case 'partnerWantsChildren':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement), 'partnerWantsChildren');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement),
+        'partnerWantsChildren',
+      );
     case 'partnerHasChildren':
-      return requireEnum(v, matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance), 'partnerHasChildren');
+      return requireEnum(
+        v,
+        matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance),
+        'partnerHasChildren',
+      );
     case 'acceptedPartnerReligions':
       return normalizeReligionList(v);
     case 'maxDistanceKm':
@@ -177,7 +243,9 @@ function normalizePrefValue(key: string, v: unknown): unknown {
       if (v === null) return null;
       return requireEnum(v, SIMILARITY_PREFERENCE_SET, 'similarityPreference');
     default:
-      throw new HolyGrailStructuredWriteError(`Unsupported preference key: ${key}`);
+      throw new HolyGrailStructuredWriteError(
+        `Unsupported preference key: ${key}`,
+      );
   }
 }
 
@@ -185,7 +253,9 @@ function assertAgeBoundsConsistent(o: Record<string, unknown>): void {
   const min = o.partnerAgeMin;
   const max = o.partnerAgeMax;
   if (typeof min === 'number' && typeof max === 'number' && min > max) {
-    throw new HolyGrailStructuredWriteError('partnerAgeMin must be <= partnerAgeMax');
+    throw new HolyGrailStructuredWriteError(
+      'partnerAgeMin must be <= partnerAgeMax',
+    );
   }
 }
 
@@ -202,7 +272,9 @@ export function mergeHolyGrailStructuredFactsPatch(
 
   for (const [key, raw] of Object.entries(p)) {
     if (!HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET.has(key)) {
-      throw new HolyGrailStructuredWriteError(`Unknown holyGrailStructuredFacts key: ${key}`);
+      throw new HolyGrailStructuredWriteError(
+        `Unknown holyGrailStructuredFacts key: ${key}`,
+      );
     }
     if (raw === null) {
       delete base[key];
@@ -223,7 +295,9 @@ export function mergeHolyGrailStructuredPreferencesPatch(
 
   for (const [key, raw] of Object.entries(p)) {
     if (!HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET.has(key)) {
-      throw new HolyGrailStructuredWriteError(`Unknown holyGrailStructuredPreferences key: ${key}`);
+      throw new HolyGrailStructuredWriteError(
+        `Unknown holyGrailStructuredPreferences key: ${key}`,
+      );
     }
     if (raw === null) {
       if (key === 'similarityPreference') {
@@ -233,7 +307,11 @@ export function mergeHolyGrailStructuredPreferencesPatch(
       }
       continue;
     }
-    if (key === 'acceptedPartnerReligions' && Array.isArray(raw) && raw.length === 0) {
+    if (
+      key === 'acceptedPartnerReligions' &&
+      Array.isArray(raw) &&
+      raw.length === 0
+    ) {
       delete base[key];
       continue;
     }

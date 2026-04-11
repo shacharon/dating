@@ -1,7 +1,7 @@
 /**
  * Negatives extraction service for V2 architecture.
  * Extracts explicit dealbreakers and anti-preferences.
- * 
+ *
  * STRICT RULE: ONLY explicit negation evidence. NO inference.
  * V2 INITIAL: Relationship negatives DISABLED (always return empty).
  */
@@ -102,18 +102,17 @@ export class NegativesExtractionService {
 
     for (const item of data.items) {
       const tag = item.tag.trim().toLowerCase();
-      
+
       // Optional: validate tag is in known set (or allow freeform for now)
       // For V2 initial, we'll be permissive with tags but strict with categories
-      
-      const category: NegativeCategory = item.category;
-      const strength = item.strength === 'hard' || item.strength === 'soft' 
-        ? item.strength 
-        : 'soft';
 
-      const evidence = item.evidence 
-        ? item.evidence.slice(0, 200).trim() 
-        : '';
+      const category: NegativeCategory = item.category;
+      const strength =
+        item.strength === 'hard' || item.strength === 'soft'
+          ? item.strength
+          : 'soft';
+
+      const evidence = item.evidence ? item.evidence.slice(0, 200).trim() : '';
 
       const confidence = Math.max(0, Math.min(1, item.confidence));
 
@@ -138,7 +137,7 @@ export class NegativesExtractionService {
 
   /**
    * Extract negatives from a single domain text using LLM.
-   * 
+   *
    * V2 INITIAL: Relationship domain always returns empty (disabled).
    */
   async extractForDomain(
@@ -185,17 +184,18 @@ export class NegativesExtractionService {
     );
 
     try {
-      const { value, rawText } = await this.llm.completeJSON<NegativesLLMOutput>({
-        modelKey: 'fast',
-        system: NEGATIVES_SYSTEM_PROMPT,
-        user: userPrompt,
-        schema: NegativesOutputSchema,
-        temperature: 0.1,
-        maxTokens: 2000,
-        timeoutMs: 60_000,
-        requestId,
-        purpose: 'negatives-extraction',
-      });
+      const { value, rawText } =
+        await this.llm.completeJSON<NegativesLLMOutput>({
+          modelKey: 'fast',
+          system: NEGATIVES_SYSTEM_PROMPT,
+          user: userPrompt,
+          schema: NegativesOutputSchema,
+          temperature: 0.1,
+          maxTokens: 2000,
+          timeoutMs: 60_000,
+          requestId,
+          purpose: 'negatives-extraction',
+        });
 
       this.logger.log(
         JSON.stringify(

@@ -20,7 +20,11 @@ const samples: SampleCase[] = [
     finalScore: 85,
     friction: 0,
     explainability: {
-      positiveChips: ['Emotional depth', 'Direct communication', 'Social rhythm'],
+      positiveChips: [
+        'Emotional depth',
+        'Direct communication',
+        'Social rhythm',
+      ],
       reasonShort:
         'Clearest fit shows up around Emotional depth, Direct communication, and Social rhythm; overall this reads as a strong, clear match.',
     },
@@ -75,7 +79,7 @@ const samples: SampleCase[] = [
     explainability: {
       positiveChips: ['Secure attachment'],
       reasonShort:
-        'Primary overlap on Secure attachment; there\'s also some alignment on Lifestyle pace, but overall it stays moderate.',
+        "Primary overlap on Secure attachment; there's also some alignment on Lifestyle pace, but overall it stays moderate.",
     },
   },
   {
@@ -96,7 +100,7 @@ const samples: SampleCase[] = [
     explainability: {
       positiveChips: ['Relationship expectations'],
       reasonShort:
-        'There\'s only partial overlap so far—Relationship expectations is the main place some alignment shows up.',
+        "There's only partial overlap so far—Relationship expectations is the main place some alignment shows up.",
     },
   },
   {
@@ -189,6 +193,5 @@ export function generateSampleOutputs(): string {
 }
 
 if (require.main === module) {
-  // eslint-disable-next-line no-console
   console.log(generateSampleOutputs());
 }

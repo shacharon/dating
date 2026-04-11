@@ -40,7 +40,8 @@ export interface HolyGrailMatchingPreferencesWireDto {
 }
 
 /** Preference fields stored in `holyGrailStructuredPreferences` JSON (same keys as wire preferences for v1). */
-export type HolyGrailStructuredPreferencesPersistedWireDto = HolyGrailMatchingPreferencesWireDto;
+export type HolyGrailStructuredPreferencesPersistedWireDto =
+  HolyGrailMatchingPreferencesWireDto;
 
 /** Session/search slice; adds `validUntil` on top of preference-shaped overrides. */
 export interface HolyGrailMatchingSearchOverridesWireDto {
@@ -77,35 +78,83 @@ export interface HolyGrailRetrievalWireResponse {
   readonly debug: HolyGrailRetrievalDebugCounts;
 }
 
-export function mapMatchingPreferencesToWireDto(p: MatchingPreferences): HolyGrailMatchingPreferencesWireDto {
+export function mapMatchingPreferencesToWireDto(
+  p: MatchingPreferences,
+): HolyGrailMatchingPreferencesWireDto {
   return {
-    ...(p.acceptedPartnerGenders !== undefined ? { acceptedPartnerGenders: [...p.acceptedPartnerGenders] } : {}),
-    ...(p.partnerAgeMin !== undefined ? { partnerAgeMin: p.partnerAgeMin } : {}),
-    ...(p.partnerAgeMax !== undefined ? { partnerAgeMax: p.partnerAgeMax } : {}),
-    ...(p.minimumPartnerEducation !== undefined ? { minimumPartnerEducation: p.minimumPartnerEducation } : {}),
-    ...(p.acceptedPartnerSmoking !== undefined ? { acceptedPartnerSmoking: p.acceptedPartnerSmoking } : {}),
-    ...(p.acceptedPartnerAlcohol !== undefined ? { acceptedPartnerAlcohol: p.acceptedPartnerAlcohol } : {}),
-    ...(p.partnerWantsChildren !== undefined ? { partnerWantsChildren: p.partnerWantsChildren } : {}),
-    ...(p.partnerHasChildren !== undefined ? { partnerHasChildren: p.partnerHasChildren } : {}),
-    ...(p.acceptedPartnerReligions !== undefined ? { acceptedPartnerReligions: [...p.acceptedPartnerReligions] } : {}),
-    ...(p.maxDistanceKm !== undefined ? { maxDistanceKm: p.maxDistanceKm } : {}),
-    ...(p.similarityPreference !== undefined ? { similarityPreference: p.similarityPreference } : {}),
+    ...(p.acceptedPartnerGenders !== undefined
+      ? { acceptedPartnerGenders: [...p.acceptedPartnerGenders] }
+      : {}),
+    ...(p.partnerAgeMin !== undefined
+      ? { partnerAgeMin: p.partnerAgeMin }
+      : {}),
+    ...(p.partnerAgeMax !== undefined
+      ? { partnerAgeMax: p.partnerAgeMax }
+      : {}),
+    ...(p.minimumPartnerEducation !== undefined
+      ? { minimumPartnerEducation: p.minimumPartnerEducation }
+      : {}),
+    ...(p.acceptedPartnerSmoking !== undefined
+      ? { acceptedPartnerSmoking: p.acceptedPartnerSmoking }
+      : {}),
+    ...(p.acceptedPartnerAlcohol !== undefined
+      ? { acceptedPartnerAlcohol: p.acceptedPartnerAlcohol }
+      : {}),
+    ...(p.partnerWantsChildren !== undefined
+      ? { partnerWantsChildren: p.partnerWantsChildren }
+      : {}),
+    ...(p.partnerHasChildren !== undefined
+      ? { partnerHasChildren: p.partnerHasChildren }
+      : {}),
+    ...(p.acceptedPartnerReligions !== undefined
+      ? { acceptedPartnerReligions: [...p.acceptedPartnerReligions] }
+      : {}),
+    ...(p.maxDistanceKm !== undefined
+      ? { maxDistanceKm: p.maxDistanceKm }
+      : {}),
+    ...(p.similarityPreference !== undefined
+      ? { similarityPreference: p.similarityPreference }
+      : {}),
   };
 }
 
-export function mapMatchingSearchOverridesToWireDto(o: MatchingSearchOverrides): HolyGrailMatchingSearchOverridesWireDto {
+export function mapMatchingSearchOverridesToWireDto(
+  o: MatchingSearchOverrides,
+): HolyGrailMatchingSearchOverridesWireDto {
   return {
-    ...(o.acceptedPartnerGenders !== undefined ? { acceptedPartnerGenders: [...o.acceptedPartnerGenders] } : {}),
-    ...(o.partnerAgeMin !== undefined ? { partnerAgeMin: o.partnerAgeMin } : {}),
-    ...(o.partnerAgeMax !== undefined ? { partnerAgeMax: o.partnerAgeMax } : {}),
-    ...(o.minimumPartnerEducation !== undefined ? { minimumPartnerEducation: o.minimumPartnerEducation } : {}),
-    ...(o.acceptedPartnerSmoking !== undefined ? { acceptedPartnerSmoking: o.acceptedPartnerSmoking } : {}),
-    ...(o.acceptedPartnerAlcohol !== undefined ? { acceptedPartnerAlcohol: o.acceptedPartnerAlcohol } : {}),
-    ...(o.partnerWantsChildren !== undefined ? { partnerWantsChildren: o.partnerWantsChildren } : {}),
-    ...(o.partnerHasChildren !== undefined ? { partnerHasChildren: o.partnerHasChildren } : {}),
-    ...(o.acceptedPartnerReligions !== undefined ? { acceptedPartnerReligions: [...o.acceptedPartnerReligions] } : {}),
-    ...(o.maxDistanceKm !== undefined ? { maxDistanceKm: o.maxDistanceKm } : {}),
-    ...(o.similarityPreference !== undefined ? { similarityPreference: o.similarityPreference } : {}),
+    ...(o.acceptedPartnerGenders !== undefined
+      ? { acceptedPartnerGenders: [...o.acceptedPartnerGenders] }
+      : {}),
+    ...(o.partnerAgeMin !== undefined
+      ? { partnerAgeMin: o.partnerAgeMin }
+      : {}),
+    ...(o.partnerAgeMax !== undefined
+      ? { partnerAgeMax: o.partnerAgeMax }
+      : {}),
+    ...(o.minimumPartnerEducation !== undefined
+      ? { minimumPartnerEducation: o.minimumPartnerEducation }
+      : {}),
+    ...(o.acceptedPartnerSmoking !== undefined
+      ? { acceptedPartnerSmoking: o.acceptedPartnerSmoking }
+      : {}),
+    ...(o.acceptedPartnerAlcohol !== undefined
+      ? { acceptedPartnerAlcohol: o.acceptedPartnerAlcohol }
+      : {}),
+    ...(o.partnerWantsChildren !== undefined
+      ? { partnerWantsChildren: o.partnerWantsChildren }
+      : {}),
+    ...(o.partnerHasChildren !== undefined
+      ? { partnerHasChildren: o.partnerHasChildren }
+      : {}),
+    ...(o.acceptedPartnerReligions !== undefined
+      ? { acceptedPartnerReligions: [...o.acceptedPartnerReligions] }
+      : {}),
+    ...(o.maxDistanceKm !== undefined
+      ? { maxDistanceKm: o.maxDistanceKm }
+      : {}),
+    ...(o.similarityPreference !== undefined
+      ? { similarityPreference: o.similarityPreference }
+      : {}),
     ...(o.validUntil !== undefined ? { validUntil: o.validUntil } : {}),
   };
 }
@@ -117,11 +166,15 @@ export function mapMatchingCanonicalToRetrievalCandidateWireDto(
     profileId: m.profileId,
     preferences: mapMatchingPreferencesToWireDto(m.preferences),
     searchOverrides: mapMatchingSearchOverridesToWireDto(m.searchOverrides),
-    ...(m.rankingSignals !== undefined ? { rankingSignals: m.rankingSignals } : {}),
+    ...(m.rankingSignals !== undefined
+      ? { rankingSignals: m.rankingSignals }
+      : {}),
   };
 }
 
-export function mapRankedHolyGrailCandidateToWireDto(row: RankedHolyGrailCandidate): HolyGrailRankedCandidateWireDto {
+export function mapRankedHolyGrailCandidateToWireDto(
+  row: RankedHolyGrailCandidate,
+): HolyGrailRankedCandidateWireDto {
   return {
     candidate: mapMatchingCanonicalToRetrievalCandidateWireDto(row.candidate),
     rankScore: row.rankScore,
@@ -135,7 +188,9 @@ export function mapHolyGrailRetrievalResponseToWireDto(res: {
   readonly debug: HolyGrailRetrievalDebugCounts;
 }): HolyGrailRetrievalWireResponse {
   return {
-    rankedCandidates: res.rankedCandidates.map(mapRankedHolyGrailCandidateToWireDto),
+    rankedCandidates: res.rankedCandidates.map(
+      mapRankedHolyGrailCandidateToWireDto,
+    ),
     debug: res.debug,
   };
 }

@@ -17,12 +17,17 @@ const EXTRACTION_SELECT = {
 export class PrismaHolyGrailProfileSourceRepository implements HolyGrailProfileSourceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMappingInputByProfileId(profileId: string): Promise<HolyGrailProfileMappingInput | null> {
+  async getMappingInputByProfileId(
+    profileId: string,
+  ): Promise<HolyGrailProfileMappingInput | null> {
     const row = await this.prisma.userProfile.findUnique({
       where: { id: profileId },
       include: {
         extractionV2: { select: EXTRACTION_SELECT },
-        signalSnapshots: { where: { domain: 'self' }, select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT },
+        signalSnapshots: {
+          where: { domain: 'self' },
+          select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
+        },
       },
     });
     if (!row) return null;
@@ -33,16 +38,24 @@ export class PrismaHolyGrailProfileSourceRepository implements HolyGrailProfileS
     excludeProfileId: string;
     limit?: number;
   }): Promise<readonly HolyGrailProfileMappingInput[]> {
-    const take = args.limit !== undefined ? Math.max(0, args.limit) : DEFAULT_CANDIDATE_POOL_LIMIT;
+    const take =
+      args.limit !== undefined
+        ? Math.max(0, args.limit)
+        : DEFAULT_CANDIDATE_POOL_LIMIT;
     const rows = await this.prisma.userProfile.findMany({
       where: { id: { not: args.excludeProfileId } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       take: take === 0 ? 0 : take,
       include: {
         extractionV2: { select: EXTRACTION_SELECT },
-        signalSnapshots: { where: { domain: 'self' }, select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT },
+        signalSnapshots: {
+          where: { domain: 'self' },
+          select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
+        },
       },
     });
-    return rows.map((row) => buildHolyGrailProfileMappingInputFromRankingAwareDbRow(row));
+    return rows.map((row) =>
+      buildHolyGrailProfileMappingInputFromRankingAwareDbRow(row),
+    );
   }
 }

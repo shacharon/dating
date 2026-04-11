@@ -4,7 +4,12 @@
  * No threshold changes.
  */
 
-import { EXTRACTION_SIGNAL_KEYS, MAX_EVIDENCE_ITEMS, OFFICIAL_EXTRACTION_SIGNAL_KEYS, SHADOW_SIGNAL_KEYS_SET } from '../../extraction/extracted-signals.interface';
+import {
+  EXTRACTION_SIGNAL_KEYS,
+  MAX_EVIDENCE_ITEMS,
+  OFFICIAL_EXTRACTION_SIGNAL_KEYS,
+  SHADOW_SIGNAL_KEYS_SET,
+} from '../../extraction/extracted-signals.interface';
 import type { ExtractedSignals } from '../../extraction/extracted-signals.interface';
 import { isSparseInput } from './sparse-policy';
 
@@ -51,11 +56,15 @@ export function enforceSignalCountLimits(
       if (aEv !== bEv) return bEv - aEv;
       return Math.abs(b.value - 5) - Math.abs(a.value - 5);
     });
-    const keepKeys = new Set<string>(sorted.slice(0, SIGNAL_COUNT_MAX).map((e) => e.key));
+    const keepKeys = new Set<string>(
+      sorted.slice(0, SIGNAL_COUNT_MAX).map((e) => e.key),
+    );
     for (const entry of nonNullOfficial) {
       if (!keepKeys.has(entry.key)) signals[entry.key] = null;
     }
-    evidence = evidence.filter((e) => keepKeys.has(e.signal) || SHADOW_SIGNAL_KEYS_SET.has(e.signal));
+    evidence = evidence.filter(
+      (e) => keepKeys.has(e.signal) || SHADOW_SIGNAL_KEYS_SET.has(e.signal),
+    );
     coverageNotes.push(`capped to ${SIGNAL_COUNT_MAX} signals`);
   }
 
@@ -69,5 +78,10 @@ export function enforceSignalCountLimits(
     );
   }
 
-  return { ...data, signals, evidence: evidence.slice(0, MAX_EVIDENCE_ITEMS), coverageNotes };
+  return {
+    ...data,
+    signals,
+    evidence: evidence.slice(0, MAX_EVIDENCE_ITEMS),
+    coverageNotes,
+  };
 }

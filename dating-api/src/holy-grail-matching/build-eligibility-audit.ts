@@ -1,4 +1,7 @@
-import type { HolyGrailEligibilityAuditV1, HolyGrailDimensionAuditRow } from './eligibility-audit.types';
+import type {
+  HolyGrailEligibilityAuditV1,
+  HolyGrailDimensionAuditRow,
+} from './eligibility-audit.types';
 import type { HolyGrailDimensionKey } from './holy-grail-dimensions';
 import type { MatchingDimensionResult } from './matching-dimension-result';
 
@@ -12,7 +15,10 @@ export function buildHolyGrailEligibilityAuditV1(args: {
   dimensions: Record<HolyGrailDimensionKey, MatchingDimensionResult>;
 }): HolyGrailEligibilityAuditV1 {
   const rows: HolyGrailDimensionAuditRow[] = (
-    Object.entries(args.dimensions) as [HolyGrailDimensionKey, MatchingDimensionResult][]
+    Object.entries(args.dimensions) as [
+      HolyGrailDimensionKey,
+      MatchingDimensionResult,
+    ][]
   ).map(([dimension, result]) => ({ dimension, result }));
 
   return {

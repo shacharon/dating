@@ -40,7 +40,8 @@ export function applyKeywordTriggers(
   texts: { aboutMe?: string; aboutRelationship?: string },
 ): EnrichedSignals {
   const combined =
-    typeof texts.aboutMe === 'string' && typeof texts.aboutRelationship === 'string'
+    typeof texts.aboutMe === 'string' &&
+    typeof texts.aboutRelationship === 'string'
       ? `${texts.aboutMe} ${texts.aboutRelationship}`
       : [texts.aboutMe, texts.aboutRelationship].filter(Boolean).join(' ');
   const enriched: EnrichedSignals = { ...signals };

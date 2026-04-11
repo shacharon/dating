@@ -74,7 +74,10 @@ function pushChip(
   globalSeen.add(chip);
 }
 
-function hasExplicitEvidenceForSignal(domain: ExtractedSignals, key: string): boolean {
+function hasExplicitEvidenceForSignal(
+  domain: ExtractedSignals,
+  key: string,
+): boolean {
   return (domain.evidence ?? []).some((item) => item.signal === key);
 }
 

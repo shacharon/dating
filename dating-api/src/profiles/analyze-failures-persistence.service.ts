@@ -26,6 +26,9 @@ export class AnalyzeFailuresPersistenceService {
       time: new Date().toISOString(),
     };
     this.failures.push(record);
-    this.logger.warn(JSON.stringify({ event: 'analyze_failure', ...record }), 'AnalyzeFailuresPersistence');
+    this.logger.warn(
+      JSON.stringify({ event: 'analyze_failure', ...record }),
+      'AnalyzeFailuresPersistence',
+    );
   }
 }

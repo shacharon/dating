@@ -2,7 +2,11 @@
  * Layer-3 Holy Grail hard eligibility (structured prefs vs counterparty facts).
  * Kids/family admission dimensions and how they differ from legacy V1 dealbreakers: `../domain/kids-family-ownership.ts`.
  */
-import type { MatchingCanonicalModel, MatchingFacts, MatchingPreferences } from '../canonical/matching-canonical.types';
+import type {
+  MatchingCanonicalModel,
+  MatchingFacts,
+  MatchingPreferences,
+} from '../canonical/matching-canonical.types';
 import {
   AcceptedPartnerAlcohol,
   AcceptedPartnerSmoking,
@@ -18,13 +22,20 @@ import {
   WantsChildrenSelf,
 } from '../canonical/matching-canonical.types';
 import { ageWholeYearsUtcFromYmd } from './holy-grail-dob-ymd';
-import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from './holy-grail-dimensions';
+import {
+  HOLY_GRAIL_DIMENSION_KEYS,
+  type HolyGrailDimensionKey,
+} from './holy-grail-dimensions';
 
 /**
  * Per-dimension Layer 3 outcome (internal). Only `FAIL` blocks `overallHardEligibility`;
  * `PASS` and `SOFT_PASS` allow; `SKIPPED` is inert.
  */
-export type HolyGrailHardEligibilityStatus = 'PASS' | 'FAIL' | 'SKIPPED' | 'SOFT_PASS';
+export type HolyGrailHardEligibilityStatus =
+  | 'PASS'
+  | 'FAIL'
+  | 'SKIPPED'
+  | 'SOFT_PASS';
 
 export interface HolyGrailDimensionEvaluation {
   readonly status: HolyGrailHardEligibilityStatus;
@@ -39,32 +50,48 @@ export interface HolyGrailEligibilityFlags {
 }
 
 export interface HolyGrailDirectionalEvaluationResult {
-  readonly dimensions: Record<HolyGrailDimensionKey, HolyGrailDimensionEvaluation>;
+  readonly dimensions: Record<
+    HolyGrailDimensionKey,
+    HolyGrailDimensionEvaluation
+  >;
   /** FAIL if any dimension is FAIL; otherwise PASS (SKIPPED / SOFT_PASS / PASS do not block). */
   readonly overallHardEligibility: 'PASS' | 'FAIL';
   readonly eligibilityFlags: HolyGrailEligibilityFlags;
 }
 
 /** Stored preferences overlaid with `searchOverrides` (same rules as Layer 3 effective prefs). */
-export function mergeEffectiveMatchingPreferences(searcher: MatchingCanonicalModel): MatchingPreferences {
+export function mergeEffectiveMatchingPreferences(
+  searcher: MatchingCanonicalModel,
+): MatchingPreferences {
   const p = searcher.preferences;
   const o = searcher.searchOverrides;
   const e: MatchingPreferences = { ...p };
-  if (o.acceptedPartnerGenders !== undefined) e.acceptedPartnerGenders = o.acceptedPartnerGenders;
+  if (o.acceptedPartnerGenders !== undefined)
+    e.acceptedPartnerGenders = o.acceptedPartnerGenders;
   if (o.partnerAgeMin !== undefined) e.partnerAgeMin = o.partnerAgeMin;
   if (o.partnerAgeMax !== undefined) e.partnerAgeMax = o.partnerAgeMax;
-  if (o.minimumPartnerEducation !== undefined) e.minimumPartnerEducation = o.minimumPartnerEducation;
-  if (o.acceptedPartnerSmoking !== undefined) e.acceptedPartnerSmoking = o.acceptedPartnerSmoking;
-  if (o.acceptedPartnerAlcohol !== undefined) e.acceptedPartnerAlcohol = o.acceptedPartnerAlcohol;
-  if (o.partnerWantsChildren !== undefined) e.partnerWantsChildren = o.partnerWantsChildren;
-  if (o.partnerHasChildren !== undefined) e.partnerHasChildren = o.partnerHasChildren;
-  if (o.acceptedPartnerReligions !== undefined) e.acceptedPartnerReligions = o.acceptedPartnerReligions;
+  if (o.minimumPartnerEducation !== undefined)
+    e.minimumPartnerEducation = o.minimumPartnerEducation;
+  if (o.acceptedPartnerSmoking !== undefined)
+    e.acceptedPartnerSmoking = o.acceptedPartnerSmoking;
+  if (o.acceptedPartnerAlcohol !== undefined)
+    e.acceptedPartnerAlcohol = o.acceptedPartnerAlcohol;
+  if (o.partnerWantsChildren !== undefined)
+    e.partnerWantsChildren = o.partnerWantsChildren;
+  if (o.partnerHasChildren !== undefined)
+    e.partnerHasChildren = o.partnerHasChildren;
+  if (o.acceptedPartnerReligions !== undefined)
+    e.acceptedPartnerReligions = o.acceptedPartnerReligions;
   if (o.maxDistanceKm !== undefined) e.maxDistanceKm = o.maxDistanceKm;
-  if (o.similarityPreference !== undefined) e.similarityPreference = o.similarityPreference;
+  if (o.similarityPreference !== undefined)
+    e.similarityPreference = o.similarityPreference;
   return e;
 }
 
-function d(status: HolyGrailHardEligibilityStatus, reasonCode: string): HolyGrailDimensionEvaluation {
+function d(
+  status: HolyGrailHardEligibilityStatus,
+  reasonCode: string,
+): HolyGrailDimensionEvaluation {
   return { status, reasonCode };
 }
 
@@ -79,13 +106,16 @@ export function holyGrailDeterministicHalfPass(
 ): boolean {
   const s = `${salt}|${searcherProfileId}|${counterpartyProfileId}`;
   let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  for (let i = 0; i < s.length; i++)
+    h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0) % 2 === 0;
 }
 
 const ALCOHOL_NONE_ONLY_RARE_SOFT_SALT = 'ALCOHOL_NONE_ONLY_RARE';
 
-function educationRankFact(e: EducationLevelSelf | undefined): number | undefined {
+function educationRankFact(
+  e: EducationLevelSelf | undefined,
+): number | undefined {
   if (e === undefined) return undefined;
   const R: Partial<Record<EducationLevelSelf, number>> = {
     [EducationLevelSelf.LESS_THAN_HIGH_SCHOOL]: 0,
@@ -109,7 +139,10 @@ function educationMinRank(min: MinimumPartnerEducation): number | undefined {
   return T[min];
 }
 
-function evalGender(pref: MatchingPreferences, facts: MatchingFacts): HolyGrailDimensionEvaluation {
+function evalGender(
+  pref: MatchingPreferences,
+  facts: MatchingFacts,
+): HolyGrailDimensionEvaluation {
   const genders = pref.acceptedPartnerGenders;
   if (genders === undefined || genders.length === 0) {
     return d('SKIPPED', 'GENDER_PREF_ABSENT');
@@ -151,7 +184,10 @@ function evalAge(
   return d('PASS', 'AGE_WITHIN_RANGE');
 }
 
-function evalEducation(pref: MatchingPreferences, facts: MatchingFacts): HolyGrailDimensionEvaluation {
+function evalEducation(
+  pref: MatchingPreferences,
+  facts: MatchingFacts,
+): HolyGrailDimensionEvaluation {
   const minE = pref.minimumPartnerEducation;
   if (minE === undefined || minE === MinimumPartnerEducation.ANY) {
     return d('SKIPPED', 'EDUCATION_PREF_INACTIVE');
@@ -200,7 +236,10 @@ function smokingMatrix(
   return 'FAIL';
 }
 
-function evalSmoking(pref: MatchingPreferences, facts: MatchingFacts): HolyGrailDimensionEvaluation {
+function evalSmoking(
+  pref: MatchingPreferences,
+  facts: MatchingFacts,
+): HolyGrailDimensionEvaluation {
   const row = pref.acceptedPartnerSmoking;
   if (row === undefined || row === AcceptedPartnerSmoking.ANY) {
     return d('SKIPPED', 'SMOKING_PREF_INACTIVE');
@@ -213,7 +252,9 @@ function evalSmoking(pref: MatchingPreferences, facts: MatchingFacts): HolyGrail
   if (cell === 'WITHHELD') {
     return d('FAIL', 'PARTNER_SMOKING_WITHHELD');
   }
-  return cell === 'PASS' ? d('PASS', 'SMOKING_MATRIX_PASS') : d('FAIL', 'SMOKING_MATRIX_FAIL');
+  return cell === 'PASS'
+    ? d('PASS', 'SMOKING_MATRIX_PASS')
+    : d('FAIL', 'SMOKING_MATRIX_FAIL');
 }
 
 function alcoholMatrix(
@@ -265,7 +306,11 @@ function evalAlcohol(
   if (
     row === AcceptedPartnerAlcohol.NONE_ONLY &&
     col === AlcoholUseSelf.RARE &&
-    holyGrailDeterministicHalfPass(ALCOHOL_NONE_ONLY_RARE_SOFT_SALT, searcherProfileId, counterpartyProfileId)
+    holyGrailDeterministicHalfPass(
+      ALCOHOL_NONE_ONLY_RARE_SOFT_SALT,
+      searcherProfileId,
+      counterpartyProfileId,
+    )
   ) {
     return d('SOFT_PASS', 'ALCOHOL_NONE_ONLY_RARE_SOFT');
   }
@@ -278,7 +323,10 @@ function evalPartnerWantsChildren(
   facts: MatchingFacts,
 ): HolyGrailDimensionEvaluation {
   const req = pref.partnerWantsChildren;
-  if (req === undefined || req === PartnerWantsChildrenRequirement.NO_REQUIREMENT) {
+  if (
+    req === undefined ||
+    req === PartnerWantsChildrenRequirement.NO_REQUIREMENT
+  ) {
     return d('SKIPPED', 'WANTS_CHILDREN_PREF_INACTIVE');
   }
   const w = facts.wantsChildren;
@@ -286,11 +334,14 @@ function evalPartnerWantsChildren(
     return d('FAIL', 'PARTNER_WANTS_CHILDREN_UNKNOWN');
   }
   if (req === PartnerWantsChildrenRequirement.MUST_WANT) {
-    if (w === WantsChildrenSelf.YES) return d('PASS', 'WANTS_CHILDREN_MUST_WANT_OK');
-    if (w === WantsChildrenSelf.UNSURE) return d('SOFT_PASS', 'WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT');
+    if (w === WantsChildrenSelf.YES)
+      return d('PASS', 'WANTS_CHILDREN_MUST_WANT_OK');
+    if (w === WantsChildrenSelf.UNSURE)
+      return d('SOFT_PASS', 'WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT');
     return d('FAIL', 'WANTS_CHILDREN_MUST_WANT_FAIL');
   }
-  if (w === WantsChildrenSelf.NO) return d('PASS', 'WANTS_CHILDREN_MUST_NOT_WANT_OK');
+  if (w === WantsChildrenSelf.NO)
+    return d('PASS', 'WANTS_CHILDREN_MUST_NOT_WANT_OK');
   return d('FAIL', 'WANTS_CHILDREN_MUST_NOT_WANT_FAIL');
 }
 
@@ -299,14 +350,19 @@ function evalPartnerHasChildren(
   facts: MatchingFacts,
 ): HolyGrailDimensionEvaluation {
   const acc = pref.partnerHasChildren;
-  if (acc === undefined || acc === PartnerHasChildrenAcceptance.NO_REQUIREMENT) {
+  if (
+    acc === undefined ||
+    acc === PartnerHasChildrenAcceptance.NO_REQUIREMENT
+  ) {
     return d('SKIPPED', 'HAS_CHILDREN_PREF_INACTIVE');
   }
   const cs = facts.childrenStatus;
   if (cs === undefined || cs === ChildrenStatusSelf.PREFER_NOT_TO_SAY) {
     return d('FAIL', 'PARTNER_CHILDREN_STATUS_UNKNOWN');
   }
-  const hasKids = cs === ChildrenStatusSelf.YES_LIVES_WITH_ME || cs === ChildrenStatusSelf.YES_NOT_WITH_ME;
+  const hasKids =
+    cs === ChildrenStatusSelf.YES_LIVES_WITH_ME ||
+    cs === ChildrenStatusSelf.YES_NOT_WITH_ME;
   if (acc === PartnerHasChildrenAcceptance.ACCEPT) {
     return d('PASS', 'HAS_CHILDREN_ACCEPT_OK');
   }
@@ -316,7 +372,10 @@ function evalPartnerHasChildren(
   return d('FAIL', 'HAS_CHILDREN_DOES_NOT_ACCEPT_FAIL');
 }
 
-function evalReligion(pref: MatchingPreferences, facts: MatchingFacts): HolyGrailDimensionEvaluation {
+function evalReligion(
+  pref: MatchingPreferences,
+  facts: MatchingFacts,
+): HolyGrailDimensionEvaluation {
   const list = pref.acceptedPartnerReligions;
   if (list === undefined || list.length === 0) {
     return d('SKIPPED', 'RELIGION_PREF_ABSENT');
@@ -332,7 +391,9 @@ function evalReligion(pref: MatchingPreferences, facts: MatchingFacts): HolyGrai
 }
 
 /** v1 canonical facts have no lat/lng anchor; `primaryLocationLabel` alone cannot enforce km. */
-function evalProximity(pref: MatchingPreferences): HolyGrailDimensionEvaluation {
+function evalProximity(
+  pref: MatchingPreferences,
+): HolyGrailDimensionEvaluation {
   if (pref.maxDistanceKm === undefined) {
     return d('SKIPPED', 'DISTANCE_PREF_ABSENT');
   }
@@ -352,14 +413,24 @@ function evaluateAll(
   out.RELIGION = evalReligion(pref, counterpartyFacts);
   out.EDUCATION = evalEducation(pref, counterpartyFacts);
   out.SMOKING = evalSmoking(pref, counterpartyFacts);
-  out.ALCOHOL = evalAlcohol(pref, counterpartyFacts, searcherProfileId, counterpartyProfileId);
+  out.ALCOHOL = evalAlcohol(
+    pref,
+    counterpartyFacts,
+    searcherProfileId,
+    counterpartyProfileId,
+  );
   out.PARTNER_HAS_CHILDREN = evalPartnerHasChildren(pref, counterpartyFacts);
-  out.PARTNER_WANTS_CHILDREN = evalPartnerWantsChildren(pref, counterpartyFacts);
+  out.PARTNER_WANTS_CHILDREN = evalPartnerWantsChildren(
+    pref,
+    counterpartyFacts,
+  );
   out.PROXIMITY = evalProximity(pref);
   return out;
 }
 
-function overallFromDimensions(dims: Record<HolyGrailDimensionKey, HolyGrailDimensionEvaluation>): 'PASS' | 'FAIL' {
+function overallFromDimensions(
+  dims: Record<HolyGrailDimensionKey, HolyGrailDimensionEvaluation>,
+): 'PASS' | 'FAIL' {
   for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
     if (dims[k].status === 'FAIL') {
       return 'FAIL';

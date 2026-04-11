@@ -3,7 +3,10 @@
  * No LLM calls, no scoring impact, read-only transformation.
  */
 
-import type { RawInterests, InterestItem } from '../extraction/extracted-interests.interface';
+import type {
+  RawInterests,
+  InterestItem,
+} from '../extraction/extracted-interests.interface';
 import type { ExtractedSignals } from '../extraction/extracted-signals.interface';
 import type {
   RelationshipMotivationResult,
@@ -105,9 +108,7 @@ function chipsFromInterests(items: InterestItem[]): Chip[] {
   function interestLabel(tag: string): string {
     const mapped = INTEREST_LABELS[tag];
     if (mapped) return mapped;
-    return tag
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return tag.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   for (const item of sorted) {
@@ -130,7 +131,9 @@ function chipsFromInterests(items: InterestItem[]): Chip[] {
 /**
  * Build chips from relationshipMotivation (relationship domain only).
  */
-function chipsFromMotivation(motivation?: RelationshipMotivationResult): Chip[] {
+function chipsFromMotivation(
+  motivation?: RelationshipMotivationResult,
+): Chip[] {
   if (!motivation || motivation.confidence < 0.6) return [];
 
   const label = MOTIVATION_LABELS[motivation.relationshipMotivation];

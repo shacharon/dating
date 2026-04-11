@@ -30,8 +30,10 @@
  * No scoring, dealbreakers, ranking, or matching engine logic belongs in this module.
  */
 
-export const MATCHING_CANONICAL_MODEL_VERSION = 'matching_canonical_v1' as const;
-export type MatchingCanonicalModelVersion = typeof MATCHING_CANONICAL_MODEL_VERSION;
+export const MATCHING_CANONICAL_MODEL_VERSION =
+  'matching_canonical_v1' as const;
+export type MatchingCanonicalModelVersion =
+  typeof MATCHING_CANONICAL_MODEL_VERSION;
 
 // ---------------------------------------------------------------------------
 // Shared enums (allowed values). Reused only where the same vocabulary applies.
@@ -219,8 +221,13 @@ export enum PartnerHasChildrenAcceptance {
 }
 
 /** Wire values for `MatchingPreferences.similarityPreference` (preference about partner sameness vs contrast). */
-export const SIMILARITY_PREFERENCE_VALUES = ['similar', 'different', 'balanced'] as const;
-export type SimilarityPreference = (typeof SIMILARITY_PREFERENCE_VALUES)[number];
+export const SIMILARITY_PREFERENCE_VALUES = [
+  'similar',
+  'different',
+  'balanced',
+] as const;
+export type SimilarityPreference =
+  (typeof SIMILARITY_PREFERENCE_VALUES)[number];
 
 // ---------------------------------------------------------------------------
 // Layer 1 — Facts (user only; no filtering semantics)

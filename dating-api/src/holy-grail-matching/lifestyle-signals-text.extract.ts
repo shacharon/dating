@@ -30,9 +30,13 @@ export type LifestyleSignalTag = (typeof LIFESTYLE_SIGNAL_TAGS)[number];
 export const LIFESTYLE_SIGNAL_TAG_SET = new Set<string>(LIFESTYLE_SIGNAL_TAGS);
 
 /** First four allowlist ids (v1); remainder are v2 additive. */
-export const LIFESTYLE_SIGNAL_V1_TAG_SET = new Set<string>(LIFESTYLE_SIGNAL_TAGS.slice(0, 4));
+export const LIFESTYLE_SIGNAL_V1_TAG_SET = new Set<string>(
+  LIFESTYLE_SIGNAL_TAGS.slice(0, 4),
+);
 
-export const LIFESTYLE_SIGNAL_V2_TAG_SET = new Set<string>(LIFESTYLE_SIGNAL_TAGS.slice(4));
+export const LIFESTYLE_SIGNAL_V2_TAG_SET = new Set<string>(
+  LIFESTYLE_SIGNAL_TAGS.slice(4),
+);
 
 export type LifestyleSignalEvidenceHit = {
   readonly tag: LifestyleSignalTag;
@@ -85,7 +89,10 @@ function pushPhraseEvidence(
   evidence: LifestyleSignalEvidenceHit[],
 ): void {
   for (const { re, label } of phrases) {
-    const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+    const r = new RegExp(
+      re.source,
+      re.flags.includes('g') ? re.flags : `${re.flags}g`,
+    );
     let m: RegExpExecArray | null;
     while ((m = r.exec(lower)) !== null) {
       if (!isNegatedBefore(lower, m.index)) {
@@ -109,22 +116,34 @@ function pushWordEvidence(
 }
 
 /** Extra swim phrases beyond single-token allowlist (explicit evidence only). */
-const SWIM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\blap\s+swim\b/i, label: 'lap swim' },
-  { re: /\blap\s+swimming\b/i, label: 'lap swimming' },
-  { re: /\bswim\s+team\b/i, label: 'swim team' },
-  { re: /\bopen\s+water\s+swim/i, label: 'open water swim' },
-];
+const SWIM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [
+    { re: /\blap\s+swim\b/i, label: 'lap swim' },
+    { re: /\blap\s+swimming\b/i, label: 'lap swimming' },
+    { re: /\bswim\s+team\b/i, label: 'swim team' },
+    { re: /\bopen\s+water\s+swim/i, label: 'open water swim' },
+  ];
 
 const SWIM_WORDS = ['swimmer', 'swimming', 'swims', 'pool', 'laps'] as const;
 
-const OUTDOORS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\bnational\s+park\b/i, label: 'national park' },
-];
+const OUTDOORS_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [{ re: /\bnational\s+park\b/i, label: 'national park' }];
 
-const OUTDOORS_WORDS = ['nature', 'outdoors', 'hiking', 'camping', 'park', 'parks'] as const;
+const OUTDOORS_WORDS = [
+  'nature',
+  'outdoors',
+  'hiking',
+  'camping',
+  'park',
+  'parks',
+] as const;
 
-const HOMEBODY_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const HOMEBODY_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bcozy\s+at\s+home\b/i, label: 'cozy at home' },
   { re: /\bcozy\s+nights?\s+in\b/i, label: 'cozy nights in' },
   { re: /\bcozy\s+nights?\s+at\s+home\b/i, label: 'cozy nights at home' },
@@ -137,7 +156,10 @@ const HOMEBODY_PHRASES: readonly { readonly re: RegExp; readonly label: string }
 
 const HOMEBODY_WORDS = ['homebody'] as const;
 
-const SOCIAL_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const SOCIAL_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bloves?\s+friends\b/i, label: 'loves friends' },
   { re: /\bweekends?\s+with\s+friends\b/i, label: 'weekends with friends' },
   { re: /\bsocial\s+with\s+friends\b/i, label: 'social with friends' },
@@ -149,7 +171,10 @@ const SOCIAL_PHRASES: readonly { readonly re: RegExp; readonly label: string }[]
 ];
 
 /** Anti-collision: avoid bare "game" (novels, sports) and bare "pet" (pet peeve / pet project). */
-const FITNESS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const FITNESS_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bwork\s+outs?\b/i, label: 'work out' },
   { re: /\bhit\s+the\s+gym\b/i, label: 'hit the gym' },
   { re: /\bweight\s+lifting\b/i, label: 'weight lifting' },
@@ -169,7 +194,10 @@ const FITNESS_WORDS = [
   'peloton',
 ] as const;
 
-const TRAVEL_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const TRAVEL_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\blove\s+to\s+travel\b/i, label: 'love to travel' },
   { re: /\blove\s+traveling\b/i, label: 'love traveling' },
   { re: /\blove\s+travelling\b/i, label: 'love travelling' },
@@ -189,11 +217,12 @@ const TRAVEL_WORDS = [
   'abroad',
 ] as const;
 
-const FOOD_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\blove\s+cooking\b/i, label: 'love cooking' },
-  { re: /\bwine\s+tasting\b/i, label: 'wine tasting' },
-  { re: /\btrying\s+new\s+restaurants\b/i, label: 'trying new restaurants' },
-];
+const FOOD_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [
+    { re: /\blove\s+cooking\b/i, label: 'love cooking' },
+    { re: /\bwine\s+tasting\b/i, label: 'wine tasting' },
+    { re: /\btrying\s+new\s+restaurants\b/i, label: 'trying new restaurants' },
+  ];
 
 const FOOD_WORDS = [
   'foodie',
@@ -207,7 +236,10 @@ const FOOD_WORDS = [
   'wine',
 ] as const;
 
-const NIGHTLIFE_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const NIGHTLIFE_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bnight\s+out\b/i, label: 'night out' },
   { re: /\bdance\s+floor\b/i, label: 'dance floor' },
   { re: /\brooftop\s+bars?\b/i, label: 'rooftop bar' },
@@ -216,16 +248,22 @@ const NIGHTLIFE_PHRASES: readonly { readonly re: RegExp; readonly label: string 
 ];
 
 /** Anti-collision: no lone "club" (golf club, book club). */
-const NIGHTLIFE_WORDS = ['nightlife', 'nightclub', 'nightclubs', 'clubbing'] as const;
+const NIGHTLIFE_WORDS = [
+  'nightlife',
+  'nightclub',
+  'nightclubs',
+  'clubbing',
+] as const;
 
-const PETS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\bfur\s+babies?\b/i, label: 'fur baby' },
-  { re: /\banimal\s+lover\b/i, label: 'animal lover' },
-  { re: /\bpet[\s-]friendly\b/i, label: 'pet-friendly' },
-  { re: /\bdog\s+mom\b/i, label: 'dog mom' },
-  { re: /\bcat\s+dad\b/i, label: 'cat dad' },
-  { re: /\brescue\s+dog\b/i, label: 'rescue dog' },
-];
+const PETS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [
+    { re: /\bfur\s+babies?\b/i, label: 'fur baby' },
+    { re: /\banimal\s+lover\b/i, label: 'animal lover' },
+    { re: /\bpet[\s-]friendly\b/i, label: 'pet-friendly' },
+    { re: /\bdog\s+mom\b/i, label: 'dog mom' },
+    { re: /\bcat\s+dad\b/i, label: 'cat dad' },
+    { re: /\brescue\s+dog\b/i, label: 'rescue dog' },
+  ];
 
 const PETS_WORDS = [
   'dog',
@@ -238,21 +276,43 @@ const PETS_WORDS = [
   'kittens',
 ] as const;
 
-const READING_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const READING_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\blove\s+reading\b/i, label: 'love reading' },
   { re: /\bread\s+a\s+lot\b/i, label: 'read a lot' },
   { re: /\bavid\s+reader\b/i, label: 'avid reader' },
 ];
 
-const READING_WORDS = ['read', 'reading', 'bookworm', 'novel', 'novels', 'kindle', 'audiobook', 'audiobooks'] as const;
+const READING_WORDS = [
+  'read',
+  'reading',
+  'bookworm',
+  'novel',
+  'novels',
+  'kindle',
+  'audiobook',
+  'audiobooks',
+] as const;
 
-const GAMING_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const GAMING_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bvideo\s+games?\b/i, label: 'video games' },
   { re: /\bboard\s+games?\b/i, label: 'board games' },
   { re: /\bpc\s+gaming\b/i, label: 'pc gaming' },
 ];
 
-const GAMING_WORDS = ['gaming', 'gamer', 'playstation', 'xbox', 'nintendo', 'esports'] as const;
+const GAMING_WORDS = [
+  'gaming',
+  'gamer',
+  'playstation',
+  'xbox',
+  'nintendo',
+  'esports',
+] as const;
 
 function scanScope(text: string): LifestyleSignalsScopeExtraction {
   const trimmed = text.trim();
@@ -313,7 +373,8 @@ export function extractLifestyleSignalsFromFreeText(input: {
   aboutPartner?: string | null;
 }): LifestyleSignalsTextExtraction {
   const aboutMe = typeof input.aboutMe === 'string' ? input.aboutMe : '';
-  const aboutPartner = typeof input.aboutPartner === 'string' ? input.aboutPartner : '';
+  const aboutPartner =
+    typeof input.aboutPartner === 'string' ? input.aboutPartner : '';
   return {
     self: scanScope(aboutMe),
     partner: scanScope(aboutPartner),

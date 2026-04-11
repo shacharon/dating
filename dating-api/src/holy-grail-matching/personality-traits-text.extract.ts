@@ -22,12 +22,18 @@ export const PERSONALITY_TRAIT_TAGS = [
 ] as const;
 export type PersonalityTraitTag = (typeof PERSONALITY_TRAIT_TAGS)[number];
 
-export const PERSONALITY_TRAIT_TAG_SET = new Set<string>(PERSONALITY_TRAIT_TAGS);
+export const PERSONALITY_TRAIT_TAG_SET = new Set<string>(
+  PERSONALITY_TRAIT_TAGS,
+);
 
 /** First two ids (v1); remainder are v2 additive. */
-export const PERSONALITY_TRAIT_V1_TAG_SET = new Set<string>(PERSONALITY_TRAIT_TAGS.slice(0, 2));
+export const PERSONALITY_TRAIT_V1_TAG_SET = new Set<string>(
+  PERSONALITY_TRAIT_TAGS.slice(0, 2),
+);
 
-export const PERSONALITY_TRAIT_V2_TAG_SET = new Set<string>(PERSONALITY_TRAIT_TAGS.slice(2));
+export const PERSONALITY_TRAIT_V2_TAG_SET = new Set<string>(
+  PERSONALITY_TRAIT_TAGS.slice(2),
+);
 
 export type PersonalityTraitEvidenceHit = {
   readonly tag: PersonalityTraitTag;
@@ -76,7 +82,10 @@ function pushPhraseEvidence(
   evidence: PersonalityTraitEvidenceHit[],
 ): void {
   for (const { re, label } of phrases) {
-    const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+    const r = new RegExp(
+      re.source,
+      re.flags.includes('g') ? re.flags : `${re.flags}g`,
+    );
     let m: RegExpExecArray | null;
     while ((m = r.exec(lower)) !== null) {
       if (!isNegatedBefore(lower, m.index)) {
@@ -99,7 +108,10 @@ function pushWordEvidence(
   }
 }
 
-const HONESTY_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const HONESTY_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bno\s+liars\b/i, label: 'no liars' },
   { re: /\btired\s+of\s+liars\b/i, label: 'tired of liars' },
   { re: /\bsick\s+of\s+liars\b/i, label: 'sick of liars' },
@@ -111,21 +123,37 @@ const HONESTY_PHRASES: readonly { readonly re: RegExp; readonly label: string }[
   { re: /\bwants?\s+honest\b/i, label: 'want honest' },
 ];
 
-const HONESTY_WORDS = ['honest', 'truthful', 'straightforward', 'transparent'] as const;
+const HONESTY_WORDS = [
+  'honest',
+  'truthful',
+  'straightforward',
+  'transparent',
+] as const;
 const HUMOR_WORDS = ['funny', 'humorous', 'witty', 'playful'] as const;
 
 /** Anti-collision: skip "kind of" idiom for bare `kind`. */
 const KIND_EMPHATIC_RE = /\bkind\b(?!\s+of\b)/i;
 
-const KIND_EMPATHY_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const KIND_EMPATHY_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bkind\s+heart(ed)?\b/i, label: 'kind heart' },
   { re: /\bkind\s+soul\b/i, label: 'kind soul' },
   { re: /\bdeeply\s+caring\b/i, label: 'deeply caring' },
 ];
 
-const KIND_EMPATHY_WORDS = ['kindness', 'empathetic', 'compassionate', 'caring'] as const;
+const KIND_EMPATHY_WORDS = [
+  'kindness',
+  'empathetic',
+  'compassionate',
+  'caring',
+] as const;
 
-const AMBITION_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const AMBITION_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bgoal[\s-]oriented\b/i, label: 'goal-oriented' },
   { re: /\bhard[\s-]working\b/i, label: 'hard-working' },
   { re: /\bhigh\s+achiever\b/i, label: 'high achiever' },
@@ -133,14 +161,18 @@ const AMBITION_PHRASES: readonly { readonly re: RegExp; readonly label: string }
 
 const AMBITION_WORDS = ['ambitious', 'driven', 'motivated'] as const;
 
-const CALM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\beasy\s+going\b/i, label: 'easy going' },
-  { re: /\bgo\s+with\s+the\s+flow\b/i, label: 'go with the flow' },
-];
+const CALM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [
+    { re: /\beasy\s+going\b/i, label: 'easy going' },
+    { re: /\bgo\s+with\s+the\s+flow\b/i, label: 'go with the flow' },
+  ];
 
 const CALM_WORDS = ['calm', 'patient', 'steady', 'easygoing'] as const;
 
-const CURIOUS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const CURIOUS_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bopen\s+minded\b/i, label: 'open minded' },
   { re: /\bopen-minded\b/i, label: 'open-minded' },
 ];
@@ -149,7 +181,10 @@ const CURIOUS_WORDS = ['curious'] as const;
 
 const LOYAL_WORDS = ['loyal', 'dependable', 'reliable'] as const;
 
-const OPTIMISM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const OPTIMISM_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bpositive\s+outlook\b/i, label: 'positive outlook' },
   { re: /\bstay\s+positive\b/i, label: 'stay positive' },
 ];
@@ -160,7 +195,10 @@ const INTROVERT_WORDS = ['introvert', 'introverted', 'reflective'] as const;
 
 const EXTROVERT_WORDS = ['extrovert', 'extroverted', 'outgoing'] as const;
 
-function pushKindWordEvidence(lower: string, evidence: PersonalityTraitEvidenceHit[]): void {
+function pushKindWordEvidence(
+  lower: string,
+  evidence: PersonalityTraitEvidenceHit[],
+): void {
   const re = new RegExp(KIND_EMPHATIC_RE.source, 'gi');
   let m: RegExpExecArray | null;
   while ((m = re.exec(lower)) !== null) {
@@ -224,7 +262,8 @@ export function extractPersonalityTraitsFromFreeText(input: {
   aboutPartner?: string | null;
 }): PersonalityTraitsTextExtraction {
   const aboutMe = typeof input.aboutMe === 'string' ? input.aboutMe : '';
-  const aboutPartner = typeof input.aboutPartner === 'string' ? input.aboutPartner : '';
+  const aboutPartner =
+    typeof input.aboutPartner === 'string' ? input.aboutPartner : '';
   return {
     self: scanScope(aboutMe),
     partner: scanScope(aboutPartner),

@@ -16,14 +16,22 @@ export function isHolyGrailDobYmdString(s: string): boolean {
 export function assertHolyGrailCalendarDateYmd(s: string): string {
   const m = HOLY_GRAIL_DOB_YMD_RE.exec(s);
   if (!m) {
-    throw new Error(`HolyGrail map: dateOfBirth must be YYYY-MM-DD, got ${JSON.stringify(s)}`);
+    throw new Error(
+      `HolyGrail map: dateOfBirth must be YYYY-MM-DD, got ${JSON.stringify(s)}`,
+    );
   }
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
   const dt = new Date(Date.UTC(y, mo - 1, d));
-  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) {
-    throw new Error(`HolyGrail map: invalid calendar date dateOfBirth ${JSON.stringify(s)}`);
+  if (
+    dt.getUTCFullYear() !== y ||
+    dt.getUTCMonth() !== mo - 1 ||
+    dt.getUTCDate() !== d
+  ) {
+    throw new Error(
+      `HolyGrail map: invalid calendar date dateOfBirth ${JSON.stringify(s)}`,
+    );
   }
   return s;
 }
@@ -38,9 +46,15 @@ export function assertHolyGrailDateOfBirthNotFuture(ymd: string): void {
   const d = Number(m[3]);
   const dobUtc = Date.UTC(y, mo - 1, d);
   const now = new Date();
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const todayUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
   if (dobUtc > todayUtc) {
-    throw new Error(`HolyGrail map: dateOfBirth must not be in the future, got ${JSON.stringify(ymd)}`);
+    throw new Error(
+      `HolyGrail map: dateOfBirth must not be in the future, got ${JSON.stringify(ymd)}`,
+    );
   }
 }
 
@@ -53,7 +67,10 @@ export function pickHolyGrailDateOfBirthDbJson(v: unknown): string | undefined {
 }
 
 /** Whole years at `ref` (UTC), or undefined if `ymd` is not a valid YYYY-MM-DD shape. */
-export function ageWholeYearsUtcFromYmd(dateOfBirthYmd: string, ref: Date): number | undefined {
+export function ageWholeYearsUtcFromYmd(
+  dateOfBirthYmd: string,
+  ref: Date,
+): number | undefined {
   const m = HOLY_GRAIL_DOB_YMD_RE.exec(dateOfBirthYmd);
   if (!m) return undefined;
   const y = Number(m[1]);

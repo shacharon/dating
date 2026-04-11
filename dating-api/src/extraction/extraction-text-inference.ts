@@ -3,7 +3,11 @@
  * No rule or threshold changes.
  */
 
-import { EXTRACTION_SIGNAL_KEYS, EXTRACTION_SIGNAL_KEYS_SET, MAX_EVIDENCE_ITEMS } from './extracted-signals.interface';
+import {
+  EXTRACTION_SIGNAL_KEYS,
+  EXTRACTION_SIGNAL_KEYS_SET,
+  MAX_EVIDENCE_ITEMS,
+} from './extracted-signals.interface';
 import type { ExtractedSignals } from './extracted-signals.interface';
 
 export interface TextInferenceRule {
@@ -114,7 +118,10 @@ export const TEXT_INFERENCE_RULES: readonly TextInferenceRule[] = [
       /\bhomebody\b/i,
       /\bstay(?:ing)?\s+(?:home|in)\b/i,
     ],
-    inferences: [{ signal: 'lifestylePace', value: 4 }, { signal: 'socialBattery', value: 5 }],
+    inferences: [
+      { signal: 'lifestylePace', value: 4 },
+      { signal: 'socialBattery', value: 5 },
+    ],
     note: '"quiet home/no drama" => lifestylePace<=4, socialBattery<=5',
   },
   {
@@ -339,4 +346,3 @@ export function applyTextInference(
     coverageNotes,
   };
 }
-

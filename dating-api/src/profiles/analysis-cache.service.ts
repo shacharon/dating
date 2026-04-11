@@ -31,7 +31,11 @@ export class AnalysisCacheService {
     return entry.result;
   }
 
-  set(key: string, result: EvaluateBatchResult, ttlMs: number = DEFAULT_TTL_MS): void {
+  set(
+    key: string,
+    result: EvaluateBatchResult,
+    ttlMs: number = DEFAULT_TTL_MS,
+  ): void {
     this.store.set(key, {
       result,
       expiresAt: Date.now() + ttlMs,

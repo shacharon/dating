@@ -55,7 +55,9 @@ const MATCH_LIST_PROFILE_DATA_SELECT = {
   },
 } as const satisfies Prisma.UserProfileSelect;
 
-type MatchListProfileDbRow = Prisma.UserProfileGetPayload<{ select: typeof MATCH_LIST_PROFILE_DATA_SELECT }>;
+type MatchListProfileDbRow = Prisma.UserProfileGetPayload<{
+  select: typeof MATCH_LIST_PROFILE_DATA_SELECT;
+}>;
 
 /** One `findMany` read supplies legacy compare payloads and HG pair rows (list + detail + compare). */
 export interface MatchPairRuntimeBundle {
@@ -153,7 +155,10 @@ export class ProfilesPrismaService {
   /**
    * Save profile with evaluation data in PostgreSQL.
    */
-  async save(id: string, payload: Omit<ProfileJsonPayload, 'savedAt'>): Promise<void> {
+  async save(
+    id: string,
+    payload: Omit<ProfileJsonPayload, 'savedAt'>,
+  ): Promise<void> {
     await this.saveToPrisma(id, payload);
   }
 
@@ -196,7 +201,9 @@ export class ProfilesPrismaService {
     for (const id of listIds) {
       const row = rowById.get(id);
       if (!row) continue;
-      profiles.push(this.rowToPayload(this.matchListDbRowToUserProfileRow(row)));
+      profiles.push(
+        this.rowToPayload(this.matchListDbRowToUserProfileRow(row)),
+      );
       holyGrailRowsById.set(id, this.matchListDbRowToHolyGrailProfileRow(row));
     }
     return { profiles, holyGrailRowsById };
@@ -210,7 +217,10 @@ export class ProfilesPrismaService {
    * Single batched `UserProfile` read for a pair: same `ProfileJsonPayload` + HG row mapping as list/compare
    * (`MATCH_LIST_PROFILE_DATA_SELECT`). Callers run legacy compare + HG without a second profile query.
    */
-  async loadMatchPairRuntimeBundle(aId: string, bId: string): Promise<MatchPairRuntimeBundle | null> {
+  async loadMatchPairRuntimeBundle(
+    aId: string,
+    bId: string,
+  ): Promise<MatchPairRuntimeBundle | null> {
     if (aId === bId) return null;
     const rows = await this.prisma.userProfile.findMany({
       where: { id: { in: [aId, bId] } },
@@ -229,7 +239,9 @@ export class ProfilesPrismaService {
     };
   }
 
-  async loadMatchListProfileDataForSubset(profileIdsOrdered: readonly string[]): Promise<{
+  async loadMatchListProfileDataForSubset(
+    profileIdsOrdered: readonly string[],
+  ): Promise<{
     profiles: ProfileJsonPayload[];
     holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
   }> {
@@ -246,13 +258,17 @@ export class ProfilesPrismaService {
     for (const id of profileIdsOrdered) {
       const row = rowById.get(id);
       if (!row) continue;
-      profiles.push(this.rowToPayload(this.matchListDbRowToUserProfileRow(row)));
+      profiles.push(
+        this.rowToPayload(this.matchListDbRowToUserProfileRow(row)),
+      );
       holyGrailRowsById.set(id, this.matchListDbRowToHolyGrailProfileRow(row));
     }
     return { profiles, holyGrailRowsById };
   }
 
-  private matchListDbRowToUserProfileRow(row: MatchListProfileDbRow): UserProfileRow {
+  private matchListDbRowToUserProfileRow(
+    row: MatchListProfileDbRow,
+  ): UserProfileRow {
     return {
       id: row.id,
       name: row.name,
@@ -276,7 +292,9 @@ export class ProfilesPrismaService {
     };
   }
 
-  private matchListDbRowToHolyGrailProfileRow(row: MatchListProfileDbRow): ChildrenUnsureProfileRow {
+  private matchListDbRowToHolyGrailProfileRow(
+    row: MatchListProfileDbRow,
+  ): ChildrenUnsureProfileRow {
     return {
       id: row.id,
       aboutMe: row.aboutMe,
@@ -316,18 +334,26 @@ export class ProfilesPrismaService {
     id: string,
     payload: Omit<ProfileJsonPayload, 'savedAt'>,
   ): Promise<void> {
-    const evaluation = this.evaluationWithSanitizedEnrichment(payload.evaluation, {
-      profileId: id,
-      logDropped: true,
-    });
-    const evaluatedAt = payload.evaluatedAt ? new Date(payload.evaluatedAt) : null;
+    const evaluation = this.evaluationWithSanitizedEnrichment(
+      payload.evaluation,
+      {
+        profileId: id,
+        logDropped: true,
+      },
+    );
+    const evaluatedAt = payload.evaluatedAt
+      ? new Date(payload.evaluatedAt)
+      : null;
     const promptVersion = payload.promptVersion || null;
     const policyVersion = payload.policyVersion || null;
     const textHash = payload.textHash || null;
 
     const selfSignals = this.takeSignalsByDomain(payload, 'self');
     const partnerSignals = this.takeSignalsByDomain(payload, 'partner');
-    const relationshipSignals = this.takeSignalsByDomain(payload, 'relationship');
+    const relationshipSignals = this.takeSignalsByDomain(
+      payload,
+      'relationship',
+    );
 
     await this.prisma.$transaction(async (tx) => {
       await tx.userProfile.upsert({
@@ -373,9 +399,13 @@ export class ProfilesPrismaService {
         select: { interests_self: true },
       });
       const selfLp =
-        selfSignals && typeof selfSignals.lifestylePace === 'number' ? selfSignals.lifestylePace : null;
+        selfSignals && typeof selfSignals.lifestylePace === 'number'
+          ? selfSignals.lifestylePace
+          : null;
       const selfCs =
-        selfSignals && typeof selfSignals.conflictStyle === 'number' ? selfSignals.conflictStyle : null;
+        selfSignals && typeof selfSignals.conflictStyle === 'number'
+          ? selfSignals.conflictStyle
+          : null;
       const composedRanking = composeHolyGrailRankingSignalsForPersist({
         evaluation,
         interestsSelf: extractionRow?.interests_self,
@@ -386,12 +416,19 @@ export class ProfilesPrismaService {
         data: [
           this.toSignalSnapshotRow(id, 'self', selfSignals, composedRanking),
           this.toSignalSnapshotRow(id, 'partner', partnerSignals, null),
-          this.toSignalSnapshotRow(id, 'relationship', relationshipSignals, null),
+          this.toSignalSnapshotRow(
+            id,
+            'relationship',
+            relationshipSignals,
+            null,
+          ),
         ],
       });
 
-      const evaluationForPersist = this.stripHgRankingEnrichmentFromEvaluationBeforePersist(evaluation);
-      const evaluationJson = evaluationForPersist as unknown as Prisma.InputJsonValue;
+      const evaluationForPersist =
+        this.stripHgRankingEnrichmentFromEvaluationBeforePersist(evaluation);
+      const evaluationJson =
+        evaluationForPersist as unknown as Prisma.InputJsonValue;
 
       await tx.profileEvaluationRaw.upsert({
         where: { profileId: id },
@@ -410,10 +447,14 @@ export class ProfilesPrismaService {
     payload: Omit<ProfileJsonPayload, 'savedAt'>,
     domain: 'self' | 'partner' | 'relationship',
   ): DomainSignals {
-    const block = (payload.evaluation as unknown as Record<string, unknown> | undefined)?.[domain];
+    const block = (
+      payload.evaluation as unknown as Record<string, unknown> | undefined
+    )?.[domain];
     if (!block || typeof block !== 'object') return null;
     const signals = (block as Record<string, unknown>).signals;
-    return signals && typeof signals === 'object' ? (signals as Record<string, unknown>) : null;
+    return signals && typeof signals === 'object'
+      ? (signals as Record<string, unknown>)
+      : null;
   }
 
   private toSignalSnapshotRow(
@@ -451,7 +492,8 @@ export class ProfilesPrismaService {
     if (!signals) {
       if (domain === 'self' && composedRanking) {
         row.hgRankingDailyRhythm = composedRanking.dailyRhythm;
-        row.hgRankingAutonomyTogetherness = composedRanking.autonomyTogetherness;
+        row.hgRankingAutonomyTogetherness =
+          composedRanking.autonomyTogetherness;
         row.hgRankingInterestsTop = [...composedRanking.interestsTop];
       }
       return row;
@@ -541,12 +583,42 @@ export class ProfilesPrismaService {
     const rawEvaluation =
       (row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined) ??
       ({
-        self: { domain: 'self', signals: {}, evidence: [], version: 'v1', confidence: 0 },
-        partner: { domain: 'partner', signals: {}, evidence: [], version: 'v1', confidence: 0 },
-        relationship: { domain: 'relationship', signals: {}, evidence: [], version: 'v1', confidence: 0 },
+        self: {
+          domain: 'self',
+          signals: {},
+          evidence: [],
+          version: 'v1',
+          confidence: 0,
+        },
+        partner: {
+          domain: 'partner',
+          signals: {},
+          evidence: [],
+          version: 'v1',
+          confidence: 0,
+        },
+        relationship: {
+          domain: 'relationship',
+          signals: {},
+          evidence: [],
+          version: 'v1',
+          confidence: 0,
+        },
         compatibility: {
-          selfVsPartner: { overallScore: 0, coverage: 0, matchedSignals: 0, hardMismatches: [], breakdown: [] },
-          selfVsRelationship: { overallScore: 0, coverage: 0, matchedSignals: 0, hardMismatches: [], breakdown: [] },
+          selfVsPartner: {
+            overallScore: 0,
+            coverage: 0,
+            matchedSignals: 0,
+            hardMismatches: [],
+            breakdown: [],
+          },
+          selfVsRelationship: {
+            overallScore: 0,
+            coverage: 0,
+            matchedSignals: 0,
+            hardMismatches: [],
+            breakdown: [],
+          },
         },
         display: { summary: 'Not analyzed yet.', insight: '' },
         productScores: {
@@ -580,7 +652,10 @@ export class ProfilesPrismaService {
       logDropped: false,
     });
 
-    evaluation = this.applySelfSnapshotHgRankingToEvaluationPayload(evaluation, row.signalSnapshots?.[0]);
+    evaluation = this.applySelfSnapshotHgRankingToEvaluationPayload(
+      evaluation,
+      row.signalSnapshots?.[0],
+    );
 
     return {
       id: row.id,
@@ -598,8 +673,8 @@ export class ProfilesPrismaService {
       policyVersion: row.evaluationMeta?.policyVersion || undefined,
       textHash: row.evaluationMeta?.textHash || undefined,
       signals:
-        ((row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined)?.self
-          ?.signals as Record<string, number | null> | undefined) ?? undefined,
+        (row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined)?.self
+          ?.signals ?? undefined,
     };
   }
 
@@ -611,10 +686,18 @@ export class ProfilesPrismaService {
     'interestsTop',
   ] as const;
 
-  private stripHgRankingEnrichmentFromEvaluationBeforePersist(evaluation: EvaluateBatchResult): EvaluateBatchResult {
+  private stripHgRankingEnrichmentFromEvaluationBeforePersist(
+    evaluation: EvaluateBatchResult,
+  ): EvaluateBatchResult {
     const c = JSON.parse(JSON.stringify(evaluation)) as EvaluateBatchResult;
     const en = c.enrichment;
-    if (!en || en.version !== 'v1' || !en.signals || typeof en.signals !== 'object') return c;
+    if (
+      !en ||
+      en.version !== 'v1' ||
+      !en.signals ||
+      typeof en.signals !== 'object'
+    )
+      return c;
     const sig = en.signals as unknown as Record<string, unknown>;
     for (const k of ProfilesPrismaService._HG_RAW_JSON_OMIT_KEYS) {
       delete sig[k];
@@ -636,14 +719,17 @@ export class ProfilesPrismaService {
     const en = evaluation.enrichment;
     if (!en || en.version !== 'v1') return evaluation;
     const c = JSON.parse(JSON.stringify(evaluation)) as EvaluateBatchResult;
-    const signals = JSON.parse(JSON.stringify(c.enrichment!.signals)) as EnrichmentSignalsV1;
+    const signals = JSON.parse(
+      JSON.stringify(c.enrichment!.signals),
+    ) as EnrichmentSignalsV1;
     const dr = selfSnap.hgRankingDailyRhythm;
     if (typeof dr === 'string' && dr.trim() !== '') {
       signals.dailyRhythm = dr.trim() as EnrichmentSignalsV1['dailyRhythm'];
     }
     const at = selfSnap.hgRankingAutonomyTogetherness;
     if (typeof at === 'string' && at.trim() !== '') {
-      signals.autonomyTogethernessDepth = at.trim() as EnrichmentSignalsV1['autonomyTogethernessDepth'];
+      signals.autonomyTogethernessDepth =
+        at.trim() as EnrichmentSignalsV1['autonomyTogethernessDepth'];
     }
     const top = selfSnap.hgRankingInterestsTop;
     if (Array.isArray(top) && top.length > 0) {

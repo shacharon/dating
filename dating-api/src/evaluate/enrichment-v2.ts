@@ -23,10 +23,16 @@ function joinBlocks(
     .join('\n');
 }
 
-function isNegatedBefore(text: string, matchIndex: number, window = 48): boolean {
+function isNegatedBefore(
+  text: string,
+  matchIndex: number,
+  window = 48,
+): boolean {
   const start = Math.max(0, matchIndex - window);
   const prefix = text.slice(start, matchIndex);
-  return /\b(not|never|isn'?t|aren'?t|without|no\s+longer|am\s+not|wasn'?t)\s*$/i.test(prefix);
+  return /\b(not|never|isn'?t|aren'?t|without|no\s+longer|am\s+not|wasn'?t)\s*$/i.test(
+    prefix,
+  );
 }
 
 const INTEREST_ALLOWLIST = new Set([
@@ -61,38 +67,67 @@ const COOKING_JOB_HINT =
   /\b(pastry\s+cook|line\s+cook|in\s+kitchens|service\s+season|head\s+chef|sous\s+chef)\b/i;
 
 function cookingAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 100), Math.min(text.length, idx + 100));
+  const win = text.slice(
+    Math.max(0, idx - 100),
+    Math.min(text.length, idx + 100),
+  );
   return !COOKING_JOB_HINT.test(win);
 }
 
-const BREWERY_YEAST_LAB_HINT = /\b(?:yeast\s+labs?|at\s+a\s+brewery|brewery)\b/i;
+const BREWERY_YEAST_LAB_HINT =
+  /\b(?:yeast\s+labs?|at\s+a\s+brewery|brewery)\b/i;
 
 function fermentationAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 120), Math.min(text.length, idx + 120));
+  const win = text.slice(
+    Math.max(0, idx - 120),
+    Math.min(text.length, idx + 120),
+  );
   if (/\bfermentation journals\b/i.test(win)) return true;
   if (BREWERY_YEAST_LAB_HINT.test(win)) return false;
   return true;
 }
 
 function sporePrintsAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 140), Math.min(text.length, idx + 140));
-  if (/\b(?:weekend|foray|guide|hobby|neighbor|porch|forays?)\b/i.test(win)) return true;
+  const win = text.slice(
+    Math.max(0, idx - 140),
+    Math.min(text.length, idx + 140),
+  );
+  if (/\b(?:weekend|foray|guide|hobby|neighbor|porch|forays?)\b/i.test(win))
+    return true;
   if (/\blab tech\b/i.test(win)) return false;
   return true;
 }
 
 function potteryAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 140), Math.min(text.length, idx + 140));
-  if (/\b(?:learning pottery|pottery badly|my own|weekend|sabbatical|studio)\b/i.test(win)) return true;
-  if (/\b(?:elementary art teacher|teach(?:es|ing)?\s+fifth|teach(?:es|ing)?\s+kids)\b/i.test(win))
+  const win = text.slice(
+    Math.max(0, idx - 140),
+    Math.min(text.length, idx + 140),
+  );
+  if (
+    /\b(?:learning pottery|pottery badly|my own|weekend|sabbatical|studio)\b/i.test(
+      win,
+    )
+  )
+    return true;
+  if (
+    /\b(?:elementary art teacher|teach(?:es|ing)?\s+fifth|teach(?:es|ing)?\s+kids)\b/i.test(
+      win,
+    )
+  )
     return false;
   return true;
 }
 
 function cartographyAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 200), Math.min(text.length, idx + 200));
+  const win = text.slice(
+    Math.max(0, idx - 200),
+    Math.min(text.length, idx + 200),
+  );
   if (/\b(?:map new neighborhoods|for fun)\b/i.test(win)) return true;
-  if (/\b(?:paper conservator|I restore old maps?|restore old maps?)\b/i.test(win)) return false;
+  if (
+    /\b(?:paper conservator|I restore old maps?|restore old maps?)\b/i.test(win)
+  )
+    return false;
   return true;
 }
 
@@ -103,11 +138,16 @@ const FURNITURE_MODEL_BUILDING_PHRASE =
   /\b(?:build furniture from plans|furniture building)\b/i;
 
 function modelBuildingAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 160), Math.min(text.length, idx + 160));
+  const win = text.slice(
+    Math.max(0, idx - 160),
+    Math.min(text.length, idx + 160),
+  );
   const head = text.slice(0, idx);
   if (MODEL_BUILDING_LEISURE_HINT.test(win)) return true;
   if (
-    FURNITURE_MODEL_BUILDING_PHRASE.test(text.slice(idx, Math.min(text.length, idx + 48))) &&
+    FURNITURE_MODEL_BUILDING_PHRASE.test(
+      text.slice(idx, Math.min(text.length, idx + 48)),
+    ) &&
     /\barchitectural model maker\b/i.test(head)
   ) {
     return true;
@@ -118,16 +158,21 @@ function modelBuildingAllowedAt(text: string, idx: number): boolean {
   ) {
     return false;
   }
-  if (/\b(?:weekend|evening|hobby|tabletop|painting miniatures)\b/i.test(win)) return true;
+  if (/\b(?:weekend|evening|hobby|tabletop|painting miniatures)\b/i.test(win))
+    return true;
   if (/\barchitectural model maker\b/i.test(win)) return false;
   return true;
 }
 
 function boatingAllowedAt(text: string, idx: number): boolean {
-  const win = text.slice(Math.max(0, idx - 140), Math.min(text.length, idx + 140));
+  const win = text.slice(
+    Math.max(0, idx - 140),
+    Math.min(text.length, idx + 140),
+  );
   return (
-    /\b(?:restore|ashore|fiberglass|yard|cousin|sailing|weekend)\b/i.test(win) ||
-    /\bfiberglass skiffs?\b/i.test(win)
+    /\b(?:restore|ashore|fiberglass|yard|cousin|sailing|weekend)\b/i.test(
+      win,
+    ) || /\bfiberglass skiffs?\b/i.test(win)
   );
 }
 
@@ -223,7 +268,11 @@ const INTEREST_PHRASE_RULES: {
   },
 ];
 
-type TokenRule = { value: string; pattern: RegExp; guard?: (text: string, idx: number) => boolean };
+type TokenRule = {
+  value: string;
+  pattern: RegExp;
+  guard?: (text: string, idx: number) => boolean;
+};
 
 function interestsTop3V2(text: string): string[] {
   const lower = text.toLowerCase();
@@ -353,10 +402,20 @@ const DAILY_RHYTHM_RULES: { value: string; patterns: RegExp[] }[] = [
   },
   {
     value: 'social_bursts_recharge',
-    patterns: [/\bsocial bursts?\b/i, /\balternating social\b/i, /\bsocial bursts? and recharge\b/i],
+    patterns: [
+      /\bsocial bursts?\b/i,
+      /\balternating social\b/i,
+      /\bsocial bursts? and recharge\b/i,
+    ],
   },
-  { value: 'slow_mornings', patterns: [/\bslow mornings?\b/i, /\bslow sundays?\b/i] },
-  { value: 'late', patterns: [/\bnight owl\b/i, /\blate nights?\b/i, /\bup late\b/i] },
+  {
+    value: 'slow_mornings',
+    patterns: [/\bslow mornings?\b/i, /\bslow sundays?\b/i],
+  },
+  {
+    value: 'late',
+    patterns: [/\bnight owl\b/i, /\blate nights?\b/i, /\bup late\b/i],
+  },
   {
     value: 'early_bird',
     patterns: [
@@ -376,13 +435,24 @@ const DAILY_RHYTHM_RULES: { value: string; patterns: RegExp[] }[] = [
   },
   {
     value: 'fast_paced',
-    patterns: [/\bvery fast lifestyle\b/i, /\bfast[-\s]?paced\b/i, /\bfast pace\b/i],
+    patterns: [
+      /\bvery fast lifestyle\b/i,
+      /\bfast[-\s]?paced\b/i,
+      /\bfast pace\b/i,
+    ],
   },
   {
     value: 'homebody',
-    patterns: [/\bhomebody\b/i, /\bstay in most nights\b/i, /\bquiet nights in\b/i],
+    patterns: [
+      /\bhomebody\b/i,
+      /\bstay in most nights\b/i,
+      /\bquiet nights in\b/i,
+    ],
   },
-  { value: 'startup_grind', patterns: [/\bstartup grind\b/i, /\bgrind mode\b/i] },
+  {
+    value: 'startup_grind',
+    patterns: [/\bstartup grind\b/i, /\bgrind mode\b/i],
+  },
   {
     value: 'location_flexible',
     patterns: [
@@ -396,7 +466,11 @@ const DAILY_RHYTHM_RULES: { value: string; patterns: RegExp[] }[] = [
   },
   {
     value: 'quiet_evenings',
-    patterns: [/\bnot into nightlife\b/i, /\bavoid(?:ing)? nightlife\b/i, /\bno nightlife\b/i],
+    patterns: [
+      /\bnot into nightlife\b/i,
+      /\bavoid(?:ing)? nightlife\b/i,
+      /\bno nightlife\b/i,
+    ],
   },
 ];
 
@@ -422,7 +496,10 @@ const AUTONOMY_RULES: { value: string; patterns: RegExp[] }[] = [
       /\balone time.{0,40}\bnon[-\s]?negotiable\b/is,
     ],
   },
-  { value: 'enmeshment', patterns: [/\beverything together\b/i, /\bdo everything together\b/i] },
+  {
+    value: 'enmeshment',
+    patterns: [/\beverything together\b/i, /\bdo everything together\b/i],
+  },
   {
     value: 'independence_with_space',
     patterns: [
@@ -527,7 +604,10 @@ const KIDS_RULES: { value: string; patterns: RegExp[] }[] = [
   },
 ];
 
-function firstMatching(text: string, rules: { value: string; patterns: RegExp[] }[]): string | null {
+function firstMatching(
+  text: string,
+  rules: { value: string; patterns: RegExp[] }[],
+): string | null {
   for (const rule of rules) {
     if (rule.patterns.some((p) => p.test(text))) return rule.value;
   }
@@ -562,10 +642,16 @@ function firstMatchingEarliest(
 function matchWithdrawsShutsDown(text: string): boolean {
   const rules: { source: string; negation: boolean }[] = [
     { source: String.raw`\bI shut down\b`, negation: false },
-    { source: String.raw`\bshut(?:s|ting)? down (?:when|if|during|after)\b`, negation: true },
+    {
+      source: String.raw`\bshut(?:s|ting)? down (?:when|if|during|after)\b`,
+      negation: true,
+    },
     { source: String.raw`\b(?:go|going) silent\b`, negation: true },
     { source: String.raw`\bstonewall(?:ing)?\b`, negation: true },
-    { source: String.raw`\bwithdraw(?:s|ing)? (?:when|if|during)\b`, negation: true },
+    {
+      source: String.raw`\bwithdraw(?:s|ing)? (?:when|if|during)\b`,
+      negation: true,
+    },
     { source: String.raw`\bfreeze(?:s|ing)? up\b`, negation: true },
   ];
   for (const { source, negation } of rules) {
@@ -712,5 +798,7 @@ export function buildEnrichmentSignalsV2(
   aboutPartner: string,
   aboutRelationship: string,
 ): EnrichmentMappedSignals {
-  return mapEnrichmentV2FromText(joinBlocks(aboutMe, aboutPartner, aboutRelationship));
+  return mapEnrichmentV2FromText(
+    joinBlocks(aboutMe, aboutPartner, aboutRelationship),
+  );
 }

@@ -34,7 +34,7 @@ export function topBandFrictionMultiplier(compatibilityScore: number): number {
  * When friction >= 3, scale the penalty by this factor (1 = no change).
  * Adjusted to help pairs with friction 3-4 at mid-range compatibility (72-81).
  */
-const HIGH_FRICTION_RELIEF = 0.70;
+const HIGH_FRICTION_RELIEF = 0.7;
 
 export function computeFrictionAndFrictionPenalties(
   compatibilityValue: number,

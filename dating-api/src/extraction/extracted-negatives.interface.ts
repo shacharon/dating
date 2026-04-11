@@ -1,7 +1,7 @@
 /**
  * Profile negatives / dealbreakers — explicit anti-preferences layer.
  * V2 extraction only; V1 does not extract negatives.
- * 
+ *
  * STRICT RULE: ONLY explicit negation evidence. NO inference.
  */
 
@@ -11,10 +11,10 @@ export type NegativeStrength = 'hard' | 'soft';
 
 export interface NegativeItem {
   category: NegativeCategory;
-  tag: string;              // canonical tag (e.g., "smoking", "no_kids", "clingy")
+  tag: string; // canonical tag (e.g., "smoking", "no_kids", "clingy")
   strength: NegativeStrength; // hard = dealbreaker, soft = preference
-  evidence: string;         // exact quote from text
-  confidence: number;       // 0-1
+  evidence: string; // exact quote from text
+  confidence: number; // 0-1
 }
 
 /** Negatives extracted from a single domain (self or partner). */
@@ -34,12 +34,7 @@ export interface ExtractedNegatives {
 
 /** Canonical negative tags by category. */
 export const NEGATIVE_TAGS = {
-  behavioral: [
-    'smoking',
-    'drugs',
-    'excessive_drinking',
-    'vaping',
-  ],
+  behavioral: ['smoking', 'drugs', 'excessive_drinking', 'vaping'],
   lifestyle: [
     'no_kids',
     'kids_required',

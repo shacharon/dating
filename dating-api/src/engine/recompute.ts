@@ -3,7 +3,10 @@
  * No duplicate pairs: for each i < j, exactly one match (users[i], users[j]).
  */
 
-import type { CompareGuardFailureResultDto, CompareResultDto } from '../matches/match-engine';
+import type {
+  CompareGuardFailureResultDto,
+  CompareResultDto,
+} from '../matches/match-engine';
 import { compareWithStatus as computeMatchWithStatus } from '../matches/match-engine';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 
@@ -26,17 +29,16 @@ export async function recomputeAllMatches(
 
   for (let i = 0; i < users.length; i++) {
     for (let j = i + 1; j < users.length; j++) {
-      const match: CompareResultDto | CompareGuardFailureResultDto = computeMatchWithStatus(
-        users[i],
-        users[j],
-      );
+      const match: CompareResultDto | CompareGuardFailureResultDto =
+        computeMatchWithStatus(users[i], users[j]);
       if (
         'status' in match &&
-        (match.status === 'NOT_ANALYZED' || match.status === 'INSUFFICIENT_DATA')
+        (match.status === 'NOT_ANALYZED' ||
+          match.status === 'INSUFFICIENT_DATA')
       ) {
         continue;
       }
-      const computed = match as CompareResultDto;
+      const computed = match;
       results.push({
         ...computed,
         userA: users[i].id,

@@ -1,12 +1,12 @@
 /**
  * V1 vs V2 Validation Script
- * 
+ *
  * Compares extraction outputs from V1 and V2 on a golden set of profiles.
  * Measures drift in signals, coverage, and validates negatives extraction.
- * 
+ *
  * Usage:
  *   npm run validate:v1-v2 [profileId1] [profileId2] ...
- * 
+ *
  * If no profileIds provided, uses first 5 profiles from database.
  */
 
@@ -116,18 +116,28 @@ async function validateProfile(
   const v2Coverage = Math.round((v2TotalNonNull / (14 * 3)) * 100);
 
   // Compute drift
-  const selfDrift = computeSignalDrift(v1Result.self.signals, v2Result.base.self.signals);
-  const partnerDrift = computeSignalDrift(v1Result.partner.signals, v2Result.base.partner.signals);
+  const selfDrift = computeSignalDrift(
+    v1Result.self.signals,
+    v2Result.base.self.signals,
+  );
+  const partnerDrift = computeSignalDrift(
+    v1Result.partner.signals,
+    v2Result.base.partner.signals,
+  );
   const relationshipDrift = computeSignalDrift(
     v1Result.relationship.signals,
     v2Result.base.relationship.signals,
   );
 
   const overallAvgDrift =
-    (selfDrift.avgDrift + partnerDrift.avgDrift + relationshipDrift.avgDrift) / 3;
+    (selfDrift.avgDrift + partnerDrift.avgDrift + relationshipDrift.avgDrift) /
+    3;
 
   const v1AvgConfidence =
-    (v1Result.self.confidence + v1Result.partner.confidence + v1Result.relationship.confidence) / 3;
+    (v1Result.self.confidence +
+      v1Result.partner.confidence +
+      v1Result.relationship.confidence) /
+    3;
   const v2AvgConfidence =
     (v2Result.base.self.confidence +
       v2Result.base.partner.confidence +
@@ -168,7 +178,8 @@ async function validateProfile(
       overallAvgDrift: Math.round(overallAvgDrift * 100) / 100,
     },
     coverageDelta: v2Coverage - v1Coverage,
-    confidenceDelta: Math.round((v2AvgConfidence - v1AvgConfidence) * 100) / 100,
+    confidenceDelta:
+      Math.round((v2AvgConfidence - v1AvgConfidence) * 100) / 100,
   };
 }
 
@@ -186,7 +197,9 @@ async function main() {
   let profileIds: string[] = process.argv.slice(2);
 
   if (profileIds.length === 0) {
-    logger.log('[Validation] No profileIds provided, using first 5 from database...');
+    logger.log(
+      '[Validation] No profileIds provided, using first 5 from database...',
+    );
     const allProfiles = await profilesService.list();
     profileIds = allProfiles.slice(0, 5).map((p) => p.id);
   }
@@ -212,7 +225,8 @@ async function main() {
 
   // Aggregate statistics
   const avgDrift =
-    results.reduce((sum, r) => sum + r.drift.overallAvgDrift, 0) / results.length;
+    results.reduce((sum, r) => sum + r.drift.overallAvgDrift, 0) /
+    results.length;
   const avgCoverageDelta =
     results.reduce((sum, r) => sum + r.coverageDelta, 0) / results.length;
   const avgConfidenceDelta =
@@ -260,8 +274,12 @@ async function main() {
   for (const result of results) {
     console.log(`\n${result.profileId} (${result.name}):`);
     console.log(`  Drift: ${result.drift.overallAvgDrift} points`);
-    console.log(`  Coverage: V1=${result.v1.coverage}%, V2=${result.v2.coverage}%, delta=${result.coverageDelta}%`);
-    console.log(`  Confidence: V1=${result.v1.avgConfidence}, V2=${result.v2.avgConfidence}, delta=${result.confidenceDelta}`);
+    console.log(
+      `  Coverage: V1=${result.v1.coverage}%, V2=${result.v2.coverage}%, delta=${result.coverageDelta}%`,
+    );
+    console.log(
+      `  Confidence: V1=${result.v1.avgConfidence}, V2=${result.v2.avgConfidence}, delta=${result.confidenceDelta}`,
+    );
     console.log(
       `  Negatives: self=${result.v2.negativesCount.self}, partner=${result.v2.negativesCount.partner}, relationship=${result.v2.negativesCount.relationship}`,
     );

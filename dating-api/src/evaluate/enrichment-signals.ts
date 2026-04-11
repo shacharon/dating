@@ -47,7 +47,8 @@ export const ENRICHMENT_CORE_SCALAR_FIELDS = [
   'conflictStyleDetail',
 ] as const;
 
-export type EnrichmentCoreScalarField = (typeof ENRICHMENT_CORE_SCALAR_FIELDS)[number];
+export type EnrichmentCoreScalarField =
+  (typeof ENRICHMENT_CORE_SCALAR_FIELDS)[number];
 
 export type EnrichmentScalarDroppedEvent = {
   profileId: string | null;
@@ -59,7 +60,9 @@ export type EnrichmentScalarDroppedEvent = {
 /**
  * Coerce the four core scalar fields to closed canonical labels (or null). Safe for DB/API payloads.
  */
-export function sanitizeEnrichmentSignalsV1(signals: EnrichmentSignalsV1Input): EnrichmentSignalsV1 {
+export function sanitizeEnrichmentSignalsV1(
+  signals: EnrichmentSignalsV1Input,
+): EnrichmentSignalsV1 {
   const core = sanitizeEnrichmentCoreScalars({
     dailyRhythm: signals.dailyRhythm,
     autonomyTogethernessDepth: signals.autonomyTogethernessDepth,
@@ -89,7 +92,11 @@ export function sanitizeEnrichmentSignalsV1ForPersist(
     const profileId = opts.profileId ?? null;
     for (const field of ENRICHMENT_CORE_SCALAR_FIELDS) {
       const raw = signals[field];
-      if (typeof raw === 'string' && raw.trim() !== '' && after[field] === null) {
+      if (
+        typeof raw === 'string' &&
+        raw.trim() !== '' &&
+        after[field] === null
+      ) {
         onDropped({ profileId, field, rawValue: raw, action: 'dropped' });
       }
     }
@@ -106,7 +113,11 @@ export function buildEnrichmentSignals(
   aboutPartner: string,
   aboutRelationship: string,
 ): EnrichmentSignalsV1 {
-  const raw = buildEnrichmentSignalsV4(aboutMe, aboutPartner, aboutRelationship);
+  const raw = buildEnrichmentSignalsV4(
+    aboutMe,
+    aboutPartner,
+    aboutRelationship,
+  );
   return sanitizeEnrichmentSignalsV1(raw);
 }
 

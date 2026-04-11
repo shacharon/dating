@@ -7,6 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  googleId     String     @unique
+  displayName  String?
+  avatarUrl    String?
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  sessions     UserSession[]
+}
+
+model UserSession {
+  id                 String    @id @default(cuid())
+  userId             String
+  sessionTokenHash   String    @unique
+  expiresAt          DateTime
+  revokedAt          DateTime?
+  lastSeenAt         DateTime?
+  ip                 String?
+  userAgent          String?
+  createdAt          DateTime  @default(now())
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
 model UserProfile {
   id                String   @id
   name              String

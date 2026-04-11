@@ -127,7 +127,12 @@ export interface MatchIndexItemDto {
   rawScore?: number;
   whyTop: MatchIndexWhyTopEntry[];
   tensionsTop: MatchIndexTensionsTopEntry[];
-  tensionMatrix?: Array<{ id: string; name: string; penalty: number; explain: string }>;
+  tensionMatrix?: Array<{
+    id: string;
+    name: string;
+    penalty: number;
+    explain: string;
+  }>;
   updatedAt: string;
   /** Same slice as list/detail when index is rebuilt from records. */
   explainability?: CompareResultDto['explainability'];

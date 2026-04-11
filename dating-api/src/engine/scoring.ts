@@ -22,10 +22,7 @@ export function compatibility(
   valuesAlignment: number,
 ): number {
   return (
-    0.35 * aToB +
-    0.35 * bToA +
-    0.25 * relationshipFit +
-    0.05 * valuesAlignment
+    0.35 * aToB + 0.35 * bToA + 0.25 * relationshipFit + 0.05 * valuesAlignment
   );
 }
 

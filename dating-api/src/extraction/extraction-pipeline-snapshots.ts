@@ -11,7 +11,11 @@ import {
   type ExtractionDomain,
   type ExtractionEvidenceItem,
 } from './extracted-signals.interface';
-import { KEY_ALIASES, normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
+import {
+  KEY_ALIASES,
+  normalizeKeys,
+  normalizeRawExtraction,
+} from './extraction-normalization';
 import {
   DOMAIN_ALLOWED_SIGNAL_KEYS,
   quoteContainsBannedMarkers,
@@ -88,14 +92,11 @@ export function computeV1PipelineSnapshots(
 
   const afterValidateClean = validateAndCleanMirror(afterNorm, domain);
 
-  const afterValidateExtraction = validateExtraction(
-    text.trim(),
-    {
-      ...afterValidateClean,
-      signals: { ...afterValidateClean.signals },
-      evidence: afterValidateClean.evidence.map((e) => ({ ...e })),
-    },
-  );
+  const afterValidateExtraction = validateExtraction(text.trim(), {
+    ...afterValidateClean,
+    signals: { ...afterValidateClean.signals },
+    evidence: afterValidateClean.evidence.map((e) => ({ ...e })),
+  });
 
   return {
     rawLlmOutput,

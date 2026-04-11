@@ -26,7 +26,9 @@ export interface HolyGrailRetrievalResponse {
   readonly debug: HolyGrailRetrievalDebugCounts;
 }
 
-function tryMapToCanonical(input: Parameters<typeof mapProfileSourceToMatchingCanonical>[0]): MatchingCanonicalModel | null {
+function tryMapToCanonical(
+  input: Parameters<typeof mapProfileSourceToMatchingCanonical>[0],
+): MatchingCanonicalModel | null {
   try {
     return mapProfileSourceToMatchingCanonical(input);
   } catch {
@@ -50,13 +52,19 @@ export class HolyGrailRetrievalService {
     readonly limit?: number;
     readonly evaluatedAt?: Date;
   }): Promise<HolyGrailRetrievalResponse> {
-    const searcherInput = await this.sources.getMappingInputByProfileId(args.searcherProfileId);
+    const searcherInput = await this.sources.getMappingInputByProfileId(
+      args.searcherProfileId,
+    );
     if (!searcherInput) {
-      throw new NotFoundException(`Profile not found: ${args.searcherProfileId}`);
+      throw new NotFoundException(
+        `Profile not found: ${args.searcherProfileId}`,
+      );
     }
     const searcher = tryMapToCanonical(searcherInput);
     if (!searcher) {
-      throw new NotFoundException(`Profile cannot be mapped to canonical model: ${args.searcherProfileId}`);
+      throw new NotFoundException(
+        `Profile cannot be mapped to canonical model: ${args.searcherProfileId}`,
+      );
     }
 
     const candidateInputs = await this.sources.listCandidateMappingInputs({

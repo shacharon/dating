@@ -1,5 +1,11 @@
-import { HOLY_GRAIL_DIMENSION_KEYS, type HolyGrailDimensionKey } from '../holy-grail-dimensions';
-import { MatchingDimensionResults, type MatchingDimensionResult } from '../matching-dimension-result';
+import {
+  HOLY_GRAIL_DIMENSION_KEYS,
+  type HolyGrailDimensionKey,
+} from '../holy-grail-dimensions';
+import {
+  MatchingDimensionResults,
+  type MatchingDimensionResult,
+} from '../matching-dimension-result';
 import {
   HolyGrailPairDecisions,
   type HolyGrailPairDecisionV1,
@@ -9,18 +15,26 @@ import {
 type DimensionMap = Record<HolyGrailDimensionKey, MatchingDimensionResult>;
 
 function hasHardBlock(m: DimensionMap): boolean {
-  return HOLY_GRAIL_DIMENSION_KEYS.some((k) => m[k] === MatchingDimensionResults.NO_MATCH);
+  return HOLY_GRAIL_DIMENSION_KEYS.some(
+    (k) => m[k] === MatchingDimensionResults.NO_MATCH,
+  );
 }
 
 /** Direction satisfies hard prefs: every dimension is MATCH or SKIPPED (ignored), no UNKNOWN/NOT_ENFORCEABLE. */
 function directionHardEligible(m: DimensionMap): boolean {
   return HOLY_GRAIL_DIMENSION_KEYS.every((k) => {
     const r = m[k];
-    return r === MatchingDimensionResults.MATCH || r === MatchingDimensionResults.SKIPPED;
+    return (
+      r === MatchingDimensionResults.MATCH ||
+      r === MatchingDimensionResults.SKIPPED
+    );
   });
 }
 
-function decidePair(stc: DimensionMap, cts: DimensionMap): HolyGrailPairDecision {
+function decidePair(
+  stc: DimensionMap,
+  cts: DimensionMap,
+): HolyGrailPairDecision {
   if (hasHardBlock(stc) || hasHardBlock(cts)) {
     return HolyGrailPairDecisions.NO_MATCH;
   }
@@ -43,7 +57,10 @@ export function buildHolyGrailPairDecisionV1(args: {
 }): HolyGrailPairDecisionV1 {
   return {
     decisionVersion: 'holy_grail_pair_decision_v1',
-    decision: decidePair(args.searcherToCounterparty, args.counterpartyToSearcher),
+    decision: decidePair(
+      args.searcherToCounterparty,
+      args.counterpartyToSearcher,
+    ),
     searcherProfileId: args.searcherProfileId,
     counterpartyProfileId: args.counterpartyProfileId,
   };

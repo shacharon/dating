@@ -17,9 +17,13 @@ export interface HgPairSnapshotListBatchStats {
   /** Live HG ran but at least one slice still came from snapshot (partial reuse). */
   readonly snapshotAssistedLiveFallbackHits: number;
   /** Counts by `classifyChildrenUnsureFromSnapshot` reject reason (when reject occurred). */
-  readonly invalidSnapshotChildrenRejectCounts: Readonly<Record<string, number>>;
+  readonly invalidSnapshotChildrenRejectCounts: Readonly<
+    Record<string, number>
+  >;
   /** Counts by `classifyHolyGrailDiagnosticsFromSnapshot` reject reason. */
-  readonly invalidSnapshotDiagnosticsRejectCounts: Readonly<Record<string, number>>;
+  readonly invalidSnapshotDiagnosticsRejectCounts: Readonly<
+    Record<string, number>
+  >;
   /** `snapshotFullPairHits / pairs` (0 if no pairs). */
   readonly snapshotFullPairHitRate: number;
   /** `liveEvalRuns / pairs` — share of pairs that ran live HG fallback. */
@@ -75,12 +79,17 @@ const emptyCumulative = (): MutableCumulative => ({
   detailResolutions: 0,
 });
 
-function bumpReject(map: Record<string, number>, key: string | undefined): void {
+function bumpReject(
+  map: Record<string, number>,
+  key: string | undefined,
+): void {
   if (key === undefined || key === '') return;
   map[key] = (map[key] ?? 0) + 1;
 }
 
-function freezeCountMap(m: Record<string, number>): Readonly<Record<string, number>> {
+function freezeCountMap(
+  m: Record<string, number>,
+): Readonly<Record<string, number>> {
   return Object.freeze({ ...m });
 }
 
@@ -100,14 +109,21 @@ function batchToReadonlyStats(
     liveEvalReturnedNull: b.liveEvalReturnedNull,
     snapshotFullPairHits: b.snapshotFullPairHits,
     snapshotAssistedLiveFallbackHits: b.snapshotAssistedLiveFallbackHits,
-    invalidSnapshotChildrenRejectCounts: freezeCountMap(b.invalidSnapshotChildrenRejectCounts),
-    invalidSnapshotDiagnosticsRejectCounts: freezeCountMap(b.invalidSnapshotDiagnosticsRejectCounts),
+    invalidSnapshotChildrenRejectCounts: freezeCountMap(
+      b.invalidSnapshotChildrenRejectCounts,
+    ),
+    invalidSnapshotDiagnosticsRejectCounts: freezeCountMap(
+      b.invalidSnapshotDiagnosticsRejectCounts,
+    ),
     snapshotFullPairHitRate: rates.snapshotFullPairHitRate,
     liveFallbackRate: rates.liveFallbackRate,
   };
 }
 
-function applyTelemetryToBatch(b: MutableListBatch, t: HgPairResolutionTelemetry): void {
+function applyTelemetryToBatch(
+  b: MutableListBatch,
+  t: HgPairResolutionTelemetry,
+): void {
   b.pairs += 1;
   if (t.childrenSource === 'snapshot') b.childrenSnapshot += 1;
   else if (t.childrenSource === 'live') b.childrenLive += 1;
@@ -119,7 +135,10 @@ function applyTelemetryToBatch(b: MutableListBatch, t: HgPairResolutionTelemetry
   if (t.liveEvalReturnedNull) b.liveEvalReturnedNull += 1;
 
   bumpReject(b.invalidSnapshotChildrenRejectCounts, t.snapshotChildrenReject);
-  bumpReject(b.invalidSnapshotDiagnosticsRejectCounts, t.snapshotDiagnosticsReject);
+  bumpReject(
+    b.invalidSnapshotDiagnosticsRejectCounts,
+    t.snapshotDiagnosticsReject,
+  );
 
   const childrenSnap = t.childrenSource === 'snapshot';
   const diagSnap = t.diagnosticsSource === 'snapshot';
@@ -135,10 +154,12 @@ function applyTelemetryToBatch(b: MutableListBatch, t: HgPairResolutionTelemetry
 export class HolyGrailPairSnapshotTelemetryService {
   private cumulative: MutableCumulative = emptyCumulative();
   private listBatch: MutableListBatch | null = null;
-  private lastListBatch: (HgPairSnapshotListBatchStats & {
-    itemsAfterFilter: number;
-    hideChildrenUnsure: boolean;
-  }) | null = null;
+  private lastListBatch:
+    | (HgPairSnapshotListBatchStats & {
+        itemsAfterFilter: number;
+        hideChildrenUnsure: boolean;
+      })
+    | null = null;
 
   constructor(private readonly logger: SimpleLogger) {}
 
@@ -196,10 +217,13 @@ export class HolyGrailPairSnapshotTelemetryService {
         event: 'hg_pair_snapshot_detail',
         telemetry: t,
         cumulativeRates: {
-          snapshotFullPairHitRate: p > 0 ? this.cumulative.snapshotFullPairHits / p : 0,
+          snapshotFullPairHitRate:
+            p > 0 ? this.cumulative.snapshotFullPairHits / p : 0,
           liveFallbackRate: p > 0 ? this.cumulative.liveEvalRuns / p : 0,
         },
-        cumulativeInvalidChildrenRejectCounts: freezeCountMap(this.cumulative.invalidSnapshotChildrenRejectCounts),
+        cumulativeInvalidChildrenRejectCounts: freezeCountMap(
+          this.cumulative.invalidSnapshotChildrenRejectCounts,
+        ),
         cumulativeInvalidDiagnosticsRejectCounts: freezeCountMap(
           this.cumulative.invalidSnapshotDiagnosticsRejectCounts,
         ),
@@ -211,7 +235,8 @@ export class HolyGrailPairSnapshotTelemetryService {
   getCumulative(): Readonly<HgPairSnapshotCumulativeStats> {
     const p = this.cumulative.pairs;
     const base = batchToReadonlyStats(this.cumulative, {
-      snapshotFullPairHitRate: p > 0 ? this.cumulative.snapshotFullPairHits / p : 0,
+      snapshotFullPairHitRate:
+        p > 0 ? this.cumulative.snapshotFullPairHits / p : 0,
       liveFallbackRate: p > 0 ? this.cumulative.liveEvalRuns / p : 0,
     });
     return {
@@ -222,7 +247,10 @@ export class HolyGrailPairSnapshotTelemetryService {
   }
 
   getLastListBatch(): Readonly<
-    HgPairSnapshotListBatchStats & { itemsAfterFilter: number; hideChildrenUnsure: boolean }
+    HgPairSnapshotListBatchStats & {
+      itemsAfterFilter: number;
+      hideChildrenUnsure: boolean;
+    }
   > | null {
     return this.lastListBatch ? { ...this.lastListBatch } : null;
   }

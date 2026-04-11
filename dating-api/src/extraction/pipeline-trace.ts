@@ -96,10 +96,12 @@ export function buildRawLlmLogFields(
   } catch {
     parsedJsonString = '"[unserializable]"';
   }
-  const parsedJsonStringTruncated = parsedJsonString.length > PIPELINE_TRACE_PARSED_JSON_LOG_MAX;
+  const parsedJsonStringTruncated =
+    parsedJsonString.length > PIPELINE_TRACE_PARSED_JSON_LOG_MAX;
   if (parsedJsonStringTruncated) {
     parsedJsonString =
-      parsedJsonString.slice(0, PIPELINE_TRACE_PARSED_JSON_LOG_MAX) + '…[truncated]';
+      parsedJsonString.slice(0, PIPELINE_TRACE_PARSED_JSON_LOG_MAX) +
+      '…[truncated]';
   }
   const rt = rawText ?? '';
   const rawTextCharLength = rt.length;

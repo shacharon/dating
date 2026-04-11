@@ -24,7 +24,8 @@ export interface CoverageConfidenceState {
 export function computeConfidenceAndInfoFlags(
   coveragePercentValue: number,
 ): CoverageConfidenceState {
-  const scoreCoverageFactorValue = scoreCoverageFactorFormula(coveragePercentValue);
+  const scoreCoverageFactorValue =
+    scoreCoverageFactorFormula(coveragePercentValue);
   const coverageFactorValue = coverageFactorFormula(coveragePercentValue);
   const confidenceValue = coverageFactorValue;
   const infoFlags: MatchInfoFlag[] = [];

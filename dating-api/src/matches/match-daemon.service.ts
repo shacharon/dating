@@ -38,7 +38,9 @@ function recordToIndexItem(record: MatchRecordDto): MatchIndexItemDto {
     })),
     tensionMatrix: record.tensionMatrix,
     updatedAt: record.updatedAt,
-    ...(record.explainability != null && { explainability: record.explainability }),
+    ...(record.explainability != null && {
+      explainability: record.explainability,
+    }),
   };
 }
 
@@ -91,7 +93,9 @@ export class MatchDaemonService {
 
     const items = records
       .map(recordToIndexItem)
-      .sort((a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall));
+      .sort(
+        (a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall),
+      );
 
     const generatedAt = new Date().toISOString();
     const index: MatchIndexDto = {
@@ -118,7 +122,10 @@ export class MatchDaemonService {
    * Returns stats. One bad profile pair does not break the run (try/catch per pair).
    */
   async runOnce(): Promise<RebuildStatsDto> {
-    this.logger.log('Daemon run starting: computing matches from DB profiles', this.context);
+    this.logger.log(
+      'Daemon run starting: computing matches from DB profiles',
+      this.context,
+    );
     const records = await this.matchesService.listAllComputed();
     const snap = await this.matchesService.persistMatchPairHgSnapshots(records);
     this.logger.log(
@@ -141,7 +148,10 @@ export class MatchDaemonService {
       return;
     }
 
-    this.logger.debug('Top score audit (top 10 highest matches):', this.context);
+    this.logger.debug(
+      'Top score audit (top 10 highest matches):',
+      this.context,
+    );
     for (const record of top) {
       const debug = record.debug;
       const line =

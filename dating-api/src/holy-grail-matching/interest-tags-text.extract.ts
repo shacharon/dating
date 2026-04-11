@@ -77,7 +77,10 @@ function pushPhraseEvidence(
   evidence: InterestTagEvidenceHit[],
 ): void {
   for (const { re, label } of phrases) {
-    const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+    const r = new RegExp(
+      re.source,
+      re.flags.includes('g') ? re.flags : `${re.flags}g`,
+    );
     let m: RegExpExecArray | null;
     while ((m = r.exec(lower)) !== null) {
       if (!isNegatedBefore(lower, m.index)) {
@@ -100,7 +103,10 @@ function pushWordEvidence(
   }
 }
 
-const MUSIC_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const MUSIC_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\blive\s+music\b/i, label: 'live music' },
   { re: /\binto\s+music\b/i, label: 'into music' },
 ];
@@ -120,15 +126,26 @@ const MUSIC_WORDS = [
   'vinyl',
 ] as const;
 
-const FILM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\bwatch\s+films\b/i, label: 'watch films' },
-  { re: /\bwatch\s+movies\b/i, label: 'watch movies' },
-  { re: /\blove\s+movies\b/i, label: 'love movies' },
-];
+const FILM_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [
+    { re: /\bwatch\s+films\b/i, label: 'watch films' },
+    { re: /\bwatch\s+movies\b/i, label: 'watch movies' },
+    { re: /\blove\s+movies\b/i, label: 'love movies' },
+  ];
 
-const FILM_WORDS = ['film', 'films', 'movie', 'movies', 'cinema', 'netflix'] as const;
+const FILM_WORDS = [
+  'film',
+  'films',
+  'movie',
+  'movies',
+  'cinema',
+  'netflix',
+] as const;
 
-const BOOKS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const BOOKS_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bbook\s+club\b/i, label: 'book club' },
   { re: /\blove\s+reading\b/i, label: 'love reading' },
   { re: /\bread\s+a\s+lot\b/i, label: 'read a lot' },
@@ -146,7 +163,10 @@ const BOOKS_WORDS = [
   'literature',
 ] as const;
 
-const SPORTS_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const SPORTS_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bteam\s+sports\b/i, label: 'team sports' },
   { re: /\bwatch\s+soccer\b/i, label: 'watch soccer' },
 ];
@@ -169,10 +189,11 @@ const SPORTS_WORDS = [
   'athletics',
 ] as const;
 
-const ART_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\bmodern\s+art\b/i, label: 'modern art' },
-  { re: /\bart\s+museum\b/i, label: 'art museum' },
-];
+const ART_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [
+    { re: /\bmodern\s+art\b/i, label: 'modern art' },
+    { re: /\bart\s+museum\b/i, label: 'art museum' },
+  ];
 
 const ART_WORDS = [
   'gallery',
@@ -188,7 +209,10 @@ const ART_WORDS = [
 /** Anti-collision: skip `art director` (role); bare `art` otherwise. */
 const ART_STANDALONE_RE = /\bart\b(?!\s+director\b)/i;
 
-function pushArtStandaloneEvidence(lower: string, evidence: InterestTagEvidenceHit[]): void {
+function pushArtStandaloneEvidence(
+  lower: string,
+  evidence: InterestTagEvidenceHit[],
+): void {
   const r = new RegExp(ART_STANDALONE_RE.source, 'gi');
   let m: RegExpExecArray | null;
   while ((m = r.exec(lower)) !== null) {
@@ -198,23 +222,42 @@ function pushArtStandaloneEvidence(lower: string, evidence: InterestTagEvidenceH
   }
 }
 
-const GAMING_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
+const GAMING_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [
   { re: /\bvideo\s+games?\b/i, label: 'video games' },
   { re: /\bboard\s+games?\b/i, label: 'board games' },
   { re: /\bpc\s+games?\b/i, label: 'pc games' },
 ];
 
-const GAMING_WORDS = ['gaming', 'gamer', 'playstation', 'xbox', 'nintendo', 'esports'] as const;
+const GAMING_WORDS = [
+  'gaming',
+  'gamer',
+  'playstation',
+  'xbox',
+  'nintendo',
+  'esports',
+] as const;
 
-const FOOD_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\blove\s+cooking\b/i, label: 'love cooking' },
-];
+const FOOD_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [{ re: /\blove\s+cooking\b/i, label: 'love cooking' }];
 
-const FOOD_WORDS = ['cooking', 'recipe', 'recipes', 'foodie', 'brunch', 'chef', 'baking', 'cuisine'] as const;
+const FOOD_WORDS = [
+  'cooking',
+  'recipe',
+  'recipes',
+  'foodie',
+  'brunch',
+  'chef',
+  'baking',
+  'cuisine',
+] as const;
 
-const TRAVEL_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\blove\s+to\s+travel\b/i, label: 'love to travel' },
-];
+const TRAVEL_PHRASES: readonly {
+  readonly re: RegExp;
+  readonly label: string;
+}[] = [{ re: /\blove\s+to\s+travel\b/i, label: 'love to travel' }];
 
 const TRAVEL_WORDS = [
   'travel',
@@ -229,13 +272,27 @@ const TRAVEL_WORDS = [
   'backpacking',
 ] as const;
 
-const PHOTO_WORDS = ['photography', 'photographer', 'photographers', 'camera', 'cameras', 'dslr'] as const;
+const PHOTO_WORDS = [
+  'photography',
+  'photographer',
+  'photographers',
+  'camera',
+  'cameras',
+  'dslr',
+] as const;
 
-const TECH_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] = [
-  { re: /\bopen\s+source\b/i, label: 'open source' },
-];
+const TECH_PHRASES: readonly { readonly re: RegExp; readonly label: string }[] =
+  [{ re: /\bopen\s+source\b/i, label: 'open source' }];
 
-const TECH_WORDS = ['coding', 'programming', 'software', 'tech', 'engineer', 'developer', 'developers'] as const;
+const TECH_WORDS = [
+  'coding',
+  'programming',
+  'software',
+  'tech',
+  'engineer',
+  'developer',
+  'developers',
+] as const;
 
 function scanScope(text: string): InterestTagsScopeExtraction {
   const trimmed = text.trim();
@@ -295,7 +352,8 @@ export function extractInterestTagsV1FromFreeText(input: {
   aboutPartner?: string | null;
 }): InterestTagsTextExtraction {
   const aboutMe = typeof input.aboutMe === 'string' ? input.aboutMe : '';
-  const aboutPartner = typeof input.aboutPartner === 'string' ? input.aboutPartner : '';
+  const aboutPartner =
+    typeof input.aboutPartner === 'string' ? input.aboutPartner : '';
   return {
     self: scanScope(aboutMe),
     partner: scanScope(aboutPartner),

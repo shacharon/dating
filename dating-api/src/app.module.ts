@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { AuthSessionConfigModule } from './config/auth-session-config.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ContradictionModule } from './contradiction/contradiction.module';
@@ -11,10 +13,12 @@ import { HolyGrailMatchingModule } from './holy-grail-matching/holy-grail-matchi
 import { MatchesModule } from './matches/matches.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SessionModule } from './session/session.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    AuthSessionConfigModule,
     PrismaModule,
     SimpleLoggerModule,
     LlmModule,
@@ -24,6 +28,8 @@ import { PrismaModule } from './prisma/prisma.module';
     ProfilesModule,
     MatchesModule,
     HolyGrailMatchingModule,
+    SessionModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

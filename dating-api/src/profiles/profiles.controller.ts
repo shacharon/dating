@@ -97,7 +97,8 @@ export class ProfilesController {
         evaluation,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile';
+      const message =
+        err instanceof Error ? err.message : 'Failed to save profile';
       throw new ServiceUnavailableException(message);
     }
 

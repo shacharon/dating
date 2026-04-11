@@ -12,14 +12,25 @@ export function evaluateHolyGrailPairDirections(
   rowA: ChildrenUnsureProfileRow,
   rowB: ChildrenUnsureProfileRow,
   evaluatedAt: Date = new Date(),
-): { aToB: HolyGrailDirectionalEvaluationResult; bToA: HolyGrailDirectionalEvaluationResult } | null {
+): {
+  aToB: HolyGrailDirectionalEvaluationResult;
+  bToA: HolyGrailDirectionalEvaluationResult;
+} | null {
   try {
     const inputA = buildHolyGrailProfileMappingInputFromRankingAwareDbRow(rowA);
     const inputB = buildHolyGrailProfileMappingInputFromRankingAwareDbRow(rowB);
     const canonA = mapProfileSourceToMatchingCanonical(inputA);
     const canonB = mapProfileSourceToMatchingCanonical(inputB);
-    const aToB = evaluateHolyGrailDirectional({ searcher: canonA, counterparty: canonB, evaluatedAt });
-    const bToA = evaluateHolyGrailDirectional({ searcher: canonB, counterparty: canonA, evaluatedAt });
+    const aToB = evaluateHolyGrailDirectional({
+      searcher: canonA,
+      counterparty: canonB,
+      evaluatedAt,
+    });
+    const bToA = evaluateHolyGrailDirectional({
+      searcher: canonB,
+      counterparty: canonA,
+      evaluatedAt,
+    });
     return { aToB, bToA };
   } catch {
     return null;

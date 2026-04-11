@@ -8,7 +8,10 @@ import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ExtractionV2Result } from '../extraction/extraction-v2.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { projectToCanonicalArrays, projectToCanonicalSignalScalars } from '../canonical/canonical-projection';
+import {
+  projectToCanonicalArrays,
+  projectToCanonicalSignalScalars,
+} from '../canonical/canonical-projection';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { syncProfileHgRankingSignalColumns } from '../holy-grail-matching/holy-grail-ranking-signals-sync';
 
@@ -53,31 +56,45 @@ export class ExtractionV2PersistenceService {
   /**
    * Compute text hash for cache key.
    */
-  hashTexts(aboutMe: string, aboutPartner: string, aboutRelationship: string): string {
+  hashTexts(
+    aboutMe: string,
+    aboutPartner: string,
+    aboutRelationship: string,
+  ): string {
     const concat = `${aboutMe}|${aboutPartner}|${aboutRelationship}`;
-    return createHash('sha256').update(concat, 'utf8').digest('hex').slice(0, 16);
+    return createHash('sha256')
+      .update(concat, 'utf8')
+      .digest('hex')
+      .slice(0, 16);
   }
 
   /**
    * Save V2 extraction result to database.
    */
   async save(input: ExtractionV2PersistInput): Promise<void> {
-    const { profileId, aboutMe, aboutPartner, aboutRelationship, extraction } = input;
+    const { profileId, aboutMe, aboutPartner, aboutRelationship, extraction } =
+      input;
 
     const textHash = this.hashTexts(aboutMe, aboutPartner, aboutRelationship);
 
     // Calculate coverage score (same logic as V1)
     const totalKeys = 14 * 3; // 14 official signals × 3 domains
-    const nonNullCount = 
-      Object.values(extraction.base.self.signals).filter(v => v != null).length +
-      Object.values(extraction.base.partner.signals).filter(v => v != null).length +
-      Object.values(extraction.base.relationship.signals).filter(v => v != null).length;
-    const coverageScore = totalKeys > 0 ? Math.round((100 * nonNullCount) / totalKeys) : 0;
+    const nonNullCount =
+      Object.values(extraction.base.self.signals).filter((v) => v != null)
+        .length +
+      Object.values(extraction.base.partner.signals).filter((v) => v != null)
+        .length +
+      Object.values(extraction.base.relationship.signals).filter(
+        (v) => v != null,
+      ).length;
+    const coverageScore =
+      totalKeys > 0 ? Math.round((100 * nonNullCount) / totalKeys) : 0;
 
-    const avgConfidence = 
+    const avgConfidence =
       (extraction.base.self.confidence +
-       extraction.base.partner.confidence +
-       extraction.base.relationship.confidence) / 3;
+        extraction.base.partner.confidence +
+        extraction.base.relationship.confidence) /
+      3;
 
     // Project to canonical arrays and signal scalars (source of truth for DB writes)
     const canonicalArrays = projectToCanonicalArrays(extraction);
@@ -114,7 +131,8 @@ export class ExtractionV2PersistenceService {
           hard_no: canonicalArrays.hard_no.length,
           relationship_clarity_self: scalars.relationship_clarity_self,
           relationship_clarity_partner: scalars.relationship_clarity_partner,
-          relationship_clarity_relationship: scalars.relationship_clarity_relationship,
+          relationship_clarity_relationship:
+            scalars.relationship_clarity_relationship,
         },
       }),
       ExtractionV2PersistenceService.name,
@@ -140,7 +158,8 @@ export class ExtractionV2PersistenceService {
         hard_no: canonicalArrays.hard_no,
         relationship_clarity_self: scalars.relationship_clarity_self,
         relationship_clarity_partner: scalars.relationship_clarity_partner,
-        relationship_clarity_relationship: scalars.relationship_clarity_relationship,
+        relationship_clarity_relationship:
+          scalars.relationship_clarity_relationship,
       },
       update: {
         promptVersion: PROMPT_VERSION_V2,
@@ -161,7 +180,8 @@ export class ExtractionV2PersistenceService {
         hard_no: canonicalArrays.hard_no,
         relationship_clarity_self: scalars.relationship_clarity_self,
         relationship_clarity_partner: scalars.relationship_clarity_partner,
-        relationship_clarity_relationship: scalars.relationship_clarity_relationship,
+        relationship_clarity_relationship:
+          scalars.relationship_clarity_relationship,
       },
     });
 
@@ -192,7 +212,8 @@ export class ExtractionV2PersistenceService {
     aboutRelationship: string;
     evaluation: EvaluateBatchResult;
   }): Promise<void> {
-    const { profileId, aboutMe, aboutPartner, aboutRelationship, evaluation } = input;
+    const { profileId, aboutMe, aboutPartner, aboutRelationship, evaluation } =
+      input;
     const textHash = this.hashTexts(aboutMe, aboutPartner, aboutRelationship);
     const ext = evaluation.extendedSignals;
 
@@ -205,7 +226,8 @@ export class ExtractionV2PersistenceService {
     const avgConfidence =
       (evaluation.self.confidence +
         evaluation.partner.confidence +
-        evaluation.relationship.confidence) / 3;
+        evaluation.relationship.confidence) /
+      3;
 
     await this.prisma.profileExtractionV2.upsert({
       where: { profileId },

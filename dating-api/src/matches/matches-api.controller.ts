@@ -39,8 +39,16 @@ export interface MatchesApiItemDto {
   /** User-facing recommendation layer (omitted on older records). */
   recommendation?: MatchRecommendationDto;
   derived?: {
-    a: { occupationClass?: string; visibilityNeed?: number; lifeStage?: number };
-    b: { occupationClass?: string; visibilityNeed?: number; lifeStage?: number };
+    a: {
+      occupationClass?: string;
+      visibilityNeed?: number;
+      lifeStage?: number;
+    };
+    b: {
+      occupationClass?: string;
+      visibilityNeed?: number;
+      lifeStage?: number;
+    };
   };
   dealbreakers?: Array<{ code: string; severity: string; evidence: string[] }>;
   balance?: {
@@ -86,13 +94,14 @@ export class MatchesApiController {
       minCovRaw != null && minCovRaw !== '' ? Number(minCovRaw) : undefined;
     const includeDebug = includeDebugRaw === '1' || includeDebugRaw === 'true';
 
-    const { records, holyGrailRowsById } = await this.matchesService.listFullWithHolyGrailRows({
-      policyVersion,
-      minCoveragePercent:
-        minCoveragePercent != null && !Number.isNaN(minCoveragePercent)
-          ? minCoveragePercent
-          : undefined,
-    });
+    const { records, holyGrailRowsById } =
+      await this.matchesService.listFullWithHolyGrailRows({
+        policyVersion,
+        minCoveragePercent:
+          minCoveragePercent != null && !Number.isNaN(minCoveragePercent)
+            ? minCoveragePercent
+            : undefined,
+      });
 
     const hgWireByMatchId =
       await this.matchesService.resolveHolyGrailDiagnosticsWireForMatchRecords(
@@ -155,7 +164,8 @@ export class MatchesApiController {
     const itemsBefore = indexBefore?.items ?? [];
     const avgScoreBefore =
       itemsBefore.length > 0
-        ? itemsBefore.reduce((s, i) => s + (i.finalScore ?? i.overall), 0) / itemsBefore.length
+        ? itemsBefore.reduce((s, i) => s + (i.finalScore ?? i.overall), 0) /
+          itemsBefore.length
         : 0;
 
     this.logger.log(
@@ -170,7 +180,8 @@ export class MatchesApiController {
     const itemsAfter = indexAfter?.items ?? [];
     const avgScoreAfter =
       itemsAfter.length > 0
-        ? itemsAfter.reduce((s, i) => s + (i.finalScore ?? i.overall), 0) / itemsAfter.length
+        ? itemsAfter.reduce((s, i) => s + (i.finalScore ?? i.overall), 0) /
+          itemsAfter.length
         : 0;
 
     this.logger.log(

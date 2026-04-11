@@ -63,7 +63,9 @@ export interface ProfileTexts {
  * Derive context from profile texts. Minimal keyword heuristics for occupationClass, visibilityNeed, lifeStage.
  * Returns defaults when no cues found; does not add extraction keys.
  */
-export function deriveContextFromProfileTexts(texts: ProfileTexts): DerivedContext {
+export function deriveContextFromProfileTexts(
+  texts: ProfileTexts,
+): DerivedContext {
   const combined = [
     texts.aboutMe ?? '',
     texts.aboutPartner ?? '',
@@ -75,21 +77,39 @@ export function deriveContextFromProfileTexts(texts: ProfileTexts): DerivedConte
   let occupationClass: string | undefined;
   if (/\b(?:travel|traveling|flying|road\s*trip|nomad)\b/i.test(combined)) {
     occupationClass = 'TRAVEL_HEAVY';
-  } else if (/\b(?:shift|night\s*shift|rotating|schedule\s*change|unpredictable\s*hours)\b/i.test(combined)) {
+  } else if (
+    /\b(?:shift|night\s*shift|rotating|schedule\s*change|unpredictable\s*hours)\b/i.test(
+      combined,
+    )
+  ) {
     occupationClass = 'SHIFT_UNPREDICTABLE';
   }
 
   let visibilityNeed: number = 5;
-  if (/\b(?:low\s*profile|private|keep\s*to\s*myself|introvert|quiet\s*life)\b/i.test(combined)) {
+  if (
+    /\b(?:low\s*profile|private|keep\s*to\s*myself|introvert|quiet\s*life)\b/i.test(
+      combined,
+    )
+  ) {
     visibilityNeed = 2;
-  } else if (/\b(?:visible|social|outgoing|public\s*figure|networking)\b/i.test(combined)) {
+  } else if (
+    /\b(?:visible|social|outgoing|public\s*figure|networking)\b/i.test(combined)
+  ) {
     visibilityNeed = 8;
   }
 
   let lifeStage: number = 5;
-  if (/\b(?:just\s*started|early\s*20s|young\s*professional|first\s*career)\b/i.test(combined)) {
+  if (
+    /\b(?:just\s*started|early\s*20s|young\s*professional|first\s*career)\b/i.test(
+      combined,
+    )
+  ) {
     lifeStage = 2;
-  } else if (/\b(?:settled|established|40s|50s|empty\s*nest|second\s*chapter)\b/i.test(combined)) {
+  } else if (
+    /\b(?:settled|established|40s|50s|empty\s*nest|second\s*chapter)\b/i.test(
+      combined,
+    )
+  ) {
     lifeStage = 8;
   }
 

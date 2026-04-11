@@ -4,4 +4,5 @@
  * (`hgMutualPass` / `hgOverallStatus` / `hgRankScore` per `tryPickHolyGrailMatchDiagnosticsDto`) are **not** removed.
  * Rows **with** a valid triple are kept only when `hgMutualPass === true`. See `hg-list-admission-gate.ts`.
  */
-export const ENABLE_HG_LIST_ADMISSION_GATE_ENV = 'ENABLE_HG_LIST_ADMISSION_GATE';
+export const ENABLE_HG_LIST_ADMISSION_GATE_ENV =
+  'ENABLE_HG_LIST_ADMISSION_GATE';

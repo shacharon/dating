@@ -5,7 +5,9 @@ import type { HolyGrailProfileMappingInput } from '../profile-sources.types';
  * DB / persistence lives in infrastructure implementations only.
  */
 export interface HolyGrailProfileSourceRepository {
-  getMappingInputByProfileId(profileId: string): Promise<HolyGrailProfileMappingInput | null>;
+  getMappingInputByProfileId(
+    profileId: string,
+  ): Promise<HolyGrailProfileMappingInput | null>;
 
   /**
    * Other profiles ordered for retrieval (stable). Caller excludes searcher separately if needed.
@@ -17,4 +19,6 @@ export interface HolyGrailProfileSourceRepository {
   }): Promise<readonly HolyGrailProfileMappingInput[]>;
 }
 
-export const HOLY_GRAIL_PROFILE_SOURCE_REPOSITORY = Symbol('HOLY_GRAIL_PROFILE_SOURCE_REPOSITORY');
+export const HOLY_GRAIL_PROFILE_SOURCE_REPOSITORY = Symbol(
+  'HOLY_GRAIL_PROFILE_SOURCE_REPOSITORY',
+);
