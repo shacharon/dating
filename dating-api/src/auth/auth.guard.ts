@@ -5,10 +5,10 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { SessionService } from '../session/session.service';
 import { UsersService } from '../users/users.service';
+import { USER_STATUS_ACTIVE } from './auth.constants';
 import { AUTH_ERROR_CODES } from './auth-error-codes';
 import type { AuthenticatedRequest } from './auth-request.types';
 import { readSessionCookieRaw } from './auth-request.util';
@@ -39,7 +39,7 @@ export class AuthGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException();
     }
-    if (user.status !== UserStatus.ACTIVE) {
+    if (user.status !== USER_STATUS_ACTIVE) {
       throw new ForbiddenException({
         statusCode: 403,
         auth_error: AUTH_ERROR_CODES.disabled_user,

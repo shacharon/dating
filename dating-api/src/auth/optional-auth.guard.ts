@@ -1,8 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { SessionService } from '../session/session.service';
 import { UsersService } from '../users/users.service';
+import { USER_STATUS_ACTIVE } from './auth.constants';
 import type { AuthenticatedRequest } from './auth-request.types';
 import { readSessionCookieRaw } from './auth-request.util';
 import { toAuthMeResponseDto } from './auth.dto';
@@ -31,7 +31,7 @@ export class OptionalAuthGuard implements CanActivate {
     }
 
     const user = await this.users.findById(validated.userId);
-    if (!user || user.status !== UserStatus.ACTIVE) {
+    if (!user || user.status !== USER_STATUS_ACTIVE) {
       return true;
     }
 

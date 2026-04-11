@@ -5,7 +5,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { UserStatus, type User } from '@prisma/client';
+import type { User } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { SessionService } from '../session/session.service';
@@ -14,6 +14,7 @@ import type { GoogleIdentity } from '../users/google-identity.types';
 import {
   GOOGLE_OAUTH_STATE_COOKIE_NAME,
   GOOGLE_OAUTH_STATE_MAX_AGE_MS,
+  USER_STATUS_ACTIVE,
 } from './auth.constants';
 import {
   AUTH_ERROR_CODES,
@@ -257,7 +258,7 @@ export class AuthService {
     let user: User;
 
     if (byGoogle) {
-      if (byGoogle.status !== UserStatus.ACTIVE) {
+      if (byGoogle.status !== USER_STATUS_ACTIVE) {
         throw forbiddenAuthError(AUTH_ERROR_CODES.disabled_user);
       }
       const emailOwner = await this.users.findByEmail(profile.email);
@@ -278,7 +279,7 @@ export class AuthService {
         if (emailOwner.googleId !== profile.googleId) {
           throw forbiddenAuthError(AUTH_ERROR_CODES.email_in_use);
         }
-        if (emailOwner.status !== UserStatus.ACTIVE) {
+        if (emailOwner.status !== USER_STATUS_ACTIVE) {
           throw forbiddenAuthError(AUTH_ERROR_CODES.disabled_user);
         }
         try {
@@ -301,7 +302,7 @@ export class AuthService {
       }
     }
 
-    if (user.status !== UserStatus.ACTIVE) {
+    if (user.status !== USER_STATUS_ACTIVE) {
       throw forbiddenAuthError(AUTH_ERROR_CODES.disabled_user);
     }
     return user;

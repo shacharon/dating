@@ -1,9 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import cookieParser from 'cookie-parser';
+import type { RequestHandler } from 'express';
+import cookieParserImport from 'cookie-parser';
 import { AuthSessionConfigService } from './config/auth-session-config.service';
 import { AppModule } from './app.module';
 import { SimpleLogger } from './logger/simple-logger.service';
+
+/** `cookie-parser` is CJS; default import typing under `nodenext` can be `error` — pin to Express `RequestHandler`. */
+type CookieParserFactory = (secret?: string | string[]) => RequestHandler;
+
+const cookieParser: CookieParserFactory =
+  cookieParserImport as CookieParserFactory;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -26,8 +33,14 @@ async function bootstrap() {
   const LOCAL_DEV_ORIGIN =
     /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[1-9]\d{0,4})?$/i;
 
+  /** Cookie session uses credentialed browser fetches from the UI origin → allow credentials by default. */
+  const corsCredentialsRaw = config.get<string>('CORS_CREDENTIALS');
   const corsCredentials =
-    config.get<string>('CORS_CREDENTIALS', 'false').toLowerCase() === 'true';
+    corsCredentialsRaw == null || corsCredentialsRaw.trim() === ''
+      ? true
+      : ['1', 'true', 'yes', 'on'].includes(
+          corsCredentialsRaw.trim().toLowerCase(),
+        );
 
   app.enableCors({
     origin: (
