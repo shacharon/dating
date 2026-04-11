@@ -1,9 +1,13 @@
 /**
  * Dealbreaker rules: which signals are treated as dealbreaker-sensitive when comparing profiles.
  * Uses only existing extraction signal keys; no new keys. No framework decorators.
+ *
+ * Family / kids: see `kids-family-ownership.ts` — legacy scoring here is separate from HG children admission
+ * (`PARTNER_*` dimensions) and from HG-driven list penalties (`children_unsure`).
  */
 
 import type { DerivedContext } from './deriveContext';
+import { RELATIONSHIP_CLARITY_MISMATCH_CODE } from './kids-family-ownership';
 
 /** Signal keys that are considered dealbreaker-sensitive (large gaps may be dealbreakers). */
 export const DEALBREAKER_SIGNAL_KEYS: readonly string[] = [
@@ -67,7 +71,7 @@ export function checkDealbreakers(
 /* ── High-level dealbreaker codes (signals + derived context) ───────────────── */
 
 export type DealbreakerCode =
-  | 'KIDS_TIMELINE_MISMATCH'
+  | typeof RELATIONSHIP_CLARITY_MISMATCH_CODE
   | 'UNPREDICTABILITY_ROUTINE_MISMATCH'
   | 'VISIBILITY_NEED_MISMATCH'
   | 'EMOTIONAL_DEPTH_FLOOR'
@@ -135,8 +139,9 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
   const aLifeStage = a.ctx.lifeStage ?? 5;
   const bLifeStage = b.ctx.lifeStage ?? 5;
 
-  // 1) Kids timeline mismatch proxy (relationshipClarity: high = wants clarity/kids soon, low = unclear/not aligned)
-  // Business logic: Only treat as HARD when one side is clearly "wants kids soon" (9–10) and the other is clearly not (1–3).
+  // 1) Relationship-clarity stress (relationshipClarity only — not HG `PARTNER_WANTS_CHILDREN` / structured kids).
+  // High = stronger clarity / commitment-signal axis in V1 space; low = weaker. See `kids-family-ownership.ts`.
+  // HARD when one side is clearly high (9–10) and the other clearly low (1–3) with a large gap.
   // Moderate gaps get PENALTY; smaller gaps get WARNING so we don't over-suppress scores.
   // Examples (relationshipClarity 0–10): (9 vs 2) → HARD; (8 vs 3) → PENALTY; (7 vs 4) → WARNING; (6 vs 5) → no flag.
   const aClarity = n(a.signals.relationshipClarity, 5);
@@ -146,23 +151,20 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
   const clarityMax = Math.max(aClarity, bClarity);
   const oneHighClarity = aClarity >= 8 || bClarity >= 8;
   if (clarityGap >= 6 && clarityMin <= 3 && clarityMax >= 9) {
-    // HARD: One clearly wants kids/clarity soon (9–10), other clearly does not (1–3). True incompatibility.
     out.push({
-      code: 'KIDS_TIMELINE_MISMATCH',
+      code: RELATIONSHIP_CLARITY_MISMATCH_CODE,
       severity: 'HARD',
       evidence: [`relationshipClarity gap: ${aClarity} vs ${bClarity} (extreme)`],
     });
   } else if (clarityGap >= 5 && oneHighClarity) {
-    // PENALTY: Strong mismatch (e.g. 8 vs 3) but not extreme; weighted deduction instead of cap.
     out.push({
-      code: 'KIDS_TIMELINE_MISMATCH',
+      code: RELATIONSHIP_CLARITY_MISMATCH_CODE,
       severity: 'PENALTY',
       evidence: [`relationshipClarity gap: ${aClarity} vs ${bClarity}`],
     });
   } else if (clarityGap >= 4 && (aClarity >= 7 || bClarity >= 7)) {
-    // WARNING: Mild mismatch; small deduction so score can stay in upper range.
     out.push({
-      code: 'KIDS_TIMELINE_MISMATCH',
+      code: RELATIONSHIP_CLARITY_MISMATCH_CODE,
       severity: 'WARNING',
       evidence: [`relationshipClarity gap: ${aClarity} vs ${bClarity}`],
     });

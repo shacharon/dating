@@ -2,7 +2,7 @@
  * Strict validation + shallow merge for persisted Holy Grail JSON columns.
  * Aligns with `holy-grail-structured-db-json.ts` read path (same `*_JSON_KEYS`, same enums).
  * Patch bodies are `HolyGrailStructuredFactsPersisted` / `HolyGrailStructuredPreferencesPersisted` shapes
- * (plain objects); mapper-only keys are rejected here, not stripped.
+ * (plain objects). Unknown keys are rejected (not stripped). Facts JSON never accepts `HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS`.
  */
 
 import { Prisma } from '@prisma/client';
@@ -144,6 +144,13 @@ function normalizeReligionList(v: unknown): string[] {
   return out;
 }
 
+function requirePositiveFiniteKm(v: unknown, field: string): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
+    throw new HolyGrailStructuredWriteError(`${field} must be a finite number > 0`);
+  }
+  return v;
+}
+
 function normalizePrefValue(key: string, v: unknown): unknown {
   switch (key) {
     case 'acceptedPartnerGenders':
@@ -164,6 +171,8 @@ function normalizePrefValue(key: string, v: unknown): unknown {
       return requireEnum(v, matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance), 'partnerHasChildren');
     case 'acceptedPartnerReligions':
       return normalizeReligionList(v);
+    case 'maxDistanceKm':
+      return requirePositiveFiniteKm(v, 'maxDistanceKm');
     case 'similarityPreference':
       if (v === null) return null;
       return requireEnum(v, SIMILARITY_PREFERENCE_SET, 'similarityPreference');

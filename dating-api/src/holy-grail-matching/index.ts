@@ -16,8 +16,6 @@ export type {
   HolyGrailStructuredFactsPersisted,
   HolyGrailStructuredFactsPersistedKey,
   HolyGrailStructuredPreferencesInput,
-  HolyGrailStructuredPreferencesMapperOnly,
-  HolyGrailStructuredPreferencesMapperOnlyKey,
   HolyGrailStructuredPreferencesPersisted,
   HolyGrailStructuredPreferencesPersistedKey,
 } from './profile-sources.types';
@@ -50,6 +48,14 @@ export {
   type HolyGrailCandidateRankingResult,
   type RankedHolyGrailCandidate,
 } from './holy-grail-candidate-ranking';
+export {
+  computeHolyGrailFiveSignalRank,
+  computeHolyGrailRankingPurityRank,
+  deterministicRankingSpread,
+  type HolyGrailFiveSignalKey,
+  type HolyGrailRankBreakdownKey,
+  type HolyGrailRankSignalBreakdown,
+} from './holy-grail-five-signal-ranking';
 export { HolyGrailMatchingModule } from './holy-grail-matching.module';
 export {
   HolyGrailRetrievalService,

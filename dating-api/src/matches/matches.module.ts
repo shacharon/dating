@@ -8,6 +8,7 @@ import { MatchesController } from './matches.controller';
 import { MatchesScanService } from './matches-scan.service';
 import { MatchesService } from './matches.service';
 import { ChildrenUnsureAnalyticsService } from './children-unsure-analytics.service';
+import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 
 @Module({
   imports: [SimpleLoggerModule, ProfilesModule],
@@ -18,6 +19,7 @@ import { ChildrenUnsureAnalyticsService } from './children-unsure-analytics.serv
     MatchesAnalyticsService,
     MatchesScanService,
     ChildrenUnsureAnalyticsService,
+    HolyGrailPairSnapshotTelemetryService,
   ],
   exports: [MatchesService],
 })

@@ -3,6 +3,10 @@
  * No scoring changes — only field selection and deterministic string assembly.
  */
 
+import {
+  tryPickHolyGrailMatchDiagnosticsDto,
+  type HolyGrailMatchDiagnosticsDto,
+} from './holy-grail-match-diagnostics.wire';
 import type { ChildrenUnsureDirectionsDto, MatchRecordDto } from './match.types';
 import { buildShortReason } from './match-short-reason';
 
@@ -19,7 +23,8 @@ export interface MatchDetailUiDto {
   profileB: { id: string; name: string };
   /**
    * When either side has MUST_WANT children and the other answered UNSURE (SOFT_PASS).
-   * Stored scores unchanged; list uses a small ranking penalty when this applies.
+   * Stored scores unchanged. Production list order is legacy-only (`MATCH_RANKING_CONTRACT === HG_GATE_LEGACY_RANK_V1`);
+   * this flag drives badges and optional `hideChildrenUnsure` filtering only — not sort position.
    */
   children_unsure: MatchDetailChildrenUnsureDto;
   score: number;
@@ -34,6 +39,13 @@ export interface MatchDetailUiDto {
   /** Raw tension label from explainability when present. */
   tensionChip?: string;
   expandedExplainability: string[];
+  /**
+   * Read-only HG diagnostics (full triple only). Omitted when enrichment unavailable or wire-invalid.
+   * Legacy clients ignore; same keys as list `MatchListItemDto`.
+   */
+  readonly hgMutualPass?: boolean;
+  readonly hgOverallStatus?: string;
+  readonly hgRankScore?: number;
 }
 
 function effectiveExplainability(m: MatchRecordDto) {
@@ -85,6 +97,7 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
 export function mapMatchRecordToDetailUi(
   m: MatchRecordDto,
   childrenUnsure: MatchDetailChildrenUnsureDto,
+  holyGrail?: HolyGrailMatchDiagnosticsDto,
 ): MatchDetailUiDto {
   const expl = effectiveExplainability(m);
   const rec = m.recommendation;
@@ -97,15 +110,17 @@ export function mapMatchRecordToDetailUi(
 
   const tension = expl?.tensionChip?.trim();
   const caution =
-    rec?.caution?.trim() ||
-    (tension ? `Watch for ${tension}.` : undefined);
+    rec?.caution?.trim() || (tension ? `Watch for ${tension}.` : undefined);
 
   const suggestedNextAction =
-    rec?.suggestedNextAction?.trim() || 'Start a conversation when it feels right.';
+    rec?.suggestedNextAction?.trim() ||
+    'Start a conversation when it feels right.';
 
   const chips = (expl?.positiveChips ?? []).slice(0, 5);
   const reasonShortRaw = expl?.reasonShort?.trim();
   const tensionChipRaw = expl?.tensionChip?.trim();
+  const hgWire: HolyGrailMatchDiagnosticsDto | undefined =
+    tryPickHolyGrailMatchDiagnosticsDto(holyGrail);
 
   return {
     ok: true,
@@ -125,5 +140,12 @@ export function mapMatchRecordToDetailUi(
     chips,
     ...(tensionChipRaw ? { tensionChip: tensionChipRaw } : {}),
     expandedExplainability: buildExpandedExplainability(m),
+    ...(hgWire
+      ? {
+          hgMutualPass: hgWire.hgMutualPass,
+          hgOverallStatus: hgWire.hgOverallStatus,
+          hgRankScore: hgWire.hgRankScore,
+        }
+      : {}),
   };
 }

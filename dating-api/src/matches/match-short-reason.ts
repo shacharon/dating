@@ -10,7 +10,7 @@ export interface ShortReasonInput {
 
 /** Human-readable label per dealbreaker code for shortReason. */
 const DEALBREAKER_LABELS: Record<string, string> = {
-  KIDS_TIMELINE_MISMATCH: 'timeline mismatch on children',
+  RELATIONSHIP_CLARITY_MISMATCH: 'relationship clarity gap',
   STATUS_GAP_SENSITIVE: 'status gap',
   LIFESTAGE_GAP: 'life stage gap',
   VISIBILITY_NEED_MISMATCH: 'visibility needs',
@@ -19,6 +19,9 @@ const DEALBREAKER_LABELS: Record<string, string> = {
 };
 
 function labelForCode(code: string): string {
+  if (code === 'KIDS_TIMELINE_MISMATCH') {
+    return 'relationship clarity gap';
+  }
   return DEALBREAKER_LABELS[code] ?? code;
 }
 
@@ -43,8 +46,8 @@ export function buildShortReason(input: ShortReasonInput): string {
   // Good fit with one main concern (e.g. kids timeline)
   if (finalScore >= 50 && finalScore < 70 && labels.length === 1) {
     const label = labels[0]!;
-    if (label === 'timeline mismatch on children') {
-      return 'Good fit, but timeline mismatch on children';
+    if (label === 'relationship clarity gap') {
+      return 'Good fit, but relationship clarity gap';
     }
     return `Good fit, but ${label}`;
   }

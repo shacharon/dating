@@ -1,3 +1,7 @@
+/**
+ * Layer-3 Holy Grail hard eligibility (structured prefs vs counterparty facts).
+ * Kids/family admission dimensions and how they differ from legacy V1 dealbreakers: `../domain/kids-family-ownership.ts`.
+ */
 import type { MatchingCanonicalModel, MatchingFacts, MatchingPreferences } from '../canonical/matching-canonical.types';
 import {
   AcceptedPartnerAlcohol,
@@ -268,6 +272,7 @@ function evalAlcohol(
   return d('FAIL', 'ALCOHOL_MATRIX_FAIL');
 }
 
+/** Structured `partnerWantsChildren` × `wantsChildren` fact — sole owner of MUST_WANT×UNSURE SOFT_PASS semantics. */
 function evalPartnerWantsChildren(
   pref: MatchingPreferences,
   facts: MatchingFacts,

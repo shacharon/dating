@@ -34,25 +34,39 @@ describe('holy-grail-structured-db-json / DB row → mapping input', () => {
     });
   });
 
-  it('drops invalid enum strings and invalid DOB', () => {
-    expect(
+  it('throws on invalid facts enum or invalid DOB shape', () => {
+    expect(() =>
       parseHolyGrailStructuredFactsFromJson({
         genderIdentity: 'ALIEN',
         dateOfBirth: 'not-a-date',
       }),
-    ).toBeUndefined();
+    ).toThrow(/invalid genderIdentity/);
   });
 
-  it('parses preferences JSON; omits maxDistanceKm; rejects inconsistent age bounds', () => {
-    expect(
+  it('throws on inconsistent partner age bounds in preferences JSON', () => {
+    expect(() =>
       parseHolyGrailStructuredPreferencesFromJson({
         acceptedPartnerGenders: ['MALE', 'FEMALE'],
         partnerAgeMin: 40,
         partnerAgeMax: 30,
         maxDistanceKm: 50,
       }),
+    ).toThrow(/partnerAgeMin must be <= partnerAgeMax/);
+  });
+
+  it('parses preferences JSON including maxDistanceKm when age bounds are valid', () => {
+    expect(
+      parseHolyGrailStructuredPreferencesFromJson({
+        acceptedPartnerGenders: ['MALE', 'FEMALE'],
+        partnerAgeMin: 30,
+        partnerAgeMax: 40,
+        maxDistanceKm: 50,
+      }),
     ).toEqual({
       acceptedPartnerGenders: [AcceptedPartnerGender.MALE, AcceptedPartnerGender.FEMALE],
+      partnerAgeMin: 30,
+      partnerAgeMax: 40,
+      maxDistanceKm: 50,
     });
   });
 

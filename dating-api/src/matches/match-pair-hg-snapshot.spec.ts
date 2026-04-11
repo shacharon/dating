@@ -9,8 +9,9 @@ import { evaluateHolyGrailDirectional } from '../holy-grail-matching/eligibility
 import { HG_LIST_PRODUCT_POLICY_VERSION } from './children-unsure.product-policy';
 import {
   buildPairHgSnapshotPayload,
-  resolveChildrenUnsureForPair,
-  tryChildrenUnsureFromSnapshotRow,
+  classifyChildrenUnsureFromSnapshot,
+  classifyHolyGrailDiagnosticsFromSnapshot,
+  resolvePairHgFieldsFromSnapshotAndRows,
   upsertMatchPairHgSnapshots,
 } from './match-pair-hg-snapshot';
 import type { MatchRecordDto } from './match.types';
@@ -59,50 +60,100 @@ describe('match_pair_hg_snapshot', () => {
       updatedAt: new Date(),
     } as MatchPairHgSnapshot;
 
-    expect(tryChildrenUnsureFromSnapshotRow(row)).toEqual({
-      profile_a_to_profile_b: true,
-      profile_b_to_profile_a: false,
-    });
+    const ch = classifyChildrenUnsureFromSnapshot(row);
+    expect(ch.ok).toBe(true);
+    if (ch.ok) {
+      expect(ch.dto).toEqual({
+        profile_a_to_profile_b: true,
+        profile_b_to_profile_a: false,
+      });
+    }
+
+    const diag = classifyHolyGrailDiagnosticsFromSnapshot(row);
+    expect(diag.ok).toBe(true);
+    if (diag.ok) {
+      expect(diag.dto.hgOverallStatus).toBe(payload.hgOverallStatus);
+      expect(diag.dto.hgRankScore).toBe(payload.hgSoftPassCount);
+      expect(typeof diag.dto.hgMutualPass).toBe('boolean');
+    }
   });
 
-  it('tryChildrenUnsureFromSnapshotRow returns null for wrong policy version', () => {
+  it('classifyChildrenUnsureFromSnapshot rejects wrong policy version', () => {
     const row = {
       hgPolicyVersion: 'old',
       hgChildrenStatus: 'SOFT_PASS:SKIPPED',
     } as MatchPairHgSnapshot;
-    expect(tryChildrenUnsureFromSnapshotRow(row)).toBeNull();
+    expect(classifyChildrenUnsureFromSnapshot(row).ok).toBe(false);
   });
 
-  it('tryChildrenUnsureFromSnapshotRow returns null for malformed status', () => {
+  it('classifyChildrenUnsureFromSnapshot rejects malformed hgChildrenStatus', () => {
     const row = {
       hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
       hgChildrenStatus: 'nope',
     } as MatchPairHgSnapshot;
-    expect(tryChildrenUnsureFromSnapshotRow(row)).toBeNull();
+    expect(classifyChildrenUnsureFromSnapshot(row).ok).toBe(false);
   });
 
-  it('resolveChildrenUnsureForPair prefers snapshot over live when snapshot parses', () => {
+  it('resolvePairHgFieldsFromSnapshotAndRows children_unsure prefers snapshot when it parses', () => {
     const snap = {
       hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
       hgChildrenStatus: 'PASS:SOFT_PASS',
     } as MatchPairHgSnapshot;
-    const out = resolveChildrenUnsureForPair({
+    const out = resolvePairHgFieldsFromSnapshotAndRows({
       snapshot: snap,
       rowA: undefined,
       rowB: undefined,
-    });
+    }).children_unsure;
     expect(out).toEqual({
       profile_a_to_profile_b: false,
       profile_b_to_profile_a: true,
     });
   });
 
-  it('resolveChildrenUnsureForPair falls back when snapshot absent', () => {
-    const out = resolveChildrenUnsureForPair({
-      snapshot: null,
+  it('classifyHolyGrailDiagnosticsFromSnapshot rejects missing hgSoftPassCount', () => {
+    const row = {
+      hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
+      hgOverallStatus: 'PASS:PASS',
+      hgSoftPassCount: null,
+    } as MatchPairHgSnapshot;
+    expect(classifyHolyGrailDiagnosticsFromSnapshot(row).ok).toBe(false);
+  });
+
+  it('resolvePairHgFieldsFromSnapshotAndRows returns holyGrail from snapshot without profile rows', () => {
+    const snap = {
+      hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
+      hgChildrenStatus: 'PASS:SOFT_PASS',
+      hgOverallStatus: 'PASS:PASS',
+      hgSoftPassCount: 2,
+    } as MatchPairHgSnapshot;
+    const out = resolvePairHgFieldsFromSnapshotAndRows({
+      snapshot: snap,
       rowA: undefined,
       rowB: undefined,
     });
+    expect(out.children_unsure).toEqual({
+      profile_a_to_profile_b: false,
+      profile_b_to_profile_a: true,
+    });
+    expect(out.holyGrail).toEqual({
+      hgMutualPass: true,
+      hgOverallStatus: 'PASS:PASS',
+      hgRankScore: 2,
+    });
+    expect(out.telemetry).toMatchObject({
+      childrenSource: 'snapshot',
+      diagnosticsSource: 'snapshot',
+      liveEvalRan: false,
+      snapshotPolicyCurrent: true,
+    });
+  });
+
+  it('resolvePairHgFieldsFromSnapshotAndRows defaults children_unsure when snapshot absent and no rows', () => {
+    const out = resolvePairHgFieldsFromSnapshotAndRows({
+      snapshot: null,
+      rowA: undefined,
+      rowB: undefined,
+    }).children_unsure;
     expect(out).toEqual({
       profile_a_to_profile_b: false,
       profile_b_to_profile_a: false,

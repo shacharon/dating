@@ -1,7 +1,21 @@
 /**
- * Holy Grail post-eligibility ranking: weighted score from five signals plus optional
- * `similarityPreference` bonus and optional grounded `personalityTraits` / `lifestyleSignals` / `interestTags` overlaps
- * (never hard filters). Deterministic, explainable, no LLM.
+ * Holy Grail post-eligibility ranking.
+ *
+ * ## HG ranking purity contract (production ordering)
+ * **DB purity** means the **sort score** uses only `MatchingCanonicalModel.rankingSignals`
+ * (`MatchingRankingSignalsSnapshot`: dailyRhythm, autonomyTogetherness, conflictStyle, lifestylePace, interestsTop)
+ * — the fields populated from persisted profile HG sidecar columns — plus **intrinsic mechanics** of that layer:
+ * empty-signal hash spread and numeric tie micro. We do **not** require persisting the final float; reproducibility is
+ * `(pair ids, five-signal columns, fixed formula)`.
+ *
+ * **Not** in the purity path: `similarityPreference` adjustment, and personality / lifestyle / interest-tag **rank**
+ * overlays (derived from structured text on the canonical model, not the five-signal DB slice). Use
+ * `computeHolyGrailFiveSignalRank` for analysis, scripts, and tests that need the full composite score.
+ *
+ * **Production-freeze (V2 enrichment, locked):** personality / lifestyle / interest tag taxonomies (v2 additive) are
+ * **secondary overlays only** — **no** eligibility, **no** promotion into the five `WEIGHTS` primary signals, **no**
+ * cap raises without doc + contract revision. Five-signal DB layer stays the main rank driver (`WEIGHTS`). See
+ * `docs/HOLY_GRAIL_MATCHING.md` § “Production-freeze — V2 enrichment families”.
  */
 
 import type {
@@ -33,15 +47,19 @@ const EMPTY_SPREAD_MAX = 2.5;
 const SIMILARITY_RANK_BONUS_MAX = 2.5;
 
 /**
- * Additive rank bonus from pairwise canonical personality-trait overlap (same order as similarity bonus).
- * Not a hard filter.
+ * **LOCKED 2** — secondary overlay cap; not a primary `WEIGHTS` signal; no eligibility. Contract change + batch proof
+ * to raise.
  */
 const PERSONALITY_RANK_BONUS_MAX = 2;
 
-/** Additive rank bonus from grounded lifestyle-signal overlap (canonical tags on `rankingSignals` only). */
+/**
+ * **LOCKED 2** — secondary overlay cap; not a primary `WEIGHTS` signal; no eligibility. Same lock as personality.
+ */
 const LIFESTYLE_RANK_BONUS_MAX = 2;
 
-/** Additive rank bonus from grounded v1 interest-tag overlap (`music` \| `film` on `rankingSignals` only). */
+/**
+ * **LOCKED 2** — secondary overlay cap; not a primary `WEIGHTS` signal; no eligibility. v1+v2 `INTEREST_TAG_SET`.
+ */
 const INTEREST_TAGS_RANK_BONUS_MAX = 2;
 
 /** One-sided label: fraction of weight when exactly one side has a label. */
@@ -451,10 +469,13 @@ function similarityPreferenceRankNote(pref: SimilarityPreference, o: number, del
  *
  * **rankScore** = rounded to 6 decimals when tie micro applies, else 4 decimals at 100.
  */
-export function computeHolyGrailFiveSignalRank(args: {
-  readonly searcher: MatchingCanonicalModel;
-  readonly candidate: MatchingCanonicalModel;
-}): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
+function computeHolyGrailFiveSignalRankInternal(
+  args: {
+    readonly searcher: MatchingCanonicalModel;
+    readonly candidate: MatchingCanonicalModel;
+  },
+  includeNonDbRankingOverlays: boolean,
+): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
   const s = snapshotOf(args.searcher);
   const c = snapshotOf(args.candidate);
 
@@ -499,54 +520,58 @@ export function computeHolyGrailFiveSignalRank(args: {
     rankScore = spread;
   } else {
     rankScore = primaryFive;
-    const eff = mergeEffectiveMatchingPreferences(args.searcher);
-    const sp = eff.similarityPreference;
-    if (sp === 'similar' || sp === 'different' || sp === 'balanced') {
-      const oMean = meanPairwiseOverlap01(s, c);
-      if (oMean !== null) {
-        const delta = similarityPreferenceDelta(sp, oMean);
-        breakdown.push({
-          signal: 'similarityPreference',
-          weight: 0,
-          points: delta,
-          note: similarityPreferenceRankNote(sp, oMean, delta),
-        });
-        rankScore = Math.max(0, primaryFive + delta);
+    if (includeNonDbRankingOverlays) {
+      const eff = mergeEffectiveMatchingPreferences(args.searcher);
+      const sp = eff.similarityPreference;
+      if (sp === 'similar' || sp === 'different' || sp === 'balanced') {
+        const oMean = meanPairwiseOverlap01(s, c);
+        if (oMean !== null) {
+          const delta = similarityPreferenceDelta(sp, oMean);
+          breakdown.push({
+            signal: 'similarityPreference',
+            weight: 0,
+            points: delta,
+            note: similarityPreferenceRankNote(sp, oMean, delta),
+          });
+          rankScore = Math.max(0, primaryFive + delta);
+        }
       }
     }
   }
 
-  const pBonus = computePersonalityTraitRankBonus(s, c);
-  if (pBonus !== null && pBonus.points > 0) {
-    breakdown.push({
-      signal: 'personalityTraits',
-      weight: 0,
-      points: pBonus.points,
-      note: pBonus.note,
-    });
-    rankScore = Math.max(0, rankScore + pBonus.points);
-  }
+  if (includeNonDbRankingOverlays) {
+    const pBonus = computePersonalityTraitRankBonus(s, c);
+    if (pBonus !== null && pBonus.points > 0) {
+      breakdown.push({
+        signal: 'personalityTraits',
+        weight: 0,
+        points: pBonus.points,
+        note: pBonus.note,
+      });
+      rankScore = Math.max(0, rankScore + pBonus.points);
+    }
 
-  const lsBonus = computeLifestyleSignalsRankBonus(s, c);
-  if (lsBonus !== null && lsBonus.points > 0) {
-    breakdown.push({
-      signal: 'lifestyleSignals',
-      weight: 0,
-      points: lsBonus.points,
-      note: lsBonus.note,
-    });
-    rankScore = Math.max(0, rankScore + lsBonus.points);
-  }
+    const lsBonus = computeLifestyleSignalsRankBonus(s, c);
+    if (lsBonus !== null && lsBonus.points > 0) {
+      breakdown.push({
+        signal: 'lifestyleSignals',
+        weight: 0,
+        points: lsBonus.points,
+        note: lsBonus.note,
+      });
+      rankScore = Math.max(0, rankScore + lsBonus.points);
+    }
 
-  const itBonus = computeInterestTagsRankBonus(s, c);
-  if (itBonus !== null && itBonus.points > 0) {
-    breakdown.push({
-      signal: 'interestTags',
-      weight: 0,
-      points: itBonus.points,
-      note: itBonus.note,
-    });
-    rankScore = Math.max(0, rankScore + itBonus.points);
+    const itBonus = computeInterestTagsRankBonus(s, c);
+    if (itBonus !== null && itBonus.points > 0) {
+      breakdown.push({
+        signal: 'interestTags',
+        weight: 0,
+        points: itBonus.points,
+        note: itBonus.note,
+      });
+      rankScore = Math.max(0, rankScore + itBonus.points);
+    }
   }
 
   /**
@@ -565,4 +590,26 @@ export function computeHolyGrailFiveSignalRank(args: {
   ];
 
   return { rankScore, rankReasons, rankBreakdown: breakdown };
+}
+
+/**
+ * Production HG rank: five persisted ranking signals + deterministic spread/tie micro only
+ * (see module docblock — HG ranking purity contract).
+ */
+export function computeHolyGrailRankingPurityRank(args: {
+  readonly searcher: MatchingCanonicalModel;
+  readonly candidate: MatchingCanonicalModel;
+}): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
+  return computeHolyGrailFiveSignalRankInternal(args, false);
+}
+
+/**
+ * Full composite rank: purity score plus optional `similarityPreference` and tag-overlap bonuses.
+ * Use for offline analysis, validation scripts, and unit tests of overlay math — not for `rankHolyGrailCandidatesAfterHardFilter`.
+ */
+export function computeHolyGrailFiveSignalRank(args: {
+  readonly searcher: MatchingCanonicalModel;
+  readonly candidate: MatchingCanonicalModel;
+}): { rankScore: number; rankReasons: string[]; rankBreakdown: HolyGrailRankSignalBreakdown[] } {
+  return computeHolyGrailFiveSignalRankInternal(args, true);
 }

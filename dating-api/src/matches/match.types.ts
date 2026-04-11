@@ -2,6 +2,8 @@
 
 import type { CompareResultDto, MatchDebugDto } from './match-engine';
 
+export type { HolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
+
 /** Holy Grail children soft-pass flags (both directions on the stored pair a|b). */
 export interface ChildrenUnsureDirectionsDto {
   readonly profile_a_to_profile_b: boolean;
@@ -78,8 +80,18 @@ export interface MatchListItemDto {
   children_unsure?: ChildrenUnsureDirectionsDto;
   /** Engine score (unchanged). Same as finalScore when not enriched. */
   engineFinalScore?: number;
-  /** Score used for ordering / display after optional children_unsure penalty. */
+  /**
+   * Sort/display key for list surfaces; under `MATCH_RANKING_CONTRACT === HG_GATE_LEGACY_RANK_V1` this always
+   * equals `engineFinalScore` (legacy only — no HG penalty). See `match-ranking-contract.ts`.
+   */
   rankingScore?: number;
+  /**
+   * Read-only HG diagnostics: all three omitted unless `tryPickHolyGrailMatchDiagnosticsDto` accepts the triple.
+   * Does not affect ordering or legacy scores.
+   */
+  readonly hgMutualPass?: boolean;
+  readonly hgOverallStatus?: string;
+  readonly hgRankScore?: number;
 }
 
 /** In-memory index entry (auto-generated on rebuild). */

@@ -1,25 +1,7 @@
-import {
-  anyChildrenUnsure,
-  applyChildrenUnsurePenalty,
-  getDisplayScore,
-} from './children-unsure.helpers';
-import { CHILDREN_UNSURE_RANKING_PENALTY_RATE } from './children-unsure.product-policy';
+import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
 import { parseHideChildrenUnsure } from './children-unsure.query';
 
 describe('children_unsure hardening', () => {
-  describe('applyChildrenUnsurePenalty', () => {
-    it('rounds engine score when no penalty', () => {
-      expect(applyChildrenUnsurePenalty(77.4, false)).toBe(77);
-      expect(applyChildrenUnsurePenalty(80, false)).toBe(80);
-    });
-
-    it('applies configured multiplicative penalty when flag true', () => {
-      const rate = CHILDREN_UNSURE_RANKING_PENALTY_RATE;
-      expect(applyChildrenUnsurePenalty(100, true)).toBe(Math.round(100 * (1 - rate)));
-      expect(applyChildrenUnsurePenalty(80, true)).toBe(Math.round(80 * (1 - rate)));
-    });
-  });
-
   describe('anyChildrenUnsure', () => {
     it('is false when absent or both false', () => {
       expect(anyChildrenUnsure(undefined)).toBe(false);

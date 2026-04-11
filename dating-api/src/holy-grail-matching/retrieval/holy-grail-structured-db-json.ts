@@ -1,8 +1,9 @@
 /**
  * Deterministic parse of persisted JSON blobs → `HolyGrailProfileMappingInput` slices.
- * Invalid or unknown keys/values are omitted (sparse). No defaults.
- * Mapper-only keys (see `holy-grail-structured-contract.ts` `*_MAPPER_ONLY_KEYS`) are **never** read here;
- * if they appear in legacy JSON they are ignored (writes still reject them).
+ * Same key allow-lists and value rules as `holy-grail-structured-write.merge.ts` (unknown keys → error;
+ * invalid values for present keys → error). `null` / missing column → no slice (`undefined`). Empty `{}` → `undefined`.
+ * Mapper-only **facts** keys (see `HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS`) are not stored in facts JSON and
+ * must not appear there (same as merge rejects them on write).
  *
  * **Canonical DB → matching path:** `buildHolyGrailProfileMappingInputFromDbRow` (this module) →
  * `mapProfileSourceToMatchingCanonical`. Do not add a second parser for `holyGrailStructured*` columns.
@@ -45,10 +46,12 @@ import {
   pickMatchingCanonicalEnumMember,
 } from '../holy-grail-canonical-enum';
 import {
+  assertHolyGrailStructuredMapPartnerAgeInteger,
   HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS,
+  HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET,
   HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
-  pickHolyGrailDateOfBirthDbJson,
-  tryParseHolyGrailPartnerAgeInteger,
+  HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET,
+  isHolyGrailDobYmdString,
 } from '../holy-grail-structured-contract';
 
 /** Compile-time guard: extend parser when `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` grows. */
@@ -77,6 +80,7 @@ const _holyGrailDbJsonPrefsCoverage: Record<
   partnerWantsChildren: true,
   partnerHasChildren: true,
   acceptedPartnerReligions: true,
+  maxDistanceKm: true,
   similarityPreference: true,
 };
 
@@ -90,16 +94,6 @@ function asPlainObject(v: unknown): Record<string, unknown> | null {
   return v as Record<string, unknown>;
 }
 
-function pickStringArray(v: unknown): string[] | undefined {
-  if (!Array.isArray(v) || v.length === 0) return undefined;
-  const out: string[] = [];
-  for (const x of v) {
-    if (typeof x !== 'string') return undefined;
-    out.push(x);
-  }
-  return out;
-}
-
 /**
  * Parses `UserProfile.holyGrailStructuredFacts` JSON.
  * Supported keys: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS`.
@@ -107,59 +101,150 @@ function pickStringArray(v: unknown): string[] | undefined {
 export function parseHolyGrailStructuredFactsFromJson(
   raw: unknown,
 ): HolyGrailStructuredFactsPersisted | undefined {
+  if (raw === null || raw === undefined) return undefined;
   const o = asPlainObject(raw);
-  if (!o) return undefined;
+  if (!o) {
+    throw new Error('HolyGrail structured facts JSON: expected a plain object');
+  }
+  if (Object.keys(o).length === 0) return undefined;
 
-  const genderIdentity = pickMatchingCanonicalEnumMember<GenderIdentity>(
-    o.genderIdentity,
-    matchingCanonicalEnumMemberSet(GenderIdentity),
-  );
-  const dateOfBirth = pickHolyGrailDateOfBirthDbJson(o.dateOfBirth);
-  const childrenStatus = pickMatchingCanonicalEnumMember(o.childrenStatus, matchingCanonicalEnumMemberSet(ChildrenStatusSelf)) as
-    | ChildrenStatusSelf
-    | undefined;
-  const wantsChildren = pickMatchingCanonicalEnumMember(o.wantsChildren, matchingCanonicalEnumMemberSet(WantsChildrenSelf)) as
-    | WantsChildrenSelf
-    | undefined;
-  const smoking = pickMatchingCanonicalEnumMember(o.smoking, matchingCanonicalEnumMemberSet(SmokingFrequencySelf)) as SmokingFrequencySelf | undefined;
-  const alcoholUse = pickMatchingCanonicalEnumMember(o.alcoholUse, matchingCanonicalEnumMemberSet(AlcoholUseSelf)) as AlcoholUseSelf | undefined;
-  const education = pickMatchingCanonicalEnumMember(o.education, matchingCanonicalEnumMemberSet(EducationLevelSelf)) as EducationLevelSelf | undefined;
-  const religion = pickMatchingCanonicalEnumMember(o.religion, matchingCanonicalEnumMemberSet(ReligionSelf)) as ReligionSelf | undefined;
+  for (const k of Object.keys(o)) {
+    if (!HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET.has(k)) {
+      throw new Error(`HolyGrail structured facts JSON: unknown key ${JSON.stringify(k)}`);
+    }
+  }
 
-  const merged = {
-    ...(genderIdentity !== undefined ? { genderIdentity } : {}),
-    ...(dateOfBirth !== undefined ? { dateOfBirth } : {}),
-    ...(childrenStatus !== undefined ? { childrenStatus } : {}),
-    ...(wantsChildren !== undefined ? { wantsChildren } : {}),
-    ...(smoking !== undefined ? { smoking } : {}),
-    ...(alcoholUse !== undefined ? { alcoholUse } : {}),
-    ...(education !== undefined ? { education } : {}),
-    ...(religion !== undefined ? { religion } : {}),
-  } as HolyGrailStructuredFactsPersisted;
+  const merged: HolyGrailStructuredFactsPersisted = {};
+
+  if (Object.prototype.hasOwnProperty.call(o, 'genderIdentity')) {
+    const genderIdentity = pickMatchingCanonicalEnumMember<GenderIdentity>(
+      o.genderIdentity,
+      matchingCanonicalEnumMemberSet(GenderIdentity),
+    );
+    if (genderIdentity === undefined) {
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid genderIdentity ${JSON.stringify(o.genderIdentity)}`,
+      );
+    }
+    merged.genderIdentity = genderIdentity;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'dateOfBirth')) {
+    if (typeof o.dateOfBirth !== 'string' || !isHolyGrailDobYmdString(o.dateOfBirth)) {
+      throw new Error(`HolyGrail structured facts JSON: invalid dateOfBirth ${JSON.stringify(o.dateOfBirth)}`);
+    }
+    merged.dateOfBirth = o.dateOfBirth;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'childrenStatus')) {
+    const childrenStatus = pickMatchingCanonicalEnumMember(
+      o.childrenStatus,
+      matchingCanonicalEnumMemberSet(ChildrenStatusSelf),
+    ) as ChildrenStatusSelf | undefined;
+    if (childrenStatus === undefined) {
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid childrenStatus ${JSON.stringify(o.childrenStatus)}`,
+      );
+    }
+    merged.childrenStatus = childrenStatus;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'wantsChildren')) {
+    const wantsChildren = pickMatchingCanonicalEnumMember(
+      o.wantsChildren,
+      matchingCanonicalEnumMemberSet(WantsChildrenSelf),
+    ) as WantsChildrenSelf | undefined;
+    if (wantsChildren === undefined) {
+      throw new Error(
+        `HolyGrail structured facts JSON: invalid wantsChildren ${JSON.stringify(o.wantsChildren)}`,
+      );
+    }
+    merged.wantsChildren = wantsChildren;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'smoking')) {
+    const smoking = pickMatchingCanonicalEnumMember(
+      o.smoking,
+      matchingCanonicalEnumMemberSet(SmokingFrequencySelf),
+    ) as SmokingFrequencySelf | undefined;
+    if (smoking === undefined) {
+      throw new Error(`HolyGrail structured facts JSON: invalid smoking ${JSON.stringify(o.smoking)}`);
+    }
+    merged.smoking = smoking;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'alcoholUse')) {
+    const alcoholUse = pickMatchingCanonicalEnumMember(
+      o.alcoholUse,
+      matchingCanonicalEnumMemberSet(AlcoholUseSelf),
+    ) as AlcoholUseSelf | undefined;
+    if (alcoholUse === undefined) {
+      throw new Error(`HolyGrail structured facts JSON: invalid alcoholUse ${JSON.stringify(o.alcoholUse)}`);
+    }
+    merged.alcoholUse = alcoholUse;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'education')) {
+    const education = pickMatchingCanonicalEnumMember(
+      o.education,
+      matchingCanonicalEnumMemberSet(EducationLevelSelf),
+    ) as EducationLevelSelf | undefined;
+    if (education === undefined) {
+      throw new Error(`HolyGrail structured facts JSON: invalid education ${JSON.stringify(o.education)}`);
+    }
+    merged.education = education;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(o, 'religion')) {
+    const religion = pickMatchingCanonicalEnumMember(
+      o.religion,
+      matchingCanonicalEnumMemberSet(ReligionSelf),
+    ) as ReligionSelf | undefined;
+    if (religion === undefined) {
+      throw new Error(`HolyGrail structured facts JSON: invalid religion ${JSON.stringify(o.religion)}`);
+    }
+    merged.religion = religion;
+  }
 
   return Object.keys(merged).length === 0 ? undefined : merged;
 }
 
-function parseAcceptedPartnerGendersJson(v: unknown): AcceptedPartnerGender[] | undefined {
-  const arr = pickStringArray(v);
-  if (!arr) return undefined;
+function parseAcceptedPartnerGendersDbJson(v: unknown): AcceptedPartnerGender[] {
+  if (!Array.isArray(v) || v.length === 0) {
+    throw new Error(
+      'HolyGrail structured preferences JSON: acceptedPartnerGenders must be a non-empty array when set',
+    );
+  }
   const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerGender);
   const out: AcceptedPartnerGender[] = [];
-  for (const s of arr) {
-    if (!allowed.has(s)) return undefined;
+  for (let i = 0; i < v.length; i++) {
+    const s = v[i];
+    if (typeof s !== 'string' || !allowed.has(s)) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid acceptedPartnerGenders[${i}]: ${JSON.stringify(s)}`,
+      );
+    }
     out.push(s as AcceptedPartnerGender);
   }
-  return out.length === 0 ? undefined : out;
+  return out;
 }
 
-function parseReligionListJson(v: unknown): ReligionSelf[] | undefined {
-  const arr = pickStringArray(v);
-  if (!arr) return undefined;
+/** When key is present: empty array → undefined (sparse); invalid member → throw. */
+function parseAcceptedPartnerReligionsDbJson(v: unknown): ReligionSelf[] | undefined {
+  if (!Array.isArray(v)) {
+    throw new Error('HolyGrail structured preferences JSON: acceptedPartnerReligions must be an array when set');
+  }
+  if (v.length === 0) return undefined;
   const allowed = matchingCanonicalEnumMemberSet(ReligionSelf);
   const out: ReligionSelf[] = [];
   const seen = new Set<string>();
-  for (const s of arr) {
-    if (!allowed.has(s)) return undefined;
+  for (let i = 0; i < v.length; i++) {
+    const s = v[i];
+    if (typeof s !== 'string' || !allowed.has(s)) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid acceptedPartnerReligions[${i}]: ${JSON.stringify(s)}`,
+      );
+    }
     if (seen.has(s)) continue;
     seen.add(s);
     out.push(s as ReligionSelf);
@@ -167,39 +252,134 @@ function parseReligionListJson(v: unknown): ReligionSelf[] | undefined {
   return out.length === 0 ? undefined : out;
 }
 
+function parseMaxDistanceKmDbJson(v: unknown): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
+    throw new Error(`HolyGrail structured preferences JSON: invalid maxDistanceKm ${JSON.stringify(v)}`);
+  }
+  return v;
+}
+
 /**
  * Parses `UserProfile.holyGrailStructuredPreferences` JSON.
- * Supported keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` (excludes mapper-only `maxDistanceKm`).
+ * Supported keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`.
  */
 export function parseHolyGrailStructuredPreferencesFromJson(
   raw: unknown,
 ): HolyGrailStructuredPreferencesPersisted | undefined {
+  if (raw === null || raw === undefined) return undefined;
   const o = asPlainObject(raw);
-  if (!o) return undefined;
-
-  const genders = parseAcceptedPartnerGendersJson(o.acceptedPartnerGenders);
-  let partnerAgeMin = tryParseHolyGrailPartnerAgeInteger(o.partnerAgeMin);
-  let partnerAgeMax = tryParseHolyGrailPartnerAgeInteger(o.partnerAgeMax);
-  if (partnerAgeMin !== undefined && partnerAgeMax !== undefined && partnerAgeMin > partnerAgeMax) {
-    partnerAgeMin = undefined;
-    partnerAgeMax = undefined;
+  if (!o) {
+    throw new Error('HolyGrail structured preferences JSON: expected a plain object');
   }
-  const minimumPartnerEducation = pickMatchingCanonicalEnumMember(o.minimumPartnerEducation, matchingCanonicalEnumMemberSet(MinimumPartnerEducation)) as
-    | MinimumPartnerEducation
-    | undefined;
-  const acceptedPartnerSmoking = pickMatchingCanonicalEnumMember(o.acceptedPartnerSmoking, matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking)) as
-    | AcceptedPartnerSmoking
-    | undefined;
-  const acceptedPartnerAlcohol = pickMatchingCanonicalEnumMember(o.acceptedPartnerAlcohol, matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol)) as
-    | AcceptedPartnerAlcohol
-    | undefined;
-  const partnerWantsChildren = pickMatchingCanonicalEnumMember(o.partnerWantsChildren, matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement)) as
-    | PartnerWantsChildrenRequirement
-    | undefined;
-  const partnerHasChildren = pickMatchingCanonicalEnumMember(o.partnerHasChildren, matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance)) as
-    | PartnerHasChildrenAcceptance
-    | undefined;
-  const acceptedPartnerReligions = parseReligionListJson(o.acceptedPartnerReligions);
+  if (Object.keys(o).length === 0) return undefined;
+
+  for (const k of Object.keys(o)) {
+    if (!HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET.has(k)) {
+      throw new Error(`HolyGrail structured preferences JSON: unknown key ${JSON.stringify(k)}`);
+    }
+  }
+
+  let partnerAgeMin: number | undefined;
+  let partnerAgeMax: number | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'partnerAgeMin')) {
+    partnerAgeMin = assertHolyGrailStructuredMapPartnerAgeInteger(
+      o.partnerAgeMin,
+      'holyGrailStructuredPreferences.partnerAgeMin',
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(o, 'partnerAgeMax')) {
+    partnerAgeMax = assertHolyGrailStructuredMapPartnerAgeInteger(
+      o.partnerAgeMax,
+      'holyGrailStructuredPreferences.partnerAgeMax',
+    );
+  }
+  if (
+    partnerAgeMin !== undefined &&
+    partnerAgeMax !== undefined &&
+    partnerAgeMin > partnerAgeMax
+  ) {
+    throw new Error('HolyGrail structured preferences JSON: partnerAgeMin must be <= partnerAgeMax');
+  }
+
+  let acceptedPartnerGenders: AcceptedPartnerGender[] | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerGenders')) {
+    acceptedPartnerGenders = parseAcceptedPartnerGendersDbJson(o.acceptedPartnerGenders);
+  }
+
+  let minimumPartnerEducation: MinimumPartnerEducation | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'minimumPartnerEducation')) {
+    minimumPartnerEducation = pickMatchingCanonicalEnumMember(
+      o.minimumPartnerEducation,
+      matchingCanonicalEnumMemberSet(MinimumPartnerEducation),
+    ) as MinimumPartnerEducation | undefined;
+    if (minimumPartnerEducation === undefined) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid minimumPartnerEducation ${JSON.stringify(o.minimumPartnerEducation)}`,
+      );
+    }
+  }
+
+  let acceptedPartnerSmoking: AcceptedPartnerSmoking | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerSmoking')) {
+    acceptedPartnerSmoking = pickMatchingCanonicalEnumMember(
+      o.acceptedPartnerSmoking,
+      matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking),
+    ) as AcceptedPartnerSmoking | undefined;
+    if (acceptedPartnerSmoking === undefined) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid acceptedPartnerSmoking ${JSON.stringify(o.acceptedPartnerSmoking)}`,
+      );
+    }
+  }
+
+  let acceptedPartnerAlcohol: AcceptedPartnerAlcohol | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerAlcohol')) {
+    acceptedPartnerAlcohol = pickMatchingCanonicalEnumMember(
+      o.acceptedPartnerAlcohol,
+      matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol),
+    ) as AcceptedPartnerAlcohol | undefined;
+    if (acceptedPartnerAlcohol === undefined) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid acceptedPartnerAlcohol ${JSON.stringify(o.acceptedPartnerAlcohol)}`,
+      );
+    }
+  }
+
+  let partnerWantsChildren: PartnerWantsChildrenRequirement | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'partnerWantsChildren')) {
+    partnerWantsChildren = pickMatchingCanonicalEnumMember(
+      o.partnerWantsChildren,
+      matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement),
+    ) as PartnerWantsChildrenRequirement | undefined;
+    if (partnerWantsChildren === undefined) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid partnerWantsChildren ${JSON.stringify(o.partnerWantsChildren)}`,
+      );
+    }
+  }
+
+  let partnerHasChildren: PartnerHasChildrenAcceptance | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'partnerHasChildren')) {
+    partnerHasChildren = pickMatchingCanonicalEnumMember(
+      o.partnerHasChildren,
+      matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance),
+    ) as PartnerHasChildrenAcceptance | undefined;
+    if (partnerHasChildren === undefined) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid partnerHasChildren ${JSON.stringify(o.partnerHasChildren)}`,
+      );
+    }
+  }
+
+  let acceptedPartnerReligions: ReligionSelf[] | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerReligions')) {
+    acceptedPartnerReligions = parseAcceptedPartnerReligionsDbJson(o.acceptedPartnerReligions);
+  }
+
+  let maxDistanceKm: number | undefined;
+  if (Object.prototype.hasOwnProperty.call(o, 'maxDistanceKm')) {
+    maxDistanceKm = parseMaxDistanceKmDbJson(o.maxDistanceKm);
+  }
 
   let similarityPreference: SimilarityPreference | null | undefined;
   if (Object.prototype.hasOwnProperty.call(o, 'similarityPreference')) {
@@ -207,15 +387,18 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     if (sp === null) {
       similarityPreference = null;
     } else {
-      similarityPreference = pickMatchingCanonicalEnumMember<SimilarityPreference>(
-        sp,
-        SIMILARITY_PREFERENCE_PARSE_SET,
-      );
+      const picked = pickMatchingCanonicalEnumMember<SimilarityPreference>(sp, SIMILARITY_PREFERENCE_PARSE_SET);
+      if (picked === undefined) {
+        throw new Error(
+          `HolyGrail structured preferences JSON: invalid similarityPreference ${JSON.stringify(sp)}`,
+        );
+      }
+      similarityPreference = picked;
     }
   }
 
   const merged = {
-    ...(genders !== undefined ? { acceptedPartnerGenders: genders } : {}),
+    ...(acceptedPartnerGenders !== undefined ? { acceptedPartnerGenders } : {}),
     ...(partnerAgeMin !== undefined ? { partnerAgeMin } : {}),
     ...(partnerAgeMax !== undefined ? { partnerAgeMax } : {}),
     ...(minimumPartnerEducation !== undefined ? { minimumPartnerEducation } : {}),
@@ -224,6 +407,7 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     ...(partnerWantsChildren !== undefined ? { partnerWantsChildren } : {}),
     ...(partnerHasChildren !== undefined ? { partnerHasChildren } : {}),
     ...(acceptedPartnerReligions !== undefined ? { acceptedPartnerReligions } : {}),
+    ...(maxDistanceKm !== undefined ? { maxDistanceKm } : {}),
     ...(similarityPreference !== undefined ? { similarityPreference } : {}),
   } as HolyGrailStructuredPreferencesPersisted;
 

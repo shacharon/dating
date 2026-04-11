@@ -3,6 +3,10 @@
  */
 
 import { anyChildrenUnsure, getDisplayScore } from './children-unsure';
+import {
+  tryHolyGrailMatchDiagnosticsApi,
+  type HolyGrailMatchDiagnosticsApi,
+} from './holy-grail-match-diagnostics';
 
 export interface MatchListItemApi {
   matchId: string;
@@ -34,6 +38,10 @@ export interface MatchListItemApi {
     caution?: string;
     suggestedNextAction: string;
   };
+  /** Read-only HG diagnostics when API returns full triple (`hgSoftPassCount` as hgRankScore). */
+  hgMutualPass?: boolean;
+  hgOverallStatus?: string;
+  hgRankScore?: number;
 }
 
 export interface GenericMatchCardModel {
@@ -46,6 +54,8 @@ export interface GenericMatchCardModel {
   primaryTakeaway: string;
   /** True if HG children_unsure applies in either direction. */
   childrenUnsure?: boolean;
+  /** Present only when API returned a valid HG triple; does not affect score display. */
+  holyGrailDiagnostics?: HolyGrailMatchDiagnosticsApi;
 }
 
 function effectiveExplainability(item: MatchListItemApi) {
@@ -65,6 +75,8 @@ export function mapListItemToCard(item: MatchListItemApi): GenericMatchCardModel
     item.shortReason?.trim() ||
     '';
 
+  const holyGrailDiagnostics = tryHolyGrailMatchDiagnosticsApi(item);
+
   return {
     id: item.matchId,
     pairLabel: `${item.a.name} · ${item.b.name}`,
@@ -73,6 +85,7 @@ export function mapListItemToCard(item: MatchListItemApi): GenericMatchCardModel
     chips,
     primaryTakeaway,
     ...(childrenUnsure ? { childrenUnsure: true } : {}),
+    ...(holyGrailDiagnostics ? { holyGrailDiagnostics } : {}),
   };
 }
 

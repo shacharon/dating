@@ -2,6 +2,7 @@ import { MATCHING_CANONICAL_MODEL_VERSION } from '../canonical/matching-canonica
 import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
 import {
   computeHolyGrailFiveSignalRank,
+  computeHolyGrailRankingPurityRank,
   deterministicRankingSpread,
 } from './holy-grail-five-signal-ranking';
 
@@ -19,6 +20,25 @@ function model(
     rankingSignals: rs,
   };
 }
+
+describe('computeHolyGrailRankingPurityRank', () => {
+  it('ignores similarityPreference overlay included in computeHolyGrailFiveSignalRank', () => {
+    const rs = {
+      dailyRhythm: 'dr',
+      autonomyTogetherness: 'at',
+      conflictStyle: 5,
+      lifestylePace: 5,
+      interestsTop: ['a', 'b'],
+    } as const;
+    const searcher = model('s', { ...rs }, { similarityPreference: 'similar' });
+    const candidate = model('c', { ...rs });
+    const pure = computeHolyGrailRankingPurityRank({ searcher, candidate });
+    const full = computeHolyGrailFiveSignalRank({ searcher, candidate });
+    expect(pure.rankBreakdown.some((b) => b.signal === 'similarityPreference')).toBe(false);
+    expect(full.rankBreakdown.some((b) => b.signal === 'similarityPreference')).toBe(true);
+    expect(full.rankScore).toBeGreaterThan(pure.rankScore);
+  });
+});
 
 describe('computeHolyGrailFiveSignalRank', () => {
   it('full match yields 100', () => {

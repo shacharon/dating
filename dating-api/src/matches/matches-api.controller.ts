@@ -13,7 +13,6 @@ import type {
   MatchExplainabilityDto,
   MatchRecommendationDto,
 } from './match-engine';
-
 export interface MatchesApiItemDto {
   matchId: string;
   finalScore: number;
@@ -52,8 +51,21 @@ export interface MatchesApiItemDto {
   };
   /** Present only when ?includeDebug=1 (admin/diagnostics). */
   debug?: MatchDebugDto;
+  /**
+   * Optional HG diagnostic triple when `match_pair_hg_snapshot` + profile rows yield a valid wire slice
+   * (same semantics as `GET /api/v1/matches`); omitted when unavailable or wire-invalid.
+   */
+  readonly hgMutualPass?: boolean;
+  readonly hgOverallStatus?: string;
+  readonly hgRankScore?: number;
 }
 
+/**
+ * Admin-style match list. When `ENABLE_HG_LIST_ADMISSION_GATE=1`, `listFullWithHolyGrailRows` applies the same
+ * membership filter as `GET /api/v1/matches`: rows **without** a valid HG diagnostic triple are **kept**; rows **with**
+ * a valid triple are kept only when `hgMutualPass === true` (`hg-list-admission-gate.ts`). Production sort remains
+ * `MATCH_RANKING_CONTRACT` (`HG_GATE_LEGACY_RANK_V1`).
+ */
 @Controller('api/matches')
 export class MatchesApiController {
   constructor(
@@ -74,13 +86,19 @@ export class MatchesApiController {
       minCovRaw != null && minCovRaw !== '' ? Number(minCovRaw) : undefined;
     const includeDebug = includeDebugRaw === '1' || includeDebugRaw === 'true';
 
-    const records = await this.matchesService.listFull({
+    const { records, holyGrailRowsById } = await this.matchesService.listFullWithHolyGrailRows({
       policyVersion,
       minCoveragePercent:
         minCoveragePercent != null && !Number.isNaN(minCoveragePercent)
           ? minCoveragePercent
           : undefined,
     });
+
+    const hgWireByMatchId =
+      await this.matchesService.resolveHolyGrailDiagnosticsWireForMatchRecords(
+        records,
+        holyGrailRowsById,
+      );
 
     const items: MatchesApiItemDto[] = records.map((r) => {
       const finalScore = r.finalScore ?? r.overall;
@@ -92,6 +110,7 @@ export class MatchesApiController {
         finalScore,
         dealbreakers,
       });
+      const hgWire = hgWireByMatchId.get(r.matchId);
       return {
         matchId: r.matchId,
         finalScore,
@@ -118,6 +137,7 @@ export class MatchesApiController {
         ...(r.dealbreakers != null && { dealbreakers: r.dealbreakers }),
         ...(r.balance != null && { balance: r.balance }),
         ...(includeDebug && r.debug != null && { debug: r.debug }),
+        ...(hgWire ? { ...hgWire } : {}),
       };
     });
 

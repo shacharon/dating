@@ -23,25 +23,57 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Dating API** — NestJS service for profiles, evaluation, matches, and Holy Grail matching. Default URL: **`http://localhost:3001`**, global route prefix: **`/api/v1`** (and some legacy **`/api/...`** controllers).
 
-## Project setup
+## Local development
+
+1. **PostgreSQL** — Create a database and set `DATABASE_URL` (see `.env.example`).
+
+2. **Environment** — From the `dating-api` folder:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env: set DATABASE_URL (and PORT if you need a port other than 3001).
+   ```
+
+3. **Install and Prisma** —
+
+   ```bash
+   npm install
+   npx prisma generate
+   npx prisma migrate deploy
+   ```
+
+   Use `prisma migrate dev` instead of `deploy` if you are applying migrations in a dev workspace for the first time.
+
+4. **Run the API** —
+
+   ```bash
+   npm run start:dev
+   ```
+
+   When the log shows the server listening, try:
+
+   - `GET http://localhost:3001/api/v1/profiles` — list profiles  
+   - `GET http://localhost:3001/api/v1/profiles/<id>` — one profile  
+   - `POST http://localhost:3001/api/v1/matches/compare` with JSON body `{ "aId": "<id1>", "bId": "<id2>" }` — match compare  
+
+   The UI (`dating-ui`, usually port **3000**) expects the API on **3001** unless you change env in both places.
+
+5. **Production build** — `npm run build` then `npm run start:prod` (runs `node dist/src/main.js`).
+
+## Project setup (CI / quick)
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+## Compile and run (reference)
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run start        # one-off nest start
+npm run start:dev    # watch mode (recommended locally)
+npm run start:prod   # after npm run build
 ```
 
 ## Run tests

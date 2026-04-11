@@ -1,6 +1,6 @@
 import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
 import {
-  computeHolyGrailFiveSignalRank,
+  computeHolyGrailRankingPurityRank,
   type HolyGrailRankSignalBreakdown,
 } from './holy-grail-five-signal-ranking';
 import { filterCandidatesByHardEligibility } from './pairwise-hard-eligibility-filter';
@@ -26,8 +26,8 @@ export interface HolyGrailCandidateRankingResult {
 
 /**
  * Hard filter first (pairwise eligibility), then deterministic rank on survivors only.
- * Ranking uses five HG sidecar signals (`rankingSignals`), optional `similarityPreference` bonus, and optional
- * `personalityTraits` / `lifestyleSignals` / `interestTags` overlap bonuses from grounded free-text tags; never affects eligibility.
+ * Ordering uses **HG ranking purity** only: `rankingSignals` (five DB-backed sidecar fields) plus empty spread and tie micro.
+ * For the full score including preference/tag overlays, use `computeHolyGrailFiveSignalRank` in analysis code; never affects eligibility.
  */
 export function rankHolyGrailCandidatesAfterHardFilter(args: {
   readonly searcher: MatchingCanonicalModel;
@@ -45,7 +45,7 @@ export function rankHolyGrailCandidatesAfterHardFilter(args: {
 
   const passed = filterResult.filteredCandidates;
   const rows: RankedHolyGrailCandidate[] = passed.map((candidate) => {
-    const { rankScore, rankReasons, rankBreakdown } = computeHolyGrailFiveSignalRank({
+    const { rankScore, rankReasons, rankBreakdown } = computeHolyGrailRankingPurityRank({
       searcher: args.searcher,
       candidate,
     });

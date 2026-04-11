@@ -25,4 +25,13 @@ describe('mapMatchRecordToDetailUi', () => {
     const ui = mapMatchRecordToDetailUi(BASE, cu);
     expect(ui.children_unsure).toEqual(cu);
   });
+
+  it('includes optional HG diagnostics when provided', () => {
+    const cu = { profile_a_to_profile_b: false, profile_b_to_profile_a: false };
+    const hg = { hgMutualPass: true, hgOverallStatus: 'PASS:PASS', hgRankScore: 0 };
+    const ui = mapMatchRecordToDetailUi(BASE, cu, hg);
+    expect(ui.hgMutualPass).toBe(true);
+    expect(ui.hgOverallStatus).toBe('PASS:PASS');
+    expect(ui.hgRankScore).toBe(0);
+  });
 });

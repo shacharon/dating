@@ -1,4 +1,5 @@
 import { computeDealbreakers } from './dealbreakers';
+import { RELATIONSHIP_CLARITY_MISMATCH_CODE } from './kids-family-ownership';
 import type { DerivedContext } from './deriveContext';
 
 function ctx(overrides: Partial<DerivedContext> = {}): DerivedContext {
@@ -52,5 +53,15 @@ describe('computeDealbreakers', () => {
     });
 
     expect(result.some((d) => d.code === 'VISIBILITY_NEED_MISMATCH')).toBe(false);
+  });
+
+  it('RELATIONSHIP_CLARITY_MISMATCH HARD when relationshipClarity is extreme 9 vs 2', () => {
+    const result = computeDealbreakers({
+      a: { signals: { relationshipClarity: 9 }, ctx: ctx() },
+      b: { signals: { relationshipClarity: 2 }, ctx: ctx() },
+    });
+    const db = result.find((d) => d.code === RELATIONSHIP_CLARITY_MISMATCH_CODE);
+    expect(db).toBeDefined();
+    expect(db!.severity).toBe('HARD');
   });
 });

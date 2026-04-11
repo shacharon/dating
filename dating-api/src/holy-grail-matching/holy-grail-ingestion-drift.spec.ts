@@ -51,6 +51,7 @@ describe('holy grail ingestion drift guards', () => {
     partnerWantsChildren: PartnerWantsChildrenRequirement.NO_REQUIREMENT,
     partnerHasChildren: PartnerHasChildrenAcceptance.NO_REQUIREMENT,
     acceptedPartnerReligions: [ReligionSelf.JEWISH],
+    maxDistanceKm: 40,
     similarityPreference: 'similar',
   };
 

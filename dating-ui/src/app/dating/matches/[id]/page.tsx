@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { tryHolyGrailMatchDiagnosticsApi } from '../../_lib/holy-grail-match-diagnostics';
 import type {
   MatchDetailApiResponse,
   MatchDetailChildrenUnsure,
@@ -53,6 +54,9 @@ export default async function MatchDetailPage({ params }: Props) {
   const { id: rawId } = await params;
   const id = decodeURIComponent(rawId);
   const match = await fetchMatchDetail(id);
+  const hgDiagnostics = tryHolyGrailMatchDiagnosticsApi(match);
+  const chips = match.chips ?? [];
+  const expandedExplainability = match.expandedExplainability ?? [];
 
   const pa = match.profileA;
   const pb = match.profileB;
@@ -123,6 +127,23 @@ export default async function MatchDetailPage({ params }: Props) {
                 </div>
               ) : null}
             </div>
+
+            {hgDiagnostics ? (
+              <div
+                className="mt-4 rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400"
+                role="note"
+                aria-label="Holy Grail diagnostic readout"
+              >
+                <p className="font-semibold text-zinc-700 dark:text-zinc-300">
+                  Holy Grail (diagnostic only)
+                </p>
+                <p className="mt-1 font-mono tabular-nums">
+                  Mutual hard pass: {hgDiagnostics.hgMutualPass ? 'yes' : 'no'} · Overall{' '}
+                  {hgDiagnostics.hgOverallStatus} · Soft-pass dimension count{' '}
+                  {hgDiagnostics.hgRankScore}
+                </p>
+              </div>
+            ) : null}
           </header>
 
           <div className="space-y-8 px-6 py-6 text-sm leading-relaxed sm:px-8 sm:py-8">
@@ -139,7 +160,7 @@ export default async function MatchDetailPage({ params }: Props) {
                     Takeaway
                   </p>
                   <p className="mt-1.5 text-base font-medium text-zinc-900 dark:text-zinc-100">
-                    {match.primaryTakeaway}
+                    {match.primaryTakeaway ?? '—'}
                   </p>
                 </div>
                 {match.caution ? (
@@ -160,7 +181,7 @@ export default async function MatchDetailPage({ params }: Props) {
                     Suggested next step
                   </p>
                   <p className="mt-1 text-sm text-zinc-800 dark:text-zinc-200">
-                    {match.suggestedNextAction}
+                    {match.suggestedNextAction ?? '—'}
                   </p>
                 </div>
               </div>
@@ -199,18 +220,15 @@ export default async function MatchDetailPage({ params }: Props) {
                   </div>
                 ) : null}
 
-                <ChipsSection
-                  title="What lines up"
-                  chips={{ attractionChips: match.chips }}
-                />
+                <ChipsSection title="What lines up" chips={{ attractionChips: chips }} />
 
-                {match.expandedExplainability.length > 0 ? (
+                {expandedExplainability.length > 0 ? (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                       More context
                     </p>
                     <ul className="mt-2 list-disc space-y-2 pl-5 text-zinc-600 dark:text-zinc-400">
-                      {match.expandedExplainability.map((line, i) => (
+                      {expandedExplainability.map((line, i) => (
                         <li key={`${i}-${line.slice(0, 48)}`}>{line}</li>
                       ))}
                     </ul>

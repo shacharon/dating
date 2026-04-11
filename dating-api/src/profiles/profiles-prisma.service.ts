@@ -16,7 +16,54 @@ import {
 import type { MatchingRankingSignalsSnapshot } from '../canonical/matching-canonical.types';
 import { HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT } from '../holy-grail-matching/holy-grail-ranking-signal-self.select';
 import { composeHolyGrailRankingSignalsForPersist } from '../holy-grail-matching/holy-grail-ranking-signals-from-db';
+import type { ChildrenUnsureProfileRow } from '../matches/children-unsure-profile-row.types';
 import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
+
+/**
+ * Single `userProfile` read for match list: legacy compare payload (`rowToPayload`) plus HG row slice
+ * (structured JSON, extractionV2, self signal snapshot). Keeps parity with `getFromPrisma` + children-unsure select.
+ */
+const MATCH_LIST_PROFILE_DATA_SELECT = {
+  id: true,
+  name: true,
+  aboutMe: true,
+  aboutPartner: true,
+  aboutRelationship: true,
+  createdAt: true,
+  updatedAt: true,
+  holyGrailStructuredFacts: true,
+  holyGrailStructuredPreferences: true,
+  evaluationRaw: {
+    select: {
+      evaluation: true,
+    },
+  },
+  signalSnapshots: {
+    where: { domain: 'self' as const },
+    select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
+  },
+  evaluation: {
+    select: {
+      evaluatedAt: true,
+      promptVersion: true,
+      policyVersion: true,
+      textHash: true,
+    },
+  },
+  extractionV2: {
+    select: { interests_self: true, interests: true, lifestyleTraits: true },
+  },
+} as const satisfies Prisma.UserProfileSelect;
+
+type MatchListProfileDbRow = Prisma.UserProfileGetPayload<{ select: typeof MATCH_LIST_PROFILE_DATA_SELECT }>;
+
+/** One `findMany` read supplies legacy compare payloads and HG pair rows (list + detail + compare). */
+export interface MatchPairRuntimeBundle {
+  readonly profileA: ProfileJsonPayload;
+  readonly profileB: ProfileJsonPayload;
+  readonly rowA: ChildrenUnsureProfileRow;
+  readonly rowB: ChildrenUnsureProfileRow;
+}
 
 interface UserProfileRow {
   id: string;
@@ -124,6 +171,121 @@ export class ProfilesPrismaService {
    */
   async list(): Promise<ProfileListItem[]> {
     return this.listFromPrisma();
+  }
+
+  /**
+   * Single batched read for match list runtime: legacy compare inputs (`ProfileJsonPayload`) in list order,
+   * plus the HG profile row map (same slice as `CHILDREN_UNSURE_PROFILE_ROW_SELECT` / `getFromPrisma` signals).
+   */
+  async loadMatchListProfileData(): Promise<{
+    profiles: ProfileJsonPayload[];
+    holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
+  }> {
+    const listItems = await this.listFromPrisma();
+    if (listItems.length === 0) {
+      return { profiles: [], holyGrailRowsById: new Map() };
+    }
+    const listIds = listItems.map((x) => x.id);
+    const rows = await this.prisma.userProfile.findMany({
+      where: { id: { in: listIds } },
+      select: MATCH_LIST_PROFILE_DATA_SELECT,
+    });
+    const rowById = new Map(rows.map((r) => [r.id, r]));
+    const profiles: ProfileJsonPayload[] = [];
+    const holyGrailRowsById = new Map<string, ChildrenUnsureProfileRow>();
+    for (const id of listIds) {
+      const row = rowById.get(id);
+      if (!row) continue;
+      profiles.push(this.rowToPayload(this.matchListDbRowToUserProfileRow(row)));
+      holyGrailRowsById.set(id, this.matchListDbRowToHolyGrailProfileRow(row));
+    }
+    return { profiles, holyGrailRowsById };
+  }
+
+  /**
+   * Same payloads as `loadMatchListProfileData`, but restricted to an explicit id list (order preserved).
+   * For scripts / diagnostics that must not fan out to all profiles × all profiles.
+   */
+  /**
+   * Single batched `UserProfile` read for a pair: same `ProfileJsonPayload` + HG row mapping as list/compare
+   * (`MATCH_LIST_PROFILE_DATA_SELECT`). Callers run legacy compare + HG without a second profile query.
+   */
+  async loadMatchPairRuntimeBundle(aId: string, bId: string): Promise<MatchPairRuntimeBundle | null> {
+    if (aId === bId) return null;
+    const rows = await this.prisma.userProfile.findMany({
+      where: { id: { in: [aId, bId] } },
+      select: MATCH_LIST_PROFILE_DATA_SELECT,
+    });
+    if (rows.length !== 2) return null;
+    const byId = new Map(rows.map((r) => [r.id, r as MatchListProfileDbRow]));
+    const rawA = byId.get(aId);
+    const rawB = byId.get(bId);
+    if (!rawA || !rawB) return null;
+    return {
+      profileA: this.rowToPayload(this.matchListDbRowToUserProfileRow(rawA)),
+      profileB: this.rowToPayload(this.matchListDbRowToUserProfileRow(rawB)),
+      rowA: this.matchListDbRowToHolyGrailProfileRow(rawA),
+      rowB: this.matchListDbRowToHolyGrailProfileRow(rawB),
+    };
+  }
+
+  async loadMatchListProfileDataForSubset(profileIdsOrdered: readonly string[]): Promise<{
+    profiles: ProfileJsonPayload[];
+    holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
+  }> {
+    if (profileIdsOrdered.length === 0) {
+      return { profiles: [], holyGrailRowsById: new Map() };
+    }
+    const rows = await this.prisma.userProfile.findMany({
+      where: { id: { in: [...profileIdsOrdered] } },
+      select: MATCH_LIST_PROFILE_DATA_SELECT,
+    });
+    const rowById = new Map(rows.map((r) => [r.id, r]));
+    const profiles: ProfileJsonPayload[] = [];
+    const holyGrailRowsById = new Map<string, ChildrenUnsureProfileRow>();
+    for (const id of profileIdsOrdered) {
+      const row = rowById.get(id);
+      if (!row) continue;
+      profiles.push(this.rowToPayload(this.matchListDbRowToUserProfileRow(row)));
+      holyGrailRowsById.set(id, this.matchListDbRowToHolyGrailProfileRow(row));
+    }
+    return { profiles, holyGrailRowsById };
+  }
+
+  private matchListDbRowToUserProfileRow(row: MatchListProfileDbRow): UserProfileRow {
+    return {
+      id: row.id,
+      name: row.name,
+      aboutMe: row.aboutMe,
+      aboutPartner: row.aboutPartner,
+      aboutRelationship: row.aboutRelationship,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      evaluationRaw: row.evaluationRaw
+        ? { evaluation: row.evaluationRaw.evaluation }
+        : null,
+      signalSnapshots: row.signalSnapshots,
+      evaluationMeta: row.evaluation
+        ? {
+            evaluatedAt: row.evaluation.evaluatedAt,
+            promptVersion: row.evaluation.promptVersion,
+            policyVersion: row.evaluation.policyVersion,
+            textHash: row.evaluation.textHash,
+          }
+        : null,
+    };
+  }
+
+  private matchListDbRowToHolyGrailProfileRow(row: MatchListProfileDbRow): ChildrenUnsureProfileRow {
+    return {
+      id: row.id,
+      aboutMe: row.aboutMe,
+      aboutPartner: row.aboutPartner,
+      holyGrailStructuredFacts: row.holyGrailStructuredFacts,
+      holyGrailStructuredPreferences: row.holyGrailStructuredPreferences,
+      extractionV2: row.extractionV2,
+      signalSnapshots: row.signalSnapshots,
+    };
   }
 
   private evaluationWithSanitizedEnrichment(

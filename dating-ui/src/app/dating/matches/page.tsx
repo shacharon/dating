@@ -51,8 +51,8 @@ export default async function MatchesPage({ searchParams }: PageProps) {
             Matches
           </h1>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Sorted by ranking score (slight penalty when kids intent is unsure). Open a match for full
-            detail.
+            Sorted by compatibility score (legacy ranking only). Kids-intent uncertainty does not change order; use
+            filters to hide those matches if you prefer. Open a match for full detail.
           </p>
           <nav className="mt-4 flex flex-wrap gap-2 text-sm" aria-label="Match filters">
             <Link

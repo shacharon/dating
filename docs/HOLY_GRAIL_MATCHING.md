@@ -11,7 +11,7 @@ Design notes for the matching contract and how it relates to storage.
 | Step 2 | **Locked** — taxonomy + MVP dimensions; see below. |
 | Step 3 | **Done (spec + code)** — enum-based dimension outcomes documented below; **implemented** in `dating-api/src/holy-grail-matching/eligibility.evaluator.ts` (PASS / FAIL / SKIPPED / SOFT_PASS). Locked SOFT_PASS rules: [Layer 3 locked policy](#locked-layer-3-policy-implementation-aligned). |
 | Step 4 | **Done** — Phase 1 rules + Phase 2 mapper (`profile-to-canonical.mapper.ts`, structured input only). |
-| Step 5 | **Partial** — decision/audit + retrieval + post-filter ranking exist; **optional:** broader real-profile audit runs beyond current scripts. |
+| Step 5 | **Partial** — decision/audit + retrieval + post-filter ranking exist; **optional:** broader real-profile audit runs beyond current scripts. **V2 enrichment (personality / lifestyle / interest)** — **approved and locked:** additive-only overlays, no eligibility, no promotion to the five primary signals, caps **2** pts/family, five-signal remains main driver; see [Production-freeze — V2 enrichment](#production-freeze--v2-enrichment-approved-and-locked). |
 | Database / Prisma | **Sparse HG JSON columns exist** on `UserProfile` (`holyGrailStructuredFacts` / `holyGrailStructuredPreferences`); contract keys are [documented below](#persisted-holy-grail-structured-json-userprofile-columns). Broader schema/index work remains roadmap. |
 | Legacy scoring / dealbreaker / ranking engine | **Out of scope** — legacy `match-engine` untouched. HG **post-filter** ranking is separate (`holy-grail-candidate-ranking.ts`) and does not affect eligibility. |
 
@@ -52,7 +52,7 @@ This section clarifies **product semantics** for Layer 2 output and Layer 3 eval
 | **A — Minimal profile** | *(no preference keys stored)* | `{}` | **All** preference-backed dimensions **SKIPPED** for that direction (until user sets prefs). Facts still evaluated only where relevant dimensions exist. |
 | **B — User set age only** | `partnerAgeMin` 25, `partnerAgeMax` 40 | `{}` | **Age** dimension **active**; gender, religion, education, smoking, alcohol, children, distance **SKIPPED** unless also stored. |
 | **C — Search widens age only** | `partnerAgeMax` 35 | `partnerAgeMax: 45` | Effective max **45**; age **active**; other dimensions follow stored sparsity. |
-| **D — Search adds temporary cap** | *(no `maxDistanceKm`)* | `maxDistanceKm: 50` | Distance dimension **active** for this search (subject to Step 3 `NOT_ENFORCEABLE` if geo missing). |
+| **D — Search adds temporary cap** | *(no `maxDistanceKm` in stored JSON)* | `maxDistanceKm: 50` | Distance dimension **active** for this search (subject to Step 3 `NOT_ENFORCEABLE` if geo missing). Stored prefs **may** include `maxDistanceKm` in `holyGrailStructuredPreferences` JSON; it round-trips like other preference keys. |
 | **E — Override clears a field** | Product convention must define whether “clear override” is **omit key** or explicit **null** in API | If override **omits** a key, that slice falls back to **stored** value only; if still absent → **SKIPPED**. |
 
 ### 3. Evaluator note — inactive dimensions (`SKIPPED`)
@@ -101,13 +101,13 @@ Two nullable JSON columns back the deterministic HG ingestion path:
 | Column | Round-trip (write + read) | TypeScript |
 |--------|---------------------------|------------|
 | `holyGrailStructuredFacts` | Keys: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` in `dating-api/src/holy-grail-matching/holy-grail-structured-contract.ts`. Merge: `mergeHolyGrailStructuredFactsPatch`. Parse: `parseHolyGrailStructuredFactsFromJson`. | Persisted slice: `HolyGrailStructuredFactsPersisted`. Full mapper slice: `HolyGrailStructuredFactsInput` (= persisted ∪ `HolyGrailStructuredFactsMapperOnly`). |
-| `holyGrailStructuredPreferences` | Keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` (same files as above). **Excludes** mapper-only `maxDistanceKm` until geo is intentionally added to this JSON. | Persisted slice: `HolyGrailStructuredPreferencesPersisted`. Full mapper slice: `HolyGrailStructuredPreferencesInput` (= persisted ∪ `HolyGrailStructuredPreferencesMapperOnly`). |
+| `holyGrailStructuredPreferences` | Keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` (includes `maxDistanceKm`). Merge: `mergeHolyGrailStructuredPreferencesPatch`. Parse: `parseHolyGrailStructuredPreferencesFromJson` (same allow-list and validation as merge; unknown keys or invalid values → throw). | `HolyGrailStructuredPreferencesPersisted` (= `HolyGrailStructuredPreferencesInput` for the mapper `structuredPreferences` slice). |
 
 **Mapper-only facts** (accepted on `HolyGrailProfileMappingInput.structuredFacts` only, not stored in `holyGrailStructuredFacts` JSON): `HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS` — e.g. `sexualOrientation`, `relationshipStatus`, `exerciseLevel`, `politics`, `livingSituation`, `workStudySituation`, `primaryLocationLabel`.
 
-**Mapper-only preferences:** `HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS` — currently `maxDistanceKm`. Supplied via tests, `searchOverrides`, or future APIs; **not** read from or written to `holyGrailStructuredPreferences` JSON (merge rejects unknown keys).
+**Retrieval wire DTOs:** `HolyGrailMatchingPreferencesWireDto` mirrors canonical `MatchingPreferences`. `HolyGrailStructuredPreferencesPersistedWireDto` is the same shape for v1 (all those fields may round-trip through the preferences JSON column when set).
 
-**Retrieval wire DTOs:** `HolyGrailMatchingPreferencesWireDto` mirrors canonical `MatchingPreferences` and may therefore include `maxDistanceKm` after mapping. Fields that actually round-trip through the preferences JSON column are spelled out as `HolyGrailStructuredPreferencesPersistedWireDto` in `holy-grail-retrieval-wire.dto.ts`.
+**DB JSON read path:** `parseHolyGrailStructuredFactsFromJson` / `parseHolyGrailStructuredPreferencesFromJson` use the same key allow-lists and value rules as merge + write: **unknown keys and invalid values throw** (no silent drops, no ignored extra keys).
 
 ---
 
@@ -371,6 +371,56 @@ If effective `acceptedPartnerAlcohol` is **absent** after merge → dimension **
 ### HG ranking signals (DB-only at runtime)
 
 The five inputs used only for ordering after hard eligibility (`MatchingCanonicalModel.rankingSignals`: `dailyRhythm`, `autonomyTogetherness`, `conflictStyle`, `lifestylePace`, `interestsTop`) are **read exclusively from typed columns on the self `ProfileSignalSnapshot` row** (see `holy-grail-ranking-signals-from-db.ts`, `buildHolyGrailRankingSignalsFromDbSelfRow`, and `HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT`). **Holy Grail retrieval, pair-direction evaluation, and post-filter ranking do not read these values from `ProfileEvaluationRaw.evaluation` or from persisted `enrichment.signals` JSON at runtime.** Enrichment may still be produced in memory during evaluate to populate DB columns on save; profile APIs may still return an enrichment-shaped payload for clients, but that is separate from the ranking source of truth. Other uses of `ProfileEvaluationRaw` / snapshots for legacy evaluate and non-HG flows remain **out of scope** for canonical enum mapping unless a future spec ties a key to a fact.
+
+### Production-freeze — V2 enrichment (approved and locked)
+
+**Locked families:** **personalityTraits v2**, **lifestyleSignals v2**, **interestTags v2** (with their v1 baselines in the same `rankingSignals` keys). Status: **approved for production** and **contract-locked** — changes require an explicit spec revision + evidence, not drive-by edits.
+
+| Family | Canonical `rankingSignals` keys | Taxonomy | Role |
+|--------|-----------------------------------|----------|------|
+| **Personality traits** | `personalityTraitsSelf`, `personalityTraitsPartner` | v1 (`humor_playful`, `honesty_integrity`) + **v2** additive tags (`PERSONALITY_TRAIT_V2_TAG_SET` in `personality-traits-text.extract.ts`) | Post-eligibility **rank bonus** only; pairwise directional Jaccard-style overlap; **never** read by `eligibility.evaluator.ts`. |
+| **Lifestyle signals** | `lifestyleSignalsSelf`, `lifestyleSignalsPartner` | v1 (first four ids) + **v2** additive (`LIFESTYLE_SIGNAL_V2_TAG_SET` in `lifestyle-signals-text.extract.ts`) | Same as personality. |
+| **Interest tags** | `interestTagsSelf`, `interestTagsPartner` | v1 (`music`, `film`) + **v2** additive (`INTEREST_TAGS_V2_TAG_SET` in `interest-tags-text.extract.ts`) | Same. |
+
+**Invariants (frozen — all mandatory):**
+
+1. **HG five-signal layer remains the main driver:** Primary rank mass stays the weighted **five** columns (`dailyRhythm`, `autonomyTogetherness`, `conflictStyle`, `lifestylePace`, `interestsTop` — DB-backed self snapshot) plus empty-spread / tie micro in the purity path. V2 tag fields **do not** enter `WEIGHTS` or replace that layer.
+2. **Additive-only secondary overlays:** Bonuses are **added** after the five-signal subtotal inside `computeHolyGrailFiveSignalRank` (`holy-grail-five-signal-ranking.ts`); they do **not** replace or rescale the primary five.
+3. **No promotion to primary signals:** V2 (and v1) tag arrays **must not** be merged into the five primary keys, copied into eligibility inputs, or reweighted as if they were a sixth “core” signal — they stay **parallel** overlap bonuses only.
+4. **No eligibility effect:** Layer-3 **PASS / FAIL / SKIPPED / SOFT_PASS** and `overallHardEligibility` are **unchanged** by these fields; they are not inputs to `evaluateHolyGrailDirectional` dimension matrices.
+5. **No cap increases:** Per-family overlay caps stay **`PERSONALITY_RANK_BONUS_MAX` = 2**, **`LIFESTYLE_RANK_BONUS_MAX` = 2**, **`INTEREST_TAGS_RANK_BONUS_MAX` = 2** (same scale family as `SIMILARITY_RANK_BONUS_MAX` / empty spread). Any future raise requires an explicit contract revision and new batch evidence — **not** a silent code tweak.
+6. **Production ordering (HG retrieval):** Survivor ordering uses **`computeHolyGrailRankingPurityRank`** (five-signal DB slice + intrinsic spread/tie micro **only**). The three locked families apply only in **`computeHolyGrailFiveSignalRank`** (analysis, batch scripts, and any product surface that intentionally uses the full composite score).
+
+**Batch evidence (observed):** Run `npx ts-node dating-api/scripts/hg-v2-enrichment-batch-analysis.ts` with `DATABASE_URL` set; full JSON is written to `dating-api/scripts/.hg-v2-enrichment-batch-output.json`. Last recorded corpus: **836** mappable profiles, **698,060** ordered pairs (full sweep). See [Rollout PR summary — V2 enrichment freeze](#rollout-pr-summary--v2-enrichment-freeze) for copy-paste metrics.
+
+---
+
+#### Rollout PR summary — V2 enrichment freeze (concise)
+
+**Title:** `docs+code: lock HG V2 enrichment overlays (personality / lifestyle / interest)`  
+
+**Summary:** Locks **personalityTraits v2**, **lifestyleSignals v2**, and **interestTags v2** as **approved** secondary rank overlays: **additive-only**, **no eligibility**, **no promotion to the five primary signals**, **no cap increases** (2 pts max/family), **HG five-signal remains the main driver**. Doc + comments only — **no runtime behavior change**. Evidence: `npx ts-node dating-api/scripts/hg-v2-enrichment-batch-analysis.ts` → `dating-api/scripts/.hg-v2-enrichment-batch-output.json`.
+
+| Metric | Value |
+|--------|--------|
+| Profiles (DB total / mappable) | 836 / 836 |
+| Ordered pairs analyzed | 698,060 (full `n×(n−1)` sweep) |
+| V2 taxonomy universe sizes (personality / lifestyle / interest) | 8 / 7 / 8 distinct tag ids |
+| Corpus coverage of each v2 universe (≥1 profile emitted tag) | **100%** / **100%** / **100%** |
+| % profiles with ≥1 v2 tag (personality / lifestyle / interest) | **41.87%** / **20.22%** / **21.65%** |
+| % profiles with ≥1 tag in any of the three families | **58.25%** |
+| Profile co-occurrence (marginal P / L / I on diagonal of 3×3) | 350 / 169 / 181 |
+| Profiles with all three v2 families | 44 (**5.26%**) |
+| Grounded tag hits in rank notes (all vs v2-only) — personality | 28,302 / 22,418 |
+| Grounded tag hits — lifestyle | 2,158 / 1,650 |
+| Grounded tag hits — interest | 1,720 / 1,454 |
+| Rank delta vs HG-only baseline, top 50 (50 searchers): mean fraction of baseline top-50 retained in full top-50 | **0.9564** |
+| Same: mean mean abs rank shift among baseline top-50 | **2.7568** |
+| Bonus pairs (ordered) — personality / lifestyle / interest overlays | 27,562 / 2,148 / 1,716 |
+| Overlay points p50 (personality / lifestyle / interest) | 1 / 2 / 2 |
+| Pairs with any of the three tag bonuses (sum > 0) | 30,514; sum p50 / p90 / p99 = **1** / **2** / **4** |
+
+**Note:** “Full” rank in the batch script is `computeHolyGrailFiveSignalRank` (includes **`similarityPreference`** Δ as well as the three tag families); baseline is `computeHolyGrailRankingPurityRank`.
 
 **Mapping class (required label on every row):**
 

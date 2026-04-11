@@ -70,6 +70,18 @@ export function MatchCard({ match }: Props) {
           {match.primaryTakeaway}
         </p>
       ) : null}
+
+      {match.holyGrailDiagnostics ? (
+        <p
+          className="mt-3 text-xs leading-snug text-zinc-500 dark:text-zinc-400"
+          data-testid="match-card-hg-diagnostics"
+          aria-label="Holy Grail diagnostic summary"
+        >
+          HG (diagnostic): mutual pass {match.holyGrailDiagnostics.hgMutualPass ? 'yes' : 'no'} · overall{' '}
+          {match.holyGrailDiagnostics.hgOverallStatus} · soft-pass dims{' '}
+          {match.holyGrailDiagnostics.hgRankScore}
+        </p>
+      ) : null}
     </Link>
   );
 }

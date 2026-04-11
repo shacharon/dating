@@ -17,7 +17,7 @@ model UserProfile {
   updatedAt         DateTime @updatedAt
   /// Sparse Holy Grail facts: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` only. Mapper-only fact fields are not stored here (`profile-sources.types.ts`).
   holyGrailStructuredFacts       Json?
-  /// Sparse Holy Grail preferences: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` only (no maxDistanceKm until geo is persisted in this JSON).
+  /// Sparse Holy Grail preferences: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` only (includes `maxDistanceKm`; geo facts for enforcement are separate).
   holyGrailStructuredPreferences Json?
   evaluation        ProfileEvaluation?
   evaluationRaw     ProfileEvaluationRaw?

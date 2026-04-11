@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "totalDbProfiles": 836,
+    "mappableProfiles": 836,
+    "mapFailedProfileIds": [],
+    "mapFailedCount": 0,
+    "orderedPairsProcessed": 698060,
+    "orderedPairsCap": 698060,
+    "naturalOrderedPairs": 698060,
+    "pairSamplingNote": "full ordered pair sweep",
+    "rankDeltaSearchers": 50,
+    "topK": 50,
+    "baselineRanker": "computeHolyGrailRankingPurityRank",
+    "fullRanker": "computeHolyGrailFiveSignalRank (purity + similarityPreference + personality + lifestyle + interest overlays)",
+    "noteRankDelta": "Top-50 overlap is |baselineTop50 ∩ fullTop50|/50 per searcher (not Jaccard). Full rank includes similarityPreference Δ, not only the three tag families."
+  },
+  "v2TaxonomyUniverseSizes": {
+    "personalityV2Universe": 8,
+    "lifestyleV2Universe": 7,
+    "interestV2Universe": 8
+  },
+  "coverageOfV2Taxonomy": {
+    "personalityV2": 100,
+    "lifestyleV2": 100,
+    "interestV2": 100,
+    "distinctTagsObserved": {
+      "personalityV2": 8,
+      "lifestyleV2": 7,
+      "interestV2": 8
+    }
+  },
+  "pctProfilesWithAtLeastOneV2Tag": {
+    "personalityV2": 41.87,
+    "lifestyleV2": 20.22,
+    "interestV2": 21.65,
+    "anyOfThreeFamilies": 58.25
+  },
+  "groundedTagFrequencyInRankNotes": {
+    "personality_allTagsTop": {
+      "kind_empathetic": 11216,
+      "calm_steady": 7048,
+      "honesty_integrity": 4080,
+      "curious_open_minded": 2798,
+      "humor_playful": 1804,
+      "loyal_committed": 670,
+      "ambitious_driven": 332,
+      "introverted_reflective": 220,
+      "extroverted_social": 94,
+      "optimistic_positive": 40
+    },
+    "lifestyle_allTagsTop": {
+      "food": 488,
+      "travel": 422,
+      "fitness": 340,
+      "reading": 306,
+      "social_friends": 192,
+      "outdoors_nature": 188,
+      "homebody": 72,
+      "gaming": 70,
+      "athletic_swimming": 56,
+      "pets": 14,
+      "nightlife": 10
+    },
+    "interest_allTagsTop": {
+      "travel": 406,
+      "music": 232,
+      "technology": 232,
+      "sports_fitness": 198,
+      "books_reading": 194,
+      "art_visual": 166,
+      "food_dining": 142,
+      "gaming": 70,
+      "photography": 46,
+      "film": 34
+    },
+    "personality_v2TagsOnlyTop": {
+      "kind_empathetic": 11216,
+      "calm_steady": 7048,
+      "curious_open_minded": 2798,
+      "loyal_committed": 670,
+      "ambitious_driven": 332,
+      "introverted_reflective": 220,
+      "extroverted_social": 94,
+      "optimistic_positive": 40
+    },
+    "lifestyle_v2TagsOnlyTop": {
+      "food": 488,
+      "travel": 422,
+      "fitness": 340,
+      "reading": 306,
+      "gaming": 70,
+      "pets": 14,
+      "nightlife": 10
+    },
+    "interest_v2TagsOnlyTop": {
+      "travel": 406,
+      "technology": 232,
+      "sports_fitness": 198,
+      "books_reading": 194,
+      "art_visual": 166,
+      "food_dining": 142,
+      "gaming": 70,
+      "photography": 46
+    },
+    "totalGroundedTagHits_allVsV2only": {
+      "personality": {
+        "all": 28302,
+        "v2Only": 22418
+      },
+      "lifestyle": {
+        "all": 2158,
+        "v2Only": 1650
+      },
+      "interest": {
+        "all": 1720,
+        "v2Only": 1454
+      }
+    }
+  },
+  "profileCoOccurrenceV2": {
+    "labels": [
+      "personalityV2",
+      "lifestyleV2",
+      "interestV2"
+    ],
+    "matrix": [
+      [
+        350,
+        65,
+        66
+      ],
+      [
+        65,
+        169,
+        126
+      ],
+      [
+        66,
+        126,
+        181
+      ]
+    ],
+    "profilesWithAllThreeV2Families": 44,
+    "pctProfilesWithAllThree": 5.26
+  },
+  "rankDeltaVsHgOnlyBaselineTop50": {
+    "meanFractionBaselineTop50AlsoInFullTop50": 0.9564,
+    "meanMeanAbsRankShiftAmongBaselineTop50": 2.7568
+  },
+  "bonusPointDistributions": {
+    "personalityTraitsOverlay": {
+      "count": 27562,
+      "p50": 1,
+      "p90": 2,
+      "p95": 2,
+      "p99": 2,
+      "histogram": {
+        "<=0": 0,
+        "<=0.25": 100,
+        "<=0.5": 2538,
+        "<=1": 14466,
+        "<=1.5": 356,
+        "<=2": 10102,
+        ">max": 0
+      }
+    },
+    "lifestyleSignalsOverlay": {
+      "count": 2148,
+      "p50": 2,
+      "p90": 2,
+      "p95": 2,
+      "p99": 2,
+      "histogram": {
+        "<=0": 0,
+        "<=0.25": 0,
+        "<=0.5": 50,
+        "<=1": 644,
+        "<=1.5": 4,
+        "<=2": 1450,
+        ">max": 0
+      }
+    },
+    "interestTagsOverlay": {
+      "count": 1716,
+      "p50": 2,
+      "p90": 2,
+      "p95": 2,
+      "p99": 2,
+      "histogram": {
+        "<=0": 0,
+        "<=0.25": 0,
+        "<=0.5": 30,
+        "<=1": 648,
+        "<=1.5": 2,
+        "<=2": 1036,
+        ">max": 0
+      }
+    },
+    "sumPersonalityLifestyleInterestOnlyPerPair": {
+      "pairsWithAnyOfThreeBonuses": 30514,
+      "p50": 1,
+      "p90": 2,
+      "p95": 2,
+      "p99": 4,
+      "histogram": {
+        "<=0": 0,
+        "<=1": 17806,
+        "<=2": 12002,
+        "<=3": 274,
+        "<=4": 420,
+        "<=5": 12,
+        "<=6": 0,
+        ">max": 0
+      }
+    }
+  }
+}

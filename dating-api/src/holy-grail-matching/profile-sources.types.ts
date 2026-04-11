@@ -2,9 +2,10 @@
  * Structured inputs for Step 4 → `MatchingCanonicalModel` mapping.
  * No raw profile text: callers populate from DB columns / validated API payloads only.
  *
- * **Persisted vs mapper-only:** `UserProfile.holyGrailStructured{Facts,Preferences}` JSON round-trips only
- * through keys in `holy-grail-structured-contract.ts` (`*_JSON_KEYS`). Mapper-only fields never pass
- * `parseHolyGrailStructured*FromJson` and are rejected on structured JSON merge writes.
+ * **Persisted vs mapper-only:** `UserProfile.holyGrailStructuredFacts` JSON round-trips only through
+ * `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS`; mapper-only fact fields never pass `parseHolyGrailStructuredFactsFromJson`
+ * and are rejected on structured facts merge writes. Preferences JSON uses `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`
+ * for read, write, and mapper `structuredPreferences` (single allow-list).
  */
 
 import type {
@@ -35,7 +36,6 @@ import {
   HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS,
   HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS,
   HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
-  HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS,
 } from './holy-grail-structured-contract';
 
 type TupleToUnion<T extends readonly string[]> = T[number];
@@ -47,10 +47,6 @@ export type HolyGrailStructuredFactsMapperOnlyKey = TupleToUnion<typeof HOLY_GRA
 /** @see `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` */
 export type HolyGrailStructuredPreferencesPersistedKey = TupleToUnion<
   typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS
->;
-/** @see `HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS` */
-export type HolyGrailStructuredPreferencesMapperOnlyKey = TupleToUnion<
-  typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS
 >;
 
 type HolyGrailStructuredFactsFieldMap = {
@@ -104,20 +100,13 @@ export type HolyGrailStructuredFactsInput = HolyGrailStructuredFactsPersisted & 
 
 /**
  * Sparse preferences read from `holyGrailStructuredPreferences` JSON (`parseHolyGrailStructuredPreferencesFromJson`).
- * Excludes mapper-only keys such as `maxDistanceKm`.
  */
 export type HolyGrailStructuredPreferencesPersisted = Partial<
   Pick<HolyGrailStructuredPreferencesFieldMap, HolyGrailStructuredPreferencesPersistedKey>
 >;
 
-/** Mapper-only preference fields (e.g. geo until persisted under HG structured JSON). */
-export type HolyGrailStructuredPreferencesMapperOnly = Partial<
-  Pick<HolyGrailStructuredPreferencesFieldMap, HolyGrailStructuredPreferencesMapperOnlyKey>
->;
-
-/** Full structured preferences slice for the mapper (persisted JSON ∪ mapper-only). */
-export type HolyGrailStructuredPreferencesInput = HolyGrailStructuredPreferencesPersisted &
-  HolyGrailStructuredPreferencesMapperOnly;
+/** Structured preferences slice for the mapper (same fields as persisted JSON). */
+export type HolyGrailStructuredPreferencesInput = HolyGrailStructuredPreferencesPersisted;
 
 /** Prisma `String[]` slices (or copies) allowed into the mapper — strings only. */
 export interface HolyGrailExtractionArraysInput {
@@ -136,6 +125,8 @@ export interface HolyGrailProfileMappingInput {
   /**
    * Optional ranking sidecar (DB-derived). Ignored by `mapProfileSourceToMatchingCanonical` for facts/prefs;
    * copied onto `MatchingCanonicalModel.rankingSignals` only. Never affects HG eligibility.
+   * Free-text–derived personality / lifestyle / interest tag arrays (v1+v2) feed **locked** secondary rank overlays only
+   * (not primary `WEIGHTS` signals; no eligibility) — `docs/HOLY_GRAIL_MATCHING.md` § Production-freeze (V2 enrichment).
    */
   readonly rankingSignals?: MatchingRankingSignalsSnapshot;
 }

@@ -57,8 +57,10 @@ describe('similarityPreference — missing / sparse', () => {
     expect(p?.similarityPreference).toBeNull();
   });
 
-  it('parse drops invalid enum string and yields undefined when that was the only key', () => {
-    expect(parseHolyGrailStructuredPreferencesFromJson({ similarityPreference: 'nope' })).toBeUndefined();
+  it('parse throws on invalid similarityPreference enum string', () => {
+    expect(() => parseHolyGrailStructuredPreferencesFromJson({ similarityPreference: 'nope' })).toThrow(
+      /invalid similarityPreference/,
+    );
   });
 
   it('build mapping input: no structuredPreferences when DB prefs empty', () => {

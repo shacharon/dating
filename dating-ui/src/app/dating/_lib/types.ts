@@ -1,5 +1,6 @@
 /**
  * Shared /dating mock contracts. Shape names mirror likely API DTOs later.
+ * Optional HG fields: use `tryHolyGrailMatchDiagnosticsApi` before rendering a diagnostic block.
  */
 
 /** Mirrors `MatchExplainabilityDto` from dating-api match engine (strict FE contract). */
@@ -37,6 +38,10 @@ export interface DatingMatchPreview {
   explainability?: MatchExplainabilityDto;
   /** When set (e.g. from API), drives decision-oriented recommendation card above explainability. */
   recommendation?: MatchRecommendationDto;
+  /** Optional HG triple; validate with `tryHolyGrailMatchDiagnosticsApi` before UI. */
+  hgMutualPass?: boolean;
+  hgOverallStatus?: string;
+  hgRankScore?: number;
 }
 
 /**
@@ -45,7 +50,7 @@ export interface DatingMatchPreview {
  */
 export type DatingMatchDetail = DatingMatchPreview;
 
-/** Holy Grail children soft-pass flags (per direction); additive, no scoring impact. */
+/** Holy Grail children soft-pass flags (per direction); drives badges / optional list filter — not list sort order. */
 export interface MatchDetailChildrenUnsure {
   profile_a_to_profile_b: boolean;
   profile_b_to_profile_a: boolean;
@@ -71,4 +76,8 @@ export interface MatchDetailApiResponse {
   chips: string[];
   tensionChip?: string;
   expandedExplainability: string[];
+  /** Optional HG triple; validate with `tryHolyGrailMatchDiagnosticsApi` before UI. */
+  hgMutualPass?: boolean;
+  hgOverallStatus?: string;
+  hgRankScore?: number;
 }

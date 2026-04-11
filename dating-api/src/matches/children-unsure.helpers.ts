@@ -1,4 +1,3 @@
-import { CHILDREN_UNSURE_RANKING_PENALTY_RATE } from './children-unsure.product-policy';
 import type { ChildrenUnsureDirectionsDto } from './match.types';
 
 export function anyChildrenUnsure(
@@ -6,15 +5,6 @@ export function anyChildrenUnsure(
 ): boolean {
   if (!row) return false;
   return row.profile_a_to_profile_b || row.profile_b_to_profile_a;
-}
-
-/**
- * Rounded display/ranking score after optional children_unsure penalty.
- * `penaltyApplies` is typically `anyChildrenUnsure(children_unsure)`.
- */
-export function applyChildrenUnsurePenalty(score: number, penaltyApplies: boolean): number {
-  if (!penaltyApplies) return Math.round(score);
-  return Math.round(score * (1 - CHILDREN_UNSURE_RANKING_PENALTY_RATE));
 }
 
 export type DisplayScoreMatchSlice = {

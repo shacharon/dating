@@ -1,6 +1,7 @@
 /**
  * Deterministic match comparison from two profile payloads.
  * No framework deps; used by MatchesService.
+ * Legacy dealbreakers vs HG children: `../domain/kids-family-ownership.ts`.
  */
 
 import { COMPATIBILITY_SIGNAL_KEYS, computeValuesAlignment } from '../compatibility/compatibility-score';
@@ -158,12 +159,12 @@ export type CompareGuardFailureResultDto =
   | CompareNotAnalyzedResultDto
   | CompareInsufficientDataResultDto;
 
-function isEvaluationPending(profile: ProfileJsonPayload): boolean {
+export function isEvaluationPending(profile: ProfileJsonPayload): boolean {
   const s = profile.evaluationStatus;
   return s != null && s !== 'DONE';
 }
 
-function hasNumericSelfSignals(profile: ProfileJsonPayload): boolean {
+export function hasNumericSelfSignals(profile: ProfileJsonPayload): boolean {
   const signals = profile.evaluation?.self?.signals;
   if (!signals || typeof signals !== 'object') return false;
   return Object.values(signals).some(

@@ -2,8 +2,8 @@
  * Single source of truth for Holy Grail structured JSON key allow-lists (DB read/write + mapper)
  * and partner-age bounds for ingestion paths. DOB YMD helpers live in `holy-grail-dob-ymd.ts`.
  *
- * TypeScript shapes: `profile-sources.types.ts` splits **persisted JSON** (`*Persisted` / parse outputs)
- * from **mapper-only** fields (`*MapperOnly`) and the combined mapper input (`*Input`).
+ * TypeScript shapes: `profile-sources.types.ts` — facts split **persisted JSON** from **mapper-only** facts;
+ * preferences use one persisted/mapper slice (`HolyGrailStructuredPreferencesPersisted` = `HolyGrailStructuredPreferencesInput`).
  */
 
 export {
@@ -66,7 +66,7 @@ export const HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_KEY_SET = new Set<string>([
   ...HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS,
 ]);
 
-// --- Keys: persisted holyGrailStructuredPreferences JSON (no maxDistanceKm until geo wire) ---
+// --- Keys: persisted holyGrailStructuredPreferences JSON (= structuredPreferences mapper allow-list) ---
 
 export const HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS = [
   'acceptedPartnerGenders',
@@ -78,23 +78,19 @@ export const HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS = [
   'partnerWantsChildren',
   'partnerHasChildren',
   'acceptedPartnerReligions',
+  'maxDistanceKm',
   'similarityPreference',
 ] as const;
-
-export const HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS = ['maxDistanceKm'] as const;
 
 export const HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET = new Set<string>(
   HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
 );
 
-export const HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET = new Set<string>([
-  ...HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
-  ...HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS,
-]);
+/** Same as persisted JSON keys — no separate mapper-only slice for preferences. */
+export const HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET = HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET;
 
 export const HOLY_GRAIL_SEARCH_OVERRIDE_KEYS = [
   ...HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
-  ...HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_ONLY_KEYS,
   'validUntil',
 ] as const;
 

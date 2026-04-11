@@ -1,5 +1,7 @@
 /**
- * Client-safe helpers — keep behavior in sync with `dating-api/src/matches/children-unsure.*`.
+ * Client-safe helpers — align with `dating-api/src/matches/children-unsure.*` and `match-ranking-contract.ts`
+ * (`MATCH_RANKING_CONTRACT === HG_GATE_LEGACY_RANK_V1`: `rankingScore` === legacy engine score for list sort;
+ * HG triple is diagnostic-only; `children_unsure` is not a ranking penalty).
  */
 
 export const HIDE_CHILDREN_UNSURE_QUERY_PARAM = 'hideChildrenUnsure';
