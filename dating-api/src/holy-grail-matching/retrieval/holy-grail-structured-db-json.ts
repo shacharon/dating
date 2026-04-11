@@ -100,7 +100,7 @@ function asPlainObject(v: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Parses `UserProfile.holyGrailStructuredFacts` JSON.
+ * Parses `MatchmakingProfile.holyGrailStructuredFacts` JSON.
  * Supported keys: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS`.
  */
 export function parseHolyGrailStructuredFactsFromJson(
@@ -288,7 +288,7 @@ function parseMaxDistanceKmDbJson(v: unknown): number {
 }
 
 /**
- * Parses `UserProfile.holyGrailStructuredPreferences` JSON.
+ * Parses `MatchmakingProfile.holyGrailStructuredPreferences` JSON.
  * Supported keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`.
  */
 export function parseHolyGrailStructuredPreferencesFromJson(

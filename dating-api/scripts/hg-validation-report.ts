@@ -23,7 +23,7 @@ function initCounts(): DimCounts {
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
 
-  const searchers = await prisma.userProfile.findMany({
+  const searchers = await prisma.matchmakingProfile.findMany({
     where: {
       OR: SYNTHETIC_ID_PREFIX_ALLOWLIST.map((prefix) => ({ id: { startsWith: prefix } })),
     },
@@ -42,7 +42,7 @@ async function main(): Promise<void> {
   try {
     console.log('=== HG VALIDATION REPORT ===');
     for (const searcherId of searcherIds) {
-      const sRow = await prisma.userProfile.findUnique({
+      const sRow = await prisma.matchmakingProfile.findUnique({
         where: { id: searcherId },
         select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
       });
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const candidateRows = await prisma.userProfile.findMany({
+      const candidateRows = await prisma.matchmakingProfile.findMany({
         where: {
           id: { not: searcherId },
           OR: VALIDATION_CANDIDATE_PREFIXES.map((prefix) => ({ id: { startsWith: prefix } })),

@@ -23,7 +23,7 @@ import {
 } from './auth-error-codes';
 import {
   httpOnlyLaxSessionCookieBase,
-  parseCookieHeader,
+  readRequestCookieJar,
   sessionMaxAgeMsFromTtlDays,
 } from './auth-cookies.util';
 import { toAuthMeResponseDto, type AuthMeResponseDto } from './auth.dto';
@@ -54,6 +54,13 @@ function authErrorFromForbidden(e: unknown): AuthErrorCode | null {
     return (payload as { auth_error: AuthErrorCode }).auth_error;
   }
   return null;
+}
+
+function rethrowCause(cause: unknown): never {
+  if (cause instanceof Error) {
+    throw cause;
+  }
+  throw new Error('Unexpected error', { cause });
 }
 
 @Injectable()
@@ -119,9 +126,7 @@ export class AuthService {
       return;
     }
 
-    const cookies =
-      (req as Request & { cookies?: Record<string, string> }).cookies ??
-      parseCookieHeader(req.headers.cookie);
+    const cookies = readRequestCookieJar(req);
     const expectedState = cookies[GOOGLE_OAUTH_STATE_COOKIE_NAME];
     if (!expectedState || expectedState !== state) {
       redirectWithAuthError(AUTH_ERROR_CODES.invalid_state);
@@ -147,13 +152,13 @@ export class AuthService {
     let user: User;
     try {
       user = await this.resolveGoogleLoginUser(profile);
-    } catch (e) {
-      const authErr = authErrorFromForbidden(e);
+    } catch (cause: unknown) {
+      const authErr = authErrorFromForbidden(cause);
       if (authErr) {
         redirectWithAuthError(authErr);
         return;
       }
-      throw e;
+      rethrowCause(cause);
     }
 
     const forwarded = req.headers['x-forwarded-for'];
@@ -231,10 +236,7 @@ export class AuthService {
 
   async logout(req: Request, res: Response): Promise<{ ok: true }> {
     const name = this.cfg.sessionCookieName;
-    const fromParser = (req as Request & { cookies?: Record<string, string> })
-      .cookies?.[name];
-    const raw =
-      fromParser ?? parseCookieHeader(req.headers.cookie)[name] ?? undefined;
+    const raw = readRequestCookieJar(req)[name] ?? undefined;
 
     if (raw?.trim()) {
       await this.sessions.revokeSession({ rawToken: raw.trim() });
@@ -267,11 +269,11 @@ export class AuthService {
       }
       try {
         user = await this.users.updateLoginFields(byGoogle.id, profile);
-      } catch (e) {
-        if (isPrismaUniqueConstraintViolation(e)) {
+      } catch (cause: unknown) {
+        if (isPrismaUniqueConstraintViolation(cause)) {
           throw forbiddenAuthError(AUTH_ERROR_CODES.email_in_use);
         }
-        throw e;
+        rethrowCause(cause);
       }
     } else {
       const emailOwner = await this.users.findByEmail(profile.email);
@@ -284,20 +286,20 @@ export class AuthService {
         }
         try {
           user = await this.users.updateLoginFields(emailOwner.id, profile);
-        } catch (e) {
-          if (isPrismaUniqueConstraintViolation(e)) {
+        } catch (cause: unknown) {
+          if (isPrismaUniqueConstraintViolation(cause)) {
             throw forbiddenAuthError(AUTH_ERROR_CODES.email_in_use);
           }
-          throw e;
+          rethrowCause(cause);
         }
       } else {
         try {
           user = await this.users.createFromGoogleIdentity(profile);
-        } catch (e) {
-          if (isPrismaUniqueConstraintViolation(e)) {
+        } catch (cause: unknown) {
+          if (isPrismaUniqueConstraintViolation(cause)) {
             throw forbiddenAuthError(AUTH_ERROR_CODES.email_in_use);
           }
-          throw e;
+          rethrowCause(cause);
         }
       }
     }

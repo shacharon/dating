@@ -14,7 +14,7 @@ import {
 } from './holy-grail-structured-write.merge';
 
 /**
- * Sparse partial updates for `UserProfile` Holy Grail JSON columns.
+ * Sparse partial updates for `MatchmakingProfile` Holy Grail JSON columns.
  * Omit `structuredFactsPatch` / `structuredPreferencesPatch` to leave that column unchanged.
  * Patches must use only `HOLY_GRAIL_STRUCTURED_*_JSON_KEYS` (see `holy-grail-structured-contract.ts`).
  */
@@ -41,7 +41,7 @@ export class HolyGrailStructuredWriteService {
       return;
     }
 
-    const row = await this.prisma.userProfile.findUnique({
+    const row = await this.prisma.matchmakingProfile.findUnique({
       where: { id: profileId },
       select: {
         holyGrailStructuredFacts: true,
@@ -52,7 +52,7 @@ export class HolyGrailStructuredWriteService {
       throw new NotFoundException(`Profile not found: ${profileId}`);
     }
 
-    const data: Prisma.UserProfileUpdateInput = {};
+    const data: Prisma.MatchmakingProfileUpdateInput = {};
 
     try {
       if (hasFacts) {
@@ -81,7 +81,7 @@ export class HolyGrailStructuredWriteService {
       throw e;
     }
 
-    await this.prisma.userProfile.update({
+    await this.prisma.matchmakingProfile.update({
       where: { id: profileId },
       data,
     });

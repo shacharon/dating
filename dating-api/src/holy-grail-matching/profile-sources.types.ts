@@ -2,7 +2,7 @@
  * Structured inputs for Step 4 → `MatchingCanonicalModel` mapping.
  * No raw profile text: callers populate from DB columns / validated API payloads only.
  *
- * **Persisted vs mapper-only:** `UserProfile.holyGrailStructuredFacts` JSON round-trips only through
+ * **Persisted vs mapper-only:** `MatchmakingProfile.holyGrailStructuredFacts` JSON round-trips only through
  * `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS`; mapper-only fact fields never pass `parseHolyGrailStructuredFactsFromJson`
  * and are rejected on structured facts merge writes. Preferences JSON uses `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`
  * for read, write, and mapper `structuredPreferences` (single allow-list).

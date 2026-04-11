@@ -2,8 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { resolveEditableProfile } from '../_lib/profile-resolve';
+import { profileToFormFields, resolveEditableProfile } from '@/lib/profile-form';
 import type { ProfileDraft } from '../_lib/types';
+
+function genderDisplay(g: string): string {
+  const m: Record<string, string> = {
+    MALE: 'Male',
+    FEMALE: 'Female',
+    NON_BINARY: 'Non-binary',
+    OTHER: 'Other',
+    PREFER_NOT_TO_SAY: 'Prefer not to say',
+  };
+  return m[g] ?? g;
+}
 
 export default function ProfilePage() {
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
@@ -21,11 +32,7 @@ export default function ProfilePage() {
         if (!profile) {
           setDraft(null);
         } else {
-          setDraft({
-            aboutMe: profile.aboutMe,
-            aboutPartner: profile.aboutPartner ?? '',
-            aboutRelationship: profile.aboutRelationship ?? '',
-          });
+          setDraft(profileToFormFields(profile));
         }
       } catch (e) {
         if (!cancelled) {
@@ -64,7 +71,7 @@ export default function ProfilePage() {
             {loadError}
           </p>
           <Link
-            href="/dating/onboarding"
+            href="/onboarding"
             className="inline-block rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             Back to onboarding
@@ -85,7 +92,7 @@ export default function ProfilePage() {
             You don’t have a profile yet. Complete onboarding to review and find matches.
           </p>
           <Link
-            href="/dating/onboarding"
+            href="/onboarding"
             className="inline-block rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
           >
             Go to onboarding
@@ -94,6 +101,11 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const partnerLine =
+    draft.desiredPartnerGenders.length > 0
+      ? draft.desiredPartnerGenders.map(genderDisplay).join(', ')
+      : '—';
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
@@ -106,6 +118,50 @@ export default function ProfilePage() {
         </p>
 
         <div className="space-y-4">
+          <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Basics
+            </h2>
+            <dl className="space-y-2 text-sm text-zinc-900 dark:text-zinc-100">
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  Birth date
+                </dt>
+                <dd>{draft.birthDate || '—'}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  Gender
+                </dt>
+                <dd>{draft.gender ? genderDisplay(draft.gender) : '—'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  Open to matching with
+                </dt>
+                <dd className="mt-0.5">{partnerLine}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  City
+                </dt>
+                <dd>{draft.city || '—'}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  Country
+                </dt>
+                <dd>{draft.country || '—'}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  Location label
+                </dt>
+                <dd className="mt-0.5">{draft.locationLabel || '—'}</dd>
+              </div>
+            </dl>
+          </section>
+
           <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
               About me
@@ -134,7 +190,7 @@ export default function ProfilePage() {
 
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
-            href="/dating/onboarding"
+            href="/onboarding"
             className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             Edit

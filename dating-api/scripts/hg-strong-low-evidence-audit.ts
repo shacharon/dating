@@ -92,7 +92,7 @@ async function main() {
   const prisma = moduleRef.get(PrismaService);
   const profilesPrisma = moduleRef.get(ProfilesPrismaService);
 
-  const recent = await prisma.userProfile.findMany({
+  const recent = await prisma.matchmakingProfile.findMany({
     where: {
       evaluation: { evaluatedAt: { not: null } },
       evaluationRaw: { isNot: null },

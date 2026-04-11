@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { getApiBase } from '@/lib/api-base';
 import {
   CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_CLICK,
   CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_IMPRESSION,
@@ -8,30 +9,30 @@ import {
 } from '../_lib/children-unsure';
 
 type Props = {
-  readonly apiBaseUrl: string;
   readonly visible: boolean;
 };
 
 /**
  * Clickable badge + fire-and-forget analytics (impression once per mount when visible; click counts).
  */
-export function ChildrenUnsureBadge({ apiBaseUrl, visible }: Props) {
+export function ChildrenUnsureBadge({ visible }: Props) {
   const impressionSent = useRef(false);
+  const apiBase = useMemo(() => getApiBase(), []);
 
   useEffect(() => {
     if (!visible || impressionSent.current) return;
     impressionSent.current = true;
-    void fetch(`${apiBaseUrl}/api/v1/matches/analytics/children-unsure/events`, {
+    void fetch(`${apiBase}/api/v1/matches/analytics/children-unsure/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'badge_impression' }),
     }).catch(() => {});
-  }, [visible, apiBaseUrl]);
+  }, [visible, apiBase]);
 
   if (!visible) return null;
 
   const onClick = () => {
-    void fetch(childrenUnsureAnalyticsEventsUrl(apiBaseUrl), {
+    void fetch(childrenUnsureAnalyticsEventsUrl(apiBase), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: CHILDREN_UNSURE_ANALYTICS_EVENT_BADGE_CLICK }),

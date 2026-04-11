@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   try {
     for (const row of rows) {
       if (!row?.id || !row.aboutMe) continue;
-      await prisma.userProfile.upsert({
+      await prisma.matchmakingProfile.upsert({
         where: { id: row.id },
         create: {
           id: row.id,

@@ -37,8 +37,8 @@ export class UserProfilesApiRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private get table(): UserProfileDelegate {
-    return (this.prisma as unknown as { userProfile: UserProfileDelegate })
-      .userProfile;
+    return (this.prisma as unknown as { matchmakingProfile: UserProfileDelegate })
+      .matchmakingProfile;
   }
 
   async findAll(): Promise<UserProfileResponseDto[]> {

@@ -3,6 +3,8 @@
  * Optional HG fields: use `tryHolyGrailMatchDiagnosticsApi` before rendering a diagnostic block.
  */
 
+import type { ProfileFormState } from '@/lib/profile-form';
+
 /** Mirrors `MatchExplainabilityDto` from dating-api match engine (strict FE contract). */
 export interface MatchExplainabilityDto {
   positiveChips: string[];
@@ -18,12 +20,8 @@ export interface MatchRecommendationDto {
   suggestedNextAction: string;
 }
 
-/** Profile text fields for display (loaded from UserProfile API). */
-export interface ProfileDraft {
-  aboutMe: string;
-  aboutPartner: string;
-  aboutRelationship: string;
-}
+/** Profile draft / review shape (aligned with onboarding form + GET /api/v1/me/profile). */
+export type ProfileDraft = ProfileFormState;
 
 /** One row in the matches list; enough for a card. */
 export interface DatingMatchPreview {

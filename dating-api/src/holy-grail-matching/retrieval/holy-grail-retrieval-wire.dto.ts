@@ -3,7 +3,7 @@
  * without injecting defaults — omitted keys stay absent.
  *
  * **vs DB JSON:** `HolyGrailMatchingPreferencesWireDto` follows canonical `MatchingPreferences`.
- * For v1 HG, the same field names round-trip through `UserProfile.holyGrailStructuredPreferences` JSON
+ * For v1 HG, the same field names round-trip through `MatchmakingProfile.holyGrailStructuredPreferences` JSON
  * (`HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`); see `HolyGrailStructuredPreferencesPersistedWireDto`.
  */
 

@@ -1,3 +1,5 @@
+import type { Request } from 'express';
+
 /** Options shared by session set/clear so browsers drop the cookie reliably. */
 export type HttpOnlyLaxSessionCookieOptions = {
   httpOnly: true;
@@ -33,6 +35,18 @@ export function sessionMaxAgeMsFromTtlDays(sessionTtlDays: number): number {
 /**
  * Parse `Cookie` header when `req.cookies` is unavailable (e.g. some tests).
  */
+/**
+ * Prefer `req.cookies` when present (cookie-parser); otherwise parse the raw `Cookie` header.
+ * Typed explicitly so callers avoid Express' loose `cookies?: any` on `Request`.
+ */
+export function readRequestCookieJar(req: Request): Record<string, string> {
+  const rawJar = (req as Request & { cookies?: unknown }).cookies;
+  if (rawJar && typeof rawJar === 'object' && !Array.isArray(rawJar)) {
+    return rawJar as Record<string, string>;
+  }
+  return parseCookieHeader(req.headers.cookie);
+}
+
 export function parseCookieHeader(
   header: string | undefined,
 ): Record<string, string> {

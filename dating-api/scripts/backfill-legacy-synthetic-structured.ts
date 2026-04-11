@@ -30,7 +30,7 @@ async function main(): Promise<void> {
         aboutMe: row.aboutMe ?? '',
         aboutPartner: row.aboutPartner ?? '',
       });
-      const existing = await prisma.userProfile.findUnique({
+      const existing = await prisma.matchmakingProfile.findUnique({
         where: { id: row.id },
         select: { holyGrailStructuredFacts: true, holyGrailStructuredPreferences: true },
       });
@@ -46,7 +46,7 @@ async function main(): Promise<void> {
         existing.holyGrailStructuredPreferences,
         structuredPreferencesPatch,
       );
-      await prisma.userProfile.update({
+      await prisma.matchmakingProfile.update({
         where: { id: row.id },
         data: { holyGrailStructuredFacts, holyGrailStructuredPreferences },
       });

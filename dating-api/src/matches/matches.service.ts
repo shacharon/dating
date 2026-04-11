@@ -543,7 +543,7 @@ export class MatchesService {
 
   /**
    * Filtered legacy records plus the HG row map from the same list load (`loadMatchListProfileData`).
-   * Avoids a second `UserProfile` query when resolving HG wires for the same record set.
+   * Avoids a second `MatchmakingProfile` query when resolving HG wires for the same record set.
    */
   async listFullWithHolyGrailRows(opts: {
     policyVersion: string;
@@ -605,7 +605,7 @@ export class MatchesService {
       const rows =
         idSet.size === 0
           ? []
-          : await this.prisma.userProfile.findMany({
+          : await this.prisma.matchmakingProfile.findMany({
               where: { id: { in: [...idSet] } },
               select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
             });

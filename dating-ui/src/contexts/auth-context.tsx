@@ -39,8 +39,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("loading");
     const r = await fetchAuthMe();
     if (r.ok) {
+      setLastError(null);
       setUser(r.user);
       setStatus("authenticated");
+      return;
+    }
+    if (r.status === 0) {
+      setUser(null);
+      setStatus("unauthenticated");
+      setLastError(
+        "Cannot reach the API. Start dating-api (port 3001 by default). With no NEXT_PUBLIC_API_URL, the UI uses same-origin /api (Next.js proxy); set API_PROXY_TARGET if the API is not on localhost:3001.",
+      );
       return;
     }
     if (r.status === 401) {

@@ -128,7 +128,7 @@ function main(): void {
 
   const prisma = new PrismaClient();
   void (async () => {
-    const rows = (await prisma.userProfile.findMany({
+    const rows = (await prisma.matchmakingProfile.findMany({
       select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
       orderBy: { id: 'asc' },
     })) as ChildrenUnsureProfileRow[];

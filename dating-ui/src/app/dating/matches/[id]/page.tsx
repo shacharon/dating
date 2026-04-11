@@ -7,8 +7,7 @@ import type {
 } from '../../_lib/types';
 import { ChipsSection } from '../../../components/chips-section';
 import { ChildrenUnsureBadge } from '../children-unsure-badge';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getApiBase } from '@/lib/api-base';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -24,8 +23,9 @@ type MatchDetailResolved = Omit<MatchDetailApiResponse, 'children_unsure'> & {
 };
 
 async function fetchMatchDetail(id: string): Promise<MatchDetailResolved> {
+  const base = getApiBase();
   const res = await fetch(
-    `${API_BASE_URL}/api/v1/matches/${encodeURIComponent(id)}`,
+    `${base}/api/v1/matches/${encodeURIComponent(id)}`,
     { cache: 'no-store' },
   );
 
@@ -94,7 +94,6 @@ export default async function MatchDetailPage({ params }: Props) {
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <ChildrenUnsureBadge
-                apiBaseUrl={API_BASE_URL}
                 visible={
                   Boolean(match.children_unsure?.profile_a_to_profile_b) ||
                   Boolean(match.children_unsure?.profile_b_to_profile_a)

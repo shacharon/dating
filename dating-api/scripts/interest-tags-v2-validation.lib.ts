@@ -149,7 +149,7 @@ export async function runInterestTagsV2Validation(args: {
   const T = INTEREST_TAGS_V2_VALIDATION_THRESHOLDS;
 
   try {
-    const rows = await prisma.userProfile.findMany({
+    const rows = await prisma.matchmakingProfile.findMany({
       where: {
         OR: idPrefixes.map((p) => ({ id: { startsWith: p } })),
       },

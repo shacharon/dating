@@ -7,7 +7,10 @@
     "build": "next build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:phase2-me-profile": "vitest run src/lib/me-profile-api.spec.ts src/lib/profile-form.spec.ts src/lib/phase25-profile-enrichment.spec.ts src/middleware.spec.ts"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -15,6 +18,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "vitest": "^3.2.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

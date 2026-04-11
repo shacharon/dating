@@ -20,7 +20,7 @@ import type { ChildrenUnsureProfileRow } from '../matches/children-unsure-profil
 import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 
 /**
- * Single `userProfile` read for match list: legacy compare payload (`rowToPayload`) plus HG row slice
+ * Single `matchmakingProfile` read for match list: legacy compare payload (`rowToPayload`) plus HG row slice
  * (structured JSON, extractionV2, self signal snapshot). Keeps parity with `getFromPrisma` + children-unsure select.
  */
 const MATCH_LIST_PROFILE_DATA_SELECT = {
@@ -53,9 +53,9 @@ const MATCH_LIST_PROFILE_DATA_SELECT = {
   extractionV2: {
     select: { interests_self: true, interests: true, lifestyleTraits: true },
   },
-} as const satisfies Prisma.UserProfileSelect;
+} as const satisfies Prisma.MatchmakingProfileSelect;
 
-type MatchListProfileDbRow = Prisma.UserProfileGetPayload<{
+type MatchListProfileDbRow = Prisma.MatchmakingProfileGetPayload<{
   select: typeof MATCH_LIST_PROFILE_DATA_SELECT;
 }>;
 
@@ -191,7 +191,7 @@ export class ProfilesPrismaService {
       return { profiles: [], holyGrailRowsById: new Map() };
     }
     const listIds = listItems.map((x) => x.id);
-    const rows = await this.prisma.userProfile.findMany({
+    const rows = await this.prisma.matchmakingProfile.findMany({
       where: { id: { in: listIds } },
       select: MATCH_LIST_PROFILE_DATA_SELECT,
     });
@@ -214,7 +214,7 @@ export class ProfilesPrismaService {
    * For scripts / diagnostics that must not fan out to all profiles × all profiles.
    */
   /**
-   * Single batched `UserProfile` read for a pair: same `ProfileJsonPayload` + HG row mapping as list/compare
+   * Single batched `MatchmakingProfile` read for a pair: same `ProfileJsonPayload` + HG row mapping as list/compare
    * (`MATCH_LIST_PROFILE_DATA_SELECT`). Callers run legacy compare + HG without a second profile query.
    */
   async loadMatchPairRuntimeBundle(
@@ -222,7 +222,7 @@ export class ProfilesPrismaService {
     bId: string,
   ): Promise<MatchPairRuntimeBundle | null> {
     if (aId === bId) return null;
-    const rows = await this.prisma.userProfile.findMany({
+    const rows = await this.prisma.matchmakingProfile.findMany({
       where: { id: { in: [aId, bId] } },
       select: MATCH_LIST_PROFILE_DATA_SELECT,
     });
@@ -248,7 +248,7 @@ export class ProfilesPrismaService {
     if (profileIdsOrdered.length === 0) {
       return { profiles: [], holyGrailRowsById: new Map() };
     }
-    const rows = await this.prisma.userProfile.findMany({
+    const rows = await this.prisma.matchmakingProfile.findMany({
       where: { id: { in: [...profileIdsOrdered] } },
       select: MATCH_LIST_PROFILE_DATA_SELECT,
     });
@@ -356,7 +356,7 @@ export class ProfilesPrismaService {
     );
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.userProfile.upsert({
+      await tx.matchmakingProfile.upsert({
         where: { id },
         create: {
           id,
@@ -516,7 +516,7 @@ export class ProfilesPrismaService {
   }
 
   private async getFromPrisma(id: string): Promise<UserProfileRow | null> {
-    const row = await this.prisma.userProfile.findUnique({
+    const row = await this.prisma.matchmakingProfile.findUnique({
       where: { id },
       include: {
         evaluationRaw: {
@@ -563,7 +563,7 @@ export class ProfilesPrismaService {
   }
 
   private async listFromPrisma(): Promise<ProfileListItem[]> {
-    const rows = await this.prisma.userProfile.findMany({
+    const rows = await this.prisma.matchmakingProfile.findMany({
       select: {
         id: true,
         name: true,

@@ -12,6 +12,20 @@ enum UserStatus {
   DISABLED
 }
 
+enum UserProfileStatus {
+  DRAFT
+  DISABLED
+}
+
+/// Product onboarding self gender (same labels as `GenderIdentity` in `matching-canonical.types.ts`).
+enum ProfileGender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -23,6 +37,7 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   sessions     UserSession[]
+  profile      UserProfile?
 }
 
 model UserSession {
@@ -42,7 +57,8 @@ model UserSession {
   @@index([revokedAt])
 }
 
-model UserProfile {
+/// Matchmaking / analysis row keyed by its own id (legacy `UserProfile` table). Not the authenticated product profile.
+model MatchmakingProfile {
   id                String   @id
   name              String
   aboutMe           String
@@ -58,6 +74,31 @@ model UserProfile {
   evaluationRaw     ProfileEvaluationRaw?
   signalSnapshots   ProfileSignalSnapshot[]
   extractionV2      ProfileExtractionV2?
+
+  @@map("UserProfile")
+}
+
+/// Authenticated product flow: one row per `User`.
+model UserProfile {
+  id                  String            @id @default(cuid())
+  userId              String            @unique
+  status              UserProfileStatus @default(DRAFT)
+  onboardingStep      Int               @default(1)
+  aboutMe             String?
+  aboutPartner        String?
+  aboutRelationship   String?
+  birthDate           DateTime?
+  gender              ProfileGender?
+  /// Partner gender openness as JSON string array, e.g. `["MALE","FEMALE"]`. Stored as `Json` so it can be NULL (Prisma does not support nullable list columns on Postgres).
+  desiredPartnerGenders Json?
+  city                String?
+  country             String?
+  locationLabel       String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("UserProductProfile")
 }
 
 model ProfileEvaluation {
@@ -70,7 +111,7 @@ model ProfileEvaluation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
 model ProfileEvaluationRaw {
@@ -80,7 +121,7 @@ model ProfileEvaluationRaw {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
 model ProfileSignalSnapshot {
@@ -112,7 +153,7 @@ model ProfileSignalSnapshot {
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([profileId, domain])
   @@index([profileId])
@@ -139,19 +180,19 @@ model ProfileExtractionV2 {
   profileId           String   @unique
   version             String   @default("v2")
   extractedAt         DateTime @default(now())
-  
+
   promptVersion       String
   textHash            String
-  
+
   extractionJson      Json
-  
+
   selfSignals         Json
   partnerSignals      Json
   relationshipSignals Json
-  
+
   coverageScore       Int
   avgConfidence       Float
-  
+
   interests_self      String[] @default([])
   interests_partner   String[] @default([])
   negatives_self      String[] @default([])
@@ -163,16 +204,16 @@ model ProfileExtractionV2 {
   preferences         String[] @default([])
   boundaries          String[] @default([])
   values              String[] @default([])
-  
+
   relationship_clarity_self         Int?
   relationship_clarity_partner      Int?
   relationship_clarity_relationship Int?
-  
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-  
-  profile             UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
+
+  profile             MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([promptVersion, textHash])
   @@index([interests_self], type: Gin)

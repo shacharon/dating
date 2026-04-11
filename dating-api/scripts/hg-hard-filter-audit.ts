@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const reasonCounts = new Map<string, number>();
 
   try {
-    const searchers = await prisma.userProfile.findMany({
+    const searchers = await prisma.matchmakingProfile.findMany({
       where: {
         OR: SYNTHETIC_ID_PREFIX_ALLOWLIST.map((prefix) => ({ id: { startsWith: prefix } })),
       },
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
     });
 
     for (const { id: reportSearcherId } of searchers) {
-      const sRow = await prisma.userProfile.findUnique({
+      const sRow = await prisma.matchmakingProfile.findUnique({
         where: { id: reportSearcherId },
         select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
       });
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const candidateRows = await prisma.userProfile.findMany({
+      const candidateRows = await prisma.matchmakingProfile.findMany({
         where: {
           id: { not: reportSearcherId },
           OR: VALIDATION_CANDIDATE_PREFIXES.map((prefix) => ({ id: { startsWith: prefix } })),

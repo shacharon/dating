@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 
 export function NavAuth() {
-  const { status, user, logout } = useAuth();
+  const { status, user, logout, lastError, clearLastError } = useAuth();
 
   if (status === "loading") {
     return (
@@ -16,12 +16,31 @@ export function NavAuth() {
 
   if (status === "unauthenticated") {
     return (
-      <Link
-        href="/login"
-        className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
-      >
-        Log in
-      </Link>
+      <div className="flex flex-wrap items-center gap-2">
+        {lastError ? (
+          <span
+            className="max-w-[14rem] truncate text-xs text-red-600 dark:text-red-400"
+            title={lastError}
+          >
+            Cannot reach API
+          </span>
+        ) : null}
+        {lastError ? (
+          <button
+            type="button"
+            className="text-xs text-zinc-500 underline dark:text-zinc-400"
+            onClick={() => clearLastError()}
+          >
+            Dismiss
+          </button>
+        ) : null}
+        <Link
+          href="/login"
+          className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+        >
+          Log in
+        </Link>
+      </div>
     );
   }
 

@@ -20,7 +20,7 @@ export class PrismaHolyGrailProfileSourceRepository implements HolyGrailProfileS
   async getMappingInputByProfileId(
     profileId: string,
   ): Promise<HolyGrailProfileMappingInput | null> {
-    const row = await this.prisma.userProfile.findUnique({
+    const row = await this.prisma.matchmakingProfile.findUnique({
       where: { id: profileId },
       include: {
         extractionV2: { select: EXTRACTION_SELECT },
@@ -42,7 +42,7 @@ export class PrismaHolyGrailProfileSourceRepository implements HolyGrailProfileS
       args.limit !== undefined
         ? Math.max(0, args.limit)
         : DEFAULT_CANDIDATE_POOL_LIMIT;
-    const rows = await this.prisma.userProfile.findMany({
+    const rows = await this.prisma.matchmakingProfile.findMany({
       where: { id: { not: args.excludeProfileId } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       take: take === 0 ? 0 : take,

@@ -20,11 +20,17 @@ export async function fetchAuthMe(): Promise<
   | { ok: false; status: number; authError?: string }
 > {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/auth/me`, {
-    method: "GET",
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/api/v1/auth/me`, {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    /** DNS, refused connection, CORS block, offline — `fetch` rejects (no HTTP status). */
+    return { ok: false, status: 0 };
+  }
   if (res.status === 200) {
     const user = parseUser(await res.json());
     if (user) return { ok: true, user };
@@ -49,15 +55,24 @@ export async function exchangeGoogleIdToken(
   { ok: true; user: AuthUser } | { ok: false; status: number; message: string }
 > {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/auth/google`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ idToken }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/api/v1/auth/google`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    });
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Cannot reach the API server. Is dating-api running?",
+    };
+  }
   if (res.status === 200) {
     const user = parseUser(await res.json());
     if (user) return { ok: true, user };
@@ -81,10 +96,14 @@ export async function exchangeGoogleIdToken(
 
 export async function authLogout(): Promise<boolean> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-  return res.ok;
+  try {
+    const res = await fetch(`${base}/api/v1/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

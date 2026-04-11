@@ -12,7 +12,7 @@ export default function DatingLandingPage() {
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
-            href="/dating/onboarding"
+            href="/onboarding"
             className="inline-block rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white transition-opacity hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
           >
             Get started

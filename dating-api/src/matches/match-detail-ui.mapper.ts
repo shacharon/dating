@@ -4,7 +4,6 @@
  */
 
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
-import type { HolyGrailMatchDiagnosticsPickSource } from './holy-grail-match-diagnostics.wire';
 import { buildShortReason } from './match-short-reason';
 import type {
   ChildrenUnsureDirectionsDto,
@@ -18,8 +17,13 @@ type HolyGrailDetailSlice = Readonly<{
   hgRankScore: number;
 }>;
 
+/** Same as wire `HolyGrailMatchDiagnosticsPickSource`; derived from `tryPick` so the type import is not a separate graph edge (avoids ESLint `error` phantom on the alias). */
+type HolyGrailDiagnosticsWireInput = Parameters<
+  typeof tryPickHolyGrailMatchDiagnosticsDto
+>[0];
+
 function pickHolyGrailDetailSlice(
-  source: HolyGrailMatchDiagnosticsPickSource | undefined,
+  source: HolyGrailDiagnosticsWireInput,
 ): HolyGrailDetailSlice | undefined {
   // Bridge: `tryPick` return type can resolve as an ESLint `error` symbol in some graphs; narrow from `unknown`.
   const raw = tryPickHolyGrailMatchDiagnosticsDto(source) as unknown;
@@ -130,7 +134,7 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
 export function mapMatchRecordToDetailUi(
   m: MatchRecordDto,
   childrenUnsure: MatchDetailChildrenUnsureDto,
-  holyGrail?: HolyGrailMatchDiagnosticsPickSource,
+  holyGrail?: HolyGrailDiagnosticsWireInput,
 ): MatchDetailUiDto {
   const expl = effectiveExplainability(m);
   const rec = m.recommendation;

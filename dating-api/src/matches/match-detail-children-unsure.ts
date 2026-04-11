@@ -35,7 +35,7 @@ export const CHILDREN_UNSURE_PROFILE_ROW_SELECT = {
     where: { domain: 'self' as const },
     select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
   },
-} satisfies Prisma.UserProfileSelect;
+} satisfies Prisma.MatchmakingProfileSelect;
 
 export interface MatchDetailChildrenUnsureFlags {
   readonly profile_a_to_profile_b: boolean;
@@ -68,7 +68,7 @@ export function computeMatchDetailChildrenUnsureFromRows(
 export async function loadChildrenUnsureProfileRowMap(
   prisma: PrismaService,
 ): Promise<Map<string, ChildrenUnsureProfileRow>> {
-  const rows = await prisma.userProfile.findMany({
+  const rows = await prisma.matchmakingProfile.findMany({
     select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
   });
   return new Map(rows.map((r) => [r.id, r as ChildrenUnsureProfileRow]));
@@ -117,7 +117,7 @@ export async function computeMatchDetailPairHg(
     rowA = preloadedRows.rowA;
     rowB = preloadedRows.rowB;
   } else {
-    const rows = await prisma.userProfile.findMany({
+    const rows = await prisma.matchmakingProfile.findMany({
       where: { id: { in: [profileIdA, profileIdB] } },
       select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
     });

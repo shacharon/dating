@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   const prefixArg = getArg('prefix');
   const activePrefixes = prefixArg ? [prefixArg] : [...SYNTHETIC_ID_PREFIX_ALLOWLIST];
 
-  const rows = await prisma.userProfile.findMany({
+  const rows = await prisma.matchmakingProfile.findMany({
     where: {
       OR: activePrefixes.map((prefix) => ({ id: { startsWith: prefix } })),
     },

@@ -50,7 +50,7 @@ async function hgValidationPoolAudit(prisma: PrismaService): Promise<{
   orderedPairEvaluations: number;
   newlyAdmittedSamples: HgPairSample[];
 }> {
-  const searchers = await prisma.userProfile.findMany({
+  const searchers = await prisma.matchmakingProfile.findMany({
     where: {
       OR: SYNTHETIC_ID_PREFIX_ALLOWLIST.map((prefix) => ({ id: { startsWith: prefix } })),
     },
@@ -65,7 +65,7 @@ async function hgValidationPoolAudit(prisma: PrismaService): Promise<{
   const newlyAdmittedSamples: HgPairSample[] = [];
 
   for (const { id: searcherId } of searchers) {
-    const sRow = await prisma.userProfile.findUnique({
+    const sRow = await prisma.matchmakingProfile.findUnique({
       where: { id: searcherId },
       select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
     });
@@ -77,7 +77,7 @@ async function hgValidationPoolAudit(prisma: PrismaService): Promise<{
       continue;
     }
 
-    const candidateRows = await prisma.userProfile.findMany({
+    const candidateRows = await prisma.matchmakingProfile.findMany({
       where: {
         id: { not: searcherId },
         OR: VALIDATION_CANDIDATE_PREFIXES.map((prefix) => ({ id: { startsWith: prefix } })),
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
     const rebuildStats = daemon.refreshIndexFromRecords(records);
 
     console.log('Loading profiles for children_unsure scan…');
-    const profileRows = await prisma.userProfile.findMany({
+    const profileRows = await prisma.matchmakingProfile.findMany({
       select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
     });
     const byId = new Map<string, ChildrenUnsureProfileRow>(

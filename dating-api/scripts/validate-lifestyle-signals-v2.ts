@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   const evaluatedAt = new Date();
 
   try {
-    const rows = await prisma.userProfile.findMany({
+    const rows = await prisma.matchmakingProfile.findMany({
       where: { id: { startsWith: PREFIX } },
       orderBy: { id: 'asc' },
       select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,

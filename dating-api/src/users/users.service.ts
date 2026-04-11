@@ -31,7 +31,7 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { googleId: g } });
   }
 
-  /** First-time Google login: creates the `User` row (no `UserProfile` yet). */
+  /** First-time Google login: creates the `User` row (no product `UserProfile` row yet). */
   async createFromGoogleIdentity(identity: GoogleIdentity): Promise<User> {
     return this.prisma.user.create({
       data: {

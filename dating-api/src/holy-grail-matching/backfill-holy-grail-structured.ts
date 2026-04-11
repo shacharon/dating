@@ -400,7 +400,7 @@ async function main() {
   const retrieval = app.get(HolyGrailRetrievalService);
   const sources = app.get(PrismaHolyGrailProfileSourceRepository);
 
-  const rows = await prisma.userProfile.findMany({
+  const rows = await prisma.matchmakingProfile.findMany({
     take: Math.max(TARGET_UPDATES * 4, SCAN_LIMIT),
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     select: {

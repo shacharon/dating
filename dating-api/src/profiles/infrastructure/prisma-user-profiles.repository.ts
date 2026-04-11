@@ -31,7 +31,7 @@ interface UserProfileTableDelegate {
   deleteMany(args: { where: { id: string } }): Promise<unknown>;
 }
 
-/** Mirrors the Prisma `UserProfile` model; kept local so domain stays Prisma-free. */
+/** Mirrors the Prisma `MatchmakingProfile` model; kept local so domain stays Prisma-free. */
 interface UserProfilePersistenceRow {
   id: string;
   name: string;
@@ -47,8 +47,8 @@ export class PrismaUserProfilesRepository implements UserProfilesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private get userProfileTable(): UserProfileTableDelegate {
-    return (this.prisma as unknown as { userProfile: UserProfileTableDelegate })
-      .userProfile;
+    return (this.prisma as unknown as { matchmakingProfile: UserProfileTableDelegate })
+      .matchmakingProfile;
   }
 
   async getById(id: UserId): Promise<UserProfileRecord | null> {

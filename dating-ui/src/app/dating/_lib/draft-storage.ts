@@ -1,24 +1,54 @@
+import type { MeProfileGender } from '@/lib/me-profile-api';
+import { ME_PROFILE_GENDERS } from '@/lib/me-profile-api';
+import {
+  emptyProfileFormState,
+  isProfileFormEmpty,
+} from '@/lib/profile-form';
 import type { ProfileDraft } from './types';
 
 const STORAGE_KEY = 'dating-onboarding-draft';
 
-const emptyDraft = (): ProfileDraft => ({
-  aboutMe: '',
-  aboutPartner: '',
-  aboutRelationship: '',
-});
+const emptyDraft = (): ProfileDraft => emptyProfileFormState();
+
+function parsePartnerGenders(raw: unknown): MeProfileGender[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const allowed = new Set<string>(ME_PROFILE_GENDERS);
+  return raw.filter(
+    (x): x is MeProfileGender => typeof x === 'string' && allowed.has(x),
+  );
+}
 
 function parseDraft(raw: string): ProfileDraft {
+  const base = emptyProfileFormState();
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return {
-      aboutMe: typeof parsed.aboutMe === 'string' ? parsed.aboutMe : '',
-      aboutPartner: typeof parsed.aboutPartner === 'string' ? parsed.aboutPartner : '',
+      ...base,
+      aboutMe: typeof parsed.aboutMe === 'string' ? parsed.aboutMe : base.aboutMe,
+      aboutPartner:
+        typeof parsed.aboutPartner === 'string'
+          ? parsed.aboutPartner
+          : base.aboutPartner,
       aboutRelationship:
-        typeof parsed.aboutRelationship === 'string' ? parsed.aboutRelationship : '',
+        typeof parsed.aboutRelationship === 'string'
+          ? parsed.aboutRelationship
+          : base.aboutRelationship,
+      birthDate:
+        typeof parsed.birthDate === 'string' ? parsed.birthDate : base.birthDate,
+      gender: typeof parsed.gender === 'string' ? parsed.gender : base.gender,
+      desiredPartnerGenders: parsePartnerGenders(parsed.desiredPartnerGenders),
+      city: typeof parsed.city === 'string' ? parsed.city : base.city,
+      country:
+        typeof parsed.country === 'string' ? parsed.country : base.country,
+      locationLabel:
+        typeof parsed.locationLabel === 'string'
+          ? parsed.locationLabel
+          : base.locationLabel,
     };
   } catch {
-    return emptyDraft();
+    return base;
   }
 }
 
@@ -43,7 +73,5 @@ export function clearDraft(): void {
 }
 
 export function isDraftMeaningfullyEmpty(draft: ProfileDraft): boolean {
-  return (
-    !draft.aboutMe.trim() && !draft.aboutPartner.trim() && !draft.aboutRelationship.trim()
-  );
+  return isProfileFormEmpty(draft);
 }

@@ -9,12 +9,12 @@ import {
   sortMatchesByScoreDesc,
   type MatchListItemApi,
 } from '../_lib/matches-list';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getApiBase } from '@/lib/api-base';
 
 async function fetchMatchList(hideChildrenUnsure: boolean): Promise<MatchListItemApi[]> {
   const qs = hideChildrenUnsure ? `?${HIDE_CHILDREN_UNSURE_QUERY_PARAM}=true` : '';
-  const res = await fetch(`${API_BASE_URL}/api/v1/matches${qs}`, {
+  const base = getApiBase();
+  const res = await fetch(`${base}/api/v1/matches${qs}`, {
     cache: 'no-store',
   });
 

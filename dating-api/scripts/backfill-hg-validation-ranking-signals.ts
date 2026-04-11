@@ -102,7 +102,7 @@ function pct(n: number, d: number): string {
 }
 
 async function loadPool(prisma: PrismaClient) {
-  return prisma.userProfile.findMany({
+  return prisma.matchmakingProfile.findMany({
     where: { OR: PREFIXES.map((p) => ({ id: { startsWith: p } })) },
     orderBy: { id: 'asc' },
     include: {

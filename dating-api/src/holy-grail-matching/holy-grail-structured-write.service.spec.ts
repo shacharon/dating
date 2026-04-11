@@ -70,7 +70,7 @@ describe('holy-grail structured write merge', () => {
 
 describe('HolyGrailStructuredWriteService', () => {
   const prismaMock = {
-    userProfile: {
+    matchmakingProfile: {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
@@ -90,17 +90,17 @@ describe('HolyGrailStructuredWriteService', () => {
   });
 
   it('throws NotFound when profile missing', async () => {
-    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+    prismaMock.matchmakingProfile.findUnique.mockResolvedValue(null);
     await expect(
       service.mergeStructuredLayers('missing', {
         structuredFactsPatch: { genderIdentity: GenderIdentity.MALE },
       }),
     ).rejects.toThrow(NotFoundException);
-    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+    expect(prismaMock.matchmakingProfile.update).not.toHaveBeenCalled();
   });
 
   it('throws BadRequest when structuredPreferencesPatch is not an object', async () => {
-    prismaMock.userProfile.findUnique.mockResolvedValue({
+    prismaMock.matchmakingProfile.findUnique.mockResolvedValue({
       holyGrailStructuredFacts: null,
       holyGrailStructuredPreferences: null,
     });
@@ -109,11 +109,11 @@ describe('HolyGrailStructuredWriteService', () => {
         structuredPreferencesPatch: [] as unknown,
       }),
     ).rejects.toThrow(BadRequestException);
-    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+    expect(prismaMock.matchmakingProfile.update).not.toHaveBeenCalled();
   });
 
   it('throws BadRequest on invalid enum and does not update', async () => {
-    prismaMock.userProfile.findUnique.mockResolvedValue({
+    prismaMock.matchmakingProfile.findUnique.mockResolvedValue({
       holyGrailStructuredFacts: null,
       holyGrailStructuredPreferences: null,
     });
@@ -122,21 +122,21 @@ describe('HolyGrailStructuredWriteService', () => {
         structuredFactsPatch: { genderIdentity: 'INVALID' },
       }),
     ).rejects.toThrow(BadRequestException);
-    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+    expect(prismaMock.matchmakingProfile.update).not.toHaveBeenCalled();
   });
 
   it('persists merged JSON for partial preferences only', async () => {
-    prismaMock.userProfile.findUnique.mockResolvedValue({
+    prismaMock.matchmakingProfile.findUnique.mockResolvedValue({
       holyGrailStructuredFacts: { genderIdentity: GenderIdentity.FEMALE },
       holyGrailStructuredPreferences: { partnerAgeMax: 55 },
     });
-    prismaMock.userProfile.update.mockResolvedValue({});
+    prismaMock.matchmakingProfile.update.mockResolvedValue({});
 
     await service.mergeStructuredLayers('p1', {
       structuredPreferencesPatch: { partnerAgeMin: 30 },
     });
 
-    expect(prismaMock.userProfile.update).toHaveBeenCalledWith({
+    expect(prismaMock.matchmakingProfile.update).toHaveBeenCalledWith({
       where: { id: 'p1' },
       data: {
         holyGrailStructuredPreferences: expect.objectContaining({
@@ -145,6 +145,6 @@ describe('HolyGrailStructuredWriteService', () => {
         }),
       },
     });
-    expect(prismaMock.userProfile.update.mock.calls[0][0].data.holyGrailStructuredFacts).toBeUndefined();
+    expect(prismaMock.matchmakingProfile.update.mock.calls[0][0].data.holyGrailStructuredFacts).toBeUndefined();
   });
 });

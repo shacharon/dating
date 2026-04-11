@@ -67,7 +67,7 @@ async function main(): Promise<void> {
         .digest('hex')
         .slice(0, 16);
 
-      await prisma.userProfile.upsert({
+      await prisma.matchmakingProfile.upsert({
         where: { id },
         create: {
           id,
