@@ -129,11 +129,15 @@ Selected from different score ranges to show system behavior:
 - **Observation:** In real relationships, some friction can be healthy if core compatibility is strong. The current system may be too friction-averse.
 - **Recommendation:** Consider a friction cap or diminishing returns (e.g., friction penalty maxes out at 7-8 points rather than scaling linearly)
 
-#### 3. Relationship balance ratio in data
-- **Observation:** Validation should use `balance.ratio` (and `positiveScore` / `negativeScore`) saved on match records, not a separate tier label.
+#### 3. Relationship Balance Tiers (GREEN/YELLOW/RED) Not Visible in Data
+- **0 GREEN tier matches** in dataset
+- **0 RED tier matches** in dataset
+- **Problem:** Either the tier logic isn't being computed/stored, or the dataset doesn't have the required signals
+- **Impact:** Cannot validate whether tier-based bonuses/penalties are working correctly
 - **Recommendation:** 
-  - Verify that `balance.ratio` is computed and stored
-  - Compare friction floor and relationship-fit nudges against ratio bands (thresholds 4 and 2)
+  - Verify that `balance.tier` is being computed and saved in match records
+  - If tiers are not being computed, this represents a missing validation dimension
+  - If computed but all matches are YELLOW/UNKNOWN, the tier thresholds may need adjustment
 
 ---
 
@@ -160,17 +164,17 @@ Selected from different score ranges to show system behavior:
 
 ### High Priority
 1. **Soften sparse-data penalty** for high-agreement matches (compatibility ≥75, friction ≤2)
-2. **Verify relationship balance ratio** is computed and visible in match records
+2. **Investigate relationship balance tier computation** - verify it's working and visible in data
 3. **Add friction penalty cap** to prevent total disqualification of otherwise compatible pairs
 
 ### Medium Priority
 4. **Review profile "Rachel"** for data quality issues (appears in multiple zero-score matches)
 5. **Consider coverage-weighted friction** - high friction matters more when coverage is high
-6. **Add ratio-band validation** using stored `balance.ratio`
+6. **Add tier-based validation** once tier data is available
 
 ### Low Priority
 7. **Monitor "Maya" profile** - unusually high performance might indicate overfitting or exceptional profile
-8. **Document expected score ranges** by ratio band for future validation
+8. **Document expected score ranges** by tier for future validation
 
 ---
 
@@ -190,6 +194,6 @@ The scoring system demonstrates **strong fundamentals**:
 **Key concerns:**
 1. Sparse-data penalty may be too aggressive for high-quality limited signals
 2. High friction acts as near-absolute disqualifier (may be too harsh)
-3. Relationship balance ratio validation may be missing from current analytics
+3. Relationship balance tier validation is missing from current data
 
 **Overall assessment:** The system is production-ready with strong fundamentals, but would benefit from fine-tuning the sparse-data and friction penalties to better handle edge cases.

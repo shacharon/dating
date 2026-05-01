@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   AcceptedPartnerAlcohol,
   MinimumPartnerEducation,
@@ -395,23 +394,19 @@ async function main() {
     logger: ['error', 'warn'],
   });
 
-  const prisma = app.get(PrismaService);
   const writer = app.get(HolyGrailStructuredWriteService);
   const retrieval = app.get(HolyGrailRetrievalService);
   const sources = app.get(PrismaHolyGrailProfileSourceRepository);
 
-  const rows = await prisma.matchmakingProfile.findMany({
-    take: Math.max(TARGET_UPDATES * 4, SCAN_LIMIT),
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    select: {
-      id: true,
-      name: true,
-      aboutMe: true,
-      aboutPartner: true,
-      aboutRelationship: true,
-      holyGrailStructuredPreferences: true,
-    },
-  });
+  // Slice 8: MatchmakingProfile reads disabled in-repo; backfill scan is a no-op until Migration 4.
+  const rows: {
+    id: string;
+    name: string;
+    aboutMe: string;
+    aboutPartner: string | null;
+    aboutRelationship: string | null;
+    holyGrailStructuredPreferences: unknown;
+  }[] = [];
 
   const baseSearchers = rows
     .slice(0, Math.max(1, VALIDATION_SEARCHERS))

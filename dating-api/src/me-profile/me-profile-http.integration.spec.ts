@@ -19,8 +19,29 @@ import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { AuthModule } from '../auth/auth.module';
 import { GoogleAuthService } from '../auth/google-auth.service';
-import { GoogleOAuthVerifier } from '../auth/google-oauth.verifier';
+import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
+import { StructuredLoggingModule } from '../logging/structured-logging.module';
+import { SimpleLoggerModule } from '../logger/simple-logger.module';
+import { LLM_CONFIG } from '../llm/llm.constants';
+import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileModule } from './me-profile.module';
+
+function parseStructuredJsonLogs(
+  spy: jest.SpiedFunction<typeof console.log>,
+): unknown[] {
+  const out: unknown[] = [];
+  for (const call of spy.mock.calls) {
+    const s = call[0];
+    if (typeof s === 'string' && s.startsWith('{')) {
+      try {
+        out.push(JSON.parse(s));
+      } catch {
+        /* non-JSON line */
+      }
+    }
+  }
+  return out;
+}
 
 function extractCookieValue(
   setCookie: string[] | undefined,
@@ -48,8 +69,13 @@ describe('me profile HTTP (integration)', () => {
     },
     userProfile: {
       findUnique: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn(),
       update: jest.fn(),
+    },
+    userProfileEvaluation: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
   const usersServiceMock = {
@@ -65,9 +91,6 @@ describe('me profile HTTP (integration)', () => {
   const SESSION_COOKIE = 'dating_session';
   const configStub = {
     googleClientId: 'google-client-id',
-    googleClientSecret: 'google-secret',
-    googleRedirectUri: 'http://localhost:3001/auth/google/callback',
-    authSuccessRedirectUrl: 'http://localhost:3000/',
     sessionSecretPepper: PEPPER,
     sessionCookieName: SESSION_COOKIE,
     sessionTtlDays: 14,
@@ -91,6 +114,9 @@ describe('me profile HTTP (integration)', () => {
         PrismaModule,
         SessionModule,
         UsersModule,
+        StructuredLoggingModule,
+        // SimpleLoggerModule is @Global() — satisfies EvaluateController's SimpleLogger dep
+        SimpleLoggerModule,
         AuthModule,
         MeProfileModule,
       ],
@@ -99,15 +125,23 @@ describe('me profile HTTP (integration)', () => {
       .useValue(prismaMock)
       .overrideProvider(AuthSessionConfigService)
       .useValue(configStub)
-      .overrideProvider(GoogleOAuthVerifier)
-      .useValue({ verifyAuthorizationCode: jest.fn() })
       .overrideProvider(GoogleAuthService)
       .useValue({ verifyIdToken })
       .overrideProvider(UsersService)
       .useValue(usersServiceMock)
+      // MeProfileModule imports EvaluateServiceModule (→ LlmModule → ExtractionCoreModule).
+      // ExtractionCoreModule is the pure extraction module; it does NOT register
+      // ExtractionV2PersistenceService (legacy DB writer) in the me-profile DI scope.
+      // LLM_CONFIG is overridden to prevent the OPENAI_API_KEY-missing throw.
+      // MeProfileAnalysisService is overridden so no LLM calls are made in HTTP tests.
+      .overrideProvider(LLM_CONFIG)
+      .useValue({ openai: { apiKey: 'test-key-not-used' }, models: new Map() })
+      .overrideProvider(MeProfileAnalysisService)
+      .useValue({ runForUser: jest.fn().mockResolvedValue(undefined) })
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(requestCorrelationMiddleware);
     app.use(cookieParser());
     await app.init();
   });
@@ -219,6 +253,7 @@ describe('me profile HTTP (integration)', () => {
       aboutMe: 'first',
       aboutPartner: null,
       aboutRelationship: null,
+      gender: 'FEMALE' as const,
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
       updatedAt: new Date('2026-02-01T00:00:00.000Z'),
     };
@@ -240,7 +275,7 @@ describe('me profile HTTP (integration)', () => {
     const postRes = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .send({ aboutMe: 'first' })
+      .send({ gender: 'FEMALE', aboutMe: 'first' })
       .expect(201);
     expect(postRes.body.aboutMe).toBe('first');
 
@@ -294,6 +329,20 @@ describe('me profile HTTP (integration)', () => {
     });
   });
 
+  it('POST /api/v1/me/profile returns 422 when gender is missing', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ aboutMe: 'x' })
+      .expect(422);
+
+    expect(res.body).toMatchObject({ error: 'gender_required' });
+    expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
+  });
+
   it('POST /api/v1/me/profile returns 201 and creates for session user', async () => {
     const raw = await loginAndCookie();
     prismaMock.userProfile.findUnique.mockResolvedValueOnce(null);
@@ -302,6 +351,7 @@ describe('me profile HTTP (integration)', () => {
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
       onboardingStep: 2,
+      gender: 'MALE' as const,
       aboutMe: 'x',
       aboutPartner: null,
       aboutRelationship: null,
@@ -313,7 +363,7 @@ describe('me profile HTTP (integration)', () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .send({ aboutMe: 'x', onboardingStep: 2 })
+      .send({ gender: 'MALE', aboutMe: 'x', onboardingStep: 2 })
       .expect(201);
 
     expect(res.body.userId).toBe(USER_ID);
@@ -321,6 +371,7 @@ describe('me profile HTTP (integration)', () => {
       data: expect.objectContaining({
         user: { connect: { id: USER_ID } },
         status: UserProfileStatus.DRAFT,
+        gender: 'MALE',
         aboutMe: 'x',
         onboardingStep: 2,
       }),
@@ -341,10 +392,11 @@ describe('me profile HTTP (integration)', () => {
       updatedAt: new Date(),
     });
 
+    // gender must be present so the gender guard passes; conflict check comes after
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .send({})
+      .send({ gender: 'FEMALE' })
       .expect(409);
 
     expect(res.body).toMatchObject({
@@ -953,6 +1005,747 @@ describe('me profile HTTP (integration)', () => {
         locationLabel: 'Jerusalem, IL',
         aboutMe: 'Patched bio',
       }),
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/v1/me/profile/analysis/latest
+  // ---------------------------------------------------------------------------
+
+  it('GET /api/v1/me/profile/analysis/latest returns 401 without session', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/me/profile/analysis/latest')
+      .expect(401);
+  });
+
+  it('GET /api/v1/me/profile/analysis/latest returns 404 when profile does not exist', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/me/profile/analysis/latest')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(404);
+
+    expect(res.body).toMatchObject({ error: 'profile_not_found' });
+  });
+
+  it('GET /api/v1/me/profile/analysis/latest returns empty evaluation contract when no row', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_analysis_latest_1',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 1,
+      aboutMe: 'x',
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: null,
+      gender: null,
+      desiredPartnerGenders: null,
+      city: null,
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prismaMock.userProfileEvaluation.findFirst.mockResolvedValue(null);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/me/profile/analysis/latest')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(200);
+
+    expect(res.body).toEqual({
+      userProfileId: 'prof_analysis_latest_1',
+      evaluationId: null,
+      createdAt: null,
+      evaluationJson: null,
+    });
+  });
+
+  it('GET /api/v1/me/profile/analysis/latest returns latest UserProfileEvaluation', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_analysis_latest_2',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 1,
+      aboutMe: 'x',
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: null,
+      gender: null,
+      desiredPartnerGenders: null,
+      city: null,
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const createdAt = new Date('2026-04-15T15:00:00.000Z');
+    prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+      id: 'upeval_int_1',
+      profileId: 'prof_analysis_latest_2',
+      version: 'v1',
+      evaluationJson: { self: {}, partner: {} },
+      createdAt,
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/me/profile/analysis/latest')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(200);
+
+    expect(res.body.userProfileId).toBe('prof_analysis_latest_2');
+    expect(res.body.evaluationId).toBe('upeval_int_1');
+    expect(res.body.createdAt).toBe(createdAt.toISOString());
+    expect(res.body.evaluationJson).toEqual({ self: {}, partner: {} });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/v1/me/profile/submit
+  // ---------------------------------------------------------------------------
+
+  it('POST /api/v1/me/profile/submit returns 401 without session', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/me/profile/submit')
+      .expect(401);
+  });
+
+  it('POST /api/v1/me/profile/submit returns 404 when profile does not exist', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile/submit')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(404);
+
+    expect(res.body).toMatchObject({
+      error: 'profile_not_found',
+      message: expect.stringContaining('No profile exists'),
+    });
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/v1/me/profile/submit returns 422 when gender is missing', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_submit_nogender',
+      userId: USER_ID,
+      status: 'DRAFT' as UserProfileStatus,
+      onboardingStep: 1,
+      aboutMe: 'ready',
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: null,
+      gender: null,
+      desiredPartnerGenders: null,
+      city: null,
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+    });
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile/submit')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(422);
+
+    expect(res.body).toMatchObject({ error: 'gender_required' });
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/v1/me/profile/submit returns 200 and sets status SUBMITTED from DRAFT', async () => {
+    const raw = await loginAndCookie();
+    const draftRow = {
+      id: 'prof_submit_1',
+      userId: USER_ID,
+      status: 'DRAFT' as UserProfileStatus,
+      onboardingStep: 1,
+      aboutMe: 'ready',
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: null,
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: null,
+      city: null,
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+    };
+    const submittedAt = new Date('2026-04-15T10:00:00.000Z');
+    prismaMock.userProfile.findUnique.mockResolvedValue(draftRow);
+    prismaMock.userProfile.update.mockResolvedValue({
+      ...draftRow,
+      status: 'SUBMITTED' as UserProfileStatus,
+      submittedAt,
+      updatedAt: submittedAt,
+    });
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile/submit')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(200);
+
+    expect(res.body.status).toBe('SUBMITTED');
+    expect(res.body.submittedAt).toBeTruthy();
+    expect(prismaMock.userProfile.update).toHaveBeenCalledWith({
+      where: { userId: USER_ID },
+      data: expect.objectContaining({
+        status: 'SUBMITTED',
+        lastAnalysisError: null,
+      }),
+    });
+  });
+
+  it.each(['SUBMITTED', 'ANALYZING'] as const)(
+    'POST /api/v1/me/profile/submit returns 422 when status is %s',
+    async (status) => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue({
+        id: 'prof_inflight',
+        userId: USER_ID,
+        status: status as UserProfileStatus,
+        onboardingStep: 1,
+        aboutMe: null,
+        aboutPartner: null,
+        aboutRelationship: null,
+        birthDate: null,
+        gender: null,
+        desiredPartnerGenders: null,
+        city: null,
+        country: null,
+        locationLabel: null,
+        submittedAt: new Date(),
+        analyzedAt: null,
+        lastAnalysisError: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/profile/submit')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(422);
+
+      expect(res.body).toMatchObject({
+        error: 'invalid_submit_state',
+        currentStatus: status,
+      });
+      expect(Array.isArray(res.body.allowedStatuses)).toBe(true);
+      expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+    },
+  );
+
+  describe('observability: request id + structured logs', () => {
+    it('echoes x-request-id on unauthenticated GET /api/v1/me/profile', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/profile')
+        .set('x-request-id', 'client-req-id-me-1')
+        .expect(401);
+      expect(res.headers['x-request-id']).toBe('client-req-id-me-1');
+    });
+
+    it('emits structured JSON with AUTH_GUARD_UNAUTHORIZED on 401', async () => {
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        await request(app.getHttpServer()).get('/api/v1/me/profile').expect(401);
+        const hit = parseStructuredJsonLogs(spy).find(
+          (o) =>
+            typeof o === 'object' &&
+            o !== null &&
+            (o as { errorCode?: string }).errorCode === 'AUTH_GUARD_UNAUTHORIZED',
+        );
+        expect(hit).toBeDefined();
+        expect((hit as { level: string }).level).toBe('error');
+        expect((hit as { service: string }).service).toBe('dating-api');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('emits ME_PROFILE_GET_NOT_FOUND trace on GET profile 404', async () => {
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        const raw = await loginAndCookie();
+        prismaMock.userProfile.findUnique.mockResolvedValue(null);
+        await request(app.getHttpServer())
+          .get('/api/v1/me/profile')
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .expect(404);
+        const hit = parseStructuredJsonLogs(spy).find(
+          (o) =>
+            (o as { errorCode?: string }).errorCode === 'ME_PROFILE_GET_NOT_FOUND',
+        );
+        expect(hit).toBeDefined();
+        expect((hit as { level: string }).level).toBe('trace');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('emits ME_PROFILE_VALIDATION_FAILED on invalid POST body', async () => {
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        const raw = await loginAndCookie();
+        prismaMock.userProfile.findUnique.mockResolvedValue(null);
+        await request(app.getHttpServer())
+          .post('/api/v1/me/profile')
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ onboardingStep: 0 })
+          .expect(400);
+        const hit = parseStructuredJsonLogs(spy).find(
+          (o) =>
+            (o as { errorCode?: string }).errorCode === 'ME_PROFILE_VALIDATION_FAILED',
+        );
+        expect(hit).toBeDefined();
+        expect((hit as { level: string }).level).toBe('error');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('emits ME_PROFILE_CREATE_CONFLICT on POST 409', async () => {
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        const raw = await loginAndCookie();
+        prismaMock.userProfile.findUnique.mockResolvedValue({
+          id: 'prof_exists',
+          userId: USER_ID,
+          status: UserProfileStatus.DRAFT,
+          onboardingStep: 1,
+          aboutMe: 'x',
+          aboutPartner: null,
+          aboutRelationship: null,
+          birthDate: null,
+          gender: null,
+          desiredPartnerGenders: null,
+          city: null,
+          country: null,
+          locationLabel: null,
+          createdAt: new Date('2026-01-01'),
+          updatedAt: new Date('2026-01-01'),
+        });
+        // gender must be present so the gender guard passes and the conflict check runs
+        await request(app.getHttpServer())
+          .post('/api/v1/me/profile')
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ gender: 'FEMALE', aboutMe: 'y' })
+          .expect(409);
+        const hit = parseStructuredJsonLogs(spy).find(
+          (o) =>
+            (o as { errorCode?: string }).errorCode === 'ME_PROFILE_CREATE_CONFLICT',
+        );
+        expect(hit).toBeDefined();
+        expect((hit as { level: string }).level).toBe('error');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  // ─── Phase 3 Step 5: GET /api/v1/me/matches ──────────────────────────────────
+
+  /** Phase 2: HG fact/preference columns added to UserProfile. Default all to empty so existing tests don't crash. */
+  const HG_FIELD_DEFAULTS = {
+    childrenStatus: null as string | null,
+    wantsChildren: null as string | null,
+    smokingFrequency: null as string | null,
+    alcoholUse: null as string | null,
+    education: null as string | null,
+    religion: null as string | null,
+    partnerAgeMin: null as number | null,
+    partnerAgeMax: null as number | null,
+    minimumPartnerEducation: null as string | null,
+    acceptedPartnerSmoking: [] as string[],
+    acceptedPartnerAlcohol: [] as string[],
+    partnerWantsChildren: null as string | null,
+    partnerHasChildren: null as string | null,
+    acceptedPartnerReligions: [] as string[],
+    maxDistanceKm: null as number | null,
+    similarityPreference: null as string | null,
+  };
+
+  describe('GET /api/v1/me/matches', () => {
+    const viewerProfile = {
+      id: 'prof_viewer_s5',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 3,
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+    };
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .expect(401);
+    });
+
+    it('returns 200 not_ready(no_profile) when viewer has no UserProfile', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('not_ready');
+      expect(res.body.reason).toBe('no_profile');
+    });
+
+    it('returns 200 not_ready(not_analyzed) when viewer profile is DRAFT', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue({
+        ...viewerProfile,
+        status: UserProfileStatus.DRAFT,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('not_ready');
+      expect(res.body.reason).toBe('not_analyzed');
+    });
+
+    it('returns 200 ready with empty matches when no candidates exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.findMany.mockResolvedValue([]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('ready');
+      expect(res.body.viewerProfileId).toBe('prof_viewer_s5');
+      expect(res.body.matches).toHaveLength(0);
+      expect(res.body.totalCandidatesBeforeFilter).toBe(0);
+    });
+
+    it('returns 200 ready — gender-mismatched candidate excluded', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      // Candidate is FEMALE — viewer (FEMALE) wants MALE only → excluded
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_s5_cand_1',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1992-03-15T00:00:00.000Z'),
+          gender: 'FEMALE',
+          desiredPartnerGenders: null,
+          city: 'NYC',
+          country: 'US',
+          locationLabel: 'New York, US',
+          aboutMe: null,
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
+          _count: { evaluations: 1 },
+          ...HG_FIELD_DEFAULTS,
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('ready');
+      expect(res.body.totalCandidatesBeforeFilter).toBe(1);
+      expect(res.body.matches).toHaveLength(0);
+    });
+
+    it('returns 200 ready — valid candidate included and id is UserProfile.id', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      // Candidate is MALE — viewer (FEMALE) wants MALE, candidate has no filter → included
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_s5_cand_2',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1988-07-20T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Male candidate',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+          _count: { evaluations: 2 },
+          ...HG_FIELD_DEFAULTS,
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('ready');
+      expect(res.body.matches).toHaveLength(1);
+      expect(res.body.matches[0].id).toBe('prof_s5_cand_2');
+      expect(res.body.matches[0].gender).toBe('MALE');
+      expect(res.body.matches[0].hasEvaluation).toBe(true);
+    });
+  });
+
+  // ─── Phase 3 Step 5: GET /api/v1/me/matches/:id ───────────────────────────
+
+  describe('GET /api/v1/me/matches/:id', () => {
+    const viewerProfile = {
+      id: 'prof_viewer_s5_det',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 3,
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+    };
+
+    const candidateProfile = {
+      id: 'prof_s5_det_cand',
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+    };
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .expect(401);
+    });
+
+    it('returns 404 when viewer has no UserProfile', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('returns 404 when candidate does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('returns 404 when candidate fails gender filter — no existence leak', async () => {
+      const raw = await loginAndCookie();
+      // Candidate is FEMALE — viewer (FEMALE) wants MALE only → ineligible → 404
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce({ ...candidateProfile, gender: 'FEMALE' as const });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('returns 200 with detail — does not expose aboutMe/aboutPartner/aboutRelationship', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(candidateProfile);
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_s5_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.id).toBe('prof_s5_det_cand');
+      expect(res.body.gender).toBe('MALE');
+      expect(res.body.hasEvaluation).toBe(true);
+      expect(res.body.evaluationSummary).toBe('Warm and grounded individual.');
+      // Ownership check: raw profile text must never appear in the response
+      expect(res.body.aboutMe).toBeUndefined();
+      expect(res.body.aboutPartner).toBeUndefined();
+      expect(res.body.aboutRelationship).toBeUndefined();
+      expect(res.body.userId).toBeUndefined();
+    });
+  });
+
+  // ─── Phase 3 Step 4: GET /api/v1/me/profile/matches ──────────────────────────
+
+  describe('GET /api/v1/me/profile/matches', () => {
+    const viewerProfile = {
+      id: 'prof_viewer_int',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 3,
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+    };
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/me/profile/matches')
+        .expect(401);
+    });
+
+    it('returns 404 when viewer has no UserProfile', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/profile/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('returns 200 with gender-filtered candidates — mismatched gender excluded', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+
+      // Candidate is FEMALE — viewer (FEMALE) wants MALE only → mismatch, excluded
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_cand_int_1',
+          birthDate: new Date('1992-03-15T00:00:00.000Z'),
+          gender: 'FEMALE',
+          desiredPartnerGenders: null,
+          city: 'NYC',
+          country: 'US',
+          locationLabel: 'New York, US',
+          aboutMe: 'Candidate text',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
+          _count: { evaluations: 1 },
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/profile/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.viewerGender).toBe('FEMALE');
+      expect(res.body.viewerAcceptedPartnerGenders).toEqual(['MALE']);
+      expect(res.body.totalCandidatesBeforeFilter).toBe(1);
+      expect(res.body.candidates).toHaveLength(0);
+    });
+
+    it('returns 200 with matching candidate included — correct gender passes filter', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+
+      // Candidate is MALE — viewer wants MALE, candidate has no filter → both directions pass
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_cand_int_2',
+          birthDate: new Date('1988-07-20T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Male candidate',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+          _count: { evaluations: 2 },
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/profile/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.totalCandidatesBeforeFilter).toBe(1);
+      expect(res.body.candidates).toHaveLength(1);
+      expect(res.body.candidates[0].userProfileId).toBe('prof_cand_int_2');
+      expect(res.body.candidates[0].gender).toBe('MALE');
+      expect(res.body.candidates[0].hasEvaluation).toBe(true);
     });
   });
 });

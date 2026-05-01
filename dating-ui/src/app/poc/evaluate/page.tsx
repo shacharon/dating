@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  emitProductLog,
+  getObservabilityRoute,
+} from '@/lib/observability/product-logger';
 import { useState } from 'react';
 import { ChipsSection, type ChipsViewModel } from '../../components/chips-section';
 
@@ -170,7 +174,12 @@ export default function EvaluatePage() {
         );
         if (chipsRes.ok) {
           const chipsData = (await chipsRes.json()) as AnalyzeV2Response;
-          console.log('analyze-v2 response', chipsData);
+          emitProductLog({
+            level: 'trace',
+            route: getObservabilityRoute(),
+            message: 'poc evaluate: analyze-v2 chips loaded',
+            meta: { profileId: data.profileId },
+          });
           setChips(chipsData?.chips ?? EMPTY_CHIPS);
         } else {
           setChips(EMPTY_CHIPS);

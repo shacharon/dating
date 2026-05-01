@@ -1,8 +1,12 @@
 "use client";
 
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { exchangeGoogleIdToken, fetchAuthMe } from "@/lib/auth/auth-api";
+import { useAuth } from "@/contexts/auth-context";
 import { getApiBase } from "@/lib/api-base";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 
 type SafeUser = {
   id: string;
@@ -21,109 +25,74 @@ type MeState =
   | { kind: "error"; message: string };
 
 const AUTH_ERROR_LABELS: Record<string, string> = {
-  invalid_state: "OAuth state did not match (CSRF or stale cookie).",
-  oauth_failed: "Google OAuth failed or was cancelled.",
   email_in_use: "That email is already linked to another account.",
   disabled_user: "This account is disabled.",
 };
 
-function parseSafeUser(json: unknown): SafeUser | null {
-  if (json == null || typeof json !== "object") return null;
-  const o = json as Record<string, unknown>;
-  if (typeof o.id !== "string" || typeof o.email !== "string") return null;
-  if (typeof o.status !== "string") return null;
-  return {
-    id: o.id,
-    email: o.email,
-    displayName: typeof o.displayName === "string" ? o.displayName : null,
-    avatarUrl: typeof o.avatarUrl === "string" ? o.avatarUrl : null,
-    status: o.status,
-  };
-}
-
 export function DevAuthTestClient() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const urlAuthError = searchParams.get("auth_error");
+  const { logout: authLogoutAndRedirect } = useAuth();
   const [me, setMe] = useState<MeState>({ kind: "idle" });
+  const [signingIn, setSigningIn] = useState(false);
+  const [lastSignInError, setLastSignInError] = useState<string | null>(null);
 
   const base = useMemo(() => getApiBase(), []);
 
-  const fetchMe = useCallback(async () => {
+  const runFetchMe = useCallback(async () => {
     setMe({ kind: "loading" });
-    try {
-      const res = await fetch(`${base}/auth/me`, {
-        method: "GET",
-        credentials: "include",
-        headers: { Accept: "application/json" },
+    const r = await fetchAuthMe();
+    if (r.ok) {
+      setMe({ kind: "ok", user: r.user });
+      return;
+    }
+    if (r.status === 401) {
+      setMe({ kind: "unauthorized" });
+      return;
+    }
+    if (r.status === 403) {
+      setMe({ kind: "forbidden", authError: r.authError });
+      return;
+    }
+    if (r.status === 0) {
+      setMe({
+        kind: "error",
+        message:
+          "Cannot reach the API (network). With no NEXT_PUBLIC_API_URL, the UI uses same-origin /api — start dating-api and ensure next.config rewrites /api to it.",
       });
-      if (res.status === 200) {
-        const raw = (await res.json()) as unknown;
-        const user = parseSafeUser(raw);
-        if (user) {
-          setMe({ kind: "ok", user });
-          return;
-        }
-        setMe({
-          kind: "error",
-          message: "/auth/me returned 200 but body was not a safe user DTO.",
-        });
-        return;
-      }
-      if (res.status === 401) {
+      return;
+    }
+    setMe({
+      kind: "error",
+      message: `GET /api/v1/auth/me returned HTTP ${r.status}`,
+    });
+  }, []);
+
+  const onGoogleCredential = useCallback(async (idToken: string) => {
+    setLastSignInError(null);
+    setSigningIn(true);
+    try {
+      const r = await exchangeGoogleIdToken(idToken);
+      if (!r.ok) {
+        setLastSignInError(r.message);
         setMe({ kind: "unauthorized" });
         return;
       }
-      if (res.status === 403) {
-        let authError: string | undefined;
-        try {
-          const j = (await res.json()) as { auth_error?: string };
-          authError = j.auth_error;
-        } catch {
-          /* ignore */
-        }
-        setMe({ kind: "forbidden", authError });
+      const verify = await fetchAuthMe();
+      if (!verify.ok) {
+        setLastSignInError(
+          "POST /api/v1/auth/google succeeded but GET /api/v1/auth/me did not return 200.",
+        );
+        setMe({ kind: "unauthorized" });
         return;
       }
-      setMe({
-        kind: "error",
-        message: `/auth/me HTTP ${res.status}`,
-      });
-    } catch (e) {
-      setMe({
-        kind: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
+      setMe({ kind: "ok", user: verify.user });
+    } finally {
+      setSigningIn(false);
     }
-  }, [base]);
-
-  const loginWithGoogle = () => {
-    window.location.href = `${base}/auth/google`;
-  };
+  }, []);
 
   const logout = async () => {
     setMe({ kind: "loading" });
-    try {
-      const res = await fetch(`${base}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) {
-        setMe({
-          kind: "error",
-          message: `/auth/logout HTTP ${res.status}`,
-        });
-        return;
-      }
-      setMe({ kind: "unauthorized" });
-      router.replace("/dev/auth-test");
-    } catch (e) {
-      setMe({
-        kind: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
-    }
+    await authLogoutAndRedirect();
   };
 
   const sessionSummary = sessionStateLabel(me);
@@ -142,42 +111,36 @@ export function DevAuthTestClient() {
 
       <section>
         <div className="mb-1 text-xs uppercase text-zinc-500">API base</div>
-        <code className="break-all text-xs">{base}</code>
+        <code className="break-all text-xs">{base || "(same-origin)"}</code>
         <p className="mt-2 text-xs text-zinc-500">
-          Env: <code>NEXT_PUBLIC_API_URL</code>. Login uses{" "}
-          <code>{`GET ${base}/auth/google`}</code> (full redirect). Cookie session
-          only — no JWT, no localStorage.
+          Product paths: <code>GET /api/v1/auth/me</code>,{" "}
+          <code>POST /api/v1/auth/google</code>, <code>POST /api/v1/auth/logout</code>{" "}
+          with <code>{`credentials: 'include'`}</code>. Same session cookie as the main app.
         </p>
       </section>
 
-      {urlAuthError ? (
+      {lastSignInError ? (
         <section
-          className="rounded border border-amber-600 bg-amber-50 p-3 text-amber-950 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-100"
-          data-testid="dev-auth-test-url-error"
+          className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/50 dark:text-red-100"
+          role="alert"
         >
-          <div className="font-semibold">auth_error (URL query after OAuth redirect)</div>
-          <div className="mt-1 font-mono text-sm">{urlAuthError}</div>
-          <div className="mt-2 text-xs">
-            {AUTH_ERROR_LABELS[urlAuthError] ??
-              "Unknown code — see dating-api auth_error contract."}
-          </div>
+          {lastSignInError}
         </section>
       ) : null}
 
       <section className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
-          onClick={loginWithGoogle}
-          disabled={me.kind === "loading"}
-        >
-          Login with Google
-        </button>
+        <div className="flex min-h-[44px] items-center">
+          <GoogleSignInButton
+            clientId={googleClientId}
+            onCredential={onGoogleCredential}
+            disabled={signingIn || me.kind === "loading"}
+          />
+        </div>
         <button
           type="button"
           className="rounded border border-zinc-400 px-3 py-2 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-900"
-          onClick={() => void fetchMe()}
-          disabled={me.kind === "loading"}
+          onClick={() => void runFetchMe()}
+          disabled={me.kind === "loading" || signingIn}
         >
           Who am I
         </button>
@@ -185,14 +148,19 @@ export function DevAuthTestClient() {
           type="button"
           className="rounded border border-red-700 px-3 py-2 text-red-800 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/50"
           onClick={() => void logout()}
-          disabled={me.kind === "loading"}
+          disabled={me.kind === "loading" || signingIn}
         >
           Logout
         </button>
       </section>
+      {signingIn ? (
+        <p className="text-xs text-zinc-500">Signing in…</p>
+      ) : null}
 
       <section>
-        <div className="mb-1 text-xs uppercase text-zinc-500">GET /auth/me</div>
+        <div className="mb-1 text-xs uppercase text-zinc-500">
+          GET /api/v1/auth/me
+        </div>
         <AuthMePanel me={me} />
       </section>
     </div>
@@ -222,7 +190,7 @@ function AuthMePanel({ me }: { me: MeState }) {
   if (me.kind === "idle") {
     return (
       <p className="text-zinc-600 dark:text-zinc-400">
-        Click <strong>Who am I</strong> for <code>GET /auth/me</code> with{" "}
+        Click <strong>Who am I</strong> for <code>GET /api/v1/auth/me</code> with{" "}
         <code>{`credentials: 'include'`}</code>.
       </p>
     );
@@ -233,7 +201,7 @@ function AuthMePanel({ me }: { me: MeState }) {
   if (me.kind === "unauthorized") {
     return (
       <p className="font-medium text-orange-700 dark:text-orange-400">
-        Anonymous — 401 from <code>/auth/me</code>.
+        Anonymous — 401 from <code>/api/v1/auth/me</code>.
       </p>
     );
   }

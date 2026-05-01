@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { getApiBase } from '@/lib/api-base';
 import { buildEnrichmentDisplayChipsV1 } from '@/lib/enrichment-display-v1';
 
-const API_BASE = 'http://localhost:3001/api/v1/profiles';
+const API_BASE = `${getApiBase()}/api/v1/profiles`;
 
 /** When URL has no `ids`, load this sample set so /profiles/compare works without query params. */
 const DEFAULT_COMPARE_IDS =

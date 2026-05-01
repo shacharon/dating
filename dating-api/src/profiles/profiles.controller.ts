@@ -89,13 +89,14 @@ export class ProfilesController {
         },
         evaluation,
       });
-      await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
-        profileId: id,
-        aboutMe,
-        aboutPartner,
-        aboutRelationship,
-        evaluation,
-      });
+      // LEGACY_RETIREMENT_PLAN.md Slice 1: ProfileExtractionV2 writes removed (2026-04-24)
+      // await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
+      //   profileId: id,
+      //   aboutMe,
+      //   aboutPartner,
+      //   aboutRelationship,
+      //   evaluation,
+      // });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to save profile';

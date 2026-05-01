@@ -6,6 +6,7 @@ import { USER_PROFILES_REPOSITORY } from '../domain/repositories/user-profiles.r
 import { PrismaUserProfilesRepository } from './infrastructure/prisma-user-profiles.repository';
 import { ProfilesAnalyzeController } from './profiles-analyze.controller';
 import { ProfilesController } from './profiles.controller';
+import { ProfilesJsonService } from './profiles-json.service';
 import { ProfilesReadController } from './profiles-read.controller';
 import { UserProfilesApiController } from './user-profiles-api.controller';
 import { UserProfilesApiService } from './user-profiles-api.service';
@@ -26,6 +27,7 @@ import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistenc
     UserProfilesApiRepository,
     UserProfilesApiService,
     ProfilesPrismaService,
+    ProfilesJsonService,
     AnalysisCacheService,
     AnalyzeFailuresPersistenceService,
     {
@@ -33,6 +35,10 @@ import { AnalyzeFailuresPersistenceService } from './analyze-failures-persistenc
       useClass: PrismaUserProfilesRepository,
     },
   ],
-  exports: [ProfilesPrismaService, USER_PROFILES_REPOSITORY],
+  exports: [
+    ProfilesPrismaService,
+    USER_PROFILES_REPOSITORY,
+    ProfilesJsonService,
+  ],
 })
 export class ProfilesModule {}

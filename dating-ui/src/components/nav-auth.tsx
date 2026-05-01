@@ -35,29 +35,29 @@ export function NavAuth() {
           </button>
         ) : null}
         <Link
-          href="/login"
+          href="/"
           className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
         >
-          Log in
+          Sign in
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
+    <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
       <span
-        className="max-w-[12rem] truncate text-zinc-600 dark:text-zinc-400"
+        className="max-w-[14rem] truncate text-zinc-600 dark:text-zinc-400"
         title={user?.email}
       >
         {user?.email}
       </span>
       <button
         type="button"
-        className="font-medium text-zinc-700 underline decoration-zinc-400 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+        className="shrink-0 rounded-md border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm hover:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
         onClick={() => void logout()}
       >
-        Log out
+        Logout
       </button>
     </div>
   );

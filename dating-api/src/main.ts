@@ -5,6 +5,7 @@ import cookieParserImport from 'cookie-parser';
 import { AuthSessionConfigService } from './config/auth-session-config.service';
 import { AppModule } from './app.module';
 import { SimpleLogger } from './logger/simple-logger.service';
+import { requestCorrelationMiddleware } from './logging/request-correlation.middleware';
 
 /** `cookie-parser` is CJS; default import typing under `nodenext` can be `error` — pin to Express `RequestHandler`. */
 type CookieParserFactory = (secret?: string | string[]) => RequestHandler;
@@ -16,6 +17,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = app.get(SimpleLogger);
   app.useLogger(logger);
+  app.use(requestCorrelationMiddleware);
   // `cookie-parser` types depend on Express v4 merges; middleware is standard RequestHandler.
 
   app.use(cookieParser());
@@ -71,6 +73,31 @@ async function bootstrap() {
 
   const url = await app.getUrl();
   logger.log(`Application is running on: ${url}`, 'Bootstrap');
-  logger.log('LOG TARGET: console', 'Bootstrap');
+  const structuredFile = config.get<string>('STRUCTURED_LOG_FILE')?.trim();
+  const structuredDir = config.get<string>('STRUCTURED_LOG_DIR')?.trim();
+  const structuredBase = config
+    .get<string>('STRUCTURED_LOG_BASE_FILENAME')
+    ?.trim();
+  const structuredRetention = config
+    .get<string>('STRUCTURED_LOG_RETENTION_DAYS')
+    ?.trim();
+  const nodeEnv = config.get<string>('NODE_ENV')?.trim() ?? '';
+  const explicitStructuredConfig = Boolean(structuredDir || structuredBase);
+  const retentionHint = structuredRetention
+    ? `, retention: ${structuredRetention}d`
+    : '';
+  const fileHint =
+    structuredFile === '0' ||
+    structuredFile?.toLowerCase() === 'false' ||
+    structuredFile?.toLowerCase() === 'off'
+      ? 'structured file sink: disabled'
+      : explicitStructuredConfig
+        ? `structured file sink: current ${structuredDir ?? 'logs'}/${structuredBase ?? 'logs'}.log, rollover ${structuredBase ?? 'logs'}-YYYY-MM-DD.log${retentionHint}`
+        : structuredFile
+          ? `structured file sink: current ${structuredFile}, rollover *-YYYY-MM-DD.log${retentionHint}`
+          : nodeEnv === 'development'
+            ? `structured file sink: current logs/logs.log, rollover logs-YYYY-MM-DD.log${retentionHint} (NODE_ENV=development default)`
+            : 'structured file sink: off (stdout only)';
+  logger.log(`LOG TARGET: console + structured JSON; ${fileHint}`, 'Bootstrap');
 }
 void bootstrap();

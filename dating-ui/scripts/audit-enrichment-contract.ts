@@ -2,7 +2,7 @@
  * Audit enrichment API contract vs closed canonical labels (DecisionEngineV1 / final-rule-signal-mapper).
  *
  * Run: npx tsx scripts/audit-enrichment-contract.ts
- * Needs: http://localhost:3001/api/v1/profiles
+ * Needs: GET /api/v1/profiles on dating-api. Optional: NEXT_PUBLIC_API_URL (origin only, no /api path).
  */
 
 import {
@@ -12,7 +12,10 @@ import {
   FINAL_RHYTHM_LABELS,
 } from '../src/lib/final-rule-signal-mapper';
 
-const API = 'http://localhost:3001/api/v1';
+const API = (() => {
+  const origin = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '');
+  return origin ? `${origin}/api/v1` : 'http://127.0.0.1:3001/api/v1';
+})();
 const SAMPLE = 50;
 
 type Family = 'kids' | 'conflict' | 'rhythm' | 'autonomy';

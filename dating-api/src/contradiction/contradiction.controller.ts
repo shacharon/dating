@@ -1,4 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { ContradictionService } from './contradiction.service';
 import type {
   ContradictionDetectionResult,
@@ -12,7 +13,11 @@ export interface DetectContradictionsBody {
 
 @Controller('api/contradiction')
 export class ContradictionController {
-  constructor(private readonly contradiction: ContradictionService) {}
+  constructor(private readonly legacy: LegacyBackendAdapter) {}
+
+  private get contradiction(): ContradictionService {
+    return this.legacy.contradiction;
+  }
 
   @Post('detect')
   async detect(

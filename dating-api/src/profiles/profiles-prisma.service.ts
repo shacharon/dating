@@ -4,9 +4,7 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { PrismaService } from '../prisma/prisma.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import {
   sanitizeEnrichmentSignalsV1ForPersist,
@@ -14,52 +12,11 @@ import {
   type EnrichmentSignalsV1,
 } from '../evaluate/enrichment-signals';
 import type { MatchingRankingSignalsSnapshot } from '../canonical/matching-canonical.types';
-import { HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT } from '../holy-grail-matching/holy-grail-ranking-signal-self.select';
 import { composeHolyGrailRankingSignalsForPersist } from '../holy-grail-matching/holy-grail-ranking-signals-from-db';
 import type { ChildrenUnsureProfileRow } from '../matches/children-unsure-profile-row.types';
 import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 
-/**
- * Single `matchmakingProfile` read for match list: legacy compare payload (`rowToPayload`) plus HG row slice
- * (structured JSON, extractionV2, self signal snapshot). Keeps parity with `getFromPrisma` + children-unsure select.
- */
-const MATCH_LIST_PROFILE_DATA_SELECT = {
-  id: true,
-  name: true,
-  aboutMe: true,
-  aboutPartner: true,
-  aboutRelationship: true,
-  createdAt: true,
-  updatedAt: true,
-  holyGrailStructuredFacts: true,
-  holyGrailStructuredPreferences: true,
-  evaluationRaw: {
-    select: {
-      evaluation: true,
-    },
-  },
-  signalSnapshots: {
-    where: { domain: 'self' as const },
-    select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
-  },
-  evaluation: {
-    select: {
-      evaluatedAt: true,
-      promptVersion: true,
-      policyVersion: true,
-      textHash: true,
-    },
-  },
-  extractionV2: {
-    select: { interests_self: true, interests: true, lifestyleTraits: true },
-  },
-} as const satisfies Prisma.MatchmakingProfileSelect;
-
-type MatchListProfileDbRow = Prisma.MatchmakingProfileGetPayload<{
-  select: typeof MATCH_LIST_PROFILE_DATA_SELECT;
-}>;
-
-/** One `findMany` read supplies legacy compare payloads and HG pair rows (list + detail + compare). */
+/** Legacy bundle shape; MatchmakingProfile reads removed (slice 8 / pre–Migration 4). */
 export interface MatchPairRuntimeBundle {
   readonly profileA: ProfileJsonPayload;
   readonly profileB: ProfileJsonPayload;
@@ -75,20 +32,6 @@ interface UserProfileRow {
   aboutRelationship: string | null;
   createdAt: Date;
   updatedAt: Date;
-  evaluationRaw?: { evaluation: unknown } | null;
-  signalSnapshots?: {
-    lifestylePace: number | null;
-    conflictStyle: number | null;
-    hgRankingDailyRhythm: string | null;
-    hgRankingAutonomyTogetherness: string | null;
-    hgRankingInterestsTop: string[];
-  }[];
-  evaluationMeta?: {
-    evaluatedAt: Date | null;
-    promptVersion: string | null;
-    policyVersion: string | null;
-    textHash: string | null;
-  } | null;
 }
 
 const SIGNAL_KEYS = [
@@ -142,10 +85,7 @@ type SignalSnapshotRow = {
 
 @Injectable()
 export class ProfilesPrismaService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly logger: SimpleLogger,
-  ) {
+  constructor(private readonly logger: SimpleLogger) {
     this.logger.log(
       'ProfilesPrismaService: DB-only mode enabled',
       'ProfilesPrismaService',
@@ -179,64 +119,24 @@ export class ProfilesPrismaService {
   }
 
   /**
-   * Single batched read for match list runtime: legacy compare inputs (`ProfileJsonPayload`) in list order,
-   * plus the HG profile row map (same slice as `CHILDREN_UNSURE_PROFILE_ROW_SELECT` / `getFromPrisma` signals).
+   * Legacy match list bundle. `MatchmakingProfile` reads disabled (slice 8); returns empty until Migration 4.
    */
   async loadMatchListProfileData(): Promise<{
     profiles: ProfileJsonPayload[];
     holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
   }> {
-    const listItems = await this.listFromPrisma();
-    if (listItems.length === 0) {
-      return { profiles: [], holyGrailRowsById: new Map() };
-    }
-    const listIds = listItems.map((x) => x.id);
-    const rows = await this.prisma.matchmakingProfile.findMany({
-      where: { id: { in: listIds } },
-      select: MATCH_LIST_PROFILE_DATA_SELECT,
-    });
-    const rowById = new Map(rows.map((r) => [r.id, r]));
-    const profiles: ProfileJsonPayload[] = [];
-    const holyGrailRowsById = new Map<string, ChildrenUnsureProfileRow>();
-    for (const id of listIds) {
-      const row = rowById.get(id);
-      if (!row) continue;
-      profiles.push(
-        this.rowToPayload(this.matchListDbRowToUserProfileRow(row)),
-      );
-      holyGrailRowsById.set(id, this.matchListDbRowToHolyGrailProfileRow(row));
-    }
-    return { profiles, holyGrailRowsById };
+    return { profiles: [], holyGrailRowsById: new Map() };
   }
 
   /**
-   * Same payloads as `loadMatchListProfileData`, but restricted to an explicit id list (order preserved).
-   * For scripts / diagnostics that must not fan out to all profiles × all profiles.
-   */
-  /**
-   * Single batched `MatchmakingProfile` read for a pair: same `ProfileJsonPayload` + HG row mapping as list/compare
-   * (`MATCH_LIST_PROFILE_DATA_SELECT`). Callers run legacy compare + HG without a second profile query.
+   * Legacy pair bundle. `MatchmakingProfile` reads disabled (slice 8).
    */
   async loadMatchPairRuntimeBundle(
     aId: string,
     bId: string,
   ): Promise<MatchPairRuntimeBundle | null> {
     if (aId === bId) return null;
-    const rows = await this.prisma.matchmakingProfile.findMany({
-      where: { id: { in: [aId, bId] } },
-      select: MATCH_LIST_PROFILE_DATA_SELECT,
-    });
-    if (rows.length !== 2) return null;
-    const byId = new Map(rows.map((r) => [r.id, r as MatchListProfileDbRow]));
-    const rawA = byId.get(aId);
-    const rawB = byId.get(bId);
-    if (!rawA || !rawB) return null;
-    return {
-      profileA: this.rowToPayload(this.matchListDbRowToUserProfileRow(rawA)),
-      profileB: this.rowToPayload(this.matchListDbRowToUserProfileRow(rawB)),
-      rowA: this.matchListDbRowToHolyGrailProfileRow(rawA),
-      rowB: this.matchListDbRowToHolyGrailProfileRow(rawB),
-    };
+    return null;
   }
 
   async loadMatchListProfileDataForSubset(
@@ -245,65 +145,8 @@ export class ProfilesPrismaService {
     profiles: ProfileJsonPayload[];
     holyGrailRowsById: ReadonlyMap<string, ChildrenUnsureProfileRow>;
   }> {
-    if (profileIdsOrdered.length === 0) {
-      return { profiles: [], holyGrailRowsById: new Map() };
-    }
-    const rows = await this.prisma.matchmakingProfile.findMany({
-      where: { id: { in: [...profileIdsOrdered] } },
-      select: MATCH_LIST_PROFILE_DATA_SELECT,
-    });
-    const rowById = new Map(rows.map((r) => [r.id, r]));
-    const profiles: ProfileJsonPayload[] = [];
-    const holyGrailRowsById = new Map<string, ChildrenUnsureProfileRow>();
-    for (const id of profileIdsOrdered) {
-      const row = rowById.get(id);
-      if (!row) continue;
-      profiles.push(
-        this.rowToPayload(this.matchListDbRowToUserProfileRow(row)),
-      );
-      holyGrailRowsById.set(id, this.matchListDbRowToHolyGrailProfileRow(row));
-    }
-    return { profiles, holyGrailRowsById };
-  }
-
-  private matchListDbRowToUserProfileRow(
-    row: MatchListProfileDbRow,
-  ): UserProfileRow {
-    return {
-      id: row.id,
-      name: row.name,
-      aboutMe: row.aboutMe,
-      aboutPartner: row.aboutPartner,
-      aboutRelationship: row.aboutRelationship,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      evaluationRaw: row.evaluationRaw
-        ? { evaluation: row.evaluationRaw.evaluation }
-        : null,
-      signalSnapshots: row.signalSnapshots,
-      evaluationMeta: row.evaluation
-        ? {
-            evaluatedAt: row.evaluation.evaluatedAt,
-            promptVersion: row.evaluation.promptVersion,
-            policyVersion: row.evaluation.policyVersion,
-            textHash: row.evaluation.textHash,
-          }
-        : null,
-    };
-  }
-
-  private matchListDbRowToHolyGrailProfileRow(
-    row: MatchListProfileDbRow,
-  ): ChildrenUnsureProfileRow {
-    return {
-      id: row.id,
-      aboutMe: row.aboutMe,
-      aboutPartner: row.aboutPartner,
-      holyGrailStructuredFacts: row.holyGrailStructuredFacts,
-      holyGrailStructuredPreferences: row.holyGrailStructuredPreferences,
-      extractionV2: row.extractionV2,
-      signalSnapshots: row.signalSnapshots,
-    };
+    void profileIdsOrdered;
+    return { profiles: [], holyGrailRowsById: new Map() };
   }
 
   private evaluationWithSanitizedEnrichment(
@@ -330,10 +173,20 @@ export class ProfilesPrismaService {
     };
   }
 
+  /**
+   * @deprecated LEGACY PATH — FROZEN.
+   * Previously wrote MatchmakingProfile + ProfileSignalSnapshot; both write paths are disabled (slice 7+).
+   * New product path: MeProfileAnalysisService → UserProfile + UserProfileEvaluation.
+   * DO NOT add new callers.
+   */
   private async saveToPrisma(
     id: string,
     payload: Omit<ProfileJsonPayload, 'savedAt'>,
   ): Promise<void> {
+    this.logger.warn(
+      `[LEGACY] saveToPrisma called for profileId=${id} — legacy table write is frozen`,
+      'ProfilesPrisma',
+    );
     const evaluation = this.evaluationWithSanitizedEnrichment(
       payload.evaluation,
       {
@@ -341,13 +194,6 @@ export class ProfilesPrismaService {
         logDropped: true,
       },
     );
-    const evaluatedAt = payload.evaluatedAt
-      ? new Date(payload.evaluatedAt)
-      : null;
-    const promptVersion = payload.promptVersion || null;
-    const policyVersion = payload.policyVersion || null;
-    const textHash = payload.textHash || null;
-
     const selfSignals = this.takeSignalsByDomain(payload, 'self');
     const partnerSignals = this.takeSignalsByDomain(payload, 'partner');
     const relationshipSignals = this.takeSignalsByDomain(
@@ -355,92 +201,30 @@ export class ProfilesPrismaService {
       'relationship',
     );
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.matchmakingProfile.upsert({
-        where: { id },
-        create: {
-          id,
-          name: payload.name,
-          aboutMe: payload.texts.aboutMe,
-          aboutPartner: payload.texts.aboutPartner || null,
-          aboutRelationship: payload.texts.aboutRelationship || null,
-        },
-        update: {
-          name: payload.name,
-          aboutMe: payload.texts.aboutMe,
-          aboutPartner: payload.texts.aboutPartner || null,
-          aboutRelationship: payload.texts.aboutRelationship || null,
-        },
-      });
-
-      await tx.profileEvaluation.upsert({
-        where: { profileId: id },
-        create: {
-          profileId: id,
-          evaluatedAt,
-          promptVersion,
-          policyVersion,
-          textHash,
-        },
-        update: {
-          evaluatedAt,
-          promptVersion,
-          policyVersion,
-          textHash,
-        },
-      });
-
-      await tx.profileSignalSnapshot.deleteMany({
-        where: { profileId: id },
-      });
-
-      const extractionRow = await tx.profileExtractionV2.findUnique({
-        where: { profileId: id },
-        select: { interests_self: true },
-      });
-      const selfLp =
-        selfSignals && typeof selfSignals.lifestylePace === 'number'
-          ? selfSignals.lifestylePace
-          : null;
-      const selfCs =
-        selfSignals && typeof selfSignals.conflictStyle === 'number'
-          ? selfSignals.conflictStyle
-          : null;
-      const composedRanking = composeHolyGrailRankingSignalsForPersist({
-        evaluation,
-        interestsSelf: extractionRow?.interests_self,
-        signalSelfNumerics: { lifestylePace: selfLp, conflictStyle: selfCs },
-      });
-
-      await tx.profileSignalSnapshot.createMany({
-        data: [
-          this.toSignalSnapshotRow(id, 'self', selfSignals, composedRanking),
-          this.toSignalSnapshotRow(id, 'partner', partnerSignals, null),
-          this.toSignalSnapshotRow(
-            id,
-            'relationship',
-            relationshipSignals,
-            null,
-          ),
-        ],
-      });
-
-      const evaluationForPersist =
-        this.stripHgRankingEnrichmentFromEvaluationBeforePersist(evaluation);
-      const evaluationJson =
-        evaluationForPersist as unknown as Prisma.InputJsonValue;
-
-      await tx.profileEvaluationRaw.upsert({
-        where: { profileId: id },
-        create: {
-          profileId: id,
-          evaluation: evaluationJson,
-        },
-        update: {
-          evaluation: evaluationJson,
-        },
-      });
+    const selfLp =
+      selfSignals && typeof selfSignals.lifestylePace === 'number'
+        ? selfSignals.lifestylePace
+        : null;
+    const selfCs =
+      selfSignals && typeof selfSignals.conflictStyle === 'number'
+        ? selfSignals.conflictStyle
+        : null;
+    const composedRanking = composeHolyGrailRankingSignalsForPersist({
+      evaluation,
+      interestsSelf: undefined,
+      signalSelfNumerics: { lifestylePace: selfLp, conflictStyle: selfCs },
     });
+    void partnerSignals;
+    void relationshipSignals;
+    void composedRanking;
+    this.logger.warn(
+      `[LEGACY] ProfileSignalSnapshot writes disabled (pre-drop slice) for profileId=${id}`,
+      'ProfilesPrisma',
+    );
+    this.logger.warn(
+      `[LEGACY] MatchmakingProfile writes disabled (slice 7 / pre–Migration 4) for profileId=${id}`,
+      'ProfilesPrisma',
+    );
   }
 
   private takeSignalsByDomain(
@@ -515,74 +299,17 @@ export class ProfilesPrismaService {
     return row;
   }
 
-  private async getFromPrisma(id: string): Promise<UserProfileRow | null> {
-    const row = await this.prisma.matchmakingProfile.findUnique({
-      where: { id },
-      include: {
-        evaluationRaw: {
-          select: {
-            evaluation: true,
-          },
-        },
-        signalSnapshots: {
-          where: { domain: 'self' },
-          select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
-        },
-        evaluation: {
-          select: {
-            evaluatedAt: true,
-            promptVersion: true,
-            policyVersion: true,
-            textHash: true,
-          },
-        },
-      },
-    });
-    if (!row) return null;
-    return {
-      id: row.id,
-      name: row.name,
-      aboutMe: row.aboutMe,
-      aboutPartner: row.aboutPartner,
-      aboutRelationship: row.aboutRelationship,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      evaluationRaw: row.evaluationRaw
-        ? { evaluation: row.evaluationRaw.evaluation }
-        : null,
-      signalSnapshots: row.signalSnapshots,
-      evaluationMeta: row.evaluation
-        ? {
-            evaluatedAt: row.evaluation.evaluatedAt,
-            promptVersion: row.evaluation.promptVersion,
-            policyVersion: row.evaluation.policyVersion,
-            textHash: row.evaluation.textHash,
-          }
-        : null,
-    };
+  private async getFromPrisma(_id: string): Promise<UserProfileRow | null> {
+    void _id;
+    return null;
   }
 
   private async listFromPrisma(): Promise<ProfileListItem[]> {
-    const rows = await this.prisma.matchmakingProfile.findMany({
-      select: {
-        id: true,
-        name: true,
-        updatedAt: true,
-      },
-      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-    });
-
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      savedAt: row.updatedAt.toISOString(),
-    }));
+    return [];
   }
 
   private rowToPayload(row: UserProfileRow): ProfileJsonPayload {
-    const rawEvaluation =
-      (row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined) ??
-      ({
+    const rawEvaluation: EvaluateBatchResult = {
         self: {
           domain: 'self',
           signals: {},
@@ -638,7 +365,7 @@ export class ProfilesPrismaService {
         },
         flags: [],
         chips: { self: [], partner: [], relationship: [] },
-      } as EvaluateBatchResult);
+      };
 
     let evaluation: EvaluateBatchResult = rawEvaluation.chips
       ? rawEvaluation
@@ -654,7 +381,7 @@ export class ProfilesPrismaService {
 
     evaluation = this.applySelfSnapshotHgRankingToEvaluationPayload(
       evaluation,
-      row.signalSnapshots?.[0],
+      undefined,
     );
 
     return {
@@ -667,14 +394,12 @@ export class ProfilesPrismaService {
       },
       evaluation,
       savedAt: row.updatedAt.toISOString(),
-      evaluationStatus: row.evaluationMeta?.evaluatedAt ? 'DONE' : undefined,
-      evaluatedAt: row.evaluationMeta?.evaluatedAt?.toISOString(),
-      promptVersion: row.evaluationMeta?.promptVersion || undefined,
-      policyVersion: row.evaluationMeta?.policyVersion || undefined,
-      textHash: row.evaluationMeta?.textHash || undefined,
-      signals:
-        (row.evaluationRaw?.evaluation as EvaluateBatchResult | undefined)?.self
-          ?.signals ?? undefined,
+      evaluationStatus: undefined,
+      evaluatedAt: undefined,
+      promptVersion: undefined,
+      policyVersion: undefined,
+      textHash: undefined,
+      signals: undefined,
     };
   }
 

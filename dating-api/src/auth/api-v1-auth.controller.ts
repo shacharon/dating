@@ -21,7 +21,7 @@ import { CurrentUser } from './current-user.decorator';
 
 /**
  * Versioned cookie-session auth (no JWT, no client-supplied user id).
- * Complements legacy browser redirect routes on {@link AuthController}.
+ * Google Sign-In: GIS posts an `id_token` to {@link ApiV1AuthController.googleLogin}.
  */
 @Controller('api/v1/auth')
 export class ApiV1AuthController {

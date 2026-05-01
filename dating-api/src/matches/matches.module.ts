@@ -2,12 +2,9 @@ import { Module } from '@nestjs/common';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { MatchDaemonService } from './match-daemon.service';
-import { MatchesAnalyticsService } from './matches-analytics.service';
 import { MatchesApiController } from './matches-api.controller';
 import { MatchesController } from './matches.controller';
-import { MatchesScanService } from './matches-scan.service';
 import { MatchesService } from './matches.service';
-import { ChildrenUnsureAnalyticsService } from './children-unsure-analytics.service';
 import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 
 @Module({
@@ -16,11 +13,11 @@ import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapsho
   providers: [
     MatchesService,
     MatchDaemonService,
-    MatchesAnalyticsService,
-    MatchesScanService,
-    ChildrenUnsureAnalyticsService,
     HolyGrailPairSnapshotTelemetryService,
   ],
-  exports: [MatchesService],
+  exports: [
+    MatchesService,
+    MatchDaemonService,
+  ],
 })
 export class MatchesModule {}

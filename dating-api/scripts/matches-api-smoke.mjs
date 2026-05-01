@@ -44,8 +44,8 @@ async function req(method, path, body) {
 }
 
 async function main() {
-  // --- List JSON shape ---
-  const list = await req('GET', '/api/v1/matches');
+  // --- List JSON shape (admin list: GET /api/matches — POC/tooling migrated off GET /api/v1/matches list) ---
+  const list = await req('GET', '/api/matches');
   let listOk =
     list.status === 200 &&
     list.json &&
@@ -53,33 +53,29 @@ async function main() {
     Array.isArray(list.json.items);
   if (listOk && list.json.items.length > 0) {
     const it = list.json.items[0];
-    const baseKeys = ['matchId', 'a', 'b', 'overall', 'updatedAt', 'dealbreakers', 'shortReason'];
+    const baseKeys = [
+      'matchId',
+      'userAId',
+      'userBId',
+      'userAName',
+      'userBName',
+      'finalScore',
+      'updatedAt',
+      'shortReason',
+    ];
     for (const k of baseKeys) {
       if (!hasOwn(it, k)) {
         listOk = false;
-        row('List JSON shape', false, `missing item.${k}`);
+        row('List JSON shape (/api/matches)', false, `missing item.${k}`);
         break;
       }
     }
-    if (listOk) row('List JSON shape', true);
+    if (listOk) row('List JSON shape (/api/matches)', true);
   } else if (listOk) {
-    row('List JSON shape', true, '(empty items[])');
+    row('List JSON shape (/api/matches)', true, '(empty items[])');
   } else {
-    row('List JSON shape', false, `${list.status} ${list.url}`);
+    row('List JSON shape (/api/matches)', false, `${list.status} ${list.url}`);
   }
-
-  // --- Top previews ---
-  const top = await req('GET', '/api/v1/matches/top');
-  const topOk =
-    top.status === 200 &&
-    top.json &&
-    top.json.ok === true &&
-    Array.isArray(top.json.matches) &&
-    (top.json.matches.length === 0 ||
-      (hasOwn(top.json.matches[0], 'id') &&
-        hasOwn(top.json.matches[0], 'compatibilityScore') &&
-        hasOwn(top.json.matches[0], 'name')));
-  row('Top previews', topOk, topOk ? undefined : `${top.status} ${top.url}`);
 
   // --- HG optional: all three or none on list items (sample) ---
   let hgOk = list.status === 200 && Array.isArray(list.json?.items);
@@ -111,8 +107,8 @@ async function main() {
   if (list.json?.items?.length) {
     const it = list.json.items[0];
     matchId = it.matchId;
-    aId = it.a?.id;
-    bId = it.b?.id;
+    aId = it.userAId;
+    bId = it.userBId;
   }
 
   if (matchId) {

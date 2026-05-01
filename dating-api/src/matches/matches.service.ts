@@ -19,13 +19,13 @@ import type {
   MatchListItemDto,
   MatchRecordDto,
 } from './match.types';
-import { buildShortReason } from './match-short-reason';
 import { PrismaService } from '../prisma/prisma.service';
-import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 import {
-  CHILDREN_UNSURE_PROFILE_ROW_SELECT,
-  loadChildrenUnsureProfileRowMap,
-} from './match-detail-children-unsure';
+  buildMatchListItems,
+  buildMatchRecordsFromProfiles,
+} from './matches-list.pipeline';
+import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
+import { loadChildrenUnsureProfileRowMap } from './match-detail-children-unsure';
 import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
 import { toCanonicalMatchId } from './match-id';
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
@@ -100,7 +100,7 @@ export type CompareHgDiagnosticSuccess = {
   readonly aId: string;
   readonly bId: string;
   readonly evaluatedAt: string;
-  /** Always `live_hg_eval_only` — does not read `match_pair_hg_snapshot`. */
+  /** Live HG resolution; pair snapshot table removed (Migration 3). */
   readonly source: 'live_hg_eval_only';
   readonly a: { readonly id: string; readonly name: string };
   readonly b: { readonly id: string; readonly name: string };
@@ -278,35 +278,16 @@ export class MatchesService {
       bundle.rowB,
     );
 
-    // Canonical V2 scalars are optional: neutral defaults when rows are absent (no 404 gate).
-    const [v2A, v2B] = await Promise.all([
-      this.prisma.profileExtractionV2.findUnique({
-        where: { profileId: profileA.id },
-        select: {
-          relationship_clarity_self: true,
-          relationship_clarity_partner: true,
-          relationship_clarity_relationship: true,
-        },
-      }),
-      this.prisma.profileExtractionV2.findUnique({
-        where: { profileId: profileB.id },
-        select: {
-          relationship_clarity_self: true,
-          relationship_clarity_partner: true,
-          relationship_clarity_relationship: true,
-        },
-      }),
-    ]);
+    // Slice 2: stop ProfileExtractionV2 runtime reads.
+    // Keep canonical scalar defaults identical to the previous "row missing" behavior.
+    const v2Scalars = {
+      relationship_clarity_self: 5,
+      relationship_clarity_partner: 5,
+      relationship_clarity_relationship: 5,
+    };
 
-    const v2Scalars = (row: typeof v2A) => ({
-      relationship_clarity_self: row?.relationship_clarity_self ?? 5,
-      relationship_clarity_partner: row?.relationship_clarity_partner ?? 5,
-      relationship_clarity_relationship:
-        row?.relationship_clarity_relationship ?? 5,
-    });
-
-    (profileA as any).canonicalScalarsV2 = v2Scalars(v2A);
-    (profileB as any).canonicalScalarsV2 = v2Scalars(v2B);
+    (profileA as any).canonicalScalarsV2 = v2Scalars;
+    (profileB as any).canonicalScalarsV2 = v2Scalars;
 
     // Canonical scalar source-of-truth for filter/debug layer (no scoring changes here).
     const canonicalClarityA = (profileA as any).canonicalScalarsV2
@@ -430,13 +411,12 @@ export class MatchesService {
   }
 
   /**
-   * Upserts `match_pair_hg_snapshot` for every computed pair (called after full recompute / rebuild).
+   * Legacy hook: pair snapshot table removed (Migration 3). No-op; `written` always 0.
    */
   async persistMatchPairHgSnapshots(
     records: MatchRecordDto[],
   ): Promise<{ written: number; skipped: number }> {
-    const profileMap = await loadChildrenUnsureProfileRowMap(this.prisma);
-    return upsertMatchPairHgSnapshots(this.prisma, records, profileMap);
+    return upsertMatchPairHgSnapshots(this.prisma, records, new Map());
   }
 
   /**
@@ -455,58 +435,12 @@ export class MatchesService {
     );
 
     this.hgPairSnapshotTelemetry.beginListBatch();
-
-    const mapped: MatchListItemDto[] = records.map((r) => {
-      const finalScore = r.finalScore ?? r.overall;
-      const dealbreakersRaw = r.dealbreakers ?? r.debug?.dealbreakers ?? [];
-      const dealbreakers = dealbreakersRaw.map((d) => ({
-        code: d.code,
-        ...(d.severity != null && { severity: d.severity }),
-      }));
-      const shortReason = buildShortReason({
-        finalScore,
-        dealbreakers,
-      });
-      const scoreMetadata: MatchListItemDto['scoreMetadata'] = {};
-      if (r.coveragePercent != null)
-        scoreMetadata.coveragePercent = r.coveragePercent;
-      if (r.coverageFactor != null)
-        scoreMetadata.coverageFactor = r.coverageFactor;
-      if (r.friction != null) scoreMetadata.friction = r.friction;
-      if (r.rawScore != null) scoreMetadata.rawScore = r.rawScore;
-
-      const rowA = holyGrailRowsById.get(r.aId);
-      const rowB = holyGrailRowsById.get(r.bId);
-      const { children_unsure, holyGrail, telemetry } =
-        resolvePairHgFieldsFromSnapshotAndRows({
-          matchId: r.matchId,
-          snapshot: snapshotMap.get(r.matchId),
-          rowA,
-          rowB,
-        });
-      this.hgPairSnapshotTelemetry.recordListPair(telemetry);
-      const hgWire = tryPickHolyGrailMatchDiagnosticsDto(holyGrail);
-      const engineFinalScore = finalScore;
-      const rankingScore = engineFinalScore;
-
-      return {
-        matchId: r.matchId,
-        a: r.a,
-        b: r.b,
-        overall: r.overall,
-        finalScore,
-        engineFinalScore,
-        rankingScore,
-        children_unsure,
-        updatedAt: r.updatedAt,
-        dealbreakers,
-        shortReason,
-        ...(r.explainability != null && { explainability: r.explainability }),
-        ...(r.recommendation != null && { recommendation: r.recommendation }),
-        ...(Object.keys(scoreMetadata).length > 0 && { scoreMetadata }),
-        ...(hgWire ? { ...hgWire } : {}),
-      };
-    });
+    const mapped = buildMatchListItems(
+      records,
+      holyGrailRowsById,
+      snapshotMap,
+      this.hgPairSnapshotTelemetry,
+    );
 
     const gateOn = this.isHgListAdmissionGateEnabled();
     const afterHgGate = gateOn
@@ -602,13 +536,8 @@ export class MatchesService {
         idSet.add(r.aId);
         idSet.add(r.bId);
       }
-      const rows =
-        idSet.size === 0
-          ? []
-          : await this.prisma.matchmakingProfile.findMany({
-              where: { id: { in: [...idSet] } },
-              select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
-            });
+      // Slice 8: MatchmakingProfile reads disabled; HG row map empty for legacy wire path.
+      const rows: ChildrenUnsureProfileRow[] = [];
       rowMap = new Map(
         rows.map((row) => [row.id, row as ChildrenUnsureProfileRow]),
       );
@@ -640,70 +569,8 @@ export class MatchesService {
   }> {
     const { profiles, holyGrailRowsById } =
       await this.profilesPrisma.loadMatchListProfileData();
-    const records =
-      MatchesService.buildMatchRecordsFromLoadedProfiles(profiles);
+    const records = buildMatchRecordsFromProfiles(profiles);
     return { records, holyGrailRowsById };
   }
 
-  private static buildMatchRecordsFromLoadedProfiles(
-    profiles: ProfileJsonPayload[],
-  ): MatchRecordDto[] {
-    const profileById = new Map(profiles.map((p) => [p.id, p] as const));
-    const ids = profiles.map((p) => p.id).sort((a, b) => a.localeCompare(b));
-    const records: MatchRecordDto[] = [];
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        const aId = ids[i];
-        const bId = ids[j];
-        const profileA = profileById.get(aId);
-        const profileB = profileById.get(bId);
-        if (!profileA || !profileB) continue;
-        const result = compareWithStatus(profileA, profileB);
-        if (
-          'status' in result &&
-          (result.status === 'NOT_ANALYZED' ||
-            result.status === 'INSUFFICIENT_DATA')
-        ) {
-          continue;
-        }
-        const compareResult = result;
-        const now = new Date().toISOString();
-        records.push({
-          matchId: toCanonicalMatchId(aId, bId),
-          aId,
-          bId,
-          a: { id: profileA.id, name: profileA.name },
-          b: { id: profileB.id, name: profileB.name },
-          overall: compareResult.finalScore,
-          createdAt: now,
-          updatedAt: now,
-          aToB: compareResult.aToB,
-          bToA: compareResult.bToA,
-          relationshipStyle: compareResult.relationshipStyle,
-          coverage: compareResult.coverage,
-          frictionRisk: compareResult.frictionRisk,
-          compatibility: compareResult.compatibility,
-          finalScore: compareResult.finalScore,
-          rawScore: compareResult.rawScore,
-          friction: compareResult.friction,
-          frictionPenalty: compareResult.frictionPenalty,
-          coveragePercent: compareResult.coveragePercent,
-          scoreCoverageFactor: compareResult.scoreCoverageFactor,
-          coverageFactor: compareResult.coverageFactor,
-          confidence: compareResult.confidence,
-          infoFlags: compareResult.infoFlags,
-          alignments: compareResult.alignments,
-          tensions: compareResult.tensions,
-          tensionMatrix: compareResult.tensionMatrix,
-          derived: compareResult.derived,
-          dealbreakers: compareResult.dealbreakers,
-          balance: compareResult.balance,
-          debug: compareResult.debug,
-          explainability: compareResult.explainability,
-          recommendation: compareResult.recommendation,
-        });
-      }
-    }
-    return records;
-  }
 }

@@ -5,23 +5,25 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  Param,
   Patch,
   Post,
   UseGuards,
   UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import type { AuthMeResponseDto } from '../auth/auth.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { CreateMeProfileDto, PatchMeProfileDto } from './me-profile.dto';
+import { ErrorCodes } from '../logging/error-codes';
+import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import {
+  CreateMeProfileDto,
+  PatchMeProfileDto,
+} from './me-profile.dto';
+import { MeMatchesService } from './me-matches.service';
+import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileService } from './me-profile.service';
-
-const meProfileBodyPipe = new ValidationPipe({
-  whitelist: true,
-  forbidNonWhitelisted: true,
-  transform: true,
-});
+import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
 /**
  * Authenticated product profile (1:1 with `User`). User id is always from the session — never from the client path or body.
@@ -29,12 +31,64 @@ const meProfileBodyPipe = new ValidationPipe({
 @Controller('api/v1/me')
 @UseGuards(AuthGuard)
 export class MeProfileController {
-  constructor(private readonly meProfile: MeProfileService) {}
+  constructor(
+    private readonly meProfile: MeProfileService,
+    private readonly meMatches: MeProfileMatchesService,
+    private readonly matches: MeMatchesService,
+    private readonly obs: StructuredObservabilityService,
+  ) {}
+
+  /**
+   * Phase 3 Step 5 — product matches list for the authenticated user.
+   * Returns `{ status: 'not_ready', reason }` when the viewer has no analyzed profile
+   * instead of a hard 4xx, giving the UI a clean signal to show an onboarding prompt.
+   */
+  @Get('matches')
+  getMatchesList(@CurrentUser() user: AuthMeResponseDto) {
+    return this.matches.list(user.id);
+  }
+
+  /**
+   * Phase 3 Step 5 — match detail for a single candidate by their `UserProfile.id`.
+   * 404 when viewer is not ready, candidate does not exist, or gender filter fails.
+   * Raw profile text fields are never exposed in the response.
+   */
+  @Get('matches/:id')
+  getMatchById(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.matches.getById(user.id, id);
+  }
+
+  /**
+   * Phase 3 Step 4 — gender-filtered candidate list driven by the authenticated user's
+   * `UserProfile` (new product flow). Candidates are all other `ANALYZED` product profiles.
+   * Both directions of the partner-gender filter must pass (reciprocal).
+   * Legacy `MatchmakingProfile` is NOT used on this path.
+   */
+  @Get('profile/matches')
+  getMatches(@CurrentUser() user: AuthMeResponseDto) {
+    return this.meMatches.getMatchesForUser(user.id);
+  }
+
+  /**
+   * Latest product analysis snapshot (`UserProfileEvaluation`) for the session user.
+   * `evaluationId` / `evaluationJson` are null when no successful analysis row exists yet.
+   */
+  @Get('profile/analysis/latest')
+  getLatestAnalysis(@CurrentUser() user: AuthMeResponseDto) {
+    return this.meProfile.getLatestAnalysisForUser(user.id);
+  }
 
   @Get('profile')
   async getProfile(@CurrentUser() user: AuthMeResponseDto) {
     const row = await this.meProfile.getForUser(user.id);
     if (!row) {
+      this.obs.trace(
+        'me profile GET: no row for current user',
+        ErrorCodes.ME_PROFILE_GET_NOT_FOUND,
+      );
       throw new NotFoundException({
         error: 'profile_not_found',
         message:
@@ -46,7 +100,7 @@ export class MeProfileController {
 
   @Post('profile')
   @HttpCode(HttpStatus.CREATED)
-  @UsePipes(meProfileBodyPipe)
+  @UsePipes(MeProfileValidationPipe)
   createProfile(
     @CurrentUser() user: AuthMeResponseDto,
     @Body() body: CreateMeProfileDto,
@@ -55,11 +109,22 @@ export class MeProfileController {
   }
 
   @Patch('profile')
-  @UsePipes(meProfileBodyPipe)
+  @UsePipes(MeProfileValidationPipe)
   patchProfile(
     @CurrentUser() user: AuthMeResponseDto,
     @Body() body: PatchMeProfileDto,
   ) {
     return this.meProfile.patchForUser(user.id, body);
+  }
+
+  /**
+   * Transitions the current user's profile to SUBMITTED.
+   * Requires an existing profile in DRAFT, ANALYZED, or FAILED state.
+   * Returns the updated profile row.
+   */
+  @Post('profile/submit')
+  @HttpCode(HttpStatus.OK)
+  submitProfile(@CurrentUser() user: AuthMeResponseDto) {
+    return this.meProfile.submitForUser(user.id);
   }
 }

@@ -3,9 +3,10 @@
  *
  * **Model: HG gate-only + legacy rank (`HG_GATE_LEGACY_RANK_V1`)**
  *
- * - **Holy Grail is not a ranking signal** in production list/top surfaces: `hgMutualPass`, `hgOverallStatus`,
+ * - **Holy Grail is not a ranking signal** in production list surfaces: `hgMutualPass`, `hgOverallStatus`,
  *   and `hgRankScore` are read-only diagnostics for UI and audits. Sort keys use legacy engine scores only.
- * - **HG-adjacent admission (optional, explicit):** `GET /api/v1/matches?hideChildrenUnsure=1` removes pairs where
+ * - **HG-adjacent admission (optional, explicit):** when `MatchesService.list` is called with `hideChildrenUnsure`
+ *   (legacy list stack; public list is `GET /api/matches`), remove pairs where
  *   HG-resolved `children_unsure` is true in either direction. This is a **client-requested response filter**, not
  *   automatic exclusion of all HG-hard-FAIL pairs from the legacy-ready set.
  * - **HG mutual-pass list gate (optional, env):** `ENABLE_HG_LIST_ADMISSION_GATE=1` removes pairs that do not have a

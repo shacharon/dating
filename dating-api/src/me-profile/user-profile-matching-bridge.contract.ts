@@ -1,5 +1,5 @@
 /**
- * Phase 2.5 — Product `UserProfile` (DB `UserProductProfile`) → matching engine **bridge contract**.
+ * Phase 2.5 — Product `UserProfile` (DB table `"UserProfile"`) → matching engine **bridge contract**.
  *
  * This module is **contract / mapping preparation only** for Phase 3:
  * - No engine runtime wiring here.

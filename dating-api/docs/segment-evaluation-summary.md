@@ -212,10 +212,10 @@ Both segments show appropriate calibration. The system is working as designed.
 - These rare cases might benefit from special handling
 - Consider: If compatibility ≥85 and friction 5-6, reduce friction penalty by 20%
 
-#### 2. Add ratio-based adjustments (optional)
-- **When balance ratio is available:** Use `balance.ratio` (thresholds 4 / 2) to contextualize friction
-- High ratio + friction 3-4 → consider reducing penalty (healthy tension)
-- Low ratio + friction 3-4 → maintain penalty (problematic imbalance)
+#### 2. Add Tier-Based Adjustments
+- **When tier data is available:** Use relationship balance tier to contextualize friction
+- GREEN tier + friction 3-4 → reduce penalty (healthy tension)
+- RED tier + friction 3-4 → maintain penalty (problematic imbalance)
 
 #### 3. Track User Feedback
 - **Sparse high-compat segment:** Do users find these matches (score ~70) satisfying?

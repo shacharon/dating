@@ -1,4 +1,4 @@
-# Pair-class logic patch: low-ratio friction floor when baseFriction === 0
+# Pair-class logic patch: RED friction floor when baseFriction === 0
 
 **Date:** 2026-03-10  
 **Scope:** Minimal patch only. No extraction, compatibility, or global scoring changes.
@@ -13,22 +13,25 @@
 
 ## Exact condition changed
 
-**Original issue:** The low-ratio band (formerly labeled RED; `ratio < 2`) always applied friction floor **4**, even when `baseFriction === 0`.
-
-**Patch (still current):** Floor **4** when `ratio < 2` applies only when there is at least some tension-derived friction. Mid band `ratio ∈ [2, 4)` still uses floor **2**. High band `ratio ≥ 4` uses floor **0**.
+**Before:** RED tier always applied a friction floor of 4.
 
 ```ts
 const frictionMinimum =
-  balance.ratio < 2 && baseFriction > 0
+  balance.tier === 'RED' ? 4 : balance.tier === 'YELLOW' ? 2 : 0;
+```
+
+**After:** RED friction floor is applied only when there is at least some tension-derived friction.
+
+```ts
+const frictionMinimum =
+  balance.tier === 'RED' && baseFriction > 0
     ? 4
-    : balance.ratio >= 2 && balance.ratio < 4
+    : balance.tier === 'YELLOW'
       ? 2
       : 0;
 ```
 
-So when balance ratio is low but `baseFriction === 0` (no tension rule fired), friction is no longer forced to 4. The low-ratio **relationship-fit** penalty (relationshipFit −10 when `ratio < 2`) is unchanged.
-
-**Note:** The engine uses `balance.ratio` thresholds **4** and **2** directly; there is no separate tier field on `RelationshipBalanceResult`.
+So when balance is RED but `baseFriction === 0` (no tension rule fired), friction is no longer forced to 4. The RED **relationship-style** penalty (relationshipFit −10) is unchanged.
 
 ---
 
@@ -43,7 +46,7 @@ So when balance ratio is low but `baseFriction === 0` (no tension rule fired), f
 | compatibility     | 78     | 78     |
 | coveragePercent   | 64     | 64     |
 
-Pair remains FAIL (expected 78–82); miss size reduced from 27 to 20. Directionals and compatibility were already high; the patch removed the low-ratio friction floor when no tensions fire, so only the low-ratio relationship-fit penalty applies.
+Pair remains FAIL (expected 78–82); miss size reduced from 27 to 20. Directionals and compatibility were already high; the patch removed the RED friction floor so only the RED relationship penalty applies.
 
 ---
 

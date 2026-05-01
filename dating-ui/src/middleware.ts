@@ -1,3 +1,5 @@
+import { emitProductLog } from '@/lib/observability/product-logger';
+import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -17,15 +19,33 @@ function needsAuthSession(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  if (pathname === '/login') {
+    const landing = new URL('/', request.url);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      landing.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(landing);
+  }
+
   if (!needsAuthSession(pathname)) {
     return NextResponse.next();
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token?.trim()) {
-    const login = new URL('/login', request.url);
-    login.searchParams.set('next', `${pathname}${search}`);
-    return NextResponse.redirect(login);
+    const landing = new URL('/', request.url);
+    landing.searchParams.set('next', `${pathname}${search}`);
+    const incomingRid = request.headers.get('x-request-id')?.trim() ?? null;
+    emitProductLog({
+      level: 'trace',
+      route: pathname,
+      message: 'middleware: unauthenticated, redirect to public landing',
+      errorCode: UiErrorCodes.UI_MIDDLEWARE_AUTH_REDIRECT,
+      requestId: incomingRid,
+      meta: { next: `${pathname}${search}` },
+    });
+    return NextResponse.redirect(landing);
   }
 
   return NextResponse.next();
@@ -33,6 +53,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/login',
+    '/dating',
     '/dating/:path*',
     '/onboarding',
     '/onboarding/:path*',

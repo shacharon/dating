@@ -3,14 +3,17 @@
  * Samples random profile pairs from API, classifies primary cause per SCORE_ONLY row.
  *
  * Run: npx tsx scripts/audit-score-only-causes.ts
- * Needs: API at http://localhost:3001 (profiles + compare)
+ * Needs: dating-api with profiles + compare. Optional: NEXT_PUBLIC_API_URL (origin only, no /api path).
  */
 
 import { mapFinalRuleEnrichmentSignals } from '../src/lib/final-rule-signal-mapper';
 import { runDecisionEngineV1 } from '../src/lib/decision-engine-v1';
 import type { EnrichmentSignalsLike } from '../src/lib/enrichment-display-v1';
 
-const API = 'http://localhost:3001/api/v1';
+const API = (() => {
+  const origin = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '');
+  return origin ? `${origin}/api/v1` : 'http://127.0.0.1:3001/api/v1';
+})();
 const SAMPLE_PAIRS = 50;
 
 type Cause = 'missing_signals' | 'mapping_gap' | 'rule_gap' | 'threshold_block';

@@ -196,7 +196,7 @@ export default function ProfilePage() {
             Edit
           </Link>
           <Link
-            href="/dating/matches"
+            href="/dating/me-matches"
             className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
           >
             Find matches

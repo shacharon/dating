@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { GenderIdentity, ReligionSelf } from '../canonical/matching-canonical.types';
 import {
@@ -7,7 +7,6 @@ import {
   mergeHolyGrailStructuredPreferencesPatch,
 } from './holy-grail-structured-write.merge';
 import { HolyGrailStructuredWriteService } from './holy-grail-structured-write.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 describe('holy-grail structured write merge', () => {
   it('valid sparse write merges onto empty existing', () => {
@@ -69,82 +68,36 @@ describe('holy-grail structured write merge', () => {
 });
 
 describe('HolyGrailStructuredWriteService', () => {
-  const prismaMock = {
-    matchmakingProfile: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-  };
-
   let service: HolyGrailStructuredWriteService;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
-      providers: [
-        HolyGrailStructuredWriteService,
-        { provide: PrismaService, useValue: prismaMock },
-      ],
+      providers: [HolyGrailStructuredWriteService],
     }).compile();
     service = moduleRef.get(HolyGrailStructuredWriteService);
   });
 
-  it('throws NotFound when profile missing', async () => {
-    prismaMock.matchmakingProfile.findUnique.mockResolvedValue(null);
-    await expect(
-      service.mergeStructuredLayers('missing', {
-        structuredFactsPatch: { genderIdentity: GenderIdentity.MALE },
-      }),
-    ).rejects.toThrow(NotFoundException);
-    expect(prismaMock.matchmakingProfile.update).not.toHaveBeenCalled();
-  });
-
   it('throws BadRequest when structuredPreferencesPatch is not an object', async () => {
-    prismaMock.matchmakingProfile.findUnique.mockResolvedValue({
-      holyGrailStructuredFacts: null,
-      holyGrailStructuredPreferences: null,
-    });
     await expect(
       service.mergeStructuredLayers('p1', {
         structuredPreferencesPatch: [] as unknown,
       }),
     ).rejects.toThrow(BadRequestException);
-    expect(prismaMock.matchmakingProfile.update).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequest on invalid enum and does not update', async () => {
-    prismaMock.matchmakingProfile.findUnique.mockResolvedValue({
-      holyGrailStructuredFacts: null,
-      holyGrailStructuredPreferences: null,
-    });
+  it('throws BadRequest on invalid enum and does not persist', async () => {
     await expect(
       service.mergeStructuredLayers('p1', {
         structuredFactsPatch: { genderIdentity: 'INVALID' },
       }),
     ).rejects.toThrow(BadRequestException);
-    expect(prismaMock.matchmakingProfile.update).not.toHaveBeenCalled();
   });
 
-  it('persists merged JSON for partial preferences only', async () => {
-    prismaMock.matchmakingProfile.findUnique.mockResolvedValue({
-      holyGrailStructuredFacts: { genderIdentity: GenderIdentity.FEMALE },
-      holyGrailStructuredPreferences: { partnerAgeMax: 55 },
-    });
-    prismaMock.matchmakingProfile.update.mockResolvedValue({});
-
-    await service.mergeStructuredLayers('p1', {
-      structuredPreferencesPatch: { partnerAgeMin: 30 },
-    });
-
-    expect(prismaMock.matchmakingProfile.update).toHaveBeenCalledWith({
-      where: { id: 'p1' },
-      data: {
-        holyGrailStructuredPreferences: expect.objectContaining({
-          partnerAgeMin: 30,
-          partnerAgeMax: 55,
-        }),
-      },
-    });
-    expect(prismaMock.matchmakingProfile.update.mock.calls[0][0].data.holyGrailStructuredFacts).toBeUndefined();
+  it('does not persist merged JSON when MatchmakingProfile writes disabled (slice 7); slice 8 null base', async () => {
+    await expect(
+      service.mergeStructuredLayers('p1', {
+        structuredPreferencesPatch: { partnerAgeMin: 30 },
+      }),
+    ).resolves.toBeUndefined();
   });
 });

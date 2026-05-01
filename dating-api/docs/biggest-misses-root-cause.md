@@ -13,43 +13,42 @@
 
 - relationshipStyle is the **relationshipFit** value from the match engine.
 - It is computed as the average of the two profiles’ `evaluation.productScores.relationshipFitScore`: Hila 58, Tamar 62 → raw average 60.
-- Then **balance ratio** is applied: if `ratio < 2`, relationshipFit is reduced by 10 → 60 − 10 = **50** (then clamped/scaled).
-- So the low 50 is **entirely due to low balance ratio**, not low product scores.
+- Then **balance tier** is applied: if tier is RED, relationshipFit is reduced by 10 → 60 − 10 = **50** (then clamped/scaled).
+- So the low 50 is **entirely due to RED tier**, not low product scores.
 
 ### Why friction = 4 and frictionPenalty = 12
 
 - **Tension rules contributed 0:** no rule fires for this pair’s self signals (emotionalDepth 3 vs 2 → gap 1; no fusion/boundaries, etc.). So `baseFriction = 0`, `tensionMatrix = []`.
-- In `computeCoverageAsymmetryLowEvidenceAdjustments`, **friction has a ratio-based floor when `ratio < 2`:**  
-  `frictionMinimum = balance.ratio < 2 && baseFriction > 0 ? 4 : …`  
-  (Historical note: before the `baseFriction > 0` guard, low ratio forced floor 4 even when `baseFriction === 0`.)  
+- In `computeCoverageAsymmetryLowEvidenceAdjustments`, **friction has a tier-based floor:**  
+  `frictionMinimum = balance.tier === 'RED' ? 4 : …`  
   So `friction = Math.max(baseFriction, frictionMinimum) = max(0, 4) = 4`.
-- `frictionPenalty(4) = min(25, 4*3) = 12`. So friction 4 and penalty 12 come **only from the low-ratio friction floor**, not from any tension rule.
+- `frictionPenalty(4) = min(25, 4*3) = 12`. So friction 4 and penalty 12 come **only from the RED friction floor**, not from any tension rule.
 
 ### Why friction is high even though tensions = [] and tensionMatrix = []
 
-- **By design:** when balance `ratio < 2`, the engine can set a **minimum friction of 4** (when `baseFriction > 0`). So high friction here is **not** from tension matrix; it is from **relationship balance policy** (low ratio → friction floor 4).
+- **By design:** when balance tier is RED, the engine sets a **minimum friction of 4** regardless of tension rules. So high friction here is **not** from tension matrix; it is from **relationship balance policy** (RED → friction floor 4).
 
 ### Is friction/relationship logic inconsistent with alignments and compatibility?
 
 - **Yes, in outcome:** directional compatibility is high (88, 88), compatibility 78, alignments 10/10/10. So the **compatibility formula** sees a strong, aligned pair.
-- **Mechanism:** balance **ratio** falls below 2 because of **EMOTIONAL_DEPTH_FLOOR** dealbreaker (both Hila and Tamar have self emotionalDepth ≤ 3). That dealbreaker (STRONG_FLAG) drives `negativeScore` up in `computeRelationshipBalance`. Low ratio then:
+- **Mechanism:** balance tier is RED because of **EMOTIONAL_DEPTH_FLOOR** dealbreaker (both Hila and Tamar have self emotionalDepth ≤ 3). That dealbreaker (STRONG_FLAG) drives `negativeScore` up in `computeRelationshipBalance`, so ratio drops below 2 → RED. RED then:
   - reduces relationshipFit by 10 → relationshipStyle 50, and  
-  - forces friction ≥ 4 when `baseFriction > 0` → frictionPenalty 12 (see pair-class patch when `baseFriction === 0`).
-- So the **same pair** is scored as highly compatible on directionals but heavily penalized on relationship/friction because of **low balance ratio** driven by “both low emotional depth.”
+  - forces friction ≥ 4 → frictionPenalty 12.
+- So the **same pair** is scored as highly compatible on directionals but heavily penalized on relationship/friction because of balance tier RED driven by “both low emotional depth.”
 
 ### Root cause (pair 1)
 
-**Classification:** RELATIONSHIP_SCORING_PROBLEM (low balance ratio drives both relationshipFit and friction floor; friction policy is correct but fed by ratio band).
+**Classification:** RELATIONSHIP_SCORING_PROBLEM (balance tier drives both relationshipFit and friction floor; friction policy is correct but fed by RED tier).
 
-- Low ratio is triggered by EMOTIONAL_DEPTH_FLOOR (both emotionalDepth ≤ 3).
-- Low ratio forces: (1) relationshipFit −10 → relationshipStyle 50, (2) friction floor 4 when tensions exist → frictionPenalty 12.
+- Balance tier RED is triggered by EMOTIONAL_DEPTH_FLOOR (both emotionalDepth ≤ 3).
+- RED forces: (1) relationshipFit −10 → relationshipStyle 50, (2) friction floor 4 → frictionPenalty 12.
 - Tension rules themselves contribute 0; the only “friction” is the policy floor.
 
 ### Minimal fix proposal (pair 1)
 
-- **Option A (recommended):** Do **not** apply the low-ratio **friction floor** when `baseFriction === 0` (no tension rule fired). Low ratio still reduces relationshipStyle, but friction stays 0 when no tensions fire. Implemented as `frictionMinimum = balance.ratio < 2 && baseFriction > 0 ? 4 : …`.
-- **Option B:** Downgrade EMOTIONAL_DEPTH_FLOOR from STRONG_FLAG to WARNING so this pair’s ratio stays in a higher band. Broader impact on other pairs.
-- **Option C:** Pair-level: when the only dealbreaker is EMOTIONAL_DEPTH_FLOOR and both directionals are high (e.g. ≥ 85), do not apply low-ratio friction floor. More special-case.
+- **Option A (recommended):** Do **not** apply the RED **friction floor** when `baseFriction === 0` (no tension rule fired). So RED still reduces relationshipStyle, but friction stays 0 when no tensions fire. Small, localized change in `computeCoverageAsymmetryLowEvidenceAdjustments`: e.g. `frictionMinimum = (balance.tier === 'RED' && baseFriction > 0) ? 4 : …` or only set floor when tier is RED **and** there is at least one tension.
+- **Option B:** Downgrade EMOTIONAL_DEPTH_FLOOR from STRONG_FLAG to WARNING so this pair does not go RED (balance stays YELLOW or GREEN). Broader impact on other pairs.
+- **Option C:** Pair-level: when the only dealbreaker is EMOTIONAL_DEPTH_FLOOR and both directionals are high (e.g. ≥ 85), do not apply RED friction floor. More special-case.
 
 ---
 
@@ -100,7 +99,7 @@
 
 | Pair            | Root cause category           | Primary driver |
 |----------------|-------------------------------|----------------|
-| 25__merged_5   | RELATIONSHIP_SCORING_PROBLEM  | Low balance ratio (EMOTIONAL_DEPTH_FLOOR) → relationshipStyle −10; friction floor 4 when tensions fire (see pair-class patch for `baseFriction === 0`). |
+| 25__merged_5   | RELATIONSHIP_SCORING_PROBLEM  | RED balance tier (EMOTIONAL_DEPTH_FLOOR) → relationshipStyle −10 and friction floor 4 despite 0 tensions. |
 | 14__3          | COVERAGE_PROBLEM / EXTRACTION | Sparse self extraction on profile 14 → 36% coverage, low A→B/B→A; emotional_depth_gap adds friction 3. |
 
 ---
@@ -109,4 +108,4 @@
 
 **PATCH_PAIR_CLASS_LOGIC**
 
-- **Rationale:** Pair 1 had a clear, localized policy issue: low balance ratio forced friction = 4 even when **no** tension rule fired (tensions = [], tensionMatrix = []). Fixing “do not apply low-ratio friction floor when baseFriction === 0” is a minimal, reversible change that fixes Hila–Tamar without broad tuning. Pair 2 is structurally an extraction/coverage issue; improving extraction is a separate track (Week 2 or extraction-only patch). The **single** recommended next step was: **patch the low-ratio friction floor** so it does not apply when there are no tension-derived penalties (pair-class logic only).
+- **Rationale:** Pair 1 has a clear, localized policy bug: RED tier forces friction = 4 even when **no** tension rule fired (tensions = [], tensionMatrix = []). Fixing “do not apply RED friction floor when baseFriction === 0” is a minimal, reversible change that fixes Hila–Tamar without broad tuning. Pair 2 is structurally an extraction/coverage issue; improving extraction is a separate track (Week 2 or extraction-only patch). So the **single** recommended next step is: **patch the RED friction floor** so it does not apply when there are no tension-derived penalties (pair-class logic only).

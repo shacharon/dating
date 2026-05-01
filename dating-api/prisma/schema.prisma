@@ -14,10 +14,12 @@ enum UserStatus {
 
 enum UserProfileStatus {
   DRAFT
-  DISABLED
+  SUBMITTED
+  ANALYZING
+  ANALYZED
+  FAILED
 }
 
-/// Product onboarding self gender (same labels as `GenderIdentity` in `matching-canonical.types.ts`).
 enum ProfileGender {
   MALE
   FEMALE
@@ -27,195 +29,92 @@ enum ProfileGender {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  googleId     String     @unique
-  displayName  String?
-  avatarUrl    String?
-  status       UserStatus @default(ACTIVE)
-  lastLoginAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  sessions     UserSession[]
-  profile      UserProfile?
+  id          String     @id @default(cuid())
+  email       String     @unique
+  googleId    String     @unique
+  displayName String?
+  avatarUrl   String?
+  status      UserStatus @default(ACTIVE)
+  lastLoginAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  profile  UserProfile?
+  sessions UserSession[]
+}
+
+model UserProfile {
+  id                    String            @id @default(cuid())
+  userId                String            @unique
+  user                  User              @relation(fields: [userId], references: [id])
+  name                  String            @default("")
+  status                UserProfileStatus @default(DRAFT)
+  onboardingStep        Int               @default(1)
+  aboutMe               String?
+  aboutPartner          String?
+  aboutRelationship     String?
+  birthDate             DateTime?
+  gender                ProfileGender
+  desiredPartnerGenders Json?
+  city                  String?
+  country               String?
+  locationLabel         String?
+  submittedAt           DateTime?
+  analyzedAt            DateTime?
+  lastAnalysisError     String?
+
+  // ── Holy Grail structured facts (self) ─────────────────────────────────────
+  childrenStatus          String?
+  wantsChildren           String?
+  smokingFrequency        String?
+  alcoholUse              String?
+  education               String?
+  religion                String?
+
+  // ── Holy Grail structured preferences (partner requirements) ───────────────
+  partnerAgeMin            Int?
+  partnerAgeMax            Int?
+  minimumPartnerEducation  String?
+  acceptedPartnerSmoking   String[] @default([])
+  acceptedPartnerAlcohol   String[] @default([])
+  partnerWantsChildren     String?
+  partnerHasChildren       String?
+  acceptedPartnerReligions String[] @default([])
+  maxDistanceKm            Int?
+  similarityPreference     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  evaluations UserProfileEvaluation[]
+}
+
+/**
+ * Append-safe analysis output for a UserProfile.
+ * One row is created per successful analysis run; multiple rows per profile are allowed.
+ * Latest-evaluation rule: ORDER BY createdAt DESC LIMIT 1.
+ */
+model UserProfileEvaluation {
+  id             String      @id @default(cuid())
+  profileId      String
+  profile        UserProfile @relation(fields: [profileId], references: [id])
+  version        String
+  evaluationJson Json
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId, createdAt(sort: Desc)])
 }
 
 model UserSession {
-  id                 String    @id @default(cuid())
-  userId             String
-  sessionTokenHash   String    @unique
-  expiresAt          DateTime
-  revokedAt          DateTime?
-  lastSeenAt         DateTime?
-  ip                 String?
-  userAgent          String?
-  createdAt          DateTime  @default(now())
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@index([revokedAt])
-}
-
-/// Matchmaking / analysis row keyed by its own id (legacy `UserProfile` table). Not the authenticated product profile.
-model MatchmakingProfile {
-  id                String   @id
-  name              String
-  aboutMe           String
-  aboutPartner      String?
-  aboutRelationship String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  /// Sparse Holy Grail facts: `HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS` only. Mapper-only fact fields are not stored here (`profile-sources.types.ts`).
-  holyGrailStructuredFacts       Json?
-  /// Sparse Holy Grail preferences: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS` only (includes `maxDistanceKm`; geo facts for enforcement are separate).
-  holyGrailStructuredPreferences Json?
-  evaluation        ProfileEvaluation?
-  evaluationRaw     ProfileEvaluationRaw?
-  signalSnapshots   ProfileSignalSnapshot[]
-  extractionV2      ProfileExtractionV2?
-
-  @@map("UserProfile")
-}
-
-/// Authenticated product flow: one row per `User`.
-model UserProfile {
-  id                  String            @id @default(cuid())
-  userId              String            @unique
-  status              UserProfileStatus @default(DRAFT)
-  onboardingStep      Int               @default(1)
-  aboutMe             String?
-  aboutPartner        String?
-  aboutRelationship   String?
-  birthDate           DateTime?
-  gender              ProfileGender?
-  /// Partner gender openness as JSON string array, e.g. `["MALE","FEMALE"]`. Stored as `Json` so it can be NULL (Prisma does not support nullable list columns on Postgres).
-  desiredPartnerGenders Json?
-  city                String?
-  country             String?
-  locationLabel       String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("UserProductProfile")
-}
-
-model ProfileEvaluation {
-  id            String   @id @default(uuid())
-  profileId     String   @unique
-  evaluatedAt   DateTime?
-  promptVersion String?
-  policyVersion String?
-  textHash      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  profile MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-}
-
-model ProfileEvaluationRaw {
-  id         String   @id @default(uuid())
-  profileId  String   @unique
-  evaluation Json?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  profile MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-}
-
-model ProfileSignalSnapshot {
-  id                       String   @id @default(uuid())
-  profileId                String
-  domain                   String
-  ambition                 Float?
-  socialBattery            Float?
-  healthBodyConsciousness  Float?
-  emotionalDepth           Float?
-  attachmentSecurity       Float?
-  directness               Float?
-  independence             Float?
-  traditionalism           Float?
-  financialMindset         Float?
-  relationshipClarity      Float?
-  spirituality             Float?
-  lifestylePace            Float?
-  physicalPriority         Float?
-  statusOrientation        Float?
-  intellectualCuriosity    Float?
-  conflictStyle            Float?
-  noveltyVsRoutine         Float?
-  structureChaosTolerance  Float?
-  /// Holy Grail five-signal ranking: daily rhythm label (see `holy-grail-ranking-signals-from-db.ts`).
-  hgRankingDailyRhythm            String?
-  hgRankingAutonomyTogetherness   String?
-  hgRankingInterestsTop           String[] @default([])
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-
-  profile MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([profileId, domain])
-  @@index([profileId])
-  @@index([domain])
-}
-
-/// Persisted HG pair snapshot (`matchId` = lexicographic `aId__bId`). Written on match rebuild; list/detail read when policy version matches, else live eval.
-model MatchPairHgSnapshot {
-  matchId              String   @id @map("match_id")
-  childrenUnsure       Boolean? @map("children_unsure")
-  hgChildrenStatus     String?  @map("hg_children_status")
-  hgOverallStatus      String?  @map("hg_overall_status")
-  hgSoftPassCount      Int?     @map("hg_soft_pass_count")
-  hgRankPenaltyApplied Boolean? @map("hg_rank_penalty_applied")
-  hgPolicyVersion      String?  @map("hg_policy_version")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  @@map("match_pair_hg_snapshot")
-}
-
-model ProfileExtractionV2 {
-  id                  String   @id @default(uuid())
-  profileId           String   @unique
-  version             String   @default("v2")
-  extractedAt         DateTime @default(now())
-
-  promptVersion       String
-  textHash            String
-
-  extractionJson      Json
-
-  selfSignals         Json
-  partnerSignals      Json
-  relationshipSignals Json
-
-  coverageScore       Int
-  avgConfidence       Float
-
-  interests_self      String[] @default([])
-  interests_partner   String[] @default([])
-  negatives_self      String[] @default([])
-  negatives_partner   String[] @default([])
-  soft_no             String[] @default([])
-  hard_no             String[] @default([])
-  interests           String[] @default([])
-  lifestyleTraits     String[] @default([])
-  preferences         String[] @default([])
-  boundaries          String[] @default([])
-  values              String[] @default([])
-
-  relationship_clarity_self         Int?
-  relationship_clarity_partner      Int?
-  relationship_clarity_relationship Int?
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  profile             MatchmakingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@index([promptVersion, textHash])
-  @@index([interests_self], type: Gin)
-  @@index([negatives_self], type: Gin)
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  sessionTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastSeenAt       DateTime?
+  ip               String?
+  userAgent        String?
+  createdAt        DateTime  @default(now())
 }

@@ -15,6 +15,12 @@ import {
   fetchAuthMe,
 } from "@/lib/auth/auth-api";
 import type { AuthStatus, AuthUser } from "@/lib/auth/types";
+import {
+  emitProductLog,
+  getObservabilityRoute,
+} from "@/lib/observability/product-logger";
+import { UiErrorCodes } from "@/lib/observability/ui-error-codes";
+import { useRouter } from "next/navigation";
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -31,12 +37,19 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setStatus("loading");
+    emitProductLog({
+      level: "trace",
+      route: getObservabilityRoute(),
+      message: "auth bootstrap: refresh session",
+      errorCode: UiErrorCodes.UI_AUTH_BOOTSTRAP,
+    });
     const r = await fetchAuthMe();
     if (r.ok) {
       setLastError(null);
@@ -94,10 +107,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     setLastError(null);
-    await authLogout();
-    setUser(null);
-    setStatus("unauthenticated");
-  }, []);
+    setStatus("loading");
+    try {
+      await authLogout();
+    } finally {
+      setUser(null);
+      setStatus("unauthenticated");
+      router.replace("/");
+    }
+  }, [router]);
 
   const clearLastError = useCallback(() => setLastError(null), []);
 

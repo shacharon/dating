@@ -1,3 +1,5 @@
+import type { ErrorCode } from './error-codes';
+
 export type StructuredLogLevel = 'trace' | 'error' | 'fatal';
 
 export type StructuredLogLine = {
@@ -11,6 +13,6 @@ export type StructuredLogLine = {
   userId: string | null;
   sessionId: string | null;
   message: string;
-  errorCode?: string;
+  errorCode?: ErrorCode;
   stack?: string;
 };

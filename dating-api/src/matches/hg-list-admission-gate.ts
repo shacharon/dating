@@ -1,8 +1,10 @@
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
 import type { MatchListItemDto, MatchRecordDto } from './match.types';
-import { resolvePairHgFieldsFromSnapshotAndRows } from './match-pair-hg-snapshot';
+import {
+  resolvePairHgFieldsFromSnapshotAndRows,
+  type MatchPairHgSnapshotRow,
+} from './match-pair-hg-snapshot';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import type { MatchPairHgSnapshot } from '@prisma/client';
 
 export function parseHgListAdmissionGateEnv(
   configValue: string | undefined,
@@ -27,7 +29,7 @@ export function listItemPassesHgListAdmissionGate(
   return w.hgMutualPass === true;
 }
 
-type SnapshotMap = ReadonlyMap<string, MatchPairHgSnapshot | undefined>;
+type SnapshotMap = ReadonlyMap<string, MatchPairHgSnapshotRow | undefined>;
 
 /**
  * Same semantics as {@link listItemPassesHgListAdmissionGate} for raw `MatchRecordDto` + snapshot/rows.
@@ -35,7 +37,7 @@ type SnapshotMap = ReadonlyMap<string, MatchPairHgSnapshot | undefined>;
 export function matchRecordPassesHgListAdmissionGate(args: {
   readonly gateEnabled: boolean;
   readonly record: MatchRecordDto;
-  readonly snapshot: MatchPairHgSnapshot | null | undefined;
+  readonly snapshot: MatchPairHgSnapshotRow | null | undefined;
   readonly rowA: ChildrenUnsureProfileRow | undefined;
   readonly rowB: ChildrenUnsureProfileRow | undefined;
 }): boolean {

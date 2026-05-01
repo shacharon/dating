@@ -56,18 +56,8 @@ function makeProfile(
   };
 }
 
-const canonicalV2Row = {
-  relationship_clarity_self: 5,
-  relationship_clarity_partner: 5,
-  relationship_clarity_relationship: 5,
-};
-
 function makePrismaMock() {
-  return {
-    profileExtractionV2: {
-      findUnique: jest.fn().mockResolvedValue(canonicalV2Row),
-    },
-  };
+  return {};
 }
 
 function makeHgPairSnapshotTelemetryMock() {
@@ -129,7 +119,6 @@ describe('MatchesService.compare', () => {
       expect(result.match.overall).toBeNull();
       expect(result.match.finalScore).toBeNull();
     }
-    expect(prisma.profileExtractionV2.findUnique).toHaveBeenCalled();
   });
 
   it('returns NOT_ANALYZED when evaluationStatus is not DONE', async () => {
@@ -180,9 +169,7 @@ describe('MatchesService.compare', () => {
 
 describe('MatchesService.compareHgDiagnostic', () => {
   it('throws NotFound when one profile id is missing', async () => {
-    const prisma = {
-      profileExtractionV2: { findUnique: jest.fn() },
-    };
+    const prisma = {};
     const profilesPrisma = {
       loadMatchPairRuntimeBundle: jest.fn().mockResolvedValue(null),
     };

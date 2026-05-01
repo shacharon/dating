@@ -1,6 +1,4 @@
-import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
-import { HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT } from '../holy-grail-matching/holy-grail-ranking-signal-self.select';
 import { evaluateHolyGrailPairDirections } from './holy-grail-pair-directions';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 import { toCanonicalMatchId } from './match-id';
@@ -14,10 +12,18 @@ import type { HolyGrailMatchDiagnosticsDto } from './match.types';
 
 export type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 
+interface LegacyMatchmakingProfileSelect {
+  id: true;
+  aboutMe: true;
+  aboutPartner: true;
+  holyGrailStructuredFacts: true;
+  holyGrailStructuredPreferences: true;
+}
+
 /**
  * Same ranking-signal DB slice as `PrismaHolyGrailProfileSourceRepository` / `hg-full-system-validation`.
  * Match **list** runtime uses `ProfilesPrismaService.loadMatchListProfileData` (superset select); detail/snapshot
- * paths keep using this shape via `findMany` / `findUnique` as before.
+ * paths use this shape via `findMany` on profiles; persisted pair snapshots are not read (pre–Migration 3).
  *
  * `children_unsure` is HG-owned for UX (badges, optional `hideChildrenUnsure` list filter) — not legacy dealbreakers
  * and not a list ranking lever (`MATCH_RANKING_CONTRACT === HG_GATE_LEGACY_RANK_V1`; see `domain/kids-family-ownership.ts`).
@@ -28,14 +34,7 @@ export const CHILDREN_UNSURE_PROFILE_ROW_SELECT = {
   aboutPartner: true,
   holyGrailStructuredFacts: true,
   holyGrailStructuredPreferences: true,
-  extractionV2: {
-    select: { interests_self: true, interests: true, lifestyleTraits: true },
-  },
-  signalSnapshots: {
-    where: { domain: 'self' as const },
-    select: HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT,
-  },
-} satisfies Prisma.MatchmakingProfileSelect;
+} as const satisfies LegacyMatchmakingProfileSelect;
 
 export interface MatchDetailChildrenUnsureFlags {
   readonly profile_a_to_profile_b: boolean;
@@ -68,10 +67,9 @@ export function computeMatchDetailChildrenUnsureFromRows(
 export async function loadChildrenUnsureProfileRowMap(
   prisma: PrismaService,
 ): Promise<Map<string, ChildrenUnsureProfileRow>> {
-  const rows = await prisma.matchmakingProfile.findMany({
-    select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
-  });
-  return new Map(rows.map((r) => [r.id, r as ChildrenUnsureProfileRow]));
+  void prisma;
+  // Slice 8: MatchmakingProfile reads disabled.
+  return new Map();
 }
 
 export async function computeMatchDetailPairHg(
@@ -88,9 +86,8 @@ export async function computeMatchDetailPairHg(
   readonly telemetry: HgPairResolutionTelemetry;
 }> {
   const matchId = toCanonicalMatchId(profileIdA, profileIdB);
-  const snap = await prisma.matchPairHgSnapshot.findUnique({
-    where: { matchId },
-  });
+  // Pair HG snapshot table removed (Migration 3); live eval via resolvePairHgFieldsFromSnapshotClassifications.
+  const snap = null;
   const childClass = classifyChildrenUnsureFromSnapshot(snap);
   const diagClass = classifyHolyGrailDiagnosticsFromSnapshot(snap);
   if (childClass.ok && diagClass.ok) {
@@ -117,10 +114,8 @@ export async function computeMatchDetailPairHg(
     rowA = preloadedRows.rowA;
     rowB = preloadedRows.rowB;
   } else {
-    const rows = await prisma.matchmakingProfile.findMany({
-      where: { id: { in: [profileIdA, profileIdB] } },
-      select: CHILDREN_UNSURE_PROFILE_ROW_SELECT,
-    });
+    // Slice 8: MatchmakingProfile reads disabled.
+    const rows: ChildrenUnsureProfileRow[] = [];
     rowA = rows.find((r) => r.id === profileIdA) as
       | ChildrenUnsureProfileRow
       | undefined;

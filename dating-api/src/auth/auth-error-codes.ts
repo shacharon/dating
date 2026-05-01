@@ -1,8 +1,8 @@
-/** Query param appended to `AUTH_SUCCESS_REDIRECT_URL` on OAuth failures. */
+/** JSON field / query key for stable auth error codes (`403` bodies, etc.). */
 export const AUTH_ERROR_QUERY_PARAM = 'auth_error' as const;
 
 /**
- * Stable OAuth callback error codes (single `auth_error` query value).
+ * Stable auth error codes (e.g. `403` JSON `auth_error`).
  * Frontend may branch on these without parsing free-form messages.
  */
 export const AUTH_ERROR_CODES = {

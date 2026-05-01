@@ -133,13 +133,13 @@ export function GoogleSignInButton({
   if (!clientId.trim()) {
     return (
       <p className="text-sm text-amber-800 dark:text-amber-200">
-        Set{" "}
+        In the <strong>dating-ui</strong> project, add{" "}
         <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">
           NEXT_PUBLIC_GOOGLE_CLIENT_ID
         </code>{" "}
-        in{" "}
-        <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">.env.local</code>
-        .
+        to <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">.env.local</code>{" "}
+        (same value as <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">GOOGLE_CLIENT_ID</code>{" "}
+        in dating-api). Restart <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">npm run dev</code>.
       </p>
     );
   }

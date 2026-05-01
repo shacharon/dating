@@ -5,9 +5,6 @@
  * legacy V1 dealbreakers on `relationshipClarity` live in `domain/dealbreakers.ts` — see `domain/kids-family-ownership.ts`.
  */
 
-/** Max rows returned by GET /api/v1/matches/top. */
-export const MATCH_TOP_PREVIEW_LIMIT = 20;
-
 /** Placeholder until profile ages are exposed on list items. */
 export const MATCH_PREVIEW_AGE_PLACEHOLDER = 30;
 

@@ -1,6 +1,11 @@
 /**
  * V2 extraction persistence service.
  * Handles storage and retrieval of ProfileExtractionV2 records.
+ *
+ * @deprecated LEGACY PATH — FROZEN after new-model validation passed.
+ * Writes to: ProfileExtractionV2 + ProfileSignalSnapshot (via HG ranking sync).
+ * Active product path: MeProfileAnalysisService → UserProfileEvaluation only.
+ * DO NOT add new callers.
  */
 
 import { Injectable } from '@nestjs/common';
@@ -70,8 +75,18 @@ export class ExtractionV2PersistenceService {
 
   /**
    * Save V2 extraction result to database.
+   * @deprecated LEGACY PATH — writes to ProfileExtractionV2. DO NOT add new callers.
    */
   async save(input: ExtractionV2PersistInput): Promise<void> {
+    this.logger.warn(
+      `[LEGACY] ExtractionV2PersistenceService.save called for profileId=${input.profileId} — legacy write path is frozen`,
+      ExtractionV2PersistenceService.name,
+    );
+    this.logger.warn(
+      '[LEGACY] ProfileExtractionV2 upsert disabled (pre-drop cleanup)',
+      ExtractionV2PersistenceService.name,
+    );
+    return;
     const { profileId, aboutMe, aboutPartner, aboutRelationship, extraction } =
       input;
 
@@ -138,72 +153,12 @@ export class ExtractionV2PersistenceService {
       ExtractionV2PersistenceService.name,
     );
 
-    await this.prisma.profileExtractionV2.upsert({
-      where: { profileId },
-      create: {
-        profileId,
-        promptVersion: PROMPT_VERSION_V2,
-        textHash,
-        extractionJson: extraction as any,
-        selfSignals: extraction.base.self.signals as any,
-        partnerSignals: extraction.base.partner.signals as any,
-        relationshipSignals: extraction.base.relationship.signals as any,
-        coverageScore,
-        avgConfidence,
-        interests_self: canonicalArrays.interests_self,
-        interests_partner: canonicalArrays.interests_partner,
-        negatives_self: canonicalArrays.negatives_self,
-        negatives_partner: canonicalArrays.negatives_partner,
-        soft_no: canonicalArrays.soft_no,
-        hard_no: canonicalArrays.hard_no,
-        relationship_clarity_self: scalars.relationship_clarity_self,
-        relationship_clarity_partner: scalars.relationship_clarity_partner,
-        relationship_clarity_relationship:
-          scalars.relationship_clarity_relationship,
-      },
-      update: {
-        promptVersion: PROMPT_VERSION_V2,
-        textHash,
-        extractionJson: extraction as any,
-        selfSignals: extraction.base.self.signals as any,
-        partnerSignals: extraction.base.partner.signals as any,
-        relationshipSignals: extraction.base.relationship.signals as any,
-        coverageScore,
-        avgConfidence,
-        extractedAt: extraction.extractedAt,
-        updatedAt: new Date(),
-        interests_self: canonicalArrays.interests_self,
-        interests_partner: canonicalArrays.interests_partner,
-        negatives_self: canonicalArrays.negatives_self,
-        negatives_partner: canonicalArrays.negatives_partner,
-        soft_no: canonicalArrays.soft_no,
-        hard_no: canonicalArrays.hard_no,
-        relationship_clarity_self: scalars.relationship_clarity_self,
-        relationship_clarity_partner: scalars.relationship_clarity_partner,
-        relationship_clarity_relationship:
-          scalars.relationship_clarity_relationship,
-      },
-    });
-
-    const persisted = await this.prisma.profileExtractionV2.findUnique({
-      where: { profileId },
-      select: { relationship_clarity_self: true },
-    });
-    this.logger.debug(
-      JSON.stringify({
-        event: 'self_relationship_clarity_trace',
-        stage: 'persisted',
-        profileId,
-        relationship_clarity_self: persisted?.relationship_clarity_self ?? null,
-      }),
-    );
-
-    await syncProfileHgRankingSignalColumns(this.prisma, profileId);
   }
 
   /**
    * Persist extendedSignals canonical arrays from evaluation into ProfileExtractionV2.
    * Persistence-only side channel: does not affect scoring/API.
+   * @deprecated LEGACY PATH — writes to ProfileExtractionV2. DO NOT add new callers.
    */
   async saveExtendedSignalsFromEvaluation(input: {
     profileId: string;
@@ -212,6 +167,15 @@ export class ExtractionV2PersistenceService {
     aboutRelationship: string;
     evaluation: EvaluateBatchResult;
   }): Promise<void> {
+    this.logger.warn(
+      `[LEGACY] ExtractionV2PersistenceService.saveExtendedSignalsFromEvaluation called for profileId=${input.profileId} — legacy write path is frozen`,
+      ExtractionV2PersistenceService.name,
+    );
+    this.logger.warn(
+      '[LEGACY] ProfileExtractionV2 upsert disabled (pre-drop cleanup)',
+      ExtractionV2PersistenceService.name,
+    );
+    return;
     const { profileId, aboutMe, aboutPartner, aboutRelationship, evaluation } =
       input;
     const textHash = this.hashTexts(aboutMe, aboutPartner, aboutRelationship);
@@ -229,69 +193,29 @@ export class ExtractionV2PersistenceService {
         evaluation.relationship.confidence) /
       3;
 
-    await this.prisma.profileExtractionV2.upsert({
-      where: { profileId },
-      create: {
-        profileId,
-        promptVersion: PROMPT_VERSION_V2,
-        textHash,
-        extractionJson: {} as any,
-        selfSignals: evaluation.self.signals as any,
-        partnerSignals: evaluation.partner.signals as any,
-        relationshipSignals: evaluation.relationship.signals as any,
-        coverageScore: evaluation.productScores.coverageScore,
-        avgConfidence,
-        interests_self: [],
-        interests_partner: [],
-        negatives_self: [],
-        negatives_partner: [],
-        soft_no: [],
-        hard_no: [],
-        interests,
-        lifestyleTraits,
-        preferences,
-        boundaries,
-        values,
-      },
-      update: {
-        textHash,
-        selfSignals: evaluation.self.signals as any,
-        partnerSignals: evaluation.partner.signals as any,
-        relationshipSignals: evaluation.relationship.signals as any,
-        coverageScore: evaluation.productScores.coverageScore,
-        avgConfidence,
-        interests,
-        lifestyleTraits,
-        preferences,
-        boundaries,
-        values,
-        updatedAt: new Date(),
-      },
-    });
-
-    await syncProfileHgRankingSignalColumns(this.prisma, profileId);
   }
 
   /**
    * Retrieve V2 extraction by profile ID.
    */
   async getByProfileId(profileId: string): Promise<ExtractionV2Result | null> {
-    const record = await this.prisma.profileExtractionV2.findUnique({
-      where: { profileId },
-    });
-
-    if (!record) return null;
-
-    return record.extractionJson as unknown as ExtractionV2Result;
+    void profileId;
+    this.logger.warn(
+      '[LEGACY] getByProfileId disabled in Slice 2 — ProfileExtractionV2 reads removed',
+      ExtractionV2PersistenceService.name,
+    );
+    return null;
   }
 
   /**
    * Check if V2 extraction exists for profile.
    */
   async exists(profileId: string): Promise<boolean> {
-    const count = await this.prisma.profileExtractionV2.count({
-      where: { profileId },
-    });
-    return count > 0;
+    void profileId;
+    this.logger.warn(
+      '[LEGACY] exists disabled in Slice 2 — ProfileExtractionV2 reads removed',
+      ExtractionV2PersistenceService.name,
+    );
+    return false;
   }
 }

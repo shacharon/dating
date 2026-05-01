@@ -160,6 +160,22 @@ function isAnalyzed(profile: ProfileJsonPayload): boolean {
   return true;
 }
 
+/**
+ * @deprecated LEGACY PATH — FROZEN after new-model validation passed.
+ *
+ * This controller writes exclusively to legacy tables:
+ *   MatchmakingProfile · ProfileEvaluation · ProfileEvaluationRaw
+ *   ProfileSignalSnapshot · ProfileExtractionV2
+ *
+ * Active product path: POST /api/v1/me/profile/submit
+ *   → MeProfileAnalysisService → UserProfile + UserProfileEvaluation only.
+ *
+ * Checkpoint: MATCH_ENGINE_NEW_MODEL_ACTIVE__LEGACY_WRITES_STILL_DUPLICATED__CUTOVER_NEXT
+ *
+ * DO NOT add new writes or new callers here.
+ * Delete this controller only after legacy table data has been migrated or
+ * after the decision to drop legacy tables is made.
+ */
 @Controller('api/profiles')
 export class ProfilesAnalyzeController {
   constructor(
@@ -191,10 +207,19 @@ export class ProfilesAnalyzeController {
     return { ok: true, total, analyzed, unanalyzed };
   }
 
+  /**
+   * @deprecated LEGACY PATH — writes to MatchmakingProfile + related tables.
+   * Called only from frozen legacy endpoints (POST /api/profiles/...analyze*).
+   * New product analysis runs via MeProfileAnalysisService.runForUser.
+   */
   private async analyzeAndPersist(
     profile: ProfileJsonPayload,
     opts?: { force?: boolean; recomputePolicyVersion?: string },
   ): Promise<AnalyzeProfileResultWithMeta> {
+    this.logger.warn(
+      `[LEGACY] analyzeAndPersist called for profileId=${profile.id} — legacy write path is frozen; use MeProfileAnalysisService for new users`,
+      'ProfilesAnalyze',
+    );
     const force = opts?.force === true;
     const recomputePolicyVersion = opts?.recomputePolicyVersion?.trim();
     const textConcat =
@@ -336,13 +361,14 @@ export class ProfilesAnalyzeController {
       textHash,
       signals: evaluation.self.signals,
     });
-    await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
-      profileId: profile.id,
-      aboutMe: profile.texts.aboutMe,
-      aboutPartner: profile.texts.aboutPartner,
-      aboutRelationship: profile.texts.aboutRelationship,
-      evaluation,
-    });
+    // LEGACY_RETIREMENT_PLAN.md Slice 1: ProfileExtractionV2 writes removed (2026-04-24)
+    // await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
+    //   profileId: profile.id,
+    //   aboutMe: profile.texts.aboutMe,
+    //   aboutPartner: profile.texts.aboutPartner,
+    //   aboutRelationship: profile.texts.aboutRelationship,
+    //   evaluation,
+    // });
 
     this.analysisCache.set(cacheKey, evaluation, ANALYSIS_CACHE_TTL_MS);
 
@@ -712,14 +738,14 @@ export class ProfilesAnalyzeController {
       id,
     );
 
-    // Persist to database
-    await this.extractionV2Persistence.save({
-      profileId: id,
-      aboutMe: profile.texts.aboutMe,
-      aboutPartner: profile.texts.aboutPartner,
-      aboutRelationship: profile.texts.aboutRelationship,
-      extraction,
-    });
+    // LEGACY_RETIREMENT_PLAN.md Slice 1: ProfileExtractionV2 writes removed (2026-04-24)
+    // await this.extractionV2Persistence.save({
+    //   profileId: id,
+    //   aboutMe: profile.texts.aboutMe,
+    //   aboutPartner: profile.texts.aboutPartner,
+    //   aboutRelationship: profile.texts.aboutRelationship,
+    //   extraction,
+    // });
 
     this.logger.log(
       `[AnalyzeV2] done id=${id} cost=${extraction._usage.estimatedCostUSD.toFixed(5)}`,

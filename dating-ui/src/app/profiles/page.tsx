@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getApiBase } from '@/lib/api-base';
 import {
   buildEnrichmentDisplayChipsV1,
   labelAutonomy,
@@ -11,7 +12,8 @@ import {
   labelKids,
 } from '@/lib/enrichment-display-v1';
 
-const API_BASE = 'http://localhost:3001/api/v1/profiles';
+const API_ORIGIN = getApiBase();
+const API_BASE = `${API_ORIGIN}/api/v1/profiles`;
 
 const SIGNAL_KEYS = [
   'ambition',
@@ -509,7 +511,7 @@ export default function ProfilesPage() {
     setAnalyzing(true);
     try {
       const res = await fetch(
-        `http://localhost:3001/api/profiles/${encodeURIComponent(selectedId)}/analyze`,
+        `${API_ORIGIN}/api/profiles/${encodeURIComponent(selectedId)}/analyze`,
         { method: 'POST' },
       );
       const data = await res.json().catch(() => null);

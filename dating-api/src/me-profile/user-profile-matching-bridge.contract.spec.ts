@@ -13,14 +13,16 @@ import {
 function minimalRow(
   overrides: Partial<{
     birthDate: Date | null;
-    gender: ProfileGender | null;
+    gender: ProfileGender;
     desiredPartnerGenders: unknown;
     city: string | null;
   }> = {},
 ) {
   return {
     birthDate: null as Date | null,
-    gender: null as ProfileGender | null,
+    // Default to PREFER_NOT_TO_SAY — mirrors the migration backfill for pre-existing rows.
+    // gender is now NOT NULL in the schema; use explicit override in tests that need a specific value.
+    gender: ProfileGender.PREFER_NOT_TO_SAY,
     desiredPartnerGenders: null as unknown,
     city: null as string | null,
     country: null as string | null,
@@ -70,9 +72,9 @@ describe('user-profile-matching-bridge.contract', () => {
     expect(
       candidateMeetsViewerProductPartnerGenders(null, GenderIdentity.MALE),
     ).toBe(true);
-    expect(candidateMeetsViewerProductPartnerGenders([], GenderIdentity.MALE)).toBe(
-      true,
-    );
+    expect(
+      candidateMeetsViewerProductPartnerGenders([], GenderIdentity.MALE),
+    ).toBe(true);
   });
 
   it('candidateMeetsViewerProductPartnerGenders: explicit list rejects wrong gender', () => {
@@ -88,7 +90,10 @@ describe('user-profile-matching-bridge.contract', () => {
   it('candidateMeetsViewerProductPartnerGenders: unknown candidate gender fails when list set', () => {
     const w = [AcceptedPartnerGender.MALE];
     expect(
-      candidateMeetsViewerProductPartnerGenders(w, GenderIdentity.PREFER_NOT_TO_SAY),
+      candidateMeetsViewerProductPartnerGenders(
+        w,
+        GenderIdentity.PREFER_NOT_TO_SAY,
+      ),
     ).toBe(false);
     expect(candidateMeetsViewerProductPartnerGenders(w, null)).toBe(false);
   });

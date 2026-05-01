@@ -1,8 +1,6 @@
-import type { Prisma } from '@prisma/client';
-
 /**
- * Prisma select for `ProfileSignalSnapshot` domain `self` HG ranking runtime reads.
- * Use everywhere ranking / HG pair eval loads profile rows (retrieval, match detail, validation scripts).
+ * Historical HG ranking column slice (formerly persisted on the retired snapshot table).
+ * Kept as documentation-only constants; runtime reads use text/JSON paths instead.
  */
 export const HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT = {
   lifestylePace: true,
@@ -10,4 +8,4 @@ export const HOLY_GRAIL_RANKING_SIGNAL_SELF_SELECT = {
   hgRankingDailyRhythm: true,
   hgRankingAutonomyTogetherness: true,
   hgRankingInterestsTop: true,
-} as const satisfies Prisma.ProfileSignalSnapshotSelect;
+} as const;

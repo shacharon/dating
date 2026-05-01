@@ -14,6 +14,7 @@ import type {
   AttractionTraitsResult,
 } from './evaluate.service';
 import type { LifestyleConflictsResult } from '../compatibility/lifestyle-conflicts';
+import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { EvaluateService } from './evaluate.service';
 
 export interface EvaluateBatchBodyDto {
@@ -50,9 +51,13 @@ function getErrorMessage(err: unknown): string {
 @Controller('api/evaluate')
 export class EvaluateController {
   constructor(
-    private readonly evaluateService: EvaluateService,
+    private readonly legacy: LegacyBackendAdapter,
     private readonly logger: SimpleLogger,
   ) {}
+
+  private get evaluateService(): EvaluateService {
+    return this.legacy.evaluate;
+  }
 
   @Post('batch')
   async evaluateBatch(

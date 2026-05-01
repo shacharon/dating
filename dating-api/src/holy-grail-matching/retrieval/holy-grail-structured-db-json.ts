@@ -462,7 +462,7 @@ export function parseHolyGrailStructuredPreferencesFromJson(
 /** Single entry point: Prisma JSON columns → `HolyGrailProfileMappingInput` for the canonical mapper. */
 export function buildHolyGrailProfileMappingInputFromDbRow(args: {
   profileId: string;
-  extractionV2: {
+  extractionV2?: {
     interests_self: string[];
     interests: string[];
     lifestyleTraits: string[];
@@ -545,11 +545,6 @@ export type HolyGrailRankingAwareDbRow = {
   readonly aboutPartner?: string | null;
   readonly holyGrailStructuredFacts: unknown;
   readonly holyGrailStructuredPreferences: unknown;
-  readonly extractionV2: {
-    interests_self: string[];
-    interests: string[];
-    lifestyleTraits: string[];
-  } | null;
   readonly signalSnapshots?: ProfileSignalSelfRow[];
 };
 
@@ -559,7 +554,7 @@ export function buildHolyGrailProfileMappingInputFromRankingAwareDbRow(
   const selfSnap = row.signalSnapshots?.[0];
   return buildHolyGrailProfileMappingInputFromDbRow({
     profileId: row.id,
-    extractionV2: row.extractionV2,
+    extractionV2: null,
     holyGrailStructuredFacts: row.holyGrailStructuredFacts,
     holyGrailStructuredPreferences: row.holyGrailStructuredPreferences,
     signalSelf: selfSnap ?? null,

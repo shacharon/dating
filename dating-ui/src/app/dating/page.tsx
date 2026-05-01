@@ -18,7 +18,7 @@ export default function DatingLandingPage() {
             Get started
           </Link>
           <Link
-            href="/dating/matches"
+            href="/dating/me-matches"
             className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             View matches

@@ -1,4 +1,3 @@
-import type { MatchPairHgSnapshot } from '@prisma/client';
 import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matching/eligibility.evaluator';
 import { HOLY_GRAIL_DIMENSION_KEYS } from '../holy-grail-matching/holy-grail-dimensions';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -15,16 +14,27 @@ import { anyChildrenUnsure } from './children-unsure.helpers';
 const HG_CHILDREN_STATUS_SEP = ':';
 
 /**
+ * Persisted pair HG row fields consumed by classifiers (Prisma model removed in Migration 3).
+ * In-memory / tests may still supply this shape; runtime DB reads/writes are gone.
+ */
+export type MatchPairHgSnapshotRow = {
+  readonly matchId?: string;
+  readonly childrenUnsure?: boolean;
+  readonly hgChildrenStatus?: string | null;
+  readonly hgOverallStatus?: string | null;
+  readonly hgSoftPassCount?: number | null;
+  readonly hgRankPenaltyApplied?: boolean;
+  readonly hgPolicyVersion?: string | null;
+};
+
+/**
  * ## Source of truth (list/detail)
  *
- * List **sort order** ignores HG (see `match-ranking-contract.ts`); this module resolves HG fields for display/snapshots.
+ * List **sort order** ignores HG (see `match-ranking-contract.ts`); this module resolves HG fields for display.
  *
- * - **Primary**: `match_pair_hg_snapshot` when policy matches `HG_LIST_PRODUCT_POLICY_VERSION` and fields parse
- *   (`classifyChildrenUnsureFromSnapshot`, `classifyHolyGrailDiagnosticsFromSnapshot`).
- * - **Fallback**: At most one live `evaluateHolyGrailPairDirections` per pair when either slice is missing/invalid
- *   and profile rows exist; see `HgPairResolutionTelemetry.liveFallbackReason`. Detail GET classifies the snapshot once,
- *   then `resolvePairHgFieldsFromSnapshotClassifications` (no duplicate snapshot parse on fallback).
- * - **Algorithmic** (rebuild / upsert): unchanged evaluator + `buildPairHgSnapshotPayload`.
+ * - **Snapshot-shaped rows**: classifiers accept `MatchPairHgSnapshotRow` when present (e.g. tests); production maps are empty.
+ * - **Fallback**: live `evaluateHolyGrailPairDirections` when slices are missing/invalid and profile rows exist.
+ * - **Rebuild**: `buildPairHgSnapshotPayload` remains; DB table dropped (Migration 3).
  */
 
 /** Structured reject reasons for snapshot validity (metrics / logs). */
@@ -133,7 +143,7 @@ function parseOverallHardPairFromSnapshot(
 }
 
 export function isMatchPairHgSnapshotPolicyCurrent(
-  row: MatchPairHgSnapshot | null | undefined,
+  row: MatchPairHgSnapshotRow | null | undefined,
 ): boolean {
   return Boolean(
     row?.hgPolicyVersion &&
@@ -145,7 +155,7 @@ export function isMatchPairHgSnapshotPolicyCurrent(
  * Snapshot validity for **children_unsure** directions (primary list/detail source when `ok`).
  */
 export function classifyChildrenUnsureFromSnapshot(
-  row: MatchPairHgSnapshot | null | undefined,
+  row: MatchPairHgSnapshotRow | null | undefined,
 ): ClassifyChildrenUnsureFromSnapshotResult {
   if (row == null) {
     return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.NO_ROW };
@@ -187,7 +197,7 @@ export function classifyChildrenUnsureFromSnapshot(
  * `hgRankScore` mirrors persisted `hgSoftPassCount`.
  */
 export function classifyHolyGrailDiagnosticsFromSnapshot(
-  row: MatchPairHgSnapshot | null | undefined,
+  row: MatchPairHgSnapshotRow | null | undefined,
 ): ClassifyHolyGrailDiagnosticsFromSnapshotResult {
   if (row == null) {
     return { ok: false, reason: HG_PAIR_SNAPSHOT_REJECT.NO_ROW };
@@ -244,7 +254,7 @@ const DEFAULT_CHILDREN: ChildrenUnsureDirectionsDto = {
  */
 export function resolvePairHgFieldsFromSnapshotClassifications(args: {
   readonly matchId?: string;
-  readonly snapshot: MatchPairHgSnapshot | null | undefined;
+  readonly snapshot: MatchPairHgSnapshotRow | null | undefined;
   readonly rowA: ChildrenUnsureProfileRow | undefined;
   readonly rowB: ChildrenUnsureProfileRow | undefined;
   readonly childClass: ClassifyChildrenUnsureFromSnapshotResult;
@@ -365,7 +375,7 @@ export function resolvePairHgFieldsFromSnapshotClassifications(args: {
  */
 export function resolvePairHgFieldsFromSnapshotAndRows(args: {
   readonly matchId?: string;
-  readonly snapshot: MatchPairHgSnapshot | null | undefined;
+  readonly snapshot: MatchPairHgSnapshotRow | null | undefined;
   readonly rowA: ChildrenUnsureProfileRow | undefined;
   readonly rowB: ChildrenUnsureProfileRow | undefined;
 }): {
@@ -385,69 +395,23 @@ export function resolvePairHgFieldsFromSnapshotAndRows(args: {
   });
 }
 
-const UPSERT_CHUNK = 40;
-
 export async function upsertMatchPairHgSnapshots(
   prisma: PrismaService,
   records: MatchRecordDto[],
   profileMap: Map<string, ChildrenUnsureProfileRow>,
 ): Promise<{ written: number; skipped: number }> {
-  const payloads: PairHgSnapshotUpsertInput[] = [];
-  let skipped = 0;
-  const evaluatedAt = new Date();
-  for (const r of records) {
-    const rowA = profileMap.get(r.aId);
-    const rowB = profileMap.get(r.bId);
-    if (!rowA || !rowB) {
-      skipped += 1;
-      continue;
-    }
-    const dirs = evaluateHolyGrailPairDirections(rowA, rowB, evaluatedAt);
-    if (!dirs) {
-      skipped += 1;
-      continue;
-    }
-    payloads.push(buildPairHgSnapshotPayload(r.matchId, dirs.aToB, dirs.bToA));
-  }
-
-  for (let i = 0; i < payloads.length; i += UPSERT_CHUNK) {
-    const chunk = payloads.slice(i, i + UPSERT_CHUNK);
-    await prisma.$transaction(
-      chunk.map((p) =>
-        prisma.matchPairHgSnapshot.upsert({
-          where: { matchId: p.matchId },
-          create: {
-            matchId: p.matchId,
-            childrenUnsure: p.childrenUnsure,
-            hgChildrenStatus: p.hgChildrenStatus,
-            hgOverallStatus: p.hgOverallStatus,
-            hgSoftPassCount: p.hgSoftPassCount,
-            hgRankPenaltyApplied: p.hgRankPenaltyApplied,
-            hgPolicyVersion: p.hgPolicyVersion,
-          },
-          update: {
-            childrenUnsure: p.childrenUnsure,
-            hgChildrenStatus: p.hgChildrenStatus,
-            hgOverallStatus: p.hgOverallStatus,
-            hgSoftPassCount: p.hgSoftPassCount,
-            hgRankPenaltyApplied: p.hgRankPenaltyApplied,
-            hgPolicyVersion: p.hgPolicyVersion,
-          },
-        }),
-      ),
-    );
-  }
-
-  return { written: payloads.length, skipped };
+  void prisma;
+  void profileMap;
+  // Table dropped (Migration 3); retained as no-op for callers.
+  return { written: 0, skipped: records.length };
 }
 
 export async function loadMatchPairHgSnapshotMap(
   prisma: PrismaService,
   matchIds: readonly string[],
-): Promise<Map<string, MatchPairHgSnapshot>> {
-  if (matchIds.length === 0) return new Map();
-  const rows = await prisma.matchPairHgSnapshot.findMany({
-    where: { matchId: { in: [...matchIds] } },
-  });
-  return new Map(rows.map((r) => [r.matchId, r]));
+): Promise<Map<string, MatchPairHgSnapshotRow>> {
+  void prisma;
+  void matchIds;
+  // Table dropped (Migration 3); callers use live HG fallbacks.
+  return new Map();
 }

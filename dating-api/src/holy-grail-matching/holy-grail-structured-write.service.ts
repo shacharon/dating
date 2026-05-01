@@ -1,11 +1,5 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ZodError } from 'zod';
-import { PrismaService } from '../prisma/prisma.service';
 import { parseHolyGrailStructuredPreferencesPatchBody } from './retrieval/holy-grail-preferences-patch.schema';
 import {
   HolyGrailStructuredWriteError,
@@ -24,12 +18,18 @@ export interface HolyGrailStructuredWriteRequest {
   readonly structuredPreferencesPatch?: unknown;
 }
 
+interface LegacyMatchmakingProfileUpdateInput {
+  holyGrailStructuredFacts?: unknown;
+  holyGrailStructuredPreferences?: unknown;
+}
+
 @Injectable()
 export class HolyGrailStructuredWriteService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(HolyGrailStructuredWriteService.name);
 
   /**
    * Validates and merges patches into existing JSON. No defaults; unknown keys rejected.
+   * Slice 8: no `MatchmakingProfile` read — merges against an empty persisted JSON base (writes still disabled in slice 7).
    */
   async mergeStructuredLayers(
     profileId: string,
@@ -41,18 +41,12 @@ export class HolyGrailStructuredWriteService {
       return;
     }
 
-    const row = await this.prisma.matchmakingProfile.findUnique({
-      where: { id: profileId },
-      select: {
-        holyGrailStructuredFacts: true,
-        holyGrailStructuredPreferences: true,
-      },
-    });
-    if (!row) {
-      throw new NotFoundException(`Profile not found: ${profileId}`);
-    }
+    const row = {
+      holyGrailStructuredFacts: null,
+      holyGrailStructuredPreferences: null,
+    };
 
-    const data: Prisma.MatchmakingProfileUpdateInput = {};
+    const data: LegacyMatchmakingProfileUpdateInput = {};
 
     try {
       if (hasFacts) {
@@ -81,9 +75,12 @@ export class HolyGrailStructuredWriteService {
       throw e;
     }
 
-    await this.prisma.matchmakingProfile.update({
-      where: { id: profileId },
-      data,
-    });
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+    // Slice 7: MatchmakingProfile writes disabled (pre–Migration 4).
+    this.logger.warn(
+      `[LEGACY] matchmakingProfile.update skipped profileId=${profileId} (slice 7); merged payload not persisted`,
+    );
   }
 }

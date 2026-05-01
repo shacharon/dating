@@ -5,8 +5,6 @@ const DEFAULT_SESSION_COOKIE_NAME = 'dating_session';
 const DEFAULT_SESSION_TTL_DAYS = 14;
 const DEFAULT_CORS_ORIGIN = 'http://localhost:3000,http://127.0.0.1:3000';
 
-const DEFAULT_AUTH_SUCCESS_REDIRECT_URL = 'http://localhost:3000';
-
 function parseEnvBool(raw: string | undefined): boolean {
   if (raw == null || raw.trim() === '') {
     return false;
@@ -26,27 +24,6 @@ export class AuthSessionConfigService {
   /** Google OAuth client ID (public); required once Google auth is enabled. */
   get googleClientId(): string | undefined {
     return trimOrUndefined(this.config.get<string>('GOOGLE_CLIENT_ID'));
-  }
-
-  /** Google OAuth client secret (server-only); required for the code exchange. */
-  get googleClientSecret(): string | undefined {
-    return trimOrUndefined(this.config.get<string>('GOOGLE_CLIENT_SECRET'));
-  }
-
-  /**
-   * Registered redirect URI for the Google OAuth web client (must match Google Cloud Console).
-   * Example: `http://localhost:3001/auth/google/callback`
-   */
-  get googleRedirectUri(): string | undefined {
-    return trimOrUndefined(this.config.get<string>('GOOGLE_REDIRECT_URI'));
-  }
-
-  /** Browser URL after successful login (OAuth callback redirect target). */
-  get authSuccessRedirectUrl(): string {
-    return (
-      trimOrUndefined(this.config.get<string>('AUTH_SUCCESS_REDIRECT_URL')) ??
-      DEFAULT_AUTH_SUCCESS_REDIRECT_URL
-    );
   }
 
   /** HttpOnly session cookie name. */

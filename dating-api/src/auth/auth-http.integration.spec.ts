@@ -1,6 +1,6 @@
 /**
- * Auth HTTP integration (supertest): cookie session, legacy `/auth/*`, and `/api/v1/auth/*`.
- * Google verification is mocked (`GoogleOAuthVerifier`, `GoogleAuthService`).
+ * Auth HTTP integration (supertest): cookie session + `/api/v1/auth/*`.
+ * Google `id_token` verification is mocked (`GoogleAuthService`).
  *
  * Run full auth foundation: `npm run smoke:auth`
  */
@@ -19,9 +19,26 @@ import { hashSessionToken } from '../session/session-token.crypto';
 import { UsersService } from '../users/users.service';
 import { AuthModule } from './auth.module';
 import { AUTH_ERROR_CODES } from './auth-error-codes';
-import { GOOGLE_OAUTH_STATE_COOKIE_NAME } from './auth.constants';
+import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
+import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { GoogleAuthService } from './google-auth.service';
-import { GoogleOAuthVerifier } from './google-oauth.verifier';
+
+function parseStructuredJsonLogs(
+  spy: jest.SpiedFunction<typeof console.log>,
+): unknown[] {
+  const out: unknown[] = [];
+  for (const call of spy.mock.calls) {
+    const s = call[0];
+    if (typeof s === 'string' && s.startsWith('{')) {
+      try {
+        out.push(JSON.parse(s));
+      } catch {
+        /* non-JSON line */
+      }
+    }
+  }
+  return out;
+}
 
 function extractCookieValue(
   setCookie: string[] | undefined,
@@ -55,16 +72,12 @@ describe('auth HTTP (integration)', () => {
     createFromGoogleIdentity: jest.Mock;
     updateLoginFields: jest.Mock;
   };
-  let verifyCode: jest.Mock;
   let verifyIdToken: jest.Mock;
 
   const PEPPER = 'integration-test-pepper';
   const SESSION_COOKIE = 'dating_session';
   const configStub = {
     googleClientId: 'google-client-id',
-    googleClientSecret: 'google-secret',
-    googleRedirectUri: 'http://localhost:3001/auth/google/callback',
-    authSuccessRedirectUrl: 'http://localhost:3000/',
     sessionSecretPepper: PEPPER,
     sessionCookieName: SESSION_COOKIE,
     sessionTtlDays: 14,
@@ -74,7 +87,6 @@ describe('auth HTTP (integration)', () => {
   };
 
   beforeAll(async () => {
-    verifyCode = jest.fn();
     verifyIdToken = jest.fn();
     usersServiceMock = {
       findById: jest.fn(),
@@ -102,6 +114,7 @@ describe('auth HTTP (integration)', () => {
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         AuthSessionConfigModule,
         PrismaModule,
+        StructuredLoggingModule,
         AuthModule,
       ],
     })
@@ -109,8 +122,6 @@ describe('auth HTTP (integration)', () => {
       .useValue(prismaMock)
       .overrideProvider(AuthSessionConfigService)
       .useValue(configStub)
-      .overrideProvider(GoogleOAuthVerifier)
-      .useValue({ verifyAuthorizationCode: verifyCode })
       .overrideProvider(GoogleAuthService)
       .useValue({ verifyIdToken: verifyIdToken })
       .overrideProvider(UsersService)
@@ -118,6 +129,7 @@ describe('auth HTTP (integration)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(requestCorrelationMiddleware);
     app.use(cookieParser());
     await app.init();
   });
@@ -138,23 +150,23 @@ describe('auth HTTP (integration)', () => {
     }));
   });
 
-  describe('smoke: /auth/me and /auth/logout', () => {
+  describe('GET /api/v1/auth/me (session cookie)', () => {
     const raw = 'known-raw-session-token';
     const hash = hashSessionToken(raw, PEPPER);
 
-    it('GET /auth/me returns 401 without cookie', async () => {
-      await request(app.getHttpServer()).get('/auth/me').expect(401);
+    it('returns 401 without cookie', async () => {
+      await request(app.getHttpServer()).get('/api/v1/auth/me').expect(401);
     });
 
-    it('GET /auth/me returns 401 when session row is missing', async () => {
+    it('returns 401 when session row is missing', async () => {
       prismaMock.userSession.findUnique.mockResolvedValue(null);
       await request(app.getHttpServer())
-        .get('/auth/me')
+        .get('/api/v1/auth/me')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(401);
     });
 
-    it('GET /auth/me returns 401 when session is revoked', async () => {
+    it('returns 401 when session is revoked', async () => {
       prismaMock.userSession.findUnique.mockResolvedValue({
         id: 'sid',
         userId: 'user_1',
@@ -163,12 +175,12 @@ describe('auth HTTP (integration)', () => {
         revokedAt: new Date('2020-01-01T00:00:00.000Z'),
       });
       await request(app.getHttpServer())
-        .get('/auth/me')
+        .get('/api/v1/auth/me')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(401);
     });
 
-    it('GET /auth/me returns 401 when session is expired', async () => {
+    it('returns 401 when session is expired', async () => {
       prismaMock.userSession.findUnique.mockResolvedValue({
         id: 'sid',
         userId: 'user_1',
@@ -177,12 +189,12 @@ describe('auth HTTP (integration)', () => {
         revokedAt: null,
       });
       await request(app.getHttpServer())
-        .get('/auth/me')
+        .get('/api/v1/auth/me')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(401);
     });
 
-    it('GET /auth/me returns safe user DTO when session is valid', async () => {
+    it('returns safe user DTO when session is valid', async () => {
       const exp = new Date('2038-01-01T00:00:00.000Z');
       prismaMock.userSession.findUnique.mockResolvedValue({
         id: 'sid',
@@ -200,7 +212,7 @@ describe('auth HTTP (integration)', () => {
       });
 
       const res = await request(app.getHttpServer())
-        .get('/auth/me')
+        .get('/api/v1/auth/me')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(200);
 
@@ -216,7 +228,7 @@ describe('auth HTTP (integration)', () => {
       });
     });
 
-    it('GET /auth/me returns 403 with auth_error disabled_user when account is disabled', async () => {
+    it('returns 403 with auth_error disabled_user when account is disabled', async () => {
       prismaMock.userSession.findUnique.mockResolvedValue({
         id: 'sid',
         userId: 'user_1',
@@ -233,7 +245,7 @@ describe('auth HTTP (integration)', () => {
       });
 
       const res = await request(app.getHttpServer())
-        .get('/auth/me')
+        .get('/api/v1/auth/me')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(403);
 
@@ -243,12 +255,17 @@ describe('auth HTTP (integration)', () => {
         }),
       );
     });
+  });
 
-    it('POST /auth/logout revokes session and clears cookie', async () => {
+  describe('POST /api/v1/auth/logout', () => {
+    const raw = 'known-raw-session-token';
+    const hash = hashSessionToken(raw, PEPPER);
+
+    it('revokes session and clears cookie', async () => {
       prismaMock.userSession.updateMany.mockResolvedValue({ count: 1 });
 
       const res = await request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/v1/auth/logout')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(200);
 
@@ -269,170 +286,14 @@ describe('auth HTTP (integration)', () => {
     });
   });
 
-  describe('OAuth callback hardening (integration)', () => {
-    it('redirects email_in_use when email belongs to another googleId', async () => {
-      verifyCode.mockResolvedValue({
-        googleId: 'google-new',
-        email: 'taken@example.com',
-        displayName: 'T',
-        avatarUrl: null,
-      });
-      usersServiceMock.findByGoogleId.mockResolvedValue(null);
-      usersServiceMock.findByEmail.mockResolvedValue({
-        id: 'existing',
-        email: 'taken@example.com',
-        googleId: 'google-old',
-        displayName: 'E',
-        avatarUrl: null,
-        status: UserStatus.ACTIVE,
-      });
-
-      const start = await request(app.getHttpServer()).get('/auth/google').expect(302);
-      const state = extractCookieValue(
-        start.headers['set-cookie'],
-        GOOGLE_OAUTH_STATE_COOKIE_NAME,
-      );
-      const cb = await request(app.getHttpServer())
-        .get('/auth/google/callback')
-        .query({ code: 'c1', state })
-        .set('Cookie', [`${GOOGLE_OAUTH_STATE_COOKIE_NAME}=${state}`])
-        .expect(302);
-
-      expect(cb.headers.location).toContain(
-        `auth_error=${AUTH_ERROR_CODES.email_in_use}`,
-      );
-      expect(prismaMock.userSession.create).not.toHaveBeenCalled();
-    });
-
-    it('redirects disabled_user when Google account matches a disabled user', async () => {
-      verifyCode.mockResolvedValue({
-        googleId: 'gid-dis',
-        email: 'd@example.com',
-        displayName: 'D',
-        avatarUrl: null,
-      });
-      usersServiceMock.findByGoogleId.mockResolvedValue({
-        id: 'u-dis',
-        email: 'd@example.com',
-        googleId: 'gid-dis',
-        displayName: 'D',
-        avatarUrl: null,
-        status: UserStatus.DISABLED,
-      });
-
-      const start = await request(app.getHttpServer()).get('/auth/google').expect(302);
-      const state = extractCookieValue(
-        start.headers['set-cookie'],
-        GOOGLE_OAUTH_STATE_COOKIE_NAME,
-      );
-      const cb = await request(app.getHttpServer())
-        .get('/auth/google/callback')
-        .query({ code: 'c2', state })
-        .set('Cookie', [`${GOOGLE_OAUTH_STATE_COOKIE_NAME}=${state}`])
-        .expect(302);
-
-      expect(cb.headers.location).toContain(
-        `auth_error=${AUTH_ERROR_CODES.disabled_user}`,
-      );
-      expect(prismaMock.userSession.create).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('callback flow: google -> callback -> me -> logout', () => {
-    it('chains OAuth start, mocked callback, /auth/me, then logout', async () => {
-      verifyCode.mockResolvedValue({
-        googleId: 'google-sub-xyz',
-        email: 'u@example.com',
-        displayName: 'User',
-        avatarUrl: null,
-      });
-      usersServiceMock.findByGoogleId.mockResolvedValue(null);
-      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
-        id: 'user_oauth_1',
-        email: 'u@example.com',
-        googleId: 'google-sub-xyz',
-        displayName: 'User',
-        avatarUrl: null,
-        status: UserStatus.ACTIVE,
-      });
-
-      const start = await request(app.getHttpServer())
-        .get('/auth/google')
-        .expect(302);
-
-      expect(start.headers.location).toContain('accounts.google.com');
-      const state = extractCookieValue(
-        start.headers['set-cookie'],
-        GOOGLE_OAUTH_STATE_COOKIE_NAME,
-      );
-      expect(state).toBeTruthy();
-      const stateCookieHeader = `${GOOGLE_OAUTH_STATE_COOKIE_NAME}=${state}`;
-
-      const cb = await request(app.getHttpServer())
-        .get('/auth/google/callback')
-        .query({ code: 'fake-auth-code', state })
-        .set('Cookie', [stateCookieHeader])
-        .expect(302);
-
-      expect(cb.headers.location).toBe(configStub.authSuccessRedirectUrl);
-
-      const rawSession = extractCookieValue(
-        cb.headers['set-cookie'],
-        SESSION_COOKIE,
-      );
-      expect(rawSession).toBeTruthy();
-      const sessionHash = hashSessionToken(rawSession!, PEPPER);
-
-      prismaMock.userSession.findUnique.mockResolvedValue({
-        id: 'sess_after_cb',
-        userId: 'user_oauth_1',
-        sessionTokenHash: sessionHash,
-        expiresAt: new Date('2038-01-01T00:00:00.000Z'),
-        revokedAt: null,
-      });
-      usersServiceMock.findById.mockResolvedValue({
-        id: 'user_oauth_1',
-        email: 'u@example.com',
-        displayName: 'User',
-        avatarUrl: null,
-        status: UserStatus.ACTIVE,
-      });
-
-      const me = await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Cookie', [`${SESSION_COOKIE}=${rawSession}`])
-        .expect(200);
-
-      expect(me.body.email).toBe('u@example.com');
-      expect(me.body.id).toBe('user_oauth_1');
-
-      prismaMock.userSession.updateMany.mockResolvedValue({ count: 1 });
-      prismaMock.userSession.findUnique.mockResolvedValue(null);
-
-      await request(app.getHttpServer())
-        .post('/auth/logout')
-        .set('Cookie', [`${SESSION_COOKIE}=${rawSession}`])
-        .expect(200);
-
-      await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Cookie', [`${SESSION_COOKIE}=${rawSession}`])
-        .expect(401);
-    });
-  });
-
   describe('api/v1/auth (id_token login)', () => {
-    it('GET /api/v1/auth/me returns 401 without cookie', async () => {
-      await request(app.getHttpServer()).get('/api/v1/auth/me').expect(401);
-    });
-
     it('GET /api/v1/auth/protected-test returns 401 without session cookie', async () => {
       await request(app.getHttpServer())
         .get('/api/v1/auth/protected-test')
         .expect(401);
     });
 
-    it('GET /api/v1/auth/protected-test returns 401 when session is revoked (same as AuthGuard on /auth/me)', async () => {
+    it('GET /api/v1/auth/protected-test returns 401 when session is revoked', async () => {
       const raw = 'revoked-protected-token';
       const hash = hashSessionToken(raw, PEPPER);
       prismaMock.userSession.findUnique.mockResolvedValue({
@@ -556,12 +417,6 @@ describe('auth HTTP (integration)', () => {
 
       expect(me.body.email).toBe('api@example.com');
 
-      const meLegacy = await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Cookie', [`${SESSION_COOKIE}=${rawSession}`])
-        .expect(200);
-      expect(meLegacy.body).toEqual(me.body);
-
       const prot = await request(app.getHttpServer())
         .get('/api/v1/auth/protected-test')
         .set('Cookie', [`${SESSION_COOKIE}=${rawSession}`])
@@ -644,6 +499,74 @@ describe('auth HTTP (integration)', () => {
       });
       expect(login.body).not.toHaveProperty('sessionToken');
       expect(login.body).not.toHaveProperty('rawToken');
+    });
+  });
+
+  describe('observability: request id + structured auth logs', () => {
+    it('echoes x-request-id on POST /api/v1/auth/google', async () => {
+      verifyIdToken.mockResolvedValue({
+        googleId: 'google-obs-rid',
+        email: 'obs-rid-auth@test.com',
+        displayName: 'R',
+        avatarUrl: null,
+      });
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: 'user_obs_rid_auth',
+        email: 'obs-rid-auth@test.com',
+        googleId: 'google-obs-rid',
+        displayName: 'R',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .set('x-request-id', 'auth-client-req-1')
+        .send({ idToken: 'jwt-obs-rid' })
+        .expect(200);
+      expect(res.headers['x-request-id']).toBe('auth-client-req-1');
+    });
+
+    it('emits structured JSON AUTH_LOGIN_START and AUTH_LOGIN_SUCCESS on id-token login', async () => {
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        verifyIdToken.mockResolvedValue({
+          googleId: 'google-obs-json',
+          email: 'obs-json-auth@test.com',
+          displayName: 'J',
+          avatarUrl: null,
+        });
+        usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+          id: 'user_obs_json_auth',
+          email: 'obs-json-auth@test.com',
+          googleId: 'google-obs-json',
+          displayName: 'J',
+          avatarUrl: null,
+          status: UserStatus.ACTIVE,
+        });
+
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/google')
+          .send({ idToken: 'jwt-obs-json' })
+          .expect(200);
+
+        const lines = parseStructuredJsonLogs(spy);
+        const codes = lines.map(
+          (l) => (l as { errorCode?: string }).errorCode,
+        );
+        expect(codes).toContain('AUTH_LOGIN_START');
+        expect(codes).toContain('AUTH_LOGIN_SUCCESS');
+        const success = lines.find(
+          (l) =>
+            (l as { errorCode?: string }).errorCode === 'AUTH_LOGIN_SUCCESS',
+        );
+        expect((success as { level?: string }).level).toBe('trace');
+        expect(typeof (success as { requestId?: string }).requestId).toBe(
+          'string',
+        );
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });

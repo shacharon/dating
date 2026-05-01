@@ -1,5 +1,11 @@
 import { getApiBase } from "@/lib/api-base";
 import type { AuthUser } from "@/lib/auth/types";
+import {
+  emitProductLog,
+  getObservabilityRoute,
+} from "@/lib/observability/product-logger";
+import { captureRequestIdFromResponse } from "@/lib/observability/request-id";
+import { UiErrorCodes } from "@/lib/observability/ui-error-codes";
 
 function parseUser(json: unknown): AuthUser | null {
   if (json == null || typeof json !== "object") return null;
@@ -20,6 +26,7 @@ export async function fetchAuthMe(): Promise<
   | { ok: false; status: number; authError?: string }
 > {
   const base = getApiBase();
+  const route = getObservabilityRoute();
   let res: Response;
   try {
     res = await fetch(`${base}/api/v1/auth/me`, {
@@ -29,12 +36,45 @@ export async function fetchAuthMe(): Promise<
     });
   } catch {
     /** DNS, refused connection, CORS block, offline — `fetch` rejects (no HTTP status). */
+    emitProductLog({
+      level: "error",
+      route,
+      message: "GET /api/v1/auth/me network failure",
+      errorCode: UiErrorCodes.UI_AUTH_ME_NETWORK,
+    });
     return { ok: false, status: 0 };
   }
+  captureRequestIdFromResponse(res);
   if (res.status === 200) {
     const user = parseUser(await res.json());
-    if (user) return { ok: true, user };
+    if (user) {
+      emitProductLog({
+        level: "trace",
+        route,
+        message: "GET /api/v1/auth/me success",
+        errorCode: UiErrorCodes.UI_AUTH_ME_OK,
+        meta: { userId: user.id },
+      });
+      return { ok: true, user };
+    }
+    emitProductLog({
+      level: "error",
+      route,
+      message: "GET /api/v1/auth/me invalid JSON body",
+      errorCode: UiErrorCodes.UI_AUTH_ME_UNEXPECTED,
+      meta: { status: res.status },
+    });
     return { ok: false, status: 500 };
+  }
+  if (res.status === 401) {
+    emitProductLog({
+      level: "trace",
+      route,
+      message: "GET /api/v1/auth/me unauthenticated",
+      errorCode: UiErrorCodes.UI_AUTH_ME_UNAUTHORIZED,
+      meta: { status: 401 },
+    });
+    return { ok: false, status: 401 };
   }
   if (res.status === 403) {
     let authError: string | undefined;
@@ -44,8 +84,22 @@ export async function fetchAuthMe(): Promise<
     } catch {
       /* ignore */
     }
+    emitProductLog({
+      level: "error",
+      route,
+      message: "GET /api/v1/auth/me forbidden",
+      errorCode: UiErrorCodes.UI_AUTH_ME_FORBIDDEN,
+      meta: { authError },
+    });
     return { ok: false, status: 403, authError };
   }
+  emitProductLog({
+    level: "error",
+    route,
+    message: `GET /api/v1/auth/me unexpected status ${res.status}`,
+    errorCode: UiErrorCodes.UI_AUTH_ME_UNEXPECTED,
+    meta: { status: res.status },
+  });
   return { ok: false, status: res.status };
 }
 
@@ -55,6 +109,7 @@ export async function exchangeGoogleIdToken(
   { ok: true; user: AuthUser } | { ok: false; status: number; message: string }
 > {
   const base = getApiBase();
+  const route = getObservabilityRoute();
   let res: Response;
   try {
     res = await fetch(`${base}/api/v1/auth/google`, {
@@ -67,15 +122,39 @@ export async function exchangeGoogleIdToken(
       body: JSON.stringify({ idToken }),
     });
   } catch {
+    emitProductLog({
+      level: "error",
+      route,
+      message: "POST /api/v1/auth/google network failure",
+      errorCode: UiErrorCodes.UI_AUTH_GOOGLE_EXCHANGE_FAIL,
+      meta: { reason: "network" },
+    });
     return {
       ok: false,
       status: 0,
       message: "Cannot reach the API server. Is dating-api running?",
     };
   }
+  captureRequestIdFromResponse(res);
   if (res.status === 200) {
     const user = parseUser(await res.json());
-    if (user) return { ok: true, user };
+    if (user) {
+      emitProductLog({
+        level: "trace",
+        route,
+        message: "POST /api/v1/auth/google success",
+        errorCode: UiErrorCodes.UI_AUTH_GOOGLE_EXCHANGE_OK,
+        meta: { userId: user.id },
+      });
+      return { ok: true, user };
+    }
+    emitProductLog({
+      level: "error",
+      route,
+      message: "POST /api/v1/auth/google invalid response body",
+      errorCode: UiErrorCodes.UI_AUTH_GOOGLE_EXCHANGE_FAIL,
+      meta: { status: res.status },
+    });
     return { ok: false, status: 500, message: "Invalid response from server." };
   }
   let message = `Sign-in failed (${res.status}).`;
@@ -91,19 +170,50 @@ export async function exchangeGoogleIdToken(
   } catch {
     /* keep default */
   }
+  emitProductLog({
+    level: "error",
+    route,
+    message: "POST /api/v1/auth/google failed",
+    errorCode: UiErrorCodes.UI_AUTH_GOOGLE_EXCHANGE_FAIL,
+    meta: { status: res.status, clientMessage: message },
+  });
   return { ok: false, status: res.status, message };
 }
 
 export async function authLogout(): Promise<boolean> {
   const base = getApiBase();
+  const route = getObservabilityRoute();
   try {
     const res = await fetch(`${base}/api/v1/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: { Accept: "application/json" },
     });
-    return res.ok;
+    captureRequestIdFromResponse(res);
+    if (res.ok) {
+      emitProductLog({
+        level: "trace",
+        route,
+        message: "POST /api/v1/auth/logout success",
+        errorCode: UiErrorCodes.UI_AUTH_LOGOUT_OK,
+      });
+      return true;
+    }
+    emitProductLog({
+      level: "error",
+      route,
+      message: `POST /api/v1/auth/logout failed status ${res.status}`,
+      errorCode: UiErrorCodes.UI_AUTH_LOGOUT_FAIL,
+      meta: { status: res.status },
+    });
+    return false;
   } catch {
+    emitProductLog({
+      level: "error",
+      route,
+      message: "POST /api/v1/auth/logout network failure",
+      errorCode: UiErrorCodes.UI_AUTH_LOGOUT_NETWORK,
+    });
     return false;
   }
 }

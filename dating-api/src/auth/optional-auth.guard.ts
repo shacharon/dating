@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
+import { mergeRequestLogContext } from '../logging/request-log-context';
 import { SessionService } from '../session/session.service';
 import { UsersService } from '../users/users.service';
 import { USER_STATUS_ACTIVE } from './auth.constants';
@@ -35,6 +36,10 @@ export class OptionalAuthGuard implements CanActivate {
       return true;
     }
 
+    mergeRequestLogContext({
+      userId: validated.userId,
+      sessionId: validated.sessionId,
+    });
     req.authUser = toAuthMeResponseDto(user);
     req.authSession = validated;
     return true;

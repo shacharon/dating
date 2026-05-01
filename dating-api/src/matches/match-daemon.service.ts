@@ -129,7 +129,7 @@ export class MatchDaemonService {
     const records = await this.matchesService.listAllComputed();
     const snap = await this.matchesService.persistMatchPairHgSnapshots(records);
     this.logger.log(
-      `HG snapshots: ${snap.written} written, ${snap.skipped} skipped`,
+      `[LEGACY] MatchPairHgSnapshot removed (Migration 3) — persist noop: ${snap.written} written, ${snap.skipped} skipped`,
       this.context,
     );
     return this.refreshIndexFromRecords(records);

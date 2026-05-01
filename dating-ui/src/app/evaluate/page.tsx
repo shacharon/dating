@@ -1,10 +1,16 @@
 'use client';
 
+import {
+  emitProductLog,
+  getObservabilityRoute,
+} from '@/lib/observability/product-logger';
 import { useState } from 'react';
 import { ChipsSection, type ChipsViewModel } from '../components/chips-section';
+import { getApiBase } from '@/lib/api-base';
 
-const API_PROFILES_EVALUATE_URL =
-  'http://localhost:3001/api/v1/profiles/evaluate';
+const API_BASE = getApiBase();
+const API_PROFILES_EVALUATE_URL = `${API_BASE}/api/v1/profiles/evaluate`;
+const API_PROFILES_ANALYZE_V2_BASE = `${API_BASE}/api/profiles`;
 
 const SECTIONS = [
   { id: 'aboutMe' as const, label: 'About me', placeholder: 'Describe yourself…' },
@@ -165,12 +171,17 @@ export default function EvaluatePage() {
       // Derived UI-facing layer only; read-only and non-persistent.
       try {
         const chipsRes = await fetch(
-          `http://localhost:3001/api/profiles/${encodeURIComponent(data.profileId)}/analyze-v2`,
+          `${API_PROFILES_ANALYZE_V2_BASE}/${encodeURIComponent(data.profileId)}/analyze-v2`,
           { method: 'POST' },
         );
         if (chipsRes.ok) {
           const chipsData = (await chipsRes.json()) as AnalyzeV2Response;
-          console.log('analyze-v2 response', chipsData);
+          emitProductLog({
+            level: 'trace',
+            route: getObservabilityRoute(),
+            message: 'evaluate: analyze-v2 chips loaded',
+            meta: { profileId: data.profileId },
+          });
           setChips(chipsData?.chips ?? EMPTY_CHIPS);
         } else {
           setChips(EMPTY_CHIPS);

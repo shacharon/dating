@@ -45,6 +45,7 @@ export class CanonicalProfileRepository {
   async findByPreferences(
     input: FindByPreferencesInput,
   ): Promise<ProfilePreferenceMatch[]> {
+    void this.prisma;
     const {
       includeInterests = [],
       excludeInterests = [],
@@ -111,41 +112,20 @@ export class CanonicalProfileRepository {
       paramIndex++;
     }
 
-    const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    void conditions;
+    void params;
+    void paramIndex;
+    void limit;
 
-    const query = `
-      SELECT 
-        "profileId",
-        "interests_self",
-        "negatives_self",
-        "hard_no",
-        "soft_no",
-        "relationship_clarity_self",
-        "relationship_clarity_partner",
-        "relationship_clarity_relationship",
-        "coverageScore",
-        "avgConfidence"
-      FROM "ProfileExtractionV2"
-      ${whereClause}
-      ORDER BY "coverageScore" DESC, "avgConfidence" DESC
-      LIMIT $${paramIndex}
-    `;
-
-    params.push(limit);
-
-    this.logger.log(
+    this.logger.warn(
       JSON.stringify({
-        event: 'canonical_query_execute',
-        conditions: conditions.length,
+        event: 'canonical_query_disabled',
+        reason: 'slice2_stop_profile_extraction_v2_runtime_reads',
       }),
       CanonicalProfileRepository.name,
     );
 
-    const results = await this.prisma.$queryRawUnsafe<ProfilePreferenceMatch[]>(
-      query,
-      ...params,
-    );
+    const results: ProfilePreferenceMatch[] = [];
 
     this.logger.log(
       JSON.stringify({

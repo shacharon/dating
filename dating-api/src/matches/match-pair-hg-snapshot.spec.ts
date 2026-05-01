@@ -1,4 +1,3 @@
-import type { MatchPairHgSnapshot } from '@prisma/client';
 import {
   PartnerWantsChildrenRequirement,
   WantsChildrenSelf,
@@ -13,8 +12,10 @@ import {
   classifyHolyGrailDiagnosticsFromSnapshot,
   resolvePairHgFieldsFromSnapshotAndRows,
   upsertMatchPairHgSnapshots,
+  type MatchPairHgSnapshotRow,
 } from './match-pair-hg-snapshot';
 import type { MatchRecordDto } from './match.types';
+import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 
 const AT = new Date('2020-06-15T12:00:00.000Z');
 
@@ -58,7 +59,7 @@ describe('match_pair_hg_snapshot', () => {
       hgPolicyVersion: payload.hgPolicyVersion,
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as MatchPairHgSnapshot;
+    } as MatchPairHgSnapshotRow;
 
     const ch = classifyChildrenUnsureFromSnapshot(row);
     expect(ch.ok).toBe(true);
@@ -82,7 +83,7 @@ describe('match_pair_hg_snapshot', () => {
     const row = {
       hgPolicyVersion: 'old',
       hgChildrenStatus: 'SOFT_PASS:SKIPPED',
-    } as MatchPairHgSnapshot;
+    } as MatchPairHgSnapshotRow;
     expect(classifyChildrenUnsureFromSnapshot(row).ok).toBe(false);
   });
 
@@ -90,7 +91,7 @@ describe('match_pair_hg_snapshot', () => {
     const row = {
       hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
       hgChildrenStatus: 'nope',
-    } as MatchPairHgSnapshot;
+    } as MatchPairHgSnapshotRow;
     expect(classifyChildrenUnsureFromSnapshot(row).ok).toBe(false);
   });
 
@@ -98,7 +99,7 @@ describe('match_pair_hg_snapshot', () => {
     const snap = {
       hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
       hgChildrenStatus: 'PASS:SOFT_PASS',
-    } as MatchPairHgSnapshot;
+    } as MatchPairHgSnapshotRow;
     const out = resolvePairHgFieldsFromSnapshotAndRows({
       snapshot: snap,
       rowA: undefined,
@@ -115,7 +116,7 @@ describe('match_pair_hg_snapshot', () => {
       hgPolicyVersion: HG_LIST_PRODUCT_POLICY_VERSION,
       hgOverallStatus: 'PASS:PASS',
       hgSoftPassCount: null,
-    } as MatchPairHgSnapshot;
+    } as MatchPairHgSnapshotRow;
     expect(classifyHolyGrailDiagnosticsFromSnapshot(row).ok).toBe(false);
   });
 
@@ -125,7 +126,7 @@ describe('match_pair_hg_snapshot', () => {
       hgChildrenStatus: 'PASS:SOFT_PASS',
       hgOverallStatus: 'PASS:PASS',
       hgSoftPassCount: 2,
-    } as MatchPairHgSnapshot;
+    } as MatchPairHgSnapshotRow;
     const out = resolvePairHgFieldsFromSnapshotAndRows({
       snapshot: snap,
       rowA: undefined,
@@ -160,12 +161,8 @@ describe('match_pair_hg_snapshot', () => {
     });
   });
 
-  it('upsertMatchPairHgSnapshots calls upsert per payload', async () => {
-    const upsert = jest.fn().mockResolvedValue({});
-    const prisma = {
-      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
-      matchPairHgSnapshot: { upsert },
-    } as unknown as import('../prisma/prisma.service').PrismaService;
+  it('upsertMatchPairHgSnapshots does not call Prisma (table removed, Migration 3)', async () => {
+    const prisma = {} as unknown as import('../prisma/prisma.service').PrismaService;
 
     const records: MatchRecordDto[] = [
       {
@@ -187,11 +184,10 @@ describe('match_pair_hg_snapshot', () => {
       },
     ];
 
-    const profileMap = new Map();
+    const profileMap = new Map<string, ChildrenUnsureProfileRow>();
     const { written, skipped } = await upsertMatchPairHgSnapshots(prisma, records, profileMap);
     expect(written).toBe(0);
     expect(skipped).toBe(1);
-    expect(upsert).not.toHaveBeenCalled();
 
     profileMap.set('a', {
       id: 'a',
@@ -206,11 +202,8 @@ describe('match_pair_hg_snapshot', () => {
       extractionV2: { interests_self: [], interests: [], lifestyleTraits: [] },
     });
 
-    upsert.mockClear();
     const r2 = await upsertMatchPairHgSnapshots(prisma, records, profileMap);
-    expect(r2.written).toBe(1);
-    expect(r2.skipped).toBe(0);
-    expect(upsert).toHaveBeenCalledTimes(1);
-    expect(upsert.mock.calls[0][0].where).toEqual({ matchId: 'a__b' });
+    expect(r2.written).toBe(0);
+    expect(r2.skipped).toBe(1);
   });
 });
