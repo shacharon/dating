@@ -21,5 +21,6 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     MeMatchesService,
     MeProfileValidationPipe,
   ],
+  exports: [MeMatchesService],
 })
 export class MeProfileModule {}

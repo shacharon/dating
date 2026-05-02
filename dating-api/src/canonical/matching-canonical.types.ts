@@ -278,8 +278,8 @@ export interface MatchingPreferences {
   partnerAgeMin?: number;
   partnerAgeMax?: number;
   minimumPartnerEducation?: MinimumPartnerEducation;
-  acceptedPartnerSmoking?: AcceptedPartnerSmoking;
-  acceptedPartnerAlcohol?: AcceptedPartnerAlcohol;
+  acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
+  acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
   partnerWantsChildren?: PartnerWantsChildrenRequirement;
   partnerHasChildren?: PartnerHasChildrenAcceptance;
   /**
@@ -314,8 +314,8 @@ export interface MatchingSearchOverrides {
   partnerAgeMin?: number;
   partnerAgeMax?: number;
   minimumPartnerEducation?: MinimumPartnerEducation;
-  acceptedPartnerSmoking?: AcceptedPartnerSmoking;
-  acceptedPartnerAlcohol?: AcceptedPartnerAlcohol;
+  acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
+  acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
   partnerWantsChildren?: PartnerWantsChildrenRequirement;
   partnerHasChildren?: PartnerHasChildrenAcceptance;
   acceptedPartnerReligions?: readonly ReligionSelf[];

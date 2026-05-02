@@ -21,9 +21,15 @@ describe('MeProfileService', () => {
     aboutMe: 'a' as string | null,
     aboutPartner: null as string | null,
     aboutRelationship: null as string | null,
+    desiredPartnerGenders: null as unknown,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-02'),
   };
+
+  /** `findUnique` with `include: { preference: true }` — HG prefs are not on `UserProfile` (Phase F). */
+  function profileRow<T extends Record<string, unknown>>(row: T) {
+    return { ...row, preference: null };
+  }
 
   let prisma: {
     userProfile: {
@@ -32,6 +38,7 @@ describe('MeProfileService', () => {
       update: jest.Mock;
     };
     userProfileEvaluation: { findFirst: jest.Mock };
+    userProfilePreference: { upsert: jest.Mock };
   };
   let service: MeProfileService;
   let obs: jest.Mocked<
@@ -51,6 +58,9 @@ describe('MeProfileService', () => {
       },
       userProfileEvaluation: {
         findFirst: jest.fn().mockResolvedValue(null),
+      },
+      userProfilePreference: {
+        upsert: jest.fn().mockResolvedValue({}),
       },
     };
     obs = {
@@ -72,11 +82,12 @@ describe('MeProfileService', () => {
     await expect(service.getForUser(userId)).resolves.toBeNull();
     expect(prisma.userProfile.findUnique).toHaveBeenCalledWith({
       where: { userId },
+      include: { preference: true },
     });
   });
 
   it('getForUser maps row to response DTO', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue(baseRow);
+    prisma.userProfile.findUnique.mockResolvedValue(profileRow(baseRow));
     const r = await service.getForUser(userId);
     expect(r).toMatchObject({
       id: 'prof_1',
@@ -110,8 +121,14 @@ describe('MeProfileService', () => {
   });
 
   it('createForUser persists DRAFT with picked fields', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue(null);
     const created = { ...baseRow, aboutMe: 'new', gender: ProfileGender.FEMALE };
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        ...created,
+        desiredPartnerGenders: created.desiredPartnerGenders,
+      })
+      .mockResolvedValueOnce(profileRow(created));
     prisma.userProfile.create.mockResolvedValue(created);
 
     const r = await service.createForUser(userId, {
@@ -140,14 +157,26 @@ describe('MeProfileService', () => {
   });
 
   it('patchForUser returns existing without update when body is empty', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue(baseRow);
+    prisma.userProfile.findUnique.mockResolvedValue(profileRow(baseRow));
     const r = await service.patchForUser(userId, {});
     expect(r).toMatchObject({ id: 'prof_1', aboutMe: 'a' });
     expect(prisma.userProfile.update).not.toHaveBeenCalled();
   });
 
   it('patchForUser updates when fields provided', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue(baseRow);
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(profileRow(baseRow))
+      .mockResolvedValueOnce({
+        ...baseRow,
+        desiredPartnerGenders: baseRow.desiredPartnerGenders,
+      })
+      .mockResolvedValueOnce(
+        profileRow({
+          ...baseRow,
+          aboutMe: 'patched',
+          updatedAt: new Date('2026-01-03'),
+        }),
+      );
     prisma.userProfile.update.mockResolvedValue({
       ...baseRow,
       aboutMe: 'patched',
@@ -164,7 +193,19 @@ describe('MeProfileService', () => {
   });
 
   it('createForUser maps identity fields to Prisma', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue(null);
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        profileRow({
+          ...baseRow,
+          birthDate: new Date('1991-06-15'),
+          gender: ProfileGender.FEMALE,
+          desiredPartnerGenders: ['MALE', ProfileGender.NON_BINARY],
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv',
+        }),
+      );
     const created = {
       ...baseRow,
       birthDate: new Date('1991-06-15'),
@@ -185,6 +226,10 @@ describe('MeProfileService', () => {
       locationLabel: 'Tel Aviv',
     });
 
+    expect(prisma.userProfile.findUnique).toHaveBeenLastCalledWith({
+      where: { userId },
+      include: { preference: true },
+    });
     expect(prisma.userProfile.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         birthDate: new Date('1991-06-15'),
@@ -198,15 +243,17 @@ describe('MeProfileService', () => {
   });
 
   it('getForUser maps enriched row and parses desiredPartnerGenders JSON', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue({
-      ...baseRow,
-      birthDate: new Date('1990-05-01T00:00:00.000Z'),
-      gender: ProfileGender.MALE,
-      desiredPartnerGenders: ['FEMALE', 'OTHER'],
-      city: 'Haifa',
-      country: 'IL',
-      locationLabel: 'Haifa, IL',
-    });
+    prisma.userProfile.findUnique.mockResolvedValue(
+      profileRow({
+        ...baseRow,
+        birthDate: new Date('1990-05-01T00:00:00.000Z'),
+        gender: ProfileGender.MALE,
+        desiredPartnerGenders: ['FEMALE', 'OTHER'],
+        city: 'Haifa',
+        country: 'IL',
+        locationLabel: 'Haifa, IL',
+      }),
+    );
     const r = await service.getForUser(userId);
     expect(r?.birthDate).toEqual(new Date('1990-05-01T00:00:00.000Z'));
     expect(r?.gender).toBe(ProfileGender.MALE);
@@ -217,7 +264,14 @@ describe('MeProfileService', () => {
   });
 
   it('patchForUser clears desiredPartnerGenders with null', async () => {
-    prisma.userProfile.findUnique.mockResolvedValue(baseRow);
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(profileRow(baseRow))
+      .mockResolvedValueOnce(
+        profileRow({
+          ...baseRow,
+          desiredPartnerGenders: null,
+        }),
+      );
     prisma.userProfile.update.mockResolvedValue({
       ...baseRow,
       desiredPartnerGenders: null,
@@ -285,11 +339,21 @@ describe('MeProfileService', () => {
         const now = new Date('2026-04-15T10:00:00.000Z');
         jest.useFakeTimers({ now });
 
-        prisma.userProfile.findUnique.mockResolvedValue({
-          ...baseRow,
-          status,
-          gender: ProfileGender.FEMALE,
-        });
+        prisma.userProfile.findUnique
+          .mockResolvedValueOnce({
+            ...baseRow,
+            status,
+            gender: ProfileGender.FEMALE,
+          })
+          .mockResolvedValueOnce(
+            profileRow({
+              ...baseRow,
+              gender: ProfileGender.FEMALE,
+              status: S.SUBMITTED,
+              submittedAt: now,
+              lastAnalysisError: null,
+            }),
+          );
         prisma.userProfile.update.mockResolvedValue({
           ...baseRow,
           gender: ProfileGender.FEMALE,
@@ -336,16 +400,27 @@ describe('MeProfileService', () => {
     });
 
     it('clears lastAnalysisError on re-submit from FAILED', async () => {
-      prisma.userProfile.findUnique.mockResolvedValue({
-        ...baseRow,
-        status: S.FAILED,
-        gender: ProfileGender.FEMALE,
-        lastAnalysisError: 'previous error',
-      });
+      const submittedAt = new Date('2026-04-20T12:00:00.000Z');
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce({
+          ...baseRow,
+          status: S.FAILED,
+          gender: ProfileGender.FEMALE,
+          lastAnalysisError: 'previous error',
+        })
+        .mockResolvedValueOnce(
+          profileRow({
+            ...baseRow,
+            status: S.SUBMITTED,
+            gender: ProfileGender.FEMALE,
+            submittedAt,
+            lastAnalysisError: null,
+          }),
+        );
       prisma.userProfile.update.mockResolvedValue({
         ...baseRow,
         status: S.SUBMITTED,
-        submittedAt: new Date(),
+        submittedAt,
         lastAnalysisError: null,
       });
 
@@ -396,15 +471,23 @@ describe('MeProfileService', () => {
       prisma.userProfile.findUnique.mockResolvedValue(null);
 
       await expect(service.getForUser(userId)).resolves.toBeNull();
+      expect(prisma.userProfile.findUnique).toHaveBeenCalledWith({
+        where: { userId },
+        include: { preference: true },
+      });
     });
 
     it('createForUser() persists to UserProfile only — no legacy table access', async () => {
       mountLegacyTraps();
-      prisma.userProfile.findUnique.mockResolvedValue(null);
-      prisma.userProfile.create.mockResolvedValue({
-        ...baseRow,
-        gender: ProfileGender.FEMALE,
-      });
+      const created = { ...baseRow, gender: ProfileGender.FEMALE };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          ...created,
+          desiredPartnerGenders: created.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(created));
+      prisma.userProfile.create.mockResolvedValue(created);
 
       await expect(
         service.createForUser(userId, { gender: ProfileGender.FEMALE }),
@@ -413,24 +496,52 @@ describe('MeProfileService', () => {
 
     it('patchForUser() updates UserProfile only — no legacy table access', async () => {
       mountLegacyTraps();
-      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, gender: ProfileGender.FEMALE });
-      prisma.userProfile.update.mockResolvedValue({ ...baseRow, aboutMe: 'updated', gender: ProfileGender.FEMALE });
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow({ ...baseRow, gender: ProfileGender.FEMALE }))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          gender: ProfileGender.FEMALE,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(
+          profileRow({
+            ...baseRow,
+            aboutMe: 'updated',
+            gender: ProfileGender.FEMALE,
+          }),
+        );
+      prisma.userProfile.update.mockResolvedValue({
+        ...baseRow,
+        aboutMe: 'updated',
+        gender: ProfileGender.FEMALE,
+      });
 
       await expect(service.patchForUser(userId, { aboutMe: 'updated' })).resolves.toBeDefined();
     });
 
     it('submitForUser() transitions to SUBMITTED without accessing any legacy table', async () => {
       mountLegacyTraps();
-      prisma.userProfile.findUnique.mockResolvedValue({
-        ...baseRow,
-        status: UserProfileStatus.DRAFT,
-        gender: ProfileGender.FEMALE,
-      });
+      const submittedAt = new Date();
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce({
+          ...baseRow,
+          status: UserProfileStatus.DRAFT,
+          gender: ProfileGender.FEMALE,
+        })
+        .mockResolvedValueOnce(
+          profileRow({
+            ...baseRow,
+            status: 'SUBMITTED' as UserProfileStatus,
+            gender: ProfileGender.FEMALE,
+            submittedAt,
+            lastAnalysisError: null,
+          }),
+        );
       prisma.userProfile.update.mockResolvedValue({
         ...baseRow,
         status: 'SUBMITTED' as UserProfileStatus,
         gender: ProfileGender.FEMALE,
-        submittedAt: new Date(),
+        submittedAt,
         lastAnalysisError: null,
       });
 
@@ -481,11 +592,21 @@ describe('MeProfileService', () => {
       const now = new Date('2026-04-18T00:00:00.000Z');
       const newModelOnlyPrisma = {
         userProfile: {
-          findUnique: jest.fn().mockResolvedValue({
-            ...baseRow,
-            status: UserProfileStatus.DRAFT,
-            gender: ProfileGender.FEMALE,
-          }),
+          findUnique: jest
+            .fn()
+            .mockResolvedValueOnce({
+              ...baseRow,
+              status: UserProfileStatus.DRAFT,
+              gender: ProfileGender.FEMALE,
+            })
+            .mockResolvedValueOnce({
+              ...baseRow,
+              status: 'SUBMITTED' as UserProfileStatus,
+              gender: ProfileGender.FEMALE,
+              submittedAt: now,
+              lastAnalysisError: null,
+              preference: null,
+            }),
           create: jest.fn(),
           update: jest.fn().mockResolvedValue({
             ...baseRow,
@@ -559,6 +680,196 @@ describe('MeProfileService', () => {
       expect(r.evaluationId).toBe('upeval_1');
       expect(r.createdAt).toBe(createdAt.toISOString());
       expect(r.evaluationJson).toEqual({ ok: true, self: {} });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phase C dual-write: UserProfilePreference
+  // ---------------------------------------------------------------------------
+
+  describe('Phase C dual-write: UserProfilePreference', () => {
+    it('createForUser upserts UserProfilePreference after profile creation', async () => {
+      const created = {
+        ...baseRow,
+        id: 'prof_new',
+        gender: ProfileGender.FEMALE,
+      };
+      const preferenceAfter = {
+        id: 'pref_new',
+        profileId: 'prof_new',
+        partnerAgeMin: 28,
+        partnerAgeMax: 40,
+        minimumPartnerEducation: null,
+        acceptedPartnerGenders: [] as string[],
+        acceptedPartnerSmoking: ['NONE_ONLY'],
+        acceptedPartnerAlcohol: ['MODERATE_OK'],
+        acceptedPartnerReligions: [] as string[],
+        partnerWantsChildren: null,
+        partnerHasChildren: null,
+        maxDistanceKm: null,
+        similarityPreference: null,
+        updatedAt: new Date('2026-01-02'),
+      };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          ...created,
+          desiredPartnerGenders: created.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce({ ...created, preference: preferenceAfter });
+      prisma.userProfile.create.mockResolvedValue(created);
+
+      await service.createForUser(userId, {
+        gender: ProfileGender.FEMALE,
+        acceptedPartnerSmoking: ['NONE_ONLY'] as never,
+        acceptedPartnerAlcohol: ['MODERATE_OK'] as never,
+        partnerAgeMin: 28,
+        partnerAgeMax: 40,
+      });
+
+      expect(prisma.userProfilePreference.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { profileId: 'prof_new' },
+          create: expect.objectContaining({
+            profileId: 'prof_new',
+            acceptedPartnerGenders: [],
+            acceptedPartnerSmoking: ['NONE_ONLY'],
+            acceptedPartnerAlcohol: ['MODERATE_OK'],
+            partnerAgeMin: 28,
+            partnerAgeMax: 40,
+          }),
+          update: expect.objectContaining({
+            acceptedPartnerSmoking: ['NONE_ONLY'],
+            partnerAgeMin: 28,
+          }),
+        }),
+      );
+    });
+
+    it('patchForUser upserts UserProfilePreference when preference fields are present', async () => {
+      const preferenceAfter = {
+        id: 'pref_1',
+        profileId: baseRow.id,
+        partnerAgeMin: null,
+        partnerAgeMax: null,
+        minimumPartnerEducation: null,
+        acceptedPartnerGenders: [] as string[],
+        acceptedPartnerSmoking: [] as string[],
+        acceptedPartnerAlcohol: [] as string[],
+        acceptedPartnerReligions: ['JEWISH'] as string[],
+        partnerWantsChildren: null,
+        partnerHasChildren: null,
+        maxDistanceKm: 50,
+        similarityPreference: null,
+        updatedAt: new Date('2026-01-02'),
+      };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce({ ...baseRow, preference: preferenceAfter });
+
+      await service.patchForUser(userId, {
+        acceptedPartnerReligions: ['JEWISH'] as never,
+        maxDistanceKm: 50,
+      });
+
+      expect(prisma.userProfile.update).not.toHaveBeenCalled();
+      expect(prisma.userProfilePreference.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { profileId: baseRow.id },
+          update: expect.objectContaining({
+            acceptedPartnerReligions: ['JEWISH'],
+            maxDistanceKm: 50,
+          }),
+        }),
+      );
+    });
+
+    it('patchForUser upserts UserProfilePreference even when only non-preference fields change', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow({ ...baseRow, aboutMe: 'updated' }));
+      prisma.userProfile.update.mockResolvedValue({ ...baseRow, aboutMe: 'updated' });
+
+      await service.patchForUser(userId, { aboutMe: 'updated' });
+
+      // Preference upsert still runs — ensures row exists after any patch
+      expect(prisma.userProfilePreference.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { profileId: baseRow.id } }),
+      );
+    });
+
+    it('preference upsert failure does not fail createForUser', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          ...baseRow,
+          id: 'prof_new',
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow({ ...baseRow, id: 'prof_new' }));
+      prisma.userProfile.create.mockResolvedValue({ ...baseRow, id: 'prof_new' });
+      prisma.userProfilePreference.upsert.mockRejectedValue(new Error('db error'));
+
+      await expect(
+        service.createForUser(userId, { gender: ProfileGender.FEMALE }),
+      ).resolves.toBeDefined();
+
+      expect(obs.error).toHaveBeenCalledWith(
+        expect.stringContaining('preference upsert failed on create'),
+        'ME_PROFILE_SAVE_FAILED',
+        expect.any(Error),
+      );
+    });
+
+    it('preference upsert failure does not fail patchForUser', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow({ ...baseRow, aboutMe: 'x' }));
+      prisma.userProfile.update.mockResolvedValue({ ...baseRow, aboutMe: 'x' });
+      prisma.userProfilePreference.upsert.mockRejectedValue(new Error('db error'));
+
+      await expect(
+        service.patchForUser(userId, { aboutMe: 'x' }),
+      ).resolves.toBeDefined();
+
+      expect(obs.error).toHaveBeenCalledWith(
+        expect.stringContaining('preference upsert failed on patch'),
+        'ME_PROFILE_SAVE_FAILED',
+        expect.any(Error),
+      );
+    });
+
+    it('createForUser maps desiredPartnerGenders to acceptedPartnerGenders, drops PREFER_NOT_TO_SAY', async () => {
+      const created = { ...baseRow, id: 'prof_pref' };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(profileRow(created));
+      prisma.userProfile.create.mockResolvedValue(created);
+
+      await service.createForUser(userId, {
+        gender: ProfileGender.FEMALE,
+        desiredPartnerGenders: [ProfileGender.MALE, ProfileGender.PREFER_NOT_TO_SAY],
+      });
+
+      expect(prisma.userProfilePreference.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            acceptedPartnerGenders: [ProfileGender.MALE],
+          }),
+        }),
+      );
     });
   });
 });

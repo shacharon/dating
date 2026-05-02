@@ -20,6 +20,134 @@ const STATUS_FAILED = 'FAILED' as UserProfileStatus;
  */
 export const EVALUATION_VERSION = 'v1';
 
+/** Canonical signal keys extracted from evaluationJson into UserProfileSignal rows. */
+const SIGNAL_KEYS = [
+  'emotionalDepth',
+  'lifestylePace',
+  'conflictStyle',
+  'independence',
+  'socialBattery',
+] as const;
+
+function toNullableSignalInt(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  const rounded = Math.round(n);
+  if (rounded < 1 || rounded > 10) {
+    return null;
+  }
+  return rounded;
+}
+
+function pickTopInterests(result: EvaluateBatchResult): string[] {
+  const fromEnrichment = result.enrichment?.signals?.interestsTop3;
+  const fromExtended = result.extendedSignals?.interests;
+  const fromRaw = result.self?.rawInterests;
+  const candidate = [fromEnrichment, fromExtended, fromRaw].find((v) =>
+    Array.isArray(v) && v.length > 0,
+  );
+  if (!candidate) {
+    return [];
+  }
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of candidate) {
+    if (typeof item !== 'string') continue;
+    const normalized = item.trim();
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(normalized);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
+/**
+ * Derive additive DB-first searchable columns from EvaluateBatchResult.
+ * Source-of-truth remains `UserProfileEvaluation.evaluationJson`.
+ *
+ * `interestsTop` on `UserProfile` is a denormalized search copy produced by the same
+ * `pickTopInterests` pipeline as `UserProfileInterest` rows — not a second semantic source.
+ */
+export function mapDbFirstColumnsFromEvaluation(
+  result: EvaluateBatchResult,
+): {
+  interestsTop: string[];
+  sigEmotionalDepth: number | null;
+  sigLifestylePace: number | null;
+  sigConflictStyle: number | null;
+  sigIndependence: number | null;
+  sigSocialBattery: number | null;
+} {
+  const selfSignals = result.self?.signals ?? {};
+  return {
+    interestsTop: pickTopInterests(result),
+    sigEmotionalDepth: toNullableSignalInt(selfSignals.emotionalDepth),
+    sigLifestylePace: toNullableSignalInt(selfSignals.lifestylePace),
+    sigConflictStyle: toNullableSignalInt(selfSignals.conflictStyle),
+    sigIndependence: toNullableSignalInt(selfSignals.independence),
+    sigSocialBattery: toNullableSignalInt(selfSignals.socialBattery),
+  };
+}
+
+/**
+ * Phase C dual-write: build UserProfileSignal upsert operations from evaluation result.
+ * Only signals with a non-null value produce a row.
+ */
+function buildSignalUpserts(
+  prisma: PrismaService,
+  profileId: string,
+  result: EvaluateBatchResult,
+  evalVersion: string,
+) {
+  const selfSignals = (result.self?.signals ?? {}) as Record<string, unknown>;
+  return SIGNAL_KEYS.flatMap((key) => {
+    const value = toNullableSignalInt(selfSignals[key]);
+    if (value === null) return [];
+    return [
+      prisma.userProfileSignal.upsert({
+        where: { profileId_signalKey: { profileId, signalKey: key } },
+        create: { profileId, signalKey: key, signalValue: value, evalVersion },
+        update: { signalValue: value, evalVersion },
+      }),
+    ];
+  });
+}
+
+/**
+ * Phase C dual-write: build UserProfileInterest operations from evaluation result.
+ * Always deletes existing interests for the profile, then re-creates ranked rows.
+ */
+function buildInterestOperations(
+  prisma: PrismaService,
+  profileId: string,
+  result: EvaluateBatchResult,
+  evalVersion: string,
+) {
+  const tags = pickTopInterests(result);
+  return [
+    prisma.userProfileInterest.deleteMany({ where: { profileId } }),
+    ...tags.map((tag, i) =>
+      prisma.userProfileInterest.create({
+        data: {
+          profileId,
+          tag: tag.toLowerCase().trim(),
+          rank: i + 1,
+          source: 'enrichment',
+          evalVersion,
+        },
+      }),
+    ),
+  ];
+}
+
 /**
  * Latest-evaluation retrieval rule.
  * Always use this instead of a bare findFirst to ensure consistent ordering.
@@ -32,6 +160,39 @@ export function latestEvaluationForProfile(
     where: { profileId },
     orderBy: { createdAt: 'desc' },
   });
+}
+
+/** Payload shape used by `MeMatchesService` when batch-loading latest evals. */
+export type LatestEvaluationForMatchPick = {
+  profileId: string;
+  evaluationJson: Prisma.JsonValue;
+  createdAt: Date;
+};
+
+/**
+ * Latest `UserProfileEvaluation` per profile (same rule as `latestEvaluationForProfile`,
+ * but one query for many ids). Iteration order is DESC by `createdAt`, so the first
+ * row seen for each `profileId` is the latest.
+ */
+export async function latestEvaluationsForProfileIds(
+  prisma: PrismaService,
+  profileIds: string[],
+): Promise<Map<string, LatestEvaluationForMatchPick>> {
+  const out = new Map<string, LatestEvaluationForMatchPick>();
+  if (profileIds.length === 0) {
+    return out;
+  }
+  const rows = await prisma.userProfileEvaluation.findMany({
+    where: { profileId: { in: profileIds } },
+    orderBy: { createdAt: 'desc' },
+    select: { profileId: true, evaluationJson: true, createdAt: true },
+  });
+  for (const row of rows) {
+    if (!out.has(row.profileId)) {
+      out.set(row.profileId, row);
+    }
+  }
+  return out;
 }
 
 /**
@@ -162,9 +323,10 @@ export class MeProfileAnalysisService {
 
     try {
       const { result } = await this.evaluate.evaluateBatch(input);
+      const dbFirstColumns = mapDbFirstColumnsFromEvaluation(result);
 
-      // Atomic write: status transition + evaluation snapshot land together.
-      // If either fails the catch block fires and sets FAILED.
+      // Atomic write: status transition + evaluation snapshot + normalized signal/interest rows.
+      // If any operation fails the catch block fires and sets FAILED.
       await this.prisma.$transaction([
         this.prisma.userProfile.update({
           where: { userId },
@@ -172,6 +334,7 @@ export class MeProfileAnalysisService {
             status: STATUS_ANALYZED,
             analyzedAt: new Date(),
             lastAnalysisError: null,
+            ...dbFirstColumns,
           },
         }),
         this.prisma.userProfileEvaluation.create({
@@ -181,6 +344,12 @@ export class MeProfileAnalysisService {
             evaluationJson: result as unknown as Prisma.InputJsonValue,
           },
         }),
+        // Drop prior signal rows so keys absent from this run cannot linger (evalVersion is pipeline tag, not run id).
+        this.prisma.userProfileSignal.deleteMany({
+          where: { profileId: profile.id },
+        }),
+        ...buildSignalUpserts(this.prisma, profile.id, result, EVALUATION_VERSION),
+        ...buildInterestOperations(this.prisma, profile.id, result, EVALUATION_VERSION),
       ]);
 
       this.obs.trace(

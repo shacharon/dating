@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
-import { latestEvaluationForProfile } from './me-profile-analysis.service';
+import {
+  latestEvaluationForProfile,
+  latestEvaluationsForProfileIds,
+} from './me-profile-analysis.service';
 import {
   buildChildrenUnsureRowFromNewModel,
   buildProfilePayloadFromNewModel,
@@ -115,17 +118,8 @@ export class MeMatchesService {
     alcoholUse: true,
     education: true,
     religion: true,
-    // HG structured preferences
-    partnerAgeMin: true,
-    partnerAgeMax: true,
-    minimumPartnerEducation: true,
-    acceptedPartnerSmoking: true,
-    acceptedPartnerAlcohol: true,
-    partnerWantsChildren: true,
-    partnerHasChildren: true,
-    acceptedPartnerReligions: true,
-    maxDistanceKm: true,
-    similarityPreference: true,
+    // HG structured preferences live on UserProfilePreference (Phase F).
+    preference: true,
     _count: { select: { evaluations: true } },
   } as const;
 
@@ -134,6 +128,7 @@ export class MeMatchesService {
   async list(userId: string): Promise<MeMatchesListResponseDto> {
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
+      include: { preference: true },
     });
 
     if (!viewer) {
@@ -168,23 +163,19 @@ export class MeMatchesService {
 
     const totalBeforeFilter = candidateRows.length;
 
-    // Batch-load latest evaluation per candidate (one query; keep first per profileId — DESC order).
-    const candidateEvalRows = await this.prisma.userProfileEvaluation.findMany({
-      where: { profileId: { in: candidateRows.map((r) => r.id) } },
-      orderBy: { createdAt: 'desc' },
-      select: { profileId: true, evaluationJson: true, createdAt: true },
-    });
-    const latestEvalByProfile = new Map<
-      string,
-      (typeof candidateEvalRows)[number]
-    >();
-    for (const ev of candidateEvalRows) {
-      if (!latestEvalByProfile.has(ev.profileId)) {
-        latestEvalByProfile.set(ev.profileId, ev);
-      }
-    }
+    const latestEvalByProfile = await latestEvaluationsForProfileIds(
+      this.prisma,
+      candidateRows.map((r) => r.id),
+    );
 
-    const viewerHgRow = buildChildrenUnsureRowFromNewModel(viewer);
+    const { row: viewerHgRow, fallback: viewerHgFallback } =
+      buildChildrenUnsureRowFromNewModel(viewer);
+    if (viewerHgFallback) {
+      this.obs.trace(
+        `event=hg_preference_fallback_used profileId=${viewer.id} reason=${viewerHgFallback.reason}`,
+        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+      );
+    }
     const matches: MeMatchItemDto[] = [];
 
     for (const row of candidateRows) {
@@ -200,7 +191,14 @@ export class MeMatchesService {
 
       // HG Layer-3 hard-eligibility gate: exclude only when both rows carry structured
       // HG data AND either direction is an explicit FAIL. Missing HG data → PASS (lenient).
-      const candidateHgRow = buildChildrenUnsureRowFromNewModel(row);
+      const { row: candidateHgRow, fallback: candidateHgFallback } =
+        buildChildrenUnsureRowFromNewModel(row);
+      if (candidateHgFallback) {
+        this.obs.trace(
+          `event=hg_preference_fallback_used profileId=${row.id} reason=${candidateHgFallback.reason}`,
+          ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+        );
+      }
       const hgDirections = evaluateHolyGrailPairDirections(viewerHgRow, candidateHgRow);
       if (
         hgDirections !== null &&
@@ -264,6 +262,7 @@ export class MeMatchesService {
     // Viewer must have an analyzed profile to retrieve match details.
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
+      include: { preference: true },
     });
 
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
@@ -299,8 +298,22 @@ export class MeMatchesService {
     }
 
     // HG Layer-3 hard-eligibility gate (same policy as list).
-    const viewerHgRow = buildChildrenUnsureRowFromNewModel(viewer);
-    const candidateHgRow = buildChildrenUnsureRowFromNewModel(candidate);
+    const { row: viewerHgRow, fallback: viewerHgFallbackDetail } =
+      buildChildrenUnsureRowFromNewModel(viewer);
+    if (viewerHgFallbackDetail) {
+      this.obs.trace(
+        `event=hg_preference_fallback_used profileId=${viewer.id} reason=${viewerHgFallbackDetail.reason}`,
+        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+      );
+    }
+    const { row: candidateHgRow, fallback: candidateHgFallbackDetail } =
+      buildChildrenUnsureRowFromNewModel(candidate);
+    if (candidateHgFallbackDetail) {
+      this.obs.trace(
+        `event=hg_preference_fallback_used profileId=${candidate.id} reason=${candidateHgFallbackDetail.reason}`,
+        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+      );
+    }
     const hgDirections = evaluateHolyGrailPairDirections(viewerHgRow, candidateHgRow);
     if (
       hgDirections !== null &&

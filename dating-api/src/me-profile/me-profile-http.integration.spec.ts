@@ -77,6 +77,9 @@ describe('me profile HTTP (integration)', () => {
       findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    userProfilePreference: {
+      upsert: jest.fn().mockResolvedValue({}),
+    },
   };
   const usersServiceMock = {
     findById: jest.fn(),
@@ -152,6 +155,7 @@ describe('me profile HTTP (integration)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.userProfile.findUnique.mockReset();
     verifyIdToken.mockReset();
     usersServiceMock.findByEmail.mockResolvedValue(null);
     usersServiceMock.findByGoogleId.mockResolvedValue(null);
@@ -254,6 +258,7 @@ describe('me profile HTTP (integration)', () => {
       aboutPartner: null,
       aboutRelationship: null,
       gender: 'FEMALE' as const,
+      desiredPartnerGenders: null as unknown,
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
       updatedAt: new Date('2026-02-01T00:00:00.000Z'),
     };
@@ -264,14 +269,21 @@ describe('me profile HTTP (integration)', () => {
       updatedAt: new Date('2026-02-02T00:00:00.000Z'),
     };
 
-    prismaMock.userProfile.findUnique.mockResolvedValueOnce(null);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce(null) // GET 404
+      .mockResolvedValueOnce(null) // POST conflict check
+      .mockResolvedValueOnce({ ...created, desiredPartnerGenders: null }) // POST: upsertPreference snapshot by id
+      .mockResolvedValueOnce({ ...created, preference: null, desiredPartnerGenders: null }) // POST: refetch for response
+      .mockResolvedValueOnce({ ...created, preference: null, desiredPartnerGenders: null }) // GET profile
+      .mockResolvedValueOnce({ ...created, preference: null, desiredPartnerGenders: null }) // PATCH load
+      .mockResolvedValueOnce({ ...created, desiredPartnerGenders: null }) // PATCH: upsertPreference snapshot
+      .mockResolvedValueOnce({ ...updated, preference: null, desiredPartnerGenders: null }); // PATCH refetch
+    prismaMock.userProfile.create.mockResolvedValue(created);
     await request(app.getHttpServer())
       .get('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
       .expect(404);
 
-    prismaMock.userProfile.findUnique.mockResolvedValueOnce(null);
-    prismaMock.userProfile.create.mockResolvedValue(created);
     const postRes = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
@@ -279,14 +291,12 @@ describe('me profile HTTP (integration)', () => {
       .expect(201);
     expect(postRes.body.aboutMe).toBe('first');
 
-    prismaMock.userProfile.findUnique.mockResolvedValue(created);
     const getRes = await request(app.getHttpServer())
       .get('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
       .expect(200);
     expect(getRes.body.aboutMe).toBe('first');
 
-    prismaMock.userProfile.findUnique.mockResolvedValue(created);
     prismaMock.userProfile.update.mockResolvedValue(updated);
     const patchRes = await request(app.getHttpServer())
       .patch('/api/v1/me/profile')
@@ -310,7 +320,7 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(row);
+    prismaMock.userProfile.findUnique.mockResolvedValue({ ...row, preference: null });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/me/profile')
@@ -326,6 +336,7 @@ describe('me profile HTTP (integration)', () => {
     });
     expect(prismaMock.userProfile.findUnique).toHaveBeenCalledWith({
       where: { userId: USER_ID },
+      include: { preference: true },
     });
   });
 
@@ -345,7 +356,6 @@ describe('me profile HTTP (integration)', () => {
 
   it('POST /api/v1/me/profile returns 201 and creates for session user', async () => {
     const raw = await loginAndCookie();
-    prismaMock.userProfile.findUnique.mockResolvedValueOnce(null);
     const created = {
       id: 'prof_new',
       userId: USER_ID,
@@ -355,9 +365,14 @@ describe('me profile HTTP (integration)', () => {
       aboutMe: 'x',
       aboutPartner: null,
       aboutRelationship: null,
+      desiredPartnerGenders: null as unknown,
       createdAt: new Date('2026-01-03T00:00:00.000Z'),
       updatedAt: new Date('2026-01-03T00:00:00.000Z'),
     };
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...created, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({ ...created, preference: null, desiredPartnerGenders: null });
     prismaMock.userProfile.create.mockResolvedValue(created);
 
     const res = await request(app.getHttpServer())
@@ -523,7 +538,10 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(existing);
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      ...existing,
+      preference: null,
+    });
 
     const res = await request(app.getHttpServer())
       .patch('/api/v1/me/profile')
@@ -553,7 +571,16 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(existing);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce({ ...existing, preference: null, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({ ...existing, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({
+        ...existing,
+        onboardingStep: 4,
+        updatedAt: new Date('2026-01-05T00:00:00.000Z'),
+        preference: null,
+        desiredPartnerGenders: null,
+      });
     prismaMock.userProfile.update.mockResolvedValue({
       ...existing,
       onboardingStep: 4,
@@ -587,7 +614,16 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(existing);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce({ ...existing, preference: null, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({ ...existing, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({
+        ...existing,
+        aboutMe: null,
+        updatedAt: new Date('2026-01-06T00:00:00.000Z'),
+        preference: null,
+        desiredPartnerGenders: null,
+      });
     prismaMock.userProfile.update.mockResolvedValue({
       ...existing,
       aboutMe: null,
@@ -666,7 +702,16 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(existing);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce({ ...existing, preference: null, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({ ...existing, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({
+        ...existing,
+        aboutMe: 'patched',
+        updatedAt: new Date('2026-01-04T00:00:00.000Z'),
+        preference: null,
+        desiredPartnerGenders: null,
+      });
     prismaMock.userProfile.update.mockResolvedValue({
       ...existing,
       aboutMe: 'patched',
@@ -812,7 +857,6 @@ describe('me profile HTTP (integration)', () => {
 
   it('POST /api/v1/me/profile returns 201 with identity fields', async () => {
     const raw = await loginAndCookie();
-    prismaMock.userProfile.findUnique.mockResolvedValueOnce(null);
     const created = {
       id: 'prof_identity',
       userId: USER_ID,
@@ -830,6 +874,10 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-03-01T00:00:00.000Z'),
       updatedAt: new Date('2026-03-01T00:00:00.000Z'),
     };
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...created, desiredPartnerGenders: ['MALE'] })
+      .mockResolvedValueOnce({ ...created, preference: null, desiredPartnerGenders: ['MALE'] });
     prismaMock.userProfile.create.mockResolvedValue(created);
 
     const postRes = await request(app.getHttpServer())
@@ -885,7 +933,14 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(existing);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce({ ...existing, preference: null })
+      .mockResolvedValueOnce({
+        ...existing,
+        desiredPartnerGenders: null,
+        updatedAt: new Date('2026-01-07T00:00:00.000Z'),
+        preference: null,
+      });
     prismaMock.userProfile.update.mockResolvedValue({
       ...existing,
       desiredPartnerGenders: null,
@@ -923,7 +978,7 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(row);
+    prismaMock.userProfile.findUnique.mockResolvedValue({ ...row, preference: null });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/me/profile')
@@ -974,7 +1029,9 @@ describe('me profile HTTP (integration)', () => {
       aboutMe: 'Patched bio',
       updatedAt: new Date('2026-01-08T00:00:00.000Z'),
     };
-    prismaMock.userProfile.findUnique.mockResolvedValue(existing);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce({ ...existing, preference: null })
+      .mockResolvedValueOnce({ ...updated, preference: null });
     prismaMock.userProfile.update.mockResolvedValue(updated);
 
     const res = await request(app.getHttpServer())
@@ -1190,7 +1247,15 @@ describe('me profile HTTP (integration)', () => {
       updatedAt: new Date('2026-04-01T00:00:00.000Z'),
     };
     const submittedAt = new Date('2026-04-15T10:00:00.000Z');
-    prismaMock.userProfile.findUnique.mockResolvedValue(draftRow);
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce(draftRow)
+      .mockResolvedValueOnce({
+        ...draftRow,
+        status: 'SUBMITTED' as UserProfileStatus,
+        submittedAt,
+        updatedAt: submittedAt,
+        preference: null,
+      });
     prismaMock.userProfile.update.mockResolvedValue({
       ...draftRow,
       status: 'SUBMITTED' as UserProfileStatus,
@@ -1362,7 +1427,34 @@ describe('me profile HTTP (integration)', () => {
 
   // ─── Phase 3 Step 5: GET /api/v1/me/matches ──────────────────────────────────
 
-  /** Phase 2: HG fact/preference columns added to UserProfile. Default all to empty so existing tests don't crash. */
+  /**
+   * Minimal `UserProfilePreference` joined row for /me/matches mocks.
+   * Must not set partnerAgeMin/Max (HG age eval FAILs when candidate birthDate is null in fixtures).
+   * Use maxDistanceKm and/or acceptedPartnerGenders so the row is non-empty (no pref fallback log).
+   */
+  function testUserProfilePreference(
+    profileId: string,
+    opts?: { acceptedPartnerGenders?: string[] },
+  ) {
+    return {
+      id: `pref_${profileId}`,
+      profileId,
+      partnerAgeMin: null as number | null,
+      partnerAgeMax: null as number | null,
+      maxDistanceKm: 100,
+      minimumPartnerEducation: null as string | null,
+      acceptedPartnerGenders: opts?.acceptedPartnerGenders ?? ([] as string[]),
+      acceptedPartnerSmoking: [] as string[],
+      acceptedPartnerAlcohol: [] as string[],
+      acceptedPartnerReligions: [] as string[],
+      partnerWantsChildren: null as string | null,
+      partnerHasChildren: null as string | null,
+      similarityPreference: null as string | null,
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+  }
+
+  /** HG fact columns on `UserProfile`. Partner prefs live on `UserProfilePreference` (Phase F). */
   const HG_FIELD_DEFAULTS = {
     childrenStatus: null as string | null,
     wantsChildren: null as string | null,
@@ -1370,16 +1462,6 @@ describe('me profile HTTP (integration)', () => {
     alcoholUse: null as string | null,
     education: null as string | null,
     religion: null as string | null,
-    partnerAgeMin: null as number | null,
-    partnerAgeMax: null as number | null,
-    minimumPartnerEducation: null as string | null,
-    acceptedPartnerSmoking: [] as string[],
-    acceptedPartnerAlcohol: [] as string[],
-    partnerWantsChildren: null as string | null,
-    partnerHasChildren: null as string | null,
-    acceptedPartnerReligions: [] as string[],
-    maxDistanceKm: null as number | null,
-    similarityPreference: null as string | null,
   };
 
   describe('GET /api/v1/me/matches', () => {
@@ -1404,6 +1486,9 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01'),
       updatedAt: new Date('2026-04-01'),
       ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_s5', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
     };
 
     it('returns 401 without session', async () => {
@@ -1477,6 +1562,7 @@ describe('me profile HTTP (integration)', () => {
           analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
           _count: { evaluations: 1 },
           ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_1'),
         },
       ]);
 
@@ -1510,6 +1596,7 @@ describe('me profile HTTP (integration)', () => {
           analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
           _count: { evaluations: 2 },
           ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_2'),
         },
       ]);
 
@@ -1550,6 +1637,9 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-01-01'),
       updatedAt: new Date('2026-04-01'),
       ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_s5_det', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
     };
 
     const candidateProfile = {
@@ -1567,6 +1657,7 @@ describe('me profile HTTP (integration)', () => {
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_s5_det_cand'),
     };
 
     it('returns 401 without session', async () => {

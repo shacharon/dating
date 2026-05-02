@@ -240,19 +240,22 @@ function evalSmoking(
   pref: MatchingPreferences,
   facts: MatchingFacts,
 ): HolyGrailDimensionEvaluation {
-  const row = pref.acceptedPartnerSmoking;
-  if (row === undefined || row === AcceptedPartnerSmoking.ANY) {
+  const rows = pref.acceptedPartnerSmoking;
+  if (rows === undefined || rows.length === 0) {
+    return d('SKIPPED', 'SMOKING_PREF_INACTIVE');
+  }
+  if (rows.includes(AcceptedPartnerSmoking.ANY)) {
     return d('SKIPPED', 'SMOKING_PREF_INACTIVE');
   }
   const col = facts.smoking;
   if (col === undefined) {
     return d('FAIL', 'PARTNER_SMOKING_MISSING');
   }
-  const cell = smokingMatrix(row, col);
-  if (cell === 'WITHHELD') {
+  const cells = rows.map((row) => smokingMatrix(row, col));
+  if (cells.some((cell) => cell === 'WITHHELD')) {
     return d('FAIL', 'PARTNER_SMOKING_WITHHELD');
   }
-  return cell === 'PASS'
+  return cells.some((cell) => cell === 'PASS')
     ? d('PASS', 'SMOKING_MATRIX_PASS')
     : d('FAIL', 'SMOKING_MATRIX_FAIL');
 }
@@ -288,24 +291,32 @@ function evalAlcohol(
   searcherProfileId: string,
   counterpartyProfileId: string,
 ): HolyGrailDimensionEvaluation {
-  const row = pref.acceptedPartnerAlcohol;
-  if (row === undefined || row === AcceptedPartnerAlcohol.ANY) {
+  const rows = pref.acceptedPartnerAlcohol;
+  if (rows === undefined || rows.length === 0) {
+    return d('SKIPPED', 'ALCOHOL_PREF_INACTIVE');
+  }
+  if (rows.includes(AcceptedPartnerAlcohol.ANY)) {
     return d('SKIPPED', 'ALCOHOL_PREF_INACTIVE');
   }
   const col = facts.alcoholUse;
   if (col === undefined) {
     return d('FAIL', 'PARTNER_ALCOHOL_MISSING');
   }
-  const cell = alcoholMatrix(row, col);
-  if (cell === 'WITHHELD') {
+  const cells = rows.map((row) => ({ row, cell: alcoholMatrix(row, col) }));
+  if (cells.some((x) => x.cell === 'WITHHELD')) {
     return d('FAIL', 'PARTNER_ALCOHOL_WITHHELD');
   }
-  if (cell === 'PASS') {
+  if (cells.some((x) => x.cell === 'PASS')) {
     return d('PASS', 'ALCOHOL_MATRIX_PASS');
   }
+  const hasNoneOnlyRareFail = cells.some(
+    (x) =>
+      x.row === AcceptedPartnerAlcohol.NONE_ONLY &&
+      x.cell === 'FAIL' &&
+      col === AlcoholUseSelf.RARE,
+  );
   if (
-    row === AcceptedPartnerAlcohol.NONE_ONLY &&
-    col === AlcoholUseSelf.RARE &&
+    hasNoneOnlyRareFail &&
     holyGrailDeterministicHalfPass(
       ALCOHOL_NONE_ONLY_RARE_SOFT_SALT,
       searcherProfileId,

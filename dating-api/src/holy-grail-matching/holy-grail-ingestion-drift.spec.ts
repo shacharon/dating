@@ -41,7 +41,7 @@ describe('holy grail ingestion drift guards', () => {
     religion: ReligionSelf.JEWISH,
   };
 
-  const prefSamples: Record<(typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS)[number], unknown> = {
+  const prefSamplesForMerge: Record<(typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS)[number], unknown> = {
     acceptedPartnerGenders: [AcceptedPartnerGender.FEMALE],
     partnerAgeMin: 25,
     partnerAgeMax: 35,
@@ -55,6 +55,12 @@ describe('holy grail ingestion drift guards', () => {
     similarityPreference: 'similar',
   };
 
+  const prefSamplesForParser: Record<(typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS)[number], unknown> = {
+    ...prefSamplesForMerge,
+    acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
+    acceptedPartnerAlcohol: [AcceptedPartnerAlcohol.NONE_ONLY],
+  };
+
   it('mergeHolyGrailStructuredFactsPatch supports every HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS', () => {
     for (const key of HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS) {
       expect(() =>
@@ -65,7 +71,7 @@ describe('holy grail ingestion drift guards', () => {
 
   it('mergeHolyGrailStructuredPreferencesPatch supports every HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS', () => {
     for (const key of HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS) {
-      const raw = prefSamples[key];
+      const raw = prefSamplesForMerge[key];
       expect(() => mergeHolyGrailStructuredPreferencesPatch({}, { [key]: raw })).not.toThrow();
     }
   });
@@ -80,9 +86,11 @@ describe('holy grail ingestion drift guards', () => {
 
   it('parseHolyGrailStructuredPreferencesFromJson returns each DB preferences key when present alone', () => {
     for (const key of HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS) {
-      const parsed = parseHolyGrailStructuredPreferencesFromJson({ [key]: prefSamples[key] });
+      const parsed = parseHolyGrailStructuredPreferencesFromJson({
+        [key]: prefSamplesForParser[key],
+      });
       expect(parsed).toBeDefined();
-      expect(parsed).toEqual(expect.objectContaining({ [key]: prefSamples[key] }));
+      expect(parsed).toEqual(expect.objectContaining({ [key]: prefSamplesForParser[key] }));
     }
   });
 });

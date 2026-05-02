@@ -103,7 +103,7 @@ describe('evaluateHolyGrailDirectional', () => {
       searcher: model('s', {
         preferences: {
           minimumPartnerEducation: MinimumPartnerEducation.ANY,
-          acceptedPartnerSmoking: AcceptedPartnerSmoking.ANY,
+          acceptedPartnerSmoking: [AcceptedPartnerSmoking.ANY],
           partnerWantsChildren: PartnerWantsChildrenRequirement.NO_REQUIREMENT,
           partnerHasChildren: PartnerHasChildrenAcceptance.NO_REQUIREMENT,
         },
@@ -196,7 +196,7 @@ describe('evaluateHolyGrailDirectional', () => {
 
   it('NONE_ONLY alcohol + partner RARE => SOFT_PASS or FAIL from deterministic half-pass', () => {
     const prefs = {
-      preferences: { acceptedPartnerAlcohol: AcceptedPartnerAlcohol.NONE_ONLY },
+      preferences: { acceptedPartnerAlcohol: [AcceptedPartnerAlcohol.NONE_ONLY] },
     };
     const facts = { facts: { alcoholUse: AlcoholUseSelf.RARE } };
     let sawSoft = false;
@@ -235,5 +235,75 @@ describe('evaluateHolyGrailDirectional', () => {
       evaluatedAt: AT,
     });
     expect(r.dimensions.EDUCATION.status).toBe('PASS');
+  });
+
+  it('smoking empty array => SKIPPED', () => {
+    const r = evaluateHolyGrailDirectional({
+      searcher: model('s', { preferences: { acceptedPartnerSmoking: [] } }),
+      counterparty: model('c', { facts: { smoking: SmokingFrequencySelf.REGULAR } }),
+      evaluatedAt: AT,
+    });
+    expect(r.dimensions.SMOKING.status).toBe('SKIPPED');
+  });
+
+  it('smoking included by allow-set => PASS', () => {
+    const r = evaluateHolyGrailDirectional({
+      searcher: model('s', {
+        preferences: {
+          acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
+        },
+      }),
+      counterparty: model('c', { facts: { smoking: SmokingFrequencySelf.NEVER } }),
+      evaluatedAt: AT,
+    });
+    expect(r.dimensions.SMOKING.status).toBe('PASS');
+  });
+
+  it('smoking excluded by allow-set => FAIL', () => {
+    const r = evaluateHolyGrailDirectional({
+      searcher: model('s', {
+        preferences: {
+          acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
+        },
+      }),
+      counterparty: model('c', { facts: { smoking: SmokingFrequencySelf.REGULAR } }),
+      evaluatedAt: AT,
+    });
+    expect(r.dimensions.SMOKING.status).toBe('FAIL');
+  });
+
+  it('alcohol empty array => SKIPPED', () => {
+    const r = evaluateHolyGrailDirectional({
+      searcher: model('s', { preferences: { acceptedPartnerAlcohol: [] } }),
+      counterparty: model('c', { facts: { alcoholUse: AlcoholUseSelf.FREQUENT } }),
+      evaluatedAt: AT,
+    });
+    expect(r.dimensions.ALCOHOL.status).toBe('SKIPPED');
+  });
+
+  it('alcohol included by allow-set => PASS', () => {
+    const r = evaluateHolyGrailDirectional({
+      searcher: model('s', {
+        preferences: {
+          acceptedPartnerAlcohol: [AcceptedPartnerAlcohol.MODERATE_OK],
+        },
+      }),
+      counterparty: model('c', { facts: { alcoholUse: AlcoholUseSelf.MODERATE } }),
+      evaluatedAt: AT,
+    });
+    expect(r.dimensions.ALCOHOL.status).toBe('PASS');
+  });
+
+  it('alcohol excluded by allow-set => FAIL', () => {
+    const r = evaluateHolyGrailDirectional({
+      searcher: model('s', {
+        preferences: {
+          acceptedPartnerAlcohol: [AcceptedPartnerAlcohol.NONE_ONLY],
+        },
+      }),
+      counterparty: model('c', { facts: { alcoholUse: AlcoholUseSelf.FREQUENT } }),
+      evaluatedAt: AT,
+    });
+    expect(r.dimensions.ALCOHOL.status).toBe('FAIL');
   });
 });

@@ -26,10 +26,33 @@ export interface ProfileEngineSource {
 }
 
 /**
+ * Minimal shape of a UserProfilePreference row needed by the HG mapper.
+ * Structurally compatible with the Prisma-generated UserProfilePreference type;
+ * extra columns on the DB type (id, profileId, updatedAt) are ignored.
+ */
+export interface UserProfilePreferenceRow {
+  readonly partnerAgeMin: number | null;
+  readonly partnerAgeMax: number | null;
+  readonly maxDistanceKm: number | null;
+  readonly minimumPartnerEducation: string | null;
+  readonly acceptedPartnerGenders: string[];
+  readonly acceptedPartnerSmoking: string[];
+  readonly acceptedPartnerAlcohol: string[];
+  readonly acceptedPartnerReligions: string[];
+  readonly partnerWantsChildren: string | null;
+  readonly partnerHasChildren: string | null;
+  readonly similarityPreference: string | null;
+}
+
+/**
  * UserProfile fields required to build a ChildrenUnsureProfileRow for HG Layer-3
  * hard-eligibility evaluation. All HG columns are optional (null = not set → SKIPPED).
  * extractionV2 is not populated in Phase 2 (only hard eligibility is needed; ranking
  * signals are a Phase 3 concern).
+ *
+ * Phase F: optional `preference` is the joined `UserProfilePreference` row.
+ * When missing or empty, HG preference scalars/arrays are omitted (lenient SKIP)
+ * except partner genders, which are still parsed from `desiredPartnerGenders` JSON.
  */
 export interface ProfileHgSource extends ProfileEngineSource {
   readonly gender: string | null;
@@ -42,17 +65,7 @@ export interface ProfileHgSource extends ProfileEngineSource {
   readonly alcoholUse: string | null;
   readonly education: string | null;
   readonly religion: string | null;
-  // preferences
-  readonly partnerAgeMin: number | null;
-  readonly partnerAgeMax: number | null;
-  readonly minimumPartnerEducation: string | null;
-  readonly acceptedPartnerSmoking: string[];
-  readonly acceptedPartnerAlcohol: string[];
-  readonly partnerWantsChildren: string | null;
-  readonly partnerHasChildren: string | null;
-  readonly acceptedPartnerReligions: string[];
-  readonly maxDistanceKm: number | null;
-  readonly similarityPreference: string | null;
+  readonly preference?: UserProfilePreferenceRow | null;
 }
 
 /**
@@ -80,6 +93,36 @@ export function buildProfilePayloadFromNewModel(
   };
 }
 
+/** Reason the mapper did not use a populated normalized preference row. */
+export type HgPreferenceFallbackReason = 'missing_row' | 'missing_fields';
+
+/**
+ * Return type of buildChildrenUnsureRowFromNewModel.
+ * `fallback` is non-null when `UserProfilePreference` is absent or empty (no scalar/array prefs),
+ * which callers can log as the `hg_preference_fallback_used` event.
+ */
+export interface BuildHgRowResult {
+  readonly row: ChildrenUnsureProfileRow;
+  readonly fallback: { readonly reason: HgPreferenceFallbackReason } | null;
+}
+
+/** Returns true when every preference field on the row is null / empty-array. */
+function isPrefRowEmpty(pref: UserProfilePreferenceRow): boolean {
+  return (
+    pref.partnerAgeMin === null &&
+    pref.partnerAgeMax === null &&
+    pref.maxDistanceKm === null &&
+    pref.minimumPartnerEducation === null &&
+    pref.acceptedPartnerGenders.length === 0 &&
+    pref.acceptedPartnerSmoking.length === 0 &&
+    pref.acceptedPartnerAlcohol.length === 0 &&
+    pref.acceptedPartnerReligions.length === 0 &&
+    pref.partnerWantsChildren === null &&
+    pref.partnerHasChildren === null &&
+    pref.similarityPreference === null
+  );
+}
+
 /**
  * Maps a ProfileHgSource (new UserProfile columns) to a ChildrenUnsureProfileRow
  * for HG Layer-3 hard-eligibility evaluation via evaluateHolyGrailPairDirections.
@@ -91,10 +134,25 @@ export function buildProfilePayloadFromNewModel(
  * parseHolyGrailStructuredFactsFromJson treats an empty object as `undefined` → all
  * HG dimensions SKIP → overallHardEligibility === 'PASS'. The pair is never excluded
  * solely because HG data is missing.
+ *
+ * Phase E/F observability: returns a `fallback` descriptor when the normalized
+ * `UserProfilePreference` row is absent or has no preference payload.
  */
 export function buildChildrenUnsureRowFromNewModel(
   profile: ProfileHgSource,
-): ChildrenUnsureProfileRow {
+): BuildHgRowResult {
+  const normPref = profile.preference ?? null;
+  const useNormalizedPrefs =
+    normPref !== null && !isPrefRowEmpty(normPref);
+
+  // Determine fallback state before building the row so callers can emit the event.
+  const fallback: BuildHgRowResult['fallback'] =
+    normPref === null
+      ? { reason: 'missing_row' }
+      : isPrefRowEmpty(normPref)
+        ? { reason: 'missing_fields' }
+        : null;
+
   const facts: Record<string, unknown> = {};
   if (profile.gender !== null) facts.genderIdentity = profile.gender;
   if (profile.birthDate !== null) {
@@ -108,30 +166,59 @@ export function buildChildrenUnsureRowFromNewModel(
   if (profile.religion !== null) facts.religion = profile.religion;
 
   const prefs: Record<string, unknown> = {};
-  const acceptedGenders = parseAcceptedPartnerGendersFromProductJson(
-    profile.desiredPartnerGenders,
-  );
-  if (acceptedGenders !== null && acceptedGenders.length > 0) {
-    prefs.acceptedPartnerGenders = acceptedGenders;
+
+  // Gender: normalized acceptedPartnerGenders when row is populated; else JSON on UserProfile.
+  if (useNormalizedPrefs) {
+    if (normPref!.acceptedPartnerGenders.length > 0) {
+      prefs.acceptedPartnerGenders = normPref!.acceptedPartnerGenders;
+    }
+  } else {
+    const acceptedGenders = parseAcceptedPartnerGendersFromProductJson(
+      profile.desiredPartnerGenders,
+    );
+    if (acceptedGenders !== null && acceptedGenders.length > 0) {
+      prefs.acceptedPartnerGenders = acceptedGenders;
+    }
   }
-  if (profile.partnerAgeMin !== null) prefs.partnerAgeMin = profile.partnerAgeMin;
-  if (profile.partnerAgeMax !== null) prefs.partnerAgeMax = profile.partnerAgeMax;
-  if (profile.minimumPartnerEducation !== null) prefs.minimumPartnerEducation = profile.minimumPartnerEducation;
-  if (profile.acceptedPartnerSmoking.length > 0) prefs.acceptedPartnerSmoking = profile.acceptedPartnerSmoking;
-  if (profile.acceptedPartnerAlcohol.length > 0) prefs.acceptedPartnerAlcohol = profile.acceptedPartnerAlcohol;
-  if (profile.partnerWantsChildren !== null) prefs.partnerWantsChildren = profile.partnerWantsChildren;
-  if (profile.partnerHasChildren !== null) prefs.partnerHasChildren = profile.partnerHasChildren;
-  if (profile.acceptedPartnerReligions.length > 0) prefs.acceptedPartnerReligions = profile.acceptedPartnerReligions;
-  if (profile.maxDistanceKm !== null) prefs.maxDistanceKm = profile.maxDistanceKm;
-  if (profile.similarityPreference !== null) prefs.similarityPreference = profile.similarityPreference;
+
+  const ageMin = useNormalizedPrefs ? normPref!.partnerAgeMin : null;
+  const ageMax = useNormalizedPrefs ? normPref!.partnerAgeMax : null;
+  const distKm = useNormalizedPrefs ? normPref!.maxDistanceKm : null;
+  const minEdu = useNormalizedPrefs ? normPref!.minimumPartnerEducation : null;
+  const partnerWantsChildren = useNormalizedPrefs
+    ? normPref!.partnerWantsChildren
+    : null;
+  const partnerHasChildren = useNormalizedPrefs ? normPref!.partnerHasChildren : null;
+  const similarityPreference = useNormalizedPrefs
+    ? normPref!.similarityPreference
+    : null;
+
+  if (ageMin !== null) prefs.partnerAgeMin = ageMin;
+  if (ageMax !== null) prefs.partnerAgeMax = ageMax;
+  if (distKm !== null) prefs.maxDistanceKm = distKm;
+  if (minEdu !== null) prefs.minimumPartnerEducation = minEdu;
+  if (partnerWantsChildren !== null) prefs.partnerWantsChildren = partnerWantsChildren;
+  if (partnerHasChildren !== null) prefs.partnerHasChildren = partnerHasChildren;
+  if (similarityPreference !== null) prefs.similarityPreference = similarityPreference;
+
+  const smoking = useNormalizedPrefs ? normPref!.acceptedPartnerSmoking : [];
+  const alcohol = useNormalizedPrefs ? normPref!.acceptedPartnerAlcohol : [];
+  const religions = useNormalizedPrefs ? normPref!.acceptedPartnerReligions : [];
+
+  if (smoking.length > 0) prefs.acceptedPartnerSmoking = smoking;
+  if (alcohol.length > 0) prefs.acceptedPartnerAlcohol = alcohol;
+  if (religions.length > 0) prefs.acceptedPartnerReligions = religions;
 
   return {
-    id: profile.id,
-    aboutMe: profile.aboutMe ?? undefined,
-    aboutPartner: profile.aboutPartner,
-    holyGrailStructuredFacts: facts,
-    holyGrailStructuredPreferences: prefs,
-    // Phase 2: extractionV2 not populated (ranking signals are Phase 3).
-    extractionV2: null,
+    row: {
+      id: profile.id,
+      aboutMe: profile.aboutMe ?? undefined,
+      aboutPartner: profile.aboutPartner,
+      holyGrailStructuredFacts: facts,
+      holyGrailStructuredPreferences: prefs,
+      // Phase 2: extractionV2 not populated (ranking signals are Phase 3).
+      extractionV2: null,
+    },
+    fallback,
   };
 }

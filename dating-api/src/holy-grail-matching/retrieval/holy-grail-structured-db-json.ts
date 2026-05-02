@@ -278,6 +278,68 @@ function parseAcceptedPartnerReligionsDbJson(
   return out.length === 0 ? undefined : out;
 }
 
+/**
+ * When key is present: empty array -> undefined (sparse/no preference); invalid member -> throw.
+ * Legacy compatibility: scalar enum string is accepted and normalized to single-element array.
+ */
+function parseAcceptedPartnerSmokingDbJson(
+  v: unknown,
+): AcceptedPartnerSmoking[] | undefined {
+  const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking);
+  const list = Array.isArray(v) ? v : [v];
+  if (!Array.isArray(v) && (typeof v !== 'string' || !allowed.has(v))) {
+    throw new Error(
+      `HolyGrail structured preferences JSON: invalid acceptedPartnerSmoking ${JSON.stringify(v)}`,
+    );
+  }
+  if (list.length === 0) return undefined;
+  const out: AcceptedPartnerSmoking[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    if (typeof s !== 'string' || !allowed.has(s)) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid acceptedPartnerSmoking[${i}] ${JSON.stringify(s)}`,
+      );
+    }
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s as AcceptedPartnerSmoking);
+  }
+  return out.length === 0 ? undefined : out;
+}
+
+/**
+ * When key is present: empty array -> undefined (sparse/no preference); invalid member -> throw.
+ * Legacy compatibility: scalar enum string is accepted and normalized to single-element array.
+ */
+function parseAcceptedPartnerAlcoholDbJson(
+  v: unknown,
+): AcceptedPartnerAlcohol[] | undefined {
+  const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol);
+  const list = Array.isArray(v) ? v : [v];
+  if (!Array.isArray(v) && (typeof v !== 'string' || !allowed.has(v))) {
+    throw new Error(
+      `HolyGrail structured preferences JSON: invalid acceptedPartnerAlcohol ${JSON.stringify(v)}`,
+    );
+  }
+  if (list.length === 0) return undefined;
+  const out: AcceptedPartnerAlcohol[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    if (typeof s !== 'string' || !allowed.has(s)) {
+      throw new Error(
+        `HolyGrail structured preferences JSON: invalid acceptedPartnerAlcohol[${i}] ${JSON.stringify(s)}`,
+      );
+    }
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s as AcceptedPartnerAlcohol);
+  }
+  return out.length === 0 ? undefined : out;
+}
+
 function parseMaxDistanceKmDbJson(v: unknown): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
     throw new Error(
@@ -355,30 +417,18 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     }
   }
 
-  let acceptedPartnerSmoking: AcceptedPartnerSmoking | undefined;
+  let acceptedPartnerSmoking: AcceptedPartnerSmoking[] | undefined;
   if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerSmoking')) {
-    acceptedPartnerSmoking = pickMatchingCanonicalEnumMember(
+    acceptedPartnerSmoking = parseAcceptedPartnerSmokingDbJson(
       o.acceptedPartnerSmoking,
-      matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking),
-    ) as AcceptedPartnerSmoking | undefined;
-    if (acceptedPartnerSmoking === undefined) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid acceptedPartnerSmoking ${JSON.stringify(o.acceptedPartnerSmoking)}`,
-      );
-    }
+    );
   }
 
-  let acceptedPartnerAlcohol: AcceptedPartnerAlcohol | undefined;
+  let acceptedPartnerAlcohol: AcceptedPartnerAlcohol[] | undefined;
   if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerAlcohol')) {
-    acceptedPartnerAlcohol = pickMatchingCanonicalEnumMember(
+    acceptedPartnerAlcohol = parseAcceptedPartnerAlcoholDbJson(
       o.acceptedPartnerAlcohol,
-      matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol),
-    ) as AcceptedPartnerAlcohol | undefined;
-    if (acceptedPartnerAlcohol === undefined) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid acceptedPartnerAlcohol ${JSON.stringify(o.acceptedPartnerAlcohol)}`,
-      );
-    }
+    );
   }
 
   let partnerWantsChildren: PartnerWantsChildrenRequirement | undefined;

@@ -548,6 +548,35 @@ function dedupeReligions(list: readonly string[], ctx: string): ReligionSelf[] {
   return out;
 }
 
+function parseEnumArrayWithLegacyScalar<T extends string>(
+  raw: unknown,
+  allowed: readonly T[],
+  ctx: string,
+): T[] | undefined {
+  const allowedSet = new Set<string>(allowed as readonly string[]);
+  const list = Array.isArray(raw) ? raw : [raw];
+  if (Array.isArray(raw) && raw.length === 0) return undefined;
+  if (!Array.isArray(raw)) {
+    if (typeof raw !== 'string' || !allowedSet.has(raw)) {
+      throw new Error(`HolyGrail map: ${ctx} must be an enum string or array`);
+    }
+  }
+  const out: T[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < list.length; i++) {
+    const x = list[i];
+    if (typeof x !== 'string' || !allowedSet.has(x)) {
+      throw new Error(
+        `HolyGrail map: invalid ${ctx}[${i}] ${JSON.stringify(x)} (not in enum)`,
+      );
+    }
+    if (seen.has(x)) continue;
+    seen.add(x);
+    out.push(x as T);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 function buildPreferences(
   sp: HolyGrailProfileMappingInput['structuredPreferences'],
 ): MatchingPreferences {
@@ -603,19 +632,19 @@ function buildPreferences(
   }
 
   if (p.acceptedPartnerSmoking !== undefined) {
-    out.acceptedPartnerSmoking = assertStringInEnum(
+    out.acceptedPartnerSmoking = parseEnumArrayWithLegacyScalar(
       p.acceptedPartnerSmoking,
       matchingCanonicalEnumStringValues(AcceptedPartnerSmoking),
       'structuredPreferences.acceptedPartnerSmoking',
-    ) as AcceptedPartnerSmoking;
+    ) as AcceptedPartnerSmoking[] | undefined;
   }
 
   if (p.acceptedPartnerAlcohol !== undefined) {
-    out.acceptedPartnerAlcohol = assertStringInEnum(
+    out.acceptedPartnerAlcohol = parseEnumArrayWithLegacyScalar(
       p.acceptedPartnerAlcohol,
       matchingCanonicalEnumStringValues(AcceptedPartnerAlcohol),
       'structuredPreferences.acceptedPartnerAlcohol',
-    ) as AcceptedPartnerAlcohol;
+    ) as AcceptedPartnerAlcohol[] | undefined;
   }
 
   if (p.partnerWantsChildren !== undefined) {
@@ -739,18 +768,18 @@ function parseSearchOverrides(raw: unknown): MatchingSearchOverrides {
     ) as MinimumPartnerEducation;
   }
   if (o.acceptedPartnerSmoking !== undefined) {
-    out.acceptedPartnerSmoking = assertStringInEnum(
+    out.acceptedPartnerSmoking = parseEnumArrayWithLegacyScalar(
       o.acceptedPartnerSmoking,
       matchingCanonicalEnumStringValues(AcceptedPartnerSmoking),
       'searchOverrides.acceptedPartnerSmoking',
-    ) as AcceptedPartnerSmoking;
+    ) as AcceptedPartnerSmoking[] | undefined;
   }
   if (o.acceptedPartnerAlcohol !== undefined) {
-    out.acceptedPartnerAlcohol = assertStringInEnum(
+    out.acceptedPartnerAlcohol = parseEnumArrayWithLegacyScalar(
       o.acceptedPartnerAlcohol,
       matchingCanonicalEnumStringValues(AcceptedPartnerAlcohol),
       'searchOverrides.acceptedPartnerAlcohol',
-    ) as AcceptedPartnerAlcohol;
+    ) as AcceptedPartnerAlcohol[] | undefined;
   }
   if (o.partnerWantsChildren !== undefined) {
     out.partnerWantsChildren = assertStringInEnum(

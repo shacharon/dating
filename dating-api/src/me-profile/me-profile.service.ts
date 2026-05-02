@@ -5,19 +5,27 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Prisma, ProfileGender, UserProfile, UserProfileStatus } from '@prisma/client';
+import {
+  Prisma,
+  ProfileGender,
+  UserProfile,
+  UserProfilePreference,
+  UserProfileStatus,
+} from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import { markHttpExceptionObservabilityLogged } from '../logging/observability-http.exception';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import type {
   CreateMeProfileDto,
   MeLatestAnalysisResponseDto,
   MeProfileResponseDto,
   PatchMeProfileDto,
 } from './me-profile.dto';
-import { latestEvaluationForProfile } from './me-profile-analysis.service';
+import {
+  latestEvaluationForProfile,
+  MeProfileAnalysisService,
+} from './me-profile-analysis.service';
 
 const PROFILE_GENDER_VALUES = new Set<string>(
   Object.values(ProfileGender) as string[],
@@ -43,6 +51,22 @@ function parseDesiredPartnerGenders(
 }
 
 /**
+ * Product JSON `desiredPartnerGenders` → `UserProfilePreference.acceptedPartnerGenders`
+ * (same filter as the API DTO path; keeps the normalized row aligned with `UserProfile`).
+ */
+function acceptedPartnerGendersFromDesiredJson(
+  raw: Prisma.JsonValue | null | undefined,
+): string[] {
+  if (raw === null || raw === undefined || !Array.isArray(raw)) {
+    return [];
+  }
+  return raw.filter(
+    (g): g is string =>
+      typeof g === 'string' && g !== ProfileGender.PREFER_NOT_TO_SAY,
+  );
+}
+
+/**
  * Statuses that are eligible to be re-submitted.
  * SUBMITTED and ANALYZING are rejected — an in-flight submission is already pending.
  *
@@ -56,7 +80,10 @@ const SUBMITTABLE_STATUSES = new Set<string>([
   'FAILED',
 ]);
 
-function toResponse(row: UserProfile): MeProfileResponseDto {
+function toResponse(
+  row: UserProfile,
+  preference: UserProfilePreference | null,
+): MeProfileResponseDto {
   return {
     id: row.id,
     userId: row.userId,
@@ -83,18 +110,68 @@ function toResponse(row: UserProfile): MeProfileResponseDto {
     alcoholUse: row.alcoholUse ?? null,
     education: row.education ?? null,
     religion: row.religion ?? null,
-    // HG structured preferences
-    partnerAgeMin: row.partnerAgeMin ?? null,
-    partnerAgeMax: row.partnerAgeMax ?? null,
-    minimumPartnerEducation: row.minimumPartnerEducation ?? null,
-    acceptedPartnerSmoking: row.acceptedPartnerSmoking,
-    acceptedPartnerAlcohol: row.acceptedPartnerAlcohol,
-    partnerWantsChildren: row.partnerWantsChildren ?? null,
-    partnerHasChildren: row.partnerHasChildren ?? null,
-    acceptedPartnerReligions: row.acceptedPartnerReligions,
-    maxDistanceKm: row.maxDistanceKm ?? null,
-    similarityPreference: row.similarityPreference ?? null,
+    // HG structured preferences (Phase F: UserProfilePreference only)
+    partnerAgeMin: preference?.partnerAgeMin ?? null,
+    partnerAgeMax: preference?.partnerAgeMax ?? null,
+    minimumPartnerEducation: preference?.minimumPartnerEducation ?? null,
+    acceptedPartnerSmoking: preference?.acceptedPartnerSmoking ?? [],
+    acceptedPartnerAlcohol: preference?.acceptedPartnerAlcohol ?? [],
+    partnerWantsChildren: preference?.partnerWantsChildren ?? null,
+    partnerHasChildren: preference?.partnerHasChildren ?? null,
+    acceptedPartnerReligions: preference?.acceptedPartnerReligions ?? [],
+    maxDistanceKm: preference?.maxDistanceKm ?? null,
+    similarityPreference: preference?.similarityPreference ?? null,
   };
+}
+
+/** Plain preference field values extracted from a create/patch DTO. */
+type PreferenceFields = {
+  acceptedPartnerGenders?: string[];
+  partnerAgeMin?: number | null;
+  partnerAgeMax?: number | null;
+  minimumPartnerEducation?: string | null;
+  acceptedPartnerSmoking?: string[];
+  acceptedPartnerAlcohol?: string[];
+  partnerWantsChildren?: string | null;
+  partnerHasChildren?: string | null;
+  acceptedPartnerReligions?: string[];
+  maxDistanceKm?: number | null;
+  similarityPreference?: string | null;
+};
+
+/**
+ * Phase C dual-write: extract preference fields from a create/patch body.
+ * Maps `desiredPartnerGenders` → `acceptedPartnerGenders`, dropping PREFER_NOT_TO_SAY.
+ */
+function toPreferenceData(
+  body: CreateMeProfileDto | PatchMeProfileDto,
+): PreferenceFields {
+  const data: PreferenceFields = {};
+  if (body.desiredPartnerGenders !== undefined) {
+    data.acceptedPartnerGenders = acceptedPartnerGendersFromDesiredJson(
+      body.desiredPartnerGenders === null
+        ? null
+        : (body.desiredPartnerGenders as unknown as Prisma.JsonValue),
+    );
+  }
+  if (body.partnerAgeMin !== undefined) data.partnerAgeMin = body.partnerAgeMin;
+  if (body.partnerAgeMax !== undefined) data.partnerAgeMax = body.partnerAgeMax;
+  if (body.minimumPartnerEducation !== undefined)
+    data.minimumPartnerEducation = body.minimumPartnerEducation;
+  if (body.acceptedPartnerSmoking !== undefined)
+    data.acceptedPartnerSmoking = body.acceptedPartnerSmoking ?? [];
+  if (body.acceptedPartnerAlcohol !== undefined)
+    data.acceptedPartnerAlcohol = body.acceptedPartnerAlcohol ?? [];
+  if (body.partnerWantsChildren !== undefined)
+    data.partnerWantsChildren = body.partnerWantsChildren;
+  if (body.partnerHasChildren !== undefined)
+    data.partnerHasChildren = body.partnerHasChildren;
+  if (body.acceptedPartnerReligions !== undefined)
+    data.acceptedPartnerReligions = body.acceptedPartnerReligions ?? [];
+  if (body.maxDistanceKm !== undefined) data.maxDistanceKm = body.maxDistanceKm;
+  if (body.similarityPreference !== undefined)
+    data.similarityPreference = body.similarityPreference;
+  return data;
 }
 
 function toPrismaWritableData(
@@ -145,18 +222,6 @@ function toPrismaWritableData(
   if (body.education !== undefined) data.education = body.education;
   if (body.religion !== undefined) data.religion = body.religion;
 
-  // HG structured preferences
-  if (body.partnerAgeMin !== undefined) data.partnerAgeMin = body.partnerAgeMin;
-  if (body.partnerAgeMax !== undefined) data.partnerAgeMax = body.partnerAgeMax;
-  if (body.minimumPartnerEducation !== undefined) data.minimumPartnerEducation = body.minimumPartnerEducation;
-  if (body.acceptedPartnerSmoking !== undefined) data.acceptedPartnerSmoking = body.acceptedPartnerSmoking ?? [];
-  if (body.acceptedPartnerAlcohol !== undefined) data.acceptedPartnerAlcohol = body.acceptedPartnerAlcohol ?? [];
-  if (body.partnerWantsChildren !== undefined) data.partnerWantsChildren = body.partnerWantsChildren;
-  if (body.partnerHasChildren !== undefined) data.partnerHasChildren = body.partnerHasChildren;
-  if (body.acceptedPartnerReligions !== undefined) data.acceptedPartnerReligions = body.acceptedPartnerReligions ?? [];
-  if (body.maxDistanceKm !== undefined) data.maxDistanceKm = body.maxDistanceKm;
-  if (body.similarityPreference !== undefined) data.similarityPreference = body.similarityPreference;
-
   return data;
 }
 
@@ -168,11 +233,40 @@ export class MeProfileService {
     private readonly analysis: MeProfileAnalysisService,
   ) {}
 
+  /**
+   * Persists HG partner-preference fields to `UserProfilePreference` (normalized; Phase F).
+   * Best-effort — failures are logged but never block the main profile operation.
+   */
+  private async upsertPreference(
+    profileId: string,
+    body: CreateMeProfileDto | PatchMeProfileDto,
+  ): Promise<void> {
+    const prefData = toPreferenceData(body);
+    if (prefData.acceptedPartnerGenders === undefined) {
+      const snap = await this.prisma.userProfile.findUnique({
+        where: { id: profileId },
+        select: { desiredPartnerGenders: true },
+      });
+      prefData.acceptedPartnerGenders = acceptedPartnerGendersFromDesiredJson(
+        snap?.desiredPartnerGenders ?? null,
+      );
+    }
+    await this.prisma.userProfilePreference.upsert({
+      where: { profileId },
+      create: {
+        profileId,
+        ...prefData,
+      } as Prisma.UserProfilePreferenceUncheckedCreateInput,
+      update: prefData as Prisma.UserProfilePreferenceUncheckedUpdateInput,
+    });
+  }
+
   async getForUser(userId: string): Promise<MeProfileResponseDto | null> {
     const row = await this.prisma.userProfile.findUnique({
       where: { userId },
+      include: { preference: true },
     });
-    return row ? toResponse(row) : null;
+    return row ? toResponse(row, row.preference) : null;
   }
 
   /**
@@ -253,11 +347,30 @@ export class MeProfileService {
           ...toPrismaWritableData(body),
         } as Prisma.UserProfileCreateInput,
       });
+      // Phase C dual-write: best-effort preference mirror (never blocks create).
+      await this.upsertPreference(row.id, body).catch((e: unknown) => {
+        this.obs.error(
+          `preference upsert failed on create profileId=${row.id}`,
+          ErrorCodes.ME_PROFILE_SAVE_FAILED,
+          e,
+        );
+      });
       this.obs.trace(
         `me profile created profileId=${row.id}`,
         ErrorCodes.ME_PROFILE_CREATE_SUCCESS,
       );
-      return toResponse(row);
+      const full = await this.prisma.userProfile.findUnique({
+        where: { userId },
+        include: { preference: true },
+      });
+      if (!full) {
+        const ex = new InternalServerErrorException({
+          message: 'Profile could not be loaded after create',
+        });
+        markHttpExceptionObservabilityLogged(ex);
+        throw ex;
+      }
+      return toResponse(full, full.preference);
     } catch (e: unknown) {
       this.obs.error(
         'me profile create persistence failed',
@@ -278,6 +391,7 @@ export class MeProfileService {
   ): Promise<MeProfileResponseDto> {
     const existing = await this.prisma.userProfile.findUnique({
       where: { userId },
+      include: { preference: true },
     });
     if (!existing) {
       throw new NotFoundException({
@@ -288,25 +402,48 @@ export class MeProfileService {
     }
 
     const data = toPrismaWritableData(body);
+    const prefDelta = toPreferenceData(body);
+    const hasProfileFieldChanges = Object.keys(data).length > 0;
+    const hasPrefChanges = Object.keys(prefDelta).length > 0;
 
-    if (Object.keys(data).length === 0) {
+    if (!hasProfileFieldChanges && !hasPrefChanges) {
       this.obs.trace(
         `me profile patched (no field changes) profileId=${existing.id}`,
         ErrorCodes.ME_PROFILE_PATCH_SUCCESS,
       );
-      return toResponse(existing);
+      return toResponse(existing, existing.preference);
     }
 
     try {
-      const row = await this.prisma.userProfile.update({
-        where: { userId },
-        data,
+      if (hasProfileFieldChanges) {
+        await this.prisma.userProfile.update({
+          where: { userId },
+          data,
+        });
+      }
+      await this.upsertPreference(existing.id, body).catch((e: unknown) => {
+        this.obs.error(
+          `preference upsert failed on patch profileId=${existing.id}`,
+          ErrorCodes.ME_PROFILE_SAVE_FAILED,
+          e,
+        );
       });
+      const full = await this.prisma.userProfile.findUnique({
+        where: { userId },
+        include: { preference: true },
+      });
+      if (!full) {
+        const ex = new InternalServerErrorException({
+          message: 'Profile could not be loaded after patch',
+        });
+        markHttpExceptionObservabilityLogged(ex);
+        throw ex;
+      }
       this.obs.trace(
-        `me profile patched profileId=${row.id}`,
+        `me profile patched profileId=${full.id}`,
         ErrorCodes.ME_PROFILE_PATCH_SUCCESS,
       );
-      return toResponse(row);
+      return toResponse(full, full.preference);
     } catch (e: unknown) {
       this.obs.error(
         'me profile patch persistence failed',
@@ -395,7 +532,18 @@ export class MeProfileService {
         );
       });
 
-      return toResponse(row);
+      const full = await this.prisma.userProfile.findUnique({
+        where: { userId },
+        include: { preference: true },
+      });
+      if (!full) {
+        const ex = new InternalServerErrorException({
+          message: 'Profile could not be loaded after submit',
+        });
+        markHttpExceptionObservabilityLogged(ex);
+        throw ex;
+      }
+      return toResponse(full, full.preference);
     } catch (e: unknown) {
       this.obs.error(
         'me profile submit persistence failed',

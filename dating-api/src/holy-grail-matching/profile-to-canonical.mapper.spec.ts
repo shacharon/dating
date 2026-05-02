@@ -1,4 +1,5 @@
 import {
+  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
   AcceptedPartnerSmoking,
   GenderIdentity,
@@ -309,8 +310,63 @@ describe('mapProfileSourceToMatchingCanonical', () => {
     });
     expect(m.preferences).toEqual({
       minimumPartnerEducation: MinimumPartnerEducation.BACHELORS,
-      acceptedPartnerSmoking: AcceptedPartnerSmoking.NONE_ONLY,
+      acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
     });
+  });
+
+  it('maps acceptedPartnerSmoking/Alcohol arrays as arrays (no scalar collapse)', () => {
+    const m = mapProfileSourceToMatchingCanonical({
+      profileId: 'p',
+      structuredPreferences: {
+        acceptedPartnerSmoking: [
+          AcceptedPartnerSmoking.NONE_ONLY,
+          AcceptedPartnerSmoking.SOCIAL_OK,
+        ],
+        acceptedPartnerAlcohol: [
+          AcceptedPartnerAlcohol.NONE_ONLY,
+          AcceptedPartnerAlcohol.MODERATE_OK,
+        ],
+      },
+    });
+    expect(m.preferences.acceptedPartnerSmoking).toEqual([
+      AcceptedPartnerSmoking.NONE_ONLY,
+      AcceptedPartnerSmoking.SOCIAL_OK,
+    ]);
+    expect(m.preferences.acceptedPartnerAlcohol).toEqual([
+      AcceptedPartnerAlcohol.NONE_ONLY,
+      AcceptedPartnerAlcohol.MODERATE_OK,
+    ]);
+  });
+
+  it('treats empty acceptedPartnerSmoking/Alcohol arrays as absent preference', () => {
+    const m = mapProfileSourceToMatchingCanonical({
+      profileId: 'p',
+      structuredPreferences: {
+        acceptedPartnerSmoking: [],
+        acceptedPartnerAlcohol: [],
+      },
+    });
+    expect(m.preferences.acceptedPartnerSmoking).toBeUndefined();
+    expect(m.preferences.acceptedPartnerAlcohol).toBeUndefined();
+  });
+
+  it('throws on invalid acceptedPartnerSmoking/Alcohol array members', () => {
+    expect(() =>
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        structuredPreferences: {
+          acceptedPartnerSmoking: ['BAD_ENUM'] as unknown as AcceptedPartnerSmoking[],
+        },
+      }),
+    ).toThrow(/invalid structuredPreferences\.acceptedPartnerSmoking/);
+    expect(() =>
+      mapProfileSourceToMatchingCanonical({
+        profileId: 'p',
+        structuredPreferences: {
+          acceptedPartnerAlcohol: ['BAD_ENUM'] as unknown as AcceptedPartnerAlcohol[],
+        },
+      }),
+    ).toThrow(/invalid structuredPreferences\.acceptedPartnerAlcohol/);
   });
 
   it('maps similarityPreference when set; preserves null; sparse when omitted', () => {

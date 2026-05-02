@@ -9,6 +9,39 @@ const S_DRAFT = 'DRAFT' as UserProfileStatus;
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
+/** Minimal UserProfilePreference fixture for Phase E tests. */
+function makePrefRow(overrides: {
+  profileId?: string;
+  acceptedPartnerSmoking?: string[];
+  acceptedPartnerAlcohol?: string[];
+  acceptedPartnerGenders?: string[];
+  acceptedPartnerReligions?: string[];
+  partnerAgeMin?: number | null;
+  partnerAgeMax?: number | null;
+  maxDistanceKm?: number | null;
+  minimumPartnerEducation?: string | null;
+  partnerWantsChildren?: string | null;
+  partnerHasChildren?: string | null;
+  similarityPreference?: string | null;
+} = {}) {
+  return {
+    id: 'pref_' + (overrides.profileId ?? 'x'),
+    profileId: overrides.profileId ?? 'prof_x',
+    partnerAgeMin: overrides.partnerAgeMin ?? null,
+    partnerAgeMax: overrides.partnerAgeMax ?? null,
+    maxDistanceKm: overrides.maxDistanceKm ?? null,
+    minimumPartnerEducation: overrides.minimumPartnerEducation ?? null,
+    acceptedPartnerGenders: (overrides.acceptedPartnerGenders ?? []) as string[],
+    acceptedPartnerSmoking: (overrides.acceptedPartnerSmoking ?? []) as string[],
+    acceptedPartnerAlcohol: (overrides.acceptedPartnerAlcohol ?? []) as string[],
+    acceptedPartnerReligions: (overrides.acceptedPartnerReligions ?? []) as string[],
+    partnerWantsChildren: overrides.partnerWantsChildren ?? null,
+    partnerHasChildren: overrides.partnerHasChildren ?? null,
+    similarityPreference: overrides.similarityPreference ?? null,
+    updatedAt: new Date('2026-04-01T10:00:00.000Z'),
+  };
+}
+
 function makeProfileRow(overrides: {
   id: string;
   userId: string;
@@ -16,9 +49,11 @@ function makeProfileRow(overrides: {
   gender?: string | null;
   desiredPartnerGenders?: unknown;
   evaluationCount?: number;
-  // HG fact/preference overrides (Phase 2)
   wantsChildren?: string | null;
-  partnerWantsChildren?: string | null;
+  smokingFrequency?: string | null;
+  alcoholUse?: string | null;
+  /** Joined `UserProfilePreference` row (Phase F: HG prefs live here only). */
+  preference?: ReturnType<typeof makePrefRow> | null;
 }) {
   return {
     id: overrides.id,
@@ -36,24 +71,13 @@ function makeProfileRow(overrides: {
     aboutRelationship: 'About relationship text',
     analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
     _count: { evaluations: overrides.evaluationCount ?? 1 },
-    // HG structured facts (null = not set → HG dimension SKIPPED)
     childrenStatus: null as string | null,
     wantsChildren: (overrides.wantsChildren ?? null) as string | null,
-    smokingFrequency: null as string | null,
-    alcoholUse: null as string | null,
+    smokingFrequency: (overrides.smokingFrequency ?? null) as string | null,
+    alcoholUse: (overrides.alcoholUse ?? null) as string | null,
     education: null as string | null,
     religion: null as string | null,
-    // HG structured preferences
-    partnerAgeMin: null as number | null,
-    partnerAgeMax: null as number | null,
-    minimumPartnerEducation: null as string | null,
-    acceptedPartnerSmoking: [] as string[],
-    acceptedPartnerAlcohol: [] as string[],
-    partnerWantsChildren: (overrides.partnerWantsChildren ?? null) as string | null,
-    partnerHasChildren: null as string | null,
-    acceptedPartnerReligions: [] as string[],
-    maxDistanceKm: null as number | null,
-    similarityPreference: null as string | null,
+    preference: overrides.preference !== undefined ? overrides.preference : null,
   };
 }
 
@@ -385,7 +409,10 @@ describe('MeMatchesService', () => {
           userId: viewerUserId,
           gender: 'MALE',
           desiredPartnerGenders: ['FEMALE'],
-          partnerWantsChildren: 'MUST_WANT',
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            partnerWantsChildren: 'MUST_WANT',
+          }),
         }),
       );
       prisma.userProfile.findMany.mockResolvedValue([
@@ -429,6 +456,66 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(1);
+    });
+
+    it('enforces HG gate when acceptedPartnerSmoking is array: conflicting smoker is excluded', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerSmoking: ['NONE_ONLY'],
+          }),
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          smokingFrequency: 'REGULAR',
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(0);
+      expect(result.totalCandidatesBeforeFilter).toBe(1);
+    });
+
+    it('enforces HG gate when acceptedPartnerAlcohol is array: conflicting alcohol use is excluded', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerAlcohol: ['NONE_ONLY'],
+          }),
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          alcoholUse: 'FREQUENT',
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(0);
+      expect(result.totalCandidatesBeforeFilter).toBe(1);
     });
   });
 
@@ -962,6 +1049,150 @@ describe('MeMatchesService', () => {
         );
 
       await expect(service.getById(viewerUserId, candidateProfileId)).resolves.toBeDefined();
+    });
+  });
+
+  // ─── Phase E: read from UserProfilePreference with fallback ───────────────
+
+  describe('Phase F: HG preferences from UserProfilePreference only', () => {
+    it('uses UserProfilePreference smoking preference when preference row is present', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerSmoking: ['NONE_ONLY'],
+          }),
+        }),
+      );
+      // Candidate smokes regularly → HG FAIL from preference row data
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          smokingFrequency: 'REGULAR',
+          preference: null, // no preference row for candidate
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      // Candidate must be excluded because the preference row supplied acceptedPartnerSmoking
+      expect(result.matches).toHaveLength(0);
+      expect(result.totalCandidatesBeforeFilter).toBe(1);
+    });
+
+    it('when preference row is absent, HG smoking preference is omitted (smoking gate SKIPPED)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: null,
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          smokingFrequency: 'REGULAR',
+          preference: null,
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(1);
+      expect(result.totalCandidatesBeforeFilter).toBe(1);
+    });
+
+    it('emits hg_preference_fallback_used trace when viewer preference row is null', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: null, // triggers missing_row fallback
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([]);
+
+      await service.list(viewerUserId);
+
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('hg_preference_fallback_used'),
+        'ME_MATCHES_HG_PREF_FALLBACK',
+      );
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('missing_row'),
+        'ME_MATCHES_HG_PREF_FALLBACK',
+      );
+    });
+
+    it('does NOT emit hg_preference_fallback_used when viewer preference row is present and non-empty', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerSmoking: ['NONE_ONLY'],
+          }),
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([]);
+
+      await service.list(viewerUserId);
+
+      const fallbackCalls = (obs.trace as jest.Mock).mock.calls.filter(
+        ([, code]) => code === 'ME_MATCHES_HG_PREF_FALLBACK',
+      );
+      expect(fallbackCalls).toHaveLength(0);
+    });
+
+    it('/me/matches includes compatible candidate when preference row carries smoking prefs', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerSmoking: ['NONE_ONLY'],
+          }),
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          smokingFrequency: 'NONE', // within accepted set → PASS
+          preference: null,
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      // Compatible candidate must be included regardless of source
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches[0].id).toBe(candidateProfileId);
     });
   });
 });

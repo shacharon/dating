@@ -56,6 +56,8 @@ export const ErrorCodes = {
   ME_MATCHES_LIST_NOT_READY: 'ME_MATCHES_LIST_NOT_READY',
   /** Me matches: GET /me/matches/:id — match detail returned */
   ME_MATCHES_DETAIL_OK: 'ME_MATCHES_DETAIL_OK',
+  /** Me matches: HG preference sourced from UserProfile legacy columns (UserProfilePreference row absent or hollow) */
+  ME_MATCHES_HG_PREF_FALLBACK: 'ME_MATCHES_HG_PREF_FALLBACK',
 
   /** Generic HTTP layer */
   HTTP_EXCEPTION: 'HTTP_EXCEPTION',

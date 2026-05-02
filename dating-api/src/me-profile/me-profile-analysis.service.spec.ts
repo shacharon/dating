@@ -6,6 +6,8 @@ import {
   buildAnalysisContext,
   EVALUATION_VERSION,
   latestEvaluationForProfile,
+  latestEvaluationsForProfileIds,
+  mapDbFirstColumnsFromEvaluation,
   MeProfileAnalysisService,
 } from './me-profile-analysis.service';
 
@@ -45,6 +47,8 @@ describe('MeProfileAnalysisService', () => {
   let prisma: {
     userProfile: { findUnique: jest.Mock; update: jest.Mock };
     userProfileEvaluation: { create: jest.Mock };
+    userProfileSignal: { deleteMany: jest.Mock; upsert: jest.Mock };
+    userProfileInterest: { deleteMany: jest.Mock; create: jest.Mock };
     $transaction: jest.Mock;
   };
   let evaluate: jest.Mocked<Pick<EvaluateService, 'evaluateBatch'>>;
@@ -60,6 +64,14 @@ describe('MeProfileAnalysisService', () => {
         update: jest.fn().mockResolvedValue({}),
       },
       userProfileEvaluation: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+      userProfileSignal: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        upsert: jest.fn().mockResolvedValue({}),
+      },
+      userProfileInterest: {
+        deleteMany: jest.fn().mockResolvedValue({}),
         create: jest.fn().mockResolvedValue({}),
       },
       // Simulate Prisma batch transaction: execute all promises in the array.
@@ -139,6 +151,12 @@ describe('MeProfileAnalysisService', () => {
         status: S.ANALYZED,
         analyzedAt: now,
         lastAnalysisError: null,
+        interestsTop: [],
+        sigEmotionalDepth: null,
+        sigLifestylePace: null,
+        sigConflictStyle: null,
+        sigIndependence: null,
+        sigSocialBattery: null,
       },
     });
 
@@ -280,6 +298,137 @@ describe('MeProfileAnalysisService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Phase C dual-write: UserProfileSignal + UserProfileInterest
+  // ---------------------------------------------------------------------------
+
+  describe('Phase C dual-write: normalized signal + interest rows', () => {
+    it('upserts UserProfileSignal rows for each non-null signal in the transaction', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: {
+            signals: {
+              emotionalDepth: 7,
+              lifestylePace: 5,
+              conflictStyle: 8,
+              independence: 6,
+              socialBattery: 9,
+            },
+          },
+          partner: {},
+          relationship: {},
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.userProfileSignal.deleteMany).toHaveBeenCalledWith({
+        where: { profileId: baseRow.id },
+      });
+      expect(prisma.userProfileSignal.upsert).toHaveBeenCalledTimes(5);
+      expect(prisma.userProfileSignal.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { profileId_signalKey: { profileId: baseRow.id, signalKey: 'emotionalDepth' } },
+          create: expect.objectContaining({ signalKey: 'emotionalDepth', signalValue: 7 }),
+          // update omits signalKey (it's the unique key; never re-set on update)
+          update: expect.objectContaining({ signalValue: 7 }),
+        }),
+      );
+    });
+
+    it('skips UserProfileSignal rows for null / out-of-range signals', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: { signals: { emotionalDepth: 0, lifestylePace: 11 } }, // both out of 1–10 range
+          partner: {},
+          relationship: {},
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      expect(prisma.userProfileSignal.deleteMany).toHaveBeenCalledWith({
+        where: { profileId: baseRow.id },
+      });
+      expect(prisma.userProfileSignal.upsert).not.toHaveBeenCalled();
+    });
+
+    it('deletes then re-creates UserProfileInterest rows for top interests', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: {},
+          partner: {},
+          relationship: {},
+          enrichment: { signals: { interestsTop3: ['Hiking', 'Coffee', 'Travel'] } },
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      expect(prisma.userProfileInterest.deleteMany).toHaveBeenCalledWith({
+        where: { profileId: baseRow.id },
+      });
+      expect(prisma.userProfileInterest.create).toHaveBeenCalledTimes(3);
+      expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ tag: 'hiking', rank: 1, source: 'enrichment' }),
+      });
+      expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ tag: 'coffee', rank: 2 }),
+      });
+      expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ tag: 'travel', rank: 3 }),
+      });
+    });
+
+    it('still deletes interests and creates zero rows when no interests are present', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: { self: {}, partner: {}, relationship: {} },
+      } as never);
+
+      await service.runForUser(userId);
+
+      expect(prisma.userProfileInterest.deleteMany).toHaveBeenCalledWith({
+        where: { profileId: baseRow.id },
+      });
+      expect(prisma.userProfileInterest.create).not.toHaveBeenCalled();
+    });
+
+    it('all normalized writes are included in the same $transaction as UserProfile.update', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: { signals: { socialBattery: 4 } },
+          partner: {},
+          relationship: {},
+          enrichment: { signals: { interestsTop3: ['Music'] } },
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      // All operations land in one $transaction call — not separate round-trips.
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      // Verify the update, evaluation create, signal upsert, and interest ops all fired.
+      expect(prisma.userProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: S.ANALYZED }) }),
+      );
+      expect(prisma.userProfileEvaluation.create).toHaveBeenCalledTimes(1);
+      expect(prisma.userProfileSignal.upsert).toHaveBeenCalledTimes(1);
+      expect(prisma.userProfileInterest.deleteMany).toHaveBeenCalledTimes(1);
+      expect(prisma.userProfileInterest.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Contract: no legacy table writes
   // ---------------------------------------------------------------------------
   //
@@ -349,6 +498,58 @@ describe('MeProfileAnalysisService', () => {
 // ---------------------------------------------------------------------------
 // latestEvaluationForProfile unit tests
 // ---------------------------------------------------------------------------
+
+describe('latestEvaluationsForProfileIds', () => {
+  it('returns the newest row per profileId (DESC createdAt)', async () => {
+    const t1 = new Date('2026-01-01T00:00:00.000Z');
+    const t2 = new Date('2026-01-02T00:00:00.000Z');
+    const t3 = new Date('2026-01-03T00:00:00.000Z');
+    const mockPrisma = {
+      userProfileEvaluation: {
+        findMany: jest.fn().mockResolvedValue([
+          { profileId: 'p1', evaluationJson: { v: 3 }, createdAt: t3 },
+          { profileId: 'p1', evaluationJson: { v: 2 }, createdAt: t2 },
+          { profileId: 'p2', evaluationJson: { v: 1 }, createdAt: t1 },
+        ]),
+      },
+    };
+
+    const map = await latestEvaluationsForProfileIds(
+      mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
+      ['p1', 'p2'],
+    );
+
+    expect(mockPrisma.userProfileEvaluation.findMany).toHaveBeenCalledWith({
+      where: { profileId: { in: ['p1', 'p2'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { profileId: true, evaluationJson: true, createdAt: true },
+    });
+    expect(map.get('p1')).toEqual({
+      profileId: 'p1',
+      evaluationJson: { v: 3 },
+      createdAt: t3,
+    });
+    expect(map.get('p2')).toEqual({
+      profileId: 'p2',
+      evaluationJson: { v: 1 },
+      createdAt: t1,
+    });
+  });
+
+  it('returns an empty map when profileIds is empty', async () => {
+    const mockPrisma = {
+      userProfileEvaluation: { findMany: jest.fn() },
+    };
+
+    const map = await latestEvaluationsForProfileIds(
+      mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
+      [],
+    );
+
+    expect(map.size).toBe(0);
+    expect(mockPrisma.userProfileEvaluation.findMany).not.toHaveBeenCalled();
+  });
+});
 
 describe('latestEvaluationForProfile', () => {
   it('calls findFirst with profileId filter ordered by createdAt desc', async () => {
@@ -440,5 +641,123 @@ describe('buildAnalysisContext', () => {
     expect(ctx.city).toBeNull();
     expect(ctx.country).toBeNull();
     expect(ctx.locationLabel).toBeNull();
+  });
+});
+
+describe('mapDbFirstColumnsFromEvaluation', () => {
+  it('maps enrichment interests and self signals to UserProfile DB-first fields', () => {
+    const mapped = mapDbFirstColumnsFromEvaluation({
+      self: {
+        domain: 'self',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {
+          emotionalDepth: 8,
+          lifestylePace: 5,
+          conflictStyle: 4,
+          independence: 7,
+          socialBattery: 6,
+        },
+        evidence: [],
+      },
+      partner: {
+        domain: 'partner',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {},
+        evidence: [],
+      },
+      relationship: {
+        domain: 'relationship',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {},
+        evidence: [],
+      },
+      compatibility: {
+        selfVsPartner: {} as never,
+        selfVsRelationship: {} as never,
+      },
+      display: { summary: 's', insight: 'i' },
+      productScores: {} as never,
+      productScoresPresentation: {} as never,
+      flags: [],
+      enrichment: {
+        version: 'v1',
+        signals: {
+          dailyRhythm: null,
+          autonomyTogethernessDepth: null,
+          kidsTimeline: null,
+          conflictStyleDetail: null,
+          interestsTop3: ['hiking', 'Music', 'hiking'],
+        },
+      },
+    });
+
+    expect(mapped).toEqual({
+      interestsTop: ['hiking', 'Music'],
+      sigEmotionalDepth: 8,
+      sigLifestylePace: 5,
+      sigConflictStyle: 4,
+      sigIndependence: 7,
+      sigSocialBattery: 6,
+    });
+  });
+
+  it('falls back to extended interests and nulls invalid/out-of-range signal values', () => {
+    const mapped = mapDbFirstColumnsFromEvaluation({
+      self: {
+        domain: 'self',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {
+          emotionalDepth: 11,
+          lifestylePace: -1,
+          conflictStyle: null,
+          independence: '7' as never,
+          socialBattery: 'bad' as never,
+        },
+        evidence: [],
+      },
+      partner: {
+        domain: 'partner',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {},
+        evidence: [],
+      },
+      relationship: {
+        domain: 'relationship',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {},
+        evidence: [],
+      },
+      compatibility: {
+        selfVsPartner: {} as never,
+        selfVsRelationship: {} as never,
+      },
+      display: { summary: 's', insight: 'i' },
+      productScores: {} as never,
+      productScoresPresentation: {} as never,
+      flags: [],
+      extendedSignals: {
+        version: 'v1',
+        interests: ['  art ', 'travel', 'food', 'extra'],
+        lifestyleTraits: [],
+        preferences: [],
+        boundaries: [],
+        values: [],
+      },
+    });
+
+    expect(mapped).toEqual({
+      interestsTop: ['art', 'travel', 'food'],
+      sigEmotionalDepth: null,
+      sigLifestylePace: null,
+      sigConflictStyle: null,
+      sigIndependence: 7,
+      sigSocialBattery: null,
+    });
   });
 });

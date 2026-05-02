@@ -30,8 +30,8 @@ export interface HolyGrailMatchingPreferencesWireDto {
   readonly partnerAgeMin?: number;
   readonly partnerAgeMax?: number;
   readonly minimumPartnerEducation?: MinimumPartnerEducation;
-  readonly acceptedPartnerSmoking?: AcceptedPartnerSmoking;
-  readonly acceptedPartnerAlcohol?: AcceptedPartnerAlcohol;
+  readonly acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
+  readonly acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
   readonly partnerWantsChildren?: PartnerWantsChildrenRequirement;
   readonly partnerHasChildren?: PartnerHasChildrenAcceptance;
   readonly acceptedPartnerReligions?: readonly ReligionSelf[];
@@ -49,8 +49,8 @@ export interface HolyGrailMatchingSearchOverridesWireDto {
   readonly partnerAgeMin?: number;
   readonly partnerAgeMax?: number;
   readonly minimumPartnerEducation?: MinimumPartnerEducation;
-  readonly acceptedPartnerSmoking?: AcceptedPartnerSmoking;
-  readonly acceptedPartnerAlcohol?: AcceptedPartnerAlcohol;
+  readonly acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
+  readonly acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
   readonly partnerWantsChildren?: PartnerWantsChildrenRequirement;
   readonly partnerHasChildren?: PartnerHasChildrenAcceptance;
   readonly acceptedPartnerReligions?: readonly ReligionSelf[];

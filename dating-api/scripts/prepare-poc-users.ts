@@ -12,8 +12,11 @@ import { NestFactory } from '@nestjs/core';
 import { ProfileGender } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import {
+  latestEvaluationForProfile,
+  MeProfileAnalysisService,
+} from '../src/me-profile/me-profile-analysis.service';
 import { MeProfileService } from '../src/me-profile/me-profile.service';
-import { MeProfileAnalysisService } from '../src/me-profile/me-profile-analysis.service';
 
 // ── POC users ────────────────────────────────────────────────────────────────
 const POC_USERS = [
@@ -59,12 +62,10 @@ async function main() {
     console.log(`  UserProfile.id     : ${profile.id}`);
     console.log(`  UserProfile.status : ${profile.status}`);
 
-    const latestEval = await prisma.userProfileEvaluation.findFirst({
-      where: { profileId: profile.id },
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, version: true, createdAt: true },
-    });
-    console.log(`  LatestEval         : ${latestEval ? `EXISTS id=${latestEval.id}` : 'MISSING'}`);
+    const latestEval = await latestEvaluationForProfile(prisma, profile.id);
+    console.log(
+      `  LatestEval         : ${latestEval ? `EXISTS id=${latestEval.id}` : 'MISSING'}`,
+    );
 
     // ── 2. Already match-ready? ──────────────────────────────────────
     if (profile.status === 'ANALYZED' && latestEval) {
@@ -115,9 +116,7 @@ async function main() {
   console.log('FINAL STATE:');
   for (const user of POC_USERS) {
     const profile = await prisma.userProfile.findUnique({ where: { userId: user.userId } });
-    const evalRow = profile
-      ? await prisma.userProfileEvaluation.findFirst({ where: { profileId: profile.id }, orderBy: { createdAt: 'desc' } })
-      : null;
+    const evalRow = profile ? await latestEvaluationForProfile(prisma, profile.id) : null;
     const ready = profile?.status === 'ANALYZED' && evalRow !== null;
     console.log(`  ${user.label.padEnd(32)}  status=${profile?.status ?? 'NO_PROFILE'}  eval=${evalRow ? 'YES' : 'NO'}  match-ready=${ready ? 'YES ✓' : 'NO ✗'}`);
   }

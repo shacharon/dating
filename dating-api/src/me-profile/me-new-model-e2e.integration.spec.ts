@@ -100,6 +100,40 @@ function extractCookieValue(headers: Record<string, unknown>, name: string): str
   return undefined;
 }
 
+/**
+ * Shapes a joined `UserProfilePreference` for Prisma `include: { preference: true }` mocks.
+ * No partnerAgeMin/Max (HG age would FAIL when fixture birthDate is null).
+ * Mirrors desiredPartnerGenders when set; otherwise maxDistanceKm keeps the row non-empty.
+ */
+function testUserProfilePreferenceForProfile(row: Record<string, unknown>) {
+  const id = String(row['id']);
+  const desired = row['desiredPartnerGenders'];
+  const genders = Array.isArray(desired)
+    ? (desired as string[]).filter((g) => g !== 'PREFER_NOT_TO_SAY')
+    : [];
+  return {
+    id: `pref_${id}`,
+    profileId: id,
+    partnerAgeMin: null,
+    partnerAgeMax: null,
+    maxDistanceKm: genders.length > 0 ? null : 100,
+    minimumPartnerEducation: null,
+    acceptedPartnerGenders: genders,
+    acceptedPartnerSmoking: [] as string[],
+    acceptedPartnerAlcohol: [] as string[],
+    acceptedPartnerReligions: [] as string[],
+    partnerWantsChildren: null,
+    partnerHasChildren: null,
+    similarityPreference: null,
+    updatedAt: new Date('2026-04-18T10:00:00.000Z'),
+  };
+}
+
+function withAnalyzedPreference(row: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!row || row['status'] !== 'ANALYZED') return row;
+  return { ...row, preference: testUserProfilePreferenceForProfile(row) };
+}
+
 function makeBaseProfileRow(id: string, userId: string): Record<string, unknown> {
   return {
     id,
@@ -121,10 +155,6 @@ function makeBaseProfileRow(id: string, userId: string): Record<string, unknown>
     lastAnalysisError: null,
     childrenStatus: null, wantsChildren: null, smokingFrequency: null,
     alcoholUse: null, education: null, religion: null,
-    partnerAgeMin: null, partnerAgeMax: null, minimumPartnerEducation: null,
-    acceptedPartnerSmoking: [], acceptedPartnerAlcohol: [],
-    partnerWantsChildren: null, partnerHasChildren: null,
-    acceptedPartnerReligions: [], maxDistanceKm: null, similarityPreference: null,
     _count: { evaluations: 0 },
     createdAt: new Date('2026-04-18T10:00:00.000Z'),
     updatedAt: new Date('2026-04-18T10:00:00.000Z'),
@@ -164,6 +194,9 @@ describe('Two-user new-model E2E flow (integration)', () => {
       findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
+    },
+    userProfilePreference: {
+      upsert: jest.fn().mockResolvedValue({ id: 'pref_mock', profileId: 'mock' }),
     },
     // ── Legacy tables: Proxy firewall ─────────────────────────────────
     // Any property access (findMany, create, upsert, …) throws immediately.
@@ -214,23 +247,26 @@ describe('Two-user new-model E2E flow (integration)', () => {
     // ── UserProfile: state-backed CRUD ────────────────────────────────
     prismaMock.userProfile.findUnique.mockImplementation(
       async ({ where }: { where: { userId?: string; id?: string } }) => {
-        if (where.userId === USER_A.id) return profileA;
-        if (where.userId === USER_B.id) return profileB;
-        if (where.id === PROF_A_ID) return profileA;
-        if (where.id === PROF_B_ID) return profileB;
-        return null;
+        let row: Record<string, unknown> | null = null;
+        if (where.userId === USER_A.id) row = profileA;
+        else if (where.userId === USER_B.id) row = profileB;
+        else if (where.id === PROF_A_ID) row = profileA;
+        else if (where.id === PROF_B_ID) row = profileB;
+        return withAnalyzedPreference(row);
       },
     );
 
     prismaMock.userProfile.findMany.mockImplementation(
       async ({ where }: { where?: { userId?: { not?: string }; status?: string } } = {}) => {
         const candidates = [profileA, profileB].filter(Boolean);
-        return candidates.filter((p) => {
-          if (!p) return false;
-          if (where?.userId?.not && p['userId'] === where.userId.not) return false;
-          if (where?.status && p['status'] !== where.status) return false;
-          return true;
-        });
+        return candidates
+          .filter((p) => {
+            if (!p) return false;
+            if (where?.userId?.not && p['userId'] === where.userId.not) return false;
+            if (where?.status && p['status'] !== where.status) return false;
+            return true;
+          })
+          .map((p) => withAnalyzedPreference(p as Record<string, unknown>)!);
       },
     );
 
