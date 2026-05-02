@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { profileToFormFields, resolveEditableProfile } from '@/lib/profile-form';
 import type { ProfileDraft } from '../_lib/types';
+import { ProfilePhotoSection } from '@/components/profile-photo-section';
 
 function genderDisplay(g: string): string {
   const m: Record<string, string> = {
@@ -118,6 +119,8 @@ export default function ProfilePage() {
         </p>
 
         <div className="space-y-4">
+          <ProfilePhotoSection />
+
           <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Basics

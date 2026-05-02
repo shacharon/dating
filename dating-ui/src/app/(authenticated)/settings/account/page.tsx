@@ -4,9 +4,7 @@ export default function SettingsAccountPage() {
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
         Account Settings
       </h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Placeholder — account settings will go here.
-      </p>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">TODO</p>
     </main>
   );
 }

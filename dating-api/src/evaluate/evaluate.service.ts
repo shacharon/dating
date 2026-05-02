@@ -31,6 +31,7 @@ import {
   applyHonestyFraming,
   DISPLAY_NOTE_LOW_QUALITY,
   isLowCoverageOrConfidence,
+  type NormalizedDisplay,
   normalizeDisplay,
 } from './evaluate-display-helpers';
 import {
@@ -40,6 +41,7 @@ import {
   SUMMARY_SYSTEM_PROMPT,
 } from './evaluate-llm-prompts';
 import {
+  AnalysisPresentationSchema,
   AttractionResultSchema,
   AttractionTraitsResultSchema,
   RelationshipMotivationResultSchema,
@@ -105,8 +107,7 @@ export class EvaluateService {
     partner: ExtractedSignals,
     relationship: ExtractedSignals,
   ): Promise<{
-    summary: string;
-    insight: string;
+    display: NormalizedDisplay;
     _evaluateLlmTrace: EvaluateLlmCallTrace;
   }> {
     const payload = JSON.stringify(
@@ -133,12 +134,12 @@ export class EvaluateService {
 
     const requestId = randomUUID();
     const { value, rawText } = await this.llm.completeJSON<
-      Record<string, unknown>
+      z.infer<typeof AnalysisPresentationSchema>
     >({
       modelKey: 'fast',
       system: SUMMARY_SYSTEM_PROMPT,
       user: `Extracted data:\n${payload}`,
-      schema: z.any(),
+      schema: AnalysisPresentationSchema,
       temperature: 0.3,
       maxTokens: 3000,
       timeoutMs: 20_000,
@@ -170,7 +171,7 @@ export class EvaluateService {
       'EvaluateService',
     );
 
-    return { ...normalized, _evaluateLlmTrace: trace };
+    return { display: normalized, _evaluateLlmTrace: trace };
   }
 
   /**
@@ -511,18 +512,11 @@ export class EvaluateService {
       ),
     ]);
 
-    const {
-      summary: summaryPre,
-      insight: insightPre,
-      _evaluateLlmTrace: summaryLlmTrace,
-    } = displayPack;
+    const { display: displayPre, _evaluateLlmTrace: summaryLlmTrace } =
+      displayPack;
 
     const useCautious = isLowCoverageOrConfidence(self, partner, relationship);
-    const { summary, insight } = applyHonestyFraming(
-      summaryPre,
-      insightPre,
-      useCautious,
-    );
+    const display = applyHonestyFraming(displayPre, useCautious);
 
     const { productScores, flags } = computeProductScores(
       self,
@@ -607,8 +601,13 @@ export class EvaluateService {
           selfVsRelationship,
         },
         display: {
-          summary,
-          insight,
+          overallNarrative: display.overallNarrative,
+          aboutMeInsight: display.aboutMeInsight,
+          relationshipInsight: display.relationshipInsight,
+          partnerInsight: display.partnerInsight,
+          missingPrompts: display.missingPrompts,
+          summary: display.summary,
+          insight: display.insight,
           ...(displayNote && { note: displayNote }),
         },
         productScores,

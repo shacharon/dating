@@ -26,4 +26,25 @@ describe('onboardingResumePath', () => {
     expect(onboardingResumePath(row('TEXTS'))).toBe('/onboarding/texts');
     expect(onboardingResumePath(row('COMPLETED'))).toBe('/dating/profile');
   });
+
+  it('edit=basic allows COMPLETED users to stay on basics', () => {
+    expect(
+      onboardingResumePath(row('COMPLETED'), { edit: true, page: 'basic' }),
+    ).toBe('/onboarding/basic');
+  });
+
+  it('edit=texts sends COMPLETED users to story step', () => {
+    expect(
+      onboardingResumePath(row('COMPLETED'), { edit: true, page: 'texts' }),
+    ).toBe('/onboarding/texts');
+  });
+
+  it('edit=texts opens story when a profile exists; only null profile goes to basics', () => {
+    expect(
+      onboardingResumePath(row('BASIC'), { edit: true, page: 'texts' }),
+    ).toBe('/onboarding/texts');
+    expect(onboardingResumePath(null, { edit: true, page: 'texts' })).toBe(
+      '/onboarding/basic',
+    );
+  });
 });

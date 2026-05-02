@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -16,6 +17,8 @@ import {
 } from './user-profile-matching-bridge.contract';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
+import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
 import {
@@ -47,6 +50,8 @@ export interface MeMatchItemDto {
   hasEvaluation: boolean;
   /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  primaryPhotoUrl: string | null;
+  approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
 }
@@ -83,6 +88,8 @@ export interface MeMatchDetailDto {
   evaluationSummary: string | null;
   /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  primaryPhotoUrl: string | null;
+  approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
 }
@@ -108,6 +115,7 @@ export class MeMatchesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
+    @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
   ) {}
 
   // ─── Shared candidate select ───────────────────────────────────────────────
@@ -144,6 +152,10 @@ export class MeMatchesService {
     interests: {
       select: { tag: true, rank: true },
       orderBy: { rank: 'asc' as const },
+    },
+    photos: {
+      where: { status: 'APPROVED' as const },
+      select: { id: true, isPrimary: true },
     },
     _count: { select: { evaluations: true } },
   } as const;
@@ -295,6 +307,7 @@ export class MeMatchesService {
       let matchScore: number | null = null;
       let explainability: MatchExplainabilityDto | null = null;
       let recommendation: MatchRecommendationDto | null = null;
+      const approvedPhotos = row.photos ?? [];
 
       const result = compareWithStatus(
         viewerRead.enginePayload,
@@ -314,6 +327,11 @@ export class MeMatchesService {
         analyzedAt: row.analyzedAt?.toISOString() ?? null,
         hasEvaluation: row._count.evaluations > 0,
         matchScore,
+        primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
+          row.id,
+          pickApprovedPrimaryPhotoId(approvedPhotos),
+        ),
+        approvedPhotoCount: approvedPhotos.length,
         explainability,
         recommendation,
       });
@@ -496,9 +514,93 @@ export class MeMatchesService {
       hasEvaluation: candidate._count.evaluations > 0,
       evaluationSummary,
       matchScore,
+      primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
+        candidate.id,
+        pickApprovedPrimaryPhotoId(candidate.photos ?? []),
+      ),
+      approvedPhotoCount: (candidate.photos ?? []).length,
       explainability,
       recommendation,
     };
+  }
+
+  async getPrimaryPhotoFileById(
+    userId: string,
+    candidateProfileId: string,
+    photoId: string,
+  ): Promise<{ contentType: string; content: Buffer }> {
+    const viewer = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      include: { preference: true },
+    });
+    if (!viewer || viewer.status !== STATUS_ANALYZED) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    const candidate = await this.prisma.userProfile.findUnique({
+      where: { id: candidateProfileId },
+      select: {
+        id: true,
+        status: true,
+        birthDate: true,
+        gender: true,
+        desiredPartnerGenders: true,
+        city: true,
+        country: true,
+        locationLabel: true,
+        aboutMe: true,
+        aboutPartner: true,
+        aboutRelationship: true,
+        preference: true,
+      },
+    });
+    if (!candidate || candidate.status !== STATUS_ANALYZED) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    const viewerBridge = buildProductProfileMatchingBridge(
+      viewer,
+      new Date(),
+      partnerGenderSourceForMeMatchesRow(viewer, this.obs),
+    );
+    const candidateBridge = buildProductProfileMatchingBridge(
+      candidate,
+      new Date(),
+      partnerGenderSourceForMeMatchesRow(candidate, this.obs),
+    );
+    const eligible = reciprocalProductGenderEligibility(
+      viewerBridge.acceptedPartnerGenders,
+      viewerBridge.selfGender,
+      candidateBridge.acceptedPartnerGenders,
+      candidateBridge.selfGender,
+    );
+    if (!eligible) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    const photo = await this.prisma.userProfilePhoto.findFirst({
+      where: {
+        id: photoId,
+        profileId: candidateProfileId,
+        status: 'APPROVED',
+        isPrimary: true,
+      },
+      select: { mimeType: true, storageKey: true },
+    });
+    if (!photo) {
+      throw new NotFoundException({
+        error: 'photo_not_found',
+        message: 'Photo was not found for this match.',
+      });
+    }
+    const content = await this.photoStorage.read(photo.storageKey);
+    if (!content) {
+      throw new NotFoundException({
+        error: 'photo_file_not_found',
+        message: 'Photo file is missing from storage.',
+      });
+    }
+    return { contentType: photo.mimeType, content };
   }
 }
 
@@ -524,4 +626,19 @@ function partnerGenderSourceForMeMatchesRow(
     ErrorCodes.ME_MATCHES_PARTNER_GENDER_LEGACY_JSON,
   );
   return undefined;
+}
+
+function pickApprovedPrimaryPhotoId(
+  photos: ReadonlyArray<{ id: string; isPrimary: boolean }>,
+): string | null {
+  const primary = photos.find((p) => p.isPrimary);
+  return primary?.id ?? null;
+}
+
+function buildMatchPrimaryPhotoUrl(
+  profileId: string,
+  photoId: string | null,
+): string | null {
+  if (!photoId) return null;
+  return `/api/v1/me/matches/${profileId}/photos/${photoId}/file`;
 }

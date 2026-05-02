@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { NavAuth } from "@/components/nav-auth";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  APP_LOCALE_CHANGE_EVENT,
+  APP_LOCALE_STORAGE_KEY,
+  DEFAULT_LOCALE,
+  getCopy,
+  readStoredLocale,
+  type AppLocale,
+} from "@/lib/i18n";
 
 const navLinkBase =
   "text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500";
@@ -32,17 +40,44 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
+  const copy = getCopy(locale);
 
   const homeActive = pathname === "/dating";
   const matchesActive =
     pathname === "/dating/me-matches" ||
     pathname.startsWith("/dating/me-matches/");
   const profileActive = pathname === "/dating/profile";
+  const analysisActive =
+    pathname === "/dating/analysis" || pathname.startsWith("/dating/analysis/");
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
     router.replace(landingUrlWithNext());
   }, [status, router]);
+
+  useEffect(() => {
+    setLocale(readStoredLocale());
+    const onLocaleChanged = (event: Event) => {
+      const e = event as CustomEvent<AppLocale>;
+      if (e.detail) {
+        setLocale(e.detail);
+        return;
+      }
+      setLocale(readStoredLocale());
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
+        setLocale(readStoredLocale());
+      }
+    };
+    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   if (status === "unauthenticated") {
     return (
@@ -83,25 +118,32 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
               className={`${navLinkBase} ${homeActive ? navLinkActive : navLinkInactive}`}
               aria-current={homeActive ? "page" : undefined}
             >
-              Home
+              {copy.nav.home}
             </Link>
             <Link
               href="/dating/me-matches"
               className={`${navLinkBase} ${matchesActive ? navLinkActive : navLinkInactive}`}
               aria-current={matchesActive ? "page" : undefined}
             >
-              Matches
+              {copy.nav.matches}
             </Link>
             <Link
               href="/dating/profile"
               className={`${navLinkBase} ${profileActive ? navLinkActive : navLinkInactive}`}
               aria-current={profileActive ? "page" : undefined}
             >
-              Profile
+              {copy.nav.profile}
+            </Link>
+            <Link
+              href="/dating/analysis"
+              className={`${navLinkBase} ${analysisActive ? navLinkActive : navLinkInactive}`}
+              aria-current={analysisActive ? "page" : undefined}
+            >
+              {copy.nav.analysis}
             </Link>
           </div>
           <div className="flex shrink-0 items-center border-t border-zinc-100 pt-2 sm:border-t-0 sm:pt-0 dark:border-zinc-800">
-            <NavAuth />
+            <NavAuth locale={locale} />
           </div>
         </div>
       </nav>

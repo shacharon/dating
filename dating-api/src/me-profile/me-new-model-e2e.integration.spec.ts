@@ -45,6 +45,7 @@ import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileModule } from './me-profile.module';
+import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
 // ─── Test constants ────────────────────────────────────────────────────────
 
@@ -381,6 +382,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
       .overrideProvider(LLM_CONFIG).useValue({ openai: { apiKey: 'test-key-not-used' }, models: new Map() })
       // Analysis is stubbed — DB state is advanced manually after submit
       .overrideProvider(MeProfileAnalysisService).useValue({ runForUser: jest.fn().mockResolvedValue(undefined) })
+      .overrideProvider(MeProfileValidationPipe).useValue({ transform: (v: unknown) => v })
       .compile();
 
     app = moduleFixture.createNestApplication();

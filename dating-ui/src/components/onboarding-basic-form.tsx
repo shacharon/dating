@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -13,6 +13,7 @@ import {
   type MeProfileGender,
 } from '@/lib/me-profile-api';
 import { onboardingResumePath } from '@/lib/onboarding-path';
+import { ProfilePhotoSection } from '@/components/profile-photo-section';
 
 function genderLabel(g: MeProfileGender): string {
   const labels: Record<MeProfileGender, string> = {
@@ -38,6 +39,7 @@ function ageFromBirthInput(iso: string): number | null {
 
 export function OnboardingBasicForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const googleName = user?.displayName?.trim() || '—';
 
@@ -52,7 +54,8 @@ export function OnboardingBasicForm() {
   const [locationLabel, setLocationLabel] = useState('');
 
   const [hasProfile, setHasProfile] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  /** False once initial profile fetch + step guard finishes (form stays mounted; no full-page loading gate). */
+  const [profileSyncing, setProfileSyncing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -62,6 +65,14 @@ export function OnboardingBasicForm() {
   const birthDateMax = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const derivedAge = useMemo(() => ageFromBirthInput(birthDate), [birthDate]);
 
+  const resumeOptions = useMemo(
+    () =>
+      searchParams.get('edit') === '1'
+        ? ({ edit: true, page: 'basic' } as const)
+        : undefined,
+    [searchParams],
+  );
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -70,11 +81,12 @@ export function OnboardingBasicForm() {
         if (cancelled) return;
         if (!profile) {
           setHasProfile(false);
-          setHydrated(true);
+          setProfileSyncing(false);
           return;
         }
-        const path = onboardingResumePath(profile);
+        const path = onboardingResumePath(profile, resumeOptions);
         if (path !== '/onboarding/basic') {
+          setProfileSyncing(false);
           router.replace(path);
           return;
         }
@@ -93,18 +105,18 @@ export function OnboardingBasicForm() {
         setCity(profile.city ?? '');
         setCountry(profile.country ?? '');
         setLocationLabel(profile.locationLabel ?? '');
-        setHydrated(true);
+        setProfileSyncing(false);
       } catch (e) {
         if (!cancelled) {
           setLoadError(e instanceof Error ? e.message : 'Failed to load profile');
-          setHydrated(true);
+          setProfileSyncing(false);
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, resumeOptions]);
 
   function setPartnerGender(g: MeProfileGender, checked: boolean) {
     setDesiredPartnerGenders((prev) => {
@@ -190,14 +202,6 @@ export function OnboardingBasicForm() {
     }
   }
 
-  if (!hydrated) {
-    return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Loading your profile…
-      </p>
-    );
-  }
-
   const inputClass =
     'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
   const labelClass =
@@ -211,6 +215,16 @@ export function OnboardingBasicForm() {
         </p>
       ) : null}
 
+      {profileSyncing ? (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
+          Syncing profile…
+        </p>
+      ) : null}
+
+      <div
+        className={`space-y-6 ${profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
+        aria-busy={profileSyncing}
+      >
       <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
         <h2 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
           Basics
@@ -362,27 +376,33 @@ export function OnboardingBasicForm() {
         </div>
       </section>
 
+      <ProfilePhotoSection />
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => void handleSaveProgress()}
-          className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          disabled={profileSyncing}
+          className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           Save progress
         </button>
         <button
           type="button"
           onClick={() => void handleContinueToTexts()}
-          className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
+          disabled={profileSyncing}
+          className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
           Continue to story
         </button>
         <Link
           href="/dating"
-          className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+          className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
+          aria-disabled={profileSyncing}
         >
           Continue later
         </Link>
+      </div>
       </div>
 
       {savedFlash ? (

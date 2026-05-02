@@ -92,11 +92,13 @@ describe('EvaluateService', () => {
       aboutPartner: 'fun',
     });
 
-    expect(result.display.summary).toMatch(/^Based on limited information/);
-    expect(result.display.summary).toMatch(/may suggest tendencies/);
-    expect(result.display.insight).toMatch(/^Limited signal/);
+    expect(result.display.overallNarrative).toMatch(/^Thanks for sharing\./);
+    expect(result.display.relationshipInsight).toMatch(
+      /^From what you shared so far,/,
+    );
+    expect(result.display.missingPrompts.length).toBeGreaterThanOrEqual(2);
     expect(result.display.note).toBe(
-      'Limited information provided; score confidence is lower.',
+      'You can get sharper insights by adding a bit more detail to your profile text.',
     );
     expect(result.enrichment?.version).toBe('v1');
     expect(result.enrichment?.signals).toMatchObject({
@@ -130,9 +132,10 @@ describe('EvaluateService', () => {
       aboutPartner: 'Partner.',
     });
 
-    expect(result.display.summary).not.toMatch(/^Based on limited information/);
-    expect(result.display.summary).not.toMatch(/may suggest tendencies/);
-    expect(result.display.insight).not.toMatch(/^Limited signal/);
+    expect(result.display.overallNarrative).not.toMatch(/^Thanks for sharing\./);
+    expect(result.display.relationshipInsight).not.toMatch(
+      /^From what you shared so far,/,
+    );
     expect(result.display.note).toBeUndefined();
   });
 
@@ -164,6 +167,11 @@ describe('EvaluateService', () => {
     expect(result.display).toBeDefined();
     expect(result.display.summary).toBeDefined();
     expect(result.display.insight).toBeDefined();
+    expect(result.display.overallNarrative).toBeDefined();
+    expect(result.display.aboutMeInsight).toBeDefined();
+    expect(result.display.relationshipInsight).toBeDefined();
+    expect(result.display.partnerInsight).toBeDefined();
+    expect(Array.isArray(result.display.missingPrompts)).toBe(true);
 
     expect(result.productScores).toBeDefined();
     expect(result.productScores.partnerFitScore).toBeGreaterThanOrEqual(0);

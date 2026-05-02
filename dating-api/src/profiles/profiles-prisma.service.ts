@@ -347,7 +347,18 @@ export class ProfilesPrismaService {
             breakdown: [],
           },
         },
-        display: { summary: 'Not analyzed yet.', insight: '' },
+        display: {
+          overallNarrative: 'Not analyzed yet.',
+          aboutMeInsight: '',
+          relationshipInsight: '',
+          partnerInsight: '',
+          missingPrompts: [
+            'What would you like a future partner to understand about you?',
+            'What relationship rhythm feels healthy and sustainable for you?',
+          ],
+          summary: 'Not analyzed yet.',
+          insight: '',
+        },
         productScores: {
           partnerFitScore: 0,
           relationshipFitScore: 0,

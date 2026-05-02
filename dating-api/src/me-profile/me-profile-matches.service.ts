@@ -23,6 +23,8 @@ export interface MeProfileMatchesCandidateDto {
   analyzedAt: string | null;
   /** True when at least one `UserProfileEvaluation` row exists for this candidate. */
   hasEvaluation: boolean;
+  primaryPhotoUrl: string | null;
+  approvedPhotoCount: number;
 }
 
 export interface MeProfileMatchesResponseDto {
@@ -95,6 +97,10 @@ export class MeProfileMatchesService {
         aboutRelationship: true,
         analyzedAt: true,
         _count: { select: { evaluations: true } },
+        photos: {
+          where: { status: 'APPROVED' as const },
+          select: { id: true, isPrimary: true },
+        },
       },
     });
 
@@ -119,6 +125,7 @@ export class MeProfileMatchesService {
       );
 
       if (eligible) {
+        const approvedPhotos = row.photos ?? [];
         candidates.push({
           userProfileId: row.id,
           gender: candidateBridge.selfGender,
@@ -126,6 +133,11 @@ export class MeProfileMatchesService {
           locationLabel: candidateBridge.location.locationLabel,
           analyzedAt: row.analyzedAt?.toISOString() ?? null,
           hasEvaluation: row._count.evaluations > 0,
+          primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
+            row.id,
+            pickApprovedPrimaryPhotoId(approvedPhotos),
+          ),
+          approvedPhotoCount: approvedPhotos.length,
         });
       }
     }
@@ -147,4 +159,19 @@ export class MeProfileMatchesService {
       candidates,
     };
   }
+}
+
+function pickApprovedPrimaryPhotoId(
+  photos: ReadonlyArray<{ id: string; isPrimary: boolean }>,
+): string | null {
+  const primary = photos.find((p) => p.isPrimary);
+  return primary?.id ?? null;
+}
+
+function buildMatchPrimaryPhotoUrl(
+  profileId: string,
+  photoId: string | null,
+): string | null {
+  if (!photoId) return null;
+  return `/api/v1/me/matches/${profileId}/photos/${photoId}/file`;
 }

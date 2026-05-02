@@ -54,7 +54,19 @@ export interface EvaluateBatchResult {
     selfVsRelationship: CompatibilityResult;
   };
   display: {
+    /** New presentation field (primary narrative for UI surfaces). */
+    overallNarrative: string;
+    /** New presentation field (about-me-specific insight). */
+    aboutMeInsight: string;
+    /** New presentation field (relationship-style insight). */
+    relationshipInsight: string;
+    /** New presentation field (partner-preference insight). */
+    partnerInsight: string;
+    /** New presentation field (2–4 concrete follow-up prompts). */
+    missingPrompts: string[];
+    /** Legacy compatibility field (mirrors overallNarrative). */
     summary: string;
+    /** Legacy compatibility field (mirrors relationshipInsight). */
     insight: string;
     /** Present when LOW_COVERAGE or LOW_CONFIDENCE; UI-safe honesty note. */
     note?: string;

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { EvaluateServiceModule } from '../evaluate/evaluate-service.module';
+import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
@@ -12,7 +13,14 @@ import { MeProfileService } from './me-profile.service';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
 @Module({
-  imports: [PrismaModule, SessionModule, UsersModule, AuthModule, EvaluateServiceModule],
+  imports: [
+    PrismaModule,
+    SessionModule,
+    UsersModule,
+    AuthModule,
+    EvaluateServiceModule,
+    PhotoStorageModule,
+  ],
   controllers: [MeProfileController],
   providers: [
     MeProfileService,

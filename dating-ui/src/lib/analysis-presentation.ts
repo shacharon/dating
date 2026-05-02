@@ -39,7 +39,16 @@ interface RawAttractionTraits {
 
 interface RawEvaluation {
   // Rendered fields
-  display?: { summary?: string; insight?: string; note?: string };
+  display?: {
+    overallNarrative?: string;
+    aboutMeInsight?: string;
+    relationshipInsight?: string;
+    partnerInsight?: string;
+    missingPrompts?: string[];
+    summary?: string;
+    insight?: string;
+    note?: string;
+  };
   flags?: string[];
   chips?: { self?: RawChip[]; partner?: RawChip[] };
   self?: RawExtractedDomain;
@@ -64,16 +73,20 @@ interface RawEvaluation {
 
 export interface AnalysisViewModel {
   heroTitle: string;
-  /** From display.summary; null when unavailable. */
+  /** Narrative intro from new display fields (or legacy summary fallback). */
   heroSubtitle: string | null;
-  /** Honesty note: from display.note or sparse-data fallback; null when not needed. */
+  /** Warm helper note only (never raw technical confidence text). */
   note: string | null;
+  /** About-me insight for the compact card. */
+  aboutMeInsight: string;
+  /** Relationship-style insight paragraph. */
+  relationshipInsight: string;
+  /** Partner-preference insight for the compact card. */
+  partnerPreferenceInsight: string;
   /** Up to 3 self-trait labels (chips-first, then signal keys, then value tags). */
   selfHighlights: string[];
   /** Up to 3 partner-preference labels (chips-first, then attraction traits). */
   partnerHighlights: string[];
-  /** Up to 3 fill-in prompts; empty array when profile is rich enough. */
-  missingPieces: string[];
   /** True when LOW_COVERAGE or LOW_CONFIDENCE flag is present. */
   isSparse: boolean;
 }
@@ -113,15 +126,15 @@ const ATTRACTION_TRAIT_LABELS: Record<string, string> = {
   financialPrudence: 'Financially grounded',
 };
 
-const FILL_IN_PROMPTS: string[] = [
-  'Tell us more about how you handle disagreement in a relationship.',
-  'Describe the kind of daily rhythm or pace that feels right to you.',
-  'Say more about the kind of person you genuinely admire in real life.',
-];
-
-const HERO_TITLE = 'Your profile is taking shape';
+const HERO_TITLE = 'Your analysis';
 const SPARSE_NOTE =
-  "We're still learning from what you've shared. A bit more will help us see you more clearly.";
+  'Light on detail. A few more lines in your profile will sharpen this read.';
+const CLINICAL_BLOCKLIST = [
+  'limited information',
+  'insufficient evidence',
+  'individual',
+  'ascertain',
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,6 +145,14 @@ function dedupe(items: string[]): string[] {
     seen.add(s);
     return true;
   });
+}
+
+function sanitizeUserFacingText(value: string | null | undefined): string | null {
+  const t = value?.trim();
+  if (!t) return null;
+  const lowered = t.toLowerCase();
+  if (CLINICAL_BLOCKLIST.some((bad) => lowered.includes(bad))) return null;
+  return t;
 }
 
 /** Returns up to `max` non-null signal keys sorted by value descending. */
@@ -174,10 +195,16 @@ export function mapEvaluationToViewModel(raw: unknown): AnalysisViewModel {
     flags.includes('LOW_COVERAGE') || flags.includes('LOW_CONFIDENCE');
 
   // ── Hero ────────────────────────────────────────────────────────────────────
-  const heroSubtitle = ev.display?.summary?.trim() || null;
-  const note =
-    ev.display?.note?.trim() ||
-    (isSparse ? SPARSE_NOTE : null);
+  const overallNarrative = sanitizeUserFacingText(
+    ev.display?.overallNarrative ?? ev.display?.summary,
+  );
+  const aboutMeInsight = sanitizeUserFacingText(ev.display?.aboutMeInsight);
+  const relationshipInsight = sanitizeUserFacingText(
+    ev.display?.relationshipInsight ?? ev.display?.insight,
+  );
+  const partnerInsight = sanitizeUserFacingText(ev.display?.partnerInsight);
+  const heroSubtitle = overallNarrative ?? null;
+  const note = isSparse ? SPARSE_NOTE : null;
 
   // ── Self highlights ──────────────────────────────────────────────────────────
   const selfFromChips = (ev.chips?.self ?? [])
@@ -197,6 +224,7 @@ export function mapEvaluationToViewModel(raw: unknown): AnalysisViewModel {
   ]);
 
   const selfHighlights = dedupe([
+    ...(aboutMeInsight ? [aboutMeInsight] : []),
     ...selfFromChips,
     ...selfFromSignals,
     ...selfFromTags,
@@ -219,24 +247,29 @@ export function mapEvaluationToViewModel(raw: unknown): AnalysisViewModel {
   );
 
   const partnerHighlights = dedupe([
+    ...(partnerInsight ? [partnerInsight] : []),
     ...partnerFromChips,
     ...partnerFromAttractionTraits,
     ...partnerFromPreferences,
   ]).slice(0, 3);
 
-  // ── Missing pieces ───────────────────────────────────────────────────────────
-  const thinProfile =
-    selfHighlights.length < 2 && partnerHighlights.length < 2;
-  const missingPieces =
-    isSparse || thinProfile ? FILL_IN_PROMPTS.slice(0, 3) : [];
-
   return {
     heroTitle: HERO_TITLE,
     heroSubtitle,
     note,
+    aboutMeInsight:
+      aboutMeInsight ??
+      selfHighlights[0] ??
+      "Not enough written signal yet—add to About me and we'll reflect you more accurately.",
+    relationshipInsight:
+      relationshipInsight ??
+      'Relationship style reads thin—say more about how you like to connect.',
+    partnerPreferenceInsight:
+      partnerInsight ??
+      partnerHighlights[0] ??
+      'Partner preference reads thin—say more about who fits you.',
     selfHighlights,
     partnerHighlights,
-    missingPieces,
     isSparse,
   };
 }

@@ -84,6 +84,7 @@ function makeProfileRow(overrides: {
     education: null as string | null,
     religion: null as string | null,
     preference: overrides.preference !== undefined ? overrides.preference : null,
+    photos: [] as Array<{ id: string; isPrimary: boolean }>,
   };
 }
 
@@ -97,6 +98,7 @@ describe('MeMatchesService', () => {
   let prisma: {
     userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
     userProfileEvaluation: { findFirst: jest.Mock };
+    userProfilePhoto: { findFirst: jest.Mock };
   };
 
   /** Default latest eval for any profile id (ORDER BY createdAt DESC LIMIT 1 contract). */
@@ -115,6 +117,7 @@ describe('MeMatchesService', () => {
   }
   let obs: jest.Mocked<Pick<StructuredObservabilityService, 'trace' | 'error'>>;
   let service: MeMatchesService;
+  let photoStorage: { read: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -130,11 +133,16 @@ describe('MeMatchesService', () => {
               Promise.resolve(defaultLatestEval(profileId)),
           ),
       },
+      userProfilePhoto: {
+        findFirst: jest.fn(),
+      },
     };
+    photoStorage = { read: jest.fn() };
     obs = { trace: jest.fn(), error: jest.fn() };
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
+      photoStorage as never,
     );
   });
 
@@ -277,6 +285,76 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(1);
       expect(result.matches![0].id).toBe(candidateProfileId);
+    });
+
+    it('includes approved primary photo URL and approved photo count', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        {
+          ...makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+          photos: [
+            { id: 'photo_primary', isPrimary: true },
+            { id: 'photo_other', isPrimary: false },
+          ],
+        },
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches?.[0].primaryPhotoUrl).toBe(
+        `/api/v1/me/matches/${candidateProfileId}/photos/photo_primary/file`,
+      );
+      expect(result.matches?.[0].approvedPhotoCount).toBe(2);
+    });
+
+    it('returns null primaryPhotoUrl when no approved primary photo exists', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        {
+          ...makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+          photos: [],
+        },
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches?.[0].primaryPhotoUrl).toBeNull();
+      expect(result.matches?.[0].approvedPhotoCount).toBe(0);
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            photos: expect.objectContaining({
+              where: { status: 'APPROVED' },
+            }),
+          }),
+        }),
+      );
     });
 
     it('list() reads reciprocal partner genders from UserProfilePreference when row exists (not desiredPartnerGenders JSON)', async () => {
@@ -1028,6 +1106,7 @@ describe('MeMatchesService', () => {
       const isolatedSvc = new MeMatchesService(
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
+        photoStorage as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -1055,6 +1134,7 @@ describe('MeMatchesService', () => {
       const isolatedSvc = new MeMatchesService(
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
+        photoStorage as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -1085,6 +1165,7 @@ describe('MeMatchesService', () => {
       const isolatedSvc = new MeMatchesService(
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
+        photoStorage as never,
       );
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);

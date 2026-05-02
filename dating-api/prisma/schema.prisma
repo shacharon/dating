@@ -34,6 +34,12 @@ enum ProfileGender {
   PREFER_NOT_TO_SAY
 }
 
+enum UserProfilePhotoStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id          String     @id @default(cuid())
   email       String     @unique
@@ -72,23 +78,23 @@ model UserProfile {
   lastAnalysisError     String?
 
   // ── Holy Grail structured facts (self) ─────────────────────────────────────
-  childrenStatus          String?
-  wantsChildren           String?
-  smokingFrequency        String?
-  alcoholUse              String?
-  education               String?
-  religion                String?
+  childrenStatus   String?
+  wantsChildren    String?
+  smokingFrequency String?
+  alcoholUse       String?
+  education        String?
+  religion         String?
 
   // Partner preference scalars/arrays live on UserProfilePreference (Phase F).
 
   // DB-first searchable fields (populated via dual-write in MeProfileAnalysisService; write-only cache).
   // Semantic source of truth: UserProfileEvaluation.evaluationJson. Engine/HG reads use evaluationJson only.
-  interestsTop       String[] @default([])
-  sigEmotionalDepth  Int?
-  sigLifestylePace   Int?
-  sigConflictStyle   Int?
-  sigIndependence    Int?
-  sigSocialBattery   Int?
+  interestsTop      String[] @default([])
+  sigEmotionalDepth Int?
+  sigLifestylePace  Int?
+  sigConflictStyle  Int?
+  sigIndependence   Int?
+  sigSocialBattery  Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -96,6 +102,7 @@ model UserProfile {
   evaluations UserProfileEvaluation[]
   signals     UserProfileSignal[]
   interests   UserProfileInterest[]
+  photos      UserProfilePhoto[]
   preference  UserProfilePreference?
 
   @@index([status, gender, birthDate])
@@ -133,21 +140,21 @@ model UserProfileInterest {
 }
 
 model UserProfilePreference {
-  id                      String      @id @default(cuid())
-  profileId               String      @unique
-  profile                 UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  partnerAgeMin           Int?
-  partnerAgeMax           Int?
-  maxDistanceKm           Int?
-  minimumPartnerEducation String?
-  acceptedPartnerGenders  String[]    @default([])
-  acceptedPartnerSmoking  String[]    @default([])
-  acceptedPartnerAlcohol  String[]    @default([])
-  acceptedPartnerReligions String[]   @default([])
-  partnerWantsChildren    String?
-  partnerHasChildren      String?
-  similarityPreference    String?
-  updatedAt               DateTime    @updatedAt
+  id                       String      @id @default(cuid())
+  profileId                String      @unique
+  profile                  UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  partnerAgeMin            Int?
+  partnerAgeMax            Int?
+  maxDistanceKm            Int?
+  minimumPartnerEducation  String?
+  acceptedPartnerGenders   String[]    @default([])
+  acceptedPartnerSmoking   String[]    @default([])
+  acceptedPartnerAlcohol   String[]    @default([])
+  acceptedPartnerReligions String[]    @default([])
+  partnerWantsChildren     String?
+  partnerHasChildren       String?
+  similarityPreference     String?
+  updatedAt                DateTime    @updatedAt
 }
 
 /**
@@ -165,6 +172,27 @@ model UserProfileEvaluation {
   createdAt DateTime @default(now())
 
   @@index([profileId, createdAt(sort: Desc)])
+}
+
+model UserProfilePhoto {
+  id                   String                 @id @default(cuid())
+  profileId            String
+  profile              UserProfile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  storageKey           String
+  originalFileName     String?
+  mimeType             String
+  sizeBytes            Int
+  position             Int
+  isPrimary            Boolean                @default(false)
+  status               UserProfilePhotoStatus @default(PENDING)
+  moderationProvider   String?
+  moderationResultJson Json?
+  rejectionReason      String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@unique([profileId, position])
+  @@index([profileId])
 }
 
 model UserSession {

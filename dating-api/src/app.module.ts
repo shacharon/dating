@@ -18,6 +18,7 @@ import { MatchesModule } from './matches/matches.module';
 import { MeProfileModule } from './me-profile/me-profile.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PhotoStorageModule } from './photo-storage/photo-storage.module';
 import { SessionModule } from './session/session.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { SessionModule } from './session/session.module';
     // so DATABASE_URL loads when Nest is started from a parent directory or via tooling.
     ConfigModule.forRoot({ isGlobal: true, envFilePath: join(__dirname, '..', '.env') }),
     AuthSessionConfigModule,
+    PhotoStorageModule,
     PrismaModule,
     SimpleLoggerModule,
     StructuredLoggingModule,

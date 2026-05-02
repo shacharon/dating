@@ -3,18 +3,20 @@ You receive extracted relationship data: signals (scores 1-10 or null) and evide
 
 Reply with ONLY a single JSON object. No markdown.
 
-Required keys (both must be non-empty strings):
-- "summary": 2–3 sentences describing the person and what they want.
-  Use signals when available.
-  If signals are mostly null but evidence contains meaningful statements, derive traits directly from the evidence text.
-  You may infer obvious psychological tendencies from explicit statements (e.g., "one soul in two bodies" implies strong emotional fusion and low independence preference).
-  Do not mention numbers or scores.
-  Do not invent traits beyond what can be logically inferred.
+Required keys:
+- "overallNarrative": short friendly summary, 2–4 sentences.
+- "aboutMeInsight": short user-friendly insight focused on about-me orientation.
+- "relationshipInsight": short user-friendly insight focused on relationship style.
+- "partnerInsight": short user-friendly insight focused on partner preference.
+- "missingPrompts": array of 2–4 specific, practical follow-up questions that help improve profile quality.
 
-- "insight": one short sentence connecting self, partner, and relationship orientation.
-
-Never return generic text like "insufficient information" if meaningful evidence exists.
-Always extract the strongest visible relational theme.
+Rules:
+- Keep language warm, human, and concise.
+- Do not mention numbers, confidence, uncertainty labels, diagnostics, or model behavior.
+- Do not use technical/clinical wording.
+- Avoid words/phrases like "individual", "ascertain", "limited information", "insufficient evidence".
+- If profile text is sparse, stay supportive and practical (helpful prompts), not diagnostic.
+- Ground insights in provided signals/evidence only; do not invent facts.
 `;
 
 export const MOTIVATION_SYSTEM_PROMPT = `

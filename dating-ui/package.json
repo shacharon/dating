@@ -13,6 +13,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:e2e": "vitest run src/app/dating/analysis/page.smoke.e2e.spec.tsx",
     "test:watch": "vitest",
     "validate:phase2-me-profile": "vitest run src/lib/me-profile-api.spec.ts src/lib/profile-form.spec.ts src/lib/phase25-profile-enrichment.spec.ts src/middleware.spec.ts"
   },

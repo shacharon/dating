@@ -90,6 +90,25 @@ export interface MeLatestAnalysisDto {
   evaluationJson: unknown | null;
 }
 
+export type MeProfilePhotoStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface MeProfilePhotoDto {
+  id: string;
+  profileId: string;
+  storageKey: string;
+  originalFileName: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  position: number;
+  isPrimary: boolean;
+  status: MeProfilePhotoStatus;
+  moderationProvider: string | null;
+  moderationResultJson: unknown | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 async function readJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!text) {
@@ -502,4 +521,118 @@ export async function fetchMyLatestAnalysis(): Promise<MeLatestAnalysisDto | nul
     },
   });
   return dto;
+}
+
+export async function listMyProfilePhotos(): Promise<MeProfilePhotoDto[]> {
+  const base = getApiBase();
+  const path = '/api/v1/me/profile/photos';
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<MeProfilePhotoDto[]>(res);
+}
+
+export async function uploadMyProfilePhoto(file: File): Promise<MeProfilePhotoDto> {
+  const base = getApiBase();
+  const path = '/api/v1/me/profile/photos';
+  const form = new FormData();
+  form.append('file', file);
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'POST',
+      credentials: 'include',
+      body: form,
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(
+      `POST ${path} failed: ${res.status} ${errText || res.statusText}`,
+    );
+  }
+  return readJson<MeProfilePhotoDto>(res);
+}
+
+export async function deleteMyProfilePhoto(photoId: string): Promise<void> {
+  const base = getApiBase();
+  const path = `/api/v1/me/profile/photos/${encodeURIComponent(photoId)}`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'DELETE',
+      ...credFetch,
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(
+      `DELETE ${path} failed: ${res.status} ${errText || res.statusText}`,
+    );
+  }
+}
+
+export async function setPrimaryMyProfilePhoto(
+  photoId: string,
+): Promise<MeProfilePhotoDto> {
+  const base = getApiBase();
+  const path = `/api/v1/me/profile/photos/${encodeURIComponent(photoId)}/primary`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'PATCH',
+      ...credFetch,
+      headers: JSON_HEADERS,
+      body: '{}',
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(
+      `PATCH ${path} failed: ${res.status} ${errText || res.statusText}`,
+    );
+  }
+  return readJson<MeProfilePhotoDto>(res);
+}
+
+export async function fetchMyProfilePhotoBlob(photoId: string): Promise<Blob> {
+  const base = getApiBase();
+  const path = `/api/v1/me/profile/photos/${encodeURIComponent(photoId)}/file`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return res.blob();
 }

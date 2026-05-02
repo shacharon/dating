@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -8,9 +9,16 @@ import {
   Param,
   Patch,
   Post,
+  Res,
+  StreamableFile,
   UseGuards,
+  UseInterceptors,
   UsePipes,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import type { Response } from 'express';
 import type { AuthMeResponseDto } from '../auth/auth.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -59,6 +67,18 @@ export class MeProfileController {
     @Param('id') id: string,
   ) {
     return this.matches.getById(user.id, id);
+  }
+
+  @Get('matches/:id/photos/:photoId/file')
+  async getMatchPrimaryPhotoFile(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.matches.getPrimaryPhotoFileById(user.id, id, photoId);
+    res.setHeader('Content-Type', file.contentType);
+    return new StreamableFile(file.content);
   }
 
   /**
@@ -126,5 +146,57 @@ export class MeProfileController {
   @HttpCode(HttpStatus.OK)
   submitProfile(@CurrentUser() user: AuthMeResponseDto) {
     return this.meProfile.submitForUser(user.id);
+  }
+
+  @Post('profile/photos')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  uploadPhoto(
+    @CurrentUser() user: AuthMeResponseDto,
+    @UploadedFile()
+    file?: {
+      mimetype: string;
+      size: number;
+      originalname?: string;
+      buffer: Buffer;
+    },
+  ) {
+    return this.meProfile.uploadPhotoForUser(user.id, file);
+  }
+
+  @Get('profile/photos')
+  listPhotos(@CurrentUser() user: AuthMeResponseDto) {
+    return this.meProfile.listPhotosForUser(user.id);
+  }
+
+  @Delete('profile/photos/:photoId')
+  deletePhoto(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('photoId') photoId: string,
+  ) {
+    return this.meProfile.deletePhotoForUser(user.id, photoId);
+  }
+
+  @Patch('profile/photos/:photoId/primary')
+  setPrimaryPhoto(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('photoId') photoId: string,
+  ) {
+    return this.meProfile.setPrimaryPhotoForUser(user.id, photoId);
+  }
+
+  @Get('profile/photos/:photoId/file')
+  async getPhotoFile(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('photoId') photoId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.meProfile.getPhotoFileForUser(user.id, photoId);
+    res.setHeader('Content-Type', file.contentType);
+    return new StreamableFile(file.content);
   }
 }

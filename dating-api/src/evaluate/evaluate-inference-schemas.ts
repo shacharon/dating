@@ -75,3 +75,30 @@ export const AttractionTraitsResultSchema = z.object({
 export type AttractionTraitsResult = z.infer<
   typeof AttractionTraitsResultSchema
 >;
+
+/**
+ * User-facing presentation copy for profile analysis.
+ * Legacy compatibility is handled downstream by mapping these fields back into
+ * display.summary / display.insight.
+ */
+export const AnalysisPresentationSchema = z.object({
+  overallNarrative: z.string().min(1).optional(),
+  aboutMeInsight: z.string().min(1).optional(),
+  relationshipInsight: z.string().min(1).optional(),
+  partnerInsight: z.string().min(1).optional(),
+  missingPrompts: z.array(z.string().min(1)).min(2).max(4).optional(),
+  /** Legacy compatibility: existing callers/tests may still provide these keys. */
+  summary: z.string().min(1).optional(),
+  insight: z.string().min(1).optional(),
+})
+  .passthrough()
+  .refine(
+    (v) =>
+      Boolean(v.overallNarrative || v.summary) &&
+      Boolean(v.relationshipInsight || v.insight),
+    {
+      message:
+        'analysis presentation requires overallNarrative/summary and relationshipInsight/insight',
+    },
+  );
+export type AnalysisPresentation = z.infer<typeof AnalysisPresentationSchema>;

@@ -30,6 +30,7 @@ function makeProfileRow(overrides: {
     aboutRelationship: 'About relationship text',
     analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
     _count: { evaluations: overrides.evaluationCount ?? 1 },
+    photos: [] as Array<{ id: string; isPrimary: boolean }>,
   };
 }
 
@@ -119,6 +120,47 @@ describe('MeProfileMatchesService', () => {
     expect(result.candidates[0].userProfileId).toBe('prof_candidate_2');
     expect(result.candidates[0].gender).toBe('FEMALE');
     expect(result.candidates[0].hasEvaluation).toBe(true);
+    expect(result.candidates[0].primaryPhotoUrl).toBeNull();
+    expect(result.candidates[0].approvedPhotoCount).toBe(0);
+  });
+
+  it('includes approved primary photo URL and count for candidates', async () => {
+    prisma.userProfile.findUnique.mockResolvedValue(
+      makeProfileRow({
+        id: viewerProfileId,
+        userId: viewerUserId,
+        gender: 'MALE',
+        desiredPartnerGenders: ['FEMALE'],
+      }),
+    );
+    prisma.userProfile.findMany.mockResolvedValue([
+      {
+        ...makeProfileRow({
+          id: 'prof_candidate_photo',
+          userId: 'user_cp',
+          gender: 'FEMALE',
+          desiredPartnerGenders: null,
+        }),
+        photos: [{ id: 'photo_primary', isPrimary: true }],
+      },
+    ]);
+
+    const result = await service.getMatchesForUser(viewerUserId);
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].primaryPhotoUrl).toBe(
+      '/api/v1/me/matches/prof_candidate_photo/photos/photo_primary/file',
+    );
+    expect(result.candidates[0].approvedPhotoCount).toBe(1);
+    expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          photos: expect.objectContaining({
+            where: { status: 'APPROVED' },
+          }),
+        }),
+      }),
+    );
   });
 
   // ── Reciprocal filter: candidate rejects viewer ──────────────────────────────

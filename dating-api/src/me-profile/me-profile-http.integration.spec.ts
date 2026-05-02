@@ -23,8 +23,10 @@ import { requestCorrelationMiddleware } from '../logging/request-correlation.mid
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { LLM_CONFIG } from '../llm/llm.constants';
+import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileModule } from './me-profile.module';
+import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
 function parseStructuredJsonLogs(
   spy: jest.SpiedFunction<typeof console.log>,
@@ -81,6 +83,21 @@ describe('me profile HTTP (integration)', () => {
     userProfilePreference: {
       upsert: jest.fn().mockResolvedValue({}),
     },
+    userProfilePhoto: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      delete: jest.fn(),
+    },
+  };
+  const photoStorageMock = {
+    driver: 'local' as const,
+    buildStorageKey: jest.fn(),
+    save: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
+    read: jest.fn(),
   };
   const usersServiceMock = {
     findById: jest.fn(),
@@ -142,6 +159,10 @@ describe('me profile HTTP (integration)', () => {
       .useValue({ openai: { apiKey: 'test-key-not-used' }, models: new Map() })
       .overrideProvider(MeProfileAnalysisService)
       .useValue({ runForUser: jest.fn().mockResolvedValue(undefined) })
+      .overrideProvider(MeProfileValidationPipe)
+      .useValue({ transform: (v: unknown) => v })
+      .overrideProvider(PHOTO_STORAGE)
+      .useValue(photoStorageMock)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -160,6 +181,22 @@ describe('me profile HTTP (integration)', () => {
       async (fn: (tx: typeof prismaMock) => Promise<unknown>) => fn(prismaMock),
     );
     prismaMock.userProfile.findUnique.mockReset();
+    prismaMock.userProfilePhoto.findMany.mockReset();
+    prismaMock.userProfilePhoto.findFirst.mockReset();
+    prismaMock.userProfilePhoto.create.mockReset();
+    prismaMock.userProfilePhoto.update.mockReset();
+    prismaMock.userProfilePhoto.updateMany.mockReset();
+    prismaMock.userProfilePhoto.delete.mockReset();
+    photoStorageMock.buildStorageKey.mockReset();
+    photoStorageMock.save.mockReset();
+    photoStorageMock.delete.mockReset();
+    photoStorageMock.read.mockReset();
+    prismaMock.userProfilePhoto.findMany.mockResolvedValue([]);
+    prismaMock.userProfilePhoto.findFirst.mockResolvedValue(null);
+    prismaMock.userProfilePhoto.updateMany.mockResolvedValue({ count: 0 });
+    photoStorageMock.save.mockResolvedValue(undefined);
+    photoStorageMock.delete.mockResolvedValue(undefined);
+    photoStorageMock.read.mockResolvedValue(Buffer.from([1, 2, 3]));
     verifyIdToken.mockReset();
     usersServiceMock.findByEmail.mockResolvedValue(null);
     usersServiceMock.findByGoogleId.mockResolvedValue(null);
@@ -1248,6 +1285,11 @@ describe('me profile HTTP (integration)', () => {
     expect(res.body.evaluationId).toBe('upeval_int_1');
     expect(res.body.createdAt).toBe(createdAt.toISOString());
     expect(res.body.evaluationJson).toEqual({ self: {}, partner: {} });
+    expect(prismaMock.userProfileEvaluation.findFirst).toHaveBeenCalledWith({
+      where: { profileId: 'prof_analysis_latest_2' },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -1678,6 +1720,7 @@ describe('me profile HTTP (integration)', () => {
           aboutPartner: null,
           aboutRelationship: null,
           analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+          photos: [{ id: 'photo_match_1', isPrimary: true }],
           _count: { evaluations: 2 },
           ...HG_FIELD_DEFAULTS,
           preference: testUserProfilePreference('prof_s5_cand_2'),
@@ -1694,6 +1737,10 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.matches[0].id).toBe('prof_s5_cand_2');
       expect(res.body.matches[0].gender).toBe('MALE');
       expect(res.body.matches[0].hasEvaluation).toBe(true);
+      expect(res.body.matches[0].primaryPhotoUrl).toBe(
+        '/api/v1/me/matches/prof_s5_cand_2/photos/photo_match_1/file',
+      );
+      expect(res.body.matches[0].approvedPhotoCount).toBe(1);
     });
   });
 
@@ -1812,6 +1859,314 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.aboutPartner).toBeUndefined();
       expect(res.body.aboutRelationship).toBeUndefined();
       expect(res.body.userId).toBeUndefined();
+    });
+
+    it('serves approved primary match photo through controlled endpoint', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce({
+          ...candidateProfile,
+          preference: testUserProfilePreference('prof_s5_det_cand'),
+        });
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue({
+        id: 'photo_s5_primary',
+        profileId: 'prof_s5_det_cand',
+        storageKey: 'uploads/profile-photos/prof_s5_det_cand/photo_s5_primary.jpg',
+        mimeType: 'image/jpeg',
+      });
+      photoStorageMock.read.mockResolvedValue(Buffer.from([255, 216, 255]));
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand/photos/photo_s5_primary/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200)
+        .expect('Content-Type', /image\/jpeg/);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Photo API: /api/v1/me/profile/photos
+  // ---------------------------------------------------------------------------
+  describe('photo API', () => {
+    const profileRow = {
+      id: 'prof_photo_1',
+      userId: USER_ID,
+      status: UserProfileStatus.DRAFT,
+      onboardingStep: 'BASIC',
+      name: '',
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: null,
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: null,
+      city: null,
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    it('uploads photo successfully', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findMany.mockResolvedValue([]);
+      prismaMock.userProfilePhoto.create.mockResolvedValue({
+        id: 'photo_1',
+        profileId: profileRow.id,
+        storageKey: 'pending://storage-key',
+        originalFileName: 'pic.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 4,
+        position: 0,
+        isPrimary: true,
+        status: 'APPROVED',
+        moderationProvider: 'stub',
+        moderationResultJson: { decision: 'approved' },
+        rejectionReason: null,
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-05-01T00:00:00.000Z'),
+      });
+      photoStorageMock.buildStorageKey.mockReturnValue(
+        'uploads/profile-photos/prof_photo_1/photo_1.jpg',
+      );
+      prismaMock.userProfilePhoto.update.mockResolvedValue({
+        id: 'photo_1',
+        profileId: profileRow.id,
+        storageKey: 'uploads/profile-photos/prof_photo_1/photo_1.jpg',
+        originalFileName: 'pic.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 4,
+        position: 0,
+        isPrimary: true,
+        status: 'APPROVED',
+        moderationProvider: 'stub',
+        moderationResultJson: { decision: 'approved' },
+        rejectionReason: null,
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-05-01T00:00:00.000Z'),
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/profile/photos')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .attach('file', Buffer.from([1, 2, 3, 4]), {
+          filename: 'pic.jpg',
+          contentType: 'image/jpeg',
+        })
+        .expect(201);
+
+      expect(res.body.id).toBe('photo_1');
+      expect(res.body.status).toBe('APPROVED');
+      expect(photoStorageMock.save).toHaveBeenCalled();
+    });
+
+    it('rejects 4th photo', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findMany.mockResolvedValue([
+        { id: 'p1', position: 0, status: 'APPROVED', isPrimary: true },
+        { id: 'p2', position: 1, status: 'APPROVED', isPrimary: false },
+        { id: 'p3', position: 2, status: 'APPROVED', isPrimary: false },
+      ]);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/profile/photos')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .attach('file', Buffer.from([1, 2, 3]), {
+          filename: 'pic.jpg',
+          contentType: 'image/jpeg',
+        })
+        .expect(422);
+    });
+
+    it('rejects invalid mime', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/profile/photos')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .attach('file', Buffer.from([1, 2, 3]), {
+          filename: 'bad.gif',
+          contentType: 'image/gif',
+        })
+        .expect(422);
+    });
+
+    it('rejects oversized file', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      const tooBig = Buffer.alloc(5 * 1024 * 1024 + 1, 1);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/profile/photos')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .attach('file', tooBig, {
+          filename: 'big.jpg',
+          contentType: 'image/jpeg',
+        })
+        .expect(413);
+    });
+
+    it('lists own photos only', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findMany.mockResolvedValue([
+        {
+          id: 'photo_a',
+          profileId: profileRow.id,
+          storageKey: 'uploads/profile-photos/prof_photo_1/photo_a.jpg',
+          originalFileName: 'a.jpg',
+          mimeType: 'image/jpeg',
+          sizeBytes: 1,
+          position: 0,
+          isPrimary: true,
+          status: 'APPROVED',
+          moderationProvider: 'stub',
+          moderationResultJson: null,
+          rejectionReason: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/profile/photos')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe('photo_a');
+      expect(prismaMock.userProfilePhoto.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { profileId: profileRow.id } }),
+      );
+    });
+
+    it('cannot delete another user photo', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/profile/photos/photo_other')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('set primary works only for own APPROVED photo', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue({
+        id: 'photo_2',
+        profileId: profileRow.id,
+        status: 'REJECTED',
+      });
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/me/profile/photos/photo_2/primary')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(422);
+    });
+
+    it('delete primary promotes lowest-position approved remaining photo', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst
+        .mockResolvedValueOnce({
+          id: 'photo_primary',
+          profileId: profileRow.id,
+          storageKey: 'uploads/profile-photos/prof_photo_1/photo_primary.jpg',
+          isPrimary: true,
+          status: 'APPROVED',
+          position: 0,
+        })
+        .mockResolvedValueOnce({
+          id: 'photo_next',
+          profileId: profileRow.id,
+          storageKey: 'uploads/profile-photos/prof_photo_1/photo_next.jpg',
+          isPrimary: false,
+          status: 'APPROVED',
+          position: 1,
+        });
+      prismaMock.userProfilePhoto.delete.mockResolvedValue({});
+      prismaMock.userProfilePhoto.update.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/profile/photos/photo_primary')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(prismaMock.userProfilePhoto.update).toHaveBeenCalledWith({
+        where: { id: 'photo_next' },
+        data: { isPrimary: true },
+      });
+    });
+
+    it('owner can read own image file', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue({
+        id: 'photo_own',
+        profileId: profileRow.id,
+        storageKey: 'uploads/profile-photos/prof_photo_1/photo_own.jpg',
+        mimeType: 'image/jpeg',
+      });
+      photoStorageMock.read.mockResolvedValue(Buffer.from([255, 216, 255]));
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/profile/photos/photo_own/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200)
+        .expect('Content-Type', /image\/jpeg/);
+    });
+
+    it('other user cannot read image', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/profile/photos/photo_other/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('missing file returns 404', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue({
+        id: 'photo_missing',
+        profileId: profileRow.id,
+        storageKey: 'uploads/profile-photos/prof_photo_1/photo_missing.jpg',
+        mimeType: 'image/jpeg',
+      });
+      photoStorageMock.read.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/profile/photos/photo_missing/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('content-type matches photo mimeType', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(profileRow);
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue({
+        id: 'photo_png',
+        profileId: profileRow.id,
+        storageKey: 'uploads/profile-photos/prof_photo_1/photo_png.png',
+        mimeType: 'image/png',
+      });
+      photoStorageMock.read.mockResolvedValue(Buffer.from([137, 80, 78, 71]));
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/profile/photos/photo_png/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200)
+        .expect('Content-Type', /image\/png/);
     });
   });
 

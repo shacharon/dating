@@ -2,8 +2,22 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
+import { DEFAULT_LOCALE, getCopy, type AppLocale } from "@/lib/i18n";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+/** Match `href` (path + optional `?query`) to App Router location (no leading `?` in `search`). */
+function hrefMatchesLocation(
+  href: string,
+  pathname: string,
+  search: string,
+): boolean {
+  const q = href.indexOf("?");
+  const path = q >= 0 ? href.slice(0, q) : href;
+  const qs = q >= 0 ? href.slice(q + 1) : "";
+  return path === pathname && qs === search;
+}
 
 function initialsForUser(user: AuthUser): string {
   const n = user.displayName?.trim();
@@ -21,11 +35,41 @@ function initialsForUser(user: AuthUser): string {
 
 const menuItemClass =
   "block w-full px-4 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800";
+const menuItemDisabledClass =
+  "block w-full cursor-not-allowed px-4 py-2 text-left text-sm text-zinc-400 dark:text-zinc-500";
 
-export function NavAuth() {
+export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
   const { status, user, logout, lastError, clearLastError } = useAuth();
+  const copy = getCopy(locale);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navPendingHref, setNavPendingHref] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    router.prefetch("/onboarding/basic?edit=1");
+    router.prefetch("/onboarding/texts?edit=1");
+    router.prefetch("/settings/account");
+    router.prefetch("/settings/language");
+  }, [menuOpen, router]);
+
+  useEffect(() => {
+    if (!navPendingHref) return;
+    if (hrefMatchesLocation(navPendingHref, pathname, search)) {
+      console.timeEnd("nav");
+      setNavPendingHref(null);
+    }
+  }, [pathname, search, navPendingHref]);
+
+  function onAvatarMenuNavigate(href: string) {
+    console.time("nav");
+    setNavPendingHref(href);
+    setMenuOpen(false);
+  }
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -96,6 +140,7 @@ export function NavAuth() {
         aria-expanded={menuOpen}
         aria-haspopup="true"
         aria-label="Account menu"
+        aria-busy={navPendingHref !== null}
         onClick={() => setMenuOpen((o) => !o)}
       >
         {user.avatarUrl ? (
@@ -120,35 +165,42 @@ export function NavAuth() {
         >
           <Link
             href="/settings/account"
+            prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => onAvatarMenuNavigate("/settings/account")}
           >
-            Account Settings
+            {copy.nav.accountSettings}
           </Link>
           <Link
-            href="/settings/profile"
+            href="/onboarding/basic?edit=1"
+            prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => onAvatarMenuNavigate("/onboarding/basic?edit=1")}
           >
-            Profile Details
+            {copy.nav.editBasicProfile}
           </Link>
           <Link
-            href="/settings/preferences"
+            href="/onboarding/texts?edit=1"
+            prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => onAvatarMenuNavigate("/onboarding/texts?edit=1")}
           >
-            Match Preferences
+            {copy.nav.editStoryProfile}
           </Link>
+          <span className={menuItemDisabledClass} role="menuitem" aria-disabled="true">
+            Match Preferences (TODO)
+          </span>
           <Link
             href="/settings/language"
+            prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => onAvatarMenuNavigate("/settings/language")}
           >
-            Language
+            {copy.nav.language}
           </Link>
           <div className="my-1 border-t border-zinc-200 dark:border-zinc-700" />
           <button
@@ -160,7 +212,7 @@ export function NavAuth() {
               void logout();
             }}
           >
-            Logout
+            {copy.nav.logout}
           </button>
         </div>
       ) : null}

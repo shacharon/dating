@@ -2,11 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetRequestIdContextForTests } from '@/lib/observability/request-id';
 import {
   createMyProfile,
+  deleteMyProfilePhoto,
+  fetchMyProfilePhotoBlob,
   fetchMyLatestAnalysis,
+  listMyProfilePhotos,
   fetchMyMatches,
   fetchMyProfile,
   patchMyProfile,
+  setPrimaryMyProfilePhoto,
   submitMyProfileForAnalysis,
+  uploadMyProfilePhoto,
 } from '@/lib/me-profile-api';
 
 function mockResponse(init: {
@@ -310,5 +315,134 @@ describe('me-profile-api', () => {
       mockResponse({ ok: false, status: 500, statusText: 'Internal Server Error', text: async () => '' }),
     );
     await expect(fetchMyMatches()).rejects.toThrow(/500/);
+  });
+
+  it('listMyProfilePhotos GETs /api/v1/me/profile/photos', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify([
+            {
+              id: 'ph1',
+              profileId: 'p1',
+              storageKey: 'uploads/profile-photos/p1/ph1.jpg',
+              originalFileName: 'a.jpg',
+              mimeType: 'image/jpeg',
+              sizeBytes: 123,
+              position: 0,
+              isPrimary: true,
+              status: 'APPROVED',
+              moderationProvider: 'stub',
+              moderationResultJson: null,
+              rejectionReason: null,
+              createdAt: 't',
+              updatedAt: 't',
+            },
+          ]),
+      }),
+    );
+    const photos = await listMyProfilePhotos();
+    expect(photos).toHaveLength(1);
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/profile/photos',
+      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    );
+  });
+
+  it('uploadMyProfilePhoto POSTs multipart form data', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 201,
+        text: async () =>
+          JSON.stringify({
+            id: 'ph2',
+            profileId: 'p1',
+            storageKey: 'uploads/profile-photos/p1/ph2.jpg',
+            originalFileName: 'b.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 321,
+            position: 1,
+            isPrimary: false,
+            status: 'APPROVED',
+            moderationProvider: 'stub',
+            moderationResultJson: null,
+            rejectionReason: null,
+            createdAt: 't',
+            updatedAt: 't',
+          }),
+      }),
+    );
+    const file = new File([new Uint8Array([1, 2, 3])], 'b.jpg', {
+      type: 'image/jpeg',
+    });
+    await uploadMyProfilePhoto(file);
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/profile/photos',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+  });
+
+  it('deleteMyProfilePhoto DELETEs by id', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({ ok: true, status: 200, text: async () => '{"deleted":true}' }),
+    );
+    await deleteMyProfilePhoto('ph1');
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/profile/photos/ph1',
+      expect.objectContaining({ method: 'DELETE', credentials: 'include' }),
+    );
+  });
+
+  it('setPrimaryMyProfilePhoto PATCHes primary endpoint', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            id: 'ph1',
+            profileId: 'p1',
+            storageKey: 'k',
+            originalFileName: null,
+            mimeType: 'image/png',
+            sizeBytes: 10,
+            position: 0,
+            isPrimary: true,
+            status: 'APPROVED',
+            moderationProvider: 'stub',
+            moderationResultJson: null,
+            rejectionReason: null,
+            createdAt: 't',
+            updatedAt: 't',
+          }),
+      }),
+    );
+    const r = await setPrimaryMyProfilePhoto('ph1');
+    expect(r.isPrimary).toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/profile/photos/ph1/primary',
+      expect.objectContaining({ method: 'PATCH', credentials: 'include', body: '{}' }),
+    );
+  });
+
+  it('fetchMyProfilePhotoBlob GETs file endpoint', async () => {
+    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: '',
+      headers: new Headers(),
+      blob: async () => blob,
+      text: async () => '',
+    } as unknown as Response);
+    const out = await fetchMyProfilePhotoBlob('ph1');
+    expect(out.size).toBe(3);
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/profile/photos/ph1/file',
+      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    );
   });
 });

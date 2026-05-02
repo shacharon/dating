@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import {
   fetchMyProfile,
   patchMyProfile,
@@ -12,15 +12,24 @@ import { onboardingResumePath } from '@/lib/onboarding-path';
 
 export function OnboardingTextsForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
-  const [hydrated, setHydrated] = useState(false);
+  const [profileSyncing, setProfileSyncing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [finishing, setFinishing] = useState(false);
+
+  const resumeOptions = useMemo(
+    () =>
+      searchParams.get('edit') === '1'
+        ? ({ edit: true, page: 'texts' } as const)
+        : undefined,
+    [searchParams],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -28,34 +37,32 @@ export function OnboardingTextsForm() {
       try {
         const profile = await fetchMyProfile();
         if (cancelled) return;
-        if (!profile) {
-          router.replace('/onboarding/basic');
-          return;
-        }
-        const path = onboardingResumePath(profile);
-        if (path === '/dating/profile') {
+        const path = onboardingResumePath(profile, resumeOptions);
+        if (path !== '/onboarding/texts') {
+          setProfileSyncing(false);
           router.replace(path);
           return;
         }
-        if (path === '/onboarding/basic') {
+        if (!profile) {
+          setProfileSyncing(false);
           router.replace('/onboarding/basic');
           return;
         }
         setAboutMe(profile.aboutMe ?? '');
         setAboutPartner(profile.aboutPartner ?? '');
         setAboutRelationship(profile.aboutRelationship ?? '');
-        setHydrated(true);
+        setProfileSyncing(false);
       } catch (e) {
         if (!cancelled) {
           setLoadError(e instanceof Error ? e.message : 'Failed to load profile');
-          setHydrated(true);
+          setProfileSyncing(false);
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, resumeOptions]);
 
   async function handleSaveProgress() {
     setSaveError(null);
@@ -110,12 +117,6 @@ export function OnboardingTextsForm() {
     }
   }
 
-  if (!hydrated) {
-    return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
-    );
-  }
-
   const inputClass =
     'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
   const labelClass =
@@ -129,6 +130,16 @@ export function OnboardingTextsForm() {
         </p>
       ) : null}
 
+      {profileSyncing ? (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
+          Syncing profile…
+        </p>
+      ) : null}
+
+      <div
+        className={`space-y-6 ${profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
+        aria-busy={profileSyncing}
+      >
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         A few short paragraphs help us understand you. You can save and come
         back, or finish to run analysis.
@@ -180,7 +191,7 @@ export function OnboardingTextsForm() {
         <button
           type="button"
           onClick={() => void handleSaveProgress()}
-          disabled={finishing}
+          disabled={finishing || profileSyncing}
           className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           Save progress
@@ -188,17 +199,24 @@ export function OnboardingTextsForm() {
         <button
           type="button"
           onClick={() => void handleFinish()}
-          disabled={finishing}
+          disabled={finishing || profileSyncing}
           className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
         >
           {finishing ? 'Submitting…' : 'Finish & analyze'}
         </button>
         <Link
-          href="/onboarding/basic"
-          className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+          href={
+            searchParams.get('edit') === '1'
+              ? '/onboarding/basic?edit=1'
+              : '/onboarding/basic'
+          }
+          prefetch
+          className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
+          aria-disabled={profileSyncing}
         >
           Back to basics
         </Link>
+      </div>
       </div>
 
       {savedFlash ? (

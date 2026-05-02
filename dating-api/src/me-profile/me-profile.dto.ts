@@ -3,3 +3,4 @@ export { PatchMeProfileDto } from './dto/me-profile-patch.dto';
 export { MeProfileResponseDto } from './dto/me-profile-response.dto';
 export { MeProfileWritableFieldsDto } from './dto/me-profile-writable-fields.dto';
 export { MeLatestAnalysisResponseDto } from './dto/me-latest-analysis-response.dto';
+export type { MeProfilePhotoDto } from './dto/me-profile-photo.dto';
