@@ -9,6 +9,7 @@ import {
   Prisma,
   ProfileGender,
   UserProfile,
+  UserProfileOnboardingStep,
   UserProfilePreference,
   UserProfileStatus,
 } from '@prisma/client';
@@ -80,6 +81,102 @@ const SUBMITTABLE_STATUSES = new Set<string>([
   'FAILED',
 ]);
 
+function mergedTextForOnboarding(
+  existing: UserProfile | null,
+  body: CreateMeProfileDto | PatchMeProfileDto,
+  key: 'aboutMe' | 'aboutPartner' | 'aboutRelationship',
+): string | null {
+  if (body[key] !== undefined) {
+    return body[key] as string | null;
+  }
+  return existing?.[key] ?? null;
+}
+
+function mergedDesiredPartnerGendersForOnboarding(
+  existing: UserProfile | null,
+  body: CreateMeProfileDto | PatchMeProfileDto,
+): ProfileGender[] | null {
+  if (body.desiredPartnerGenders !== undefined) {
+    if (body.desiredPartnerGenders === null) {
+      return null;
+    }
+    return body.desiredPartnerGenders;
+  }
+  if (!existing) {
+    return null;
+  }
+  return parseDesiredPartnerGenders(existing.desiredPartnerGenders);
+}
+
+function isNonEmptyTrimmedText(value: string | null | undefined): boolean {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/**
+ * Enforces two-step onboarding: TEXTS requires partner genders; COMPLETED requires all three text fields.
+ * BASIC is always allowed (partial saves). Analysis still only runs on {@link MeProfileService.submitForUser}.
+ */
+function assertOnboardingStepCoherent(
+  existing: UserProfile | null,
+  body: CreateMeProfileDto | PatchMeProfileDto,
+): void {
+  if (body.onboardingStep === undefined) {
+    return;
+  }
+  if (body.onboardingStep === UserProfileOnboardingStep.BASIC) {
+    return;
+  }
+  if (body.onboardingStep === UserProfileOnboardingStep.TEXTS) {
+    const genders = mergedDesiredPartnerGendersForOnboarding(existing, body);
+    if (!genders?.length) {
+      const ex = new UnprocessableEntityException({
+        error: 'onboarding_partner_genders_required',
+        message:
+          'Set at least one desiredPartnerGenders value before moving onboarding to TEXTS.',
+      });
+      markHttpExceptionObservabilityLogged(ex);
+      throw ex;
+    }
+    return;
+  }
+  if (body.onboardingStep === UserProfileOnboardingStep.COMPLETED) {
+    const aboutMe = mergedTextForOnboarding(existing, body, 'aboutMe');
+    const aboutPartner = mergedTextForOnboarding(existing, body, 'aboutPartner');
+    const aboutRelationship = mergedTextForOnboarding(
+      existing,
+      body,
+      'aboutRelationship',
+    );
+    if (
+      !isNonEmptyTrimmedText(aboutMe) ||
+      !isNonEmptyTrimmedText(aboutPartner) ||
+      !isNonEmptyTrimmedText(aboutRelationship)
+    ) {
+      const ex = new UnprocessableEntityException({
+        error: 'onboarding_texts_incomplete',
+        message:
+          'aboutMe, aboutPartner, and aboutRelationship must all be non-empty before onboarding can be COMPLETED.',
+      });
+      markHttpExceptionObservabilityLogged(ex);
+      throw ex;
+    }
+  }
+}
+
+function applyOnboardingCompletionToWriteData(
+  data: Prisma.UserProfileUpdateInput,
+  body: CreateMeProfileDto | PatchMeProfileDto,
+  existingCompletedAt: Date | null | undefined,
+): void {
+  if (body.onboardingStep !== UserProfileOnboardingStep.COMPLETED) {
+    return;
+  }
+  if (existingCompletedAt) {
+    return;
+  }
+  data.onboardingCompletedAt = new Date();
+}
+
 function toResponse(
   row: UserProfile,
   preference: UserProfilePreference | null,
@@ -88,7 +185,9 @@ function toResponse(
     id: row.id,
     userId: row.userId,
     status: row.status,
+    nickname: row.nickname ?? null,
     onboardingStep: row.onboardingStep,
+    onboardingCompletedAt: row.onboardingCompletedAt ?? null,
     aboutMe: row.aboutMe,
     aboutPartner: row.aboutPartner,
     aboutRelationship: row.aboutRelationship,
@@ -186,6 +285,10 @@ function toPrismaWritableData(
   }
   if (body.aboutRelationship !== undefined) {
     data.aboutRelationship = body.aboutRelationship;
+  }
+  if (body.nickname !== undefined) {
+    const n = body.nickname;
+    data.nickname = n === null || n === '' ? null : n;
   }
   if (body.onboardingStep !== undefined) {
     data.onboardingStep = body.onboardingStep;
@@ -315,15 +418,6 @@ export class MeProfileService {
     userId: string,
     body: CreateMeProfileDto,
   ): Promise<MeProfileResponseDto> {
-    if (!body.gender) {
-      const ex = new UnprocessableEntityException({
-        error: 'gender_required',
-        message: 'gender is required to create a profile',
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
-    }
-
     const existing = await this.prisma.userProfile.findUnique({
       where: { userId },
     });
@@ -339,13 +433,20 @@ export class MeProfileService {
       });
     }
 
+    assertOnboardingStepCoherent(null, body);
+
     try {
       const row = await this.prisma.$transaction(async (tx) => {
+        const writable = toPrismaWritableData(body);
+        if (body.gender === undefined) {
+          writable.gender = ProfileGender.PREFER_NOT_TO_SAY;
+        }
+        applyOnboardingCompletionToWriteData(writable, body, null);
         const created = await tx.userProfile.create({
           data: {
             user: { connect: { id: userId } },
             status: UserProfileStatus.DRAFT,
-            ...toPrismaWritableData(body),
+            ...writable,
           } as Prisma.UserProfileCreateInput,
         });
         await this.upsertPreference(tx, created.id, body);
@@ -368,6 +469,18 @@ export class MeProfileService {
       }
       return toResponse(full, full.preference);
     } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        const target = e.meta?.target;
+        if (Array.isArray(target) && target.includes('nickname')) {
+          throw new ConflictException({
+            error: 'nickname_taken',
+            message: 'This nickname is already in use.',
+          });
+        }
+      }
       this.obs.error(
         'me profile create persistence failed',
         ErrorCodes.ME_PROFILE_SAVE_FAILED,
@@ -397,7 +510,14 @@ export class MeProfileService {
       });
     }
 
+    assertOnboardingStepCoherent(existing, body);
+
     const data = toPrismaWritableData(body);
+    applyOnboardingCompletionToWriteData(
+      data,
+      body,
+      existing.onboardingCompletedAt,
+    );
     const prefDelta = toPreferenceData(body);
     const hasProfileFieldChanges = Object.keys(data).length > 0;
     const hasPrefChanges = Object.keys(prefDelta).length > 0;
@@ -437,6 +557,18 @@ export class MeProfileService {
       );
       return toResponse(full, full.preference);
     } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        const target = e.meta?.target;
+        if (Array.isArray(target) && target.includes('nickname')) {
+          throw new ConflictException({
+            error: 'nickname_taken',
+            message: 'This nickname is already in use.',
+          });
+        }
+      }
       this.obs.error(
         'me profile patch persistence failed',
         ErrorCodes.ME_PROFILE_SAVE_FAILED,
@@ -487,14 +619,18 @@ export class MeProfileService {
       throw ex;
     }
 
-    if (!existing.gender) {
+    if (
+      !existing.gender ||
+      existing.gender === ProfileGender.PREFER_NOT_TO_SAY
+    ) {
       this.obs.error(
-        `me profile submit rejected: gender missing profileId=${existing.id}`,
+        `me profile submit rejected: gender not chosen profileId=${existing.id}`,
         ErrorCodes.ME_PROFILE_SUBMIT_INVALID_STATE,
       );
       const ex = new UnprocessableEntityException({
         error: 'gender_required',
-        message: 'gender must be set before submitting the profile',
+        message:
+          'Choose a gender (other than prefer-not-to-say) before submitting the profile for analysis.',
       });
       markHttpExceptionObservabilityLogged(ex);
       throw ex;

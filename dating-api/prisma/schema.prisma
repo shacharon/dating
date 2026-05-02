@@ -20,6 +20,12 @@ enum UserProfileStatus {
   FAILED
 }
 
+enum UserProfileOnboardingStep {
+  BASIC
+  TEXTS
+  COMPLETED
+}
+
 enum ProfileGender {
   MALE
   FEMALE
@@ -44,12 +50,14 @@ model User {
 }
 
 model UserProfile {
-  id                    String            @id @default(cuid())
-  userId                String            @unique
-  user                  User              @relation(fields: [userId], references: [id])
-  name                  String            @default("")
-  status                UserProfileStatus @default(DRAFT)
-  onboardingStep        Int               @default(1)
+  id                    String                    @id @default(cuid())
+  userId                String                    @unique
+  user                  User                      @relation(fields: [userId], references: [id])
+  name                  String                    @default("")
+  nickname              String?                   @unique
+  status                UserProfileStatus         @default(DRAFT)
+  onboardingStep        UserProfileOnboardingStep @default(BASIC)
+  onboardingCompletedAt DateTime?
   aboutMe               String?
   aboutPartner          String?
   aboutRelationship     String?
@@ -73,7 +81,8 @@ model UserProfile {
 
   // Partner preference scalars/arrays live on UserProfilePreference (Phase F).
 
-  // DB-first searchable fields (not populated yet; additive only).
+  // DB-first searchable fields (populated via dual-write in MeProfileAnalysisService; write-only cache).
+  // Semantic source of truth: UserProfileEvaluation.evaluationJson. Engine/HG reads use evaluationJson only.
   interestsTop       String[] @default([])
   sigEmotionalDepth  Int?
   sigLifestylePace   Int?

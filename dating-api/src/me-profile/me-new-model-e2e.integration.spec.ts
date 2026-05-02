@@ -140,7 +140,7 @@ function makeBaseProfileRow(id: string, userId: string): Record<string, unknown>
     userId,
     name: '',
     status: 'DRAFT',
-    onboardingStep: 1,
+    onboardingStep: 'BASIC',
     aboutMe: null,
     aboutPartner: null,
     aboutRelationship: null,

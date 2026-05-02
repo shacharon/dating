@@ -70,6 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus("unauthenticated");
       return;
     }
+    if (r.status >= 500) {
+      setUser(null);
+      setStatus("unauthenticated");
+      setLastError(
+        "Auth check failed with a server error (often the Next.js proxy could not reach dating-api). Start dating-api on port 3001, or set API_PROXY_TARGET to its URL. Direct test: GET http://127.0.0.1:3001/api/v1/auth/me should return 401 JSON when no cookie.",
+      );
+      return;
+    }
     setUser(null);
     setStatus("unauthenticated");
   }, []);

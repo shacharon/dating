@@ -125,6 +125,12 @@ export default function ProfilePage() {
             <dl className="space-y-2 text-sm text-zinc-900 dark:text-zinc-100">
               <div className="flex flex-wrap gap-x-2">
                 <dt className="font-medium text-zinc-600 dark:text-zinc-400">
+                  Nickname
+                </dt>
+                <dd>{draft.nickname?.trim() ? draft.nickname.trim() : '—'}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-zinc-600 dark:text-zinc-400">
                   Birth date
                 </dt>
                 <dd>{draft.birthDate || '—'}</dd>

@@ -257,7 +257,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_flow',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'first',
       aboutPartner: null,
       aboutRelationship: null,
@@ -317,7 +317,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_1',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'hi',
       aboutPartner: null,
       aboutRelationship: null,
@@ -335,7 +335,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_1',
       userId: USER_ID,
       status: 'DRAFT',
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'hi',
     });
     expect(prismaMock.userProfile.findUnique).toHaveBeenCalledWith({
@@ -344,18 +344,55 @@ describe('me profile HTTP (integration)', () => {
     });
   });
 
-  it('POST /api/v1/me/profile returns 422 when gender is missing', async () => {
+  it('POST /api/v1/me/profile returns 201 without gender (defaults; onboarding step 1)', async () => {
     const raw = await loginAndCookie();
-    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+    const created = {
+      id: 'prof_min',
+      userId: USER_ID,
+      status: UserProfileStatus.DRAFT,
+      onboardingStep: 'BASIC' as const,
+      gender: 'PREFER_NOT_TO_SAY' as const,
+      nickname: 'River',
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: new Date('1990-06-01'),
+      desiredPartnerGenders: null as unknown,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: null,
+      createdAt: new Date('2026-01-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+    };
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...created, desiredPartnerGenders: null })
+      .mockResolvedValueOnce({ ...created, preference: null, desiredPartnerGenders: null });
+    prismaMock.userProfile.create.mockResolvedValue(created);
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .send({ aboutMe: 'x' })
-      .expect(422);
+      .send({
+        nickname: 'River',
+        birthDate: '1990-06-01',
+        city: 'TLV',
+        country: 'IL',
+        onboardingStep: 'BASIC',
+      })
+      .expect(201);
 
-    expect(res.body).toMatchObject({ error: 'gender_required' });
-    expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
+    expect(res.body.onboardingStep).toBe('BASIC');
+    expect(res.body.nickname).toBe('River');
+    expect(prismaMock.userProfile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        user: { connect: { id: USER_ID } },
+        status: UserProfileStatus.DRAFT,
+        gender: 'PREFER_NOT_TO_SAY',
+        nickname: 'River',
+        onboardingStep: 'BASIC',
+      }),
+    });
   });
 
   it('POST /api/v1/me/profile returns 201 and creates for session user', async () => {
@@ -364,7 +401,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_new',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 2,
+      onboardingStep: 'TEXTS',
       gender: 'MALE' as const,
       aboutMe: 'x',
       aboutPartner: null,
@@ -382,7 +419,12 @@ describe('me profile HTTP (integration)', () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .send({ gender: 'MALE', aboutMe: 'x', onboardingStep: 2 })
+      .send({
+        gender: 'MALE',
+        aboutMe: 'x',
+        desiredPartnerGenders: ['FEMALE'],
+        onboardingStep: 'TEXTS',
+      })
       .expect(201);
 
     expect(res.body.userId).toBe(USER_ID);
@@ -392,9 +434,49 @@ describe('me profile HTTP (integration)', () => {
         status: UserProfileStatus.DRAFT,
         gender: 'MALE',
         aboutMe: 'x',
-        onboardingStep: 2,
+        desiredPartnerGenders: ['FEMALE'],
+        onboardingStep: 'TEXTS',
       }),
     });
+  });
+
+  it('POST /api/v1/me/profile returns 422 when onboardingStep TEXTS without desiredPartnerGenders', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ gender: 'MALE', onboardingStep: 'TEXTS' })
+      .expect(422);
+
+    expect(res.body).toMatchObject({ error: 'onboarding_partner_genders_required' });
+    expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /api/v1/me/profile returns 422 when onboardingStep COMPLETED without all texts', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_inc',
+      userId: USER_ID,
+      status: UserProfileStatus.DRAFT,
+      onboardingStep: 'TEXTS',
+      aboutMe: 'only me',
+      aboutPartner: null,
+      aboutRelationship: null,
+      gender: 'MALE' as const,
+      desiredPartnerGenders: ['FEMALE'] as unknown,
+      preference: null,
+    });
+
+    const res = await request(app.getHttpServer())
+      .patch('/api/v1/me/profile')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ onboardingStep: 'COMPLETED' })
+      .expect(422);
+
+    expect(res.body).toMatchObject({ error: 'onboarding_texts_incomplete' });
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 
   it('POST /api/v1/me/profile returns 409 when profile already exists', async () => {
@@ -403,7 +485,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_existing',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,
@@ -411,7 +493,6 @@ describe('me profile HTTP (integration)', () => {
       updatedAt: new Date(),
     });
 
-    // gender must be present so the gender guard passes; conflict check comes after
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
@@ -456,7 +537,7 @@ describe('me profile HTTP (integration)', () => {
     expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
   });
 
-  it('POST /api/v1/me/profile returns 400 when onboardingStep is not a positive integer', async () => {
+  it('POST /api/v1/me/profile returns 400 when onboardingStep is not a valid enum', async () => {
     const raw = await loginAndCookie();
     prismaMock.userProfile.findUnique.mockResolvedValue(null);
 
@@ -472,7 +553,7 @@ describe('me profile HTTP (integration)', () => {
   it.each([
     ['fraction', { onboardingStep: 1.5 }],
     ['negative', { onboardingStep: -1 }],
-    ['string', { onboardingStep: '2' }],
+    ['invalid string', { onboardingStep: 'STEP_99' }],
   ])(
     'POST /api/v1/me/profile returns 400 when onboardingStep is invalid (%s)',
     async (_label, body) => {
@@ -535,7 +616,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_partial',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 3,
+      onboardingStep: 'COMPLETED',
       aboutMe: 'keep',
       aboutPartner: null,
       aboutRelationship: null,
@@ -556,7 +637,7 @@ describe('me profile HTTP (integration)', () => {
     expect(res.body).toMatchObject({
       id: 'prof_partial',
       aboutMe: 'keep',
-      onboardingStep: 3,
+      onboardingStep: 'COMPLETED',
       status: 'DRAFT',
     });
     expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
@@ -568,7 +649,9 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_step',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'] as unknown,
       aboutMe: 'unchanged',
       aboutPartner: null,
       aboutRelationship: null,
@@ -576,32 +659,34 @@ describe('me profile HTTP (integration)', () => {
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
     prismaMock.userProfile.findUnique
-      .mockResolvedValueOnce({ ...existing, preference: null, desiredPartnerGenders: null })
-      .mockResolvedValueOnce({ ...existing, desiredPartnerGenders: null })
       .mockResolvedValueOnce({
         ...existing,
-        onboardingStep: 4,
+        preference: null,
+      })
+      .mockResolvedValueOnce({ ...existing })
+      .mockResolvedValueOnce({
+        ...existing,
+        onboardingStep: 'TEXTS',
         updatedAt: new Date('2026-01-05T00:00:00.000Z'),
         preference: null,
-        desiredPartnerGenders: null,
       });
     prismaMock.userProfile.update.mockResolvedValue({
       ...existing,
-      onboardingStep: 4,
+      onboardingStep: 'TEXTS',
       updatedAt: new Date('2026-01-05T00:00:00.000Z'),
     });
 
     const res = await request(app.getHttpServer())
       .patch('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .send({ onboardingStep: 4 })
+      .send({ onboardingStep: 'TEXTS' })
       .expect(200);
 
-    expect(res.body.onboardingStep).toBe(4);
+    expect(res.body.onboardingStep).toBe('TEXTS');
     expect(res.body.aboutMe).toBe('unchanged');
     expect(prismaMock.userProfile.update).toHaveBeenCalledWith({
       where: { userId: USER_ID },
-      data: { onboardingStep: 4 },
+      data: { onboardingStep: 'TEXTS' },
     });
   });
 
@@ -611,7 +696,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_null',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'will clear',
       aboutPartner: 'p',
       aboutRelationship: null,
@@ -647,13 +732,13 @@ describe('me profile HTTP (integration)', () => {
     });
   });
 
-  it('PATCH /api/v1/me/profile returns 400 when onboardingStep is not a positive integer', async () => {
+  it('PATCH /api/v1/me/profile returns 400 when onboardingStep is not a valid enum', async () => {
     const raw = await loginAndCookie();
     prismaMock.userProfile.findUnique.mockResolvedValue({
       id: 'prof_u',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'a',
       aboutPartner: null,
       aboutRelationship: null,
@@ -676,7 +761,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_u',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'a',
       aboutPartner: null,
       aboutRelationship: null,
@@ -699,7 +784,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_u',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,
@@ -741,7 +826,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_u',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'a',
       aboutPartner: null,
       aboutRelationship: null,
@@ -764,7 +849,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_u',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'a',
       aboutPartner: null,
       aboutRelationship: null,
@@ -865,7 +950,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_identity',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,
@@ -924,7 +1009,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_clr_dpg',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,
@@ -969,7 +1054,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_enriched_get',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 2,
+      onboardingStep: 'TEXTS',
       aboutMe: 'About',
       aboutPartner: null,
       aboutRelationship: 'LT',
@@ -991,7 +1076,7 @@ describe('me profile HTTP (integration)', () => {
 
     expect(res.body).toMatchObject({
       id: 'prof_enriched_get',
-      onboardingStep: 2,
+      onboardingStep: 'TEXTS',
       aboutMe: 'About',
       aboutRelationship: 'LT',
       gender: 'MALE',
@@ -1009,7 +1094,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_patch_enr',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,
@@ -1097,7 +1182,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_analysis_latest_1',
       userId: USER_ID,
       status: UserProfileStatus.ANALYZED,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'x',
       aboutPartner: null,
       aboutRelationship: null,
@@ -1129,7 +1214,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_analysis_latest_2',
       userId: USER_ID,
       status: UserProfileStatus.ANALYZED,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'x',
       aboutPartner: null,
       aboutRelationship: null,
@@ -1191,18 +1276,18 @@ describe('me profile HTTP (integration)', () => {
     expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 
-  it('POST /api/v1/me/profile/submit returns 422 when gender is missing', async () => {
+  it('POST /api/v1/me/profile/submit returns 422 when gender is not explicitly chosen', async () => {
     const raw = await loginAndCookie();
     prismaMock.userProfile.findUnique.mockResolvedValue({
       id: 'prof_submit_nogender',
       userId: USER_ID,
       status: 'DRAFT' as UserProfileStatus,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'ready',
       aboutPartner: null,
       aboutRelationship: null,
       birthDate: null,
-      gender: null,
+      gender: 'PREFER_NOT_TO_SAY' as const,
       desiredPartnerGenders: null,
       city: null,
       country: null,
@@ -1229,7 +1314,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_submit_1',
       userId: USER_ID,
       status: 'DRAFT' as UserProfileStatus,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       aboutMe: 'ready',
       aboutPartner: null,
       aboutRelationship: null,
@@ -1286,7 +1371,7 @@ describe('me profile HTTP (integration)', () => {
         id: 'prof_inflight',
         userId: USER_ID,
         status: status as UserProfileStatus,
-        onboardingStep: 1,
+        onboardingStep: 'BASIC',
         aboutMe: null,
         aboutPartner: null,
         aboutRelationship: null,
@@ -1372,7 +1457,7 @@ describe('me profile HTTP (integration)', () => {
         await request(app.getHttpServer())
           .post('/api/v1/me/profile')
           .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-          .send({ onboardingStep: 0 })
+          .send({ onboardingStep: 'INVALID' })
           .expect(400);
         const hit = parseStructuredJsonLogs(spy).find(
           (o) =>
@@ -1393,7 +1478,7 @@ describe('me profile HTTP (integration)', () => {
           id: 'prof_exists',
           userId: USER_ID,
           status: UserProfileStatus.DRAFT,
-          onboardingStep: 1,
+          onboardingStep: 'BASIC',
           aboutMe: 'x',
           aboutPartner: null,
           aboutRelationship: null,
@@ -1468,7 +1553,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_viewer_s5',
       userId: USER_ID,
       status: UserProfileStatus.ANALYZED,
-      onboardingStep: 3,
+      onboardingStep: 'COMPLETED',
       name: '',
       aboutMe: 'I like hiking',
       aboutPartner: 'Looking for warmth',
@@ -1619,7 +1704,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_viewer_s5_det',
       userId: USER_ID,
       status: UserProfileStatus.ANALYZED,
-      onboardingStep: 3,
+      onboardingStep: 'COMPLETED',
       name: '',
       aboutMe: 'I like hiking',
       aboutPartner: 'Looking for warmth',
@@ -1737,7 +1822,7 @@ describe('me profile HTTP (integration)', () => {
       id: 'prof_viewer_int',
       userId: USER_ID,
       status: UserProfileStatus.ANALYZED,
-      onboardingStep: 3,
+      onboardingStep: 'COMPLETED',
       name: '',
       aboutMe: 'I like hiking',
       aboutPartner: 'Looking for warmth',

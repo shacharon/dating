@@ -4,7 +4,12 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Prisma, ProfileGender, UserProfileStatus } from '@prisma/client';
+import {
+  Prisma,
+  ProfileGender,
+  UserProfileOnboardingStep,
+  UserProfileStatus,
+} from '@prisma/client';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
@@ -16,7 +21,8 @@ describe('MeProfileService', () => {
     id: 'prof_1',
     userId,
     status: UserProfileStatus.DRAFT,
-    onboardingStep: 1,
+    onboardingStep: UserProfileOnboardingStep.BASIC,
+    gender: ProfileGender.FEMALE,
     aboutMe: 'a' as string | null,
     aboutPartner: null as string | null,
     aboutRelationship: null as string | null,
@@ -98,7 +104,7 @@ describe('MeProfileService', () => {
       status: UserProfileStatus.DRAFT,
       aboutMe: 'a',
       birthDate: null,
-      gender: null,
+      gender: ProfileGender.FEMALE,
       desiredPartnerGenders: null,
       city: null,
       country: null,
@@ -107,11 +113,43 @@ describe('MeProfileService', () => {
     expect(r?.createdAt).toEqual(baseRow.createdAt);
   });
 
-  it('createForUser throws UnprocessableEntityException when gender is missing', async () => {
-    await expect(service.createForUser(userId, {})).rejects.toBeInstanceOf(
-      UnprocessableEntityException,
-    );
-    expect(prisma.userProfile.findUnique).not.toHaveBeenCalled();
+  it('createForUser creates DRAFT with default gender when body is empty (onboarding step 1)', async () => {
+    const created = {
+      ...baseRow,
+      gender: ProfileGender.PREFER_NOT_TO_SAY,
+      aboutMe: null,
+    };
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        ...created,
+        desiredPartnerGenders: created.desiredPartnerGenders,
+      })
+      .mockResolvedValueOnce(profileRow(created));
+    prisma.userProfile.create.mockResolvedValue(created);
+
+    await service.createForUser(userId, {});
+
+    expect(prisma.userProfile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        user: { connect: { id: userId } },
+        status: UserProfileStatus.DRAFT,
+        gender: ProfileGender.PREFER_NOT_TO_SAY,
+      }),
+    });
+  });
+
+  it('createForUser rejects TEXTS onboarding without desiredPartnerGenders', async () => {
+    prisma.userProfile.findUnique.mockResolvedValue(null);
+    await expect(
+      service.createForUser(userId, {
+        onboardingStep: UserProfileOnboardingStep.TEXTS,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        error: 'onboarding_partner_genders_required',
+      }),
+    });
     expect(prisma.userProfile.create).not.toHaveBeenCalled();
   });
 
@@ -137,7 +175,8 @@ describe('MeProfileService', () => {
     const r = await service.createForUser(userId, {
       gender: ProfileGender.FEMALE,
       aboutMe: 'new',
-      onboardingStep: 2,
+      desiredPartnerGenders: [ProfileGender.MALE],
+      onboardingStep: UserProfileOnboardingStep.TEXTS,
     });
 
     expect(r.aboutMe).toBe('new');
@@ -146,7 +185,7 @@ describe('MeProfileService', () => {
         user: { connect: { id: userId } },
         status: UserProfileStatus.DRAFT,
         aboutMe: 'new',
-        onboardingStep: 2,
+        onboardingStep: UserProfileOnboardingStep.TEXTS,
       }),
     });
   });
@@ -192,6 +231,61 @@ describe('MeProfileService', () => {
     expect(prisma.userProfile.update).toHaveBeenCalledWith({
       where: { userId },
       data: { aboutMe: 'patched' },
+    });
+  });
+
+  it('patchForUser rejects COMPLETED onboarding when text fields are incomplete', async () => {
+    prisma.userProfile.findUnique.mockResolvedValueOnce(profileRow(baseRow));
+    await expect(
+      service.patchForUser(userId, {
+        onboardingStep: UserProfileOnboardingStep.COMPLETED,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ error: 'onboarding_texts_incomplete' }),
+    });
+    expect(prisma.userProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('patchForUser persists COMPLETED onboarding with completion timestamp', async () => {
+    const rich = {
+      ...baseRow,
+      aboutMe: 'me',
+      aboutPartner: 'them',
+      aboutRelationship: 'us',
+    };
+    const completedAt = new Date('2026-01-10T12:00:00.000Z');
+    jest.useFakeTimers({ now: completedAt });
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(profileRow(rich))
+      .mockResolvedValueOnce({
+        ...rich,
+        desiredPartnerGenders: rich.desiredPartnerGenders,
+      })
+      .mockResolvedValueOnce(
+        profileRow({
+          ...rich,
+          onboardingStep: UserProfileOnboardingStep.COMPLETED,
+          onboardingCompletedAt: completedAt,
+        }),
+      );
+    prisma.userProfile.update.mockResolvedValue({
+      ...rich,
+      onboardingStep: UserProfileOnboardingStep.COMPLETED,
+      onboardingCompletedAt: completedAt,
+    });
+
+    const r = await service.patchForUser(userId, {
+      onboardingStep: UserProfileOnboardingStep.COMPLETED,
+    });
+    jest.useRealTimers();
+
+    expect(r.onboardingStep).toBe(UserProfileOnboardingStep.COMPLETED);
+    expect(prisma.userProfile.update).toHaveBeenCalledWith({
+      where: { userId },
+      data: expect.objectContaining({
+        onboardingStep: UserProfileOnboardingStep.COMPLETED,
+        onboardingCompletedAt: completedAt,
+      }),
     });
   });
 
@@ -310,18 +404,24 @@ describe('MeProfileService', () => {
       FAILED: 'FAILED' as UserProfileStatus,
     };
 
-    it('throws UnprocessableEntityException when gender is missing', async () => {
-      prisma.userProfile.findUnique.mockResolvedValue({
-        ...baseRow,
-        status: UserProfileStatus.DRAFT,
-        gender: null,
-      });
-      await expect(service.submitForUser(userId)).rejects.toMatchObject({
-        response: expect.objectContaining({ error: 'gender_required' }),
-      });
-      expect(prisma.userProfile.update).not.toHaveBeenCalled();
-      expect(analysis.runForUser).not.toHaveBeenCalled();
-    });
+    it.each([
+      ['null', null],
+      ['PREFER_NOT_TO_SAY', ProfileGender.PREFER_NOT_TO_SAY],
+    ] as const)(
+      'throws UnprocessableEntityException when gender is %s',
+      async (_label, gender) => {
+        prisma.userProfile.findUnique.mockResolvedValue({
+          ...baseRow,
+          status: UserProfileStatus.DRAFT,
+          gender: gender as unknown as typeof baseRow.gender,
+        });
+        await expect(service.submitForUser(userId)).rejects.toMatchObject({
+          response: expect.objectContaining({ error: 'gender_required' }),
+        });
+        expect(prisma.userProfile.update).not.toHaveBeenCalled();
+        expect(analysis.runForUser).not.toHaveBeenCalled();
+      },
+    );
 
     it.each([S.SUBMITTED, S.ANALYZING])(
       'throws UnprocessableEntityException when status is %s',

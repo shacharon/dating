@@ -54,7 +54,7 @@ function pickTopInterests(evaluationJson: unknown): string[] {
     const key = normalized.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(normalized);
+    out.push(key);
     if (out.length >= 3) break;
   }
   return out;
@@ -115,6 +115,7 @@ async function main(): Promise<void> {
     let interestDeletes = 0;
     let interestCreates = 0;
     let preferenceUpserts = 0;
+    let profileDenormUpdates = 0;
 
     for (const profile of profiles) {
       const ev = latestEvalByProfile.get(profile.id);
@@ -122,16 +123,29 @@ async function main(): Promise<void> {
       const evalVersion = ev?.version ?? EVALUATION_VERSION_FALLBACK;
 
       const signalMap = extractSignalMap(evalJson);
-      const interestTags = pickTopInterests(evalJson).map((x) => x.toLowerCase().trim());
+      const interestTags = pickTopInterests(evalJson);
 
       signalUpserts += Object.keys(signalMap).length;
       interestDeletes += 1;
       interestCreates += interestTags.length;
       preferenceUpserts += 1;
+      profileDenormUpdates += 1;
 
       if (!apply) continue;
 
       await prisma.$transaction(async (tx) => {
+        await tx.userProfile.update({
+          where: { id: profile.id },
+          data: {
+            interestsTop: interestTags,
+            sigEmotionalDepth: signalMap.emotionalDepth ?? null,
+            sigLifestylePace: signalMap.lifestylePace ?? null,
+            sigConflictStyle: signalMap.conflictStyle ?? null,
+            sigIndependence: signalMap.independence ?? null,
+            sigSocialBattery: signalMap.socialBattery ?? null,
+          },
+        });
+
         for (const key of SIGNAL_KEYS) {
           const signalValue = signalMap[key];
           if (signalValue === undefined) continue;
@@ -179,7 +193,7 @@ async function main(): Promise<void> {
       `[backfill-normalized] profiles=${profiles.length} latestEvaluations=${latestEvalByProfile.size}`,
     );
     console.log(
-      `[backfill-normalized] signalUpserts=${signalUpserts} interestDeletes=${interestDeletes} interestCreates=${interestCreates} preferenceUpserts=${preferenceUpserts}`,
+      `[backfill-normalized] profileDenormUpdates=${profileDenormUpdates} signalUpserts=${signalUpserts} interestDeletes=${interestDeletes} interestCreates=${interestCreates} preferenceUpserts=${preferenceUpserts}`,
     );
     console.log(
       `[backfill-normalized] completed mode=${mode} (use --apply to write changes)`,

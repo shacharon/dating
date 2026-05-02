@@ -16,7 +16,8 @@ function enrichedApiProfile(): MeProfileDto {
     id: 'p_enr',
     userId: 'u1',
     status: 'DRAFT',
-    onboardingStep: 2,
+    onboardingStep: 'TEXTS',
+    nickname: null,
     aboutMe: 'Runner',
     aboutPartner: 'Kind',
     aboutRelationship: null,
@@ -34,6 +35,7 @@ function enrichedApiProfile(): MeProfileDto {
 describe('Phase 2.5 profile enrichment (UI persistence helpers)', () => {
   it('profileToFormFields maps GET response into onboarding form state', () => {
     const form = profileToFormFields(enrichedApiProfile());
+    expect(form.nickname).toBe('');
     expect(form.birthDate).toBe('1991-04-12');
     expect(form.gender).toBe('FEMALE');
     expect(form.desiredPartnerGenders).toEqual(['MALE', 'NON_BINARY']);
@@ -49,6 +51,7 @@ describe('Phase 2.5 profile enrichment (UI persistence helpers)', () => {
     const form = profileToFormFields(enrichedApiProfile());
     const payload = buildPatchPayload(form);
     expect(payload).toEqual({
+      nickname: null,
       aboutMe: 'Runner',
       aboutPartner: 'Kind',
       aboutRelationship: null,

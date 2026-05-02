@@ -10,6 +10,7 @@ function needsAuthSession(pathname: string): boolean {
   return (
     pathname.startsWith('/dating') ||
     pathname.startsWith('/onboarding') ||
+    pathname.startsWith('/settings') ||
     pathname === '/profile' ||
     pathname.startsWith('/profile/') ||
     pathname === '/app' ||
@@ -62,5 +63,7 @@ export const config = {
     '/profile/:path*',
     '/app',
     '/app/:path*',
+    '/settings',
+    '/settings/:path*',
   ],
 };

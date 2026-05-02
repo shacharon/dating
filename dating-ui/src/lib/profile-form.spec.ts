@@ -12,7 +12,8 @@ const baseProfile: MeProfileDto = {
   id: 'p1',
   userId: 'u1',
   status: 'DRAFT',
-  onboardingStep: 1,
+  onboardingStep: 'BASIC',
+  nickname: 'Sam',
   aboutMe: 'Hello',
   aboutPartner: 'Kind',
   aboutRelationship: 'Long term',
@@ -29,6 +30,7 @@ const baseProfile: MeProfileDto = {
 describe('profile-form', () => {
   it('profileToFormFields maps API row to form state', () => {
     expect(profileToFormFields(baseProfile)).toEqual({
+      nickname: 'Sam',
       aboutMe: 'Hello',
       aboutPartner: 'Kind',
       aboutRelationship: 'Long term',
@@ -45,6 +47,7 @@ describe('profile-form', () => {
     expect(
       profileToFormFields({
         ...baseProfile,
+        nickname: null,
         aboutMe: null,
         aboutPartner: null,
         aboutRelationship: null,
@@ -57,6 +60,7 @@ describe('profile-form', () => {
       }),
     ).toEqual({
       ...emptyProfileFormState(),
+      nickname: '',
       aboutMe: '',
       aboutPartner: '',
       aboutRelationship: '',
@@ -77,6 +81,7 @@ describe('profile-form', () => {
       locationLabel: ' Haifa IL ',
     };
     expect(buildCreatePayload(s)).toEqual({
+      nickname: null,
       aboutMe: '  x  ',
       aboutPartner: null,
       aboutRelationship: null,
@@ -92,6 +97,7 @@ describe('profile-form', () => {
   it('buildCreatePayload uses null for empty identity strings and no partner genders', () => {
     const s = emptyProfileFormState();
     expect(buildCreatePayload(s)).toEqual({
+      nickname: null,
       aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,

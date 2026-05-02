@@ -92,7 +92,7 @@ function pickTopInterests(result: EvaluateBatchResult): string[] {
     const key = normalized.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(normalized);
+    out.push(key);
     if (out.length >= 3) break;
   }
   return out;

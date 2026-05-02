@@ -1,4 +1,8 @@
-import type { ProfileGender, UserProfileStatus } from '@prisma/client';
+import type {
+  ProfileGender,
+  UserProfileOnboardingStep,
+  UserProfileStatus,
+} from '@prisma/client';
 
 /**
  * GET / POST / PATCH success body for `/api/v1/me/profile`.
@@ -10,7 +14,9 @@ export class MeProfileResponseDto {
   id!: string;
   userId!: string;
   status!: UserProfileStatus;
-  onboardingStep!: number;
+  nickname!: string | null;
+  onboardingStep!: UserProfileOnboardingStep;
+  onboardingCompletedAt!: Date | null;
   aboutMe!: string | null;
   aboutPartner!: string | null;
   aboutRelationship!: string | null;

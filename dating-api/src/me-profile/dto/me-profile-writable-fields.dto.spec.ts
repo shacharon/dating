@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ProfileGender } from '@prisma/client';
+import { ProfileGender, UserProfileOnboardingStep } from '@prisma/client';
 import { CreateMeProfileDto } from './me-profile-create.dto';
 import { PatchMeProfileDto } from './me-profile-patch.dto';
 
@@ -61,6 +61,23 @@ describe('MeProfileWritableFieldsDto / CreateMeProfileDto validation', () => {
 
   it('rejects non-string city', async () => {
     const errors = await validateCreate({ city: 99 });
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('accepts onboardingStep enum and optional nickname', async () => {
+    const errors = await validateCreate({
+      gender: ProfileGender.MALE,
+      onboardingStep: UserProfileOnboardingStep.BASIC,
+      nickname: 'alex_42',
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects invalid onboardingStep', async () => {
+    const errors = await validateCreate({
+      gender: ProfileGender.MALE,
+      onboardingStep: 'PHASE_X' as unknown as UserProfileOnboardingStep,
+    });
     expect(errors.length).toBeGreaterThan(0);
   });
 

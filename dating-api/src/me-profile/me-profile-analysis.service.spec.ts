@@ -23,7 +23,7 @@ const baseRow = {
   id: 'prof_analysis_1',
   userId: 'user_analysis_1',
   status: S.SUBMITTED,
-  onboardingStep: 1,
+  onboardingStep: 'BASIC',
   name: '',
   aboutMe: 'I love hiking',
   aboutPartner: 'Looking for kindness',
@@ -477,6 +477,66 @@ describe('MeProfileAnalysisService', () => {
         data: expect.objectContaining({ tag: 'music', rank: 1, evalVersion: EVALUATION_VERSION }),
       });
     });
+
+    it('UserProfile.update includes denorm columns (interestsTop, sig*) from same evaluationJson', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: {
+            signals: {
+              emotionalDepth: 7,
+              lifestylePace: 5,
+              conflictStyle: 8,
+              independence: 6,
+              socialBattery: 9,
+            },
+          },
+          partner: {},
+          relationship: {},
+          enrichment: { signals: { interestsTop3: ['Hiking', 'Coffee', 'Travel'] } },
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      expect(prisma.userProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: S.ANALYZED,
+            interestsTop: ['hiking', 'coffee', 'travel'],
+            sigEmotionalDepth: 7,
+            sigLifestylePace: 5,
+            sigConflictStyle: 8,
+            sigIndependence: 6,
+            sigSocialBattery: 9,
+          }),
+        }),
+      );
+    });
+
+    it('UserProfile.update uses lowercase interests (casing fix)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: {},
+          partner: {},
+          relationship: {},
+          enrichment: { signals: { interestsTop3: ['YOGA', 'Running', 'CoOkInG'] } },
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      expect(prisma.userProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            interestsTop: ['yoga', 'running', 'cooking'],
+          }),
+        }),
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -779,7 +839,7 @@ describe('mapDbFirstColumnsFromEvaluation (write-only UserProfile denorm payload
     });
 
     expect(mapped).toEqual({
-      interestsTop: ['hiking', 'Music'],
+      interestsTop: ['hiking', 'music'],
       sigEmotionalDepth: 8,
       sigLifestylePace: 5,
       sigConflictStyle: 4,
@@ -843,5 +903,42 @@ describe('mapDbFirstColumnsFromEvaluation (write-only UserProfile denorm payload
       sigIndependence: 7,
       sigSocialBattery: null,
     });
+  });
+
+  it('lowercases all interest tags (casing alignment fix)', () => {
+    const mapped = mapDbFirstColumnsFromEvaluation({
+      self: {
+        domain: 'self',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {},
+        evidence: [],
+      },
+      partner: { domain: 'partner', version: 'v1', confidence: 0.9, signals: {}, evidence: [] },
+      relationship: {
+        domain: 'relationship',
+        version: 'v1',
+        confidence: 0.9,
+        signals: {},
+        evidence: [],
+      },
+      compatibility: { selfVsPartner: {} as never, selfVsRelationship: {} as never },
+      display: { summary: 's', insight: 'i' },
+      productScores: {} as never,
+      productScoresPresentation: {} as never,
+      flags: [],
+      enrichment: {
+        version: 'v1',
+        signals: {
+          dailyRhythm: null,
+          autonomyTogethernessDepth: null,
+          kidsTimeline: null,
+          conflictStyleDetail: null,
+          interestsTop3: ['YOGA', 'Running', 'CoOkInG'],
+        },
+      },
+    });
+
+    expect(mapped.interestsTop).toEqual(['yoga', 'running', 'cooking']);
   });
 });

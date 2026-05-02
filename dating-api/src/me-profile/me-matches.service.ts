@@ -26,6 +26,14 @@ import {
 
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
+/**
+ * When `ENGINE_READ_NORMALIZED=1` the match engine reads signals + interests from the
+ * normalized `UserProfileSignal` / `UserProfileInterest` tables instead of the stored
+ * evaluation blob. The blob remains the fallback for profiles with no normalized rows.
+ * Flag off (default) → pure evaluation-blob path, zero behaviour change.
+ */
+const USE_NORMALIZED = process.env['גםק'] === '1';
+
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 export interface MeMatchItemDto {
@@ -103,8 +111,10 @@ export class MeMatchesService {
   ) {}
 
   // ─── Shared candidate select ───────────────────────────────────────────────
-  // Intentionally excludes `UserProfile.interestsTop` and `sig*` — engine/HG inputs come only from
-  // `buildMeMatchesParticipantReadModel` (latest evaluation row passed into that builder).
+  // `UserProfile.interestsTop` and `sig*` are excluded — engine/HG inputs come only from
+  // `buildMeMatchesParticipantReadModel` (latest evaluation + optional normalized rows).
+  // `signals` and `interests` are always selected; the assembler uses them only when
+  // ENGINE_READ_NORMALIZED=1 (zero-cost when flag is off).
 
   private candidateSelect = {
     id: true,
@@ -129,6 +139,12 @@ export class MeMatchesService {
     religion: true,
     // HG structured preferences live on UserProfilePreference (Phase F).
     preference: true,
+    // Normalized signal / interest rows for ENGINE_READ_NORMALIZED assembly.
+    signals: { select: { signalKey: true, signalValue: true } },
+    interests: {
+      select: { tag: true, rank: true },
+      orderBy: { rank: 'asc' as const },
+    },
     _count: { select: { evaluations: true } },
   } as const;
 
@@ -137,7 +153,14 @@ export class MeMatchesService {
   async list(userId: string): Promise<MeMatchesListResponseDto> {
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
-      include: { preference: true },
+      include: {
+        preference: true,
+        signals: { select: { signalKey: true, signalValue: true } },
+        interests: {
+          select: { tag: true, rank: true },
+          orderBy: { rank: 'asc' },
+        },
+      },
     });
 
     if (!viewer) {
@@ -172,11 +195,21 @@ export class MeMatchesService {
           'Profile is marked analyzed but no UserProfileEvaluation row exists. Re-run analysis.',
       });
     }
-    const { preference: viewerPreference, ...viewerProfileCore } = viewer;
+    const {
+      preference: viewerPreference,
+      signals: viewerSignals = [],
+      interests: viewerInterests = [],
+      ...viewerProfileCore
+    } = viewer;
     const viewerRead = buildMeMatchesParticipantReadModel(
       viewerProfileCore,
       viewerPreference ?? null,
       viewerEval,
+      {
+        signals: viewerSignals,
+        interests: viewerInterests,
+        useNormalized: USE_NORMALIZED,
+      },
     );
     if (viewerRead.hg.fallback) {
       this.obs.trace(
@@ -222,11 +255,21 @@ export class MeMatchesService {
         });
       }
 
-      const { preference: candidatePreference, ...candidateProfileCore } = row;
+      const {
+        preference: candidatePreference,
+        signals: candidateSignals = [],
+        interests: candidateInterests = [],
+        ...candidateProfileCore
+      } = row;
       const candidateRead = buildMeMatchesParticipantReadModel(
         candidateProfileCore,
         candidatePreference ?? null,
         candidateEval,
+        {
+          signals: candidateSignals,
+          interests: candidateInterests,
+          useNormalized: USE_NORMALIZED,
+        },
       );
       if (candidateRead.hg.fallback) {
         this.obs.trace(
@@ -302,7 +345,14 @@ export class MeMatchesService {
     // Viewer must have an analyzed profile to retrieve match details.
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
-      include: { preference: true },
+      include: {
+        preference: true,
+        signals: { select: { signalKey: true, signalValue: true } },
+        interests: {
+          select: { tag: true, rank: true },
+          orderBy: { rank: 'asc' },
+        },
+      },
     });
 
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
@@ -346,7 +396,10 @@ export class MeMatchesService {
     }
 
     const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
-    const candidateEval = await latestEvaluationForProfile(this.prisma, candidate.id);
+    const candidateEval = await latestEvaluationForProfile(
+      this.prisma,
+      candidate.id,
+    );
     if (!viewerEval || !candidateEval) {
       throw new NotFoundException({
         error: 'evaluation_not_found',
@@ -354,17 +407,37 @@ export class MeMatchesService {
       });
     }
 
-    const { preference: viewerPrefDetail, ...viewerCoreDetail } = viewer;
+    const {
+      preference: viewerPrefDetail,
+      signals: viewerSignalsDetail = [],
+      interests: viewerInterestsDetail = [],
+      ...viewerCoreDetail
+    } = viewer;
     const viewerRead = buildMeMatchesParticipantReadModel(
       viewerCoreDetail,
       viewerPrefDetail ?? null,
       viewerEval,
+      {
+        signals: viewerSignalsDetail,
+        interests: viewerInterestsDetail,
+        useNormalized: USE_NORMALIZED,
+      },
     );
-    const { preference: candidatePrefDetail, ...candidateCoreDetail } = candidate;
+    const {
+      preference: candidatePrefDetail,
+      signals: candidateSignalsDetail = [],
+      interests: candidateInterestsDetail = [],
+      ...candidateCoreDetail
+    } = candidate;
     const candidateRead = buildMeMatchesParticipantReadModel(
       candidateCoreDetail,
       candidatePrefDetail ?? null,
       candidateEval,
+      {
+        signals: candidateSignalsDetail,
+        interests: candidateInterestsDetail,
+        useNormalized: USE_NORMALIZED,
+      },
     );
 
     if (viewerRead.hg.fallback) {

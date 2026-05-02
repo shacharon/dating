@@ -16,6 +16,7 @@ export async function resolveEditableProfile(): Promise<MeProfileDto | null> {
 
 /** Onboarding / save form state (client-only shape). */
 export type ProfileFormState = {
+  nickname: string;
   aboutMe: string;
   aboutPartner: string;
   aboutRelationship: string;
@@ -30,6 +31,7 @@ export type ProfileFormState = {
 
 export function emptyProfileFormState(): ProfileFormState {
   return {
+    nickname: '',
     aboutMe: '',
     aboutPartner: '',
     aboutRelationship: '',
@@ -45,6 +47,7 @@ export function emptyProfileFormState(): ProfileFormState {
 /** True when there is nothing meaningful to persist (all blanks). */
 export function isProfileFormEmpty(s: ProfileFormState): boolean {
   return (
+    !s.nickname.trim() &&
     !s.aboutMe.trim() &&
     !s.aboutPartner.trim() &&
     !s.aboutRelationship.trim() &&
@@ -71,6 +74,7 @@ export function profileToFormFields(p: MeProfileDto): ProfileFormState {
     (x): x is MeProfileGender => typeof x === 'string' && allowed.has(x),
   );
   return {
+    nickname: p.nickname ?? '',
     aboutMe: p.aboutMe ?? '',
     aboutPartner: p.aboutPartner ?? '',
     aboutRelationship: p.aboutRelationship ?? '',
@@ -85,6 +89,7 @@ export function profileToFormFields(p: MeProfileDto): ProfileFormState {
 
 export function buildCreatePayload(s: ProfileFormState): CreateMeProfileBody {
   return {
+    nickname: s.nickname.trim() ? s.nickname.trim() : null,
     aboutMe: s.aboutMe.trim() ? s.aboutMe : null,
     aboutPartner: s.aboutPartner.trim() ? s.aboutPartner.trim() : null,
     aboutRelationship: s.aboutRelationship.trim()

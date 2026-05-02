@@ -1,4 +1,4 @@
-import { ProfileGender } from '@prisma/client';
+import { ProfileGender, UserProfileOnboardingStep } from '@prisma/client';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   Validate,
   ValidateIf,
@@ -87,9 +88,17 @@ export class MeProfileWritableFieldsDto {
   locationLabel?: string | null;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  onboardingStep?: number;
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsString()
+  @MaxLength(80, { message: 'nickname must be at most 80 characters' })
+  nickname?: string | null;
+
+  @IsOptional()
+  @IsEnum(UserProfileOnboardingStep, {
+    message:
+      'onboardingStep must be a UserProfileOnboardingStep value (BASIC, TEXTS, COMPLETED)',
+  })
+  onboardingStep?: UserProfileOnboardingStep;
 
   // ── Holy Grail structured facts (self) ──────────────────────────────────────
 

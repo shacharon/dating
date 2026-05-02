@@ -3,9 +3,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NavAuth } from "@/components/nav-auth";
 import { useAuth } from "@/contexts/auth-context";
+
+const navLinkBase =
+  "text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500";
+const navLinkInactive =
+  "text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100";
+const navLinkActive =
+  "font-semibold text-zinc-900 underline decoration-2 underline-offset-4 dark:text-zinc-100";
 
 function landingUrlWithNext(): string {
   if (typeof window === "undefined") return "/";
@@ -24,6 +31,13 @@ function landingUrlWithNext(): string {
 export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const homeActive = pathname === "/dating";
+  const matchesActive =
+    pathname === "/dating/me-matches" ||
+    pathname.startsWith("/dating/me-matches/");
+  const profileActive = pathname === "/dating/profile";
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
@@ -66,33 +80,24 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
             <Link
               href="/dating"
-              className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+              className={`${navLinkBase} ${homeActive ? navLinkActive : navLinkInactive}`}
+              aria-current={homeActive ? "page" : undefined}
             >
               Home
             </Link>
             <Link
-              href="/profiles"
-              className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+              href="/dating/me-matches"
+              className={`${navLinkBase} ${matchesActive ? navLinkActive : navLinkInactive}`}
+              aria-current={matchesActive ? "page" : undefined}
             >
-              Profile viewer
-            </Link>
-            <Link
-              href="/onboarding"
-              className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
-            >
-              Onboarding
+              Matches
             </Link>
             <Link
               href="/dating/profile"
-              className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
+              className={`${navLinkBase} ${profileActive ? navLinkActive : navLinkInactive}`}
+              aria-current={profileActive ? "page" : undefined}
             >
               Profile
-            </Link>
-            <Link
-              href="/dating/me-matches"
-              className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
-            >
-              Matches
             </Link>
           </div>
           <div className="flex shrink-0 items-center border-t border-zinc-100 pt-2 sm:border-t-0 sm:pt-0 dark:border-zinc-800">

@@ -124,7 +124,7 @@ describe('user-profile-matching-bridge.contract', () => {
       id: 'x',
       userId: 'u',
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 1,
+      onboardingStep: 'BASIC',
       birthDate: new Date('2000-05-01T00:00:00.000Z'),
       gender: ProfileGender.NON_BINARY,
       desiredPartnerGenders: ['FEMALE'] as unknown,

@@ -40,11 +40,16 @@ export const ME_PARTNER_GENDER_CHOICES: readonly MeProfileGender[] = [
   'OTHER',
 ];
 
+/** Mirrors dating-api `UserProfileOnboardingStep`. */
+export type MeProfileOnboardingStep = 'BASIC' | 'TEXTS' | 'COMPLETED';
+
 export interface MeProfileDto {
   id: string;
   userId: string;
   status: string;
-  onboardingStep: number;
+  onboardingStep: MeProfileOnboardingStep;
+  nickname?: string | null;
+  onboardingCompletedAt?: string | null;
   aboutMe: string | null;
   aboutPartner: string | null;
   aboutRelationship: string | null;
@@ -65,7 +70,8 @@ export interface CreateMeProfileBody {
   aboutMe?: string | null;
   aboutPartner?: string | null;
   aboutRelationship?: string | null;
-  onboardingStep?: number;
+  onboardingStep?: MeProfileOnboardingStep;
+  nickname?: string | null;
   birthDate?: string | null;
   gender?: MeProfileGender | null;
   desiredPartnerGenders?: MeProfileGender[] | null;

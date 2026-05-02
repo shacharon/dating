@@ -1,5 +1,7 @@
 'use client';
 
+/** @deprecated Product flow uses {@link OnboardingBasicForm} + {@link OnboardingTextsForm} under `/onboarding/*`. */
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';

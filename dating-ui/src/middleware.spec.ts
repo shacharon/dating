@@ -60,6 +60,16 @@ describe('middleware (Phase 2 profile routes)', () => {
     expect(res.headers.get('location')).toBeNull();
   });
 
+  it('redirects unauthenticated /onboarding/basic to / with next', () => {
+    const req = new NextRequest(new URL('http://localhost:3000/onboarding/basic'));
+    const res = middleware(req);
+    const loc = res.headers.get('location');
+    expect(loc).toBeTruthy();
+    const u = new URL(loc!);
+    expect(u.pathname).toBe('/');
+    expect(u.searchParams.get('next')).toBe('/onboarding/basic');
+  });
+
   it('redirects unauthenticated /profile to / with next param', () => {
     const req = new NextRequest(new URL('http://localhost:3000/profile'));
     const res = middleware(req);
