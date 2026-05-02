@@ -58,6 +58,11 @@ export const ErrorCodes = {
   ME_MATCHES_DETAIL_OK: 'ME_MATCHES_DETAIL_OK',
   /** Me matches: HG preference sourced from UserProfile legacy columns (UserProfilePreference row absent or hollow) */
   ME_MATCHES_HG_PREF_FALLBACK: 'ME_MATCHES_HG_PREF_FALLBACK',
+  /**
+   * Me matches: reciprocal partner-gender filter read `UserProfile.desiredPartnerGenders` JSON because
+   * no `UserProfilePreference` row exists for that profile (`/api/v1/me/matches` only).
+   */
+  ME_MATCHES_PARTNER_GENDER_LEGACY_JSON: 'ME_MATCHES_PARTNER_GENDER_LEGACY_JSON',
 
   /** Generic HTTP layer */
   HTTP_EXCEPTION: 'HTTP_EXCEPTION',

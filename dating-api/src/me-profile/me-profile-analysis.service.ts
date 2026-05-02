@@ -20,7 +20,20 @@ const STATUS_FAILED = 'FAILED' as UserProfileStatus;
  */
 export const EVALUATION_VERSION = 'v1';
 
-/** Canonical signal keys extracted from evaluationJson into UserProfileSignal rows. */
+/**
+ * Canonical signal keys extracted from `EvaluateBatchResult` into `UserProfileSignal` rows.
+ *
+ * **Semantic source of truth** for profile analysis remains `UserProfileEvaluation.evaluationJson`
+ * (the row created in the same `$transaction` batch as these upserts). `UserProfileSignal` is a
+ * denormalized index for search/filtering.
+ *
+ * **Schema note:** `UserProfileSignal.evalVersion` stores the pipeline version tag
+ * (`EVALUATION_VERSION`, mirrored on `UserProfileEvaluation.version`). It is **not** a foreign key
+ * to `UserProfileEvaluation.id`. There is no `evaluationId` column today — proving read-side
+ * alignment to a specific evaluation row would require a schema migration (do not fake linkage in
+ * application code). The **write path** aligns signals to the latest run by atomically creating
+ * the evaluation row, `deleteMany` for the profile, then upserting from this run's `result`.
+ */
 const SIGNAL_KEYS = [
   'emotionalDepth',
   'lifestylePace',
@@ -44,6 +57,22 @@ function toNullableSignalInt(value: unknown): number | null {
   return rounded;
 }
 
+/**
+ * Top interest tags from enrichment / extended / raw signals, deduped by lowercase key (max 3).
+ *
+ * **Semantic source of truth** for what these tags mean is `UserProfileEvaluation.evaluationJson`
+ * for the evaluation row created in the same `$transaction` as {@link buildInterestOperations}.
+ * `UserProfileInterest` rows are a denormalized index. The same tags are **written** onto
+ * `UserProfile.interestsTop` via {@link mapDbFirstColumnsFromEvaluation} for DB-first search only;
+ * product code under `src/me-profile/` does **not** read that column back for matching or mapping.
+ *
+ * **Schema note:** `UserProfileInterest.evalVersion` stores the pipeline tag (`EVALUATION_VERSION`,
+ * same string as `UserProfileEvaluation.version`). It is **not** a foreign key to
+ * `UserProfileEvaluation.id`. There is no `evaluationId` column — proving read-side alignment to a
+ * specific evaluation row would require a schema migration (do not fake linkage in application
+ * code). The **write path** replaces all interest rows for the profile in the same atomic batch as
+ * the new evaluation snapshot (`deleteMany` then `create` from this run's `result`).
+ */
 function pickTopInterests(result: EvaluateBatchResult): string[] {
   const fromEnrichment = result.enrichment?.signals?.interestsTop3;
   const fromExtended = result.extendedSignals?.interests;
@@ -70,11 +99,16 @@ function pickTopInterests(result: EvaluateBatchResult): string[] {
 }
 
 /**
- * Derive additive DB-first searchable columns from EvaluateBatchResult.
- * Source-of-truth remains `UserProfileEvaluation.evaluationJson`.
+ * Payload fragment for **`UserProfile.update` write only** — denormalized DB-first / cache columns
+ * (`interestsTop`, `sig*`) derived from the same `EvaluateBatchResult` persisted as
+ * `UserProfileEvaluation.evaluationJson` in the same transaction.
  *
- * `interestsTop` on `UserProfile` is a denormalized search copy produced by the same
- * `pickTopInterests` pipeline as `UserProfileInterest` rows — not a second semantic source.
+ * **Semantic source of truth** remains `UserProfileEvaluation.evaluationJson`. These fields exist
+ * on `UserProfile` for indexing/search and parity with normalized tables; **`src/me-profile/` must
+ * not read them at runtime** for engine scoring or HG mapping (use latest evaluation JSON instead).
+ * This module does not substitute `UserProfileSignal` / `UserProfileInterest` for those reads here.
+ *
+ * (No `evaluationId` on interest rows; see {@link pickTopInterests}.)
  */
 export function mapDbFirstColumnsFromEvaluation(
   result: EvaluateBatchResult,
@@ -98,8 +132,9 @@ export function mapDbFirstColumnsFromEvaluation(
 }
 
 /**
- * Phase C dual-write: build UserProfileSignal upsert operations from evaluation result.
- * Only signals with a non-null value produce a row.
+ * Phase C dual-write: build `UserProfileSignal` upsert operations from this run's `result`.
+ * Only signals with a non-null value produce a row. Caller must pass the same `evalVersion` string
+ * used for `UserProfileEvaluation.version` in the same transaction (see {@link SIGNAL_KEYS}).
  */
 function buildSignalUpserts(
   prisma: PrismaService,
@@ -122,8 +157,9 @@ function buildSignalUpserts(
 }
 
 /**
- * Phase C dual-write: build UserProfileInterest operations from evaluation result.
- * Always deletes existing interests for the profile, then re-creates ranked rows.
+ * Phase C dual-write: build `UserProfileInterest` `deleteMany` + `create` ops from this run's `result`.
+ * Always removes all interest rows for the profile, then re-creates ranked rows from {@link pickTopInterests}.
+ * Caller must pass the same `evalVersion` as `UserProfileEvaluation.version` in the same transaction.
  */
 function buildInterestOperations(
   prisma: PrismaService,
@@ -149,8 +185,8 @@ function buildInterestOperations(
 }
 
 /**
- * Latest-evaluation retrieval rule.
- * Always use this instead of a bare findFirst to ensure consistent ordering.
+ * Latest-evaluation retrieval rule: exactly one row, newest `createdAt` only.
+ * Equivalent to `ORDER BY createdAt DESC LIMIT 1` — never returns older evaluations.
  */
 export function latestEvaluationForProfile(
   prisma: PrismaService,
@@ -159,6 +195,7 @@ export function latestEvaluationForProfile(
   return prisma.userProfileEvaluation.findFirst({
     where: { profileId },
     orderBy: { createdAt: 'desc' },
+    take: 1,
   });
 }
 
@@ -170,27 +207,25 @@ export type LatestEvaluationForMatchPick = {
 };
 
 /**
- * Latest `UserProfileEvaluation` per profile (same rule as `latestEvaluationForProfile`,
- * but one query for many ids). Iteration order is DESC by `createdAt`, so the first
- * row seen for each `profileId` is the latest.
+ * Latest `UserProfileEvaluation` per profile id: one `ORDER BY createdAt DESC LIMIT 1`
+ * query per distinct id via {@link latestEvaluationForProfile} (no multi-row reads, no fallback).
  */
 export async function latestEvaluationsForProfileIds(
   prisma: PrismaService,
   profileIds: string[],
 ): Promise<Map<string, LatestEvaluationForMatchPick>> {
   const out = new Map<string, LatestEvaluationForMatchPick>();
-  if (profileIds.length === 0) {
-    return out;
-  }
-  const rows = await prisma.userProfileEvaluation.findMany({
-    where: { profileId: { in: profileIds } },
-    orderBy: { createdAt: 'desc' },
-    select: { profileId: true, evaluationJson: true, createdAt: true },
-  });
-  for (const row of rows) {
-    if (!out.has(row.profileId)) {
-      out.set(row.profileId, row);
+  const unique = [...new Set(profileIds)];
+  for (const profileId of unique) {
+    const row = await latestEvaluationForProfile(prisma, profileId);
+    if (row === null) {
+      continue;
     }
+    out.set(profileId, {
+      profileId,
+      evaluationJson: row.evaluationJson,
+      createdAt: row.createdAt,
+    });
   }
   return out;
 }
@@ -323,9 +358,13 @@ export class MeProfileAnalysisService {
 
     try {
       const { result } = await this.evaluate.evaluateBatch(input);
+      // Write-only denormalized columns on UserProfile (interestsTop, sig*); not read back here or in MeMatchesService / engine mapper.
       const dbFirstColumns = mapDbFirstColumnsFromEvaluation(result);
 
-      // Atomic write: status transition + evaluation snapshot + normalized signal/interest rows.
+      // Atomic write: ANALYZED profile + new UserProfileEvaluation row + normalized signals/interests.
+      // Order: evaluation snapshot is created before signal/interest writes; signals and interests
+      // are wiped then repopulated from `result` so they match this batch's evaluation JSON
+      // (`UserProfileSignal` / `UserProfileInterest` have evalVersion only — no evaluationId FK; see SIGNAL_KEYS and pickTopInterests).
       // If any operation fails the catch block fires and sets FAILED.
       await this.prisma.$transaction([
         this.prisma.userProfile.update({
@@ -344,7 +383,6 @@ export class MeProfileAnalysisService {
             evaluationJson: result as unknown as Prisma.InputJsonValue,
           },
         }),
-        // Drop prior signal rows so keys absent from this run cannot linger (evalVersion is pipeline tag, not run id).
         this.prisma.userProfileSignal.deleteMany({
           where: { profileId: profile.id },
         }),

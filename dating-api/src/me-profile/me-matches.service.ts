@@ -1,16 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
 import {
   latestEvaluationForProfile,
   latestEvaluationsForProfileIds,
 } from './me-profile-analysis.service';
-import {
-  buildChildrenUnsureRowFromNewModel,
-  buildProfilePayloadFromNewModel,
-} from './me-profile-engine.mapper';
+import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
+  type ProductProfilePartnerGenderPreferenceSource,
 } from './user-profile-matching-bridge.contract';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
@@ -66,8 +68,8 @@ export interface MeMatchDetailDto {
   analyzedAt: string | null;
   hasEvaluation: boolean;
   /**
-   * Curated analysis headline from `UserProfileEvaluation.evaluationJson.display.summary`.
-   * Null when no evaluation exists or the field is absent.
+   * Curated analysis headline from the candidate’s read model (`evaluationDisplaySummary`).
+   * Parsed only inside `me-profile-engine.mapper` from the latest stored evaluation blob.
    * Raw text fields (aboutMe / aboutPartner / aboutRelationship) are never exposed.
    */
   evaluationSummary: string | null;
@@ -84,7 +86,12 @@ export interface MeMatchDetailDto {
  *
  * **Active path (new product flow):**
  * - Viewer identity is resolved from the session `userId` only — never from client path/body.
- * - Source of truth is `UserProfile` + `UserProfileEvaluation`.
+ * - Source of truth is `UserProfile` + `UserProfileEvaluation`, with partner gender
+ *   preferences read from `UserProfilePreference.acceptedPartnerGenders` when that row exists.
+ * - Match-engine + HG inputs are composed **only** via {@link buildMeMatchesParticipantReadModel}
+ *   (semantic scoring payload from the latest stored evaluation — not `UserProfile.interestsTop` / `sig*`).
+ *   Do not call low-level mapper entry points or read stored evaluation blobs in this service;
+ *   policy tests enforce that.
  * - Legacy `MatchmakingProfile` is NOT used on this path.
  * - Gender filtering is reciprocal: both viewer→candidate AND candidate→viewer must pass.
  */
@@ -96,6 +103,8 @@ export class MeMatchesService {
   ) {}
 
   // ─── Shared candidate select ───────────────────────────────────────────────
+  // Intentionally excludes `UserProfile.interestsTop` and `sig*` — engine/HG inputs come only from
+  // `buildMeMatchesParticipantReadModel` (latest evaluation row passed into that builder).
 
   private candidateSelect = {
     id: true,
@@ -148,13 +157,33 @@ export class MeMatchesService {
     }
 
     const asOf = new Date();
-    const viewerBridge = buildProductProfileMatchingBridge(viewer, asOf);
+    const viewerBridge = buildProductProfileMatchingBridge(
+      viewer,
+      asOf,
+      partnerGenderSourceForMeMatchesRow(viewer, this.obs),
+    );
 
-    // Load viewer evaluation for engine scoring. Present when status = ANALYZED per lifecycle contract.
+    // Latest evaluation only (ORDER BY createdAt DESC LIMIT 1) — required for scoring.
     const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
-    const viewerPayload = viewerEval
-      ? buildProfilePayloadFromNewModel(viewer, viewerEval)
-      : null;
+    if (!viewerEval) {
+      throw new InternalServerErrorException({
+        error: 'viewer_evaluation_not_found',
+        message:
+          'Profile is marked analyzed but no UserProfileEvaluation row exists. Re-run analysis.',
+      });
+    }
+    const { preference: viewerPreference, ...viewerProfileCore } = viewer;
+    const viewerRead = buildMeMatchesParticipantReadModel(
+      viewerProfileCore,
+      viewerPreference ?? null,
+      viewerEval,
+    );
+    if (viewerRead.hg.fallback) {
+      this.obs.trace(
+        `event=hg_preference_fallback_used profileId=${viewer.id} reason=${viewerRead.hg.fallback.reason}`,
+        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+      );
+    }
 
     const candidateRows = await this.prisma.userProfile.findMany({
       where: { userId: { not: userId }, status: STATUS_ANALYZED },
@@ -168,18 +197,14 @@ export class MeMatchesService {
       candidateRows.map((r) => r.id),
     );
 
-    const { row: viewerHgRow, fallback: viewerHgFallback } =
-      buildChildrenUnsureRowFromNewModel(viewer);
-    if (viewerHgFallback) {
-      this.obs.trace(
-        `event=hg_preference_fallback_used profileId=${viewer.id} reason=${viewerHgFallback.reason}`,
-        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
-      );
-    }
     const matches: MeMatchItemDto[] = [];
 
     for (const row of candidateRows) {
-      const candidateBridge = buildProductProfileMatchingBridge(row, asOf);
+      const candidateBridge = buildProductProfileMatchingBridge(
+        row,
+        asOf,
+        partnerGenderSourceForMeMatchesRow(row, this.obs),
+      );
       const eligible = reciprocalProductGenderEligibility(
         viewerBridge.acceptedPartnerGenders,
         viewerBridge.selfGender,
@@ -189,17 +214,33 @@ export class MeMatchesService {
 
       if (!eligible) continue;
 
-      // HG Layer-3 hard-eligibility gate: exclude only when both rows carry structured
-      // HG data AND either direction is an explicit FAIL. Missing HG data → PASS (lenient).
-      const { row: candidateHgRow, fallback: candidateHgFallback } =
-        buildChildrenUnsureRowFromNewModel(row);
-      if (candidateHgFallback) {
+      const candidateEval = latestEvalByProfile.get(row.id);
+      if (!candidateEval) {
+        throw new InternalServerErrorException({
+          error: 'candidate_evaluation_not_found',
+          message: `Profile ${row.id} is analyzed but has no UserProfileEvaluation row.`,
+        });
+      }
+
+      const { preference: candidatePreference, ...candidateProfileCore } = row;
+      const candidateRead = buildMeMatchesParticipantReadModel(
+        candidateProfileCore,
+        candidatePreference ?? null,
+        candidateEval,
+      );
+      if (candidateRead.hg.fallback) {
         this.obs.trace(
-          `event=hg_preference_fallback_used profileId=${row.id} reason=${candidateHgFallback.reason}`,
+          `event=hg_preference_fallback_used profileId=${row.id} reason=${candidateRead.hg.fallback.reason}`,
           ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
         );
       }
-      const hgDirections = evaluateHolyGrailPairDirections(viewerHgRow, candidateHgRow);
+
+      // HG Layer-3 hard-eligibility gate: exclude only when both rows carry structured
+      // HG data AND either direction is an explicit FAIL. Missing HG data → PASS (lenient).
+      const hgDirections = evaluateHolyGrailPairDirections(
+        viewerRead.hg.row,
+        candidateRead.hg.row,
+      );
       if (
         hgDirections !== null &&
         (hgDirections.aToB.overallHardEligibility === 'FAIL' ||
@@ -212,15 +253,14 @@ export class MeMatchesService {
       let explainability: MatchExplainabilityDto | null = null;
       let recommendation: MatchRecommendationDto | null = null;
 
-      const candidateEval = latestEvalByProfile.get(row.id);
-      if (viewerPayload && candidateEval) {
-        const candidatePayload = buildProfilePayloadFromNewModel(row, candidateEval);
-        const result = compareWithStatus(viewerPayload, candidatePayload);
-        if (!('status' in result)) {
-          matchScore = result.finalScore;
-          explainability = result.explainability;
-          recommendation = result.recommendation;
-        }
+      const result = compareWithStatus(
+        viewerRead.enginePayload,
+        candidateRead.enginePayload,
+      );
+      if (!('status' in result)) {
+        matchScore = result.finalScore;
+        explainability = result.explainability;
+        recommendation = result.recommendation;
       }
 
       matches.push({
@@ -272,7 +312,11 @@ export class MeMatchesService {
     }
 
     const asOf = new Date();
-    const viewerBridge = buildProductProfileMatchingBridge(viewer, asOf);
+    const viewerBridge = buildProductProfileMatchingBridge(
+      viewer,
+      asOf,
+      partnerGenderSourceForMeMatchesRow(viewer, this.obs),
+    );
 
     // Load candidate by UserProfile.id — never by userId (no foreign-key exposure).
     const candidate = await this.prisma.userProfile.findUnique({
@@ -284,7 +328,11 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
 
-    const candidateBridge = buildProductProfileMatchingBridge(candidate, asOf);
+    const candidateBridge = buildProductProfileMatchingBridge(
+      candidate,
+      asOf,
+      partnerGenderSourceForMeMatchesRow(candidate, this.obs),
+    );
     const eligible = reciprocalProductGenderEligibility(
       viewerBridge.acceptedPartnerGenders,
       viewerBridge.selfGender,
@@ -297,24 +345,46 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
 
+    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
+    const candidateEval = await latestEvaluationForProfile(this.prisma, candidate.id);
+    if (!viewerEval || !candidateEval) {
+      throw new NotFoundException({
+        error: 'evaluation_not_found',
+        message: 'No analysis result available for this match.',
+      });
+    }
+
+    const { preference: viewerPrefDetail, ...viewerCoreDetail } = viewer;
+    const viewerRead = buildMeMatchesParticipantReadModel(
+      viewerCoreDetail,
+      viewerPrefDetail ?? null,
+      viewerEval,
+    );
+    const { preference: candidatePrefDetail, ...candidateCoreDetail } = candidate;
+    const candidateRead = buildMeMatchesParticipantReadModel(
+      candidateCoreDetail,
+      candidatePrefDetail ?? null,
+      candidateEval,
+    );
+
+    if (viewerRead.hg.fallback) {
+      this.obs.trace(
+        `event=hg_preference_fallback_used profileId=${viewer.id} reason=${viewerRead.hg.fallback.reason}`,
+        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+      );
+    }
+    if (candidateRead.hg.fallback) {
+      this.obs.trace(
+        `event=hg_preference_fallback_used profileId=${candidate.id} reason=${candidateRead.hg.fallback.reason}`,
+        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
+      );
+    }
+
     // HG Layer-3 hard-eligibility gate (same policy as list).
-    const { row: viewerHgRow, fallback: viewerHgFallbackDetail } =
-      buildChildrenUnsureRowFromNewModel(viewer);
-    if (viewerHgFallbackDetail) {
-      this.obs.trace(
-        `event=hg_preference_fallback_used profileId=${viewer.id} reason=${viewerHgFallbackDetail.reason}`,
-        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
-      );
-    }
-    const { row: candidateHgRow, fallback: candidateHgFallbackDetail } =
-      buildChildrenUnsureRowFromNewModel(candidate);
-    if (candidateHgFallbackDetail) {
-      this.obs.trace(
-        `event=hg_preference_fallback_used profileId=${candidate.id} reason=${candidateHgFallbackDetail.reason}`,
-        ErrorCodes.ME_MATCHES_HG_PREF_FALLBACK,
-      );
-    }
-    const hgDirections = evaluateHolyGrailPairDirections(viewerHgRow, candidateHgRow);
+    const hgDirections = evaluateHolyGrailPairDirections(
+      viewerRead.hg.row,
+      candidateRead.hg.row,
+    );
     if (
       hgDirections !== null &&
       (hgDirections.aToB.overallHardEligibility === 'FAIL' ||
@@ -323,27 +393,20 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
 
-    // Load evaluations for both viewer and candidate — used for summary and engine scoring.
-    const [viewerEval, candidateEval] = await Promise.all([
-      latestEvaluationForProfile(this.prisma, viewer.id),
-      latestEvaluationForProfile(this.prisma, candidate.id),
-    ]);
-
-    const evaluationSummary = extractDisplaySummary(candidateEval?.evaluationJson);
+    const evaluationSummary = candidateRead.evaluationDisplaySummary;
 
     let matchScore: number | null = null;
     let explainability: MatchExplainabilityDto | null = null;
     let recommendation: MatchRecommendationDto | null = null;
 
-    if (viewerEval && candidateEval) {
-      const viewerPayload = buildProfilePayloadFromNewModel(viewer, viewerEval);
-      const candidatePayload = buildProfilePayloadFromNewModel(candidate, candidateEval);
-      const result = compareWithStatus(viewerPayload, candidatePayload);
-      if (!('status' in result)) {
-        matchScore = result.finalScore;
-        explainability = result.explainability;
-        recommendation = result.recommendation;
-      }
+    const result = compareWithStatus(
+      viewerRead.enginePayload,
+      candidateRead.enginePayload,
+    );
+    if (!('status' in result)) {
+      matchScore = result.finalScore;
+      explainability = result.explainability;
+      recommendation = result.recommendation;
     }
 
     this.obs.trace(
@@ -368,21 +431,24 @@ export class MeMatchesService {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function extractDisplaySummary(evaluationJson: unknown): string | null {
-  if (
-    evaluationJson !== null &&
-    typeof evaluationJson === 'object' &&
-    'display' in evaluationJson
-  ) {
-    const display = (evaluationJson as Record<string, unknown>)['display'];
-    if (
-      display !== null &&
-      typeof display === 'object' &&
-      'summary' in display &&
-      typeof (display as Record<string, unknown>)['summary'] === 'string'
-    ) {
-      return (display as Record<string, unknown>)['summary'] as string;
-    }
+/**
+ * Partner-gender read path for `/api/v1/me/matches` only: prefer `UserProfilePreference.acceptedPartnerGenders`
+ * when the joined row exists; otherwise emit a trace and fall back to `UserProfile.desiredPartnerGenders` JSON
+ * inside {@link buildProductProfileMatchingBridge}.
+ */
+function partnerGenderSourceForMeMatchesRow(
+  row: { id: string; preference?: { acceptedPartnerGenders: string[] } | null },
+  obs: StructuredObservabilityService,
+): ProductProfilePartnerGenderPreferenceSource | undefined {
+  if (row.preference != null) {
+    return {
+      kind: 'preference',
+      acceptedPartnerGenders: row.preference.acceptedPartnerGenders,
+    };
   }
-  return null;
+  obs.trace(
+    `event=me_matches_partner_genders_legacy_json profileId=${row.id} reason=missing_UserProfilePreference_row_reads_UserProfile_desiredPartnerGenders`,
+    ErrorCodes.ME_MATCHES_PARTNER_GENDER_LEGACY_JSON,
+  );
+  return undefined;
 }

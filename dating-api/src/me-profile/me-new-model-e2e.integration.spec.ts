@@ -177,6 +177,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
 
   // ── Prisma mock: new-model tables functional, legacy tables locked ──
   const prismaMock = {
+    $transaction: jest.fn(),
     // ── New-model tables ──────────────────────────────────────────────
     userSession: {
       create: jest.fn(),
@@ -219,6 +220,9 @@ describe('Two-user new-model E2E flow (integration)', () => {
   // ── Module bootstrap ──────────────────────────────────────────────
 
   beforeAll(async () => {
+    prismaMock.$transaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(prismaMock),
+    );
     // ── Session: create stores nothing; findUnique resolves from registry ──
     prismaMock.userSession.create.mockImplementation(
       async ({ data }: { data: { expiresAt: Date } }) => ({

@@ -142,4 +142,16 @@ describe('user-profile-matching-bridge.contract', () => {
     expect(b.acceptedPartnerGenders).toEqual([AcceptedPartnerGender.FEMALE]);
     expect(b.analysisText.aboutMe).toBe('Hi');
   });
+
+  it('buildProductProfileMatchingBridge prefers preference acceptedPartnerGenders over conflicting desiredPartnerGenders JSON', () => {
+    const row = minimalRow({
+      gender: ProfileGender.MALE,
+      desiredPartnerGenders: ['MALE'],
+    });
+    const b = buildProductProfileMatchingBridge(row, asOf, {
+      kind: 'preference',
+      acceptedPartnerGenders: ['FEMALE'],
+    });
+    expect(b.acceptedPartnerGenders).toEqual([AcceptedPartnerGender.FEMALE]);
+  });
 });

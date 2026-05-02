@@ -8,7 +8,6 @@ import { Prisma, ProfileGender, UserProfileStatus } from '@prisma/client';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
-import type { MeLatestAnalysisResponseDto } from './me-profile.dto';
 import { MeProfileService } from './me-profile.service';
 
 describe('MeProfileService', () => {
@@ -32,6 +31,7 @@ describe('MeProfileService', () => {
   }
 
   let prisma: {
+    $transaction: jest.Mock;
     userProfile: {
       findUnique: jest.Mock;
       create: jest.Mock;
@@ -51,6 +51,9 @@ describe('MeProfileService', () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn(
+        async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma),
+      ),
       userProfile: {
         findUnique: jest.fn(),
         create: jest.fn(),
@@ -553,9 +556,9 @@ describe('MeProfileService', () => {
       prisma.userProfile.findUnique.mockResolvedValue(baseRow);
       prisma.userProfileEvaluation.findFirst.mockResolvedValue(null);
 
-      await expect(service.getLatestAnalysisForUser(userId)).resolves.toMatchObject({
-        evaluationId: null,
-      });
+      await expect(service.getLatestAnalysisForUser(userId)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -640,25 +643,20 @@ describe('MeProfileService', () => {
       expect(prisma.userProfileEvaluation.findFirst).not.toHaveBeenCalled();
     });
 
-    it('returns null evaluation fields when no UserProfileEvaluation row', async () => {
+    it('throws NotFoundException when no UserProfileEvaluation row exists', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(baseRow);
       prisma.userProfileEvaluation.findFirst.mockResolvedValue(null);
 
-      const r: MeLatestAnalysisResponseDto =
-        await service.getLatestAnalysisForUser(userId);
-
-      expect(r).toEqual({
-        userProfileId: 'prof_1',
-        evaluationId: null,
-        createdAt: null,
-        evaluationJson: null,
-      });
+      await expect(service.getLatestAnalysisForUser(userId)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(prisma.userProfileEvaluation.findFirst).toHaveBeenCalledWith({
         where: { profileId: 'prof_1' },
         orderBy: { createdAt: 'desc' },
+        take: 1,
       });
-      expect(obs.trace).toHaveBeenCalledWith(
-        expect.stringContaining('hasEval=false'),
+      expect(obs.trace).not.toHaveBeenCalledWith(
+        expect.stringContaining('me profile latest analysis'),
         'ME_PROFILE_ANALYSIS_LATEST_OK',
       );
     });
@@ -676,10 +674,31 @@ describe('MeProfileService', () => {
 
       const r = await service.getLatestAnalysisForUser(userId);
 
+      expect(prisma.userProfileEvaluation.findFirst).toHaveBeenCalledWith({
+        where: { profileId: 'prof_1' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      });
       expect(r.userProfileId).toBe('prof_1');
       expect(r.evaluationId).toBe('upeval_1');
       expect(r.createdAt).toBe(createdAt.toISOString());
       expect(r.evaluationJson).toEqual({ ok: true, self: {} });
+    });
+
+    it('returns only the single row from latestEvaluationForProfile (no merge with older evaluations)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(baseRow);
+      prisma.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_latest_only',
+        profileId: 'prof_1',
+        version: 'v1',
+        evaluationJson: { run: 'latest' },
+        createdAt: new Date('2026-06-01T12:00:00.000Z'),
+      });
+
+      const r = await service.getLatestAnalysisForUser(userId);
+
+      expect(r.evaluationId).toBe('eval_latest_only');
+      expect(r.evaluationJson).toEqual({ run: 'latest' });
     });
   });
 
@@ -806,49 +825,124 @@ describe('MeProfileService', () => {
       );
     });
 
-    it('preference upsert failure does not fail createForUser', async () => {
-      prisma.userProfile.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          ...baseRow,
-          id: 'prof_new',
-          desiredPartnerGenders: baseRow.desiredPartnerGenders,
-        })
-        .mockResolvedValueOnce(profileRow({ ...baseRow, id: 'prof_new' }));
+    it('preference upsert failure fails createForUser (atomic rollback)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValueOnce(null);
       prisma.userProfile.create.mockResolvedValue({ ...baseRow, id: 'prof_new' });
       prisma.userProfilePreference.upsert.mockRejectedValue(new Error('db error'));
 
       await expect(
         service.createForUser(userId, { gender: ProfileGender.FEMALE }),
-      ).resolves.toBeDefined();
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
 
       expect(obs.error).toHaveBeenCalledWith(
-        expect.stringContaining('preference upsert failed on create'),
+        'me profile create persistence failed',
         'ME_PROFILE_SAVE_FAILED',
         expect.any(Error),
       );
     });
 
-    it('preference upsert failure does not fail patchForUser', async () => {
-      prisma.userProfile.findUnique
-        .mockResolvedValueOnce(profileRow(baseRow))
-        .mockResolvedValueOnce({
-          ...baseRow,
-          desiredPartnerGenders: baseRow.desiredPartnerGenders,
-        })
-        .mockResolvedValueOnce(profileRow({ ...baseRow, aboutMe: 'x' }));
+    it('preference upsert failure fails patchForUser (atomic rollback)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValueOnce(profileRow(baseRow));
       prisma.userProfile.update.mockResolvedValue({ ...baseRow, aboutMe: 'x' });
       prisma.userProfilePreference.upsert.mockRejectedValue(new Error('db error'));
 
       await expect(
         service.patchForUser(userId, { aboutMe: 'x' }),
-      ).resolves.toBeDefined();
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
 
       expect(obs.error).toHaveBeenCalledWith(
-        expect.stringContaining('preference upsert failed on patch'),
+        'me profile patch persistence failed',
         'ME_PROFILE_SAVE_FAILED',
         expect.any(Error),
       );
+    });
+
+    /**
+     * Real Prisma runs profile + preference inside one interactive transaction; the root
+     * client does not "commit" if the callback throws. We simulate that by routing writes
+     * through a tx object whose `create`/`update` are not the same mocks as `prisma.*`,
+     * while delegating `userProfilePreference.upsert` to `prisma` so
+     * `prisma.userProfilePreference.upsert.mockRejectedValue` still drives the failure.
+     */
+    describe('UserProfilePreference upsert throws (rollback contract)', () => {
+      it('createForUser: request fails; root UserProfile create is not invoked', async () => {
+        const created = {
+          ...baseRow,
+          id: 'prof_tx',
+          gender: ProfileGender.FEMALE,
+        };
+        const txCreate = jest.fn().mockResolvedValue(created);
+        prisma.userProfile.findUnique
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ desiredPartnerGenders: null });
+        prisma.userProfilePreference.upsert.mockRejectedValue(
+          new Error('pref upsert failed'),
+        );
+
+        prisma.$transaction.mockImplementationOnce(
+          async (fn: (tx: unknown) => Promise<unknown>) => {
+            const tx = {
+              userProfile: {
+                create: txCreate,
+                update: prisma.userProfile.update,
+                findUnique: prisma.userProfile.findUnique,
+              },
+              userProfilePreference: {
+                upsert: (...args: unknown[]) =>
+                  prisma.userProfilePreference.upsert(...args),
+              },
+            };
+            return fn(tx);
+          },
+        );
+
+        await expect(
+          service.createForUser(userId, { gender: ProfileGender.FEMALE }),
+        ).rejects.toBeInstanceOf(InternalServerErrorException);
+
+        expect(prisma.userProfilePreference.upsert).toHaveBeenCalled();
+        expect(txCreate).toHaveBeenCalled();
+        expect(prisma.userProfile.create).not.toHaveBeenCalled();
+      });
+
+      it('patchForUser: request fails; root UserProfile update is not invoked', async () => {
+        const txUpdate = jest
+          .fn()
+          .mockResolvedValue({ ...baseRow, aboutMe: 'would-rollback' });
+        prisma.userProfile.findUnique
+          .mockResolvedValueOnce(profileRow(baseRow))
+          .mockResolvedValueOnce({
+            desiredPartnerGenders: baseRow.desiredPartnerGenders,
+          });
+        prisma.userProfilePreference.upsert.mockRejectedValue(
+          new Error('pref upsert failed'),
+        );
+
+        prisma.$transaction.mockImplementationOnce(
+          async (fn: (tx: unknown) => Promise<unknown>) => {
+            const tx = {
+              userProfile: {
+                create: prisma.userProfile.create,
+                update: txUpdate,
+                findUnique: prisma.userProfile.findUnique,
+              },
+              userProfilePreference: {
+                upsert: (...args: unknown[]) =>
+                  prisma.userProfilePreference.upsert(...args),
+              },
+            };
+            return fn(tx);
+          },
+        );
+
+        await expect(
+          service.patchForUser(userId, { aboutMe: 'would-rollback' }),
+        ).rejects.toBeInstanceOf(InternalServerErrorException);
+
+        expect(prisma.userProfilePreference.upsert).toHaveBeenCalled();
+        expect(txUpdate).toHaveBeenCalled();
+        expect(prisma.userProfile.update).not.toHaveBeenCalled();
+      });
     });
 
     it('createForUser maps desiredPartnerGenders to acceptedPartnerGenders, drops PREFER_NOT_TO_SAY', async () => {

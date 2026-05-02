@@ -7,6 +7,11 @@
  *
  * Phase 3 should import these types/helpers when building canonical preferences / retrieval
  * from the authenticated product profile row, alongside (not replacing) legacy analysis paths.
+ *
+ * **Active `/api/v1/me/matches`:** reciprocal gender eligibility uses {@link buildProductProfileMatchingBridge}
+ * with {@link ProductProfilePartnerGenderPreferenceSource}. Match-engine + HG row inputs are assembled
+ * only by {@link buildMeMatchesParticipantReadModel} in `me-profile-engine.mapper.ts` from `UserProfile`,
+ * `UserProfilePreference`, and latest `UserProfileEvaluation` (`evaluationJson` remains semantic SOT for scoring).
  */
 
 import { ProfileGender, type Prisma, type UserProfile } from '@prisma/client';
@@ -62,7 +67,10 @@ export interface ProductProfileMatchingBridge {
   /** Canonical self gender when `UserProfile.gender` is set. */
   readonly selfGender: GenderIdentity | null;
   /**
-   * Canonical strict partner-gender acceptance derived from `desiredPartnerGenders` JSON.
+   * Canonical strict partner-gender acceptance for matching eligibility.
+   * `/api/v1/me/matches` supplies {@link ProductProfilePartnerGenderPreferenceSource} from
+   * `UserProfilePreference.acceptedPartnerGenders` when that row exists; otherwise this is
+   * derived from `UserProfile.desiredPartnerGenders` JSON (legacy).
    * `null` when unset or empty → **no** partner-gender filter from this product field alone.
    */
   readonly acceptedPartnerGenders: readonly AcceptedPartnerGender[] | null;
@@ -124,6 +132,16 @@ export function parseAcceptedPartnerGendersFromProductJson(
   return out.length > 0 ? out : null;
 }
 
+/**
+ * Optional override for `/api/v1/me/matches` only: when a `UserProfilePreference` row exists,
+ * pass `acceptedPartnerGenders` from that row so the bridge does not read `UserProfile.desiredPartnerGenders`.
+ * Omit on other routes (e.g. `/api/v1/me/profile/matches`) — those keep JSON-only reads.
+ */
+export interface ProductProfilePartnerGenderPreferenceSource {
+  readonly kind: 'preference';
+  readonly acceptedPartnerGenders: readonly string[];
+}
+
 function wholeYearsBetween(from: Date, asOf: Date): number {
   let years = asOf.getUTCFullYear() - from.getUTCFullYear();
   const m = asOf.getUTCMonth() - from.getUTCMonth();
@@ -147,22 +165,31 @@ function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
 /**
  * Pure bridge: Prisma `UserProfile` slice → `ProductProfileMatchingBridge`.
  * `asOf` is the policy clock for age (Phase 3 should inject a single clock per request/job).
+ *
+ * @param partnerGenderSource `/api/v1/me/matches` passes `{ kind: 'preference', acceptedPartnerGenders }` when
+ *   `UserProfilePreference` is joined; omit to keep the legacy read from `row.desiredPartnerGenders` JSON only.
  */
 export function buildProductProfileMatchingBridge(
   row: UserProfileMatchingBridgeSource,
   asOf: Date,
+  partnerGenderSource?: ProductProfilePartnerGenderPreferenceSource,
 ): ProductProfileMatchingBridge {
   const g = row.gender ? parseProfileGender(row.gender) : null;
   const selfGender = g ? profileGenderToGenderIdentity(g) : null;
+
+  const acceptedPartnerGenders =
+    partnerGenderSource?.kind === 'preference'
+      ? parseAcceptedPartnerGendersFromProductJson(
+          partnerGenderSource.acceptedPartnerGenders as unknown as Prisma.JsonValue,
+        )
+      : parseAcceptedPartnerGendersFromProductJson(row.desiredPartnerGenders ?? null);
 
   return {
     version: PRODUCT_PROFILE_MATCHING_BRIDGE_VERSION,
     selfBirthDate: row.birthDate ?? null,
     derivedSelfAgeYears: deriveAgeYears(row.birthDate ?? null, asOf),
     selfGender,
-    acceptedPartnerGenders: parseAcceptedPartnerGendersFromProductJson(
-      row.desiredPartnerGenders ?? null,
-    ),
+    acceptedPartnerGenders,
     location: {
       city: row.city ?? null,
       country: row.country ?? null,

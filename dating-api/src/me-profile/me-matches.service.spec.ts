@@ -1,7 +1,13 @@
-import { NotFoundException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import * as holyGrailPair from '../matches/holy-grail-pair-directions';
+import * as matchEngine from '../matches/match-engine';
+import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import { MeMatchesService } from './me-matches.service';
 
 const S_ANALYZED = 'ANALYZED' as UserProfileStatus;
@@ -92,6 +98,21 @@ describe('MeMatchesService', () => {
     userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
     userProfileEvaluation: { findFirst: jest.Mock };
   };
+
+  /** Default latest eval for any profile id (ORDER BY createdAt DESC LIMIT 1 contract). */
+  function defaultLatestEval(profileId: string) {
+    return {
+      id: `eval_${profileId}`,
+      profileId,
+      version: 'v1',
+      evaluationJson: {
+        self: { signals: { ambition: 0.6, socialBattery: 0.5, emotionalDepth: 0.7 } },
+        partner: { signals: {} },
+        relationship: { signals: {} },
+      },
+      createdAt: new Date('2026-04-01T10:00:00.000Z'),
+    };
+  }
   let obs: jest.Mocked<Pick<StructuredObservabilityService, 'trace' | 'error'>>;
   let service: MeMatchesService;
 
@@ -102,8 +123,12 @@ describe('MeMatchesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       userProfileEvaluation: {
-        findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest
+          .fn()
+          .mockImplementation(
+            ({ where: { profileId } }: { where: { profileId: string } }) =>
+              Promise.resolve(defaultLatestEval(profileId)),
+          ),
       },
     };
     obs = { trace: jest.fn(), error: jest.fn() };
@@ -154,6 +179,56 @@ describe('MeMatchesService', () => {
       expect(result.totalCandidatesBeforeFilter).toBe(0);
     });
 
+    it('list() throws InternalServerErrorException when viewer has no UserProfileEvaluation row', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfileEvaluation.findFirst.mockResolvedValue(null);
+      prisma.userProfile.findMany.mockResolvedValue([]);
+
+      await expect(service.list(viewerUserId)).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
+    });
+
+    it('list() throws InternalServerErrorException when a candidate has no UserProfileEvaluation row', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({ id: candidateProfileId, userId: 'user_cand', gender: 'FEMALE' }),
+      ]);
+      let call = 0;
+      prisma.userProfileEvaluation.findFirst.mockImplementation(() => {
+        call += 1;
+        if (call === 1) {
+          return Promise.resolve({
+            evaluationJson: {
+              self: { signals: { ambition: 0.6, socialBattery: 0.5, emotionalDepth: 0.7 } },
+              partner: { signals: {} },
+              relationship: { signals: {} },
+            },
+            createdAt: new Date('2026-04-01T10:00:00.000Z'),
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(service.list(viewerUserId)).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
+    });
+
     it('excludes candidate whose gender is not in viewer desiredPartnerGenders', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
         makeProfileRow({
@@ -173,6 +248,10 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(0);
       expect(result.totalCandidatesBeforeFilter).toBe(1);
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('me_matches_partner_genders_legacy_json'),
+        'ME_MATCHES_PARTNER_GENDER_LEGACY_JSON',
+      );
     });
 
     it('includes candidate when gender filter passes reciprocally', async () => {
@@ -198,6 +277,40 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(1);
       expect(result.matches![0].id).toBe(candidateProfileId);
+    });
+
+    it('list() reads reciprocal partner genders from UserProfilePreference when row exists (not desiredPartnerGenders JSON)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['MALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
+          }),
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          preference: makePrefRow({
+            profileId: candidateProfileId,
+            acceptedPartnerGenders: ['MALE'],
+          }),
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches![0].id).toBe(candidateProfileId);
+      expect(result.viewerAcceptedPartnerGenders).toEqual(['FEMALE']);
     });
 
     // Requirement 2: no filter when viewer has no desiredPartnerGenders
@@ -411,6 +524,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           preference: makePrefRow({
             profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
             partnerWantsChildren: 'MUST_WANT',
           }),
         }),
@@ -467,6 +581,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           preference: makePrefRow({
             profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
             acceptedPartnerSmoking: ['NONE_ONLY'],
           }),
         }),
@@ -497,6 +612,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           preference: makePrefRow({
             profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
             acceptedPartnerAlcohol: ['NONE_ONLY'],
           }),
         }),
@@ -543,8 +659,12 @@ describe('MeMatchesService', () => {
     prisma.userProfile.findMany.mockResolvedValue([
       makeProfileRow({ id: candidateProfileId, userId: 'user_cand', gender: 'FEMALE', desiredPartnerGenders: ['MALE'] }),
     ]);
-    // Candidate evaluations (batch findMany)
-    prisma.userProfileEvaluation.findMany.mockResolvedValue([evalWithSignals]);
+    prisma.userProfileEvaluation.findFirst.mockImplementation(() =>
+      Promise.resolve({
+        evaluationJson: evalWithSignals.evaluationJson,
+        createdAt: evalWithSignals.createdAt,
+      }),
+    );
 
     const result = await service.list(viewerUserId);
 
@@ -663,7 +783,7 @@ describe('MeMatchesService', () => {
       expect(result.evaluationSummary).toBe('Thoughtful and grounded.');
     });
 
-    it('returns evaluationSummary=null when no evaluation row exists', async () => {
+    it('throws NotFoundException when no UserProfileEvaluation row exists for viewer or candidate', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -684,10 +804,9 @@ describe('MeMatchesService', () => {
         );
       prisma.userProfileEvaluation.findFirst.mockResolvedValue(null);
 
-      const result = await service.getById(viewerUserId, candidateProfileId);
-
-      expect(result.evaluationSummary).toBeNull();
-      expect(result.hasEvaluation).toBe(false);
+      await expect(service.getById(viewerUserId, candidateProfileId)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('returns numeric matchScore sourced from UserProfileEvaluation when both profiles have valid signals', async () => {
@@ -790,7 +909,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['MALE'],
         }),
       ]);
-      prisma.userProfileEvaluation.findMany.mockResolvedValue([candidateEvalRow]);
+      prisma.userProfileEvaluation.findFirst.mockResolvedValue(viewerEvalRow);
 
       const result = await service.list(viewerUserId);
 
@@ -903,9 +1022,6 @@ describe('MeMatchesService', () => {
             evaluationJson: evalPayload,
             createdAt: new Date(),
           }),
-          findMany: jest.fn().mockResolvedValue([
-            { profileId: candidateProfileId, evaluationJson: evalPayload, createdAt: new Date() },
-          ]),
         },
       };
 
@@ -933,7 +1049,6 @@ describe('MeMatchesService', () => {
         },
         userProfileEvaluation: {
           findFirst: jest.fn().mockResolvedValue(null),
-          findMany: jest.fn().mockResolvedValue([]),
         },
       };
 
@@ -964,7 +1079,6 @@ describe('MeMatchesService', () => {
             evaluationJson: evalPayload,
             createdAt: new Date(),
           }),
-          findMany: jest.fn().mockResolvedValue([]),
         },
       };
 
@@ -1020,13 +1134,6 @@ describe('MeMatchesService', () => {
       prisma.userProfile.findMany.mockResolvedValue([
         makeProfileRow({ id: candidateProfileId, userId: 'user_cand', gender: 'FEMALE', desiredPartnerGenders: ['MALE'] }),
       ]);
-      prisma.userProfileEvaluation.findMany.mockResolvedValue([
-        {
-          profileId: candidateProfileId,
-          evaluationJson: { self: { signals: { ambition: 0.5 } }, partner: { signals: {} }, relationship: { signals: {} } },
-          createdAt: new Date(),
-        },
-      ]);
 
       await expect(service.list(viewerUserId)).resolves.toBeDefined();
     });
@@ -1064,6 +1171,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           preference: makePrefRow({
             profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
             acceptedPartnerSmoking: ['NONE_ONLY'],
           }),
         }),
@@ -1149,6 +1257,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           preference: makePrefRow({
             profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
             acceptedPartnerSmoking: ['NONE_ONLY'],
           }),
         }),
@@ -1172,6 +1281,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           preference: makePrefRow({
             profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
             acceptedPartnerSmoking: ['NONE_ONLY'],
           }),
         }),
@@ -1193,6 +1303,52 @@ describe('MeMatchesService', () => {
       // Compatible candidate must be included regardless of source
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0].id).toBe(candidateProfileId);
+    });
+  });
+
+  describe('read-model → match engine + HG wiring', () => {
+    it('calls compareWithStatus and evaluateHolyGrailPairDirections only with readModel slices', async () => {
+      const viewerFixture = makeProfileRow({
+        id: viewerProfileId,
+        userId: viewerUserId,
+        gender: 'MALE',
+        desiredPartnerGenders: ['FEMALE'],
+      });
+      const candFixture = makeProfileRow({
+        id: candidateProfileId,
+        userId: 'user_cand',
+        gender: 'FEMALE',
+        desiredPartnerGenders: ['MALE'],
+      });
+      const vEval = defaultLatestEval(viewerProfileId);
+      const cEval = defaultLatestEval(candidateProfileId);
+
+      prisma.userProfile.findUnique.mockResolvedValue(viewerFixture);
+      prisma.userProfile.findMany.mockResolvedValue([candFixture]);
+
+      const { preference: vp, ...vCore } = viewerFixture;
+      const { preference: cp, ...cCore } = candFixture;
+      const expectedViewer = buildMeMatchesParticipantReadModel(vCore, vp ?? null, vEval);
+      const expectedCandidate = buildMeMatchesParticipantReadModel(cCore, cp ?? null, cEval);
+
+      const cmp = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
+        finalScore: 55,
+        explainability: {} as never,
+        recommendation: {} as never,
+      } as never);
+      const hgSpy = jest
+        .spyOn(holyGrailPair, 'evaluateHolyGrailPairDirections')
+        .mockReturnValue(null);
+
+      await service.list(viewerUserId);
+
+      expect(hgSpy).toHaveBeenCalledWith(expectedViewer.hg.row, expectedCandidate.hg.row);
+      expect(cmp).toHaveBeenCalledWith(
+        expectedViewer.enginePayload,
+        expectedCandidate.enginePayload,
+      );
+      cmp.mockRestore();
+      hgSpy.mockRestore();
     });
   });
 });

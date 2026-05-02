@@ -61,6 +61,7 @@ function extractCookieValue(
 describe('me profile HTTP (integration)', () => {
   let app: INestApplication<App>;
   const prismaMock = {
+    $transaction: jest.fn(),
     userSession: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -155,6 +156,9 @@ describe('me profile HTTP (integration)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(
+      async (fn: (tx: typeof prismaMock) => Promise<unknown>) => fn(prismaMock),
+    );
     prismaMock.userProfile.findUnique.mockReset();
     verifyIdToken.mockReset();
     usersServiceMock.findByEmail.mockResolvedValue(null);
@@ -1087,7 +1091,7 @@ describe('me profile HTTP (integration)', () => {
     expect(res.body).toMatchObject({ error: 'profile_not_found' });
   });
 
-  it('GET /api/v1/me/profile/analysis/latest returns empty evaluation contract when no row', async () => {
+  it('GET /api/v1/me/profile/analysis/latest returns 404 when no UserProfileEvaluation row exists', async () => {
     const raw = await loginAndCookie();
     prismaMock.userProfile.findUnique.mockResolvedValue({
       id: 'prof_analysis_latest_1',
@@ -1114,14 +1118,9 @@ describe('me profile HTTP (integration)', () => {
     const res = await request(app.getHttpServer())
       .get('/api/v1/me/profile/analysis/latest')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .expect(200);
+      .expect(404);
 
-    expect(res.body).toEqual({
-      userProfileId: 'prof_analysis_latest_1',
-      evaluationId: null,
-      createdAt: null,
-      evaluationJson: null,
-    });
+    expect(res.body).toMatchObject({ error: 'evaluation_not_found' });
   });
 
   it('GET /api/v1/me/profile/analysis/latest returns latest UserProfileEvaluation', async () => {

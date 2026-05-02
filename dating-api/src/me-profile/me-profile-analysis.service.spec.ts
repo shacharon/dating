@@ -298,7 +298,8 @@ describe('MeProfileAnalysisService', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Phase C dual-write: UserProfileSignal + UserProfileInterest
+  // Phase C dual-write: UserProfileSignal + UserProfileInterest (same transaction as
+  // UserProfileEvaluation.create; evalVersion is pipeline tag — no evaluationId FK)
   // ---------------------------------------------------------------------------
 
   describe('Phase C dual-write: normalized signal + interest rows', () => {
@@ -331,11 +332,53 @@ describe('MeProfileAnalysisService', () => {
       expect(prisma.userProfileSignal.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { profileId_signalKey: { profileId: baseRow.id, signalKey: 'emotionalDepth' } },
-          create: expect.objectContaining({ signalKey: 'emotionalDepth', signalValue: 7 }),
+          create: expect.objectContaining({
+            signalKey: 'emotionalDepth',
+            signalValue: 7,
+            evalVersion: EVALUATION_VERSION,
+          }),
           // update omits signalKey (it's the unique key; never re-set on update)
-          update: expect.objectContaining({ signalValue: 7 }),
+          update: expect.objectContaining({ signalValue: 7, evalVersion: EVALUATION_VERSION }),
         }),
       );
+    });
+
+    it('creates UserProfileEvaluation before wiping UserProfileSignal (transaction op build order)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: { signals: { emotionalDepth: 3 } },
+          partner: {},
+          relationship: {},
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      const evalOrder = prisma.userProfileEvaluation.create.mock.invocationCallOrder[0]!;
+      const signalDeleteOrder = prisma.userProfileSignal.deleteMany.mock.invocationCallOrder[0]!;
+      expect(evalOrder).toBeLessThan(signalDeleteOrder);
+    });
+
+    it('creates UserProfileEvaluation before deleting UserProfileInterest (transaction op build order)', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
+      evaluate.evaluateBatch.mockResolvedValue({
+        ok: true,
+        result: {
+          self: {},
+          partner: {},
+          relationship: {},
+          enrichment: { signals: { interestsTop3: ['Reading'] } },
+        },
+      } as never);
+
+      await service.runForUser(userId);
+
+      const evalOrder = prisma.userProfileEvaluation.create.mock.invocationCallOrder[0]!;
+      const interestDeleteOrder =
+        prisma.userProfileInterest.deleteMany.mock.invocationCallOrder[0]!;
+      expect(evalOrder).toBeLessThan(interestDeleteOrder);
     });
 
     it('skips UserProfileSignal rows for null / out-of-range signals', async () => {
@@ -376,13 +419,18 @@ describe('MeProfileAnalysisService', () => {
       });
       expect(prisma.userProfileInterest.create).toHaveBeenCalledTimes(3);
       expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ tag: 'hiking', rank: 1, source: 'enrichment' }),
+        data: expect.objectContaining({
+          tag: 'hiking',
+          rank: 1,
+          source: 'enrichment',
+          evalVersion: EVALUATION_VERSION,
+        }),
       });
       expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ tag: 'coffee', rank: 2 }),
+        data: expect.objectContaining({ tag: 'coffee', rank: 2, evalVersion: EVALUATION_VERSION }),
       });
       expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ tag: 'travel', rank: 3 }),
+        data: expect.objectContaining({ tag: 'travel', rank: 3, evalVersion: EVALUATION_VERSION }),
       });
     });
 
@@ -425,6 +473,9 @@ describe('MeProfileAnalysisService', () => {
       expect(prisma.userProfileSignal.upsert).toHaveBeenCalledTimes(1);
       expect(prisma.userProfileInterest.deleteMany).toHaveBeenCalledTimes(1);
       expect(prisma.userProfileInterest.create).toHaveBeenCalledTimes(1);
+      expect(prisma.userProfileInterest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ tag: 'music', rank: 1, evalVersion: EVALUATION_VERSION }),
+      });
     });
   });
 
@@ -500,18 +551,28 @@ describe('MeProfileAnalysisService', () => {
 // ---------------------------------------------------------------------------
 
 describe('latestEvaluationsForProfileIds', () => {
-  it('returns the newest row per profileId (DESC createdAt)', async () => {
+  it('loads each distinct profileId via latestEvaluationForProfile only (no findMany)', async () => {
     const t1 = new Date('2026-01-01T00:00:00.000Z');
-    const t2 = new Date('2026-01-02T00:00:00.000Z');
     const t3 = new Date('2026-01-03T00:00:00.000Z');
+    const findFirst = jest.fn().mockImplementation(({ where: { profileId } }) => {
+      if (profileId === 'p1') {
+        return Promise.resolve({
+          profileId: 'p1',
+          evaluationJson: { v: 'latest_p1' },
+          createdAt: t3,
+        });
+      }
+      if (profileId === 'p2') {
+        return Promise.resolve({
+          profileId: 'p2',
+          evaluationJson: { v: 'only_p2' },
+          createdAt: t1,
+        });
+      }
+      return Promise.resolve(null);
+    });
     const mockPrisma = {
-      userProfileEvaluation: {
-        findMany: jest.fn().mockResolvedValue([
-          { profileId: 'p1', evaluationJson: { v: 3 }, createdAt: t3 },
-          { profileId: 'p1', evaluationJson: { v: 2 }, createdAt: t2 },
-          { profileId: 'p2', evaluationJson: { v: 1 }, createdAt: t1 },
-        ]),
-      },
+      userProfileEvaluation: { findFirst },
     };
 
     const map = await latestEvaluationsForProfileIds(
@@ -519,26 +580,48 @@ describe('latestEvaluationsForProfileIds', () => {
       ['p1', 'p2'],
     );
 
-    expect(mockPrisma.userProfileEvaluation.findMany).toHaveBeenCalledWith({
-      where: { profileId: { in: ['p1', 'p2'] } },
+    expect(findFirst).toHaveBeenCalledTimes(2);
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { profileId: 'p1' },
       orderBy: { createdAt: 'desc' },
-      select: { profileId: true, evaluationJson: true, createdAt: true },
+      take: 1,
+    });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { profileId: 'p2' },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
     });
     expect(map.get('p1')).toEqual({
       profileId: 'p1',
-      evaluationJson: { v: 3 },
+      evaluationJson: { v: 'latest_p1' },
       createdAt: t3,
     });
     expect(map.get('p2')).toEqual({
       profileId: 'p2',
-      evaluationJson: { v: 1 },
+      evaluationJson: { v: 'only_p2' },
       createdAt: t1,
     });
   });
 
+  it('deduplicates profileIds so each id is queried once', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      profileId: 'p1',
+      evaluationJson: {},
+      createdAt: new Date(),
+    });
+    const mockPrisma = { userProfileEvaluation: { findFirst } };
+
+    await latestEvaluationsForProfileIds(
+      mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
+      ['p1', 'p1', 'p1'],
+    );
+
+    expect(findFirst).toHaveBeenCalledTimes(1);
+  });
+
   it('returns an empty map when profileIds is empty', async () => {
     const mockPrisma = {
-      userProfileEvaluation: { findMany: jest.fn() },
+      userProfileEvaluation: { findFirst: jest.fn() },
     };
 
     const map = await latestEvaluationsForProfileIds(
@@ -547,7 +630,7 @@ describe('latestEvaluationsForProfileIds', () => {
     );
 
     expect(map.size).toBe(0);
-    expect(mockPrisma.userProfileEvaluation.findMany).not.toHaveBeenCalled();
+    expect(mockPrisma.userProfileEvaluation.findFirst).not.toHaveBeenCalled();
   });
 });
 
@@ -565,6 +648,7 @@ describe('latestEvaluationForProfile', () => {
     expect(mockPrisma.userProfileEvaluation.findFirst).toHaveBeenCalledWith({
       where: { profileId: 'prof_123' },
       orderBy: { createdAt: 'desc' },
+      take: 1,
     });
   });
 
@@ -644,7 +728,7 @@ describe('buildAnalysisContext', () => {
   });
 });
 
-describe('mapDbFirstColumnsFromEvaluation', () => {
+describe('mapDbFirstColumnsFromEvaluation (write-only UserProfile denorm payload)', () => {
   it('maps enrichment interests and self signals to UserProfile DB-first fields', () => {
     const mapped = mapDbFirstColumnsFromEvaluation({
       self: {

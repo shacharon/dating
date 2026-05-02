@@ -8,6 +8,19 @@
  * signals is needed here. MeProfileAnalysisService stores the full EvaluateBatchResult
  * (including enrichment.signals.dailyRhythm / autonomyTogethernessDepth / interestsTop3)
  * directly into UserProfileEvaluation.evaluationJson without modification.
+ *
+ * **`UserProfile.interestsTop` and `sig*` columns are intentionally unused here** — they are
+ * write-only denormalized cache on the profile row; engine input is always `evaluationJson` from
+ * the latest `UserProfileEvaluation` row passed in by callers (not `UserProfileSignal` /
+ * `UserProfileInterest` in this layer).
+ *
+ * **`buildMeMatchesParticipantReadModel`** is the single composition point for `/api/v1/me/matches`:
+ * it takes `UserProfile` (HG slice), `UserProfilePreference`, and latest `UserProfileEvaluation`
+ * and returns both the match-engine payload and HG row in one object.
+ *
+ * **`MeMatchesService` must import only this builder** from this module — not
+ * {@link buildProfilePayloadFromNewModel} or {@link buildChildrenUnsureRowFromNewModel} directly;
+ * those remain internal building blocks for the read model.
  */
 
 import type { Prisma, UserProfileEvaluation } from '@prisma/client';
@@ -51,8 +64,10 @@ export interface UserProfilePreferenceRow {
  * signals are a Phase 3 concern).
  *
  * Phase F: optional `preference` is the joined `UserProfilePreference` row.
- * When missing or empty, HG preference scalars/arrays are omitted (lenient SKIP)
- * except partner genders, which are still parsed from `desiredPartnerGenders` JSON.
+ * When missing or empty, HG preference scalars/arrays are omitted (lenient SKIP).
+ * Partner genders: when a preference row exists, `acceptedPartnerGenders` on that row is the
+ * sole read source for `/api/v1/me/matches` HG mapping; `UserProfile.desiredPartnerGenders` JSON
+ * is used only when there is no preference row (legacy).
  */
 export interface ProfileHgSource extends ProfileEngineSource {
   readonly gender: string | null;
@@ -69,8 +84,12 @@ export interface ProfileHgSource extends ProfileEngineSource {
 }
 
 /**
- * Maps a UserProfile row slice + a UserProfileEvaluation row to the ProfileJsonPayload
+ * Maps a UserProfile row slice + a `UserProfileEvaluation` row to the ProfileJsonPayload
  * shape consumed by compareWithStatus (match engine).
+ *
+ * `evaluation` must be the **latest** row for this profile only (same row as
+ * {@link latestEvaluationForProfile}: `ORDER BY createdAt DESC LIMIT 1`). Do not pass older
+ * evaluations or merged payloads.
  *
  * evaluationStatus is always 'DONE' here: callers must only pass evaluations that exist
  * (i.e. UserProfile.status === 'ANALYZED' and a UserProfileEvaluation row is present).
@@ -104,6 +123,27 @@ export type HgPreferenceFallbackReason = 'missing_row' | 'missing_fields';
 export interface BuildHgRowResult {
   readonly row: ChildrenUnsureProfileRow;
   readonly fallback: { readonly reason: HgPreferenceFallbackReason } | null;
+}
+
+/**
+ * `UserProfile` fields required for `/api/v1/me/matches` read-model assembly, **without** embedded
+ * `preference` (supplied as a separate argument to {@link buildMeMatchesParticipantReadModel}).
+ */
+export type MeMatchesReadModelProfileInput = Omit<ProfileHgSource, 'preference'>;
+
+/**
+ * Single read model for one participant (viewer or candidate) on `/api/v1/me/matches`.
+ * Built only from `UserProfile` + `UserProfilePreference` + latest `UserProfileEvaluation`.
+ *
+ * - {@link MeMatchesParticipantReadModel.enginePayload} → `compareWithStatus` (semantic SOT: `evaluationJson`).
+ * - {@link MeMatchesParticipantReadModel.hg} → `evaluateHolyGrailPairDirections` (`hg.row`).
+ * - {@link MeMatchesParticipantReadModel.evaluationDisplaySummary} — optional UI headline parsed inside this module only.
+ */
+export interface MeMatchesParticipantReadModel {
+  readonly enginePayload: ProfileJsonPayload;
+  readonly hg: BuildHgRowResult;
+  /** `display.summary` from the evaluation blob; null when absent. Not exposed on list DTO. */
+  readonly evaluationDisplaySummary: string | null;
 }
 
 /** Returns true when every preference field on the row is null / empty-array. */
@@ -167,12 +207,14 @@ export function buildChildrenUnsureRowFromNewModel(
 
   const prefs: Record<string, unknown> = {};
 
-  // Gender: normalized acceptedPartnerGenders when row is populated; else JSON on UserProfile.
-  if (useNormalizedPrefs) {
-    if (normPref!.acceptedPartnerGenders.length > 0) {
-      prefs.acceptedPartnerGenders = normPref!.acceptedPartnerGenders;
+  // Partner genders: UserProfilePreference row is read SOT when present (even if other pref
+  // fields are empty). Legacy: no preference row → parse `UserProfile.desiredPartnerGenders` JSON.
+  if (normPref !== null) {
+    if (normPref.acceptedPartnerGenders.length > 0) {
+      prefs.acceptedPartnerGenders = normPref.acceptedPartnerGenders;
     }
   } else {
+    // Legacy — no UserProfilePreference row; mirror product JSON until backfill guarantees a row.
     const acceptedGenders = parseAcceptedPartnerGendersFromProductJson(
       profile.desiredPartnerGenders,
     );
@@ -220,5 +262,49 @@ export function buildChildrenUnsureRowFromNewModel(
       extractionV2: null,
     },
     fallback,
+  };
+}
+
+/**
+ * Assembles all **match-engine** and **HG Layer-3** inputs for one profile on the active
+ * `/api/v1/me/matches` path. Callers load latest `UserProfileEvaluation` separately
+ * ({@link latestEvaluationForProfile} / batch map); this function performs no I/O.
+ *
+ * @param profile — `UserProfile` row slice for engine texts + HG facts/prefs, **excluding** `preference`.
+ * @param preference — joined `UserProfilePreference` row or null (HG partner genders + scalars).
+ * @param evaluation — latest `UserProfileEvaluation` for `profile.id` (`evaluationJson` is semantic SOT for the engine).
+ */
+function parseEvaluationDisplaySummaryFromEvaluationBlob(
+  blob: Pick<UserProfileEvaluation, 'evaluationJson'>['evaluationJson'],
+): string | null {
+  if (blob !== null && typeof blob === 'object' && 'display' in blob) {
+    const display = (blob as Record<string, unknown>)['display'];
+    if (
+      display !== null &&
+      typeof display === 'object' &&
+      'summary' in display &&
+      typeof (display as Record<string, unknown>)['summary'] === 'string'
+    ) {
+      return (display as Record<string, unknown>)['summary'] as string;
+    }
+  }
+  return null;
+}
+
+export function buildMeMatchesParticipantReadModel(
+  profile: MeMatchesReadModelProfileInput,
+  preference: UserProfilePreferenceRow | null | undefined,
+  evaluation: Pick<UserProfileEvaluation, 'createdAt' | 'evaluationJson'>,
+): MeMatchesParticipantReadModel {
+  const profileHg: ProfileHgSource = {
+    ...profile,
+    preference: preference ?? undefined,
+  };
+  return {
+    enginePayload: buildProfilePayloadFromNewModel(profile, evaluation),
+    hg: buildChildrenUnsureRowFromNewModel(profileHg),
+    evaluationDisplaySummary: parseEvaluationDisplaySummaryFromEvaluationBlob(
+      evaluation.evaluationJson,
+    ),
   };
 }

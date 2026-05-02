@@ -235,15 +235,16 @@ export class MeProfileService {
 
   /**
    * Persists HG partner-preference fields to `UserProfilePreference` (normalized; Phase F).
-   * Best-effort — failures are logged but never block the main profile operation.
+   * Must use the same transaction client as the profile write so both tables commit or roll back together.
    */
   private async upsertPreference(
+    tx: Prisma.TransactionClient,
     profileId: string,
     body: CreateMeProfileDto | PatchMeProfileDto,
   ): Promise<void> {
     const prefData = toPreferenceData(body);
     if (prefData.acceptedPartnerGenders === undefined) {
-      const snap = await this.prisma.userProfile.findUnique({
+      const snap = await tx.userProfile.findUnique({
         where: { id: profileId },
         select: { desiredPartnerGenders: true },
       });
@@ -251,7 +252,7 @@ export class MeProfileService {
         snap?.desiredPartnerGenders ?? null,
       );
     }
-    await this.prisma.userProfilePreference.upsert({
+    await tx.userProfilePreference.upsert({
       where: { profileId },
       create: {
         profileId,
@@ -289,19 +290,18 @@ export class MeProfileService {
 
     const latest = await latestEvaluationForProfile(this.prisma, profile.id);
 
+    if (!latest) {
+      throw new NotFoundException({
+        error: 'evaluation_not_found',
+        message:
+          'No analysis result exists for this profile yet. Submit your profile for analysis first.',
+      });
+    }
+
     this.obs.trace(
-      `me profile latest analysis profileId=${profile.id} hasEval=${Boolean(latest)}`,
+      `me profile latest analysis profileId=${profile.id} evaluationId=${latest.id}`,
       ErrorCodes.ME_PROFILE_ANALYSIS_LATEST_OK,
     );
-
-    if (!latest) {
-      return {
-        userProfileId: profile.id,
-        evaluationId: null,
-        createdAt: null,
-        evaluationJson: null,
-      };
-    }
 
     return {
       userProfileId: profile.id,
@@ -340,20 +340,16 @@ export class MeProfileService {
     }
 
     try {
-      const row = await this.prisma.userProfile.create({
-        data: {
-          user: { connect: { id: userId } },
-          status: UserProfileStatus.DRAFT,
-          ...toPrismaWritableData(body),
-        } as Prisma.UserProfileCreateInput,
-      });
-      // Phase C dual-write: best-effort preference mirror (never blocks create).
-      await this.upsertPreference(row.id, body).catch((e: unknown) => {
-        this.obs.error(
-          `preference upsert failed on create profileId=${row.id}`,
-          ErrorCodes.ME_PROFILE_SAVE_FAILED,
-          e,
-        );
+      const row = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.userProfile.create({
+          data: {
+            user: { connect: { id: userId } },
+            status: UserProfileStatus.DRAFT,
+            ...toPrismaWritableData(body),
+          } as Prisma.UserProfileCreateInput,
+        });
+        await this.upsertPreference(tx, created.id, body);
+        return created;
       });
       this.obs.trace(
         `me profile created profileId=${row.id}`,
@@ -415,18 +411,14 @@ export class MeProfileService {
     }
 
     try {
-      if (hasProfileFieldChanges) {
-        await this.prisma.userProfile.update({
-          where: { userId },
-          data,
-        });
-      }
-      await this.upsertPreference(existing.id, body).catch((e: unknown) => {
-        this.obs.error(
-          `preference upsert failed on patch profileId=${existing.id}`,
-          ErrorCodes.ME_PROFILE_SAVE_FAILED,
-          e,
-        );
+      await this.prisma.$transaction(async (tx) => {
+        if (hasProfileFieldChanges) {
+          await tx.userProfile.update({
+            where: { userId },
+            data,
+          });
+        }
+        await this.upsertPreference(tx, existing.id, body);
       });
       const full = await this.prisma.userProfile.findUnique({
         where: { userId },
