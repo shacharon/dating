@@ -28,6 +28,8 @@ import {
   CreateMeProfileDto,
   PatchMeProfileDto,
 } from './me-profile.dto';
+import { CreateMatchActionDto } from './me-match-actions.dto';
+import { MeMatchActionsService } from './me-match-actions.service';
 import { MeMatchesService } from './me-matches.service';
 import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileService } from './me-profile.service';
@@ -43,6 +45,7 @@ export class MeProfileController {
     private readonly meProfile: MeProfileService,
     private readonly meMatches: MeProfileMatchesService,
     private readonly matches: MeMatchesService,
+    private readonly matchActions: MeMatchActionsService,
     private readonly obs: StructuredObservabilityService,
   ) {}
 
@@ -71,6 +74,43 @@ export class MeProfileController {
     @Param('id') id: string,
   ) {
     return this.matches.getById(user.id, id);
+  }
+
+  /**
+   * Current viewer action toward a candidate (`UserProfile.id`), if any.
+   */
+  @Get('matches/:id/actions')
+  getMatchAction(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.matchActions.getActionState(user.id, id);
+  }
+
+  /**
+   * Record a match action (Story 1: LIKE only) toward a candidate by `UserProfile.id`.
+   */
+  @Post('matches/:id/actions')
+  @HttpCode(HttpStatus.CREATED)
+  @UsePipes(MeProfileValidationPipe)
+  createMatchAction(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+    @Body() body: CreateMatchActionDto,
+  ) {
+    return this.matchActions.createAction(user.id, id, body.action);
+  }
+
+  /**
+   * Remove LIKE or PASS toward a candidate (`UserProfile.id`). BLOCK cannot be undone.
+   */
+  @Delete('matches/:id/actions')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteMatchAction(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.matchActions.deleteAction(user.id, id);
   }
 
   @Get('matches/:id/photos/:photoId/file')

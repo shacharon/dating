@@ -40,6 +40,12 @@ enum UserProfilePhotoStatus {
   REJECTED
 }
 
+enum MatchActionType {
+  LIKE
+  PASS
+  BLOCK
+}
+
 model User {
   id          String     @id @default(cuid())
   email       String     @unique
@@ -53,6 +59,8 @@ model User {
 
   profile  UserProfile?
   sessions UserSession[]
+  matchActionsAsActor  MatchAction[] @relation("MatchActionsByActor")
+  matchActionsAsTarget MatchAction[] @relation("MatchActionsByTarget")
 }
 
 model UserProfile {
@@ -193,6 +201,21 @@ model UserProfilePhoto {
 
   @@unique([profileId, position])
   @@index([profileId])
+}
+
+model MatchAction {
+  id                      String          @id @default(cuid())
+  actorUserId             String
+  actor                   User            @relation("MatchActionsByActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  targetUserId            String
+  target                  User            @relation("MatchActionsByTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetProfileIdSnapshot String
+  action                  MatchActionType
+  createdAt               DateTime        @default(now())
+
+  @@unique([actorUserId, targetUserId])
+  @@index([actorUserId, action])
+  @@index([targetUserId, action])
 }
 
 model UserSession {

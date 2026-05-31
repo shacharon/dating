@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import type { UserProfileStatus } from '@prisma/client';
+import { MatchActionType, type UserProfileStatus } from '@prisma/client';
 import {
   latestEvaluationForProfile,
   latestEvaluationsForProfileIds,
@@ -60,6 +60,8 @@ export interface MeMatchItemDto {
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /** Viewer's action toward this candidate's user, if any. */
+  yourAction: 'LIKE' | 'PASS' | 'BLOCK' | null;
 }
 
 export interface MeMatchesListResponseDto {
@@ -141,6 +143,7 @@ export class MeMatchesService {
 
   private candidateSelect = {
     id: true,
+    userId: true,
     name: true,
     status: true,
     birthDate: true,
@@ -258,6 +261,15 @@ export class MeMatchesService {
       candidateRows.map((r) => r.id),
     );
 
+    const actionByTargetUserId = new Map(
+      (
+        await this.prisma.matchAction.findMany({
+          where: { actorUserId: userId },
+          select: { targetUserId: true, action: true },
+        })
+      ).map((row) => [row.targetUserId, row.action]),
+    );
+
     const matches: MeMatchItemDto[] = [];
 
     for (const row of candidateRows) {
@@ -320,6 +332,10 @@ export class MeMatchesService {
         continue;
       }
 
+      if (actionByTargetUserId.get(row.userId) === MatchActionType.BLOCK) {
+        continue;
+      }
+
       let matchScore: number | null = null;
       let explainability: MatchExplainabilityDto | null = null;
       let recommendation: MatchRecommendationDto | null = null;
@@ -351,6 +367,7 @@ export class MeMatchesService {
         approvedPhotoCount: approvedPhotos.length,
         explainability,
         recommendation,
+        yourAction: actionByTargetUserId.get(row.userId) ?? null,
       });
     }
 
@@ -376,6 +393,86 @@ export class MeMatchesService {
       viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
       totalCandidatesBeforeFilter: totalBeforeFilter,
       matches,
+    };
+  }
+
+  // ─── assertMatchCandidateVisible ───────────────────────────────────────────
+
+  /**
+   * Ensures the viewer can see the candidate on match detail/list rules.
+   * Throws `NotFoundException` when not visible (same semantics as getById).
+   */
+  async assertMatchCandidateVisible(
+    viewerUserId: string,
+    candidateProfileId: string,
+  ): Promise<{ candidateProfileId: string; targetUserId: string }> {
+    const viewer = await this.prisma.userProfile.findUnique({
+      where: { userId: viewerUserId },
+      include: {
+        preference: true,
+        signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
+        interests: {
+          select: { tag: true, rank: true, evalVersion: true },
+          orderBy: { rank: 'asc' },
+        },
+      },
+    });
+
+    if (!viewer || viewer.status !== STATUS_ANALYZED) {
+      throw new NotFoundException(
+        'Your profile is not ready for matching. Complete your profile and run analysis first.',
+      );
+    }
+
+    const asOf = new Date();
+    const viewerBridge = buildProductProfileMatchingBridge(
+      viewer,
+      asOf,
+      partnerGenderSourceForMeMatchesRow(viewer, this.obs),
+    );
+
+    const candidate = await this.prisma.userProfile.findUnique({
+      where: { id: candidateProfileId },
+      select: this.candidateSelect,
+    });
+
+    if (!candidate || candidate.status !== STATUS_ANALYZED) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    const candidateBridge = buildProductProfileMatchingBridge(
+      candidate,
+      asOf,
+      partnerGenderSourceForMeMatchesRow(candidate, this.obs),
+    );
+    const eligible = reciprocalProductGenderEligibility(
+      viewerBridge.acceptedPartnerGenders,
+      viewerBridge.selfGender,
+      candidateBridge.acceptedPartnerGenders,
+      candidateBridge.selfGender,
+    );
+
+    if (!eligible) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
+    const candidateEval = await latestEvaluationForProfile(
+      this.prisma,
+      candidate.id,
+    );
+    if (!viewerEval || !candidateEval) {
+      throw new NotFoundException({
+        error: 'evaluation_not_found',
+        message: 'No analysis result available for this match.',
+      });
+    }
+
+    await this.assertViewerHasNotBlockedTarget(viewerUserId, candidate.userId);
+
+    return {
+      candidateProfileId: candidate.id,
+      targetUserId: candidate.userId,
     };
   }
 
@@ -449,6 +546,8 @@ export class MeMatchesService {
         message: 'No analysis result available for this match.',
       });
     }
+
+    await this.assertViewerHasNotBlockedTarget(userId, candidate.userId);
 
     const {
       preference: viewerPrefDetail,
@@ -577,6 +676,7 @@ export class MeMatchesService {
       where: { id: candidateProfileId },
       select: {
         id: true,
+        userId: true,
         status: true,
         birthDate: true,
         gender: true,
@@ -614,6 +714,8 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
 
+    await this.assertViewerHasNotBlockedTarget(userId, candidate.userId);
+
     const photo = await this.prisma.userProfilePhoto.findFirst({
       where: {
         id: photoId,
@@ -637,6 +739,21 @@ export class MeMatchesService {
       });
     }
     return { contentType: photo.mimeType, content };
+  }
+
+  private async assertViewerHasNotBlockedTarget(
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<void> {
+    const row = await this.prisma.matchAction.findUnique({
+      where: {
+        actorUserId_targetUserId: { actorUserId: viewerUserId, targetUserId },
+      },
+      select: { action: true },
+    });
+    if (row?.action === MatchActionType.BLOCK) {
+      throw new NotFoundException('Match not found.');
+    }
   }
 }
 

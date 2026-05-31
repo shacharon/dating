@@ -102,6 +102,7 @@ describe('MeMatchesService', () => {
     userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
     userProfileEvaluation: { findFirst: jest.Mock };
     userProfilePhoto: { findFirst: jest.Mock };
+    matchAction: { findMany: jest.Mock; findUnique: jest.Mock };
   };
 
   /** Default latest eval for any profile id (ORDER BY createdAt DESC LIMIT 1 contract). */
@@ -138,6 +139,10 @@ describe('MeMatchesService', () => {
       },
       userProfilePhoto: {
         findFirst: jest.fn(),
+      },
+      matchAction: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn().mockResolvedValue(null),
       },
     };
     photoStorage = { read: jest.fn() };
@@ -289,6 +294,62 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(1);
       expect(result.matches![0].id).toBe(candidateProfileId);
+    });
+
+    it('excludes candidate when viewer has BLOCK action toward them', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+        }),
+      ]);
+      prisma.matchAction.findMany.mockResolvedValue([
+        { targetUserId: 'user_cand', action: 'BLOCK' },
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(0);
+      expect(result.totalCandidatesBeforeFilter).toBe(1);
+    });
+
+    it('includes candidate when viewer has LIKE action toward them', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+        }),
+      ]);
+      prisma.matchAction.findMany.mockResolvedValue([
+        { targetUserId: 'user_cand', action: 'LIKE' },
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches![0].yourAction).toBe('LIKE');
     });
 
     it('includes approved primary photo URL and approved photo count', async () => {
@@ -1129,6 +1190,31 @@ describe('MeMatchesService', () => {
       expect(result.hasEvaluation).toBe(true);
     });
 
+    it('throws NotFoundException when viewer blocked the candidate', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+        );
+      prisma.matchAction.findUnique.mockResolvedValue({ action: 'BLOCK' });
+
+      await expect(
+        service.getById(viewerUserId, candidateProfileId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
     it('includes evaluationSummary from display.summary when evaluation exists', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
@@ -1295,6 +1381,35 @@ describe('MeMatchesService', () => {
       } finally {
         spy.mockRestore();
       }
+    });
+  });
+
+  // ─── assertMatchCandidateVisible() ────────────────────────────────────────
+
+  describe('assertMatchCandidateVisible()', () => {
+    it('throws NotFoundException when viewer blocked the candidate', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+        );
+      prisma.matchAction.findUnique.mockResolvedValue({ action: 'BLOCK' });
+
+      await expect(
+        service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -1482,6 +1597,9 @@ describe('MeMatchesService', () => {
             createdAt: new Date(),
             version: 'v1',
           }),
+        },
+        matchAction: {
+          findMany: jest.fn().mockResolvedValue([]),
         },
       };
 

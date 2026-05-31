@@ -166,3 +166,88 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
     unmount();
   });
 });
+
+describe('MeMatchesPage (yourAction badges)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows Liked badge when yourAction is LIKE', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [{ ...baseMatch, yourAction: 'LIKE' as const }],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('You liked this match')).toBeTruthy();
+      expect(screen.getByText('Liked')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('shows Passed badge when yourAction is PASS', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [{ ...baseMatch, yourAction: 'PASS' as const }],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('You passed on this match')).toBeTruthy();
+      expect(screen.getByText('Passed')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('does not show action badge when yourAction is null', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [{ ...baseMatch, yourAction: null }],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole('heading', { level: 1, name: /Your matches/i }).length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+    expect(screen.queryByLabelText('You liked this match')).toBeNull();
+    expect(screen.queryByText('Liked')).toBeNull();
+    expect(screen.queryByLabelText('You passed on this match')).toBeNull();
+    unmount();
+  });
+});
+
+describe('MeMatchesPage (blocked list exclusion)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does not render blocked match when API excludes them from list', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          id: 'prof-visible',
+          gender: 'FEMALE' as const,
+          locationLabel: 'Haifa',
+        },
+      ],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Haifa/)).toBeTruthy();
+    });
+    expect(
+      document.querySelector('a[href="/dating/me-matches/prof-blocked"]'),
+    ).toBeNull();
+    unmount();
+  });
+});

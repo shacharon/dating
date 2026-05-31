@@ -91,6 +91,12 @@ describe('me profile HTTP (integration)', () => {
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       delete: jest.fn(),
     },
+    matchAction: {
+      upsert: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn(),
+      delete: jest.fn(),
+    },
   };
   const photoStorageMock = {
     driver: 'local' as const,
@@ -187,6 +193,11 @@ describe('me profile HTTP (integration)', () => {
     prismaMock.userProfilePhoto.update.mockReset();
     prismaMock.userProfilePhoto.updateMany.mockReset();
     prismaMock.userProfilePhoto.delete.mockReset();
+    prismaMock.matchAction.upsert.mockReset();
+    prismaMock.matchAction.findMany.mockReset();
+    prismaMock.matchAction.findMany.mockResolvedValue([]);
+    prismaMock.matchAction.findUnique?.mockReset?.();
+    prismaMock.matchAction.delete?.mockReset?.();
     photoStorageMock.buildStorageKey.mockReset();
     photoStorageMock.save.mockReset();
     photoStorageMock.delete.mockReset();
@@ -1617,6 +1628,21 @@ describe('me profile HTTP (integration)', () => {
       }),
     };
 
+    function mockListEvaluations() {
+      prismaMock.userProfileEvaluation.findFirst.mockImplementation(
+        async (args: { where?: { profileId?: string } }) => {
+          const profileId = args?.where?.profileId ?? viewerProfile.id;
+          return {
+            id: `eval_${profileId}`,
+            profileId,
+            version: 'v1',
+            createdAt: new Date('2026-04-01T10:00:00.000Z'),
+            evaluationJson: { display: { summary: 'Test summary.' } },
+          };
+        },
+      );
+    }
+
     it('returns 401 without session', async () => {
       await request(app.getHttpServer())
         .get('/api/v1/me/matches')
@@ -1654,6 +1680,7 @@ describe('me profile HTTP (integration)', () => {
 
     it('returns 200 ready with empty matches when no candidates exist', async () => {
       const raw = await loginAndCookie();
+      mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
       prismaMock.userProfile.findMany.mockResolvedValue([]);
 
@@ -1670,6 +1697,7 @@ describe('me profile HTTP (integration)', () => {
 
     it('returns 200 ready — gender-mismatched candidate excluded', async () => {
       const raw = await loginAndCookie();
+      mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
       // Candidate is FEMALE — viewer (FEMALE) wants MALE only → excluded
       prismaMock.userProfile.findMany.mockResolvedValue([
@@ -1704,11 +1732,13 @@ describe('me profile HTTP (integration)', () => {
 
     it('returns 200 ready — valid candidate included and id is UserProfile.id', async () => {
       const raw = await loginAndCookie();
+      mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
       // Candidate is MALE — viewer (FEMALE) wants MALE, candidate has no filter → included
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
           id: 'prof_s5_cand_2',
+          userId: 'user_s5_cand_2',
           status: UserProfileStatus.ANALYZED,
           birthDate: new Date('1988-07-20T00:00:00.000Z'),
           gender: 'MALE',
@@ -1741,6 +1771,136 @@ describe('me profile HTTP (integration)', () => {
         '/api/v1/me/matches/prof_s5_cand_2/photos/photo_match_1/file',
       );
       expect(res.body.matches[0].approvedPhotoCount).toBe(1);
+      expect(res.body.matches[0].yourAction).toBeNull();
+    });
+
+    it('includes yourAction on list items from batch action join', async () => {
+      const raw = await loginAndCookie();
+      mockListEvaluations();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_s5_cand_2',
+          userId: 'user_s5_cand_2',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1988-07-20T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Male candidate A',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+          photos: [],
+          _count: { evaluations: 1 },
+          ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_2'),
+        },
+        {
+          id: 'prof_s5_cand_3',
+          userId: 'user_s5_cand_3',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1987-05-10T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Male candidate B',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-03T11:00:00.000Z'),
+          photos: [],
+          _count: { evaluations: 1 },
+          ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_3'),
+        },
+      ]);
+      prismaMock.matchAction.findMany.mockResolvedValue([
+        { targetUserId: 'user_s5_cand_2', action: 'LIKE' },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('ready');
+      expect(res.body.matches).toHaveLength(2);
+      const liked = res.body.matches.find(
+        (m: { id: string }) => m.id === 'prof_s5_cand_2',
+      );
+      const other = res.body.matches.find(
+        (m: { id: string }) => m.id === 'prof_s5_cand_3',
+      );
+      expect(liked.yourAction).toBe('LIKE');
+      expect(other.yourAction).toBeNull();
+      expect(prismaMock.matchAction.findMany).toHaveBeenCalledWith({
+        where: { actorUserId: USER_ID },
+        select: { targetUserId: true, action: true },
+      });
+    });
+
+    it('excludes blocked candidates from list', async () => {
+      const raw = await loginAndCookie();
+      mockListEvaluations();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_s5_cand_2',
+          userId: 'user_s5_cand_2',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1988-07-20T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Male candidate A',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+          photos: [],
+          _count: { evaluations: 1 },
+          ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_2'),
+        },
+        {
+          id: 'prof_s5_cand_3',
+          userId: 'user_s5_cand_3',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1987-05-10T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Male candidate B',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-03T11:00:00.000Z'),
+          photos: [],
+          _count: { evaluations: 1 },
+          ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_3'),
+        },
+      ]);
+      prismaMock.matchAction.findMany.mockResolvedValue([
+        { targetUserId: 'user_s5_cand_2', action: 'BLOCK' },
+        { targetUserId: 'user_s5_cand_3', action: 'LIKE' },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('ready');
+      expect(res.body.matches).toHaveLength(1);
+      expect(res.body.matches[0].id).toBe('prof_s5_cand_3');
+      expect(res.body.matches[0].yourAction).toBe('LIKE');
     });
   });
 
@@ -1775,6 +1935,7 @@ describe('me profile HTTP (integration)', () => {
 
     const candidateProfile = {
       id: 'prof_s5_det_cand',
+      userId: 'user_s5_det_cand',
       status: UserProfileStatus.ANALYZED,
       birthDate: new Date('1988-07-20T00:00:00.000Z'),
       gender: 'MALE' as const,
@@ -1861,6 +2022,26 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.userId).toBeUndefined();
     });
 
+    it('returns 404 when viewer blocked the candidate', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(candidateProfile);
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_s5_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'BLOCK' });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
     it('serves approved primary match photo through controlled endpoint', async () => {
       const raw = await loginAndCookie();
       prismaMock.userProfile.findUnique
@@ -1882,6 +2063,925 @@ describe('me profile HTTP (integration)', () => {
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(200)
         .expect('Content-Type', /image\/jpeg/);
+    });
+
+    it('returns 404 for photo when viewer blocked the candidate', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce({
+          ...candidateProfile,
+          preference: testUserProfilePreference('prof_s5_det_cand'),
+        });
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'BLOCK' });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand/photos/photo_s5_primary/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.userProfilePhoto.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Sprint 1 Story 3: GET /api/v1/me/matches/:id/actions ────────────────
+
+  describe('GET /api/v1/me/matches/:id/actions', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+
+    const viewerProfile = {
+      id: 'prof_viewer_action',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 'COMPLETED',
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_action', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
+      signals: [],
+      interests: [],
+    };
+
+    const candidateProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_action_cand'),
+      signals: [],
+      interests: [],
+    };
+
+    function mockEligibleMatchDetail() {
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return viewerProfile;
+          }
+          if (args.where.id === candidateProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return {
+                id: candidateProfile.id,
+                userId: candidateProfile.userId,
+              };
+            }
+            return candidateProfile;
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_action_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+    }
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_action_cand/actions')
+        .expect(401);
+    });
+
+    it('returns 404 when candidate does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.matchAction.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('returns 200 with action null when match visible and no row', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({ action: null });
+      expect(prismaMock.matchAction.findUnique).toHaveBeenCalledWith({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId: USER_ID,
+            targetUserId: CANDIDATE_USER_ID,
+          },
+        },
+        select: { action: true, createdAt: true },
+      });
+    });
+
+    it('returns 200 with LIKE action and createdAt', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T10:00:00.000Z');
+      prismaMock.matchAction.findUnique.mockResolvedValue({
+        action: 'LIKE',
+        createdAt,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({
+        action: 'LIKE',
+        createdAt: createdAt.toISOString(),
+      });
+    });
+
+    it('returns 404 when viewer blocked the candidate', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'BLOCK' });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+  });
+
+  // ─── Sprint 1 Story 1: POST /api/v1/me/matches/:id/actions ───────────────
+
+  describe('POST /api/v1/me/matches/:id/actions', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+
+    const viewerProfile = {
+      id: 'prof_viewer_action',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 'COMPLETED',
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_action', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
+      signals: [],
+      interests: [],
+    };
+
+    const candidateProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_action_cand'),
+      signals: [],
+      interests: [],
+    };
+
+    function mockEligibleMatchDetail() {
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return viewerProfile;
+          }
+          if (args.where.id === candidateProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return {
+                id: candidateProfile.id,
+                userId: candidateProfile.userId,
+              };
+            }
+            return candidateProfile;
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_action_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+    }
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .send({ action: 'LIKE' })
+        .expect(401);
+    });
+
+    it('returns 404 when candidate does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(404);
+
+      expect(prismaMock.matchAction.upsert).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when acting on self (same user id)', async () => {
+      const raw = await loginAndCookie();
+      const selfViewerProfile = {
+        ...viewerProfile,
+        gender: 'FEMALE' as const,
+        desiredPartnerGenders: ['FEMALE'],
+        preference: testUserProfilePreference('prof_viewer_action', {
+          acceptedPartnerGenders: ['FEMALE'],
+        }),
+      };
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return selfViewerProfile;
+          }
+          if (args.where.id === selfViewerProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return { id: selfViewerProfile.id, userId: USER_ID };
+            }
+            return {
+              ...selfViewerProfile,
+              id: selfViewerProfile.id,
+              userId: USER_ID,
+              _count: { evaluations: 1 },
+            };
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_self',
+        profileId: selfViewerProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Self summary.' } },
+      });
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/matches/${selfViewerProfile.id}/actions`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(400);
+
+      expect(prismaMock.matchAction.upsert).not.toHaveBeenCalled();
+    });
+
+    it('creates PASS action with user-to-user identity (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T11:00:00.000Z');
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_pass',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'PASS',
+        createdAt,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'PASS' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        id: 'action_row_pass',
+        action: 'PASS',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: 'prof_action_cand',
+        createdAt: createdAt.toISOString(),
+      });
+    });
+
+    it('creates BLOCK action with user-to-user identity (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T12:00:00.000Z');
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_block',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'BLOCK',
+        createdAt,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'BLOCK' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        id: 'action_row_block',
+        action: 'BLOCK',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: 'prof_action_cand',
+        createdAt: createdAt.toISOString(),
+      });
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ action: 'BLOCK' }),
+        }),
+      );
+    });
+
+    it('BLOCK overwrites prior LIKE on same user pair (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T12:00:00.000Z');
+      prismaMock.matchAction.upsert
+        .mockResolvedValueOnce({
+          id: 'action_row_1',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'LIKE',
+          createdAt,
+        })
+        .mockResolvedValueOnce({
+          id: 'action_row_1',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'BLOCK',
+          createdAt,
+        });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      const blockRes = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'BLOCK' })
+        .expect(201);
+
+      expect(blockRes.body.action).toBe('BLOCK');
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledTimes(2);
+      expect(prismaMock.matchAction.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ action: 'BLOCK' }),
+        }),
+      );
+    });
+
+    it('BLOCK overwrites prior PASS on same user pair (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T12:00:00.000Z');
+      prismaMock.matchAction.upsert
+        .mockResolvedValueOnce({
+          id: 'action_row_pass',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'PASS',
+          createdAt,
+        })
+        .mockResolvedValueOnce({
+          id: 'action_row_pass',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'BLOCK',
+          createdAt,
+        });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'PASS' })
+        .expect(201);
+
+      const blockRes = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'BLOCK' })
+        .expect(201);
+
+      expect(blockRes.body.action).toBe('BLOCK');
+      expect(prismaMock.matchAction.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ action: 'BLOCK' }),
+        }),
+      );
+    });
+
+    it('returns 400 for invalid action value', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'INVALID' })
+        .expect(400);
+
+      expect(prismaMock.matchAction.upsert).not.toHaveBeenCalled();
+    });
+
+    it('creates LIKE action with user-to-user identity (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T10:00:00.000Z');
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_1',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'LIKE',
+        createdAt,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        id: 'action_row_1',
+        action: 'LIKE',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: 'prof_action_cand',
+        createdAt: createdAt.toISOString(),
+      });
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledWith({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId: USER_ID,
+            targetUserId: CANDIDATE_USER_ID,
+          },
+        },
+        create: expect.objectContaining({
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'LIKE',
+        }),
+        update: expect.objectContaining({
+          action: 'LIKE',
+          targetProfileIdSnapshot: candidateProfile.id,
+        }),
+      });
+    });
+
+    it('re-LIKE is idempotent (upsert, 201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_1',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'LIKE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+      });
+
+      for (let i = 0; i < 2; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/me/matches/prof_action_cand/actions')
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ action: 'LIKE' })
+          .expect(201);
+      }
+
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledTimes(2);
+    });
+
+    it('re-PASS is idempotent (upsert, 201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_pass',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'PASS',
+        createdAt: new Date('2026-05-31T11:00:00.000Z'),
+      });
+
+      for (let i = 0; i < 2; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/me/matches/prof_action_cand/actions')
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ action: 'PASS' })
+          .expect(201);
+      }
+
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledTimes(2);
+    });
+
+    it('PASS overwrites prior LIKE on same user pair (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T10:00:00.000Z');
+      prismaMock.matchAction.upsert
+        .mockResolvedValueOnce({
+          id: 'action_row_1',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'LIKE',
+          createdAt,
+        })
+        .mockResolvedValueOnce({
+          id: 'action_row_1',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'PASS',
+          createdAt,
+        });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      const passRes = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'PASS' })
+        .expect(201);
+
+      expect(passRes.body.action).toBe('PASS');
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledTimes(2);
+      expect(prismaMock.matchAction.upsert).toHaveBeenLastCalledWith({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId: USER_ID,
+            targetUserId: CANDIDATE_USER_ID,
+          },
+        },
+        create: expect.objectContaining({ action: 'PASS' }),
+        update: expect.objectContaining({
+          action: 'PASS',
+          targetProfileIdSnapshot: candidateProfile.id,
+        }),
+      });
+    });
+
+    it('LIKE overwrites prior PASS on same user pair (201)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T10:00:00.000Z');
+      prismaMock.matchAction.upsert
+        .mockResolvedValueOnce({
+          id: 'action_row_1',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'PASS',
+          createdAt,
+        })
+        .mockResolvedValueOnce({
+          id: 'action_row_1',
+          actorUserId: USER_ID,
+          targetUserId: CANDIDATE_USER_ID,
+          targetProfileIdSnapshot: candidateProfile.id,
+          action: 'LIKE',
+          createdAt,
+        });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'PASS' })
+        .expect(201);
+
+      const likeRes = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(likeRes.body.action).toBe('LIKE');
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledTimes(2);
+      expect(prismaMock.matchAction.upsert).toHaveBeenLastCalledWith({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId: USER_ID,
+            targetUserId: CANDIDATE_USER_ID,
+          },
+        },
+        create: expect.objectContaining({ action: 'LIKE' }),
+        update: expect.objectContaining({
+          action: 'LIKE',
+          targetProfileIdSnapshot: candidateProfile.id,
+        }),
+      });
+    });
+  });
+
+  // ─── Sprint 1 Story 4: DELETE /api/v1/me/matches/:id/actions ───────────
+
+  describe('DELETE /api/v1/me/matches/:id/actions', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+
+    const viewerProfile = {
+      id: 'prof_viewer_action',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 'COMPLETED',
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_action', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
+      signals: [],
+      interests: [],
+    };
+
+    const candidateProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_action_cand'),
+      signals: [],
+      interests: [],
+    };
+
+    function mockEligibleMatchDetail() {
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return viewerProfile;
+          }
+          if (args.where.id === candidateProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return {
+                id: candidateProfile.id,
+                userId: candidateProfile.userId,
+              };
+            }
+            return candidateProfile;
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_action_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+    }
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .expect(401);
+    });
+
+    it('returns 404 when candidate does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.matchAction.delete).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when visible but no action row', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(res.body.message).toBe('No action to undo');
+      expect(prismaMock.matchAction.delete).not.toHaveBeenCalled();
+    });
+
+    it('returns 204 and deletes LIKE row', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+      prismaMock.matchAction.delete.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(204);
+
+      expect(prismaMock.matchAction.delete).toHaveBeenCalledWith({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId: USER_ID,
+            targetUserId: CANDIDATE_USER_ID,
+          },
+        },
+      });
+    });
+
+    it('returns 204 and deletes PASS row', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'PASS' });
+      prismaMock.matchAction.delete.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(204);
+
+      expect(prismaMock.matchAction.delete).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 404 when action is BLOCK (blocked match hidden)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'BLOCK' });
+
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.matchAction.delete).not.toHaveBeenCalled();
+    });
+
+    it('allows POST LIKE after DELETE (undo then re-like)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T10:00:00.000Z');
+
+      prismaMock.matchAction.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ action: 'LIKE' });
+      prismaMock.matchAction.delete.mockResolvedValueOnce({});
+      await request(app.getHttpServer())
+        .delete('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(204);
+
+      prismaMock.matchAction.upsert.mockResolvedValueOnce({
+        id: 'action_row_new',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'LIKE',
+        createdAt,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(res.body.action).toBe('LIKE');
+      expect(prismaMock.matchAction.delete).toHaveBeenCalledTimes(1);
+      expect(prismaMock.matchAction.upsert).toHaveBeenCalledTimes(1);
     });
   });
 

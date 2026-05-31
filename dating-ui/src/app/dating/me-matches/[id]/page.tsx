@@ -2,21 +2,60 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { fetchMyMatchById, type MeMatchDetailDto } from '@/lib/me-profile-api';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  blockMatch,
+  fetchMatchAction,
+  fetchMyMatchById,
+  likeMatch,
+  passMatch,
+  undoMatchAction,
+  type MeMatchDetailDto,
+} from '@/lib/me-profile-api';
+
+type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
+
+function actionStatusMessage(action: YourAction): string | null {
+  switch (action) {
+    case 'LIKE':
+      return 'You liked this person';
+    case 'PASS':
+      return 'You passed on this person';
+    case 'BLOCK':
+      return 'You blocked this person';
+    default:
+      return null;
+  }
+}
+
+function undoAriaLabel(action: 'LIKE' | 'PASS'): string {
+  return action === 'LIKE'
+    ? 'Undo your like on this match'
+    : 'Undo your pass on this match';
+}
 
 export default function MeMatchDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [data, setData] = useState<MeMatchDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [yourAction, setYourAction] = useState<YourAction>(null);
+  const [actionSaving, setActionSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    fetchMyMatchById(id)
-      .then((dto) => {
-        if (!cancelled) setData(dto);
+    setLoading(true);
+    setError(null);
+    Promise.all([fetchMyMatchById(id), fetchMatchAction(id)])
+      .then(([dto, actionState]) => {
+        if (cancelled) return;
+        setData(dto);
+        setYourAction(actionState.action);
       })
       .catch((e: unknown) => {
         if (!cancelled)
@@ -29,6 +68,74 @@ export default function MeMatchDetailPage() {
       cancelled = true;
     };
   }, [id]);
+
+  async function recordAction(action: 'LIKE' | 'PASS') {
+    if (!id || actionSaving || yourAction != null) return;
+    setActionError(null);
+    setActionSaving(true);
+    try {
+      if (action === 'LIKE') {
+        await likeMatch(id);
+      } else {
+        await passMatch(id);
+      }
+      const actionState = await fetchMatchAction(id);
+      setYourAction(actionState.action);
+    } catch (e: unknown) {
+      setActionError(
+        e instanceof Error
+          ? e.message
+          : action === 'LIKE'
+            ? 'Failed to like match'
+            : 'Failed to pass on match',
+      );
+    } finally {
+      setActionSaving(false);
+    }
+  }
+
+  async function handleUndo() {
+    if (
+      !id ||
+      actionSaving ||
+      yourAction == null ||
+      yourAction === 'BLOCK'
+    ) {
+      return;
+    }
+    setActionError(null);
+    setActionSaving(true);
+    try {
+      await undoMatchAction(id);
+      const actionState = await fetchMatchAction(id);
+      setYourAction(actionState.action);
+    } catch (e: unknown) {
+      setActionError(
+        e instanceof Error ? e.message : 'Failed to undo match action',
+      );
+    } finally {
+      setActionSaving(false);
+    }
+  }
+
+  async function handleBlockConfirm() {
+    if (!id || actionSaving) return;
+    setBlockError(null);
+    setActionSaving(true);
+    try {
+      await blockMatch(id);
+      router.push('/dating/me-matches');
+    } catch (e: unknown) {
+      setBlockConfirmOpen(false);
+      setBlockError(
+        e instanceof Error ? e.message : 'Failed to block match',
+      );
+    } finally {
+      setActionSaving(false);
+    }
+  }
+
+  const statusMessage = actionStatusMessage(yourAction);
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -196,7 +303,127 @@ export default function MeMatchDetailPage() {
               )}
             </div>
 
-            <footer className="flex justify-start border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
+            <footer className="flex flex-col items-start gap-3 border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
+              {statusMessage ? (
+                <div className="flex flex-col items-start gap-2">
+                  <p
+                    className="text-sm font-medium text-zinc-600 dark:text-zinc-300"
+                    role="status"
+                  >
+                    {statusMessage}
+                  </p>
+                  {(yourAction === 'LIKE' || yourAction === 'PASS') && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void handleUndo()}
+                        disabled={actionSaving}
+                        aria-label={undoAriaLabel(yourAction)}
+                        className="text-sm font-medium text-zinc-500 underline-offset-4 hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
+                      >
+                        {actionSaving ? 'Saving…' : 'Undo'}
+                      </button>
+                      {actionSaving && (
+                        <p
+                          className="text-xs text-zinc-400 dark:text-zinc-500"
+                          role="status"
+                        >
+                          Saving…
+                        </p>
+                      )}
+                      {actionError && (
+                        <div
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+                          role="alert"
+                        >
+                          {actionError}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-start gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void recordAction('LIKE')}
+                      disabled={actionSaving}
+                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-700 dark:hover:bg-emerald-600"
+                    >
+                      {actionSaving ? 'Saving…' : 'Like'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void recordAction('PASS')}
+                      disabled={actionSaving}
+                      className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      Pass
+                    </button>
+                  </div>
+                  {actionSaving && (
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500" role="status">
+                      Saving…
+                    </p>
+                  )}
+                  {actionError && (
+                    <div
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+                      role="alert"
+                    >
+                      {actionError}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-col items-start gap-2">
+                {blockConfirmOpen ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 dark:border-red-900/50 dark:bg-red-950/20">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                      Are you sure? This can&apos;t be undone.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBlockConfirmOpen(false)}
+                        disabled={actionSaving}
+                        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleBlockConfirm()}
+                        disabled={actionSaving}
+                        className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                      >
+                        {actionSaving ? 'Saving…' : 'Block permanently'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlockError(null);
+                      setBlockConfirmOpen(true);
+                    }}
+                    disabled={actionSaving}
+                    className="text-sm font-medium text-red-600 underline-offset-4 hover:text-red-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    Block
+                  </button>
+                )}
+                {blockError && (
+                  <div
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+                    role="alert"
+                  >
+                    {blockError}
+                  </div>
+                )}
+              </div>
               <Link
                 href="/dating/me-matches"
                 className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"

@@ -9,6 +9,34 @@ import {
   type MeMatchesListDto,
 } from '@/lib/me-profile-api';
 
+function matchActionBadge(action: NonNullable<
+  NonNullable<MeMatchesListDto['matches']>[number]['yourAction']
+>) {
+  switch (action) {
+    case 'LIKE':
+      return {
+        label: 'Liked',
+        className:
+          'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+        ariaLabel: 'You liked this match',
+      };
+    case 'PASS':
+      return {
+        label: 'Passed',
+        className:
+          'rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+        ariaLabel: 'You passed on this match',
+      };
+    case 'BLOCK':
+      return {
+        label: 'Blocked',
+        className:
+          'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400',
+        ariaLabel: 'You blocked this match',
+      };
+  }
+}
+
 export default function MeMatchesPage() {
   const router = useRouter();
   const [data, setData] = useState<MeMatchesListDto | null>(null);
@@ -208,6 +236,17 @@ export default function MeMatchesPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      {m.yourAction != null && (() => {
+                        const badge = matchActionBadge(m.yourAction);
+                        return (
+                          <span
+                            className={badge.className}
+                            aria-label={badge.ariaLabel}
+                          >
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
                       {m.matchScore != null && (
                         <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                           {m.matchScore}

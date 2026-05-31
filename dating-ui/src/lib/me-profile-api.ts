@@ -396,6 +396,7 @@ export interface MeMatchItemDto {
   profileAnalysisStale?: boolean;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  yourAction?: 'LIKE' | 'PASS' | 'BLOCK' | null;
 }
 
 /** Full response shape of `GET /api/v1/me/matches`. */
@@ -487,6 +488,158 @@ export async function fetchMyMatchById(id: string): Promise<MeMatchDetailDto> {
     throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
   }
   return readJson<MeMatchDetailDto>(res);
+}
+
+/** Response shape of `POST /api/v1/me/matches/:id/actions`. */
+export interface MatchActionDto {
+  id: string;
+  actorUserId: string;
+  targetUserId: string;
+  targetProfileIdSnapshot: string;
+  action: 'LIKE' | 'PASS' | 'BLOCK';
+  createdAt: string;
+}
+
+async function recordMatchAction(
+  profileId: string,
+  action: 'LIKE' | 'PASS' | 'BLOCK',
+): Promise<MatchActionDto> {
+  const base = getApiBase();
+  const path = `/api/v1/me/matches/${encodeURIComponent(profileId)}/actions`;
+  const loginMessages: Record<typeof action, string> = {
+    LIKE: 'You must be logged in to like a match.',
+    PASS: 'You must be logged in to pass on a match.',
+    BLOCK: 'You must be logged in to block a match.',
+  };
+  const failureMessages: Record<typeof action, string> = {
+    LIKE: 'Could not like this match.',
+    PASS: 'Could not pass on this match.',
+    BLOCK: 'Could not block this match.',
+  };
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'POST',
+      ...credFetch,
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ action }),
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (res.status === 401) {
+    throw new Error(loginMessages[action]);
+  }
+  if (res.status === 404) {
+    throw new Error('Match not found.');
+  }
+  if (res.status === 400) {
+    const errBody = await res.text();
+    try {
+      const parsed = JSON.parse(errBody) as { message?: string | string[] };
+      const msg = parsed.message;
+      if (typeof msg === 'string') throw new Error(msg);
+      if (Array.isArray(msg)) throw new Error(msg.join(', '));
+    } catch (e) {
+      if (e instanceof Error && e.message !== errBody) throw e;
+    }
+    throw new Error(failureMessages[action]);
+  }
+  if (!res.ok) {
+    throw new Error(`POST ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<MatchActionDto>(res);
+}
+
+/** Records a LIKE action toward a match candidate by their `UserProfile.id`. */
+export async function likeMatch(profileId: string): Promise<MatchActionDto> {
+  return recordMatchAction(profileId, 'LIKE');
+}
+
+/** Records a PASS action toward a match candidate by their `UserProfile.id`. */
+export async function passMatch(profileId: string): Promise<MatchActionDto> {
+  return recordMatchAction(profileId, 'PASS');
+}
+
+/** Permanently blocks a match candidate by their `UserProfile.id`. Cannot be undone. */
+export async function blockMatch(profileId: string): Promise<MatchActionDto> {
+  return recordMatchAction(profileId, 'BLOCK');
+}
+
+/**
+ * Removes the viewer's LIKE or PASS toward a match candidate. BLOCK cannot be undone.
+ */
+export async function undoMatchAction(profileId: string): Promise<void> {
+  const base = getApiBase();
+  const path = `/api/v1/me/matches/${encodeURIComponent(profileId)}/actions`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'DELETE',
+      ...credFetch,
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (res.status === 401) {
+    throw new Error('You must be logged in to undo a match action.');
+  }
+  if (res.status === 403 || res.status === 400) {
+    const errBody = await res.text();
+    try {
+      const parsed = JSON.parse(errBody) as { message?: string | string[] };
+      const msg = parsed.message;
+      if (typeof msg === 'string') throw new Error(msg);
+      if (Array.isArray(msg)) throw new Error(msg.join(', '));
+    } catch (e) {
+      if (e instanceof Error && e.message !== errBody) throw e;
+    }
+    throw new Error('Could not undo this match action.');
+  }
+  if (res.status === 404) {
+    throw new Error('No action to undo.');
+  }
+  if (res.status !== 204) {
+    throw new Error(`DELETE ${path} failed: ${res.status} ${res.statusText}`);
+  }
+}
+
+/** Response shape of `GET /api/v1/me/matches/:id/actions`. */
+export interface MatchActionStateDto {
+  action: 'LIKE' | 'PASS' | 'BLOCK' | null;
+  createdAt?: string;
+}
+
+/**
+ * Returns the viewer's current action toward a match candidate, if any.
+ */
+export async function fetchMatchAction(
+  profileId: string,
+): Promise<MatchActionStateDto> {
+  const base = getApiBase();
+  const path = `/api/v1/me/matches/${encodeURIComponent(profileId)}/actions`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (res.status === 404) {
+    throw new Error('Match not found.');
+  }
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<MatchActionStateDto>(res);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
