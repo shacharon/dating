@@ -4,6 +4,8 @@ import {
   assembleEvaluationPayload,
   buildMeMatchesParticipantReadModel,
   buildProfilePayloadFromNewModel,
+  meMatchesEngineNormalizedMergeActive,
+  resolveMeMatchesEngineInputSourceMode,
   type NormalizedInterestRow,
   type NormalizedSignalRow,
 } from './me-profile-engine.mapper';
@@ -35,6 +37,7 @@ describe('me-profile-engine.mapper', () => {
     const evaluation = {
       createdAt: new Date('2026-05-02T12:00:00.000Z'),
       evaluationJson: evaluationJson as unknown as Prisma.JsonValue,
+      version: 'v1',
     };
 
     it('returns enginePayload + hg from UserProfile + preference + latest evaluation only', () => {
@@ -82,6 +85,7 @@ describe('me-profile-engine.mapper', () => {
     it('parses evaluationDisplaySummary from display.summary inside the read model', () => {
       const evalWithDisplay = {
         createdAt: new Date('2026-05-02T12:00:00.000Z'),
+        version: 'v1',
         evaluationJson: {
           display: { summary: 'Grounded optimist.' },
           self: {},
@@ -91,6 +95,56 @@ describe('me-profile-engine.mapper', () => {
       };
       const read = buildMeMatchesParticipantReadModel(baseHgProfile, null, evalWithDisplay);
       expect(read.evaluationDisplaySummary).toBe('Grounded optimist.');
+    });
+
+    it('blob-only when useNormalized is false even if normalized rows carry different evalVersion', () => {
+      const read = buildMeMatchesParticipantReadModel(
+        baseHgProfile,
+        null,
+        evaluation,
+        {
+          signals: [
+            { signalKey: 'emotionalDepth', signalValue: 99, evalVersion: 'stale' },
+          ],
+          interests: [],
+          useNormalized: false,
+        },
+      );
+      expect((read.enginePayload.evaluation as any).self.signals.emotionalDepth).toBe(3);
+    });
+
+    it('merges normalized rows when useNormalized and all evalVersion match evaluation.version', () => {
+      const read = buildMeMatchesParticipantReadModel(
+        baseHgProfile,
+        null,
+        evaluation,
+        {
+          signals: [{ signalKey: 'emotionalDepth', signalValue: 8, evalVersion: 'v1' }],
+          interests: [{ tag: 'chess', rank: 0, evalVersion: 'v1' }],
+          useNormalized: true,
+        },
+      );
+      expect((read.enginePayload.evaluation as any).self.signals.emotionalDepth).toBe(8);
+      expect((read.enginePayload.evaluation as any).enrichment?.signals?.interestsTop3).toEqual([
+        'chess',
+      ]);
+    });
+
+    it('blob-only when useNormalized and a signal evalVersion mismatches (all-or-nothing)', () => {
+      const read = buildMeMatchesParticipantReadModel(
+        baseHgProfile,
+        null,
+        evaluation,
+        {
+          signals: [
+            { signalKey: 'emotionalDepth', signalValue: 8, evalVersion: 'v1' },
+            { signalKey: 'lifestylePace', signalValue: 7, evalVersion: 'v2' },
+          ],
+          interests: [],
+          useNormalized: true,
+        },
+      );
+      expect((read.enginePayload.evaluation as any).self.signals.emotionalDepth).toBe(3);
     });
   });
 
@@ -111,6 +165,7 @@ describe('me-profile-engine.mapper', () => {
       const evaluation = {
         createdAt: new Date('2026-05-02T12:00:00.000Z'),
         evaluationJson: evaluationJson as unknown as Prisma.JsonValue,
+        version: 'v1',
       };
 
       const payload = buildProfilePayloadFromNewModel(profile, evaluation);
@@ -122,6 +177,7 @@ describe('me-profile-engine.mapper', () => {
   });
 
   describe('assembleEvaluationPayload', () => {
+    const evalVersion = 'v1';
     const baseEval = {
       self: { signals: { emotionalDepth: 5, lifestylePace: 3 } },
       partner: {},
@@ -140,36 +196,46 @@ describe('me-profile-engine.mapper', () => {
     const baseEvalJson = baseEval as unknown as Prisma.JsonValue;
 
     it('returns evaluationJson unchanged when useNormalized=false', () => {
-      const signals: NormalizedSignalRow[] = [{ signalKey: 'emotionalDepth', signalValue: 9 }];
-      const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0 }];
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 9, evalVersion: 'v2' },
+      ];
+      const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0, evalVersion: 'v2' }];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, false);
+      const result = assembleEvaluationPayload(
+        baseEvalJson,
+        signals,
+        interests,
+        false,
+        evalVersion,
+      );
 
       expect(result).toBe(baseEval);
     });
 
     it('returns evaluationJson unchanged when both arrays are empty (flag on)', () => {
-      const result = assembleEvaluationPayload(baseEvalJson, [], [], true);
+      const result = assembleEvaluationPayload(baseEvalJson, [], [], true, evalVersion);
 
       expect(result).toBe(baseEval);
     });
 
     it('overrides self.signals with normalized rows when flag on', () => {
       const signals: NormalizedSignalRow[] = [
-        { signalKey: 'emotionalDepth', signalValue: 9 },
-        { signalKey: 'lifestylePace', signalValue: 7 },
+        { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
+        { signalKey: 'lifestylePace', signalValue: 7, evalVersion },
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true, evalVersion);
 
       expect((result.self as any).signals.emotionalDepth).toBe(9);
       expect((result.self as any).signals.lifestylePace).toBe(7);
     });
 
     it('preserves unrelated self.signals keys not in normalized rows', () => {
-      const signals: NormalizedSignalRow[] = [{ signalKey: 'emotionalDepth', signalValue: 9 }];
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
+      ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true, evalVersion);
 
       // lifestylePace was in base but not in normalized signals — must be preserved
       expect((result.self as any).signals.lifestylePace).toBe(3);
@@ -177,13 +243,13 @@ describe('me-profile-engine.mapper', () => {
 
     it('overrides enrichment.signals.interestsTop3 when flag on and interests provided', () => {
       const interests: NormalizedInterestRow[] = [
-        { tag: 'yoga', rank: 0 },
-        { tag: 'cooking', rank: 1 },
-        { tag: 'climbing', rank: 2 },
-        { tag: 'gaming', rank: 3 }, // rank 4 — should be trimmed to top 3
+        { tag: 'yoga', rank: 0, evalVersion },
+        { tag: 'cooking', rank: 1, evalVersion },
+        { tag: 'climbing', rank: 2, evalVersion },
+        { tag: 'gaming', rank: 3, evalVersion }, // rank 4 — should be trimmed to top 3
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, [], interests, true);
+      const result = assembleEvaluationPayload(baseEvalJson, [], interests, true, evalVersion);
 
       expect(result.enrichment?.signals.interestsTop3).toEqual(['yoga', 'cooking', 'climbing']);
     });
@@ -203,9 +269,9 @@ describe('me-profile-engine.mapper', () => {
         },
       } as unknown as Prisma.JsonValue;
 
-      const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0 }];
+      const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0, evalVersion }];
 
-      const result = assembleEvaluationPayload(evalWithEnrichment, [], interests, true);
+      const result = assembleEvaluationPayload(evalWithEnrichment, [], interests, true, evalVersion);
 
       expect(result.enrichment?.signals.dailyRhythm).toBe('morning_person');
       expect(result.enrichment?.signals.interestsTop3).toEqual(['yoga']);
@@ -218,9 +284,9 @@ describe('me-profile-engine.mapper', () => {
         relationship: {},
       } as unknown as Prisma.JsonValue;
 
-      const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0 }];
+      const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0, evalVersion }];
 
-      const result = assembleEvaluationPayload(evalNoEnrichment, [], interests, true);
+      const result = assembleEvaluationPayload(evalNoEnrichment, [], interests, true, evalVersion);
 
       expect(result.enrichment?.version).toBe('v1');
       expect(result.enrichment?.signals.interestsTop3).toEqual(['yoga']);
@@ -228,13 +294,15 @@ describe('me-profile-engine.mapper', () => {
     });
 
     it('applies both signal and interest overrides in a single call', () => {
-      const signals: NormalizedSignalRow[] = [{ signalKey: 'emotionalDepth', signalValue: 10 }];
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 10, evalVersion },
+      ];
       const interests: NormalizedInterestRow[] = [
-        { tag: 'reading', rank: 0 },
-        { tag: 'surfing', rank: 1 },
+        { tag: 'reading', rank: 0, evalVersion },
+        { tag: 'surfing', rank: 1, evalVersion },
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true, evalVersion);
 
       expect((result.self as any).signals.emotionalDepth).toBe(10);
       expect(result.enrichment?.signals.interestsTop3).toEqual(['reading', 'surfing']);
@@ -247,12 +315,98 @@ describe('me-profile-engine.mapper', () => {
         display: { summary: 'Grounded.', insight: 'Insight.' },
       } as unknown as Prisma.JsonValue;
 
-      const signals: NormalizedSignalRow[] = [{ signalKey: 'emotionalDepth', signalValue: 9 }];
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
+      ];
 
-      const result = assembleEvaluationPayload(evalWithAll, signals, [], true);
+      const result = assembleEvaluationPayload(evalWithAll, signals, [], true, evalVersion);
 
       expect((result.partner as any).signals.emotionalDepth).toBe(2);
       expect(result.display?.summary).toBe('Grounded.');
+    });
+
+    it('merges normalized signals and interests when all evalVersion match evaluation', () => {
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 8, evalVersion },
+      ];
+      const interests: NormalizedInterestRow[] = [
+        { tag: 'chess', rank: 0, evalVersion },
+        { tag: 'swim', rank: 1, evalVersion },
+      ];
+      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true, evalVersion);
+      expect((result.self as any).signals.emotionalDepth).toBe(8);
+      expect(result.enrichment?.signals.interestsTop3).toEqual(['chess', 'swim']);
+    });
+
+    it('ignores normalized signals when any row evalVersion mismatches (blob only)', () => {
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
+        { signalKey: 'lifestylePace', signalValue: 8, evalVersion: 'v2' },
+      ];
+      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true, evalVersion);
+      expect(result).toBe(baseEval);
+      expect((result.self as any).signals.emotionalDepth).toBe(5);
+    });
+
+    it('ignores normalized interests when any row evalVersion mismatches (blob only)', () => {
+      const interests: NormalizedInterestRow[] = [
+        { tag: 'yoga', rank: 0, evalVersion: 'v2' },
+      ];
+      const result = assembleEvaluationPayload(baseEvalJson, [], interests, true, evalVersion);
+      expect(result).toBe(baseEval);
+      expect(result.enrichment?.signals.interestsTop3).toEqual(['hiking', 'coffee', 'travel']);
+    });
+
+    it('all-or-nothing: mismatched interest drops aligned signals too (no partial merge)', () => {
+      const signals: NormalizedSignalRow[] = [
+        { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
+      ];
+      const interests: NormalizedInterestRow[] = [
+        { tag: 'yoga', rank: 0, evalVersion },
+        { tag: 'bad', rank: 1, evalVersion: 'v2' },
+      ];
+      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true, evalVersion);
+      expect(result).toBe(baseEval);
+      expect((result.self as any).signals.emotionalDepth).toBe(5);
+      expect(result.enrichment?.signals.interestsTop3).toEqual(['hiking', 'coffee', 'travel']);
+    });
+  });
+
+  describe('meMatchesEngineNormalizedMergeActive', () => {
+    const v = 'v1';
+    const sig = (ev: string): NormalizedSignalRow[] => [
+      { signalKey: 'emotionalDepth', signalValue: 5, evalVersion: ev },
+    ];
+
+    it('is false when useNormalized is false (same gate as assembleEvaluationPayload)', () => {
+      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], true, v)).toBe(true);
+      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], false, v)).toBe(false);
+      expect(resolveMeMatchesEngineInputSourceMode(sig(v), [], false, v)).toBe(
+        'evaluationJson',
+      );
+    });
+
+    it('is false when both normalized arrays are empty', () => {
+      expect(meMatchesEngineNormalizedMergeActive([], [], true, v)).toBe(false);
+      expect(resolveMeMatchesEngineInputSourceMode([], [], true, v)).toBe(
+        'evaluationJson',
+      );
+    });
+
+    it('is false when any evalVersion mismatches evaluationVersion', () => {
+      expect(meMatchesEngineNormalizedMergeActive(sig('v2'), [], true, v)).toBe(
+        false,
+      );
+      expect(resolveMeMatchesEngineInputSourceMode(sig('v2'), [], true, v)).toBe(
+        'evaluationJson',
+      );
+    });
+
+    it('is true when flag on, rows present, and all versions align', () => {
+      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], true, v)).toBe(true);
+      expect(resolveMeMatchesEngineInputSourceMode(sig(v), [], true, v)).toBe(
+        'normalized',
+      );
     });
   });
 });

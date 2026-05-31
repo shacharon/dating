@@ -121,6 +121,37 @@ export default function MeMatchDetailPage() {
                 </section>
               )}
 
+              {data.matchExplanationTraits && data.matchExplanationTraits.length > 0 && (
+                <section className="rounded-lg border border-zinc-100 bg-zinc-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/40">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    Why you match
+                  </p>
+                  <ul className="mt-3 space-y-3">
+                    {data.matchExplanationTraits.map((trait) => (
+                      <li key={`${trait.group}-${trait.label}`} className="text-sm">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                            {trait.group}
+                          </span>
+                          <span
+                            className={
+                              trait.strength === 'strong'
+                                ? 'text-xs font-medium text-emerald-600 dark:text-emerald-400'
+                                : 'text-xs font-medium text-zinc-500 dark:text-zinc-400'
+                            }
+                          >
+                            {trait.strength === 'strong' ? 'Strong' : 'Moderate'}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                          {trait.evidence}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {/* Recommendation takeaway */}
               {data.recommendation?.primaryTakeaway && (
                 <section className="rounded-lg border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">

@@ -4,6 +4,8 @@ import * as path from 'node:path';
 /**
  * Static enforcement: `MeMatchesService` must treat `buildMeMatchesParticipantReadModel`
  * as the sole assembler of match-engine payloads and HG rows (no ad-hoc evaluation blob reads).
+ *
+ * Human-readable V1 contract: `docs/MATCH_ENGINE_V1_CONTRACT.md`.
  */
 describe('MeMatchesService read-model policy (source)', () => {
   const serviceSrc = fs.readFileSync(

@@ -15,8 +15,10 @@
  * `UserProfileInterest` in this layer).
  *
  * **Feature flag `ENGINE_READ_NORMALIZED`**: when the env var is set to `'1'`, the assembler
- * overrides `evaluationJson` signals with rows from `UserProfileSignal` / `UserProfileInterest`
- * before passing to the engine. The raw `evaluationJson` is always the fallback.
+ * may override `evaluationJson` signals with rows from `UserProfileSignal` / `UserProfileInterest`
+ * only when **every** normalized row's `evalVersion` equals the latest evaluation's `version`
+ * (all-or-nothing per participant). Otherwise the blob alone is used. The raw `evaluationJson`
+ * is always the fallback.
  *
  * **`buildMeMatchesParticipantReadModel`** is the single composition point for `/api/v1/me/matches`:
  * it takes `UserProfile` (HG slice), `UserProfilePreference`, latest `UserProfileEvaluation`,
@@ -40,12 +42,54 @@ import { parseAcceptedPartnerGendersFromProductJson } from './user-profile-match
 export interface NormalizedSignalRow {
   readonly signalKey: string;
   readonly signalValue: number;
+  /** Pipeline tag; must match latest `UserProfileEvaluation.version` for merge. */
+  readonly evalVersion: string;
 }
 
 /** One row from `UserProfileInterest` — only the columns consumed by the assembler. */
 export interface NormalizedInterestRow {
   readonly tag: string;
   readonly rank: number;
+  /** Pipeline tag; must match latest `UserProfileEvaluation.version` for merge. */
+  readonly evalVersion: string;
+}
+
+/**
+ * Whether {@link assembleEvaluationPayload} will apply normalized overlays (not merely return
+ * the blob unchanged). Same guard as the merge entry: `useNormalized`, non-empty row set, and
+ * every row's `evalVersion` equals `evaluationVersion`.
+ */
+export function meMatchesEngineNormalizedMergeActive(
+  signals: readonly NormalizedSignalRow[],
+  interests: readonly NormalizedInterestRow[],
+  useNormalized: boolean,
+  evaluationVersion: string,
+): boolean {
+  if (!useNormalized || (signals.length === 0 && interests.length === 0)) {
+    return false;
+  }
+  return (
+    signals.every((s) => s.evalVersion === evaluationVersion) &&
+    interests.every((i) => i.evalVersion === evaluationVersion)
+  );
+}
+
+export type MeMatchesEngineInputSourceMode = 'evaluationJson' | 'normalized';
+
+export function resolveMeMatchesEngineInputSourceMode(
+  signals: readonly NormalizedSignalRow[],
+  interests: readonly NormalizedInterestRow[],
+  useNormalized: boolean,
+  evaluationVersion: string,
+): MeMatchesEngineInputSourceMode {
+  return meMatchesEngineNormalizedMergeActive(
+    signals,
+    interests,
+    useNormalized,
+    evaluationVersion,
+  )
+    ? 'normalized'
+    : 'evaluationJson';
 }
 
 /**
@@ -54,7 +98,8 @@ export interface NormalizedInterestRow {
  * When `useNormalized` is false **or** both arrays are empty the original blob is returned
  * unchanged (zero allocation on the hot path with flag off).
  *
- * Overrides applied when `useNormalized=true`:
+ * Overrides applied when `useNormalized=true` **and** every normalized row's `evalVersion`
+ * equals `evaluationVersion` (otherwise the blob is returned unchanged — all-or-nothing).
  * - `self.signals`: each `signalKey` in the normalized rows replaces the matching key.
  * - `enrichment.signals.interestsTop3`: replaced with the top-3 tags (rows must arrive
  *   ordered by `rank ASC`; only the first three are used).
@@ -67,10 +112,18 @@ export function assembleEvaluationPayload(
   signals: readonly NormalizedSignalRow[],
   interests: readonly NormalizedInterestRow[],
   useNormalized: boolean,
+  evaluationVersion: string,
 ): EvaluateBatchResult {
   const base = evaluationJson as unknown as EvaluateBatchResult;
 
-  if (!useNormalized || (signals.length === 0 && interests.length === 0)) {
+  if (
+    !meMatchesEngineNormalizedMergeActive(
+      signals,
+      interests,
+      useNormalized,
+      evaluationVersion,
+    )
+  ) {
     return base;
   }
 
@@ -104,6 +157,8 @@ export function assembleEvaluationPayload(
         autonomyTogethernessDepth: null,
         kidsTimeline: null,
         conflictStyleDetail: null,
+        relationshipPace: null,
+        communicationMode: null,
         ...baseEnrichment?.signals,
         interestsTop3: top3,
       },
@@ -378,12 +433,12 @@ function parseEvaluationDisplaySummaryFromEvaluationBlob(
  * @param preference — joined `UserProfilePreference` row or null (HG partner genders + scalars).
  * @param evaluation — latest `UserProfileEvaluation` for `profile.id` (`evaluationJson` is semantic SOT for the engine).
  * @param normalizedRows — optional normalized signal/interest rows; when present the assembler
- *   merges them onto `evaluationJson` according to the `useNormalized` flag.
+ *   merges them onto `evaluationJson` according to the `useNormalized` flag and `evaluation.version`.
  */
 export function buildMeMatchesParticipantReadModel(
   profile: MeMatchesReadModelProfileInput,
   preference: UserProfilePreferenceRow | null | undefined,
-  evaluation: Pick<UserProfileEvaluation, 'createdAt' | 'evaluationJson'>,
+  evaluation: Pick<UserProfileEvaluation, 'createdAt' | 'evaluationJson' | 'version'>,
   normalizedRows?: {
     signals: readonly NormalizedSignalRow[];
     interests: readonly NormalizedInterestRow[];
@@ -404,6 +459,7 @@ export function buildMeMatchesParticipantReadModel(
             normalizedRows.signals,
             normalizedRows.interests,
             normalizedRows.useNormalized,
+            evaluation.version,
           ) as unknown as Prisma.JsonValue,
         }
       : evaluation;

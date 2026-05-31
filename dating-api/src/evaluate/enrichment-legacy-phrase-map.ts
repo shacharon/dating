@@ -44,3 +44,20 @@ export const LEGACY_ENRICHMENT_PHRASE_TO_CONFLICT_STYLE = {
   'talks issues through': 'process_together',
   'needs cooldown after conflict': 'cooldown_then_talk',
 } as const satisfies Readonly<Record<string, string>>;
+
+export const LEGACY_ENRICHMENT_PHRASE_TO_RELATIONSHIP_PACE = {
+  'fast mover': 'fast_mover',
+  'moving fast': 'fast_mover',
+  'measured pace': 'measured_pace',
+  'slow build': 'slow_build',
+  'no rush': 'no_rush_explicit',
+  'no rush explicit': 'no_rush_explicit',
+} as const satisfies Readonly<Record<string, string>>;
+
+export const LEGACY_ENRICHMENT_PHRASE_TO_COMMUNICATION_MODE = {
+  'verbal expressive': 'verbal_expressive',
+  'action oriented': 'action_oriented',
+  'deep talker': 'deep_talker',
+  'reserved opener': 'reserved_opener',
+  'text heavy': 'text_heavy',
+} as const satisfies Readonly<Record<string, string>>;

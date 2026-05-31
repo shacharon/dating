@@ -37,6 +37,15 @@ const PROFILE_GENDER_VALUES = new Set<string>(
   Object.values(ProfileGender) as string[],
 );
 
+/** Trims profile nicknames; blank input becomes `null`. */
+function normalizeNicknameValue(
+  value: string | null | undefined,
+): string | null {
+  if (value === null || value === undefined) return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 function parseDesiredPartnerGenders(
   raw: Prisma.JsonValue | null,
 ): ProfileGender[] | null {
@@ -305,8 +314,7 @@ function toPrismaWritableData(
     data.aboutRelationship = body.aboutRelationship;
   }
   if (body.nickname !== undefined) {
-    const n = body.nickname;
-    data.nickname = n === null || n === '' ? null : n;
+    data.nickname = normalizeNicknameValue(body.nickname);
   }
   if (body.onboardingStep !== undefined) {
     data.onboardingStep = body.onboardingStep;
@@ -354,6 +362,25 @@ export class MeProfileService {
     private readonly analysis: MeProfileAnalysisService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
   ) {}
+
+  private async assertNicknameAvailable(
+    nickname: string,
+    excludeProfileId: string | null,
+  ): Promise<void> {
+    const taken = await this.prisma.userProfile.findFirst({
+      where: {
+        nickname,
+        ...(excludeProfileId ? { NOT: { id: excludeProfileId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (taken) {
+      throw new ConflictException({
+        error: 'nickname_taken',
+        message: 'This nickname is already in use.',
+      });
+    }
+  }
 
   private async requireProfileForUser(userId: string): Promise<UserProfile> {
     const profile = await this.prisma.userProfile.findUnique({ where: { userId } });
@@ -677,6 +704,14 @@ export class MeProfileService {
 
     assertOnboardingStepCoherent(null, body);
 
+    const createNickname =
+      body.nickname !== undefined
+        ? normalizeNicknameValue(body.nickname)
+        : undefined;
+    if (createNickname) {
+      await this.assertNicknameAvailable(createNickname, null);
+    }
+
     try {
       const row = await this.prisma.$transaction(async (tx) => {
         const writable = toPrismaWritableData(body);
@@ -755,6 +790,15 @@ export class MeProfileService {
     assertOnboardingStepCoherent(existing, body);
 
     const data = toPrismaWritableData(body);
+    if (body.nickname !== undefined) {
+      const nextNickname = normalizeNicknameValue(body.nickname);
+      const currentNickname = normalizeNicknameValue(existing.nickname);
+      if (nextNickname === currentNickname) {
+        delete data.nickname;
+      } else if (nextNickname !== null) {
+        await this.assertNicknameAvailable(nextNickname, existing.id);
+      }
+    }
     applyOnboardingCompletionToWriteData(
       data,
       body,

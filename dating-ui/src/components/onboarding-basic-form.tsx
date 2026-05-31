@@ -44,6 +44,7 @@ export function OnboardingBasicForm() {
   const googleName = user?.displayName?.trim() || '—';
 
   const [nickname, setNickname] = useState('');
+  const [loadedNickname, setLoadedNickname] = useState<string | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState('');
   const [desiredPartnerGenders, setDesiredPartnerGenders] = useState<
@@ -91,6 +92,7 @@ export function OnboardingBasicForm() {
           return;
         }
         setHasProfile(true);
+        setLoadedNickname(profile.nickname ?? null);
         setNickname(profile.nickname ?? '');
         const bd = profile.birthDate?.slice(0, 10) ?? '';
         setBirthDate(/^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : '');
@@ -128,8 +130,12 @@ export function OnboardingBasicForm() {
   }
 
   function basicBody(advanceToTexts: boolean) {
-    return {
-      nickname: nickname.trim() ? nickname.trim() : null,
+    const nextNickname = nickname.trim() ? nickname.trim() : null;
+    const nicknameChanged =
+      normalizeNicknameValue(nextNickname) !==
+      normalizeNicknameValue(loadedNickname);
+
+    const body: Parameters<typeof patchMyProfile>[0] = {
       birthDate: birthDate.trim() ? birthDate.trim() : null,
       gender: (gender || null) as MeProfileGender | null,
       desiredPartnerGenders:
@@ -139,6 +145,18 @@ export function OnboardingBasicForm() {
       locationLabel: locationLabel.trim() ? locationLabel.trim() : null,
       onboardingStep: advanceToTexts ? ('TEXTS' as const) : ('BASIC' as const),
     };
+
+    if (!hasProfile || nicknameChanged) {
+      body.nickname = nextNickname;
+    }
+
+    return body;
+  }
+
+  function normalizeNicknameValue(value: string | null): string | null {
+    if (!value) return null;
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
   }
 
   async function persist(advanceToTexts: boolean): Promise<boolean> {
@@ -163,6 +181,9 @@ export function OnboardingBasicForm() {
     try {
       if (hasProfile) {
         await patchMyProfile(body);
+        setLoadedNickname(
+          normalizeNicknameValue(nickname.trim() ? nickname.trim() : null),
+        );
       } else {
         try {
           await createMyProfile(body);
@@ -253,7 +274,7 @@ export function OnboardingBasicForm() {
               onChange={(e) => setNickname(e.target.value)}
               className={inputClass}
               placeholder="How you want to be called"
-              autoComplete="nickname"
+              autoComplete="off"
               maxLength={80}
             />
           </div>

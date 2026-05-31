@@ -49,7 +49,7 @@ RAW INTERESTS (rawInterests):
 - Max 10 items; prefer 5-8 high-quality.
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance, emotionalAvailability, emotionalSafety, practicalLifeReadiness
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -78,6 +78,9 @@ SIGNAL RULES:
 - conflictStyle = explicit disagreement handling, repair, de-escalation
 - noveltyVsRoutine = explicit novelty vs routine preference
 - structureChaosTolerance = explicit order vs chaos preference
+- emotionalAvailability = explicit self-assessed readiness to invest emotionally in a relationship now; high = fully open/ready, low = guarded/healing/not ready
+- emotionalSafety = explicit stated need for psychological safety, vulnerability, or non-judgment in a relationship; high = strong explicit need, low = not a stated need
+- practicalLifeReadiness = explicit stability or instability in practical life circumstances (housing, schedule, bandwidth); high = clearly settled/stable, low = explicit instability signals
 
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
@@ -162,7 +165,7 @@ RAW INTERESTS (rawInterests):
 - Max 10 items; prefer 5-8 high-quality.
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, relationshipClarity, traditionalism, spirituality, lifestylePace, socialBattery
+emotionalDepth, attachmentSecurity, relationshipClarity, traditionalism, spirituality, lifestylePace, socialBattery, commitmentIntentDepth, emotionalSafety
 
 CONTRACT RULE:
 Only extract when the text describes how the relationship should function.
@@ -187,6 +190,8 @@ SIGNAL RULES:
 - spirituality = explicit spiritual or religious bond
 - lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher
 - socialBattery = explicit together-social-energy preference only
+- commitmentIntentDepth = explicit long-term seriousness of intent; high = seeking life partner/deep commitment now, low = casual or explicitly undefined horizon
+- emotionalSafety = explicit desire for psychological safety, being able to be vulnerable, or non-judgment within the relationship
 
 FAMILY LANGUAGE RULE:
 Kids, family, marriage, traditional future -> traditionalism only.
@@ -260,7 +265,7 @@ RAW INTERESTS (rawInterests):
 - Max 10 items; prefer 5-8 high-quality.
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, commitmentIntentDepth
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -284,6 +289,7 @@ SIGNAL RULES:
 - physicalPriority = explicit looks, attraction, chemistry, appearance
 - intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations
 - conflictStyle = explicit disagreement handling, repair, calm discussion, de-escalation
+- commitmentIntentDepth = explicit desired seriousness of intent in a partner; high = wants partner seeking deep commitment, low = open to casual or undefined
 
 DIRECTION LOCK:
 For lifestylePace:

@@ -310,6 +310,25 @@ describe('me-profile-api', () => {
     );
   });
 
+  it('fetchMyMatches parses viewerProfileAnalysisStale when true', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            status: 'ready',
+            viewerProfileId: 'prof-viewer',
+            viewerProfileAnalysisStale: true,
+            matches: [],
+          }),
+      }),
+    );
+    const result = await fetchMyMatches();
+    expect(result.status).toBe('ready');
+    expect(result.viewerProfileAnalysisStale).toBe(true);
+  });
+
   it('fetchMyMatches throws on non-200 (network/server error surfaces cleanly)', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       mockResponse({ ok: false, status: 500, statusText: 'Internal Server Error', text: async () => '' }),

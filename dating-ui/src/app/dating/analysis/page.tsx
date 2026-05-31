@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   fetchMyLatestAnalysis,
@@ -10,13 +10,26 @@ import {
   type MeLatestAnalysisDto,
 } from '@/lib/me-profile-api';
 import { mapEvaluationToViewModel } from '@/lib/analysis-presentation';
+import {
+  ANALYSIS_STATUS_CHECK_FIRST_MS,
+  ANALYSIS_STATUS_CHECK_SECOND_MS,
+  isAlreadyRunningSubmitError,
+  isAnalysisInFlight,
+  runFeedbackAfterStatusCheck,
+  RUN_FEEDBACK,
+} from './analysis-run-ux';
 
-/** Matches API: submit is only allowed from DRAFT / ANALYZED / FAILED — not while a run is queued or in progress. */
-function isAnalysisInFlight(profileStatus: string | undefined): boolean {
-  return profileStatus === 'SUBMITTED' || profileStatus === 'ANALYZING';
+async function loadAnalysisPageState(): Promise<{
+  latest: MeLatestAnalysisDto | null;
+  profile: MeProfileDto | null;
+}> {
+  const latest = await fetchMyLatestAnalysis();
+  if (latest === null) {
+    return { latest: null, profile: null };
+  }
+  const profile = await fetchMyProfile();
+  return { latest, profile };
 }
-
-const ANALYSIS_POLL_MS = 5000;
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -78,24 +91,94 @@ export default function DatingAnalysisPage() {
   const [profile, setProfile] = useState<MeProfileDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reAnalyzeLoading, setReAnalyzeLoading] = useState(false);
-  const [reAnalyzeFeedback, setReAnalyzeFeedback] = useState<string | null>(null);
+  const [reAnalyzeSubmitting, setReAnalyzeSubmitting] = useState(false);
+  const [reRunLocked, setReRunLocked] = useState(false);
+  const [runFeedback, setRunFeedback] = useState<string | null>(null);
+  const [refreshHintShown, setRefreshHintShown] = useState(false);
+  const statusCheckTimeoutsRef = useRef<
+    ReturnType<typeof setTimeout>[]
+  >([]);
+
+  const clearStatusChecks = useCallback(() => {
+    for (const id of statusCheckTimeoutsRef.current) {
+      clearTimeout(id);
+    }
+    statusCheckTimeoutsRef.current = [];
+  }, []);
+
+  const applyLoadedState = useCallback(
+    (latest: MeLatestAnalysisDto, p: MeProfileDto | null) => {
+      setData(latest);
+      setProfile(p);
+    },
+    [],
+  );
+
+  const scheduleStatusChecksRef = useRef<() => void>(() => {});
+
+  const performStatusCheck = useCallback(
+    async (checkIndex: 1 | 2): Promise<boolean> => {
+      try {
+        const { latest, profile: p } = await loadAnalysisPageState();
+        if (latest) setData(latest);
+        if (p) setProfile(p);
+
+        const nextFeedback = runFeedbackAfterStatusCheck(
+          checkIndex,
+          p?.status,
+        );
+        if (nextFeedback === null) {
+          clearStatusChecks();
+          setRunFeedback(null);
+          setRefreshHintShown(false);
+          setReRunLocked(false);
+          return false;
+        }
+        if (checkIndex === 2 && nextFeedback !== undefined) {
+          setRefreshHintShown(true);
+        } else if (nextFeedback !== undefined) {
+          setRunFeedback(nextFeedback);
+        }
+        return true;
+      } catch {
+        if (checkIndex === 2) {
+          setRefreshHintShown(true);
+        }
+        return true;
+      }
+    },
+    [clearStatusChecks],
+  );
+
+  const scheduleStatusChecks = useCallback(() => {
+    clearStatusChecks();
+    statusCheckTimeoutsRef.current = [
+      setTimeout(() => {
+        void performStatusCheck(1);
+      }, ANALYSIS_STATUS_CHECK_FIRST_MS),
+      setTimeout(() => {
+        void performStatusCheck(2);
+      }, ANALYSIS_STATUS_CHECK_SECOND_MS),
+    ];
+  }, [clearStatusChecks, performStatusCheck]);
+
+  scheduleStatusChecksRef.current = scheduleStatusChecks;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const dto = await fetchMyLatestAnalysis();
+        const { latest, profile: p } = await loadAnalysisPageState();
         if (cancelled) return;
-        if (dto === null) {
-          // No profile yet — send to onboarding to create one.
+        if (latest === null) {
           router.replace('/onboarding');
           return;
         }
-        setData(dto);
-        const p = await fetchMyProfile();
-        if (!cancelled) {
-          setProfile(p);
+        applyLoadedState(latest, p);
+        if (isAnalysisInFlight(p?.status)) {
+          setReRunLocked(true);
+          setRunFeedback(RUN_FEEDBACK.inProgress);
+          scheduleStatusChecksRef.current();
         }
       } catch (e) {
         if (!cancelled)
@@ -107,74 +190,63 @@ export default function DatingAnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
-
-  const analysisInFlight = isAnalysisInFlight(profile?.status);
+  }, [router, applyLoadedState]);
 
   useEffect(() => {
-    if (!analysisInFlight) return;
-    const id = window.setInterval(() => {
-      void (async () => {
-        try {
-          const [latest, p] = await Promise.all([
-            fetchMyLatestAnalysis(),
-            fetchMyProfile(),
-          ]);
-          if (latest) setData(latest);
-          if (p) setProfile(p);
-        } catch {
-          /* ignore transient poll errors */
-        }
-      })();
-    }, ANALYSIS_POLL_MS);
-    return () => window.clearInterval(id);
-  }, [analysisInFlight]);
+    return () => {
+      clearStatusChecks();
+    };
+  }, [clearStatusChecks]);
 
+  const analysisInFlight = isAnalysisInFlight(profile?.status);
   const vm = mapEvaluationToViewModel(data?.evaluationJson ?? null);
 
   async function onReAnalyze() {
-    if (analysisInFlight) return;
-    setReAnalyzeFeedback(null);
-    setReAnalyzeLoading(true);
+    if (reAnalyzeSubmitting || analysisInFlight || reRunLocked) {
+      return;
+    }
+
+    setReRunLocked(true);
+    setRefreshHintShown(false);
+    setRunFeedback(RUN_FEEDBACK.inProgress);
+    setReAnalyzeSubmitting(true);
+    scheduleStatusChecks();
     try {
       const updated = await submitMyProfileForAnalysis();
       setProfile(updated);
-      setReAnalyzeFeedback(
-        'Analysis started. This page will refresh when the new run finishes.',
-      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
-      if (
-        msg.includes('invalid_submit_state') ||
-        msg.includes('ANALYZING') ||
-        msg.includes('SUBMITTED')
-      ) {
-        setReAnalyzeFeedback(
-          'Analysis is already running. Wait for it to finish, then you can re-run.',
-        );
-        void fetchMyProfile().then((p) => {
+      if (isAlreadyRunningSubmitError(msg)) {
+        try {
+          const p = await fetchMyProfile();
           if (p) setProfile(p);
-        });
+        } catch {
+          /* keep prior profile */
+        }
       } else {
-        setReAnalyzeFeedback('Could not start analysis. Try again.');
+        clearStatusChecks();
+        setRunFeedback(RUN_FEEDBACK.submitFailed);
+        setRefreshHintShown(false);
+        setReRunLocked(false);
       }
     } finally {
-      setReAnalyzeLoading(false);
+      setReAnalyzeSubmitting(false);
     }
   }
+
+  const reRunButtonDisabled =
+    reAnalyzeSubmitting || analysisInFlight || reRunLocked;
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
       <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-8 sm:px-6 sm:py-10">
 
-        {/* Loading / redirecting */}
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
             Loading analysis…
           </p>
         )}
 
-        {/* Error (network / server fault — not a missing-profile 404) */}
         {!loading && error && (
           <div
             className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
@@ -184,7 +256,6 @@ export default function DatingAnalysisPage() {
           </div>
         )}
 
-        {/* No evaluation yet (profile exists but analysis hasn't run) */}
         {!loading && !error && data && !data.evaluationId && (
           <div className="rounded-2xl border border-zinc-200/80 bg-white px-6 py-6 dark:border-zinc-800 dark:bg-zinc-900">
             <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
@@ -203,10 +274,8 @@ export default function DatingAnalysisPage() {
           </div>
         )}
 
-        {/* Analysis result — driven entirely by view model */}
         {!loading && !error && data?.evaluationId && (
           <>
-            {/* Hero */}
             <section className="rounded-2xl border border-zinc-200/80 bg-white px-6 py-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none sm:px-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
@@ -222,29 +291,30 @@ export default function DatingAnalysisPage() {
                 <button
                   type="button"
                   onClick={() => void onReAnalyze()}
-                  disabled={reAnalyzeLoading || analysisInFlight}
+                  disabled={reRunButtonDisabled}
+                  aria-busy={reAnalyzeSubmitting || analysisInFlight}
                   className="inline-flex shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
                 >
-                  {reAnalyzeLoading
+                  {reAnalyzeSubmitting
                     ? 'Starting…'
                     : analysisInFlight
                       ? 'Analysis running…'
                       : 'Re-run analysis'}
                 </button>
               </div>
-              {analysisInFlight && (
-                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400" role="status">
-                  Your profile is being analyzed. This can take a minute—the page
-                  updates automatically when it is done.
+              {(runFeedback || refreshHintShown) && (
+                <p
+                  className="mt-2 text-xs text-zinc-500 dark:text-zinc-400"
+                  role="status"
+                  data-testid="analysis-run-feedback"
+                >
+                  {refreshHintShown
+                    ? RUN_FEEDBACK.stillRunningRefresh
+                    : runFeedback}
                 </p>
               )}
               {vm.note && (
                 <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">{vm.note}</p>
-              )}
-              {reAnalyzeFeedback && (
-                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400" role="status">
-                  {reAnalyzeFeedback}
-                </p>
               )}
               {data.createdAt && (
                 <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-600">
@@ -257,7 +327,6 @@ export default function DatingAnalysisPage() {
               )}
             </section>
 
-            {/* Three compact insight cards */}
             <section className="space-y-3">
               <SectionHeading>How we read your profile</SectionHeading>
               <div className="grid gap-3 md:grid-cols-3">
@@ -270,7 +339,6 @@ export default function DatingAnalysisPage() {
               </div>
             </section>
 
-            {/* User original text reference */}
             <section className="space-y-3">
               <SectionHeading>What you wrote</SectionHeading>
               <div className="grid gap-3 md:grid-cols-3">

@@ -8,8 +8,10 @@ import {
   sanitizeEnrichmentCoreScalars,
   type EnrichmentAutonomyTogethernessLabel,
   type EnrichmentConflictStyleDetailLabel,
+  type EnrichmentCommunicationModeLabel,
   type EnrichmentDailyRhythmLabel,
   type EnrichmentKidsTimelineLabel,
+  type EnrichmentRelationshipPaceLabel,
 } from './enrichment-canonical-labels';
 import { buildEnrichmentSignalsV4 } from './enrichment-v4';
 
@@ -22,6 +24,10 @@ export interface EnrichmentSignalsV1 {
   kidsTimeline: EnrichmentKidsTimelineLabel | null;
   /** How they handle disagreement (explicit or clearly implied). */
   conflictStyleDetail: EnrichmentConflictStyleDetailLabel | null;
+  /** Desired tempo for relationship milestones (deterministic text rules only; no scoring impact). */
+  relationshipPace: EnrichmentRelationshipPaceLabel | null;
+  /** Preferred communication register (deterministic text rules only; no scoring impact). */
+  communicationMode: EnrichmentCommunicationModeLabel | null;
   /** Up to three distinct interest labels, first-seen order in combined text. */
   interestsTop3: string[];
 }
@@ -37,6 +43,8 @@ export type EnrichmentSignalsV1Input = {
   autonomyTogethernessDepth?: string | null;
   kidsTimeline?: string | null;
   conflictStyleDetail?: string | null;
+  relationshipPace?: string | null;
+  communicationMode?: string | null;
   interestsTop3?: unknown;
 };
 
@@ -45,6 +53,8 @@ export const ENRICHMENT_CORE_SCALAR_FIELDS = [
   'autonomyTogethernessDepth',
   'kidsTimeline',
   'conflictStyleDetail',
+  'relationshipPace',
+  'communicationMode',
 ] as const;
 
 export type EnrichmentCoreScalarField =
@@ -58,7 +68,7 @@ export type EnrichmentScalarDroppedEvent = {
 };
 
 /**
- * Coerce the four core scalar fields to closed canonical labels (or null). Safe for DB/API payloads.
+ * Coerce all core scalar fields to closed canonical labels (or null). Safe for DB/API payloads.
  */
 export function sanitizeEnrichmentSignalsV1(
   signals: EnrichmentSignalsV1Input,
@@ -68,6 +78,8 @@ export function sanitizeEnrichmentSignalsV1(
     autonomyTogethernessDepth: signals.autonomyTogethernessDepth,
     kidsTimeline: signals.kidsTimeline,
     conflictStyleDetail: signals.conflictStyleDetail,
+    relationshipPace: signals.relationshipPace,
+    communicationMode: signals.communicationMode,
   });
   const interestsTop3 = Array.isArray(signals.interestsTop3)
     ? signals.interestsTop3.filter((x): x is string => typeof x === 'string')

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-03T12:46:20.152Z",
+  "env": {
+    "ENGINE_READ_NORMALIZED": "0"
+  },
+  "viewer": {
+    "userId": "cmoo8giaa0000t570f122z6z5",
+    "profileId": "cmooc2j3z0008t5d8ch5z20wm"
+  },
+  "candidate": {
+    "profileId": "cmo5ms15z0005t5ocbng6g0zq"
+  },
+  "engineInputSource": {
+    "viewer": "evaluationJson",
+    "candidate": "evaluationJson"
+  },
+  "compare": {
+    "outcome": "scored"
+  },
+  "matchScore": 62,
+  "profileAnalysisStale": true,
+  "explainability": {
+    "positiveChips": [
+      "Emotional depth",
+      "Lifestyle pace"
+    ],
+    "reasonShort": "Emotional depth and Lifestyle pace are where your profiles align most; the overall read is solid."
+  },
+  "recommendation": {
+    "explainability": {
+      "positiveChips": [
+        "Emotional depth",
+        "Lifestyle pace"
+      ],
+      "reasonShort": "Emotional depth and Lifestyle pace are where your profiles align most; the overall read is solid."
+    },
+    "primaryTakeaway": "Promising fit on emotional depth and lifestyle pace.",
+    "suggestedNextAction": "Review profile and message"
+  },
+  "evaluationSummary": "The person values independence and a calm, meaningful life, preferring low-energy social interactions. They seek a partner who is emotionally open and serious about commitment, as well as someone who embodies kindness and reliability, indicating a desire for a stable and heartfelt relationship. Together, they envision a future that remains grounded and tranquil.",
+  "listContext": {
+    "viewerProfileId": "cmooc2j3z0008t5d8ch5z20wm",
+    "candidateRank": 2,
+    "totalMatchesReturned": 2
+  },
+  "matchExplanationTraits": [
+    {
+      "group": "Emotional connection",
+      "label": "Emotional depth",
+      "evidence": "You both value depth and emotional presence in a relationship.",
+      "strength": "moderate"
+    },
+    {
+      "group": "Lifestyle match",
+      "label": "Lifestyle pace",
+      "evidence": "You move at a similar pace — how you structure your days aligns.",
+      "strength": "moderate"
+    }
+  ]
+}

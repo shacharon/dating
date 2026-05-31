@@ -9,6 +9,8 @@ export interface EnrichmentMappedSignals {
   autonomyTogethernessDepth: string | null;
   kidsTimeline: string | null;
   conflictStyleDetail: string | null;
+  relationshipPace: string | null;
+  communicationMode: string | null;
   interestsTop3: string[];
 }
 
@@ -783,12 +785,129 @@ function matchConflictStyleV2(text: string): string | null {
   return null;
 }
 
+// ── Relationship pace rules ───────────────────────────────────────────────────
+// Signals how quickly someone wants to move through relationship milestones.
+// Uses `firstMatching` (first rule wins); high-precision phrases only.
+
+const RELATIONSHIP_PACE_RULES: { value: string; patterns: RegExp[] }[] = [
+  {
+    value: 'fast_mover',
+    patterns: [
+      /\bnot looking for a pen pal\b/i,
+      /\bready to settle down\b/i,
+      /\bwant(?:ing)? to meet (?:soon|quickly|right away)\b/i,
+      /\bno more back and forth\b/i,
+      /\bnot here for pen pals\b/i,
+      /\bready to take the next step\b/i,
+      /\bwant(?:s|ing)? to move forward\b/i,
+      /\bnot interested in (?:casual|long[-\s]?drawn[-\s]?out)\b/i,
+    ],
+  },
+  {
+    value: 'slow_build',
+    patterns: [
+      /\btake things (?:very )?slow(?:ly)?\b/i,
+      /\bprefer(?:ring)? a slow build\b/i,
+      /\bslow burn\b/i,
+      /\bneed time to (?:really )?get to know\b/i,
+      /\bbuild (?:things |it )?(?:slowly|gradually)\b/i,
+      /\bgo slow\b/i,
+    ],
+  },
+  {
+    value: 'no_rush_explicit',
+    patterns: [
+      /\bno rush\b/i,
+      /\bnot in a(?:ny)? hurry\b/i,
+      /\btake things at (?:our|my) own pace\b/i,
+      /\bno pressure\b/i,
+      /\bwhenever it feels right\b/i,
+      /\bat (?:our|a) natural pace\b/i,
+    ],
+  },
+  {
+    value: 'measured_pace',
+    patterns: [
+      /\bsee where things go\b/i,
+      /\blet things (?:develop|unfold|progress) naturally\b/i,
+      /\btake it one step at a time\b/i,
+      /\bnot rushing but (?:I'm |I am )?serious\b/i,
+      /\btake it as it comes\b/i,
+      /\blet it flow naturally\b/i,
+    ],
+  },
+];
+
+// ── Communication mode rules ──────────────────────────────────────────────────
+// Signals preferred communication register. Priority order matters: more specific
+// labels (`deep_talker`) are checked before broader ones (`verbal_expressive`).
+
+const COMMUNICATION_MODE_RULES: { value: string; patterns: RegExp[] }[] = [
+  {
+    value: 'deep_talker',
+    patterns: [
+      /\bcould talk for hours\b/i,
+      /\btalk for hours\b/i,
+      /\blate[-\s]?night conversations\b/i,
+      /\bphilosophical discussions\b/i,
+      /\blove a good debate\b/i,
+      /\bdeep conversations? (?:about|on|over)\b/i,
+      /\blong conversations? about (?:life|everything|anything)\b/i,
+    ],
+  },
+  {
+    value: 'action_oriented',
+    patterns: [
+      /\bshow up (?:rather|instead of) (?:talking|words)\b/i,
+      /\bactions? speak louder\b/i,
+      /\bexpress (?:myself |love )?through actions?\b/i,
+      /\bI show,? not tell\b/i,
+      /\bdeeds,? not words\b/i,
+      /\bshow(?:ing)? (?:up|love) through (?:actions?|doing)\b/i,
+    ],
+  },
+  {
+    value: 'reserved_opener',
+    patterns: [
+      /\btakes? time to open up\b/i,
+      /\bslow to open up\b/i,
+      /\bprivate person\b/i,
+      /\bdon'?t share easily\b/i,
+      /\bnot (?:very )?open right away\b/i,
+      /\bguarded at first\b/i,
+    ],
+  },
+  {
+    value: 'text_heavy',
+    patterns: [
+      /\blove texting\b/i,
+      /\bgood (?:at |with )?communication over text\b/i,
+      /\btext a lot\b/i,
+      /\bbetter over text\b/i,
+      /\btext[-\s]?based communicator\b/i,
+    ],
+  },
+  {
+    value: 'verbal_expressive',
+    patterns: [
+      /\blove talking\b/i,
+      /\bneed to (?:talk|express myself)\b/i,
+      /\bvery expressive\b/i,
+      /\bexpress (?:myself |my feelings )?(?:verbally|with words|through talking)\b/i,
+      /\bopen communicator\b/i,
+      /\bvery (?:communicative|verbal)\b/i,
+    ],
+  },
+];
+
 export function mapEnrichmentV2FromText(text: string): EnrichmentMappedSignals {
   return {
     dailyRhythm: firstMatching(text, DAILY_RHYTHM_RULES),
     autonomyTogethernessDepth: firstMatchingEarliest(text, AUTONOMY_RULES),
     kidsTimeline: firstMatching(text, KIDS_RULES),
     conflictStyleDetail: matchConflictStyleV2(text),
+    relationshipPace: firstMatching(text, RELATIONSHIP_PACE_RULES),
+    communicationMode: firstMatching(text, COMMUNICATION_MODE_RULES),
     interestsTop3: interestsTop3V2(text),
   };
 }

@@ -9,6 +9,8 @@ import {
   LEGACY_ENRICHMENT_PHRASE_TO_CONFLICT_STYLE,
   LEGACY_ENRICHMENT_PHRASE_TO_DAILY_RHYTHM,
   LEGACY_ENRICHMENT_PHRASE_TO_KIDS_TIMELINE,
+  LEGACY_ENRICHMENT_PHRASE_TO_RELATIONSHIP_PACE,
+  LEGACY_ENRICHMENT_PHRASE_TO_COMMUNICATION_MODE,
 } from './enrichment-legacy-phrase-map';
 
 export const ENRICHMENT_DAILY_RHYTHM_LABELS = [
@@ -55,6 +57,23 @@ export const ENRICHMENT_CONFLICT_STYLE_DETAIL_LABELS = [
   'avoids_conflict',
 ] as const;
 
+/** Desired tempo for relationship milestones (deterministic text rules; no scoring impact). */
+export const ENRICHMENT_RELATIONSHIP_PACE_LABELS = [
+  'fast_mover',
+  'measured_pace',
+  'slow_build',
+  'no_rush_explicit',
+] as const;
+
+/** Preferred communication register (deterministic text rules; no scoring impact). */
+export const ENRICHMENT_COMMUNICATION_MODE_LABELS = [
+  'verbal_expressive',
+  'action_oriented',
+  'deep_talker',
+  'reserved_opener',
+  'text_heavy',
+] as const;
+
 export type EnrichmentDailyRhythmLabel =
   (typeof ENRICHMENT_DAILY_RHYTHM_LABELS)[number];
 export type EnrichmentAutonomyTogethernessLabel =
@@ -63,11 +82,17 @@ export type EnrichmentKidsTimelineLabel =
   (typeof ENRICHMENT_KIDS_TIMELINE_LABELS)[number];
 export type EnrichmentConflictStyleDetailLabel =
   (typeof ENRICHMENT_CONFLICT_STYLE_DETAIL_LABELS)[number];
+export type EnrichmentRelationshipPaceLabel =
+  (typeof ENRICHMENT_RELATIONSHIP_PACE_LABELS)[number];
+export type EnrichmentCommunicationModeLabel =
+  (typeof ENRICHMENT_COMMUNICATION_MODE_LABELS)[number];
 
 const DAILY_SET = new Set<string>(ENRICHMENT_DAILY_RHYTHM_LABELS);
 const AUTONOMY_SET = new Set<string>(ENRICHMENT_AUTONOMY_TOGETHERNESS_LABELS);
 const KIDS_SET = new Set<string>(ENRICHMENT_KIDS_TIMELINE_LABELS);
 const CONFLICT_SET = new Set<string>(ENRICHMENT_CONFLICT_STYLE_DETAIL_LABELS);
+const RELATIONSHIP_PACE_SET = new Set<string>(ENRICHMENT_RELATIONSHIP_PACE_LABELS);
+const COMMUNICATION_MODE_SET = new Set<string>(ENRICHMENT_COMMUNICATION_MODE_LABELS);
 
 function normalizePhraseKey(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -143,11 +168,35 @@ export function coerceEnrichmentConflictStyleDetail(
   return v as EnrichmentConflictStyleDetailLabel | null;
 }
 
+export function coerceEnrichmentRelationshipPace(
+  raw: string | null | undefined,
+): EnrichmentRelationshipPaceLabel | null {
+  const v = coerceToClosedSet(
+    raw,
+    RELATIONSHIP_PACE_SET,
+    LEGACY_ENRICHMENT_PHRASE_TO_RELATIONSHIP_PACE,
+  );
+  return v as EnrichmentRelationshipPaceLabel | null;
+}
+
+export function coerceEnrichmentCommunicationMode(
+  raw: string | null | undefined,
+): EnrichmentCommunicationModeLabel | null {
+  const v = coerceToClosedSet(
+    raw,
+    COMMUNICATION_MODE_SET,
+    LEGACY_ENRICHMENT_PHRASE_TO_COMMUNICATION_MODE,
+  );
+  return v as EnrichmentCommunicationModeLabel | null;
+}
+
 export interface EnrichmentCoreScalarsInput {
   dailyRhythm: string | null | undefined;
   autonomyTogethernessDepth: string | null | undefined;
   kidsTimeline: string | null | undefined;
   conflictStyleDetail: string | null | undefined;
+  relationshipPace: string | null | undefined;
+  communicationMode: string | null | undefined;
 }
 
 export interface EnrichmentCoreScalars {
@@ -155,6 +204,8 @@ export interface EnrichmentCoreScalars {
   autonomyTogethernessDepth: EnrichmentAutonomyTogethernessLabel | null;
   kidsTimeline: EnrichmentKidsTimelineLabel | null;
   conflictStyleDetail: EnrichmentConflictStyleDetailLabel | null;
+  relationshipPace: EnrichmentRelationshipPaceLabel | null;
+  communicationMode: EnrichmentCommunicationModeLabel | null;
 }
 
 export function sanitizeEnrichmentCoreScalars(
@@ -168,6 +219,10 @@ export function sanitizeEnrichmentCoreScalars(
     kidsTimeline: coerceEnrichmentKidsTimeline(input.kidsTimeline),
     conflictStyleDetail: coerceEnrichmentConflictStyleDetail(
       input.conflictStyleDetail,
+    ),
+    relationshipPace: coerceEnrichmentRelationshipPace(input.relationshipPace),
+    communicationMode: coerceEnrichmentCommunicationMode(
+      input.communicationMode,
     ),
   };
 }

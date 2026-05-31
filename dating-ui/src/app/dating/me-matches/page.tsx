@@ -1,23 +1,40 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchMyMatches, type MeMatchesListDto } from '@/lib/me-profile-api';
+import {
+  fetchMyMatches,
+  submitMyProfileForAnalysis,
+  type MeMatchesListDto,
+} from '@/lib/me-profile-api';
 
 export default function MeMatchesPage() {
   const router = useRouter();
   const [data, setData] = useState<MeMatchesListDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshBusy, setRefreshBusy] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshSuccess, setRefreshSuccess] = useState<string | null>(null);
+
+  const loadMatches = useCallback(async () => {
+    const dto = await fetchMyMatches();
+    if (dto.status === 'not_ready') {
+      router.replace(dto.reason === 'no_profile' ? '/onboarding' : '/dating/analysis');
+      return;
+    }
+    setData(dto);
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     fetchMyMatches()
       .then((dto) => {
         if (cancelled) return;
         if (dto.status === 'not_ready') {
-          // Guard: send user to the appropriate step before showing matches.
           router.replace(dto.reason === 'no_profile' ? '/onboarding' : '/dating/analysis');
           return;
         }
@@ -36,6 +53,23 @@ export default function MeMatchesPage() {
   }, [router]);
 
   const matches = data?.status === 'ready' ? (data.matches ?? []) : [];
+
+  const handleRefreshAnalysis = async () => {
+    setRefreshBusy(true);
+    setRefreshError(null);
+    setRefreshSuccess(null);
+    try {
+      await submitMyProfileForAnalysis();
+      setRefreshSuccess(
+        'Refresh started — scores will update once analysis completes.',
+      );
+      await loadMatches();
+    } catch (e: unknown) {
+      setRefreshError(e instanceof Error ? e.message : 'Refresh failed');
+    } finally {
+      setRefreshBusy(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -81,6 +115,47 @@ export default function MeMatchesPage() {
           >
             {error}
           </div>
+        )}
+
+        {/* Viewer analysis stale (success/error after refresh stay visible below) */}
+        {!loading &&
+          !error &&
+          data?.status === 'ready' &&
+          data.viewerProfileAnalysisStale === true && (
+            <div
+              className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-800 dark:bg-amber-950/40"
+              role="region"
+              aria-label="Profile analysis out of date"
+            >
+              <p className="text-sm text-amber-900 dark:text-amber-100">
+                Your profile changed since the last analysis. Match scores may be
+                out of date.
+              </p>
+              <button
+                type="button"
+                data-testid="matches-refresh-analysis"
+                className="mt-3 rounded-lg bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50 dark:bg-amber-700 dark:hover:bg-amber-600"
+                disabled={refreshBusy}
+                onClick={() => void handleRefreshAnalysis()}
+              >
+                Refresh analysis
+              </button>
+            </div>
+          )}
+
+        {!loading && !error && refreshSuccess && (
+          <p
+            className="text-sm text-emerald-800 dark:text-emerald-200"
+            role="status"
+            data-testid="matches-refresh-success"
+          >
+            {refreshSuccess}
+          </p>
+        )}
+        {!loading && !error && refreshError && (
+          <p className="text-sm text-red-700 dark:text-red-400" role="alert">
+            {refreshError}
+          </p>
         )}
 
         {/* Empty */}

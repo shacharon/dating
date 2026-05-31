@@ -16,6 +16,26 @@ const JSON_HEADERS = {
   Accept: 'application/json',
 };
 
+function profileWriteErrorMessage(
+  method: 'POST' | 'PATCH',
+  status: number,
+  errBody: string,
+): string {
+  try {
+    const parsed = JSON.parse(errBody) as {
+      error?: string;
+      message?: string;
+    };
+    if (parsed.error === 'nickname_taken') {
+      return 'This nickname is already taken. Choose a different one or leave it blank.';
+    }
+    if (parsed.message) return parsed.message;
+  } catch {
+    // fall through
+  }
+  return `${method} /api/v1/me/profile failed: ${status} ${errBody || ''}`.trim();
+}
+
 /** Matches dating-api `ProfileGender` enum (product profile). */
 export type MeProfileGender =
   | 'MALE'
@@ -216,9 +236,7 @@ export async function createMyProfile(body: CreateMeProfileBody): Promise<MeProf
       errorCode: UiErrorCodes.UI_PROFILE_CREATE_FAIL,
       meta: { status: res.status, bodyPreview: errBody.slice(0, 500) },
     });
-    throw new Error(
-      `POST /api/v1/me/profile failed: ${res.status} ${errBody || res.statusText}`,
-    );
+    throw new Error(profileWriteErrorMessage('POST', res.status, errBody));
   }
   const dto = await readJson<MeProfileDto>(res);
   emitProductLog({
@@ -262,9 +280,7 @@ export async function patchMyProfile(body: PatchMeProfileBody): Promise<MeProfil
       errorCode: UiErrorCodes.UI_PROFILE_PATCH_FAIL,
       meta: { status: res.status, bodyPreview: errBody.slice(0, 500) },
     });
-    throw new Error(
-      `PATCH /api/v1/me/profile failed: ${res.status} ${errBody || res.statusText}`,
-    );
+    throw new Error(profileWriteErrorMessage('PATCH', res.status, errBody));
   }
   const dto = await readJson<MeProfileDto>(res);
   emitProductLog({
@@ -358,6 +374,14 @@ export interface MatchRecommendationDto {
   suggestedNextAction: string;
 }
 
+/** Deterministic compatibility trait from `explainability.positiveChips` (detail only). */
+export interface MatchExplanationTrait {
+  group: string;
+  label: string;
+  evidence: string;
+  strength: 'strong' | 'moderate';
+}
+
 export interface MeMatchItemDto {
   /** `UserProfile.id` of the candidate. */
   id: string;
@@ -368,6 +392,8 @@ export interface MeMatchItemDto {
   hasEvaluation: boolean;
   /** Engine final score 0–100. Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
+  profileAnalysisStale?: boolean;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
 }
@@ -380,6 +406,10 @@ export interface MeMatchesListDto {
   viewerProfileId?: string;
   viewerGender?: string | null;
   viewerAcceptedPartnerGenders?: string[] | null;
+  /**
+   * Present when `status = 'ready'`. True when the viewer profile changed after their latest analysis.
+   */
+  viewerProfileAnalysisStale?: boolean;
   totalCandidatesBeforeFilter?: number;
   matches?: MeMatchItemDto[];
 }
@@ -397,6 +427,10 @@ export interface MeMatchDetailDto {
   evaluationSummary: string | null;
   /** Engine final score 0–100. Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
+  profileAnalysisStale?: boolean;
+  /** Present when engine returned scored explainability with mapped positive chips. */
+  matchExplanationTraits?: MatchExplanationTrait[];
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
 }

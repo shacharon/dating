@@ -47,6 +47,8 @@ export class MeProfileController {
   ) {}
 
   /**
+   * Official product match endpoint. All match UI flows use this route.
+   * 
    * Phase 3 Step 5 — product matches list for the authenticated user.
    * Returns `{ status: 'not_ready', reason }` when the viewer has no analyzed profile
    * instead of a hard 4xx, giving the UI a clean signal to show an onboarding prompt.
@@ -57,6 +59,8 @@ export class MeProfileController {
   }
 
   /**
+   * Official product match endpoint. All match UI flows use this route.
+   * 
    * Phase 3 Step 5 — match detail for a single candidate by their `UserProfile.id`.
    * 404 when viewer is not ready, candidate does not exist, or gender filter fails.
    * Raw profile text fields are never exposed in the response.
@@ -82,6 +86,9 @@ export class MeProfileController {
   }
 
   /**
+   * @deprecated Phase 3 Step 4 — legacy candidate-only list.
+   * Use GET /api/v1/me/matches for scored match results.
+   * 
    * Phase 3 Step 4 — gender-filtered candidate list driven by the authenticated user's
    * `UserProfile` (new product flow). Candidates are all other `ANALYZED` product profiles.
    * Both directions of the partner-gender filter must pass (reciprocal).

@@ -22,6 +22,10 @@ import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
 import {
+  buildMatchExplanationTraits,
+  type MatchExplanationTrait,
+} from '../matches/match-explanation-traits';
+import {
   compareWithStatus,
   type MatchExplainabilityDto,
   type MatchRecommendationDto,
@@ -35,7 +39,7 @@ const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
  * evaluation blob. The blob remains the fallback for profiles with no normalized rows.
  * Flag off (default) → pure evaluation-blob path, zero behaviour change.
  */
-const USE_NORMALIZED = process.env['גםק'] === '1';
+const USE_NORMALIZED = process.env['ENGINE_READ_NORMALIZED'] === '1';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
@@ -50,6 +54,8 @@ export interface MeMatchItemDto {
   hasEvaluation: boolean;
   /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
+  profileAnalysisStale?: boolean;
   primaryPhotoUrl: string | null;
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
@@ -68,6 +74,11 @@ export interface MeMatchesListResponseDto {
   viewerProfileId?: string;
   viewerGender?: string | null;
   viewerAcceptedPartnerGenders?: string[] | null;
+  /**
+   * Present when `status = 'ready'`. True when the viewer's profile was saved after
+   * their latest `UserProfileEvaluation` (`UserProfile.updatedAt > evaluation.createdAt`).
+   */
+  viewerProfileAnalysisStale?: boolean;
   totalCandidatesBeforeFilter?: number;
   matches?: MeMatchItemDto[];
 }
@@ -88,6 +99,10 @@ export interface MeMatchDetailDto {
   evaluationSummary: string | null;
   /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
+  profileAnalysisStale?: boolean;
+  /** Deterministic compatibility traits from `explainability.positiveChips` (detail only). */
+  matchExplanationTraits?: MatchExplanationTrait[];
   primaryPhotoUrl: string | null;
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
@@ -138,6 +153,7 @@ export class MeMatchesService {
     aboutPartner: true,
     aboutRelationship: true,
     analyzedAt: true,
+    updatedAt: true,
     // HG structured facts
     childrenStatus: true,
     wantsChildren: true,
@@ -148,9 +164,9 @@ export class MeMatchesService {
     // HG structured preferences live on UserProfilePreference (Phase F).
     preference: true,
     // Normalized signal / interest rows for ENGINE_READ_NORMALIZED assembly.
-    signals: { select: { signalKey: true, signalValue: true } },
+    signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
     interests: {
-      select: { tag: true, rank: true },
+      select: { tag: true, rank: true, evalVersion: true },
       orderBy: { rank: 'asc' as const },
     },
     photos: {
@@ -167,9 +183,9 @@ export class MeMatchesService {
       where: { userId },
       include: {
         preference: true,
-        signals: { select: { signalKey: true, signalValue: true } },
+        signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
         interests: {
-          select: { tag: true, rank: true },
+          select: { tag: true, rank: true, evalVersion: true },
           orderBy: { rank: 'asc' },
         },
       },
@@ -327,6 +343,7 @@ export class MeMatchesService {
         analyzedAt: row.analyzedAt?.toISOString() ?? null,
         hasEvaluation: row._count.evaluations > 0,
         matchScore,
+        profileAnalysisStale: row.updatedAt > candidateEval.createdAt,
         primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
           row.id,
           pickApprovedPrimaryPhotoId(approvedPhotos),
@@ -336,6 +353,13 @@ export class MeMatchesService {
         recommendation,
       });
     }
+
+    // Sort matches by matchScore DESC (null scores sort last)
+    matches.sort((a, b) => {
+      const aScore = a.matchScore ?? -1;
+      const bScore = b.matchScore ?? -1;
+      return bScore - aScore;
+    });
 
     this.obs.trace(
       `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length}`,
@@ -349,6 +373,7 @@ export class MeMatchesService {
       viewerAcceptedPartnerGenders: viewerBridge.acceptedPartnerGenders
         ? [...viewerBridge.acceptedPartnerGenders]
         : null,
+      viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
       totalCandidatesBeforeFilter: totalBeforeFilter,
       matches,
     };
@@ -365,9 +390,9 @@ export class MeMatchesService {
       where: { userId },
       include: {
         preference: true,
-        signals: { select: { signalKey: true, signalValue: true } },
+        signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
         interests: {
-          select: { tag: true, rank: true },
+          select: { tag: true, rank: true, evalVersion: true },
           orderBy: { rank: 'asc' },
         },
       },
@@ -494,10 +519,17 @@ export class MeMatchesService {
       viewerRead.enginePayload,
       candidateRead.enginePayload,
     );
+    let matchExplanationTraits: MatchExplanationTrait[] | undefined;
     if (!('status' in result)) {
       matchScore = result.finalScore;
       explainability = result.explainability;
       recommendation = result.recommendation;
+      const built = buildMatchExplanationTraits(
+        result.explainability.positiveChips,
+        result.finalScore,
+      );
+      matchExplanationTraits =
+        built.length > 0 ? built : undefined;
     }
 
     this.obs.trace(
@@ -514,6 +546,10 @@ export class MeMatchesService {
       hasEvaluation: candidate._count.evaluations > 0,
       evaluationSummary,
       matchScore,
+      profileAnalysisStale: candidate.updatedAt > candidateEval.createdAt,
+      ...(matchExplanationTraits !== undefined && {
+        matchExplanationTraits,
+      }),
       primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
         candidate.id,
         pickApprovedPrimaryPhotoId(candidate.photos ?? []),

@@ -40,6 +40,7 @@ describe('MeProfileService', () => {
     $transaction: jest.Mock;
     userProfile: {
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
     };
@@ -62,6 +63,7 @@ describe('MeProfileService', () => {
       ),
       userProfile: {
         findUnique: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
         update: jest.fn(),
       },
@@ -232,6 +234,40 @@ describe('MeProfileService', () => {
       where: { userId },
       data: { aboutMe: 'patched' },
     });
+  });
+
+  it('patchForUser omits nickname when unchanged', async () => {
+    const row = { ...baseRow, nickname: 'River' };
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(profileRow(row))
+      .mockResolvedValueOnce(profileRow(row))
+      .mockResolvedValueOnce(profileRow(row));
+    prisma.userProfile.update.mockResolvedValue(row);
+
+    await service.patchForUser(userId, {
+      nickname: 'River',
+      aboutMe: 'patched',
+    });
+
+    expect(prisma.userProfile.findFirst).not.toHaveBeenCalled();
+    expect(prisma.userProfile.update).toHaveBeenCalledWith({
+      where: { userId },
+      data: { aboutMe: 'patched' },
+    });
+  });
+
+  it('patchForUser rejects nickname already used by another profile', async () => {
+    prisma.userProfile.findUnique.mockResolvedValueOnce(
+      profileRow({ ...baseRow, nickname: 'Mine' }),
+    );
+    prisma.userProfile.findFirst.mockResolvedValueOnce({ id: 'prof_other' });
+
+    await expect(
+      service.patchForUser(userId, { nickname: 'Taken' }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ error: 'nickname_taken' }),
+    });
+    expect(prisma.userProfile.update).not.toHaveBeenCalled();
   });
 
   it('patchForUser rejects COMPLETED onboarding when text fields are incomplete', async () => {

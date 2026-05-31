@@ -204,6 +204,8 @@ export type LatestEvaluationForMatchPick = {
   profileId: string;
   evaluationJson: Prisma.JsonValue;
   createdAt: Date;
+  /** Same as `UserProfileEvaluation.version`; required for normalized read guard. */
+  version: string;
 };
 
 /**
@@ -225,6 +227,7 @@ export async function latestEvaluationsForProfileIds(
       profileId,
       evaluationJson: row.evaluationJson,
       createdAt: row.createdAt,
+      version: row.version,
     });
   }
   return out;

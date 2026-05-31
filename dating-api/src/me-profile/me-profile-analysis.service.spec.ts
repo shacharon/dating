@@ -620,6 +620,7 @@ describe('latestEvaluationsForProfileIds', () => {
           profileId: 'p1',
           evaluationJson: { v: 'latest_p1' },
           createdAt: t3,
+          version: 'v1',
         });
       }
       if (profileId === 'p2') {
@@ -627,6 +628,7 @@ describe('latestEvaluationsForProfileIds', () => {
           profileId: 'p2',
           evaluationJson: { v: 'only_p2' },
           createdAt: t1,
+          version: 'v1',
         });
       }
       return Promise.resolve(null);
@@ -655,11 +657,13 @@ describe('latestEvaluationsForProfileIds', () => {
       profileId: 'p1',
       evaluationJson: { v: 'latest_p1' },
       createdAt: t3,
+      version: 'v1',
     });
     expect(map.get('p2')).toEqual({
       profileId: 'p2',
       evaluationJson: { v: 'only_p2' },
       createdAt: t1,
+      version: 'v1',
     });
   });
 
@@ -668,6 +672,7 @@ describe('latestEvaluationsForProfileIds', () => {
       profileId: 'p1',
       evaluationJson: {},
       createdAt: new Date(),
+      version: 'v1',
     });
     const mockPrisma = { userProfileEvaluation: { findFirst } };
 
