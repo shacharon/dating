@@ -17,6 +17,7 @@ export type AppCopySchema = {
   nav: {
     home: string;
     matches: string;
+    conversations: string;
     profile: string;
     analysis: string;
     accountSettings: string;

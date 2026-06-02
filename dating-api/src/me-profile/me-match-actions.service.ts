@@ -4,16 +4,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MatchActionType } from '@prisma/client';
+import { MatchActionType, MutualMatch, MutualMatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { MatchActionDto, MatchActionStateDto } from './me-match-actions.dto';
 import { MeMatchesService } from './me-matches.service';
+import { MutualMatchesService } from './mutual-matches.service';
 
 @Injectable()
 export class MeMatchActionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly meMatches: MeMatchesService,
+    private readonly mutualMatches: MutualMatchesService,
   ) {}
 
   async getActionState(
@@ -25,23 +27,32 @@ export class MeMatchActionsService {
       candidateProfileId,
     );
 
-    const row = await this.prisma.matchAction.findUnique({
-      where: {
-        actorUserId_targetUserId: {
-          actorUserId,
-          targetUserId,
+    const [row, mutual] = await Promise.all([
+      this.prisma.matchAction.findUnique({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId,
+            targetUserId,
+          },
         },
-      },
-      select: { action: true, createdAt: true },
-    });
+        select: { action: true, createdAt: true },
+      }),
+      this.mutualMatches.findActiveByUserPair(actorUserId, targetUserId),
+    ]);
 
     if (!row) {
-      return { action: null };
+      return {
+        action: null,
+        mutualMatch: !!mutual,
+        conversationId: mutual?.id ?? null,
+      };
     }
 
     return {
       action: row.action,
       createdAt: row.createdAt.toISOString(),
+      mutualMatch: !!mutual,
+      conversationId: mutual?.id ?? null,
     };
   }
 
@@ -60,24 +71,43 @@ export class MeMatchActionsService {
       throw new BadRequestException('Cannot act on yourself');
     }
 
-    const row = await this.prisma.matchAction.upsert({
-      where: {
-        actorUserId_targetUserId: {
+    let detectResult: MutualMatch | null = null;
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const upserted = await tx.matchAction.upsert({
+        where: {
+          actorUserId_targetUserId: {
+            actorUserId,
+            targetUserId,
+          },
+        },
+        create: {
           actorUserId,
           targetUserId,
+          targetProfileIdSnapshot: profileId,
+          action,
         },
-      },
-      create: {
-        actorUserId,
-        targetUserId,
-        targetProfileIdSnapshot: profileId,
-        action,
-      },
-      update: {
-        action,
-        targetProfileIdSnapshot: profileId,
-      },
+        update: {
+          action,
+          targetProfileIdSnapshot: profileId,
+        },
+      });
+
+      if (action === MatchActionType.LIKE) {
+        detectResult = await this.mutualMatches.detectAndCreateMutualMatch(
+          actorUserId,
+          targetUserId,
+          tx,
+        );
+      }
+
+      return upserted;
     });
+
+    const mutualFields =
+      action === MatchActionType.LIKE
+        ? this.mutualFieldsFromDetectResult(detectResult)
+        : { mutualMatch: false, conversationId: null };
 
     return {
       id: row.id,
@@ -86,7 +116,18 @@ export class MeMatchActionsService {
       targetProfileIdSnapshot: row.targetProfileIdSnapshot,
       action: row.action,
       createdAt: row.createdAt.toISOString(),
+      mutualMatch: mutualFields.mutualMatch,
+      conversationId: mutualFields.conversationId,
     };
+  }
+
+  private mutualFieldsFromDetectResult(
+    row: MutualMatch | null,
+  ): { mutualMatch: boolean; conversationId: string | null } {
+    if (row?.status === MutualMatchStatus.ACTIVE) {
+      return { mutualMatch: true, conversationId: row.id };
+    }
+    return { mutualMatch: false, conversationId: null };
   }
 
   async deleteAction(

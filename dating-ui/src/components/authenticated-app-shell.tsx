@@ -47,6 +47,9 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   const matchesActive =
     pathname === "/dating/me-matches" ||
     pathname.startsWith("/dating/me-matches/");
+  const conversationsActive =
+    pathname === "/dating/conversations" ||
+    pathname.startsWith("/dating/conversations/");
   const profileActive = pathname === "/dating/profile";
   const analysisActive =
     pathname === "/dating/analysis" || pathname.startsWith("/dating/analysis/");
@@ -126,6 +129,13 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
               aria-current={matchesActive ? "page" : undefined}
             >
               {copy.nav.matches}
+            </Link>
+            <Link
+              href="/dating/conversations"
+              className={`${navLinkBase} ${conversationsActive ? navLinkActive : navLinkInactive}`}
+              aria-current={conversationsActive ? "page" : undefined}
+            >
+              {copy.nav.conversations}
             </Link>
             <Link
               href="/dating/profile"

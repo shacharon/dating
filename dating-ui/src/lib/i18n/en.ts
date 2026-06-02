@@ -9,6 +9,7 @@ export const enCopy: AppCopySchema = {
   nav: {
     home: "Home",
     matches: "Matches",
+    conversations: "Conversations",
     profile: "Profile",
     analysis: "Analysis",
     accountSettings: "Account Settings",

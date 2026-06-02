@@ -9,6 +9,8 @@ import {
   Param,
   Patch,
   Post,
+  Put,
+  Query,
   Res,
   StreamableFile,
   UseGuards,
@@ -28,7 +30,10 @@ import {
   CreateMeProfileDto,
   PatchMeProfileDto,
 } from './me-profile.dto';
+import { SendConversationMessageDto, parseMessageListLimit } from './me-conversation-messages.dto';
+import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { CreateMatchActionDto } from './me-match-actions.dto';
+import { MeConversationsService } from './me-conversations.service';
 import { MeMatchActionsService } from './me-match-actions.service';
 import { MeMatchesService } from './me-matches.service';
 import { MeProfileMatchesService } from './me-profile-matches.service';
@@ -46,8 +51,85 @@ export class MeProfileController {
     private readonly meMatches: MeProfileMatchesService,
     private readonly matches: MeMatchesService,
     private readonly matchActions: MeMatchActionsService,
+    private readonly conversations: MeConversationsService,
+    private readonly conversationMessages: MeConversationMessagesService,
     private readonly obs: StructuredObservabilityService,
   ) {}
+
+  /**
+   * Sprint 2 Story 2 — active mutual matches for the session user (conversation list entry point).
+   */
+  @Get('conversations')
+  listConversations(@CurrentUser() user: AuthMeResponseDto) {
+    return this.conversations.list(user.id);
+  }
+
+  /**
+   * Sprint 2 Story 3 — conversation shell metadata for one mutual match.
+   */
+  @Get('conversations/:id')
+  getConversationById(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.conversations.getById(user.id, id);
+  }
+
+  /**
+   * Sprint 3 Story 4 — mark conversation as read for the session user.
+   */
+  @Put('conversations/:id/read')
+  @HttpCode(HttpStatus.OK)
+  markConversationRead(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.conversations.markAsRead(user.id, id);
+  }
+
+  /**
+   * Sprint 3 Story 2 — message history for an ACTIVE conversation (cursor pagination).
+   */
+  @Get('conversations/:id/messages')
+  listConversationMessages(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+    @Query('limit') limitStr?: string,
+    @Query('before') before?: string,
+    @Query('after') after?: string,
+  ) {
+    return this.conversationMessages.listMessages(user.id, id, {
+      limit: parseMessageListLimit(limitStr),
+      before: before?.trim() || undefined,
+      after: after?.trim() || undefined,
+    });
+  }
+
+  /**
+   * Sprint 3 Story 1 — send a text message in an ACTIVE conversation.
+   */
+  @Post('conversations/:id/messages')
+  @HttpCode(HttpStatus.CREATED)
+  @UsePipes(MeProfileValidationPipe)
+  sendConversationMessage(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+    @Body() body: SendConversationMessageDto,
+  ) {
+    return this.conversationMessages.sendMessage(user.id, id, body.text);
+  }
+
+  /**
+   * Sprint 2 Story 5 — soft-unmatch (hide conversation for both participants).
+   */
+  @Delete('conversations/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unmatchConversation(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.conversations.unmatch(user.id, id);
+  }
 
   /**
    * Official product match endpoint. All match UI flows use this route.

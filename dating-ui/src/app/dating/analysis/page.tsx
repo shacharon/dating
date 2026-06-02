@@ -266,7 +266,7 @@ export default function DatingAnalysisPage() {
             </p>
             <button
               type="button"
-              onClick={() => router.push('/onboarding')}
+              onClick={() => router.push('/onboarding/basic?edit=1')}
               className="mt-4 inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
             >
               Edit profile

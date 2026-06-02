@@ -63,6 +63,24 @@ export const ErrorCodes = {
    * no `UserProfilePreference` row exists for that profile (`/api/v1/me/matches` only).
    */
   ME_MATCHES_PARTNER_GENDER_LEGACY_JSON: 'ME_MATCHES_PARTNER_GENDER_LEGACY_JSON',
+  /** Me conversations: GET /me/conversations — list returned */
+  ME_CONVERSATIONS_LIST_OK: 'ME_CONVERSATIONS_LIST_OK',
+  /** Me conversations: GET /me/conversations/:id — detail returned */
+  ME_CONVERSATIONS_DETAIL_OK: 'ME_CONVERSATIONS_DETAIL_OK',
+  /** Sprint 2 Story 5 — soft unmatch on conversation. */
+  ME_CONVERSATIONS_UNMATCH_OK: 'ME_CONVERSATIONS_UNMATCH_OK',
+  /** Sprint 3 Story 1 — send message in conversation. */
+  ME_CONVERSATIONS_MESSAGE_SEND_OK: 'ME_CONVERSATIONS_MESSAGE_SEND_OK',
+  /** Sprint 3 Story 2 — list messages in conversation. */
+  ME_CONVERSATIONS_MESSAGES_LIST_OK: 'ME_CONVERSATIONS_MESSAGES_LIST_OK',
+  /** Sprint 3 Story 4 — mark conversation as read. */
+  ME_CONVERSATIONS_MARK_READ_OK: 'ME_CONVERSATIONS_MARK_READ_OK',
+  /** Sprint 3 Story 6 — message send rate limit exceeded. */
+  ME_CONVERSATIONS_MESSAGE_RATE_LIMITED:
+    'ME_CONVERSATIONS_MESSAGE_RATE_LIMITED',
+  /** Sprint 3 Story 6 — profanity placeholder detected (log only). */
+  ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED:
+    'ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED',
 
   /** Generic HTTP layer */
   HTTP_EXCEPTION: 'HTTP_EXCEPTION',

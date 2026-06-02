@@ -25,6 +25,8 @@ import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { LLM_CONFIG } from '../llm/llm.constants';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
+import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
+import { MeConversationsService } from './me-conversations.service';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
@@ -96,6 +98,19 @@ describe('me profile HTTP (integration)', () => {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
       delete: jest.fn(),
+    },
+    mutualMatch: {
+      upsert: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    message: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
     },
   };
   const photoStorageMock = {
@@ -198,6 +213,16 @@ describe('me profile HTTP (integration)', () => {
     prismaMock.matchAction.findMany.mockResolvedValue([]);
     prismaMock.matchAction.findUnique?.mockReset?.();
     prismaMock.matchAction.delete?.mockReset?.();
+    prismaMock.mutualMatch.upsert?.mockReset?.();
+    prismaMock.mutualMatch.findFirst?.mockReset?.();
+    prismaMock.mutualMatch.findMany?.mockReset?.();
+    prismaMock.mutualMatch.findMany?.mockResolvedValue([]);
+    prismaMock.mutualMatch.findUnique?.mockReset?.();
+    prismaMock.mutualMatch.update?.mockReset?.();
+    prismaMock.message.create?.mockReset?.();
+    prismaMock.message.findMany?.mockReset?.();
+    prismaMock.message.findFirst?.mockReset?.();
+    prismaMock.message.count?.mockReset?.();
     photoStorageMock.buildStorageKey.mockReset();
     photoStorageMock.save.mockReset();
     photoStorageMock.delete.mockReset();
@@ -217,6 +242,7 @@ describe('me profile HTTP (integration)', () => {
       expiresAt: data.expiresAt,
     }));
     prismaMock.userSession.update.mockResolvedValue({});
+    app.get(ConversationMessageRateLimitService).resetForTests();
   });
 
   async function loginAndCookie(): Promise<string> {
@@ -2206,7 +2232,11 @@ describe('me profile HTTP (integration)', () => {
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(200);
 
-      expect(res.body).toEqual({ action: null });
+      expect(res.body).toEqual({
+        action: null,
+        mutualMatch: false,
+        conversationId: null,
+      });
       expect(prismaMock.matchAction.findUnique).toHaveBeenCalledWith({
         where: {
           actorUserId_targetUserId: {
@@ -2235,6 +2265,8 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body).toEqual({
         action: 'LIKE',
         createdAt: createdAt.toISOString(),
+        mutualMatch: false,
+        conversationId: null,
       });
     });
 
@@ -2773,6 +2805,1643 @@ describe('me profile HTTP (integration)', () => {
           targetProfileIdSnapshot: candidateProfile.id,
         }),
       });
+    });
+  });
+
+  // ─── Sprint 2 Story 1: mutual match detection on LIKE ───────────────────
+
+  describe('Sprint 2 Story 1: mutual match detection', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+
+    const viewerProfile = {
+      id: 'prof_viewer_action',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 'COMPLETED',
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_action', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
+      signals: [],
+      interests: [],
+    };
+
+    const candidateProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_action_cand'),
+      signals: [],
+      interests: [],
+    };
+
+    function mockEligibleMatchDetail() {
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return viewerProfile;
+          }
+          if (args.where.id === candidateProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return {
+                id: candidateProfile.id,
+                userId: candidateProfile.userId,
+              };
+            }
+            return candidateProfile;
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_action_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+    }
+
+    function mockLikeUpsert() {
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_like',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'LIKE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+      });
+    }
+
+    it('does not create MutualMatch when only one user has LIKED', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+    });
+
+    it('creates MutualMatch when reciprocal LIKE exists (sorted user ids)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+      prismaMock.mutualMatch.upsert.mockResolvedValue({
+        id: 'mutual_row_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(prismaMock.mutualMatch.upsert).toHaveBeenCalledWith({
+        where: {
+          userId1_userId2: {
+            userId1: CANDIDATE_USER_ID,
+            userId2: USER_ID,
+          },
+        },
+        create: {
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          status: 'ACTIVE',
+        },
+        update: {},
+      });
+    });
+
+    it('re-LIKE after mutual is idempotent (201, upsert with empty update)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+      prismaMock.mutualMatch.upsert.mockResolvedValue({
+        id: 'mutual_row_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: new Date('2026-05-31T09:00:00.000Z'),
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      });
+
+      for (let i = 0; i < 2; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/me/matches/prof_action_cand/actions')
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ action: 'LIKE' })
+          .expect(201);
+      }
+
+      expect(prismaMock.mutualMatch.upsert).toHaveBeenCalledTimes(2);
+      expect(prismaMock.mutualMatch.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({ update: {} }),
+      );
+    });
+
+    it('does not create MutualMatch when reverse action is PASS', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'PASS' });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+    });
+
+    it('does not invoke mutual detection on PASS', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_pass',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'PASS',
+        createdAt: new Date('2026-05-31T11:00:00.000Z'),
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'PASS' })
+        .expect(201);
+
+      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+    });
+
+    it('does not change MutualMatch when BLOCK overwrites LIKE (deferred Story 1 behavior)', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_block',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'BLOCK',
+        createdAt: new Date('2026-05-31T12:00:00.000Z'),
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'BLOCK' })
+        .expect(201);
+
+      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Sprint 2 Story 4: mutual match notification flags ───────────────────
+
+  describe('Sprint 2 Story 4: mutual match notification', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+
+    const viewerProfile = {
+      id: 'prof_viewer_action',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 'COMPLETED',
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_action', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
+      signals: [],
+      interests: [],
+    };
+
+    const candidateProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_action_cand'),
+      signals: [],
+      interests: [],
+    };
+
+    function mockEligibleMatchDetail() {
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return viewerProfile;
+          }
+          if (args.where.id === candidateProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return {
+                id: candidateProfile.id,
+                userId: candidateProfile.userId,
+              };
+            }
+            return candidateProfile;
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_action_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+    }
+
+    function mockLikeUpsert() {
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_like',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'LIKE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+      });
+    }
+
+    it('POST LIKE returns mutualMatch false when only one-sided like', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        action: 'LIKE',
+        mutualMatch: false,
+        conversationId: null,
+      });
+    });
+
+    it('POST LIKE returns mutualMatch true and conversationId on reciprocal like', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+      prismaMock.mutualMatch.upsert.mockResolvedValue({
+        id: 'mutual_row_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        action: 'LIKE',
+        mutualMatch: true,
+        conversationId: 'mutual_row_1',
+      });
+    });
+
+    it('POST PASS returns mutualMatch false', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchAction.upsert.mockResolvedValue({
+        id: 'action_row_pass',
+        actorUserId: USER_ID,
+        targetUserId: CANDIDATE_USER_ID,
+        targetProfileIdSnapshot: candidateProfile.id,
+        action: 'PASS',
+        createdAt: new Date('2026-05-31T11:00:00.000Z'),
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'PASS' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        action: 'PASS',
+        mutualMatch: false,
+        conversationId: null,
+      });
+    });
+
+    it('GET actions returns mutualMatch true when ACTIVE mutual exists', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-05-31T10:00:00.000Z');
+      prismaMock.matchAction.findUnique.mockResolvedValue({
+        action: 'LIKE',
+        createdAt,
+      });
+      prismaMock.mutualMatch.findFirst.mockResolvedValue({
+        id: 'mutual_row_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt,
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({
+        action: 'LIKE',
+        createdAt: createdAt.toISOString(),
+        mutualMatch: true,
+        conversationId: 'mutual_row_1',
+      });
+      expect(prismaMock.mutualMatch.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId1: CANDIDATE_USER_ID,
+            userId2: USER_ID,
+            status: 'ACTIVE',
+          }),
+        }),
+      );
+    });
+  });
+
+  // ─── Sprint 2 Story 2: GET /api/v1/me/conversations ─────────────────────
+
+  describe('Sprint 2 Story 2: GET /api/v1/me/conversations', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .expect(401);
+    });
+
+    it('returns 200 with empty list when no ACTIVE mutual matches', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findMany.mockResolvedValue([]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({ conversations: [] });
+      expect(prismaMock.mutualMatch.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'ACTIVE',
+            OR: [{ userId1: USER_ID }, { userId2: USER_ID }],
+          }),
+        }),
+      );
+    });
+
+    it('returns other user profile info for ACTIVE mutual match', async () => {
+      const raw = await loginAndCookie();
+      const matchedAt = new Date('2026-05-31T14:00:00.000Z');
+      prismaMock.mutualMatch.findMany.mockResolvedValue([
+        {
+          id: 'mutual_row_list_1',
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAt,
+          user1LastReadAt: null,
+          user2LastReadAt: null,
+        },
+      ]);
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_action_cand',
+          userId: CANDIDATE_USER_ID,
+          nickname: 'Yonatan',
+          gender: 'MALE',
+          birthDate: new Date('1988-07-20T00:00:00.000Z'),
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          desiredPartnerGenders: ['FEMALE'],
+          photos: [{ id: 'photo_conv_primary', isPrimary: true }],
+        },
+      ]);
+      prismaMock.message.count.mockResolvedValue(0);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.conversations).toHaveLength(1);
+      expect(res.body.conversations[0]).toMatchObject({
+        id: 'mutual_row_list_1',
+        matchedAt: matchedAt.toISOString(),
+        unreadCount: 0,
+        otherUser: {
+          id: CANDIDATE_USER_ID,
+          profileId: 'prof_action_cand',
+          nickname: 'Yonatan',
+          gender: 'MALE',
+          locationLabel: 'Tel Aviv, IL',
+          photoUrl:
+            '/api/v1/me/matches/prof_action_cand/photos/photo_conv_primary/file',
+        },
+      });
+      expect(typeof res.body.conversations[0].otherUser.ageYears).toBe('number');
+    });
+
+    it('GET match photo returns 200 when ACTIVE mutual exists despite gender ineligibility', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findFirst.mockResolvedValue({
+        id: 'mutual_row_photo_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      });
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: { where: { id?: string } }) => {
+          if (args.where.id === 'prof_action_cand') {
+            return {
+              id: 'prof_action_cand',
+              userId: CANDIDATE_USER_ID,
+              status: UserProfileStatus.ANALYZED,
+              gender: 'MALE' as const,
+              desiredPartnerGenders: ['MALE'],
+              birthDate: new Date('1988-07-20T00:00:00.000Z'),
+              city: 'TLV',
+              country: 'IL',
+              locationLabel: 'Tel Aviv, IL',
+              aboutMe: null,
+              aboutPartner: null,
+              aboutRelationship: null,
+              preference: null,
+            };
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfilePhoto.findFirst.mockResolvedValue({
+        mimeType: 'image/jpeg',
+        storageKey: 'photos/conv-test.jpg',
+      });
+      photoStorageMock.read.mockResolvedValue(Buffer.from([9, 8, 7]));
+
+      await request(app.getHttpServer())
+        .get(
+          '/api/v1/me/matches/prof_action_cand/photos/photo_conv_primary/file',
+        )
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(prismaMock.mutualMatch.findFirst).toHaveBeenCalled();
+      expect(photoStorageMock.read).toHaveBeenCalledWith('photos/conv-test.jpg');
+    });
+  });
+
+  // ─── Sprint 3 Story 5: GET /api/v1/me/conversations unreadCount ────────
+
+  describe('Sprint 3 Story 5: GET /api/v1/me/conversations unreadCount', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_unread_list_1';
+    const CONVERSATION_READ_ID = 'mutual_row_unread_list_2';
+    const matchedAtNewer = new Date('2026-05-31T14:00:00.000Z');
+    const matchedAtOlder = new Date('2026-05-30T10:00:00.000Z');
+
+    const listProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      nickname: 'Yonatan',
+      gender: 'MALE' as const,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      desiredPartnerGenders: ['FEMALE'],
+      photos: [{ id: 'photo_conv_primary', isPrimary: true }],
+    };
+
+    it('returns unreadCount 3 when peer messages exist and lastReadAt is null', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findMany.mockResolvedValue([
+        {
+          id: CONVERSATION_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAtNewer,
+          user1LastReadAt: null,
+          user2LastReadAt: null,
+        },
+      ]);
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
+      prismaMock.message.count.mockResolvedValue(3);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.conversations[0].unreadCount).toBe(3);
+      expect(prismaMock.message.count).toHaveBeenCalledWith({
+        where: {
+          conversationId: CONVERSATION_ID,
+          senderId: CANDIDATE_USER_ID,
+          status: 'SENT',
+        },
+      });
+    });
+
+    it('returns unreadCount 0 after mark-as-read then list', async () => {
+      const raw = await loginAndCookie();
+      let user2LastReadAt: Date | null = null;
+      prismaMock.mutualMatch.findUnique.mockImplementation(async () => ({
+        id: CONVERSATION_ID,
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE' as const,
+        createdAt: matchedAtNewer,
+        user1LastReadAt: null,
+        user2LastReadAt,
+      }));
+      prismaMock.mutualMatch.findMany.mockImplementation(async () => [
+        {
+          id: CONVERSATION_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAtNewer,
+          user1LastReadAt: null,
+          user2LastReadAt,
+        },
+      ]);
+      prismaMock.mutualMatch.update.mockImplementation(
+        async (args: { data: { user2LastReadAt?: Date } }) => {
+          if (args.data.user2LastReadAt) {
+            user2LastReadAt = args.data.user2LastReadAt;
+          }
+          return {};
+        },
+      );
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
+      prismaMock.message.count
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(0);
+
+      const before = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+      expect(before.body.conversations[0].unreadCount).toBe(3);
+
+      await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      const after = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+      expect(after.body.conversations[0].unreadCount).toBe(0);
+    });
+
+    it('sorts conversations with unread before read', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findMany.mockResolvedValue([
+        {
+          id: CONVERSATION_READ_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAtNewer,
+          user1LastReadAt: null,
+          user2LastReadAt: new Date('2026-06-01T12:00:00.000Z'),
+        },
+        {
+          id: CONVERSATION_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAtOlder,
+          user1LastReadAt: null,
+          user2LastReadAt: null,
+        },
+      ]);
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
+      prismaMock.message.count.mockImplementation(
+        async (args: { where: { conversationId: string } }) => {
+          if (args.where.conversationId === CONVERSATION_ID) return 2;
+          return 0;
+        },
+      );
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.conversations).toHaveLength(2);
+      expect(res.body.conversations[0].id).toBe(CONVERSATION_ID);
+      expect(res.body.conversations[0].unreadCount).toBe(2);
+      expect(res.body.conversations[1].id).toBe(CONVERSATION_READ_ID);
+      expect(res.body.conversations[1].unreadCount).toBe(0);
+    });
+  });
+
+  // ─── Sprint 2 Story 3: GET /api/v1/me/conversations/:id ─────────────────
+
+  describe('Sprint 2 Story 3: GET /api/v1/me/conversations/:id', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_detail_1';
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .expect(401);
+    });
+
+    it('returns 404 when conversation does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_not_found',
+        message: 'Conversation not found.',
+      });
+    });
+
+    it('returns 404 when conversation is UNMATCHED', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: CONVERSATION_ID,
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'UNMATCHED',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+      });
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
+
+    it('returns 403 when session user is not a participant', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: CONVERSATION_ID,
+        userId1: 'user_not_participant',
+        userId2: CANDIDATE_USER_ID,
+        status: 'ACTIVE',
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_forbidden',
+        message: 'You do not have access to this conversation.',
+      });
+    });
+
+    it('returns 200 with conversation detail for participant', async () => {
+      const raw = await loginAndCookie();
+      const matchedAt = new Date('2026-05-31T14:00:00.000Z');
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: CONVERSATION_ID,
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: matchedAt,
+      });
+      prismaMock.userProfile.findUnique.mockResolvedValue({
+        id: 'prof_action_cand',
+        userId: CANDIDATE_USER_ID,
+        nickname: 'Yonatan',
+        gender: 'MALE',
+        birthDate: new Date('1988-07-20T00:00:00.000Z'),
+        city: 'TLV',
+        country: 'IL',
+        locationLabel: 'Tel Aviv, IL',
+        desiredPartnerGenders: ['FEMALE'],
+        photos: [{ id: 'photo_conv_primary', isPrimary: true }],
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        id: CONVERSATION_ID,
+        matchedAt: matchedAt.toISOString(),
+        status: 'ACTIVE',
+        lastReadAt: null,
+        otherUser: {
+          id: CANDIDATE_USER_ID,
+          profileId: 'prof_action_cand',
+          nickname: 'Yonatan',
+          gender: 'MALE',
+          locationLabel: 'Tel Aviv, IL',
+          photoUrl:
+            '/api/v1/me/matches/prof_action_cand/photos/photo_conv_primary/file',
+        },
+      });
+    });
+  });
+
+  // ─── Sprint 2 Story 5: DELETE /api/v1/me/conversations/:id ──────────────
+
+  describe('Sprint 2 Story 5: DELETE /api/v1/me/conversations/:id', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_unmatch_1';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+    };
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .expect(401);
+    });
+
+    it('returns 404 when conversation does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_not_found',
+        message: 'Conversation not found.',
+      });
+      expect(prismaMock.mutualMatch.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when conversation is already UNMATCHED', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        ...activeMatch,
+        status: 'UNMATCHED',
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.mutualMatch.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when session user is not a participant', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        ...activeMatch,
+        userId1: 'user_not_participant',
+        userId2: CANDIDATE_USER_ID,
+      });
+
+      const res = await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_forbidden',
+        message: 'You do not have access to this conversation.',
+      });
+      expect(prismaMock.mutualMatch.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 204 and soft-unmatches ACTIVE conversation for participant', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.mutualMatch.update.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(204);
+
+      expect(prismaMock.mutualMatch.update).toHaveBeenCalledWith({
+        where: { id: CONVERSATION_ID },
+        data: expect.objectContaining({
+          status: 'UNMATCHED',
+          unmatchedByUserId: USER_ID,
+          unmatchedAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it('returns 404 on second DELETE after unmatch', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique
+        .mockResolvedValueOnce(activeMatch)
+        .mockResolvedValueOnce({
+          ...activeMatch,
+          status: 'UNMATCHED',
+        });
+      prismaMock.mutualMatch.update.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.mutualMatch.update).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ─── Sprint 3 Story 1: POST /api/v1/me/conversations/:id/messages ───────
+
+  describe('Sprint 3 Story 1: POST /api/v1/me/conversations/:id/messages', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_message_1';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    };
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .send({ text: 'Hello' })
+        .expect(401);
+    });
+
+    it('returns 201 and creates message for ACTIVE participant', async () => {
+      const raw = await loginAndCookie();
+      const createdAt = new Date('2026-05-31T16:00:00.000Z');
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.create.mockResolvedValue({
+        id: 'msg_created_1',
+        conversationId: CONVERSATION_ID,
+        senderId: USER_ID,
+        text: 'Hello!',
+        createdAt,
+        status: 'SENT',
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello!' })
+        .expect(201);
+
+      expect(res.body).toEqual({
+        id: 'msg_created_1',
+        conversationId: CONVERSATION_ID,
+        senderId: USER_ID,
+        text: 'Hello!',
+        createdAt: createdAt.toISOString(),
+        status: 'SENT',
+      });
+      expect(prismaMock.message.create).toHaveBeenCalledWith({
+        data: {
+          conversationId: CONVERSATION_ID,
+          senderId: USER_ID,
+          text: 'Hello!',
+          status: 'SENT',
+        },
+      });
+    });
+
+    it('returns 403 when session user is not a participant', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        ...activeMatch,
+        userId1: 'user_not_participant',
+        userId2: CANDIDATE_USER_ID,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello' })
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_forbidden',
+        message: 'You do not have access to this conversation.',
+      });
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when conversation does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello' })
+        .expect(404);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_not_found',
+        message: 'Conversation not found.',
+      });
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when conversation is UNMATCHED', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        ...activeMatch,
+        status: 'UNMATCHED',
+      });
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello' })
+        .expect(404);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when text is empty', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: '' })
+        .expect(400);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when text is whitespace only', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: '   ' })
+        .expect(400);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when text exceeds 2000 characters', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'x'.repeat(2001) })
+        .expect(400);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('persists trimmed text', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.create.mockResolvedValue({
+        id: 'msg_trim',
+        conversationId: CONVERSATION_ID,
+        senderId: USER_ID,
+        text: 'Hi',
+        createdAt: new Date(),
+        status: 'SENT',
+      });
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: '  Hi  ' })
+        .expect(201);
+
+      expect(prismaMock.message.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ text: 'Hi' }),
+      });
+    });
+  });
+
+  // ─── Sprint 3 Story 6: message safety guardrails ───────────────────────────
+
+  describe('Sprint 3 Story 6: message safety guardrails', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_message_guardrails_1';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    };
+
+    beforeEach(() => {
+      app.get(ConversationMessageRateLimitService).resetForTests();
+    });
+
+    it('returns 429 on 11th POST within the rate-limit window', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+
+      let seq = 0;
+      prismaMock.message.create.mockImplementation(
+        async (args: {
+          data: {
+            conversationId: string;
+            senderId: string;
+            text: string;
+            status: string;
+          };
+        }) => {
+          seq += 1;
+          return {
+            id: `msg_rate_${seq}`,
+            conversationId: args.data.conversationId,
+            senderId: args.data.senderId,
+            text: args.data.text,
+            createdAt: new Date('2026-05-31T16:00:00.000Z'),
+            status: 'SENT',
+          };
+        },
+      );
+
+      for (let i = 0; i < 10; i++) {
+        await request(app.getHttpServer())
+          .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ text: `Message ${i}` })
+          .expect(201);
+      }
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Message 11' })
+        .expect(429);
+
+      expect(res.body).toMatchObject({
+        message: 'Too many messages. Please wait.',
+      });
+      expect(prismaMock.message.create).toHaveBeenCalledTimes(10);
+    });
+
+    it('returns 400 when text exceeds 2000 characters (Story 6 guardrail)', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'x'.repeat(2001) })
+        .expect(400);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Sprint 3 Story 2: GET /api/v1/me/conversations/:id/messages ──────────
+
+  describe('Sprint 3 Story 2: GET /api/v1/me/conversations/:id/messages', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_message_list_1';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    };
+
+    const t1 = new Date('2026-05-31T10:00:00.000Z');
+    const t2 = new Date('2026-05-31T11:00:00.000Z');
+    const t3 = new Date('2026-05-31T12:00:00.000Z');
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .expect(401);
+    });
+
+    it('returns 200 with messages in chronological ASC order', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.findMany.mockResolvedValue([
+        {
+          id: 'msg_3',
+          conversationId: CONVERSATION_ID,
+          senderId: USER_ID,
+          text: 'Third',
+          createdAt: t3,
+          status: 'SENT',
+        },
+        {
+          id: 'msg_2',
+          conversationId: CONVERSATION_ID,
+          senderId: CANDIDATE_USER_ID,
+          text: 'Second',
+          createdAt: t2,
+          status: 'SENT',
+        },
+        {
+          id: 'msg_1',
+          conversationId: CONVERSATION_ID,
+          senderId: USER_ID,
+          text: 'First',
+          createdAt: t1,
+          status: 'SENT',
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.messages.map((m: { id: string }) => m.id)).toEqual([
+        'msg_1',
+        'msg_2',
+        'msg_3',
+      ]);
+      expect(res.body.pagination).toEqual({
+        hasMore: false,
+        nextCursor: null,
+      });
+    });
+
+    it('returns 200 with empty array when no messages exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.findMany.mockResolvedValue([]);
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({
+        messages: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+
+    it('returns pagination when more messages exist than limit', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.findMany.mockResolvedValue([
+        {
+          id: 'msg_3',
+          conversationId: CONVERSATION_ID,
+          senderId: USER_ID,
+          text: 'Third',
+          createdAt: t3,
+          status: 'SENT',
+        },
+        {
+          id: 'msg_2',
+          conversationId: CONVERSATION_ID,
+          senderId: CANDIDATE_USER_ID,
+          text: 'Second',
+          createdAt: t2,
+          status: 'SENT',
+        },
+        {
+          id: 'msg_1',
+          conversationId: CONVERSATION_ID,
+          senderId: USER_ID,
+          text: 'First',
+          createdAt: t1,
+          status: 'SENT',
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get(
+          `/api/v1/me/conversations/${CONVERSATION_ID}/messages?limit=2`,
+        )
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.messages.map((m: { id: string }) => m.id)).toEqual([
+        'msg_2',
+        'msg_3',
+      ]);
+      expect(res.body.pagination).toEqual({
+        hasMore: true,
+        nextCursor: 'msg_2',
+      });
+    });
+
+    it('returns earlier page when before cursor is provided', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.findFirst.mockResolvedValue({
+        id: 'msg_2',
+        createdAt: t2,
+      });
+      prismaMock.message.findMany.mockResolvedValue([
+        {
+          id: 'msg_1',
+          conversationId: CONVERSATION_ID,
+          senderId: USER_ID,
+          text: 'First',
+          createdAt: t1,
+          status: 'SENT',
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get(
+          `/api/v1/me/conversations/${CONVERSATION_ID}/messages?before=msg_2`,
+        )
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.messages).toHaveLength(1);
+      expect(res.body.messages[0].id).toBe('msg_1');
+      expect(prismaMock.message.findFirst).toHaveBeenCalled();
+    });
+
+    it('returns 403 when session user is not a participant', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        ...activeMatch,
+        userId1: 'user_not_participant',
+        userId2: CANDIDATE_USER_ID,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_forbidden',
+        message: 'You do not have access to this conversation.',
+      });
+      expect(prismaMock.message.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when conversation does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_not_found',
+        message: 'Conversation not found.',
+      });
+      expect(prismaMock.message.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when conversation is UNMATCHED', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        ...activeMatch,
+        status: 'UNMATCHED',
+      });
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.message.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when before cursor is invalid', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      prismaMock.message.findFirst.mockResolvedValue(null);
+
+      await request(app.getHttpServer())
+        .get(
+          `/api/v1/me/conversations/${CONVERSATION_ID}/messages?before=msg_missing`,
+        )
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(400);
+
+      expect(prismaMock.message.findMany).not.toHaveBeenCalled();
+    });
+
+    it.each(['0', '101', 'abc'])(
+      'returns 400 when limit is invalid (%s)',
+      async (limit) => {
+        const raw = await loginAndCookie();
+        prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+
+        await request(app.getHttpServer())
+          .get(
+            `/api/v1/me/conversations/${CONVERSATION_ID}/messages?limit=${limit}`,
+          )
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .expect(400);
+
+        expect(prismaMock.message.findMany).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  // ─── Sprint 3 Story 4: PUT /api/v1/me/conversations/:id/read ────────────
+
+  describe('Sprint 3 Story 4: PUT /api/v1/me/conversations/:id/read', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_mark_read_1';
+    const matchedAt = new Date('2026-05-31T10:00:00.000Z');
+
+    function mockActiveMatchWithReadState() {
+      let user2LastReadAt: Date | null = null;
+      prismaMock.mutualMatch.findUnique.mockImplementation(async () => ({
+        id: CONVERSATION_ID,
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE' as const,
+        createdAt: matchedAt,
+        user1LastReadAt: null,
+        user2LastReadAt,
+      }));
+      prismaMock.mutualMatch.update.mockImplementation(
+        async (args: { data: { user2LastReadAt?: Date } }) => {
+          if (args.data.user2LastReadAt) {
+            user2LastReadAt = args.data.user2LastReadAt;
+          }
+          return {};
+        },
+      );
+      return {
+        getUser2LastReadAt: () => user2LastReadAt,
+      };
+    }
+
+    it('returns 401 without session', async () => {
+      await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .expect(401);
+    });
+
+    it('returns 200 with lastReadAt and updates DB column for recipient', async () => {
+      const raw = await loginAndCookie();
+      mockActiveMatchWithReadState();
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.lastReadAt).toEqual(expect.any(String));
+      expect(prismaMock.mutualMatch.update).toHaveBeenCalledWith({
+        where: { id: CONVERSATION_ID },
+        data: { user2LastReadAt: expect.any(Date) },
+      });
+    });
+
+    it('GET detail returns lastReadAt after mark-as-read', async () => {
+      const raw = await loginAndCookie();
+      const readAt = new Date('2026-06-01T18:30:00.000Z');
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: CONVERSATION_ID,
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: matchedAt,
+        user1LastReadAt: null,
+        user2LastReadAt: readAt,
+      });
+      prismaMock.userProfile.findUnique.mockResolvedValue({
+        id: 'prof_action_cand',
+        userId: CANDIDATE_USER_ID,
+        nickname: 'Yonatan',
+        gender: 'MALE',
+        birthDate: new Date('1988-07-20T00:00:00.000Z'),
+        city: 'TLV',
+        country: 'IL',
+        locationLabel: 'Tel Aviv, IL',
+        desiredPartnerGenders: ['FEMALE'],
+        photos: [],
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/me/conversations/${CONVERSATION_ID}`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.lastReadAt).toBe(readAt.toISOString());
+    });
+
+    it('countUnreadForParticipant is 3 before read and 0 after PUT', async () => {
+      const raw = await loginAndCookie();
+      mockActiveMatchWithReadState();
+      prismaMock.message.count
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(0);
+
+      const conversations = app.get(MeConversationsService);
+
+      const before = await conversations.countUnreadForParticipant(
+        USER_ID,
+        CONVERSATION_ID,
+      );
+      expect(before).toBe(3);
+
+      await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      const after = await conversations.countUnreadForParticipant(
+        USER_ID,
+        CONVERSATION_ID,
+      );
+      expect(after).toBe(0);
+      expect(prismaMock.message.count).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns 403 when session user is not a participant', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: CONVERSATION_ID,
+        userId1: 'user_not_participant',
+        userId2: CANDIDATE_USER_ID,
+        status: 'ACTIVE',
+        createdAt: matchedAt,
+        user1LastReadAt: null,
+        user2LastReadAt: null,
+      });
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(403);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_forbidden',
+        message: 'You do not have access to this conversation.',
+      });
+      expect(prismaMock.mutualMatch.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when conversation does not exist', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(res.body).toMatchObject({
+        error: 'conversation_not_found',
+        message: 'Conversation not found.',
+      });
+    });
+
+    it('returns 404 when conversation is UNMATCHED', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: CONVERSATION_ID,
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'UNMATCHED',
+        createdAt: matchedAt,
+        user1LastReadAt: null,
+        user2LastReadAt: null,
+      });
+
+      await request(app.getHttpServer())
+        .put(`/api/v1/me/conversations/${CONVERSATION_ID}/read`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.mutualMatch.update).not.toHaveBeenCalled();
     });
   });
 

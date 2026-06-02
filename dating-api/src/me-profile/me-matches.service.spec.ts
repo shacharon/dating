@@ -56,6 +56,7 @@ function makeProfileRow(overrides: {
   gender?: string | null;
   desiredPartnerGenders?: unknown;
   evaluationCount?: number;
+  nickname?: string | null;
   wantsChildren?: string | null;
   smokingFrequency?: string | null;
   alcoholUse?: string | null;
@@ -67,6 +68,7 @@ function makeProfileRow(overrides: {
     id: overrides.id,
     userId: overrides.userId,
     name: `Profile ${overrides.id}`,
+    nickname: overrides.nickname ?? null,
     status: overrides.status ?? S_ANALYZED,
     birthDate: new Date('1990-06-15T00:00:00.000Z'),
     gender: (overrides.gender ?? null) as string | null,
@@ -122,6 +124,7 @@ describe('MeMatchesService', () => {
   let obs: jest.Mocked<Pick<StructuredObservabilityService, 'trace' | 'error'>>;
   let service: MeMatchesService;
   let photoStorage: { read: jest.Mock };
+  let mutualMatches: { findActiveByUserPair: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -147,10 +150,12 @@ describe('MeMatchesService', () => {
     };
     photoStorage = { read: jest.fn() };
     obs = { trace: jest.fn(), error: jest.fn() };
+    mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
       photoStorage as never,
+      mutualMatches as never,
     );
   });
 
@@ -294,6 +299,30 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(1);
       expect(result.matches![0].id).toBe(candidateProfileId);
+    });
+
+    it('returns trimmed nickname when set', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          nickname: 'Alex',
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.matches?.[0]?.nickname).toBe('Alex');
     });
 
     it('excludes candidate when viewer has BLOCK action toward them', async () => {
@@ -1190,6 +1219,31 @@ describe('MeMatchesService', () => {
       expect(result.hasEvaluation).toBe(true);
     });
 
+    it('returns trimmed nickname on detail when set', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+            nickname: '  River  ',
+          }),
+        );
+
+      const result = await service.getById(viewerUserId, candidateProfileId);
+
+      expect(result.nickname).toBe('River');
+    });
+
     it('throws NotFoundException when viewer blocked the candidate', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
@@ -1607,6 +1661,7 @@ describe('MeMatchesService', () => {
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
+        mutualMatches as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -1635,6 +1690,7 @@ describe('MeMatchesService', () => {
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
+        mutualMatches as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -1661,12 +1717,16 @@ describe('MeMatchesService', () => {
             version: 'v1',
           }),
         },
+        matchAction: {
+          findUnique: jest.fn().mockResolvedValue(null),
+        },
       };
 
       const isolatedSvc = new MeMatchesService(
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
+        mutualMatches as never,
       );
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);

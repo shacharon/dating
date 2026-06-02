@@ -12,6 +12,8 @@ import {
   undoMatchAction,
   type MeMatchDetailDto,
 } from '@/lib/me-profile-api';
+import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
+import { MatchCelebrationModal } from '@/components/match-celebration-modal';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 
@@ -45,6 +47,11 @@ export default function MeMatchDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
   const [blockError, setBlockError] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<{ conversationId: string } | null>(
+    null,
+  );
+  const [mutualMatch, setMutualMatch] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -56,6 +63,8 @@ export default function MeMatchDetailPage() {
         if (cancelled) return;
         setData(dto);
         setYourAction(actionState.action);
+        setMutualMatch(actionState.mutualMatch);
+        setConversationId(actionState.conversationId);
       })
       .catch((e: unknown) => {
         if (!cancelled)
@@ -75,12 +84,20 @@ export default function MeMatchDetailPage() {
     setActionSaving(true);
     try {
       if (action === 'LIKE') {
-        await likeMatch(id);
+        const result = await likeMatch(id);
+        setYourAction('LIKE');
+        if (result.mutualMatch && result.conversationId) {
+          setCelebration({ conversationId: result.conversationId });
+          setMutualMatch(true);
+          setConversationId(result.conversationId);
+        }
       } else {
         await passMatch(id);
+        const actionState = await fetchMatchAction(id);
+        setYourAction(actionState.action);
+        setMutualMatch(actionState.mutualMatch);
+        setConversationId(actionState.conversationId);
       }
-      const actionState = await fetchMatchAction(id);
-      setYourAction(actionState.action);
     } catch (e: unknown) {
       setActionError(
         e instanceof Error
@@ -109,6 +126,8 @@ export default function MeMatchDetailPage() {
       await undoMatchAction(id);
       const actionState = await fetchMatchAction(id);
       setYourAction(actionState.action);
+      setMutualMatch(actionState.mutualMatch);
+      setConversationId(actionState.conversationId);
     } catch (e: unknown) {
       setActionError(
         e instanceof Error ? e.message : 'Failed to undo match action',
@@ -176,16 +195,11 @@ export default function MeMatchDetailPage() {
                 Match
               </p>
               <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {[
-                  data.gender,
-                  data.ageYears != null ? `${data.ageYears} years old` : null,
-                ]
-                  .filter(Boolean)
-                  .join(', ')}
+                {matchDetailTitle(data)}
               </h1>
-              {data.locationLabel && (
+              {matchDetailSubtitle(data) && (
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  {data.locationLabel}
+                  {matchDetailSubtitle(data)}
                 </p>
               )}
             </header>
@@ -304,6 +318,21 @@ export default function MeMatchDetailPage() {
             </div>
 
             <footer className="flex flex-col items-start gap-3 border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
+              {mutualMatch && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    You matched!
+                  </span>
+                  {conversationId && (
+                    <Link
+                      href={`/dating/conversations/${conversationId}`}
+                      className="text-xs font-medium text-emerald-600 underline-offset-4 hover:underline dark:text-emerald-400"
+                    >
+                      View conversation
+                    </Link>
+                  )}
+                </div>
+              )}
               {statusMessage ? (
                 <div className="flex flex-col items-start gap-2">
                   <p
@@ -434,6 +463,18 @@ export default function MeMatchDetailPage() {
           </article>
         )}
       </div>
+
+      {data && celebration && (
+        <MatchCelebrationModal
+          open
+          onClose={() => setCelebration(null)}
+          candidateName={matchDetailTitle(data)}
+          photoUrl={data.primaryPhotoUrl ?? null}
+          onSendMessage={() => {
+            router.push(`/dating/conversations/${celebration.conversationId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -33,6 +33,7 @@ vi.mock('next/link', () => ({
 
 const baseMatch = {
   id: 'prof-cand-1',
+  nickname: null as string | null,
   gender: 'FEMALE' as const,
   ageYears: 29,
   locationLabel: 'Tel Aviv',
@@ -218,6 +219,21 @@ describe('MeMatchesPage (yourAction badges)', () => {
     expect(screen.queryByLabelText('You liked this match')).toBeNull();
     expect(screen.queryByText('Liked')).toBeNull();
     expect(screen.queryByLabelText('You passed on this match')).toBeNull();
+    unmount();
+  });
+
+  it('shows nickname as primary label when provided', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [{ ...baseMatch, nickname: 'River', gender: 'FEMALE', ageYears: 29, locationLabel: 'Tel Aviv' }],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('River')).toBeTruthy();
+    });
+    expect(screen.getByText(/FEMALE · 29y · Tel Aviv/)).toBeTruthy();
     unmount();
   });
 });

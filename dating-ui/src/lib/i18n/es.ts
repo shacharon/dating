@@ -9,6 +9,7 @@ export const esCopy: AppCopySchema = {
   nav: {
     home: "Inicio",
     matches: "Coincidencias",
+    conversations: "Conversaciones",
     profile: "Perfil",
     analysis: "Analisis",
     accountSettings: "Configuracion de cuenta",

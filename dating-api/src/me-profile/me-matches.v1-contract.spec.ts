@@ -43,6 +43,7 @@ function makeProfileRow(overrides: {
     id: overrides.id,
     userId: overrides.userId,
     name: `Profile ${overrides.id}`,
+    nickname: null as string | null,
     status: S_ANALYZED,
     birthDate: new Date('1990-06-15T00:00:00.000Z'),
     gender: (overrides.gender ?? null) as string | null,
@@ -118,6 +119,7 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
       userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
       userProfileEvaluation: { findFirst: jest.Mock };
       userProfilePhoto: { findFirst: jest.Mock };
+      matchAction: { findUnique: jest.Mock };
     };
     let service: MeMatchesService;
 
@@ -136,16 +138,22 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
             ),
         },
         userProfilePhoto: { findFirst: jest.fn() },
+        matchAction: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
       };
       const obs: jest.Mocked<Pick<StructuredObservabilityService, 'trace' | 'error'>> = {
         trace: jest.fn(),
         error: jest.fn(),
       };
       const photoStorage = { read: jest.fn() };
+      const mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
       service = new MeMatchesService(
         prisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
+        mutualMatches as never,
       );
     });
 

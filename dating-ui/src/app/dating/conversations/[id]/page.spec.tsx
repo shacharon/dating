@@ -1,0 +1,608 @@
+/** @vitest-environment jsdom */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+
+const {
+  fetchMyConversationById,
+  fetchConversationMessages,
+  markConversationAsRead,
+  sendConversationMessage,
+  unmatchMyConversation,
+  mockPush,
+} = vi.hoisted(() => ({
+  fetchMyConversationById: vi.fn(),
+  fetchConversationMessages: vi.fn(),
+  markConversationAsRead: vi.fn(),
+  sendConversationMessage: vi.fn(),
+  unmatchMyConversation: vi.fn(),
+  mockPush: vi.fn(),
+}));
+
+vi.mock('@/lib/conversations-api', () => ({
+  fetchMyConversationById,
+  fetchConversationMessages,
+  markConversationAsRead,
+  sendConversationMessage,
+  unmatchMyConversation,
+  conversationPhotoSrc: (url: string | null) => url,
+}));
+
+vi.mock('@/contexts/auth-context', () => ({
+  useAuth: () => ({
+    user: { id: 'user_me' },
+    status: 'authenticated',
+    refresh: vi.fn(),
+    signInWithGoogleIdToken: vi.fn(),
+    logout: vi.fn(),
+    lastError: null,
+    clearLastError: vi.fn(),
+  }),
+}));
+
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ id: 'mutual_abc' }),
+  useRouter: () => ({ push: mockPush }),
+}));
+
+import ConversationDetailPage from './page';
+
+vi.mock('next/link', () => ({
+  default ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  },
+}));
+
+const detail = {
+  id: 'mutual_abc',
+  otherUser: {
+    id: 'user_cand_1',
+    profileId: 'prof_cand_1',
+    nickname: 'Noa',
+    gender: 'FEMALE',
+    ageYears: 32,
+    locationLabel: 'Tel Aviv',
+    photoUrl: '/api/v1/me/matches/prof_cand_1/photos/photo_1/file',
+  },
+  matchedAt: '2026-05-31T12:00:00.000Z',
+  status: 'ACTIVE' as const,
+  lastReadAt: null,
+};
+
+describe('ConversationDetailPage', () => {
+  const sentMessage = {
+    id: 'msg_1',
+    conversationId: 'mutual_abc',
+    senderId: 'user_me',
+    text: 'Hello there',
+    createdAt: '2026-05-31T16:00:00.000Z',
+    status: 'SENT' as const,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    fetchMyConversationById.mockResolvedValue(detail);
+    fetchConversationMessages.mockResolvedValue({
+      messages: [],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+    markConversationAsRead.mockResolvedValue({
+      lastReadAt: '2026-06-01T18:00:00.000Z',
+    });
+    unmatchMyConversation.mockResolvedValue(undefined);
+    sendConversationMessage.mockResolvedValue(sentMessage);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('renders match card with name and matched date', async () => {
+    fetchMyConversationById.mockResolvedValue(detail);
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-match-card')).toBeTruthy();
+    });
+    expect(screen.getByText('Noa')).toBeTruthy();
+    expect(screen.getByTestId('conversation-matched-date')).toBeTruthy();
+    expect(screen.getByText(/Matched on/)).toBeTruthy();
+    unmount();
+  });
+
+  it('renders enabled composer and empty messages state', async () => {
+    fetchMyConversationById.mockResolvedValue(detail);
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-messaging')).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-messages-empty')).toBeTruthy();
+    });
+    expect(screen.getByText(/No messages yet/)).toBeTruthy();
+    expect(
+      (screen.getByLabelText('Message') as HTMLTextAreaElement).disabled,
+    ).toBe(false);
+    expect(screen.getByTestId('conversation-send-button')).toBeTruthy();
+    unmount();
+  });
+
+  it('loads messages on mount', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(fetchConversationMessages).toHaveBeenCalledWith('mutual_abc');
+    });
+    unmount();
+  });
+
+  it('calls markConversationAsRead after conversation shell loads', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(markConversationAsRead).toHaveBeenCalledWith('mutual_abc');
+    });
+    unmount();
+  });
+
+  it('calls markConversationAsRead again when tab becomes visible after debounce', async () => {
+    const nowSpy = vi.spyOn(Date, 'now');
+    nowSpy.mockReturnValue(0);
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(markConversationAsRead).toHaveBeenCalled();
+    });
+    const callsAfterMount = markConversationAsRead.mock.calls.length;
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(markConversationAsRead.mock.calls.length).toBe(callsAfterMount);
+
+    nowSpy.mockReturnValue(6000);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitFor(() => {
+      expect(markConversationAsRead.mock.calls.length).toBeGreaterThan(
+        callsAfterMount,
+      );
+    });
+
+    unmount();
+  });
+
+  it('skips mark-as-read on visibility within 5s debounce', async () => {
+    const nowSpy = vi.spyOn(Date, 'now');
+    nowSpy.mockReturnValue(1000);
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(markConversationAsRead).toHaveBeenCalled();
+    });
+    const callsAfterMount = markConversationAsRead.mock.calls.length;
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(markConversationAsRead.mock.calls.length).toBe(callsAfterMount);
+
+    unmount();
+  });
+
+  it('does not show error banner when mark-as-read fails', async () => {
+    markConversationAsRead.mockRejectedValue(new Error('Mark read failed'));
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(markConversationAsRead).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId('conversation-error')).toBeNull();
+    expect(screen.queryByText('Mark read failed')).toBeNull();
+    unmount();
+  });
+
+  it('renders left and right bubbles based on sender', async () => {
+    const recent = new Date().toISOString();
+    fetchConversationMessages.mockResolvedValue({
+      messages: [
+        {
+          id: 'msg_mine',
+          conversationId: 'mutual_abc',
+          senderId: 'user_me',
+          text: 'My message',
+          createdAt: recent,
+          status: 'SENT',
+        },
+        {
+          id: 'msg_other',
+          conversationId: 'mutual_abc',
+          senderId: 'user_cand_1',
+          text: 'Their message',
+          createdAt: recent,
+          status: 'SENT',
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('My message')).toBeTruthy();
+      expect(screen.getByText('Their message')).toBeTruthy();
+    });
+    expect(
+      screen.getByText('My message').closest('[data-sender="me"]'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Their message').closest('[data-sender="other"]'),
+    ).toBeTruthy();
+    unmount();
+  });
+
+  it('shows message timestamp', async () => {
+    const recent = new Date().toISOString();
+    fetchConversationMessages.mockResolvedValue({
+      messages: [
+        {
+          id: 'msg_mine',
+          conversationId: 'mutual_abc',
+          senderId: 'user_me',
+          text: 'Timed message',
+          createdAt: recent,
+          status: 'SENT',
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-message-time')).toBeTruthy();
+    });
+    expect(screen.getByText('Just now')).toBeTruthy();
+    unmount();
+  });
+
+  it('shows load earlier button and fetches with before cursor', async () => {
+    const recent = new Date().toISOString();
+    fetchConversationMessages
+      .mockResolvedValueOnce({
+        messages: [
+          {
+            id: 'msg_new',
+            conversationId: 'mutual_abc',
+            senderId: 'user_me',
+            text: 'Recent',
+            createdAt: recent,
+            status: 'SENT',
+          },
+        ],
+        pagination: { hasMore: true, nextCursor: 'msg_old' },
+      })
+      .mockResolvedValueOnce({
+        messages: [
+          {
+            id: 'msg_old',
+            conversationId: 'mutual_abc',
+            senderId: 'user_cand_1',
+            text: 'Older',
+            createdAt: '2026-05-30T10:00:00.000Z',
+            status: 'SENT',
+          },
+        ],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-load-earlier')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('conversation-load-earlier'));
+
+    await waitFor(() => {
+      expect(fetchConversationMessages).toHaveBeenCalledWith('mutual_abc', {
+        before: 'msg_old',
+      });
+      expect(screen.getByText('Older')).toBeTruthy();
+      expect(screen.getByText('Recent')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('shows messages error when history fetch fails', async () => {
+    fetchConversationMessages.mockRejectedValue(
+      new Error('Failed to load messages'),
+    );
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-messages-error')).toBeTruthy();
+    });
+    expect(screen.getByText('Failed to load messages')).toBeTruthy();
+    unmount();
+  });
+
+  it('does not duplicate message when send returns existing id', async () => {
+    fetchConversationMessages.mockResolvedValue({
+      messages: [sentMessage],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Hello there')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Hello there' },
+    });
+    fireEvent.click(screen.getByTestId('conversation-send-button'));
+
+    await waitFor(() => {
+      expect(sendConversationMessage).toHaveBeenCalled();
+    });
+    expect(screen.getAllByText('Hello there')).toHaveLength(1);
+    unmount();
+  });
+
+  it('shows character count as draft length / 2000', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-char-count')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'a'.repeat(245) },
+    });
+
+    expect(screen.getByTestId('conversation-char-count').textContent).toBe(
+      '245 / 2000',
+    );
+    unmount();
+  });
+
+  it('shows red character count and disables Send when draft exceeds 2000', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Message')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'x'.repeat(2001) },
+    });
+
+    const counter = screen.getByTestId('conversation-char-count');
+    expect(counter.textContent).toBe('2001 / 2000');
+    expect(counter.className).toMatch(/text-red-600/);
+    expect(
+      (screen.getByTestId('conversation-send-button') as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    unmount();
+  });
+
+  it('shows rate-limit error when send returns 429', async () => {
+    sendConversationMessage.mockRejectedValue(
+      new Error('Too many messages. Please wait.'),
+    );
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Message')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Hi' },
+    });
+    fireEvent.click(screen.getByTestId('conversation-send-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-send-error')).toBeTruthy();
+      expect(
+        screen.getByText('Too many messages. Please wait.'),
+      ).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('disables Send when draft is empty', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-send-button')).toBeTruthy();
+    });
+
+    expect(
+      (screen.getByTestId('conversation-send-button') as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    unmount();
+  });
+
+  it('calls sendConversationMessage and shows message bubble on Send', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Message')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Hello there' },
+    });
+    fireEvent.click(screen.getByTestId('conversation-send-button'));
+
+    await waitFor(() => {
+      expect(sendConversationMessage).toHaveBeenCalledWith(
+        'mutual_abc',
+        'Hello there',
+      );
+      expect(screen.getByText('Hello there')).toBeTruthy();
+      expect(screen.queryByTestId('conversation-messages-empty')).toBeNull();
+    });
+    expect(
+      (screen.getByLabelText('Message') as HTMLTextAreaElement).value,
+    ).toBe('');
+    unmount();
+  });
+
+  it('shows send error when API fails', async () => {
+    sendConversationMessage.mockRejectedValue(new Error('Network error'));
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Message')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Oops' },
+    });
+    fireEvent.click(screen.getByTestId('conversation-send-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-send-error')).toBeTruthy();
+      expect(screen.getByText('Network error')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('renders back link to conversation list', async () => {
+    fetchMyConversationById.mockResolvedValue(detail);
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-back-link')).toBeTruthy();
+    });
+    expect(
+      screen.getByTestId('conversation-back-link').getAttribute('href'),
+    ).toBe('/dating/conversations');
+    unmount();
+  });
+
+  it('shows error when conversation is not found', async () => {
+    fetchMyConversationById.mockRejectedValue(
+      new Error('Conversation not found.'),
+    );
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-error')).toBeTruthy();
+    });
+    expect(screen.getByText(/Conversation not found/)).toBeTruthy();
+    unmount();
+  });
+
+  it('shows Unmatch button on loaded detail', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('shows confirmation with other user name when Unmatch is clicked', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^unmatch$/i }));
+
+    expect(screen.getByTestId('conversation-unmatch-confirm')).toBeTruthy();
+    expect(screen.getByText(/Unmatch Noa\?/)).toBeTruthy();
+    expect(unmatchMyConversation).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('cancels unmatch without calling API', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^unmatch$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByTestId('conversation-unmatch-confirm')).toBeNull();
+    expect(unmatchMyConversation).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('calls unmatchMyConversation and redirects on confirm', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^unmatch$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^unmatch$/i }));
+
+    await waitFor(() => {
+      expect(unmatchMyConversation).toHaveBeenCalledWith('mutual_abc');
+      expect(mockPush).toHaveBeenCalledWith('/dating/conversations');
+    });
+    unmount();
+  });
+
+  it('shows error when unmatch fails', async () => {
+    unmatchMyConversation.mockRejectedValue(new Error('Network error'));
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^unmatch$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^unmatch$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy();
+      expect(screen.getByText('Network error')).toBeTruthy();
+    });
+    expect(mockPush).not.toHaveBeenCalled();
+    unmount();
+  });
+});

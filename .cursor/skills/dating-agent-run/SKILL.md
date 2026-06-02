@@ -1,9 +1,9 @@
 ---
 name: dating-agent-run
 description: >-
-  Run dating-app sprint agents manually using --agent N story M. Resolves story
-  ref, loads agent-N step skill + role skill, writes handoff for next agent.
-  Use when the user writes --agent followed by a number and story reference.
+  Run dating-app sprint agents manually using --agent N sprint S story M. Resolves
+  story ref, loads agent-N step skill + role skill, writes handoff for next agent.
+  Use when the user writes --agent followed by a number, sprint, and story reference.
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 ## Command syntax
 
 ```text
---agent <n> story <m>
+--agent <n> sprint <s> story <m>
 ```
 
 | Agent | Step skill | Role skill | Handoff |
@@ -24,13 +24,13 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 | **2** | [agent-2/SKILL.md](./agent-2/SKILL.md) | [dating-code-review](../dating-code-review/SKILL.md) | `agent-2-cr.md` |
 | **3** | [agent-3/SKILL.md](./agent-3/SKILL.md) | [dating-pm-contractor](../dating-pm-contractor/SKILL.md) | `agent-3-pm.md` |
 
-**Examples:** `--agent 0 story 1` · `--agent 1 story 1` · `--agent 0 STORY_01_like`
+**Examples:** `--agent 0 sprint 2 story 1` · `--agent 1 sprint 2 story 1` · `--agent 0 sprint 1 STORY_01_like`
 
 ---
 
 ## Execution flow
 
-1. Parse `--agent <n> story <m>`.
+1. Parse `--agent <n> sprint <s> story <m>`.
 2. Read **this file** + **agent-`<n>`/SKILL.md** (step spec).
 3. Read the **role skill** linked from that step spec.
 4. Resolve story + epic + required prior handoffs.
@@ -43,9 +43,12 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 
 ## Resolve story ref
 
-1. **`story <m>`** or bare **`m`** → sprint README checklist row #m (e.g. `1` → `STORY_01_like.md`).
-2. **Name/path** → `dating-api/docs/sprints/**/STORY_*.md` or exact path.
-3. Always read story (Why, What, DoD) + epic from sprint README.
+1. **`sprint <s> story <m>`** → Find sprint folder `dating-api/docs/sprints/sprint-0<s>-*/README.md`, read checklist row #m to get story file (e.g. `sprint 2 story 1` → `sprint-02-mutual-match/STORY_01_detect_mutual.md`).
+2. **`sprint <s> STORY_<name>`** → Direct story name (e.g. `sprint 1 STORY_01_like` → `sprint-01-match-actions/STORY_01_like.md`).
+3. **Full path** → Use exact path if provided.
+4. Always read story (Why, What, AC, DoD) + epic linked from sprint README.
+
+**Sprint folder format:** `sprint-0<s>-<name>` (e.g. `sprint-01-match-actions`, `sprint-02-mutual-match`, `sprint-03-messaging`)
 
 **Handoff folder:**
 
@@ -75,18 +78,20 @@ If missing → stop, tell user which `--agent` to run first.
 - Match actions are **user-to-user**: `actorUserId`, `targetUserId`, `targetProfileIdSnapshot`
 - `@@unique([actorUserId, targetUserId])`
 - API URLs use `UserProfile.id`; resolve to `targetUserId` on write
-- See `dating-api/docs/epics/EPIC_MATCH_ACTIONS.md`
+- See epics:
+  - Sprint 1: `dating-api/docs/epics/EPIC_MATCH_ACTIONS.md`
+  - Sprints 2-3: `dating-api/docs/epics/EPIC_MUTUAL_MATCH_MESSAGING.md`
 
 ---
 
 ## Reply format
 
 ```markdown
-## Done: --agent <n> story <m>
+## Done: --agent <n> sprint <s> story <m>
 
 **Handoff:** `dating-api/docs/sprints/.../agent-<n>-....md`
 
 **Summary:** ...
 
-**Next (when you're ready):** `--agent <n+1> story <m>`
+**Next (when you're ready):** `--agent <n+1> sprint <s> story <m>`
 ```

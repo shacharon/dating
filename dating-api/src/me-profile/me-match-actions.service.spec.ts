@@ -1,23 +1,33 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { MatchActionType } from '@prisma/client';
+import { MatchActionType, MutualMatchStatus } from '@prisma/client';
 import { MeMatchActionsService } from './me-match-actions.service';
 import type { MeMatchesService } from './me-matches.service';
+import type { MutualMatchesService } from './mutual-matches.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
 describe('MeMatchActionsService', () => {
   const prisma = {
     matchAction: { findUnique: jest.fn(), upsert: jest.fn(), delete: jest.fn() },
+    $transaction: jest.fn(),
   } as unknown as PrismaService;
 
   const meMatches = {
     assertMatchCandidateVisible: jest.fn(),
   } as unknown as MeMatchesService;
 
+  const mutualMatches = {
+    detectAndCreateMutualMatch: jest.fn(),
+    findActiveByUserPair: jest.fn(),
+  } as unknown as MutualMatchesService;
+
   let service: MeMatchActionsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MeMatchActionsService(prisma, meMatches);
+    (prisma.$transaction as jest.Mock).mockImplementation(async (fn) =>
+      fn(prisma),
+    );
+    service = new MeMatchActionsService(prisma, meMatches, mutualMatches);
   });
 
   it('upserts BLOCK with user-to-user identity', async () => {
@@ -48,7 +58,10 @@ describe('MeMatchActionsService', () => {
       targetProfileIdSnapshot: 'prof-cand',
       action: 'BLOCK',
       createdAt: createdAt.toISOString(),
+      mutualMatch: false,
+      conversationId: null,
     });
+    expect(mutualMatches.detectAndCreateMutualMatch).not.toHaveBeenCalled();
   });
 
   it('BLOCK upsert overwrites existing LIKE row', async () => {
@@ -103,7 +116,10 @@ describe('MeMatchActionsService', () => {
       targetProfileIdSnapshot: 'prof-cand',
       action: 'PASS',
       createdAt: createdAt.toISOString(),
+      mutualMatch: false,
+      conversationId: null,
     });
+    expect(mutualMatches.detectAndCreateMutualMatch).not.toHaveBeenCalled();
   });
 
   it('rejects self-action after match visibility passes', async () => {
@@ -134,6 +150,7 @@ describe('MeMatchActionsService', () => {
       action: MatchActionType.LIKE,
       createdAt,
     });
+    (mutualMatches.detectAndCreateMutualMatch as jest.Mock).mockResolvedValue(null);
 
     const result = await service.createAction(
       'actor-1',
@@ -148,6 +165,87 @@ describe('MeMatchActionsService', () => {
       targetProfileIdSnapshot: 'prof-cand',
       action: 'LIKE',
       createdAt: createdAt.toISOString(),
+      mutualMatch: false,
+      conversationId: null,
+    });
+    expect(mutualMatches.detectAndCreateMutualMatch).toHaveBeenCalledWith(
+      'actor-1',
+      'target-user',
+      prisma,
+    );
+  });
+
+  it('returns mutualMatch true and conversationId when detection returns ACTIVE row', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    const createdAt = new Date('2026-05-31T10:00:00.000Z');
+    (prisma.matchAction.upsert as jest.Mock).mockResolvedValue({
+      id: 'action-1',
+      actorUserId: 'actor-1',
+      targetUserId: 'target-user',
+      targetProfileIdSnapshot: 'prof-cand',
+      action: MatchActionType.LIKE,
+      createdAt,
+    });
+    (mutualMatches.detectAndCreateMutualMatch as jest.Mock).mockResolvedValue({
+      id: 'mutual_row_1',
+      userId1: 'actor-1',
+      userId2: 'target-user',
+      status: MutualMatchStatus.ACTIVE,
+      createdAt,
+      unmatchedAt: null,
+      unmatchedByUserId: null,
+    });
+
+    const result = await service.createAction(
+      'actor-1',
+      'prof-cand',
+      MatchActionType.LIKE,
+    );
+
+    expect(result).toMatchObject({
+      action: 'LIKE',
+      mutualMatch: true,
+      conversationId: 'mutual_row_1',
+    });
+  });
+
+  it('returns mutualMatch false when detection returns UNMATCHED row', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    const createdAt = new Date('2026-05-31T10:00:00.000Z');
+    (prisma.matchAction.upsert as jest.Mock).mockResolvedValue({
+      id: 'action-1',
+      actorUserId: 'actor-1',
+      targetUserId: 'target-user',
+      targetProfileIdSnapshot: 'prof-cand',
+      action: MatchActionType.LIKE,
+      createdAt,
+    });
+    (mutualMatches.detectAndCreateMutualMatch as jest.Mock).mockResolvedValue({
+      id: 'mutual_row_unmatched',
+      userId1: 'actor-1',
+      userId2: 'target-user',
+      status: MutualMatchStatus.UNMATCHED,
+      createdAt,
+      unmatchedAt: createdAt,
+      unmatchedByUserId: 'actor-1',
+    });
+
+    const result = await service.createAction(
+      'actor-1',
+      'prof-cand',
+      MatchActionType.LIKE,
+    );
+
+    expect(result).toMatchObject({
+      action: 'LIKE',
+      mutualMatch: false,
+      conversationId: null,
     });
   });
 
@@ -157,9 +255,12 @@ describe('MeMatchActionsService', () => {
       targetUserId: 'target-user',
     });
     (prisma.matchAction.findUnique as jest.Mock).mockResolvedValue(null);
+    (mutualMatches.findActiveByUserPair as jest.Mock).mockResolvedValue(null);
 
     await expect(service.getActionState('actor-1', 'prof-cand')).resolves.toEqual({
       action: null,
+      mutualMatch: false,
+      conversationId: null,
     });
   });
 
@@ -173,11 +274,46 @@ describe('MeMatchActionsService', () => {
       action: MatchActionType.LIKE,
       createdAt,
     });
+    (mutualMatches.findActiveByUserPair as jest.Mock).mockResolvedValue(null);
 
     await expect(service.getActionState('actor-1', 'prof-cand')).resolves.toEqual({
       action: 'LIKE',
       createdAt: createdAt.toISOString(),
+      mutualMatch: false,
+      conversationId: null,
     });
+  });
+
+  it('returns mutualMatch true on getActionState when ACTIVE mutual exists', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    const createdAt = new Date('2026-05-31T10:00:00.000Z');
+    (prisma.matchAction.findUnique as jest.Mock).mockResolvedValue({
+      action: MatchActionType.LIKE,
+      createdAt,
+    });
+    (mutualMatches.findActiveByUserPair as jest.Mock).mockResolvedValue({
+      id: 'mutual_row_1',
+      userId1: 'actor-1',
+      userId2: 'target-user',
+      status: MutualMatchStatus.ACTIVE,
+      createdAt,
+      unmatchedAt: null,
+      unmatchedByUserId: null,
+    });
+
+    await expect(service.getActionState('actor-1', 'prof-cand')).resolves.toEqual({
+      action: 'LIKE',
+      createdAt: createdAt.toISOString(),
+      mutualMatch: true,
+      conversationId: 'mutual_row_1',
+    });
+    expect(mutualMatches.findActiveByUserPair).toHaveBeenCalledWith(
+      'actor-1',
+      'target-user',
+    );
   });
 
   it('deletes LIKE row on undo', async () => {

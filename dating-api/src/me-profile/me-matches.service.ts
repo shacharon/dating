@@ -20,6 +20,7 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { MutualMatchesService } from './mutual-matches.service';
 import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
 import {
   buildMatchExplanationTraits,
@@ -46,6 +47,8 @@ const USE_NORMALIZED = process.env['ENGINE_READ_NORMALIZED'] === '1';
 export interface MeMatchItemDto {
   /** `UserProfile.id` of the candidate. */
   id: string;
+  /** Public display name chosen by the candidate; null when unset. */
+  nickname: string | null;
   gender: string | null;
   ageYears: number | null;
   locationLabel: string | null;
@@ -88,6 +91,8 @@ export interface MeMatchesListResponseDto {
 export interface MeMatchDetailDto {
   /** `UserProfile.id` of the candidate. */
   id: string;
+  /** Public display name chosen by the candidate; null when unset. */
+  nickname: string | null;
   gender: string | null;
   ageYears: number | null;
   locationLabel: string | null;
@@ -133,6 +138,7 @@ export class MeMatchesService {
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
+    private readonly mutualMatches: MutualMatchesService,
   ) {}
 
   // ─── Shared candidate select ───────────────────────────────────────────────
@@ -145,6 +151,7 @@ export class MeMatchesService {
     id: true,
     userId: true,
     name: true,
+    nickname: true,
     status: true,
     birthDate: true,
     gender: true,
@@ -353,6 +360,7 @@ export class MeMatchesService {
 
       matches.push({
         id: row.id,
+        nickname: row.nickname?.trim() ? row.nickname.trim() : null,
         gender: candidateBridge.selfGender,
         ageYears: candidateBridge.derivedSelfAgeYears,
         locationLabel: candidateBridge.location.locationLabel,
@@ -638,6 +646,7 @@ export class MeMatchesService {
 
     return {
       id: candidate.id,
+      nickname: candidate.nickname?.trim() ? candidate.nickname.trim() : null,
       gender: candidateBridge.selfGender,
       ageYears: candidateBridge.derivedSelfAgeYears,
       locationLabel: candidateBridge.location.locationLabel,
@@ -664,14 +673,6 @@ export class MeMatchesService {
     candidateProfileId: string,
     photoId: string,
   ): Promise<{ contentType: string; content: Buffer }> {
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: { preference: true },
-    });
-    if (!viewer || viewer.status !== STATUS_ANALYZED) {
-      throw new NotFoundException('Match not found.');
-    }
-
     const candidate = await this.prisma.userProfile.findUnique({
       where: { id: candidateProfileId },
       select: {
@@ -690,7 +691,27 @@ export class MeMatchesService {
         preference: true,
       },
     });
-    if (!candidate || candidate.status !== STATUS_ANALYZED) {
+    if (!candidate) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    const mutual = await this.mutualMatches.findActiveByUserPair(
+      userId,
+      candidate.userId,
+    );
+    if (mutual) {
+      return this.readApprovedPrimaryPhotoFile(candidateProfileId, photoId);
+    }
+
+    const viewer = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      include: { preference: true },
+    });
+    if (!viewer || viewer.status !== STATUS_ANALYZED) {
+      throw new NotFoundException('Match not found.');
+    }
+
+    if (candidate.status !== STATUS_ANALYZED) {
       throw new NotFoundException('Match not found.');
     }
 
@@ -716,6 +737,13 @@ export class MeMatchesService {
 
     await this.assertViewerHasNotBlockedTarget(userId, candidate.userId);
 
+    return this.readApprovedPrimaryPhotoFile(candidateProfileId, photoId);
+  }
+
+  private async readApprovedPrimaryPhotoFile(
+    candidateProfileId: string,
+    photoId: string,
+  ): Promise<{ contentType: string; content: Buffer }> {
     const photo = await this.prisma.userProfilePhoto.findFirst({
       where: {
         id: photoId,

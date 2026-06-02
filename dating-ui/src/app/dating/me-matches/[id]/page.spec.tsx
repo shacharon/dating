@@ -48,8 +48,20 @@ vi.mock('next/link', () => ({
 
 import MeMatchDetailPage from './page';
 
+const noActionState = {
+  action: null as const,
+  mutualMatch: false,
+  conversationId: null,
+};
+
+const baseActionFields = {
+  mutualMatch: false,
+  conversationId: null,
+};
+
 const baseMatch = {
   id: 'prof-cand-1',
+  nickname: null as string | null,
   gender: 'FEMALE' as const,
   ageYears: 29,
   locationLabel: 'Tel Aviv',
@@ -68,7 +80,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchMyMatchById.mockResolvedValue(baseMatch);
-    fetchMatchAction.mockResolvedValue({ action: null });
+    fetchMatchAction.mockResolvedValue(noActionState);
     likeMatch.mockResolvedValue({
       id: 'action-1',
       actorUserId: 'user-1',
@@ -76,6 +88,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       targetProfileIdSnapshot: 'prof-cand-1',
       action: 'LIKE',
       createdAt: '2026-05-31T10:00:00.000Z',
+      ...baseActionFields,
     });
     passMatch.mockResolvedValue({
       id: 'action-2',
@@ -84,6 +97,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       targetProfileIdSnapshot: 'prof-cand-1',
       action: 'PASS',
       createdAt: '2026-05-31T11:00:00.000Z',
+      ...baseActionFields,
     });
     undoMatchAction.mockResolvedValue(undefined);
     blockMatch.mockResolvedValue({
@@ -93,6 +107,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       targetProfileIdSnapshot: 'prof-cand-1',
       action: 'BLOCK',
       createdAt: '2026-05-31T12:00:00.000Z',
+      ...baseActionFields,
     });
   });
 
@@ -110,10 +125,6 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('records like on Like click', async () => {
-    fetchMatchAction
-      .mockResolvedValueOnce({ action: null })
-      .mockResolvedValueOnce({ action: 'LIKE', createdAt: '2026-05-31T10:00:00.000Z' });
-
     render(<MeMatchDetailPage />);
 
     await waitFor(() => {
@@ -134,8 +145,12 @@ describe('MeMatchDetailPage (match actions)', () => {
 
   it('records pass on Pass click', async () => {
     fetchMatchAction
-      .mockResolvedValueOnce({ action: null })
-      .mockResolvedValueOnce({ action: 'PASS', createdAt: '2026-05-31T11:00:00.000Z' });
+      .mockResolvedValueOnce(noActionState)
+      .mockResolvedValueOnce({
+        action: 'PASS',
+        createdAt: '2026-05-31T11:00:00.000Z',
+        ...baseActionFields,
+      });
 
     render(<MeMatchDetailPage />);
 
@@ -178,6 +193,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     fetchMatchAction.mockResolvedValue({
       action: 'LIKE',
       createdAt: '2026-05-31T10:00:00.000Z',
+      ...baseActionFields,
     });
 
     render(<MeMatchDetailPage />);
@@ -194,6 +210,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     fetchMatchAction.mockResolvedValue({
       action: 'PASS',
       createdAt: '2026-05-31T11:00:00.000Z',
+      ...baseActionFields,
     });
 
     render(<MeMatchDetailPage />);
@@ -210,6 +227,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     fetchMatchAction.mockResolvedValue({
       action: 'BLOCK',
       createdAt: '2026-05-31T12:00:00.000Z',
+      ...baseActionFields,
     });
 
     render(<MeMatchDetailPage />);
@@ -225,8 +243,9 @@ describe('MeMatchDetailPage (match actions)', () => {
       .mockResolvedValueOnce({
         action: 'LIKE',
         createdAt: '2026-05-31T10:00:00.000Z',
+        ...baseActionFields,
       })
-      .mockResolvedValueOnce({ action: null });
+      .mockResolvedValueOnce(noActionState);
 
     render(<MeMatchDetailPage />);
 
@@ -251,8 +270,9 @@ describe('MeMatchDetailPage (match actions)', () => {
       .mockResolvedValueOnce({
         action: 'PASS',
         createdAt: '2026-05-31T11:00:00.000Z',
+        ...baseActionFields,
       })
-      .mockResolvedValueOnce({ action: null });
+      .mockResolvedValueOnce(noActionState);
 
     render(<MeMatchDetailPage />);
 
@@ -329,6 +349,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     fetchMatchAction.mockResolvedValue({
       action: 'LIKE',
       createdAt: '2026-05-31T10:00:00.000Z',
+      ...baseActionFields,
     });
 
     render(<MeMatchDetailPage />);
@@ -338,5 +359,106 @@ describe('MeMatchDetailPage (match actions)', () => {
       expect(screen.getByRole('button', { name: /undo your like on this match/i })).toBeTruthy();
       expect(screen.getByRole('button', { name: /^block$/i })).toBeTruthy();
     });
+  });
+});
+
+describe('MeMatchDetailPage (mutual match notification)', () => {
+  const mutualLikeResult = {
+    id: 'action-mutual',
+    actorUserId: 'user-1',
+    targetUserId: 'user-2',
+    targetProfileIdSnapshot: 'prof-cand-1',
+    action: 'LIKE' as const,
+    createdAt: '2026-05-31T10:00:00.000Z',
+    mutualMatch: true,
+    conversationId: 'mutual_row_1',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      nickname: 'Rivka',
+      primaryPhotoUrl: '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
+    });
+    fetchMatchAction.mockResolvedValue(noActionState);
+    likeMatch.mockResolvedValue(mutualLikeResult);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('shows celebration modal when like returns mutualMatch true', async () => {
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^like$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeTruthy();
+      expect(screen.getByText("It's a match!")).toBeTruthy();
+    });
+    expect(screen.getByRole('dialog').textContent).toContain('Rivka');
+  });
+
+  it('navigates to conversation when Send a message is clicked', async () => {
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^like$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /send a message/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /send a message/i }));
+
+    expect(mockPush).toHaveBeenCalledWith('/dating/conversations/mutual_row_1');
+  });
+
+  it('hides modal when close is clicked', async () => {
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^like$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(screen.getByText('You matched!')).toBeTruthy();
+  });
+
+  it('shows You matched badge when fetchMatchAction returns mutual on load', async () => {
+    fetchMatchAction.mockResolvedValue({
+      action: 'LIKE',
+      createdAt: '2026-05-31T10:00:00.000Z',
+      mutualMatch: true,
+      conversationId: 'mutual_row_1',
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('You matched!')).toBeTruthy();
+      const link = screen.getByRole('link', { name: /view conversation/i });
+      expect(link.getAttribute('href')).toBe('/dating/conversations/mutual_row_1');
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

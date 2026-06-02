@@ -385,6 +385,7 @@ export interface MatchExplanationTrait {
 export interface MeMatchItemDto {
   /** `UserProfile.id` of the candidate. */
   id: string;
+  nickname: string | null;
   gender: string | null;
   ageYears: number | null;
   locationLabel: string | null;
@@ -419,6 +420,7 @@ export interface MeMatchesListDto {
 export interface MeMatchDetailDto {
   /** `UserProfile.id` of the candidate. */
   id: string;
+  nickname: string | null;
   gender: string | null;
   ageYears: number | null;
   locationLabel: string | null;
@@ -434,6 +436,8 @@ export interface MeMatchDetailDto {
   matchExplanationTraits?: MatchExplanationTrait[];
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /** Relative path to primary photo file endpoint; null when absent. */
+  primaryPhotoUrl?: string | null;
 }
 
 /**
@@ -498,6 +502,8 @@ export interface MatchActionDto {
   targetProfileIdSnapshot: string;
   action: 'LIKE' | 'PASS' | 'BLOCK';
   createdAt: string;
+  mutualMatch: boolean;
+  conversationId: string | null;
 }
 
 async function recordMatchAction(
@@ -611,6 +617,8 @@ export async function undoMatchAction(profileId: string): Promise<void> {
 export interface MatchActionStateDto {
   action: 'LIKE' | 'PASS' | 'BLOCK' | null;
   createdAt?: string;
+  mutualMatch: boolean;
+  conversationId: string | null;
 }
 
 /**

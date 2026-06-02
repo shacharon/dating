@@ -199,7 +199,7 @@ export default function ProfilePage() {
 
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
-            href="/onboarding"
+            href="/onboarding/basic?edit=1"
             className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             Edit

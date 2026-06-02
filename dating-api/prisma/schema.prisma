@@ -46,6 +46,16 @@ enum MatchActionType {
   BLOCK
 }
 
+enum MutualMatchStatus {
+  ACTIVE
+  UNMATCHED
+}
+
+enum MessageStatus {
+  SENT
+  DELETED
+}
+
 model User {
   id          String     @id @default(cuid())
   email       String     @unique
@@ -61,6 +71,9 @@ model User {
   sessions UserSession[]
   matchActionsAsActor  MatchAction[] @relation("MatchActionsByActor")
   matchActionsAsTarget MatchAction[] @relation("MatchActionsByTarget")
+  mutualMatchesAsUser1 MutualMatch[] @relation("MutualMatchUser1")
+  mutualMatchesAsUser2 MutualMatch[] @relation("MutualMatchUser2")
+  messages              Message[]
 }
 
 model UserProfile {
@@ -216,6 +229,39 @@ model MatchAction {
   @@unique([actorUserId, targetUserId])
   @@index([actorUserId, action])
   @@index([targetUserId, action])
+}
+
+model MutualMatch {
+  id                String            @id @default(cuid())
+  userId1           String
+  user1             User              @relation("MutualMatchUser1", fields: [userId1], references: [id], onDelete: Cascade)
+  userId2           String
+  user2             User              @relation("MutualMatchUser2", fields: [userId2], references: [id], onDelete: Cascade)
+  createdAt         DateTime          @default(now())
+  status            MutualMatchStatus @default(ACTIVE)
+  unmatchedAt       DateTime?
+  unmatchedByUserId String?
+  user1LastReadAt   DateTime?
+  user2LastReadAt   DateTime?
+  messages          Message[]
+
+  @@unique([userId1, userId2])
+  @@index([userId1, status])
+  @@index([userId2, status])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   MutualMatch   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text           String        @db.Text
+  createdAt      DateTime      @default(now())
+  status         MessageStatus @default(SENT)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }
 
 model UserSession {

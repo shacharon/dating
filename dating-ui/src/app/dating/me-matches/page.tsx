@@ -8,6 +8,10 @@ import {
   submitMyProfileForAnalysis,
   type MeMatchesListDto,
 } from '@/lib/me-profile-api';
+import {
+  matchListPrimaryLabel,
+  matchListSecondaryMeta,
+} from './match-display';
 
 function matchActionBadge(action: NonNullable<
   NonNullable<MeMatchesListDto['matches']>[number]['yourAction']
@@ -112,7 +116,7 @@ export default function MeMatchesPage() {
             ← Your analysis
           </Link>
           <Link
-            href="/onboarding"
+            href="/onboarding/basic?edit=1"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             Edit profile
@@ -212,15 +216,21 @@ export default function MeMatchesPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 space-y-1">
-                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {[
-                          m.gender,
-                          m.ageYears != null ? `${m.ageYears}y` : null,
-                          m.locationLabel,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
+                      {(() => {
+                        const secondary = matchListSecondaryMeta(m);
+                        return (
+                          <>
+                            <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                              {matchListPrimaryLabel(m)}
+                            </p>
+                            {secondary && (
+                              <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                                {secondary}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                       {m.explainability?.reasonShort && (
                         <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                           {m.explainability.reasonShort}
