@@ -8,6 +8,8 @@ const apiProxyTarget =
   process.env.API_PROXY_TARGET?.replace(/\/$/, "") ?? "http://localhost:3001";
 
 const nextConfig: NextConfig = {
+  /** socket.io handshake must not be 308-redirected between `/socket.io` and `/socket.io/`. */
+  skipTrailingSlashRedirect: true,
   /** Avoid picking a parent folder when multiple lockfiles exist (Turbopack workspace root). */
   turbopack: {
     root: projectRoot,
@@ -21,6 +23,15 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${apiProxyTarget}/api/:path*`,
+      },
+      // Engine path is exactly `/socket.io` (query only) — `:path*` does not match that URL.
+      {
+        source: "/socket.io",
+        destination: `${apiProxyTarget}/socket.io`,
+      },
+      {
+        source: "/socket.io/:path*",
+        destination: `${apiProxyTarget}/socket.io/:path*`,
       },
     ];
   },

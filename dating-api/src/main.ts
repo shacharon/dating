@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { RedisIoAdapter } from './messaging-realtime/redis-io.adapter';
 import { ConfigService } from '@nestjs/config';
 import type { RequestHandler } from 'express';
 import cookieParserImport from 'cookie-parser';
@@ -15,7 +16,16 @@ const cookieParser: CookieParserFactory =
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const wsAdapter = new RedisIoAdapter(app);
+  await wsAdapter.connectToRedis();
+  app.useWebSocketAdapter(wsAdapter);
   const logger = app.get(SimpleLogger);
+  if (!process.env.REDIS_URL?.trim()) {
+    logger.warn(
+      'REDIS_URL unset — socket.io single-instance mode; multi-instance deploy requires Redis adapter',
+      'Bootstrap',
+    );
+  }
   app.useLogger(logger);
   app.use(requestCorrelationMiddleware);
   // `cookie-parser` types depend on Express v4 merges; middleware is standard RequestHandler.

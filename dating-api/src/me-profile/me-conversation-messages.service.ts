@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { MessageStatus, type Prisma } from '@prisma/client';
+import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
+import { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -30,6 +32,7 @@ export class MeConversationMessagesService {
     private readonly conversations: MeConversationsService,
     private readonly obs: StructuredObservabilityService,
     private readonly messageRateLimit: ConversationMessageRateLimitService,
+    private readonly realtime: RealtimePublisher,
   ) {}
 
   async listMessages(
@@ -180,7 +183,7 @@ export class MeConversationMessagesService {
     conversationId: string,
     text: string,
   ): Promise<MessageDto> {
-    await this.conversations.assertActiveConversationParticipant(
+    const match = await this.conversations.assertActiveConversationParticipant(
       sessionUserId,
       conversationId,
     );
@@ -209,6 +212,35 @@ export class MeConversationMessagesService {
       ErrorCodes.ME_CONVERSATIONS_MESSAGE_SEND_OK,
     );
 
-    return toMessageDto(row);
+    const dto = toMessageDto(row);
+    this.publishMessageNewBestEffort(
+      match.userId1,
+      match.userId2,
+      dto,
+      conversationId,
+    );
+
+    return dto;
+  }
+
+  private publishMessageNewBestEffort(
+    userId1: string,
+    userId2: string,
+    payload: MessageDto,
+    conversationId: string,
+  ): void {
+    try {
+      this.realtime.publishToUsers(
+        [userId1, userId2],
+        MESSAGING_EVENT_MESSAGE_NEW,
+        payload,
+      );
+    } catch (err) {
+      this.obs.error(
+        `messaging message.new publish failed conversationId=${conversationId} messageId=${payload.id}`,
+        ErrorCodes.MESSAGING_MESSAGE_NEW_PUBLISH_FAILED,
+        err,
+      );
+    }
   }
 }

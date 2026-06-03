@@ -82,6 +82,24 @@ export const ErrorCodes = {
   ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED:
     'ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED',
 
+  /** Sprint 4 Story 1 — messaging WebSocket connected. */
+  MESSAGING_WS_CONNECT_OK: 'MESSAGING_WS_CONNECT_OK',
+  /** Sprint 4 Story 1 — messaging WebSocket disconnected. */
+  MESSAGING_WS_DISCONNECT_OK: 'MESSAGING_WS_DISCONNECT_OK',
+  /** Sprint 4 Story 1 — messaging WebSocket handshake auth failed. */
+  MESSAGING_WS_AUTH_FAILED: 'MESSAGING_WS_AUTH_FAILED',
+  /** Sprint 4 Story 6 — conversation subscribe authorized. */
+  MESSAGING_WS_SUBSCRIBE_OK: 'MESSAGING_WS_SUBSCRIBE_OK',
+  /** Sprint 4 Story 6 — conversation subscribe denied. */
+  MESSAGING_WS_SUBSCRIBE_DENIED: 'MESSAGING_WS_SUBSCRIBE_DENIED',
+  /** Sprint 4 Story 6 — inbound socket event rate limit exceeded. */
+  MESSAGING_WS_RATE_LIMITED: 'MESSAGING_WS_RATE_LIMITED',
+  /** Sprint 4 Story 6 — session revoked/expired; socket disconnected. */
+  MESSAGING_WS_SESSION_INVALIDATED: 'MESSAGING_WS_SESSION_INVALIDATED',
+  /** Sprint 4 Story 2 — message.new publish failed (best-effort; HTTP send still OK). */
+  MESSAGING_MESSAGE_NEW_PUBLISH_FAILED:
+    'MESSAGING_MESSAGE_NEW_PUBLISH_FAILED',
+
   /** Generic HTTP layer */
   HTTP_EXCEPTION: 'HTTP_EXCEPTION',
   HTTP_UNHANDLED: 'HTTP_UNHANDLED',

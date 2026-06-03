@@ -1,10 +1,11 @@
 # Epic: Mutual Match & Messaging (Dating Loop — Phase 2 & 3)
 
-**Status:** Complete (Sprint 2 + Sprint 3)  
+**Status:** In progress (Sprint 2–3 complete; Sprint 4 real-time messaging complete)  
 **Priority:** P0  
 **Sprints:** 
 - [Sprint 2 — Mutual Match + Conversation Shell](../sprints/sprint-02-mutual-match/README.md) — **complete** (5/5 stories)
 - [Sprint 3 — Messaging](../sprints/sprint-03-messaging/README.md) — **complete** (6/6 stories)
+- [Sprint 4 — Real-time Messaging (WebSocket)](../sprints/sprint-04-realtime-messaging/README.md) — **complete** (6/6)
 
 ---
 
@@ -133,7 +134,7 @@ Or separate table if more participant metadata is needed later.
 
 **Phase 1:** Short polling (3-5s) is simpler to implement and debug. For early product validation, real-time feel is "good enough."
 
-**Phase 2 (future):** WebSocket can replace polling when scale/latency becomes important.
+**Phase 2 (Sprint 4):** WebSocket shipped behind `NEXT_PUBLIC_REALTIME=ws` (rollback: `poll`). REST stays the source of truth; sockets are push-only. See [sprint-04-realtime-messaging](../sprints/sprint-04-realtime-messaging/README.md) and [PROD_REALTIME.md](../sprints/sprint-04-realtime-messaging/PROD_REALTIME.md).
 
 ### Why soft delete messages?
 
@@ -151,6 +152,7 @@ Avoids duplicate `MutualMatch` rows. Always sort user IDs before creating/queryi
 |--------|--------|---------|--------|
 | **Sprint 2** | Mutual match detection + conversation shell | 5 stories | **Complete** |
 | **Sprint 3** | Text messaging + real-time + read status | 6 stories | **Complete** (6/6) |
+| **Sprint 4** | Real-time messaging via WebSocket (replace polling) | 6 stories | **Complete** (6/6) |
 
 ---
 

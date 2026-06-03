@@ -15,6 +15,7 @@ import { LlmModule } from './llm/llm.module';
 import { HolyGrailMatchingModule } from './holy-grail-matching/holy-grail-matching.module';
 import { LegacyBackendModule } from './legacy/legacy-backend.module';
 import { MatchesModule } from './matches/matches.module';
+import { MessagingRealtimeModule } from './messaging-realtime/messaging-realtime.module';
 import { MeProfileModule } from './me-profile/me-profile.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -37,6 +38,7 @@ import { SessionModule } from './session/session.module';
     ContradictionModule,
     ProfilesModule,
     MeProfileModule,
+    MessagingRealtimeModule,
     MatchesModule,
     HolyGrailMatchingModule,
     SessionModule,

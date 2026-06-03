@@ -24,6 +24,12 @@ import {
   formatMatchedOnDate,
   formatMessageTime,
 } from '../conversation-display';
+import {
+  useMessagingSocket,
+  type MessagingConnectionStatus,
+} from '@/hooks/use-messaging-socket';
+import { setActiveConversationId } from '@/lib/conversation-focus';
+import { getRealtimeMode } from '@/lib/realtime-mode';
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -70,10 +76,12 @@ export default function ConversationDetailPage() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [socketReconnecting, setSocketReconnecting] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<MessageDto[]>([]);
   const initialScrollDoneRef = useRef(false);
   const lastMarkReadAtRef = useRef(0);
+  const realtimeMode = getRealtimeMode();
 
   const tryMarkRead = useCallback(async () => {
     if (!id) return;
@@ -87,6 +95,13 @@ export default function ConversationDetailPage() {
 
   useEffect(() => {
     lastMarkReadAtRef.current = 0;
+    setSocketReconnecting(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setActiveConversationId(id);
+    return () => setActiveConversationId(null);
   }, [id]);
 
   useEffect(() => {
@@ -173,7 +188,48 @@ export default function ConversationDetailPage() {
     scrollListToBottom(listRef.current);
   }, [messagesLoading, messages.length]);
 
+  const mergeIncomingMessages = useCallback((incoming: MessageDto[]) => {
+    if (incoming.length === 0) return;
+    setMessages((prev) => {
+      const merged = appendUniqueMessages(prev, incoming);
+      if (merged === prev) return prev;
+
+      const listEl = listRef.current;
+      if (listEl && isNearBottom(listEl)) {
+        requestAnimationFrame(() => scrollListToBottom(listEl));
+      }
+      return merged;
+    });
+  }, []);
+
+  const handleMessageNew = useCallback(
+    (msg: MessageDto) => mergeIncomingMessages([msg]),
+    [mergeIncomingMessages],
+  );
+
+  const getLastMessageId = useCallback(
+    () => messagesRef.current[messagesRef.current.length - 1]?.id,
+    [],
+  );
+
+  const handleSocketConnectionChange = useCallback(
+    (status: MessagingConnectionStatus) => {
+      setSocketReconnecting(status === 'reconnecting');
+    },
+    [],
+  );
+
+  useMessagingSocket({
+    enabled: realtimeMode === 'ws' && !!id && !messagesLoading,
+    conversationId: id,
+    onMessageNew: handleMessageNew,
+    getLastMessageId,
+    onMessagesMerged: mergeIncomingMessages,
+    onConnectionChange: handleSocketConnectionChange,
+  });
+
   useEffect(() => {
+    if (realtimeMode !== 'poll') return;
     if (!id || messagesLoading) return;
 
     const poll = async () => {
@@ -188,18 +244,7 @@ export default function ConversationDetailPage() {
           after: lastId,
           limit: 100,
         });
-        if (incoming.length === 0) return;
-
-        setMessages((prev) => {
-          const merged = appendUniqueMessages(prev, incoming);
-          if (merged === prev) return prev;
-
-          const listEl = listRef.current;
-          if (listEl && isNearBottom(listEl)) {
-            requestAnimationFrame(() => scrollListToBottom(listEl));
-          }
-          return merged;
-        });
+        mergeIncomingMessages(incoming);
       } catch {
         // silent retry on next tick
       }
@@ -215,7 +260,7 @@ export default function ConversationDetailPage() {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [id, messagesLoading]);
+  }, [realtimeMode, id, messagesLoading, mergeIncomingMessages]);
 
   const draftTrimmed = draft.trim();
   const overLimit = draft.length > MAX_MESSAGE_TEXT_LENGTH;
@@ -381,6 +426,15 @@ export default function ConversationDetailPage() {
               aria-label="Messaging"
               data-testid="conversation-messaging"
             >
+              {realtimeMode === 'ws' && socketReconnecting && (
+                <p
+                  role="status"
+                  data-testid="conversation-reconnecting"
+                  className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  Reconnecting…
+                </p>
+              )}
               <div
                 ref={listRef}
                 className="flex max-h-96 flex-1 flex-col gap-3 overflow-y-auto p-4"

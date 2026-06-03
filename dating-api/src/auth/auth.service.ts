@@ -10,6 +10,7 @@ import { AuthSessionConfigService } from '../config/auth-session-config.service'
 import { ErrorCodes } from '../logging/error-codes';
 import { mergeRequestLogContext } from '../logging/request-log-context';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import { MessagingSocketRegistry } from '../messaging-realtime/messaging-socket-registry.service';
 import { SessionService } from '../session/session.service';
 import { UsersService } from '../users/users.service';
 import type { GoogleIdentity } from '../users/google-identity.types';
@@ -46,6 +47,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly googleAuth: GoogleAuthService,
     private readonly obs: StructuredObservabilityService,
+    private readonly socketRegistry: MessagingSocketRegistry,
   ) {}
 
   /**
@@ -128,6 +130,7 @@ export class AuthService {
           userId: validated.userId,
           sessionId: validated.sessionId,
         });
+        this.socketRegistry.disconnectBySessionId(validated.sessionId);
       }
       await this.sessions.revokeSession({ rawToken: raw.trim() });
     }

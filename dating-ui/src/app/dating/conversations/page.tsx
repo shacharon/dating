@@ -2,11 +2,17 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { useMessagingSocket } from '@/hooks/use-messaging-socket';
 import {
   conversationPhotoSrc,
   fetchMyConversations,
   type ConversationListItemDto,
+  type MessageDto,
 } from '@/lib/conversations-api';
+import { getActiveConversationId } from '@/lib/conversation-focus';
+import { incrementUnreadForConversation } from '@/lib/conversation-list-unread';
+import { getRealtimeMode } from '@/lib/realtime-mode';
 import {
   conversationPrimaryLabel,
   conversationSecondaryMeta,
@@ -14,6 +20,8 @@ import {
 } from './conversation-display';
 
 export default function ConversationsPage() {
+  const { user } = useAuth();
+  const realtimeMode = getRealtimeMode();
   const [conversations, setConversations] = useState<ConversationListItemDto[]>(
     [],
   );
@@ -24,6 +32,28 @@ export default function ConversationsPage() {
     const dto = await fetchMyConversations();
     setConversations(dto.conversations ?? []);
   }, []);
+
+  const handleListMessageNew = useCallback(
+    (msg: MessageDto) => {
+      if (!user?.id || msg.senderId === user.id) {
+        return;
+      }
+      if (msg.conversationId === getActiveConversationId()) {
+        return;
+      }
+      setConversations((prev) =>
+        incrementUnreadForConversation(prev, msg.conversationId),
+      );
+    },
+    [user?.id],
+  );
+
+  useMessagingSocket({
+    enabled: realtimeMode === 'ws',
+    onMessageNew: handleListMessageNew,
+    getLastMessageId: () => undefined,
+    onMessagesMerged: () => {},
+  });
 
   useEffect(() => {
     let cancelled = false;

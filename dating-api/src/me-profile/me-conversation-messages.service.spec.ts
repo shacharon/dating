@@ -12,6 +12,8 @@ import type { ConversationMessageRateLimitService } from './conversation-message
 import type { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
+import type { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
+import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
 
 describe('MeConversationMessagesService', () => {
   const sessionUserId = 'user_viewer_1';
@@ -40,17 +42,23 @@ describe('MeConversationMessagesService', () => {
     recordSend: jest.fn(),
   } as unknown as ConversationMessageRateLimitService;
 
+  const realtime = {
+    publishToUsers: jest.fn(),
+  } as unknown as RealtimePublisher;
+
   let service: MeConversationMessagesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     (messageRateLimit.assertCanSend as jest.Mock).mockReset();
     (messageRateLimit.recordSend as jest.Mock).mockReset();
+    (realtime.publishToUsers as jest.Mock).mockReset();
     service = new MeConversationMessagesService(
       prisma,
       conversations,
       obs,
       messageRateLimit,
+      realtime,
     );
     (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(
       {
@@ -58,6 +66,8 @@ describe('MeConversationMessagesService', () => {
         userId1: otherUserId,
         userId2: sessionUserId,
         createdAt: new Date('2026-05-31T10:00:00.000Z'),
+        user1LastReadAt: null,
+        user2LastReadAt: null,
       },
     );
   });
@@ -101,6 +111,39 @@ describe('MeConversationMessagesService', () => {
       expect.stringContaining(conversationId),
       ErrorCodes.ME_CONVERSATIONS_MESSAGE_SEND_OK,
     );
+    expect(realtime.publishToUsers).toHaveBeenCalledWith(
+      [otherUserId, sessionUserId],
+      MESSAGING_EVENT_MESSAGE_NEW,
+      result,
+    );
+  });
+
+  it('returns MessageDto when publishToUsers throws', async () => {
+    const createdAt = new Date('2026-05-31T16:00:00.000Z');
+    (prisma.message.create as jest.Mock).mockResolvedValue({
+      id: 'msg_fail_pub',
+      conversationId,
+      senderId: sessionUserId,
+      text: 'Hi',
+      createdAt,
+      status: MessageStatus.SENT,
+    });
+    (realtime.publishToUsers as jest.Mock).mockImplementation(() => {
+      throw new Error('socket down');
+    });
+
+    const result = await service.sendMessage(
+      sessionUserId,
+      conversationId,
+      'Hi',
+    );
+
+    expect(result.id).toBe('msg_fail_pub');
+    expect(obs.error).toHaveBeenCalledWith(
+      expect.stringContaining(conversationId),
+      ErrorCodes.MESSAGING_MESSAGE_NEW_PUBLISH_FAILED,
+      expect.any(Error),
+    );
   });
 
   it('throws HttpException when rate limit exceeded and does not create message', async () => {
@@ -116,6 +159,7 @@ describe('MeConversationMessagesService', () => {
     ).rejects.toBeInstanceOf(HttpException);
     expect(prisma.message.create).not.toHaveBeenCalled();
     expect(messageRateLimit.recordSend).not.toHaveBeenCalled();
+    expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
   it('still creates message when profanity is detected and logs profanity trace', async () => {
@@ -151,6 +195,7 @@ describe('MeConversationMessagesService', () => {
       service.sendMessage(sessionUserId, conversationId, '   '),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.message.create).not.toHaveBeenCalled();
+    expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
   it('throws BadRequestException when text is empty string', async () => {
@@ -158,6 +203,18 @@ describe('MeConversationMessagesService', () => {
       service.sendMessage(sessionUserId, conversationId, ''),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.message.create).not.toHaveBeenCalled();
+    expect(realtime.publishToUsers).not.toHaveBeenCalled();
+  });
+
+  it('does not publish when message create fails', async () => {
+    (prisma.message.create as jest.Mock).mockRejectedValue(
+      new Error('db error'),
+    );
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+    ).rejects.toThrow('db error');
+    expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
   it('stores trimmed text', async () => {

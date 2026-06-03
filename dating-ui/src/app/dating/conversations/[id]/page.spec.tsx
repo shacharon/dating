@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 
 const {
   fetchMyConversationById,
@@ -9,14 +9,51 @@ const {
   sendConversationMessage,
   unmatchMyConversation,
   mockPush,
-} = vi.hoisted(() => ({
-  fetchMyConversationById: vi.fn(),
-  fetchConversationMessages: vi.fn(),
-  markConversationAsRead: vi.fn(),
-  sendConversationMessage: vi.fn(),
-  unmatchMyConversation: vi.fn(),
-  mockPush: vi.fn(),
-}));
+  getRealtimeMode,
+  createMessagingSocket,
+  messageNewHandlerRef,
+  connectHandlerRef,
+  disconnectHandlerRef,
+} = vi.hoisted(() => {
+  const messageNewHandlerRef: {
+    current: ((msg: unknown) => void) | null;
+  } = { current: null };
+  const connectHandlerRef: { current: (() => void) | null } = { current: null };
+  const disconnectHandlerRef: { current: (() => void) | null } = {
+    current: null,
+  };
+
+  const createMessagingSocket = vi.fn(() => ({
+    on: vi.fn((event: string, fn: () => void) => {
+      if (event === 'message.new') {
+        messageNewHandlerRef.current = fn as (msg: unknown) => void;
+      }
+      if (event === 'connect') {
+        connectHandlerRef.current = fn;
+      }
+      if (event === 'disconnect') {
+        disconnectHandlerRef.current = fn;
+      }
+    }),
+    off: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+
+  return {
+    fetchMyConversationById: vi.fn(),
+    fetchConversationMessages: vi.fn(),
+    markConversationAsRead: vi.fn(),
+    sendConversationMessage: vi.fn(),
+    unmatchMyConversation: vi.fn(),
+    mockPush: vi.fn(),
+    getRealtimeMode: vi.fn(() => 'poll' as const),
+    createMessagingSocket,
+    messageNewHandlerRef,
+    connectHandlerRef,
+    disconnectHandlerRef,
+  };
+});
 
 vi.mock('@/lib/conversations-api', () => ({
   fetchMyConversationById,
@@ -25,6 +62,24 @@ vi.mock('@/lib/conversations-api', () => ({
   sendConversationMessage,
   unmatchMyConversation,
   conversationPhotoSrc: (url: string | null) => url,
+}));
+
+vi.mock('@/lib/realtime-mode', () => ({
+  getRealtimeMode,
+}));
+
+const { setActiveConversationId } = vi.hoisted(() => ({
+  setActiveConversationId: vi.fn(),
+}));
+
+vi.mock('@/lib/conversation-focus', () => ({
+  setActiveConversationId,
+}));
+
+vi.mock('@/lib/messaging-socket', () => ({
+  createMessagingSocket,
+  MESSAGING_EVENT_MESSAGE_NEW: 'message.new',
+  MESSAGING_WS_NAMESPACE: '/ws/messaging',
 }));
 
 vi.mock('@/contexts/auth-context', () => ({
@@ -93,6 +148,10 @@ describe('ConversationDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    getRealtimeMode.mockReturnValue('poll');
+    messageNewHandlerRef.current = null;
+    connectHandlerRef.current = null;
+    disconnectHandlerRef.current = null;
     fetchMyConversationById.mockResolvedValue(detail);
     fetchConversationMessages.mockResolvedValue({
       messages: [],
@@ -109,6 +168,18 @@ describe('ConversationDetailPage', () => {
     vi.clearAllMocks();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it('sets active conversation id on mount and clears on unmount', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(setActiveConversationId).toHaveBeenCalledWith('mutual_abc');
+    });
+
+    unmount();
+
+    expect(setActiveConversationId).toHaveBeenCalledWith(null);
   });
 
   it('renders match card with name and matched date', async () => {
@@ -604,5 +675,280 @@ describe('ConversationDetailPage', () => {
     });
     expect(mockPush).not.toHaveBeenCalled();
     unmount();
+  });
+
+  describe('realtime ws mode', () => {
+    const otherMessage = {
+      id: 'msg_other_1',
+      conversationId: 'mutual_abc',
+      senderId: 'user_cand_1',
+      text: 'Hey from socket',
+      createdAt: '2026-05-31T17:00:00.000Z',
+      status: 'SENT' as const,
+    };
+
+    beforeEach(() => {
+    getRealtimeMode.mockReturnValue('ws');
+    connectHandlerRef.current = null;
+    disconnectHandlerRef.current = null;
+  });
+
+    it('appends a bubble when message.new is received', async () => {
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(createMessagingSocket).toHaveBeenCalled();
+        expect(messageNewHandlerRef.current).toBeTruthy();
+      });
+
+      messageNewHandlerRef.current!(otherMessage);
+
+      await waitFor(() => {
+        expect(screen.getByText('Hey from socket')).toBeTruthy();
+      });
+      unmount();
+    });
+
+    it('does not schedule polling interval when mode is ws', async () => {
+      const intervalSpy = vi.spyOn(global, 'setInterval');
+
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('conversation-messaging')).toBeTruthy();
+      });
+
+      const pollIntervals = intervalSpy.mock.calls.filter(
+        ([delay]) => delay === 3000,
+      );
+      expect(pollIntervals).toHaveLength(0);
+      intervalSpy.mockRestore();
+      unmount();
+    });
+
+    it('ignores message.new for a different conversationId', async () => {
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(messageNewHandlerRef.current).toBeTruthy();
+      });
+
+      messageNewHandlerRef.current!({
+        ...otherMessage,
+        id: 'msg_wrong_conv',
+        conversationId: 'mutual_other',
+        text: 'Wrong thread',
+      });
+
+      expect(screen.queryByText('Wrong thread')).toBeNull();
+      unmount();
+    });
+
+    it('shows reconnecting banner after disconnect', async () => {
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(connectHandlerRef.current).toBeTruthy();
+      });
+
+      await act(async () => {
+        connectHandlerRef.current!();
+      });
+      await act(async () => {
+        disconnectHandlerRef.current!();
+      });
+
+      expect(screen.getByTestId('conversation-reconnecting')).toBeTruthy();
+      expect(screen.getByText('Reconnecting…')).toBeTruthy();
+      unmount();
+    });
+
+    it('clears reconnecting banner and runs catch-up on connect', async () => {
+      fetchConversationMessages
+        .mockResolvedValueOnce({
+          messages: [sentMessage],
+          pagination: { hasMore: false, nextCursor: null },
+        })
+        .mockResolvedValueOnce({
+          messages: [
+            {
+              id: 'msg_missed',
+              conversationId: 'mutual_abc',
+              senderId: 'user_cand_1',
+              text: 'Missed while offline',
+              createdAt: '2026-05-31T17:30:00.000Z',
+              status: 'SENT',
+            },
+          ],
+          pagination: { hasMore: false, nextCursor: null },
+        });
+
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(connectHandlerRef.current).toBeTruthy();
+      });
+
+      await act(async () => {
+        connectHandlerRef.current!();
+      });
+      await act(async () => {
+        disconnectHandlerRef.current!();
+      });
+      expect(screen.getByTestId('conversation-reconnecting')).toBeTruthy();
+
+      await act(async () => {
+        connectHandlerRef.current!();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('conversation-reconnecting')).toBeNull();
+        expect(screen.getByText('Missed while offline')).toBeTruthy();
+      });
+
+      expect(fetchConversationMessages).toHaveBeenCalledWith('mutual_abc', {
+        after: 'msg_1',
+        limit: 100,
+      });
+      unmount();
+    });
+
+    it('does not duplicate message when catch-up returns existing id', async () => {
+      fetchConversationMessages
+        .mockResolvedValueOnce({
+          messages: [sentMessage],
+          pagination: { hasMore: false, nextCursor: null },
+        })
+        .mockResolvedValueOnce({
+          messages: [sentMessage],
+          pagination: { hasMore: false, nextCursor: null },
+        });
+
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(connectHandlerRef.current).toBeTruthy();
+      });
+
+      await act(async () => {
+        connectHandlerRef.current!();
+      });
+
+      await waitFor(() => {
+        const bubbles = screen.getAllByTestId('conversation-message-bubble');
+        expect(bubbles).toHaveLength(1);
+      });
+      unmount();
+    });
+
+    it('disconnects socket on unmount', async () => {
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(createMessagingSocket).toHaveBeenCalled();
+      });
+
+      const socket = createMessagingSocket.mock.results[0]?.value as {
+        disconnect: ReturnType<typeof vi.fn>;
+      };
+      unmount();
+      expect(socket.disconnect).toHaveBeenCalled();
+    });
+
+    it('does not duplicate self-sent message when echo has same id', async () => {
+      fetchConversationMessages.mockResolvedValue({
+        messages: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Message')).toBeTruthy();
+      });
+
+      fireEvent.change(screen.getByLabelText('Message'), {
+        target: { value: 'Hello there' },
+      });
+      fireEvent.click(screen.getByTestId('conversation-send-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Hello there')).toBeTruthy();
+      });
+
+      expect(messageNewHandlerRef.current).toBeTruthy();
+      messageNewHandlerRef.current!(sentMessage);
+
+      const bubbles = screen.getAllByText('Hello there');
+      expect(bubbles).toHaveLength(1);
+      unmount();
+    });
+  });
+
+  describe('realtime poll mode', () => {
+    beforeEach(() => {
+      getRealtimeMode.mockReturnValue('poll');
+    });
+
+    it('does not show reconnecting banner in poll mode', async () => {
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('conversation-messaging')).toBeTruthy();
+      });
+
+      if (disconnectHandlerRef.current) {
+        disconnectHandlerRef.current();
+      }
+
+      expect(screen.queryByTestId('conversation-reconnecting')).toBeNull();
+      unmount();
+    });
+
+    it('polls with after cursor on interval', async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+
+      const intervalSpy = vi.spyOn(global, 'setInterval');
+
+      fetchConversationMessages.mockResolvedValue({
+        messages: [sentMessage],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+
+      const { unmount } = render(<ConversationDetailPage />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('conversation-message-list').textContent,
+        ).toContain('Hello there');
+      });
+
+      const pollCall = intervalSpy.mock.calls.find(
+        ([, delay]) => delay === 3000,
+      );
+      expect(pollCall).toBeTruthy();
+      const pollTick = pollCall![0] as () => void | Promise<void>;
+
+      fetchConversationMessages.mockClear();
+      fetchConversationMessages.mockResolvedValue({
+        messages: [],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+
+      await Promise.resolve(pollTick());
+
+      await waitFor(() => {
+        expect(fetchConversationMessages).toHaveBeenCalledWith('mutual_abc', {
+          after: 'msg_1',
+          limit: 100,
+        });
+      });
+
+      intervalSpy.mockRestore();
+      unmount();
+    });
   });
 });
