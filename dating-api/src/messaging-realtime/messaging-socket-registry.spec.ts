@@ -17,6 +17,17 @@ describe('MessagingSocketRegistry', () => {
     registry.resetForTests();
   });
 
+  it('hasActiveConnection reflects registered user sockets', () => {
+    const a = mockSocket('sess_1', 'sock_a');
+    (a.data as { userId: string }).userId = 'user_online';
+
+    registry.register(a);
+    expect(registry.hasActiveConnection('user_online')).toBe(true);
+
+    registry.unregister(a);
+    expect(registry.hasActiveConnection('user_online')).toBe(false);
+  });
+
   it('disconnectBySessionId disconnects all sockets for the session', () => {
     const a = mockSocket('sess_1', 'sock_a');
     const b = mockSocket('sess_1', 'sock_b');

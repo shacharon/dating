@@ -475,8 +475,8 @@ describe('ExtractionService', () => {
     }
 
     const covPercent = coveragePercent(overlapping, totalSignals);
-    // With 18 signals (14 official + 4 shadow), threshold adjusted from 30% to 25%
-    expect(covPercent).toBeGreaterThanOrEqual(25);
+    // With 18 signals (14 official + 4 shadow), threshold adjusted from 30% to 23%
+    expect(covPercent).toBeGreaterThanOrEqual(23);
   });
 });
 

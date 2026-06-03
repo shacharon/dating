@@ -3,6 +3,7 @@ import { MatchActionType, MutualMatchStatus } from '@prisma/client';
 import { MeMatchActionsService } from './me-match-actions.service';
 import type { MeMatchesService } from './me-matches.service';
 import type { MutualMatchesService } from './mutual-matches.service';
+import type { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
 describe('MeMatchActionsService', () => {
@@ -20,6 +21,10 @@ describe('MeMatchActionsService', () => {
     findActiveByUserPair: jest.fn(),
   } as unknown as MutualMatchesService;
 
+  const mutualMatchEmail = {
+    notifyNewMutualMatchBestEffort: jest.fn().mockResolvedValue(undefined),
+  } as unknown as MutualMatchEmailService;
+
   let service: MeMatchActionsService;
 
   beforeEach(() => {
@@ -27,7 +32,12 @@ describe('MeMatchActionsService', () => {
     (prisma.$transaction as jest.Mock).mockImplementation(async (fn) =>
       fn(prisma),
     );
-    service = new MeMatchActionsService(prisma, meMatches, mutualMatches);
+    service = new MeMatchActionsService(
+      prisma,
+      meMatches,
+      mutualMatches,
+      mutualMatchEmail,
+    );
   });
 
   it('upserts BLOCK with user-to-user identity', async () => {
@@ -190,13 +200,16 @@ describe('MeMatchActionsService', () => {
       createdAt,
     });
     (mutualMatches.detectAndCreateMutualMatch as jest.Mock).mockResolvedValue({
-      id: 'mutual_row_1',
-      userId1: 'actor-1',
-      userId2: 'target-user',
-      status: MutualMatchStatus.ACTIVE,
-      createdAt,
-      unmatchedAt: null,
-      unmatchedByUserId: null,
+      created: true,
+      mutualMatch: {
+        id: 'mutual_row_1',
+        userId1: 'actor-1',
+        userId2: 'target-user',
+        status: MutualMatchStatus.ACTIVE,
+        createdAt,
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      },
     });
 
     const result = await service.createAction(
@@ -210,6 +223,41 @@ describe('MeMatchActionsService', () => {
       mutualMatch: true,
       conversationId: 'mutual_row_1',
     });
+    expect(mutualMatchEmail.notifyNewMutualMatchBestEffort).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'mutual_row_1' }),
+    );
+  });
+
+  it('does not notify email when mutual match already existed', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    const createdAt = new Date('2026-05-31T10:00:00.000Z');
+    (prisma.matchAction.upsert as jest.Mock).mockResolvedValue({
+      id: 'action-1',
+      actorUserId: 'actor-1',
+      targetUserId: 'target-user',
+      targetProfileIdSnapshot: 'prof-cand',
+      action: MatchActionType.LIKE,
+      createdAt,
+    });
+    (mutualMatches.detectAndCreateMutualMatch as jest.Mock).mockResolvedValue({
+      created: false,
+      mutualMatch: {
+        id: 'mutual_row_1',
+        userId1: 'actor-1',
+        userId2: 'target-user',
+        status: MutualMatchStatus.ACTIVE,
+        createdAt,
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      },
+    });
+
+    await service.createAction('actor-1', 'prof-cand', MatchActionType.LIKE);
+
+    expect(mutualMatchEmail.notifyNewMutualMatchBestEffort).not.toHaveBeenCalled();
   });
 
   it('returns mutualMatch false when detection returns UNMATCHED row', async () => {
@@ -227,13 +275,16 @@ describe('MeMatchActionsService', () => {
       createdAt,
     });
     (mutualMatches.detectAndCreateMutualMatch as jest.Mock).mockResolvedValue({
-      id: 'mutual_row_unmatched',
-      userId1: 'actor-1',
-      userId2: 'target-user',
-      status: MutualMatchStatus.UNMATCHED,
-      createdAt,
-      unmatchedAt: createdAt,
-      unmatchedByUserId: 'actor-1',
+      created: false,
+      mutualMatch: {
+        id: 'mutual_row_unmatched',
+        userId1: 'actor-1',
+        userId2: 'target-user',
+        status: MutualMatchStatus.UNMATCHED,
+        createdAt,
+        unmatchedAt: createdAt,
+        unmatchedByUserId: 'actor-1',
+      },
     });
 
     const result = await service.createAction(

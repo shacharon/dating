@@ -20,6 +20,8 @@ describe('sanitizeEnrichmentSignalsV1', () => {
       kidsTimeline: 'wants_kids',
       conflictStyleDetail: 'process_together',
       autonomyTogethernessDepth: 'quality_over_quantity',
+      communicationMode: null,
+      relationshipPace: null,
       interestsTop3: ['travel', 'music'],
     });
   });
@@ -78,6 +80,8 @@ describe('buildEnrichmentSignals', () => {
       autonomyTogethernessDepth: null,
       kidsTimeline: 'childfree',
       conflictStyleDetail: 'avoids_conflict',
+      communicationMode: null,
+      relationshipPace: 'measured_pace',
       interestsTop3: ['journaling', 'reading', 'gym'],
     });
     expect(wrapEnrichmentV1(signals)).toEqual({
@@ -99,6 +103,8 @@ describe('buildEnrichmentSignals', () => {
       autonomyTogethernessDepth: null,
       kidsTimeline: 'wants_kids_soon',
       conflictStyleDetail: 'repair_over_blame',
+      communicationMode: null,
+      relationshipPace: null,
       interestsTop3: ['travel', 'music'],
     });
   });
@@ -110,6 +116,8 @@ describe('buildEnrichmentSignals', () => {
       autonomyTogethernessDepth: null,
       kidsTimeline: null,
       conflictStyleDetail: null,
+      communicationMode: null,
+      relationshipPace: null,
       interestsTop3: [],
     });
   });

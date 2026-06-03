@@ -4,11 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MatchActionType, MutualMatch, MutualMatchStatus } from '@prisma/client';
+import { MatchActionType, MutualMatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { MatchActionDto, MatchActionStateDto } from './me-match-actions.dto';
 import { MeMatchesService } from './me-matches.service';
-import { MutualMatchesService } from './mutual-matches.service';
+import {
+  MutualMatchesService,
+  type MutualMatchDetectResult,
+} from './mutual-matches.service';
+import { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
 
 @Injectable()
 export class MeMatchActionsService {
@@ -16,6 +20,7 @@ export class MeMatchActionsService {
     private readonly prisma: PrismaService,
     private readonly meMatches: MeMatchesService,
     private readonly mutualMatches: MutualMatchesService,
+    private readonly mutualMatchEmail: MutualMatchEmailService,
   ) {}
 
   async getActionState(
@@ -71,9 +76,7 @@ export class MeMatchActionsService {
       throw new BadRequestException('Cannot act on yourself');
     }
 
-    let detectResult: MutualMatch | null = null;
-
-    const row = await this.prisma.$transaction(async (tx) => {
+    const { row, detectResult } = await this.prisma.$transaction(async (tx) => {
       const upserted = await tx.matchAction.upsert({
         where: {
           actorUserId_targetUserId: {
@@ -93,21 +96,28 @@ export class MeMatchActionsService {
         },
       });
 
+      let detection: MutualMatchDetectResult | null = null;
       if (action === MatchActionType.LIKE) {
-        detectResult = await this.mutualMatches.detectAndCreateMutualMatch(
+        detection = await this.mutualMatches.detectAndCreateMutualMatch(
           actorUserId,
           targetUserId,
           tx,
         );
       }
 
-      return upserted;
+      return { row: upserted, detectResult: detection };
     });
 
     const mutualFields =
       action === MatchActionType.LIKE
         ? this.mutualFieldsFromDetectResult(detectResult)
         : { mutualMatch: false, conversationId: null };
+
+    if (detectResult?.created) {
+      void this.mutualMatchEmail.notifyNewMutualMatchBestEffort(
+        detectResult.mutualMatch,
+      );
+    }
 
     return {
       id: row.id,
@@ -122,10 +132,10 @@ export class MeMatchActionsService {
   }
 
   private mutualFieldsFromDetectResult(
-    row: MutualMatch | null,
+    row: MutualMatchDetectResult | null,
   ): { mutualMatch: boolean; conversationId: string | null } {
-    if (row?.status === MutualMatchStatus.ACTIVE) {
-      return { mutualMatch: true, conversationId: row.id };
+    if (row?.mutualMatch.status === MutualMatchStatus.ACTIVE) {
+      return { mutualMatch: true, conversationId: row.mutualMatch.id };
     }
     return { mutualMatch: false, conversationId: null };
   }

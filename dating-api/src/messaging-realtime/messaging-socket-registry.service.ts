@@ -5,6 +5,7 @@ import type { MessagingSocketData } from './messaging-ws-auth.service';
 @Injectable()
 export class MessagingSocketRegistry {
   private readonly bySession = new Map<string, Set<Socket>>();
+  private readonly byUserId = new Map<string, Set<Socket>>();
 
   register(client: Socket): void {
     const data = client.data as MessagingSocketData | undefined;
@@ -12,12 +13,21 @@ export class MessagingSocketRegistry {
       return;
     }
 
-    let set = this.bySession.get(data.sessionId);
-    if (!set) {
-      set = new Set();
-      this.bySession.set(data.sessionId, set);
+    let sessionSet = this.bySession.get(data.sessionId);
+    if (!sessionSet) {
+      sessionSet = new Set();
+      this.bySession.set(data.sessionId, sessionSet);
     }
-    set.add(client);
+    sessionSet.add(client);
+
+    if (data.userId) {
+      let userSet = this.byUserId.get(data.userId);
+      if (!userSet) {
+        userSet = new Set();
+        this.byUserId.set(data.userId, userSet);
+      }
+      userSet.add(client);
+    }
   }
 
   unregister(client: Socket): void {
@@ -26,13 +36,16 @@ export class MessagingSocketRegistry {
       return;
     }
 
-    const set = this.bySession.get(data.sessionId);
-    if (!set) {
-      return;
+    const sessionSet = this.bySession.get(data.sessionId);
+    if (sessionSet) {
+      sessionSet.delete(client);
+      if (sessionSet.size === 0) {
+        this.bySession.delete(data.sessionId);
+      }
     }
-    set.delete(client);
-    if (set.size === 0) {
-      this.bySession.delete(data.sessionId);
+
+    if (data.userId) {
+      this.removeFromUserMap(data.userId, client);
     }
   }
 
@@ -42,9 +55,18 @@ export class MessagingSocketRegistry {
       return;
     }
     for (const socket of [...set]) {
+      const data = socket.data as MessagingSocketData | undefined;
+      if (data?.userId) {
+        this.removeFromUserMap(data.userId, socket);
+      }
       socket.disconnect(true);
     }
     this.bySession.delete(sessionId);
+  }
+
+  hasActiveConnection(userId: string): boolean {
+    const set = this.byUserId.get(userId);
+    return !!set && set.size > 0;
   }
 
   activeConnectionCount(): number {
@@ -58,5 +80,17 @@ export class MessagingSocketRegistry {
   /** Test-only. */
   resetForTests(): void {
     this.bySession.clear();
+    this.byUserId.clear();
+  }
+
+  private removeFromUserMap(userId: string, client: Socket): void {
+    const userSet = this.byUserId.get(userId);
+    if (!userSet) {
+      return;
+    }
+    userSet.delete(client);
+    if (userSet.size === 0) {
+      this.byUserId.delete(userId);
+    }
   }
 }

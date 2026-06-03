@@ -1,5 +1,8 @@
 export const MESSAGING_WS_NAMESPACE = '/ws/messaging';
 
+/** socket.io engine HTTP path (must match UI `path: '/socket.io'`). */
+export const MESSAGING_SOCKET_IO_PATH = '/socket.io';
+
 /** Server → client event after REST message persist (Story 2). */
 export const MESSAGING_EVENT_MESSAGE_NEW = 'message.new';
 

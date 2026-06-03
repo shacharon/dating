@@ -5,7 +5,11 @@ import type { PrismaService } from '../prisma/prisma.service';
 describe('MutualMatchesService', () => {
   const prisma = {
     matchAction: { findUnique: jest.fn() },
-    mutualMatch: { upsert: jest.fn(), findFirst: jest.fn() },
+    mutualMatch: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      findFirst: jest.fn(),
+    },
   } as unknown as PrismaService;
 
   let service: MutualMatchesService;
@@ -36,8 +40,9 @@ describe('MutualMatchesService', () => {
       (prisma.matchAction.findUnique as jest.Mock).mockResolvedValue({
         action: MatchActionType.LIKE,
       });
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(null);
       const createdAt = new Date('2026-05-31T10:00:00.000Z');
-      (prisma.mutualMatch.upsert as jest.Mock).mockResolvedValue({
+      (prisma.mutualMatch.create as jest.Mock).mockResolvedValue({
         id: 'mutual-1',
         userId1: targetUserId,
         userId2: actorUserId,
@@ -53,22 +58,18 @@ describe('MutualMatchesService', () => {
       );
 
       expect(result).toMatchObject({
-        id: 'mutual-1',
-        status: MutualMatchStatus.ACTIVE,
-      });
-      expect(prisma.mutualMatch.upsert).toHaveBeenCalledWith({
-        where: {
-          userId1_userId2: {
-            userId1: targetUserId,
-            userId2: actorUserId,
-          },
+        created: true,
+        mutualMatch: {
+          id: 'mutual-1',
+          status: MutualMatchStatus.ACTIVE,
         },
-        create: {
+      });
+      expect(prisma.mutualMatch.create).toHaveBeenCalledWith({
+        data: {
           userId1: targetUserId,
           userId2: actorUserId,
           status: MutualMatchStatus.ACTIVE,
         },
-        update: {},
       });
     });
 
@@ -79,7 +80,7 @@ describe('MutualMatchesService', () => {
         service.detectAndCreateMutualMatch(actorUserId, targetUserId),
       ).resolves.toBeNull();
 
-      expect(prisma.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prisma.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('returns null when reverse action is PASS', async () => {
@@ -91,7 +92,7 @@ describe('MutualMatchesService', () => {
         service.detectAndCreateMutualMatch(actorUserId, targetUserId),
       ).resolves.toBeNull();
 
-      expect(prisma.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prisma.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('returns null when reverse action is BLOCK', async () => {
@@ -103,14 +104,14 @@ describe('MutualMatchesService', () => {
         service.detectAndCreateMutualMatch(actorUserId, targetUserId),
       ).resolves.toBeNull();
 
-      expect(prisma.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prisma.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('is idempotent when ACTIVE mutual already exists', async () => {
       (prisma.matchAction.findUnique as jest.Mock).mockResolvedValue({
         action: MatchActionType.LIKE,
       });
-      (prisma.mutualMatch.upsert as jest.Mock).mockResolvedValue({
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         id: 'mutual-existing',
         userId1: targetUserId,
         userId2: actorUserId,
@@ -120,18 +121,23 @@ describe('MutualMatchesService', () => {
         unmatchedByUserId: null,
       });
 
-      await service.detectAndCreateMutualMatch(actorUserId, targetUserId);
-
-      expect(prisma.mutualMatch.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ update: {} }),
+      const result = await service.detectAndCreateMutualMatch(
+        actorUserId,
+        targetUserId,
       );
+
+      expect(result).toMatchObject({ created: false });
+      expect(prisma.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('uses transaction client when provided', async () => {
       const tx = {
-        matchAction: { findUnique: jest.fn().mockResolvedValue({ action: MatchActionType.LIKE }) },
+        matchAction: {
+          findUnique: jest.fn().mockResolvedValue({ action: MatchActionType.LIKE }),
+        },
         mutualMatch: {
-          upsert: jest.fn().mockResolvedValue({
+          findUnique: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({
             id: 'mutual-tx',
             userId1: targetUserId,
             userId2: actorUserId,
@@ -146,7 +152,7 @@ describe('MutualMatchesService', () => {
       await service.detectAndCreateMutualMatch(actorUserId, targetUserId, tx as never);
 
       expect(tx.matchAction.findUnique).toHaveBeenCalled();
-      expect(tx.mutualMatch.upsert).toHaveBeenCalled();
+      expect(tx.mutualMatch.create).toHaveBeenCalled();
       expect(prisma.matchAction.findUnique).not.toHaveBeenCalled();
     });
   });

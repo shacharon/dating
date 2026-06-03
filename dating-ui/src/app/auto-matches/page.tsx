@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_AUTO = 'http://localhost:3001/api/v1/matches/auto';
-const API_REBUILD = 'http://localhost:3001/api/v1/matches/rebuild';
+import { apiUrl } from '@/lib/api-base';
+
+const API_AUTO = apiUrl('/api/v1/matches/auto');
+const API_REBUILD = apiUrl('/api/v1/matches/rebuild');
 
 interface WhyTopEntry {
   key: string;

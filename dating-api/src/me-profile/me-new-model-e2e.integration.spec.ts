@@ -200,6 +200,10 @@ describe('Two-user new-model E2E flow (integration)', () => {
     userProfilePreference: {
       upsert: jest.fn().mockResolvedValue({ id: 'pref_mock', profileId: 'mock' }),
     },
+    matchAction: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
     // ── Legacy tables: Proxy firewall ─────────────────────────────────
     // Any property access (findMany, create, upsert, …) throws immediately.
     matchmakingProfile: legacyProxy('matchmakingProfile'),

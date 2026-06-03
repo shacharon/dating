@@ -7,6 +7,12 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+export type MutualMatchDetectResult = {
+  mutualMatch: MutualMatch;
+  /** True only when ACTIVE row was newly created in this call. */
+  created: boolean;
+};
+
 @Injectable()
 export class MutualMatchesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,7 +25,7 @@ export class MutualMatchesService {
     actorUserId: string,
     targetUserId: string,
     tx?: Prisma.TransactionClient,
-  ): Promise<MutualMatch | null> {
+  ): Promise<MutualMatchDetectResult | null> {
     const db = tx ?? this.prisma;
 
     const reverse = await db.matchAction.findUnique({
@@ -38,11 +44,23 @@ export class MutualMatchesService {
 
     const [userId1, userId2] = this.sortUserPair(actorUserId, targetUserId);
 
-    return db.mutualMatch.upsert({
+    const existing = await db.mutualMatch.findUnique({
       where: { userId1_userId2: { userId1, userId2 } },
-      create: { userId1, userId2, status: MutualMatchStatus.ACTIVE },
-      update: {},
     });
+
+    if (existing?.status === MutualMatchStatus.ACTIVE) {
+      return { mutualMatch: existing, created: false };
+    }
+
+    if (existing) {
+      return { mutualMatch: existing, created: false };
+    }
+
+    const mutualMatch = await db.mutualMatch.create({
+      data: { userId1, userId2, status: MutualMatchStatus.ACTIVE },
+    });
+
+    return { mutualMatch, created: true };
   }
 
   async findActiveByUserPair(

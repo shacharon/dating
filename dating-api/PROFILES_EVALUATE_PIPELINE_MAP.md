@@ -34,8 +34,9 @@
 | **23** | **Product scores** | `computeProductScores` <br/> `evaluate.service.ts:301-374` <br/> Called: **732-738** | **In**: 3 `ExtractedSignals`, 2 `CompatibilityResult` <br/> **Out**: `ProductScores` (0–100 for 5 dimensions) + `EvaluateFlag[]` | **DETERMINISTIC_SCORING** | **Clamp/round**; coverage **caps** `overallDecisionScore` (**348-352**) |
 | **24** | Display note from flags | `evaluateBatch` <br/> `evaluate.service.ts:740-743` | **In**: flags <br/> **Out**: optional `display.note` | **DETERMINISTIC_POLICY** | Adds note string |
 | **25** | UI chips (display-only) | `buildChips` <br/> `chips-builder.ts:260+` <br/> Called: `evaluate.service.ts:757-763` | **In**: 3 `ExtractedSignals`, optional `rawInterests`, `extendedSignals` <br/> **Out**: `ChipsBundle` | **DETERMINISTIC_POLICY** | Read-only aggregation |
-| **26** | Persist to DB | `ProfilesController.evaluate` <br/> `profiles.controller.ts:79-88` <br/> → `ProfilesPrismaService.save` <br/> `profiles-prisma.service.ts:90-182` | **In**: `{ id, name, texts, evaluation }` <br/> **Out**: DB rows (`userProfile`, `profileEvaluation`, `profileSignalSnapshot`, `profileEvaluationRaw`) | **PATCH_WIRING** | Stores evaluation JSON as-is |
-| **27** | Signal snapshot denormalization | `takeSignalsByDomain` <br/> `profiles-prisma.service.ts:184-192` <br/> `toSignalSnapshotRow` <br/> `profiles-prisma.service.ts:194-232` | **In**: evaluation JSON <br/> **Out**: typed signal snapshot rows | **PATCH_WIRING** | Coerces non-number → null (**227**) |
+| **26** | HTTP response | `ProfilesController.evaluate` <br/> `profiles.controller.ts` | **In**: evaluation result <br/> **Out**: `{ ok, profileId, evaluation }` JSON | **PATCH_WIRING** | **No DB persist** (Sprint 7 Story 1) |
+
+~~**26–27** Persist to DB / signal snapshot denormalization — **removed** (legacy frozen path deleted).~~
 
 ---
 

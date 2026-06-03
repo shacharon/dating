@@ -27,6 +27,8 @@ describe('enrichment-legacy-phrase-map', () => {
       conflictStyleDetail: 'repair_over_blame',
       dailyRhythm: 'early_bird',
       autonomyTogethernessDepth: 'interdependence',
+      communicationMode: null,
+      relationshipPace: null,
     });
   });
 

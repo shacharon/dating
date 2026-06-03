@@ -7,4 +7,9 @@ export type AuthUser = {
   status: string;
 };
 
-export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+export type AuthStatus =
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
+  /** API unreachable after retries (not the same as logged out). */
+  | "error";

@@ -37,7 +37,7 @@ function landingUrlWithNext(): string {
  * ahead of session confirmation. Sends stale/invalid sessions to public landing with `next`.
  */
 export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, lastError, refresh } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
@@ -81,6 +81,32 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
       window.removeEventListener("storage", onStorage);
     };
   }, []);
+
+  if (status === "error") {
+    return (
+      <>
+        <header className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+          <p className="mx-auto max-w-5xl text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Cannot reach dating-api
+          </p>
+        </header>
+        <div className="mx-auto max-w-lg px-4 py-10 text-sm text-zinc-600 dark:text-zinc-400">
+          {lastError ? (
+            <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+              {lastError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            Retry connection
+          </button>
+        </div>
+      </>
+    );
+  }
 
   if (status === "unauthenticated") {
     return (

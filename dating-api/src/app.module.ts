@@ -8,7 +8,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ContradictionModule } from './contradiction/contradiction.module';
 import { EvaluateModule } from './evaluate/evaluate.module';
-import { ExtractionModule } from './extraction/extraction.module';
+import { HealthModule } from './health/health.module';
 import { SimpleLoggerModule } from './logger/simple-logger.module';
 import { StructuredLoggingModule } from './logging/structured-logging.module';
 import { LlmModule } from './llm/llm.module';
@@ -32,9 +32,9 @@ import { SessionModule } from './session/session.module';
     PrismaModule,
     SimpleLoggerModule,
     StructuredLoggingModule,
+    HealthModule,
     LlmModule,
     EvaluateModule,
-    ExtractionModule,
     ContradictionModule,
     ProfilesModule,
     MeProfileModule,

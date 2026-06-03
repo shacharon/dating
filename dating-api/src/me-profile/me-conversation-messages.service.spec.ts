@@ -14,6 +14,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
+import type { NewMessageEmailService } from '../notifications/new-message-email.service';
 
 describe('MeConversationMessagesService', () => {
   const sessionUserId = 'user_viewer_1';
@@ -46,6 +47,10 @@ describe('MeConversationMessagesService', () => {
     publishToUsers: jest.fn(),
   } as unknown as RealtimePublisher;
 
+  const newMessageEmail = {
+    maybeNotifyBestEffort: jest.fn().mockResolvedValue(undefined),
+  } as unknown as NewMessageEmailService;
+
   let service: MeConversationMessagesService;
 
   beforeEach(() => {
@@ -59,6 +64,7 @@ describe('MeConversationMessagesService', () => {
       obs,
       messageRateLimit,
       realtime,
+      newMessageEmail,
     );
     (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(
       {
@@ -116,6 +122,12 @@ describe('MeConversationMessagesService', () => {
       MESSAGING_EVENT_MESSAGE_NEW,
       result,
     );
+    expect(newMessageEmail.maybeNotifyBestEffort).toHaveBeenCalledWith({
+      conversationId,
+      recipientUserId: otherUserId,
+      senderUserId: sessionUserId,
+      messageId: 'msg_abc',
+    });
   });
 
   it('returns MessageDto when publishToUsers throws', async () => {

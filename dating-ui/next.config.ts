@@ -4,8 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
+/** Prefer 127.0.0.1 over localhost — avoids intermittent IPv6/proxy failures on Windows. */
 const apiProxyTarget =
-  process.env.API_PROXY_TARGET?.replace(/\/$/, "") ?? "http://localhost:3001";
+  process.env.API_PROXY_TARGET?.replace(/\/$/, "") ?? "http://127.0.0.1:3001";
 
 const nextConfig: NextConfig = {
   /** socket.io handshake must not be 308-redirected between `/socket.io` and `/socket.io/`. */

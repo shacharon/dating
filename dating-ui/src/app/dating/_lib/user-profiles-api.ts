@@ -2,7 +2,7 @@
  * Minimal fetch client for dating-api UserProfile CRUD (/api/v1/user-profiles).
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { apiUrl } from '@/lib/api-base';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json' };
 
@@ -39,7 +39,7 @@ async function readJson<T>(res: Response): Promise<T> {
 }
 
 export async function listProfiles(): Promise<UserProfileDto[]> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/user-profiles`, {
+  const res = await fetch(apiUrl('/api/v1/user-profiles'), {
     cache: 'no-store',
     headers: { Accept: 'application/json' },
   });
@@ -51,7 +51,7 @@ export async function listProfiles(): Promise<UserProfileDto[]> {
 
 export async function getProfile(id: string): Promise<UserProfileDto | null> {
   const res = await fetch(
-    `${API_BASE_URL}/api/v1/user-profiles/${encodeURIComponent(id)}`,
+    apiUrl(`/api/v1/user-profiles/${encodeURIComponent(id)}`),
     { cache: 'no-store', headers: { Accept: 'application/json' } },
   );
   if (res.status === 404) {
@@ -66,7 +66,7 @@ export async function getProfile(id: string): Promise<UserProfileDto | null> {
 export async function createProfile(
   payload: CreateUserProfilePayload,
 ): Promise<UserProfileDto> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/user-profiles`, {
+  const res = await fetch(apiUrl('/api/v1/user-profiles'), {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify(payload),
@@ -85,7 +85,7 @@ export async function updateProfile(
   payload: UpdateUserProfilePayload,
 ): Promise<UserProfileDto> {
   const res = await fetch(
-    `${API_BASE_URL}/api/v1/user-profiles/${encodeURIComponent(id)}`,
+    apiUrl(`/api/v1/user-profiles/${encodeURIComponent(id)}`),
     {
       method: 'PATCH',
       headers: JSON_HEADERS,
@@ -103,7 +103,7 @@ export async function updateProfile(
 
 export async function deleteProfile(id: string): Promise<void> {
   const res = await fetch(
-    `${API_BASE_URL}/api/v1/user-profiles/${encodeURIComponent(id)}`,
+    apiUrl(`/api/v1/user-profiles/${encodeURIComponent(id)}`),
     { method: 'DELETE' },
   );
   if (res.status === 404) {

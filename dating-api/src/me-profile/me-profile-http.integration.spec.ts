@@ -75,6 +75,7 @@ describe('me profile HTTP (integration)', () => {
     userProfile: {
       findUnique: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -101,6 +102,7 @@ describe('me profile HTTP (integration)', () => {
     },
     mutualMatch: {
       upsert: jest.fn(),
+      create: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
@@ -202,6 +204,8 @@ describe('me profile HTTP (integration)', () => {
       async (fn: (tx: typeof prismaMock) => Promise<unknown>) => fn(prismaMock),
     );
     prismaMock.userProfile.findUnique.mockReset();
+    prismaMock.userProfile.findFirst.mockReset();
+    prismaMock.userProfile.findFirst.mockResolvedValue(null);
     prismaMock.userProfilePhoto.findMany.mockReset();
     prismaMock.userProfilePhoto.findFirst.mockReset();
     prismaMock.userProfilePhoto.create.mockReset();
@@ -214,6 +218,7 @@ describe('me profile HTTP (integration)', () => {
     prismaMock.matchAction.findUnique?.mockReset?.();
     prismaMock.matchAction.delete?.mockReset?.();
     prismaMock.mutualMatch.upsert?.mockReset?.();
+    prismaMock.mutualMatch.create?.mockReset?.();
     prismaMock.mutualMatch.findFirst?.mockReset?.();
     prismaMock.mutualMatch.findMany?.mockReset?.();
     prismaMock.mutualMatch.findMany?.mockResolvedValue([]);
@@ -2923,7 +2928,7 @@ describe('me profile HTTP (integration)', () => {
         .send({ action: 'LIKE' })
         .expect(201);
 
-      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('creates MutualMatch when reciprocal LIKE exists (sorted user ids)', async () => {
@@ -2931,7 +2936,8 @@ describe('me profile HTTP (integration)', () => {
       mockEligibleMatchDetail();
       mockLikeUpsert();
       prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
-      prismaMock.mutualMatch.upsert.mockResolvedValue({
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+      prismaMock.mutualMatch.create.mockResolvedValue({
         id: 'mutual_row_1',
         userId1: CANDIDATE_USER_ID,
         userId2: USER_ID,
@@ -2947,28 +2953,21 @@ describe('me profile HTTP (integration)', () => {
         .send({ action: 'LIKE' })
         .expect(201);
 
-      expect(prismaMock.mutualMatch.upsert).toHaveBeenCalledWith({
-        where: {
-          userId1_userId2: {
-            userId1: CANDIDATE_USER_ID,
-            userId2: USER_ID,
-          },
-        },
-        create: {
+      expect(prismaMock.mutualMatch.create).toHaveBeenCalledWith({
+        data: {
           userId1: CANDIDATE_USER_ID,
           userId2: USER_ID,
           status: 'ACTIVE',
         },
-        update: {},
       });
     });
 
-    it('re-LIKE after mutual is idempotent (201, upsert with empty update)', async () => {
+    it('re-LIKE after mutual is idempotent (201, no second create)', async () => {
       const raw = await loginAndCookie();
       mockEligibleMatchDetail();
       mockLikeUpsert();
       prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
-      prismaMock.mutualMatch.upsert.mockResolvedValue({
+      const existingMutual = {
         id: 'mutual_row_1',
         userId1: CANDIDATE_USER_ID,
         userId2: USER_ID,
@@ -2976,7 +2975,8 @@ describe('me profile HTTP (integration)', () => {
         createdAt: new Date('2026-05-31T09:00:00.000Z'),
         unmatchedAt: null,
         unmatchedByUserId: null,
-      });
+      };
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(existingMutual);
 
       for (let i = 0; i < 2; i++) {
         await request(app.getHttpServer())
@@ -2986,10 +2986,7 @@ describe('me profile HTTP (integration)', () => {
           .expect(201);
       }
 
-      expect(prismaMock.mutualMatch.upsert).toHaveBeenCalledTimes(2);
-      expect(prismaMock.mutualMatch.upsert).toHaveBeenLastCalledWith(
-        expect.objectContaining({ update: {} }),
-      );
+      expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('does not create MutualMatch when reverse action is PASS', async () => {
@@ -3004,7 +3001,7 @@ describe('me profile HTTP (integration)', () => {
         .send({ action: 'LIKE' })
         .expect(201);
 
-      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('does not invoke mutual detection on PASS', async () => {
@@ -3026,7 +3023,7 @@ describe('me profile HTTP (integration)', () => {
         .send({ action: 'PASS' })
         .expect(201);
 
-      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
     });
 
     it('does not change MutualMatch when BLOCK overwrites LIKE (deferred Story 1 behavior)', async () => {
@@ -3047,7 +3044,7 @@ describe('me profile HTTP (integration)', () => {
         .send({ action: 'BLOCK' })
         .expect(201);
 
-      expect(prismaMock.mutualMatch.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
     });
   });
 
@@ -3178,7 +3175,8 @@ describe('me profile HTTP (integration)', () => {
       mockEligibleMatchDetail();
       mockLikeUpsert();
       prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
-      prismaMock.mutualMatch.upsert.mockResolvedValue({
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(null);
+      prismaMock.mutualMatch.create.mockResolvedValue({
         id: 'mutual_row_1',
         userId1: CANDIDATE_USER_ID,
         userId2: USER_ID,

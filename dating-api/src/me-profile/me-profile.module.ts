@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { MessagingRealtimeModule } from '../messaging-realtime/messaging-realtime.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { EvaluateServiceModule } from '../evaluate/evaluate-service.module';
 import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -27,6 +28,7 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     EvaluateServiceModule,
     PhotoStorageModule,
     forwardRef(() => MessagingRealtimeModule),
+    NotificationsModule,
   ],
   controllers: [MeProfileController],
   providers: [

@@ -21,6 +21,46 @@ function parseUser(json: unknown): AuthUser | null {
   };
 }
 
+/** Covers nest `--watch` restarts (~5–15s) without treating logged-out users as errors. */
+const AUTH_ME_RETRY_DELAYS_MS = [
+  250, 500, 750, 1000, 1500, 2000, 2500, 3000,
+] as const;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Transient: API down, proxy error, or nest watch restart (not logged out). */
+export function isTransientAuthMeFailure(status: number): boolean {
+  return status === 0 || status >= 500;
+}
+
+/**
+ * Bootstrap auth check with retries — avoids false "server error" when dating-api
+ * is still starting or briefly restarting (`nest start --watch`).
+ */
+export async function fetchAuthMeWithRetry(
+  options?: { maxAttempts?: number },
+): Promise<
+  | { ok: true; user: AuthUser }
+  | { ok: false; status: number; authError?: string }
+> {
+  const maxAttempts = options?.maxAttempts ?? AUTH_ME_RETRY_DELAYS_MS.length + 1;
+  let last: Awaited<ReturnType<typeof fetchAuthMe>> = { ok: false, status: 0 };
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    last = await fetchAuthMe();
+    if (last.ok || !isTransientAuthMeFailure(last.status)) {
+      return last;
+    }
+    const delay = AUTH_ME_RETRY_DELAYS_MS[attempt];
+    if (delay == null) break;
+    await sleep(delay);
+  }
+
+  return last;
+}
+
 export async function fetchAuthMe(): Promise<
   | { ok: true; user: AuthUser }
   | { ok: false; status: number; authError?: string }

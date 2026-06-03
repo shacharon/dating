@@ -79,7 +79,7 @@ async function bootstrap() {
   });
 
   const resolvedPort = Number(port) || 3001;
-  await app.listen(resolvedPort);
+  await app.listen(resolvedPort, '0.0.0.0');
 
   const url = await app.getUrl();
   logger.log(`Application is running on: ${url}`, 'Bootstrap');

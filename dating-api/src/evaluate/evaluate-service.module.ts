@@ -3,10 +3,8 @@
  * Import this module (instead of EvaluateModule) when you need EvaluateService
  * without pulling in EvaluateController's LegacyBackendAdapter dependency.
  *
- * Uses ExtractionCoreModule (pure LLM extraction, no DB persistence) instead of
- * ExtractionModule so that ExtractionV2PersistenceService — which writes to legacy
- * ProfileExtractionV2 / ProfileSignalSnapshot tables — is never registered in the
- * DI scope of callers (e.g. MeProfileModule).
+ * Uses ExtractionCoreModule (pure LLM extraction, no DB persistence).
+ * Legacy ExtractionModule / V2 analyze stack removed in Sprint 7 Story 1.
  */
 import { Module } from '@nestjs/common';
 import { ExtractionCoreModule } from '../extraction/extraction-core.module';

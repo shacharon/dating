@@ -12,7 +12,8 @@ import {
 import {
   authLogout,
   exchangeGoogleIdToken,
-  fetchAuthMe,
+  fetchAuthMeWithRetry,
+  isTransientAuthMeFailure,
 } from "@/lib/auth/auth-api";
 import type { AuthStatus, AuthUser } from "@/lib/auth/types";
 import {
@@ -36,6 +37,13 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function apiUnavailableMessage(status: number): string {
+  if (status === 0) {
+    return "Cannot reach dating-api. Start it with: cd dating-api && npm run start:dev (port 3001). The UI proxies /api to API_PROXY_TARGET (default http://127.0.0.1:3001).";
+  }
+  return "dating-api is not responding (often restarting). Wait a few seconds and click Retry. If you recently pulled code, run: cd dating-api && npx prisma migrate deploy";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [status, setStatus] = useState<AuthStatus>("loading");
@@ -50,35 +58,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       message: "auth bootstrap: refresh session",
       errorCode: UiErrorCodes.UI_AUTH_BOOTSTRAP,
     });
-    const r = await fetchAuthMe();
+    const r = await fetchAuthMeWithRetry();
     if (r.ok) {
       setLastError(null);
       setUser(r.user);
       setStatus("authenticated");
       return;
     }
-    if (r.status === 0) {
-      setUser(null);
-      setStatus("unauthenticated");
-      setLastError(
-        "Cannot reach the API. Start dating-api (port 3001 by default). With no NEXT_PUBLIC_API_URL, the UI uses same-origin /api (Next.js proxy); set API_PROXY_TARGET if the API is not on localhost:3001.",
-      );
-      return;
-    }
     if (r.status === 401) {
       setUser(null);
+      setLastError(null);
       setStatus("unauthenticated");
       return;
     }
-    if (r.status >= 500) {
+    if (isTransientAuthMeFailure(r.status)) {
       setUser(null);
-      setStatus("unauthenticated");
-      setLastError(
-        "Auth check failed with a server error (often the Next.js proxy could not reach dating-api). Start dating-api on port 3001, or set API_PROXY_TARGET to its URL. Direct test: GET http://127.0.0.1:3001/api/v1/auth/me should return 401 JSON when no cookie.",
-      );
+      setLastError(apiUnavailableMessage(r.status));
+      setStatus("error");
       return;
     }
     setUser(null);
+    setLastError(null);
     setStatus("unauthenticated");
   }, []);
 
@@ -93,18 +93,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("loading");
     const r = await exchangeGoogleIdToken(idToken);
     if (r.ok) {
-      // Confirm session cookie is sent and accepted (same as full-page refresh path).
-      const verify = await fetchAuthMe();
+      const verify = await fetchAuthMeWithRetry();
       if (verify.ok) {
         setUser(verify.user);
         setStatus("authenticated");
         return true;
       }
       setUser(null);
-      setStatus("unauthenticated");
-      setLastError(
-        "Login succeeded but GET /api/v1/auth/me did not return 200 — check CORS credentials and cookie domain.",
-      );
+      if (isTransientAuthMeFailure(verify.status)) {
+        setLastError(apiUnavailableMessage(verify.status));
+        setStatus("error");
+      } else {
+        setLastError(
+          "Login succeeded but session check failed — try Refresh or sign in again.",
+        );
+        setStatus("unauthenticated");
+      }
       return false;
     }
     setUser(null);

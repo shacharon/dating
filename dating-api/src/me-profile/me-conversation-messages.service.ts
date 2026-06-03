@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { logProfanityIfDetected } from './conversation-message-profanity';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationsService } from './me-conversations.service';
+import { NewMessageEmailService } from '../notifications/new-message-email.service';
 import {
   type MessageDto,
   type MessageListDto,
@@ -33,6 +34,7 @@ export class MeConversationMessagesService {
     private readonly obs: StructuredObservabilityService,
     private readonly messageRateLimit: ConversationMessageRateLimitService,
     private readonly realtime: RealtimePublisher,
+    private readonly newMessageEmail: NewMessageEmailService,
   ) {}
 
   async listMessages(
@@ -219,6 +221,15 @@ export class MeConversationMessagesService {
       dto,
       conversationId,
     );
+
+    const recipientUserId =
+      sessionUserId === match.userId1 ? match.userId2 : match.userId1;
+    void this.newMessageEmail.maybeNotifyBestEffort({
+      conversationId,
+      recipientUserId,
+      senderUserId: sessionUserId,
+      messageId: dto.id,
+    });
 
     return dto;
   }

@@ -1,5 +1,28 @@
 # Refactor changelog
 
+## Sprint 7 Story 1 — frozen legacy runtime deleted
+
+**Date:** 2026-06-03  
+**Checkpoint:** `SPRINT7_STORY1_FROZEN_LEGACY_PATHS_DELETED`
+
+### What changed
+
+- Deleted frozen `ProfilesAnalyzeController` cluster (`GET/POST /api/profiles/*analyze*`).
+- Deleted V2 extraction chain (`ExtractionModule`, `ExtractionV2*`, interests/negatives extraction, canonical projection, ranking sync).
+- Removed global `ExtractionModule` from `AppModule`; product path uses `ExtractionCoreModule` only.
+- `POST /api/v1/profiles/evaluate` returns evaluation JSON only (no DB persist).
+- Slimmed `ProfilesPrismaService` — removed frozen `save`/`saveToPrisma`.
+- Deleted UI POC routes (`dating-ui/src/app/poc/**`).
+- Removed `validate:v1-v2` npm script and `scripts/analyze-all-resume.ps1`.
+
+### What remains (Story 2+)
+
+- `legacy/` module (admin DI seam).
+- Deprecated npm scripts with `exit(1)`.
+- Legacy DB tables/columns (no schema change in Story 1).
+
+---
+
 ## Script/tooling cleanup before MatchmakingProfile drop
 
 **Date:** 2026-04-27

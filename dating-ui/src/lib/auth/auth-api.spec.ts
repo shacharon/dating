@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetRequestIdContextForTests } from '@/lib/observability/request-id';
-import { fetchAuthMe } from './auth-api';
+import {
+  fetchAuthMe,
+  fetchAuthMeWithRetry,
+  isTransientAuthMeFailure,
+} from './auth-api';
 
 describe('auth-api', () => {
   const originalFetch = globalThis.fetch;
@@ -35,6 +39,45 @@ describe('auth-api', () => {
         }
       });
     expect(structured).toHaveLength(1);
+  });
+
+  it('isTransientAuthMeFailure treats 0 and 5xx as transient', () => {
+    expect(isTransientAuthMeFailure(0)).toBe(true);
+    expect(isTransientAuthMeFailure(500)).toBe(true);
+    expect(isTransientAuthMeFailure(503)).toBe(true);
+    expect(isTransientAuthMeFailure(401)).toBe(false);
+    expect(isTransientAuthMeFailure(403)).toBe(false);
+  });
+
+  it('fetchAuthMeWithRetry succeeds after transient 500', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 500,
+        ok: false,
+        headers: new Headers(),
+        json: async () => ({}),
+      } as Response)
+      .mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        headers: new Headers(),
+        json: async () => ({
+          id: 'u1',
+          email: 'a@b.com',
+          displayName: 'A',
+          avatarUrl: null,
+          status: 'ACTIVE',
+        }),
+      } as Response);
+    globalThis.fetch = fetchMock;
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const r = await fetchAuthMeWithRetry({ maxAttempts: 2 });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.user.id).toBe('u1');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('fetchAuthMe captures x-request-id from response for logs', async () => {

@@ -12,6 +12,7 @@ import {
   type MatchDecisionV1,
 } from '@/lib/decision-engine-v1';
 import type { EnrichmentSignalsLike } from '@/lib/enrichment-display-v1';
+import { apiUrl } from '@/lib/api-base';
 
 type DecisionCueV1 = 'TALK' | 'THINK' | 'SKIP';
 
@@ -145,9 +146,9 @@ function MatchDecisionBlock({ engine }: { engine: DecisionEngineV1Result }) {
   );
 }
 
-const API_PROFILES = 'http://localhost:3001/api/v1/profiles';
-const API_MATCHES = 'http://localhost:3001/api/v1/matches';
-const API_COMPARE = 'http://localhost:3001/api/v1/matches/compare';
+const API_PROFILES = apiUrl('/api/v1/profiles');
+const API_MATCHES = apiUrl('/api/v1/matches');
+const API_COMPARE = apiUrl('/api/v1/matches/compare');
 
 interface ProfileListItem {
   id: string;

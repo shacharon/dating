@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import type { Server, ServerOptions } from 'socket.io';
+import { setMessagingRedisAdapterBound } from './messaging-realtime-redis-state';
 
 export class RedisIoAdapter extends IoAdapter {
   private redisAdapter: ReturnType<typeof createAdapter> | null = null;
@@ -21,6 +22,7 @@ export class RedisIoAdapter extends IoAdapter {
     const subClient = pubClient.duplicate();
     await Promise.all([pubClient.connect(), subClient.connect()]);
     this.redisAdapter = createAdapter(pubClient, subClient);
+    setMessagingRedisAdapterBound(true);
   }
 
   override createIOServer(port: number, options?: ServerOptions): Server {

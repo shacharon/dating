@@ -9,8 +9,6 @@ import { randomUUID } from 'node:crypto';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
-import { ProfilesPrismaService } from './profiles-prisma.service';
-import { ExtractionV2PersistenceService } from '../extraction/extraction-v2-persistence.service';
 
 export interface ProfilesEvaluateBodyDto {
   id?: string;
@@ -34,9 +32,7 @@ function getErrorMessage(err: unknown): string {
 export class ProfilesController {
   constructor(
     private readonly evaluateService: EvaluateService,
-    private readonly profilesStorage: ProfilesPrismaService,
     private readonly logger: SimpleLogger,
-    private readonly extractionV2Persistence: ExtractionV2PersistenceService,
   ) {}
 
   @Post('evaluate')
@@ -76,37 +72,10 @@ export class ProfilesController {
       throw new ServiceUnavailableException(message);
     }
 
-    const evaluation = result.result;
-
-    try {
-      await this.profilesStorage.save(id, {
-        id,
-        name,
-        texts: {
-          aboutMe,
-          aboutPartner,
-          aboutRelationship,
-        },
-        evaluation,
-      });
-      // LEGACY_RETIREMENT_PLAN.md Slice 1: ProfileExtractionV2 writes removed (2026-04-24)
-      // await this.extractionV2Persistence.saveExtendedSignalsFromEvaluation({
-      //   profileId: id,
-      //   aboutMe,
-      //   aboutPartner,
-      //   aboutRelationship,
-      //   evaluation,
-      // });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to save profile';
-      throw new ServiceUnavailableException(message);
-    }
-
     return {
       ok: true,
       profileId: id,
-      evaluation,
+      evaluation: result.result,
     };
   }
 }

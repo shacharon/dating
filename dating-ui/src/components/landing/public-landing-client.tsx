@@ -27,7 +27,7 @@ function safeNextPath(raw: string | null): string {
 export function PublicLandingClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status, signInWithGoogleIdToken, lastError, clearLastError } =
+  const { status, signInWithGoogleIdToken, lastError, clearLastError, refresh } =
     useAuth();
   const [signingIn, setSigningIn] = useState(false);
 
@@ -64,7 +64,8 @@ export function PublicLandingClient() {
   );
 
   const showBootstrapLoading = status === "loading" && !signingIn;
-  const showCta = status === "unauthenticated" || signingIn;
+  const showCta =
+    status === "unauthenticated" || status === "error" || signingIn;
 
   return (
     <main
@@ -93,6 +94,18 @@ export function PublicLandingClient() {
             >
               {lastError}
             </div>
+          ) : null}
+          {status === "error" ? (
+            <button
+              type="button"
+              onClick={() => {
+                clearLastError();
+                void refresh();
+              }}
+              className="w-full rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+            >
+              Retry connection to API
+            </button>
           ) : null}
           <div className="flex min-h-[48px] flex-col items-center gap-3">
             <p className="text-center text-base font-medium text-zinc-800 dark:text-zinc-200">
