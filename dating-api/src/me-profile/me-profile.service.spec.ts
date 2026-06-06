@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { AnalyticsService } from '../analytics/analytics.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileService } from './me-profile.service';
 
@@ -81,10 +82,14 @@ describe('MeProfileService', () => {
       httpServerError: jest.fn(),
     };
     analysis = { runForUser: jest.fn().mockResolvedValue(undefined) };
+    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
+    const photoStorage = {} as never;
     service = new MeProfileService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
       analysis as unknown as MeProfileAnalysisService,
+      photoStorage,
+      analytics,
     );
   });
 
@@ -722,6 +727,8 @@ describe('MeProfileService', () => {
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         newModelAnalysis as unknown as MeProfileAnalysisService,
+        {} as never,
+        { track: jest.fn() } as unknown as AnalyticsService,
       );
 
       await expect(svc.getForUser(userId)).resolves.toBeNull();
@@ -761,6 +768,8 @@ describe('MeProfileService', () => {
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         newModelAnalysis as unknown as MeProfileAnalysisService,
+        {} as never,
+        { track: jest.fn() } as unknown as AnalyticsService,
       );
 
       const result = await svc.submitForUser(userId);

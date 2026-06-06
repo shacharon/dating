@@ -27,6 +27,7 @@ import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationsService } from './me-conversations.service';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
@@ -161,6 +162,7 @@ describe('me profile HTTP (integration)', () => {
         StructuredLoggingModule,
         // SimpleLoggerModule is @Global() — satisfies EvaluateController's SimpleLogger dep
         SimpleLoggerModule,
+        AnalyticsModule,
         AuthModule,
         MeProfileModule,
       ],

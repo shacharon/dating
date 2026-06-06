@@ -30,6 +30,7 @@ import {
 } from '../messaging-realtime/messaging-realtime.constants';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
@@ -122,6 +123,7 @@ describe('me conversation messages WS (integration)', () => {
         UsersModule,
         StructuredLoggingModule,
         SimpleLoggerModule,
+        AnalyticsModule,
         AuthModule,
         MeProfileModule,
       ],

@@ -26,8 +26,11 @@ See also: [Sprint 4 PROD_REALTIME.md](../sprint-04-realtime-messaging/PROD_REALT
 | `NEXT_PUBLIC_SENTRY_DSN` | UI | Optional locally; set in staging/prod |
 | `SENTRY_ENVIRONMENT` | API + UI | e.g. `production`, `staging` |
 | `SENTRY_TRACES_SAMPLE_RATE` | API + UI | e.g. `0.1` in prod |
+| `ENABLE_SENTRY_TEST` | API | Set `1` to allow `GET /health/sentry-test` in production (default: off in prod) |
 
 **Never commit DSN values to git.**
+
+**Sentry smoke (staging):** with `SENTRY_DSN` set, `GET /health/sentry-test` throws a controlled error that should appear in the Sentry project (route disabled in production unless `ENABLE_SENTRY_TEST=1`). Health routes are not under `/api/v1`.
 
 ## Tier A — automated (before browser smoke)
 

@@ -1,5 +1,26 @@
 # Refactor changelog
 
+## Sprint 7 Story 2 — legacy retirement cleanup
+
+**Date:** 2026-06-03  
+**Checkpoint:** `SPRINT7_STORY2_LEGACY_RETIREMENT_CLEANUP`
+
+### What changed
+
+- Removed 13 deprecated `package.json` scripts (inline DEPRECATED stubs + broken `ci:hg-ranking-guard` / `lifestyle-v2:db-report`).
+- Deleted `.github/workflows/hg-ranking-signal-guard.yml` (guard always threw).
+- Archived 28 MatchmakingProfile-era scripts to `scripts/archive/retired-matchmaking-profile/`.
+- Added `scripts/OPERATIONAL_SCRIPTS.md` (supported smokes/validates + Phase F note).
+- Updated `LEGACY_RETIREMENT_PLAN.md` status; match engine docs mark MP as retired.
+
+### What remains (deferred)
+
+- Physical DB drop migration for orphan legacy tables (if any still exist in long-lived DBs).
+- Optional `STRONG_FLAG` → `PENALTY` code migration in `dealbreakers.ts`.
+- Optional new-model HG ranking CI guard (future sprint).
+
+---
+
 ## Sprint 7 Story 1 — frozen legacy runtime deleted
 
 **Date:** 2026-06-03  
@@ -15,11 +36,10 @@
 - Deleted UI POC routes (`dating-ui/src/app/poc/**`).
 - Removed `validate:v1-v2` npm script and `scripts/analyze-all-resume.ps1`.
 
-### What remains (Story 2+)
+### What remains (post Story 2)
 
 - `legacy/` module (admin DI seam).
-- Deprecated npm scripts with `exit(1)`.
-- Legacy DB tables/columns (no schema change in Story 1).
+- Orphan legacy DB tables in long-lived databases (no Prisma model; drop migration deferred).
 
 ---
 

@@ -11,6 +11,7 @@ import { parseMessageListLimit } from './me-conversation-messages.dto';
 import type { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import type { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
@@ -58,6 +59,7 @@ describe('MeConversationMessagesService', () => {
     (messageRateLimit.assertCanSend as jest.Mock).mockReset();
     (messageRateLimit.recordSend as jest.Mock).mockReset();
     (realtime.publishToUsers as jest.Mock).mockReset();
+    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationMessagesService(
       prisma,
       conversations,
@@ -65,6 +67,7 @@ describe('MeConversationMessagesService', () => {
       messageRateLimit,
       realtime,
       newMessageEmail,
+      analytics,
     );
     (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(
       {

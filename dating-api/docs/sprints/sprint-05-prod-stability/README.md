@@ -3,21 +3,22 @@
 **Epic:** Platform hardening (post–Sprint 4 realtime)  
 **Duration:** ~1 week (4 stories)  
 **Goal:** Close the Sprint 4 prod gate, add error observability, and remove known foot-guns in the match engine before wider rollout.  
-**Status:** **In progress** — 1/4 stories done  
-**Depends on:** [Sprint 4: Real-time Messaging](../sprint-04-realtime-messaging/README.md) (complete)
+**Status:** **Engineering complete** — 4/4 stories done · operator smokes 5.1 / 5.2 pending  
+**Depends on:** [Sprint 4: Real-time Messaging](../sprint-04-realtime-messaging/README.md) (complete)  
+**Closeout plan:** [SPRINT_5_6_7_CLOSEOUT.md](../SPRINT_5_6_7_CLOSEOUT.md)
 
 ---
 
 ## Story checklist
 
-| # | Story | Status | Depends on |
-|---|--------|--------|------------|
-| 1 | [WS prod smoke + flag flip](./STORY_01_ws_prod_smoke_flag_flip.md) | Done (Tier B pending operator) | Sprint 4 |
-| 2 | [Sentry + structured error logging](./STORY_02_sentry_structured_logging.md) | Not started | — |
-| 3 | [Remove LOW_INFO_PROFILE_IDS hardcode](./STORY_03_remove_low_info_profile_ids.md) | Not started | — |
-| 4 | [Consolidate overallScore → finalScore](./STORY_04_consolidate_final_score.md) | Not started | — |
+| # | Story | Status | Closeout # | Depends on |
+|---|--------|--------|------------|------------|
+| 1 | [WS prod smoke + flag flip](./STORY_01_ws_prod_smoke_flag_flip.md) | Done (Tier B pending operator) | — | Sprint 4 |
+| 2 | [Sentry + structured error logging](./STORY_02_sentry_structured_logging.md) | **Done** (operator Sentry smoke pending) | 1 | — |
+| 3 | [Remove LOW_INFO_PROFILE_IDS hardcode](./STORY_03_remove_low_info_profile_ids.md) | **Done** (engineering gate) | 5 | — |
+| 4 | [Consolidate overallScore → finalScore](./STORY_04_consolidate_final_score.md) | **Done** (engineering gate) | 6 | — |
 
-**Recommended order:** 1 → 2 → 3 → 4 (Story 1 unblocks prod; 3–4 are independent engine cleanup)
+**Sprint 5 engineering stories: complete.** See [closeout plan](../SPRINT_5_6_7_CLOSEOUT.md) for cross-sprint work.
 
 ---
 
@@ -28,7 +29,7 @@
 | WS rollout | **`NEXT_PUBLIC_REALTIME=ws`** in prod after Story 1 smoke passes | Sprint 4 shipped behind flag; this sprint closes the gate |
 | Error tracking | **Sentry** (API + UI) | No observability stack exists today; Sentry is standard for NestJS + Next.js |
 | LOW_INFO cap | **Replace hardcoded profile id with coverage-based rule** | Profile `19` hack is not maintainable; use existing `coverage` / `scoreCoverageFactor` |
-| Score field | **`finalScore` is canonical** | `overallScore` on match results becomes alias or removed; compatibility sub-scores keep their own `overallScore` where semantically correct |
+| Score field | **`finalScore` is canonical** | **Done** — duplicate `overall` / `overallScore` removed from match payloads; compat sub-scores unchanged |
 
 ---
 
@@ -87,4 +88,4 @@ Handoffs: `handoffs/<story-slug>/agent-*.md`
 
 1. **Prod cookie/proxy** — same Sprint 4 risk; Story 1 must verify browser 101 in target environment.  
 2. **Sentry DSN secrets** — must not be committed; env-only.  
-3. **overallScore removal** — many test fixtures reference compatibility sub-score `overallScore`; Story 4 must not break `computeCompatibility()` return type.
+3. ~~**overallScore removal**~~ — **Done** (Story 4); `computeCompatibility().overallScore` preserved.

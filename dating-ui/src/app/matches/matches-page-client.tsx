@@ -175,9 +175,7 @@ interface CompareResult {
   b?: { id: string; name: string };
   status?: 'READY' | 'NOT_ANALYZED';
   message?: string;
-  /** @deprecated Use finalScore instead. */
-  overall: number | null;
-  finalScore?: number | null;
+  finalScore: number | null;
   aToB?: number | null;
   bToA?: number | null;
   relationshipStyle?: number | null;
@@ -195,9 +193,7 @@ interface MatchListItem {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** Use finalScore for display; API returns engine finalScore. */
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   updatedAt: string;
 }
 
@@ -330,7 +326,7 @@ export default function MatchesPageClient() {
         setDecisionLayer(buildMatchDecisionInsights(sa, sb));
 
         const analyzed = result?.status !== 'NOT_ANALYZED';
-        const rawScore = result?.finalScore ?? result?.overall;
+        const rawScore = result?.finalScore;
         const compatibilityScore =
           typeof rawScore === 'number' && Number.isFinite(rawScore) ? rawScore : null;
         if (analyzed && compatibilityScore != null && sa != null && sb != null) {
@@ -362,7 +358,7 @@ export default function MatchesPageClient() {
     result?.matchId,
     result?.status,
     result?.finalScore,
-    result?.overall,
+    result?.finalScore,
   ]);
 
   async function handleSelectMatch(matchId: string) {
@@ -402,7 +398,7 @@ export default function MatchesPageClient() {
     aId.trim() !== bId.trim();
 
   const sortedMatchesList = useMemo(() => {
-    const score = (m: MatchListItem) => m.finalScore ?? m.overall;
+    const score = (m: MatchListItem) => m.finalScore;
     return [...matchesList].sort((a, b) => {
       const sa = score(a);
       const sb = score(b);
@@ -513,7 +509,7 @@ export default function MatchesPageClient() {
                         <td className="p-2 text-zinc-600 dark:text-zinc-400">
                           {m.a.name} / {m.b.name}
                         </td>
-                        <td className="p-2 font-medium">{m.finalScore ?? m.overall}</td>
+                        <td className="p-2 font-medium">{m.finalScore}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -665,7 +661,7 @@ export default function MatchesPageClient() {
                   <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100" data-score-source="api">
                     {result.status === 'NOT_ANALYZED'
                       ? '—'
-                      : (result.finalScore ?? result.overall)}
+                      : result.finalScore}
                   </p>
                   {result.status !== 'NOT_ANALYZED' && (
                     <ul className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">

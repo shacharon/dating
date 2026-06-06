@@ -10,6 +10,9 @@ import {
   Prisma,
 } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { hashConversationId } from '../analytics/hash-conversation-id';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -103,6 +106,7 @@ export class MeConversationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async list(sessionUserId: string): Promise<ConversationListResponseDto> {
@@ -248,6 +252,10 @@ export class MeConversationsService {
       `me conversations detail id=${conversationId} userId=${sessionUserId}`,
       ErrorCodes.ME_CONVERSATIONS_DETAIL_OK,
     );
+
+    this.analytics.track(sessionUserId, ProductAnalyticsEvents.CONVERSATION_OPENED, {
+      conversationIdHash: hashConversationId(conversationId),
+    });
 
     return {
       id: match.id,

@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { buildShortReason } from './match-short-reason';
+import { resolveEngineFinalScore } from './match-score.util';
 import type {
   MatchDebugDto,
   MatchExplainabilityDto,
@@ -97,7 +98,7 @@ export class MatchesApiController {
       );
 
     const items: MatchesApiItemDto[] = records.map((r) => {
-      const finalScore = r.finalScore ?? r.overall;
+      const finalScore = resolveEngineFinalScore(r);
       const lowCoverage =
         (r.infoFlags ?? []).includes('LOW_COVERAGE') ||
         (r.coveragePercent != null && r.coveragePercent < 50);

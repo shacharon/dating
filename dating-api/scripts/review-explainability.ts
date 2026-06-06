@@ -19,6 +19,7 @@ import {
 } from '../src/matches/explainability-review-heuristics';
 import type { MatchExplainabilityDto } from '../src/matches/match-explainability';
 import type { MatchRecordDto } from '../src/matches/match.types';
+import { resolveEngineFinalScore } from '../src/matches/match-score.util';
 
 const ROOT = process.cwd();
 const MATCHES_DIR =
@@ -38,7 +39,7 @@ function isRecord(x: unknown): x is MatchRecordDto {
     'matchId' in x &&
     'a' in x &&
     'b' in x &&
-    'overall' in x
+    ('finalScore' in x || 'overall' in x)
   );
 }
 
@@ -103,7 +104,7 @@ function chipHistogram(records: MatchRecordDto[]): Map<string, number> {
 
 function analyzeRecords(records: MatchRecordDto[]): ExplainabilityReviewRowResult[] {
   return records.map((rec) => {
-    const finalScore = rec.finalScore ?? rec.overall;
+    const finalScore = resolveEngineFinalScore(rec);
     return analyzeExplainabilityRow({
       matchId: rec.matchId,
       pairLabel: pairLabelFromRecord(rec.a.name, rec.b.name),
@@ -334,8 +335,8 @@ async function main(): Promise<void> {
   const topScoreWithEx = [...records]
     .filter((r) => r.explainability != null)
     .sort((a, b) => {
-      const sa = a.finalScore ?? a.overall;
-      const sb = b.finalScore ?? b.overall;
+      const sa = resolveEngineFinalScore(a);
+      const sb = resolveEngineFinalScore(b);
       if (sb !== sa) return sb - sa;
       return a.matchId.localeCompare(b.matchId);
     })
@@ -466,7 +467,7 @@ async function main(): Promise<void> {
     const row = analyzeExplainabilityRow({
       matchId: r.matchId,
       pairLabel: pairLabelFromRecord(r.a.name, r.b.name),
-      finalScore: r.finalScore ?? r.overall,
+      finalScore: resolveEngineFinalScore(r),
       compatibility: r.compatibility,
       friction: r.friction,
       explainability: r.explainability as MatchExplainabilityDto,
@@ -483,7 +484,7 @@ async function main(): Promise<void> {
     const row = analyzeExplainabilityRow({
       matchId: r.matchId,
       pairLabel: pairLabelFromRecord(r.a.name, r.b.name),
-      finalScore: r.finalScore ?? r.overall,
+      finalScore: resolveEngineFinalScore(r),
       compatibility: r.compatibility,
       friction: r.friction,
       explainability: r.explainability as MatchExplainabilityDto,

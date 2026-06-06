@@ -4,6 +4,7 @@ import {
   MessagingRealtimeHealthService,
   type RealtimeHealthSnapshot,
 } from '../messaging-realtime/messaging-realtime-health.service';
+import { SentryConfigService } from '../observability/sentry-config.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -12,11 +13,16 @@ describe('HealthController', () => {
     namespace: '/ws/messaging',
     socketIoPath: '/socket.io',
     redisAdapter: false,
+    wsRateLimitRedis: false,
     sessionCookieName: 'dating_session',
   };
 
   const healthServiceMock = {
     getSnapshot: jest.fn().mockReturnValue(snapshot),
+  };
+
+  const sentryConfigMock = {
+    sentryTestRouteEnabled: false,
   };
 
   beforeEach(async () => {
@@ -28,6 +34,7 @@ describe('HealthController', () => {
           provide: MessagingRealtimeHealthService,
           useValue: healthServiceMock,
         },
+        { provide: SentryConfigService, useValue: sentryConfigMock },
       ],
     }).compile();
 

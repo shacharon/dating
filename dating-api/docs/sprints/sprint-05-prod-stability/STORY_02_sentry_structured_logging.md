@@ -1,8 +1,10 @@
 # Story 2: Sentry + structured error logging
 
 **Sprint:** 5  
-**Status:** Not started  
-**Depends on:** —
+**Status:** Done (engineering gate — operator Sentry dashboard smoke pending)  
+**Closeout order:** 1 (start here)  
+**Depends on:** —  
+**Unblocks:** Sprint 7 Story 4 (funnel analytics)
 
 ---
 
@@ -20,14 +22,14 @@ There is no production error tracking today. WS auth failures, unhandled excepti
 
 ### Acceptance criteria
 
-- [ ] **API Sentry** — `@sentry/nestjs` (or `@sentry/node`) initialized in `main.ts` with env-gated DSN (`SENTRY_DSN`)
-- [ ] **UI Sentry** — `@sentry/nextjs` with env-gated DSN (`NEXT_PUBLIC_SENTRY_DSN`)
-- [ ] **No DSN in repo** — `.env.example` documents vars; secrets in deployment only
-- [ ] **WS errors captured** — gateway auth fail, rate limit, disconnect anomalies tagged with `messaging-realtime` context
-- [ ] **Existing structured logs preserved** — Sentry complements `StructuredObservabilityService`; does not replace error codes
-- [ ] **PII scrubbing** — no session tokens, cookies, or message body in Sentry payloads
-- [ ] **Sample rate** — configurable; default 1.0 in staging, lower in prod if needed
-- [ ] **Tests** — Sentry init skipped when DSN unset; smoke test that capture is wired (mock Sentry in unit test)
+- [x] **API Sentry** — `@sentry/node` initialized via `instrument.ts` (imported first in `main.ts`) with env-gated DSN (`SENTRY_DSN`)
+- [x] **UI Sentry** — `@sentry/nextjs` with env-gated DSN (`NEXT_PUBLIC_SENTRY_DSN`)
+- [x] **No DSN in repo** — `.env.example` documents vars; secrets in deployment only
+- [x] **WS errors captured** — gateway auth fail, rate limit, session invalid → Sentry warnings tagged `messaging-realtime` (routine disconnects: structured logs only)
+- [x] **Existing structured logs preserved** — Sentry complements `StructuredObservabilityService`; does not replace error codes
+- [x] **PII scrubbing** — no session tokens, cookies, or message body in Sentry payloads (`sentry-pii.ts` + UI `beforeSend`)
+- [x] **Sample rate** — configurable via `SENTRY_TRACES_SAMPLE_RATE` (default 0 dev; 0.1 prod documented in `PROD_STABILITY.md`)
+- [x] **Tests** — Sentry bridge no-op when DSN unset; PII scrub; health `sentry-test` route
 
 ### Out of scope (this story)
 
@@ -37,34 +39,56 @@ There is no production error tracking today. WS auth failures, unhandled excepti
 
 ---
 
-## Technical notes (guidance, not prescriptive)
+## Technical notes
 
-See `handoffs/STORY_02_sentry_structured_logging/agent-0-architect.md` after architect run.
-
-Key integration points:
-- `dating-api/src/main.ts` — global exception filter
-- `dating-api/src/messaging-realtime/messaging.gateway.ts` — capture unexpected errors
-- `dating-ui/next.config.ts` — Sentry webpack plugin (optional, env-gated)
-- `dating-ui/sentry.client.config.ts` / `sentry.server.config.ts`
+See `handoffs/STORY_02_sentry_structured_logging/agent-0-architect.md`.
 
 ---
 
 ## Definition of done
 
-- [ ] Sentry packages added to API + UI package.json
-- [ ] Init guarded by DSN presence (no-op locally without env)
-- [ ] `.env.example` updated
-- [ ] PROD_STABILITY.md lists Sentry env vars
-- [ ] Unit test: Sentry mock not called when DSN unset
-- [ ] Manual: trigger test error in staging → appears in Sentry project
+- [x] Sentry packages added to API + UI package.json
+- [x] Init guarded by DSN presence (no-op locally without env)
+- [x] `.env.example` updated
+- [x] PROD_STABILITY.md lists Sentry env vars
+- [x] Unit test: Sentry mock not called when DSN unset
+- [ ] Manual: trigger test error in staging → appears in Sentry project (**pending operator**)
 
 ---
 
-## Manual smoke
+## Shipped (2026-06-03)
 
-1. Set `SENTRY_DSN` on API staging → trigger 500 on a test route → event in Sentry  
+| Area | Deliverable |
+|------|-------------|
+| API init | `src/instrument.ts`, `SentryModule`, `SentryBridgeService` |
+| HTTP | `ObservabilityExceptionFilter` → Sentry on 5xx/fatal |
+| WS | Auth / rate limit / session invalid → `captureMessage` warnings |
+| Email | Send failure → `captureException` |
+| PII | `sentry-pii.ts` + UI scrub |
+| Smoke route | `GET /health/sentry-test` (non-prod default) |
+| UI | `instrumentation.ts`, client/server config, `global-error.tsx` |
+| Tests | **1255/1255** Jest pass |
+
+Handoffs: `handoffs/STORY_02_sentry_structured_logging/agent-*.md`
+
+---
+
+## Agent run
+
+```text
+--agent 0 sprint 5 story 2
+--agent 1 sprint 5 story 2
+--agent 2 sprint 5 story 2
+--agent 3 sprint 5 story 2
+```
+
+---
+
+## Manual smoke (operator)
+
+1. Set `SENTRY_DSN` on API staging → `GET /health/sentry-test` → event in Sentry  
 2. Set `NEXT_PUBLIC_SENTRY_DSN` on UI → trigger client error → event in Sentry  
-3. WS auth fail with invalid cookie → breadcrumb or tagged event (not raw cookie)  
+3. WS auth fail with invalid cookie → warning tagged `messaging-realtime`, no cookie in payload  
 4. Unset DSN locally → app starts normally, no Sentry network calls
 
 ---
@@ -75,3 +99,4 @@ Key integration points:
 |------|--------|
 | Alert rules | ops follow-up |
 | Product analytics events | Sprint 7 Story 4 |
+| Operator dashboard smoke | when DSN configured in staging/prod |

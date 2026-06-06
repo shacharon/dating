@@ -9,10 +9,16 @@ import type { App } from 'supertest/types';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { HealthController } from './health.controller';
 import { MessagingRealtimeHealthService } from '../messaging-realtime/messaging-realtime-health.service';
+import { MessagingWsRateLimitService } from '../messaging-realtime/messaging-ws-rate-limit.service';
+import { SentryConfigService } from '../observability/sentry-config.service';
 import {
   resetMessagingRedisAdapterBoundForTests,
   setMessagingRedisAdapterBound,
 } from '../messaging-realtime/messaging-realtime-redis-state';
+
+const wsRateLimitStub = {
+  isUsingRedisStore: jest.fn().mockReturnValue(false),
+};
 
 describe('health HTTP (integration)', () => {
   let app: INestApplication<App>;
@@ -23,8 +29,16 @@ describe('health HTTP (integration)', () => {
       providers: [
         MessagingRealtimeHealthService,
         {
+          provide: MessagingWsRateLimitService,
+          useValue: wsRateLimitStub,
+        },
+        {
           provide: AuthSessionConfigService,
           useValue: { sessionCookieName: 'dating_session' },
+        },
+        {
+          provide: SentryConfigService,
+          useValue: { sentryTestRouteEnabled: false },
         },
       ],
     }).compile();
@@ -63,6 +77,7 @@ describe('health HTTP (integration)', () => {
         namespace: '/ws/messaging',
         socketIoPath: '/socket.io',
         redisAdapter: false,
+        wsRateLimitRedis: false,
         sessionCookieName: 'dating_session',
       },
     });
@@ -77,5 +92,69 @@ describe('health HTTP (integration)', () => {
       .expect(200);
 
     expect(res.body.messaging.redisAdapter).toBe(true);
+  });
+});
+
+describe('health HTTP — sentry-test route', () => {
+  let app: INestApplication<App>;
+
+  afterAll(async () => {
+    if (app) {
+      await app.close();
+    }
+  });
+
+  it('GET /health/sentry-test returns 404 when route disabled', async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      controllers: [HealthController],
+      providers: [
+        MessagingRealtimeHealthService,
+        {
+          provide: MessagingWsRateLimitService,
+          useValue: wsRateLimitStub,
+        },
+        {
+          provide: AuthSessionConfigService,
+          useValue: { sessionCookieName: 'dating_session' },
+        },
+        {
+          provide: SentryConfigService,
+          useValue: { sentryTestRouteEnabled: false },
+        },
+      ],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+
+    await request(app.getHttpServer()).get('/health/sentry-test').expect(404);
+  });
+
+  it('GET /health/sentry-test returns 500 when route enabled', async () => {
+    await app?.close();
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      controllers: [HealthController],
+      providers: [
+        MessagingRealtimeHealthService,
+        {
+          provide: MessagingWsRateLimitService,
+          useValue: wsRateLimitStub,
+        },
+        {
+          provide: AuthSessionConfigService,
+          useValue: { sessionCookieName: 'dating_session' },
+        },
+        {
+          provide: SentryConfigService,
+          useValue: { sentryTestRouteEnabled: true },
+        },
+      ],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+
+    await request(app.getHttpServer()).get('/health/sentry-test').expect(500);
   });
 });

@@ -1,7 +1,8 @@
 # Story 3: LLM-derived context fields
 
 **Sprint:** 6  
-**Status:** Not started  
+**Status:** **Done** (engineering gate — 2026-06-03)  
+**Closeout order:** 7 (largest; do after 6.2 + 6.4)  
 **Depends on:** —
 
 ---
@@ -20,16 +21,16 @@
 
 ### Acceptance criteria
 
-- [ ] **Schema extension** — `evaluationJson` (or structured extraction output) includes:
+- [x] **Schema extension** — `evaluationJson` includes `derivedContext` v1:
   - `occupationClass`: enum (`STANDARD` | `SHIFT_UNPREDICTABLE` | `TRAVEL_HEAVY` | null)
   - `visibilityNeed`: number 0–10
   - `lifeStage`: number 0–10
-- [ ] **Extraction prompt updated** — LLM asked to infer these from profile text with definitions
-- [ ] **Zod validation** — new fields validated on persist; invalid → fallback defaults (5 for numeric, null for class)
-- [ ] **deriveContext reads LLM output first** — `deriveContextFromProfileTexts()` becomes fallback only when LLM fields absent (backward compat for old evaluations)
-- [ ] **Dealbreakers unchanged in structure** — `computeDealbreakers()` still receives `DerivedContext`; source of truth shifts upstream
-- [ ] **Backfill optional** — script or note for re-analyzing existing profiles (not blocking)
-- [ ] **Tests** — unit tests for new schema; integration test that analyzed profile populates context fields
+- [x] **Extraction prompt updated** — `DERIVED_CONTEXT_SYSTEM_PROMPT` in `evaluate-llm-prompts.ts`
+- [x] **Zod validation** — `LlmDerivedContextRawSchema` + `sanitizeDerivedContextForPersist`; invalid → defaults (5 / null)
+- [x] **deriveContext reads LLM output first** — `resolveDerivedContext()`; regex fallback when v1 absent
+- [x] **Dealbreakers unchanged in structure** — `computeDealbreakers()` unchanged
+- [x] **Backfill optional** — re-analyze via existing analyze path (not blocking)
+- [x] **Tests** — sanitize, deriveContext, evaluate.service, match-engine specs
 
 ### Out of scope (this story)
 
@@ -39,28 +40,40 @@
 
 ---
 
-## Technical notes (guidance, not prescriptive)
+## Shipped (engineering)
 
-See `handoffs/STORY_03_llm_derived_context/agent-0-architect.md` after architect run.
+| Deliverable | Detail |
+|-------------|--------|
+| `EvaluateBatchResult.derivedContext` | v1 sidecar on `evaluationJson` |
+| `inferDerivedContext()` | LLM call in `evaluateBatch` (purpose `evaluate-derived-context`) |
+| `resolveDerivedContext()` | LLM-first; `deriveContextFromProfileTexts` legacy fallback |
+| `match-engine.ts` | Uses `resolveDerivedContext(evaluation, texts)` |
+| Docs | `match-engine-overview.md` source-order bullet |
 
-Key files:
-- `dating-api/src/extraction/` — prompt + persistence
-- `dating-api/src/domain/deriveContext.ts` — fallback regex (keep temporarily)
-- `dating-api/src/domain/dealbreakers.ts` — consumer (no change expected)
-- `dating-api/src/evaluate/` — may need to pass context into match pipeline
-
-Enum values must match existing dealbreaker expectations:
-- `SHIFT_UNPREDICTABLE`, `TRAVEL_HEAVY` (already used in dealbreakers.ts rule #2)
+**Backward compat:** Legacy evaluations without `derivedContext` use regex at compare time until re-analyze.
 
 ---
 
 ## Definition of done
 
-- [ ] LLM extracts three context fields on new analyses
-- [ ] Match pipeline uses LLM fields when present
-- [ ] Regex fallback works for legacy evaluations
-- [ ] Tests pass
-- [ ] Extraction prompt documented
+- [x] LLM extracts three context fields on new analyses
+- [x] Match pipeline uses LLM fields when present
+- [x] Regex fallback works for legacy evaluations
+- [x] Tests pass (**1298/1298**)
+- [x] Prompt documented in `evaluate-llm-prompts.ts`
+
+---
+
+## Agent run
+
+```text
+--agent 0 sprint 6 story 3   ✅
+--agent 1 sprint 6 story 3   ✅
+--agent 2 sprint 6 story 3   ✅
+--agent 3 sprint 6 story 3   ✅
+```
+
+Handoffs: `handoffs/STORY_03_llm_derived_context/agent-*.md`
 
 ---
 
@@ -77,4 +90,4 @@ Enum values must match existing dealbreaker expectations:
 | Item | Target |
 |------|--------|
 | Remove regex fallback | after backfill |
-| Batch re-analyze existing profiles | ops script |
+| Batch re-analyze existing profiles | operator (existing analyze endpoint) |

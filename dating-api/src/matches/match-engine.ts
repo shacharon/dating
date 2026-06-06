@@ -22,7 +22,7 @@ import {
 import type { EnrichedSignals } from '../engine/tension-rules';
 import { compatibility as compatibilityFormula } from '../engine/scoring';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
-import { deriveContextFromProfileTexts } from '../domain/deriveContext';
+import { resolveDerivedContext } from '../domain/deriveContext';
 import {
   applyDealbreakerCap,
   computeDealbreakers,
@@ -34,7 +34,9 @@ import {
   type RelationshipBalanceResult,
 } from '../domain/relationshipBalance';
 import {
+  applySparseFinalScoreCap,
   computeConfidenceAndInfoFlags,
+  shouldApplySparseFinalScoreCap,
   type CoverageConfidenceState,
   type MatchInfoFlag,
 } from './coverage-policy';
@@ -101,8 +103,6 @@ export interface TensionMatrixEntryDto {
 }
 
 export interface CompareResultDto {
-  /** @deprecated Use finalScore instead. Kept for backward compatibility. */
-  overallScore: number;
   aToB: number;
   bToA: number;
   relationshipStyle: number;
@@ -110,6 +110,8 @@ export interface CompareResultDto {
   frictionRisk: number;
   /** New scoring model */
   compatibility: number;
+  /** Tier-1 values alignment (0–100, uncapped); blend uses valuesAlignmentForCompat (cap 85). */
+  valuesAlignment: number;
   finalScore: number;
   /** Raw score before final clamp path (compatibility − friction penalty ± edge boost; no coverage multiplier). */
   rawScore: number;
@@ -162,7 +164,7 @@ export interface CompareNotAnalyzedResultDto {
   relationshipFit: null;
   coverage: null;
   friction: null;
-  overall: null;
+  finalScore: null;
 }
 
 export interface CompareInsufficientDataResultDto {
@@ -173,7 +175,7 @@ export interface CompareInsufficientDataResultDto {
   relationshipFit: null;
   coverage: null;
   friction: null;
-  overall: null;
+  finalScore: null;
 }
 
 export type CompareGuardFailureResultDto =
@@ -204,23 +206,6 @@ function clampTo100(x: number): number {
   return Math.max(0, Math.min(100, Math.round(x)));
 }
 
-/** Profile IDs treated as low-information / stub (e.g. SHORT). Pairs involving one of these get a deterministic score cap to avoid over-scoring. */
-const LOW_INFO_PROFILE_IDS = new Set<string>(['19']);
-/** Max finalScore when either profile is low-info. Chosen so BROKEN golden pairs (expected 49–53) can land in band. */
-const LOW_INFO_FINAL_SCORE_CAP = 55;
-
-function applyLowInfoCap(
-  finalScoreClamped: number,
-  profileAId: string,
-  profileBId: string,
-): number {
-  const isLowInfo =
-    LOW_INFO_PROFILE_IDS.has(profileAId) ||
-    LOW_INFO_PROFILE_IDS.has(profileBId);
-  if (!isLowInfo) return finalScoreClamped;
-  return Math.min(finalScoreClamped, LOW_INFO_FINAL_SCORE_CAP);
-}
-
 export function hasAnalyzedSignals(profile: ProfileJsonPayload): boolean {
   if (isEvaluationPending(profile)) return false;
   return hasNumericSelfSignals(profile);
@@ -232,7 +217,7 @@ const GUARD_NULL_FIELDS = {
   relationshipFit: null,
   coverage: null,
   friction: null,
-  overall: null,
+  finalScore: null,
 } as const;
 
 export function compareWithStatus(
@@ -272,8 +257,8 @@ function shouldLogMatchDebug(): boolean {
 interface ProfileContextsAndEnriched {
   signalsA: Record<string, number | null>;
   signalsB: Record<string, number | null>;
-  ctxA: ReturnType<typeof deriveContextFromProfileTexts>;
-  ctxB: ReturnType<typeof deriveContextFromProfileTexts>;
+  ctxA: ReturnType<typeof resolveDerivedContext>;
+  ctxB: ReturnType<typeof resolveDerivedContext>;
   enrichedA: EnrichedSignals;
   enrichedB: EnrichedSignals;
 }
@@ -284,8 +269,8 @@ function deriveProfileContextsAndEnrichedSignals(
 ): ProfileContextsAndEnriched {
   const signalsA = profileA.evaluation?.self?.signals ?? {};
   const signalsB = profileB.evaluation?.self?.signals ?? {};
-  const ctxA = deriveContextFromProfileTexts(profileA.texts ?? {});
-  const ctxB = deriveContextFromProfileTexts(profileB.texts ?? {});
+  const ctxA = resolveDerivedContext(profileA.evaluation, profileA.texts ?? {});
+  const ctxB = resolveDerivedContext(profileB.evaluation, profileB.texts ?? {});
   const enrichedA = applyKeywordTriggers(signalsA, {
     aboutMe: profileA.texts?.aboutMe,
     aboutRelationship: profileA.texts?.aboutRelationship,
@@ -306,9 +291,9 @@ interface DealbreakersAndBalance {
 
 function computeDealbreakersAndBalance(
   signalsA: Record<string, number | null>,
-  ctxA: ReturnType<typeof deriveContextFromProfileTexts>,
+  ctxA: ReturnType<typeof resolveDerivedContext>,
   signalsB: Record<string, number | null>,
-  ctxB: ReturnType<typeof deriveContextFromProfileTexts>,
+  ctxB: ReturnType<typeof resolveDerivedContext>,
 ): DealbreakersAndBalance {
   const dealbreakers = computeDealbreakers({
     a: { signals: signalsA as CoreSignals, ctx: ctxA },
@@ -560,8 +545,8 @@ function buildDebugDto(
 function buildFinalResultDto(
   profileA: ProfileJsonPayload,
   profileB: ProfileJsonPayload,
-  ctxA: ReturnType<typeof deriveContextFromProfileTexts>,
-  ctxB: ReturnType<typeof deriveContextFromProfileTexts>,
+  ctxA: ReturnType<typeof resolveDerivedContext>,
+  ctxB: ReturnType<typeof resolveDerivedContext>,
   dealbreakers: Dealbreaker[],
   balance: RelationshipBalanceResult,
   compatAB: CompatibilityResult,
@@ -569,6 +554,7 @@ function buildFinalResultDto(
   bToA: number,
   coveragePercentValue: number,
   relationshipFit: number,
+  valuesAlignment: number,
   friction: number,
   frictionRisk: number,
   compatibilityValue: number,
@@ -599,6 +585,7 @@ function buildFinalResultDto(
     'hard_cap_90',
   ];
   if (preCapFinalScore !== finalScoreValue) provenance.push('dealbreaker_cap');
+  if (caps.sparseFinalCapApplied) provenance.push('sparse_final_cap');
 
   const debug = buildDebugDto(
     raw,
@@ -672,13 +659,13 @@ function buildFinalResultDto(
   });
 
   return {
-    overallScore: finalScoreClamped,
     aToB: displayAToB,
     bToA: displayBToA,
     relationshipStyle: relationshipFit,
     coverage: coveragePercentValue,
     frictionRisk,
     compatibility: compatibilityValue,
+    valuesAlignment,
     finalScore: finalScoreClamped,
     rawScore: raw,
     friction,
@@ -765,10 +752,10 @@ export function compare(
     step2.dealbreakers,
   );
   let finalScoreClamped = Math.min(90, clampTo100(finalScoreAfterDealbreakers));
-  finalScoreClamped = applyLowInfoCap(
+  finalScoreClamped = applySparseFinalScoreCap(
     finalScoreClamped,
-    profileA.id,
-    profileB.id,
+    step3.coveragePercentValue,
+    step3.minPresent,
   );
 
   const step5ForDto: FrictionAndPenaltiesState = {
@@ -780,6 +767,10 @@ export function compare(
     finalScoreBeforeSparseCalibration: undefined,
     finalScoreClamped,
     preCapFinalScore,
+    sparseFinalCapApplied: shouldApplySparseFinalScoreCap(
+      step3.coveragePercentValue,
+      step3.minPresent,
+    ),
   };
   return buildFinalResultDto(
     profileA,
@@ -793,6 +784,7 @@ export function compare(
     step3.bToA,
     step3.coveragePercentValue,
     step6.relationshipFit,
+    step6.valuesAlignment,
     step4.friction,
     step4.frictionRisk,
     step7Compat,

@@ -1,8 +1,12 @@
+import type { DerivedContextV1 } from '../evaluate/evaluate-batch.types';
+
 /**
  * Derived context: computed or aggregated view of extracted signals for downstream use.
  * Does not introduce new extraction keys; uses only existing signal keys and standard aggregates.
  * No framework decorators.
  */
+
+export type OccupationClass = DerivedContextV1['occupationClass'];
 
 /** Signal key as used in extraction (must match EXTRACTION_SIGNAL_KEYS). */
 export type SignalKey = string;
@@ -118,4 +122,35 @@ export function deriveContextFromProfileTexts(
     visibilityNeed,
     lifeStage,
   };
+}
+
+/** STANDARD and null → undefined for dealbreaker rule #2 (regex never sets STANDARD). */
+export function mapOccupationForDealbreakers(
+  occ: DerivedContextV1['occupationClass'],
+): string | undefined {
+  if (occ === 'SHIFT_UNPREDICTABLE' || occ === 'TRAVEL_HEAVY') return occ;
+  return undefined;
+}
+
+/** Evaluation with optional persisted LLM derived context. */
+export type EvaluationWithDerivedContext = {
+  derivedContext?: DerivedContextV1;
+};
+
+/**
+ * Prefer LLM-derived context from evaluationJson when present; else keyword regex fallback.
+ */
+export function resolveDerivedContext(
+  evaluation: EvaluationWithDerivedContext | undefined,
+  texts: ProfileTexts,
+): DerivedContext {
+  const stored = evaluation?.derivedContext;
+  if (stored?.version === 'v1') {
+    return {
+      occupationClass: mapOccupationForDealbreakers(stored.occupationClass),
+      visibilityNeed: stored.visibilityNeed,
+      lifeStage: stored.lifeStage,
+    };
+  }
+  return deriveContextFromProfileTexts(texts);
 }

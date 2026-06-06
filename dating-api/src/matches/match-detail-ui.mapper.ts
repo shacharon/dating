@@ -9,6 +9,7 @@ import type {
   ChildrenUnsureDirectionsDto,
   MatchRecordDto,
 } from './match.types';
+import { resolveEngineFinalScore } from './match-score.util';
 
 /** Detail UI HG triple — local structural type so ESLint/TS never sees a broken re-exported symbol. */
 type HolyGrailDetailSlice = Readonly<{
@@ -115,7 +116,7 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
   }
 
   if (out.length < 2) {
-    const finalScore = m.finalScore ?? m.overall;
+    const finalScore = resolveEngineFinalScore(m);
     const sr = buildShortReason({
       finalScore,
       dealbreakers: m.dealbreakers ?? [],
@@ -138,7 +139,7 @@ export function mapMatchRecordToDetailUi(
 ): MatchDetailUiDto {
   const expl = effectiveExplainability(m);
   const rec = m.recommendation;
-  const finalScore = m.finalScore ?? m.overall;
+  const finalScore = resolveEngineFinalScore(m);
 
   const primaryTakeaway =
     rec?.primaryTakeaway ??

@@ -116,7 +116,7 @@ describe('MatchesService.compare', () => {
     if (result.status === 'INSUFFICIENT_DATA') {
       expect(result.match.message).toContain('empty or non-numeric');
       expect(result.match.compatibility).toBeNull();
-      expect(result.match.overall).toBeNull();
+      expect(result.match.finalScore).toBeNull();
       expect(result.match.finalScore).toBeNull();
     }
   });

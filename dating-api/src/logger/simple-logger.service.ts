@@ -265,7 +265,14 @@ export class SimpleLogger implements LoggerService {
    * Plain engine logs stay on {@link writeLog} only.
    */
   emitStructured(line: StructuredLogLine): void {
-    const jsonLine = JSON.stringify(line);
+    this.emitJsonLine(line);
+  }
+
+  /**
+   * One JSON object per line (product analytics, etc.) — same stdout/file sink as observability.
+   */
+  emitJsonLine(payload: Record<string, unknown>): void {
+    const jsonLine = JSON.stringify(payload);
     console.log(jsonLine);
     this.tryAppendStructuredToFile(jsonLine);
   }

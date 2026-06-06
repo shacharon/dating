@@ -99,6 +99,6 @@ Handoffs: `handoffs/<story-slug>/agent-*.md`
 ## Open risks (rollout)
 
 1. **Cookie on WS through the Next proxy** — confirm browser 101 in manual smoke.  
-2. **Inbound rate limit** — in-memory per API process (not shared across replicas).  
+2. **Inbound rate limit** — in-memory per process when `REDIS_URL` unset; **shared via Redis** when scaled (Sprint 7 Story 3).  
 3. **Multi-instance** — require `REDIS_URL` when replicas > 1.  
 4. **Manual smoke** — pending user verification before prod flag flip.

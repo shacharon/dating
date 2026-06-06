@@ -9,8 +9,11 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Namespace, Socket } from 'socket.io';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { MeConversationsService } from '../me-profile/me-conversations.service';
 import {
   MESSAGING_EVENT_CONVERSATION_SUBSCRIBE,
@@ -62,10 +65,12 @@ export class MessagingGateway
     private readonly wsAuth: MessagingWsAuthService,
     private readonly publisher: RealtimePublisher,
     private readonly obs: StructuredObservabilityService,
+    private readonly sentry: SentryBridgeService,
     private readonly conversations: MeConversationsService,
     private readonly rateLimit: MessagingWsRateLimitService,
     private readonly wsSession: MessagingWsSessionService,
     private readonly socketRegistry: MessagingSocketRegistry,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   afterInit(): void {
@@ -100,6 +105,13 @@ export class MessagingGateway
       `messaging ws connect userId=${result.userId} sessionId=${result.sessionId} socketId=${client.id} active=${this.socketRegistry.activeConnectionCount()}`,
       ErrorCodes.MESSAGING_WS_CONNECT_OK,
     );
+    this.analytics.track(
+      result.userId,
+      ProductAnalyticsEvents.MESSAGING_WS_CONNECTED,
+      {
+        activeConnections: this.socketRegistry.activeConnectionCount(),
+      },
+    );
   }
 
   handleDisconnect(client: Socket): void {
@@ -114,6 +126,15 @@ export class MessagingGateway
       `messaging ws disconnect userId=${userId} sessionId=${sessionId} socketId=${client.id} active=${this.socketRegistry.activeConnectionCount()}`,
       ErrorCodes.MESSAGING_WS_DISCONNECT_OK,
     );
+    if (data?.userId) {
+      this.analytics.track(
+        data.userId,
+        ProductAnalyticsEvents.MESSAGING_WS_DISCONNECTED,
+        {
+          activeConnections: this.socketRegistry.activeConnectionCount(),
+        },
+      );
+    }
   }
 
   @SubscribeMessage(MESSAGING_EVENT_CONVERSATION_SUBSCRIBE)
@@ -121,7 +142,7 @@ export class MessagingGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { conversationId?: string },
   ): Promise<void> {
-    if (!this.guardInbound(client)) {
+    if (!(await this.guardInbound(client))) {
       return;
     }
 
@@ -165,7 +186,7 @@ export class MessagingGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { conversationId?: string },
   ): Promise<void> {
-    if (!this.guardInbound(client)) {
+    if (!(await this.guardInbound(client))) {
       return;
     }
 
@@ -177,7 +198,7 @@ export class MessagingGateway
     getSubscribedIds(client).delete(conversationId);
   }
 
-  private guardInbound(client: Socket): boolean {
+  private async guardInbound(client: Socket): Promise<boolean> {
     const data = client.data as MessagingSocketData | undefined;
     if (!data?.userId) {
       client.disconnect(true);
@@ -185,14 +206,21 @@ export class MessagingGateway
     }
 
     try {
-      this.rateLimit.assertCanReceive(data.userId);
-      this.rateLimit.recordReceive(data.userId);
+      await this.rateLimit.consumeInboundSlot(data.userId);
       return true;
     } catch (e) {
       if (e instanceof WsRateLimitExceededError) {
         this.obs.trace(
           `messaging ws rate limited userId=${data.userId} socketId=${client.id}`,
           ErrorCodes.MESSAGING_WS_RATE_LIMITED,
+        );
+        this.sentry.captureMessage(
+          `messaging ws rate limited userId=${data.userId}`,
+          {
+            errorCode: ErrorCodes.MESSAGING_WS_RATE_LIMITED,
+            tags: { subsystem: 'messaging-realtime' },
+            level: 'warning',
+          },
         );
         client.disconnect(true);
         return false;
@@ -211,6 +239,14 @@ export class MessagingGateway
           this.obs.trace(
             `messaging ws session invalid userId=${data.userId} sessionId=${data.sessionId} socketId=${client.id}`,
             ErrorCodes.MESSAGING_WS_SESSION_INVALIDATED,
+          );
+          this.sentry.captureMessage(
+            `messaging ws session invalid userId=${data.userId}`,
+            {
+              errorCode: ErrorCodes.MESSAGING_WS_SESSION_INVALIDATED,
+              tags: { subsystem: 'messaging-realtime' },
+              level: 'warning',
+            },
           );
           clearSessionCheckTimer(client);
           client.disconnect(true);

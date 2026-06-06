@@ -9,7 +9,7 @@ function row(p: Partial<MatchListItemDto> & Pick<MatchListItemDto, 'matchId'>): 
   return {
     a: { id: 'a', name: 'A' },
     b: { id: 'b', name: 'B' },
-    overall: p.overall ?? 50,
+    finalScore: p.finalScore ?? 50,
     updatedAt: '2020-01-01T00:00:00.000Z',
     dealbreakers: p.dealbreakers ?? [],
     shortReason: 'x',

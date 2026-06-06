@@ -1,3 +1,4 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { RedisIoAdapter } from './messaging-realtime/redis-io.adapter';
 import { ConfigService } from '@nestjs/config';

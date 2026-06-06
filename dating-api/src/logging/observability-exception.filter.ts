@@ -5,6 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core';
+import { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { ErrorCodes } from './error-codes';
 import { isHttpExceptionObservabilityLogged } from './observability-http.exception';
 import { StructuredObservabilityService } from './structured-observability.service';
@@ -13,6 +14,7 @@ import { StructuredObservabilityService } from './structured-observability.servi
 export class ObservabilityExceptionFilter extends BaseExceptionFilter {
   constructor(
     private readonly obs: StructuredObservabilityService,
+    private readonly sentry: SentryBridgeService,
     httpAdapterHost: HttpAdapterHost,
   ) {
     super(httpAdapterHost.httpAdapter);
@@ -29,6 +31,10 @@ export class ObservabilityExceptionFilter extends BaseExceptionFilter {
           `HttpException status=${status}`,
           exception,
         );
+        this.sentry.captureException(exception, {
+          errorCode: ErrorCodes.HTTP_EXCEPTION,
+          tags: { subsystem: 'http', httpStatus: String(status) },
+        });
       }
     } else {
       this.obs.fatal(
@@ -38,6 +44,10 @@ export class ObservabilityExceptionFilter extends BaseExceptionFilter {
         ErrorCodes.HTTP_UNHANDLED,
         exception,
       );
+      this.sentry.captureException(exception, {
+        errorCode: ErrorCodes.HTTP_UNHANDLED,
+        tags: { subsystem: 'http' },
+      });
     }
     super.catch(exception, host);
   }

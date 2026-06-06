@@ -3,6 +3,8 @@ import { MatchActionType, MutualMatchStatus } from '@prisma/client';
 import { MeMatchActionsService } from './me-match-actions.service';
 import type { MeMatchesService } from './me-matches.service';
 import type { MutualMatchesService } from './mutual-matches.service';
+import type { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import type { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -25,6 +27,10 @@ describe('MeMatchActionsService', () => {
     notifyNewMutualMatchBestEffort: jest.fn().mockResolvedValue(undefined),
   } as unknown as MutualMatchEmailService;
 
+  const analytics = {
+    track: jest.fn(),
+  } as unknown as AnalyticsService;
+
   let service: MeMatchActionsService;
 
   beforeEach(() => {
@@ -37,6 +43,7 @@ describe('MeMatchActionsService', () => {
       meMatches,
       mutualMatches,
       mutualMatchEmail,
+      analytics,
     );
   });
 
@@ -183,6 +190,11 @@ describe('MeMatchActionsService', () => {
       'target-user',
       prisma,
     );
+    expect(analytics.track).toHaveBeenCalledWith(
+      'actor-1',
+      ProductAnalyticsEvents.MATCH_ACTION,
+      { action: 'like', candidateProfileId: 'prof-cand' },
+    );
   });
 
   it('returns mutualMatch true and conversationId when detection returns ACTIVE row', async () => {
@@ -226,6 +238,16 @@ describe('MeMatchActionsService', () => {
     expect(mutualMatchEmail.notifyNewMutualMatchBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'mutual_row_1' }),
     );
+    expect(analytics.track).toHaveBeenCalledWith(
+      'actor-1',
+      ProductAnalyticsEvents.MATCH_MUTUAL_CREATED,
+      { mutualMatchId: 'mutual_row_1', otherUserId: 'target-user' },
+    );
+    expect(analytics.track).toHaveBeenCalledWith(
+      'target-user',
+      ProductAnalyticsEvents.MATCH_MUTUAL_CREATED,
+      { mutualMatchId: 'mutual_row_1', otherUserId: 'actor-1' },
+    );
   });
 
   it('does not notify email when mutual match already existed', async () => {
@@ -258,6 +280,11 @@ describe('MeMatchActionsService', () => {
     await service.createAction('actor-1', 'prof-cand', MatchActionType.LIKE);
 
     expect(mutualMatchEmail.notifyNewMutualMatchBestEffort).not.toHaveBeenCalled();
+    expect(analytics.track).not.toHaveBeenCalledWith(
+      expect.anything(),
+      ProductAnalyticsEvents.MATCH_MUTUAL_CREATED,
+      expect.anything(),
+    );
   });
 
   it('returns mutualMatch false when detection returns UNMATCHED row', async () => {
@@ -389,6 +416,11 @@ describe('MeMatchActionsService', () => {
         },
       },
     });
+    expect(analytics.track).toHaveBeenCalledWith(
+      'actor-1',
+      ProductAnalyticsEvents.MATCH_ACTION,
+      { action: 'undo', candidateProfileId: 'prof-cand' },
+    );
   });
 
   it('throws NotFoundException when no row to undo', async () => {

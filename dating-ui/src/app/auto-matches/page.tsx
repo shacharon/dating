@@ -25,8 +25,7 @@ interface MatchIndexItem {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   coverage: number;
   frictionRisk: number;
   whyTop: WhyTopEntry[];
@@ -202,7 +201,7 @@ export default function AutoMatchesPage() {
                         <span className="font-medium">{item.b.name}</span>
                       </td>
                       <td className="p-3 font-medium tabular-nums">
-                        {item.finalScore ?? item.overall}
+                        {item.finalScore}
                       </td>
                       <td className="max-w-[240px] p-3 text-zinc-600 dark:text-zinc-400">
                         {formatWhy(item)}

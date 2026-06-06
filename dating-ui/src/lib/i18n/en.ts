@@ -24,4 +24,9 @@ export const enCopy: AppCopySchema = {
     storyTitle: "Step 2 — Your story",
     storySubtitle: "Save a draft, or finish to submit your profile for analysis.",
   },
+  notifications: {
+    messageToast: (name: string) => `${name} sent you a message`,
+    messageToastAction: "View",
+    messageToastDismiss: "Dismiss",
+  },
 };

@@ -39,7 +39,7 @@ Assumes both profiles are scoreable (callers that skip guards must ensure this).
 Stages are applied in order:
 
 1. **Contexts & enriched signals** — keyword triggers on texts; raw + enriched signal maps.
-2. **Dealbreakers & relationship balance** — `computeDealbreakers`, `computeRelationshipBalance` (tier GREEN / YELLOW / RED).
+2. **Dealbreakers & relationship balance** — `computeDealbreakers`, `computeRelationshipBalance` (tier GREEN / YELLOW / RED). **Emotional depth:** `EMOTIONAL_DEPTH_FLOOR` fires on **directional** mismatch (one partner ≥ 8, other ≤ 2), not when both are low — reserved/pragmatic pairs are not dealbroken. The separate tension rule `emotional_depth_gap` (|Δ| ≥ 4) may still add friction. **Values blend:** `valuesAlignment` is weighted at **15%** in compatibility (`engine/scoring.ts`); blend input uses `valuesAlignmentForCompat` capped at 85.
 3. **Directional compatibility** — `computeCompatibility` each direction → `aToB`, `bToA`; **coverage %** = comparable signal keys / total keys.
 4. **Asymmetry / low-evidence friction floor** — scales directionals when asymmetric profiles; may raise friction floor from balance tier or low coverage; builds **tension matrix** from `computeFriction`.
 5. **Relationship fit & values alignment** — from product scores + signals; tier can nudge relationship fit.
@@ -47,7 +47,7 @@ Stages are applied in order:
 7. **Confidence & flags** — from coverage only (`coverageFactor`, `scoreCoverageFactor` for **display/metadata**, `LOW_COVERAGE` / `LOW_CONFIDENCE`). **Extra rule:** if **coverage &lt; 25%**, **confidence is capped at 0.75** for the response.
 8. **Friction penalty & pre-raw score** — see §4.
 9. **Edge boost** — if **friction ≤ 1** and **compatibility ∈ [70, 75]** → **+2** on raw before clamps.
-10. **Clamp 0–100** → **dealbreaker cap** → **hard cap 90** → **low-info profile cap** → DTO assembly (directional display calibration for **display** `aToB`/`bToA` only).
+10. **Clamp 0–100** → **dealbreaker cap** → **hard cap 90** → **sparse coverage final cap** → DTO assembly (directional display calibration for **display** `aToB`/`bToA` only).
 
 **Removed from final score path (vs older builds):** multiplying the score by `scoreCoverageFactor`, score stretch, top-end boost, and sparse-match score multipliers. Those concepts do **not** apply to `finalScore` anymore.
 
@@ -58,7 +58,7 @@ Stages are applied in order:
 ### Compatibility (blended)
 
 \[
-\text{compat} = 0.35\cdot aToB + 0.35\cdot bToA + 0.25\cdot relationshipFit + 0.05\cdot valuesAlignment
+\text{compat} = 0.30\cdot aToB + 0.30\cdot bToA + 0.25\cdot relationshipFit + 0.15\cdot valuesAlignment
 \]
 
 (clamped / shaped by coverage ceiling and nuance steps in code.)
@@ -84,7 +84,7 @@ i.e. **`rawScore(compatibility, 1, adjustedFrictionPenalty)`** — the second ar
 2. **`preCapFinalScore`** = round clamp to **[0, 100]**.
 3. **`applyDealbreakerCap`** — HARD caps, PENALTY/WARNING deductions (`domain/dealbreakers.ts`).
 4. **`finalScore`** = `min(90, clamp 0–100)`.
-5. **Low-info cap:** if either profile id is in **`LOW_INFO_PROFILE_IDS`** (currently **`19`** / SHORT stub) → `finalScore = min(finalScore, 55)`.
+5. **Sparse final cap:** if **`coveragePercent < 50`** OR **`minPresent <= 5`** (sparser profile has ≤5 of 14 self signals) → `finalScore = min(finalScore, 55)`. Policy in `coverage-policy.ts`.
 
 ### `rawScore` field on DTO
 
@@ -105,11 +105,12 @@ Value **after** friction subtraction and **after** the +2 edge boost, **before**
 
 ## 6. Outputs (`CompareResultDto`)
 
-- **Scores:** `finalScore`, `overallScore` (= `finalScore`), `rawScore`, `compatibility`.
+- **Scores:** `finalScore` (canonical headline score), `rawScore`, `compatibility`.
 - **Directionals:** `aToB`, `bToA` (may be display-calibrated for UX; core math uses internal directionals earlier).
 - **Risk / structure:** `friction`, `frictionPenalty`, `frictionRisk`, `tensionMatrix`, `tensions`, `alignments`.
 - **Meta:** `coverage`, `coveragePercent`, `confidence`, `scoreCoverageFactor`, `coverageFactor`, `infoFlags`, `relationshipStyle`.
 - **Domain:** `dealbreakers`, `balance`, `derived` (per-profile context).
+- **Derived context** (`occupationClass`, `visibilityNeed`, `lifeStage`): use `evaluation.derivedContext` v1 when present (LLM at analyze time); else `deriveContextFromProfileTexts(texts)` keyword fallback for legacy evaluations.
 - **Debug:** `debug` (penalties, bonuses, provenance strings, etc.).
 - **`explainability`:** deterministic UI copy only — `positiveChips` (≤3), optional `tensionChip` if `friction >= 3`, `reasonShort` (one sentence). Built in `match-explainability.ts`; **does not** affect scoring.
 - **`finalScoreBeforeSparseCalibration`:** **unused** in this version (undefined) — kept optional on type for older clients.
@@ -122,7 +123,7 @@ Value **after** friction subtraction and **after** the +2 edge boost, **before**
 2. **Sparse or partial data** lowers **confidence** and sets **flags**, rather than silently crushing the score with a coverage multiplier.
 3. **Friction** uses a **fixed, documented** penalty curve + relief rules; not re-derived from coverage.
 4. **Dealbreakers** remain a **hard/soft cap layer** after the continuous score.
-5. **Global ceiling 90** on normal matches; **stub profile 19** capped at **55** to avoid fake highs.
+5. **Global ceiling 90** on normal matches; **sparse pairs** (low coverage or ≤5 signals on sparser side) capped at **55** to avoid fake highs.
 6. **Deterministic** — same inputs → same outputs; no LLM inside the engine.
 
 ---
@@ -152,4 +153,4 @@ Value **after** friction subtraction and **after** the +2 edge boost, **before**
 
 ---
 
-*Last aligned with production `match-engine.ts` scoring path: compat − friction (+ edge), dealbreakers, cap 90, low-info cap, coverage → confidence only.*
+*Last aligned with production `match-engine.ts` scoring path: compat − friction (+ edge), dealbreakers, cap 90, sparse final cap, coverage → confidence only.*

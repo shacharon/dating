@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ErrorCodes, type ErrorCode } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailProviderResolver } from './email-provider.resolver';
 import { EmailUnsubscribeTokenService } from './email-unsubscribe-token.service';
@@ -12,6 +13,7 @@ export class EmailNotificationService {
     private readonly providerResolver: EmailProviderResolver,
     private readonly unsubscribeTokens: EmailUnsubscribeTokenService,
     private readonly obs: StructuredObservabilityService,
+    private readonly sentry: SentryBridgeService,
   ) {}
 
   async sendTransactionalBestEffort(params: {
@@ -54,6 +56,10 @@ export class EmailNotificationService {
         params.failCode,
         err,
       );
+      this.sentry.captureException(err, {
+        errorCode: params.failCode,
+        tags: { subsystem: 'notifications' },
+      });
     }
   }
 }

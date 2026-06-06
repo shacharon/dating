@@ -24,6 +24,15 @@ If `REDIS_URL` is unset:
 
 - Run **one** API replica for correct WS fan-out, **or**
 - Use load-balancer sticky sessions (fragile); emits from instance A will not reach users connected to instance B.
+- Inbound WS rate limits use **in-memory** counters per process (30 events / 60s per user).
+
+## Multi-instance (`REDIS_URL` set)
+
+- Socket.io uses the Redis adapter for cross-replica emits.
+- **Inbound WS rate limits are shared** via Redis keys `ws:ratelimit:<userId>` (default **30 events / 60s** per user globally).
+- Optional env: `WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW`, `WS_INBOUND_RATE_LIMIT_WINDOW_MS`.
+- If Redis is unavailable at runtime, rate limiting **degrades fail-open** (events allowed; `ws_rate_limit_redis_degraded` warning logged) — fix Redis rather than blocking chat.
+- `/health` reports `messaging.wsRateLimitRedis` when the Redis-backed limiter is active.
 
 ## Smoke (Stories 1–6)
 

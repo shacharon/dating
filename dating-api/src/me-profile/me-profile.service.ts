@@ -17,6 +17,8 @@ import {
 } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import { markHttpExceptionObservabilityLogged } from '../logging/observability-http.exception';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
@@ -361,6 +363,7 @@ export class MeProfileService {
     private readonly obs: StructuredObservabilityService,
     private readonly analysis: MeProfileAnalysisService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   private async assertNicknameAvailable(
@@ -935,6 +938,10 @@ export class MeProfileService {
         `me profile submitted profileId=${row.id}`,
         ErrorCodes.ME_PROFILE_SUBMIT_SUCCESS,
       );
+      this.analytics.track(userId, ProductAnalyticsEvents.PROFILE_SUBMITTED, {
+        profileId: row.id,
+        priorStatus: existing.status as string,
+      });
 
       // Fire-and-forget: analysis manages its own ANALYZING → ANALYZED | FAILED
       // transitions. The submit response returns immediately with SUBMITTED.

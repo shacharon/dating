@@ -44,6 +44,7 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
@@ -374,6 +375,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
         UsersModule,
         StructuredLoggingModule,
         SimpleLoggerModule,
+        AnalyticsModule,
         AuthModule,
         MeProfileModule,
       ],

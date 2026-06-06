@@ -9,9 +9,11 @@ import {
   resetMessagingRedisAdapterBoundForTests,
   setMessagingRedisAdapterBound,
 } from './messaging-realtime-redis-state';
+import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 
 describe('MessagingRealtimeHealthService', () => {
   let service: MessagingRealtimeHealthService;
+  let wsRateLimit: { isUsingRedisStore: jest.Mock };
 
   const configStub = {
     sessionCookieName: 'dating_session',
@@ -19,12 +21,17 @@ describe('MessagingRealtimeHealthService', () => {
 
   beforeEach(async () => {
     resetMessagingRedisAdapterBoundForTests();
+    wsRateLimit = { isUsingRedisStore: jest.fn().mockReturnValue(false) };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MessagingRealtimeHealthService,
         {
           provide: AuthSessionConfigService,
           useValue: configStub,
+        },
+        {
+          provide: MessagingWsRateLimitService,
+          useValue: wsRateLimit,
         },
       ],
     }).compile();
@@ -41,6 +48,7 @@ describe('MessagingRealtimeHealthService', () => {
       namespace: MESSAGING_WS_NAMESPACE,
       socketIoPath: MESSAGING_SOCKET_IO_PATH,
       redisAdapter: false,
+      wsRateLimitRedis: false,
       sessionCookieName: 'dating_session',
     });
   });
@@ -51,6 +59,12 @@ describe('MessagingRealtimeHealthService', () => {
     expect(service.getSnapshot().redisAdapter).toBe(true);
   });
 
+  it('reports wsRateLimitRedis from MessagingWsRateLimitService', () => {
+    wsRateLimit.isUsingRedisStore.mockReturnValue(true);
+
+    expect(service.getSnapshot().wsRateLimitRedis).toBe(true);
+  });
+
   it('sessionCookieName comes from AuthSessionConfigService', async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -58,6 +72,10 @@ describe('MessagingRealtimeHealthService', () => {
         {
           provide: AuthSessionConfigService,
           useValue: { sessionCookieName: 'custom_session' },
+        },
+        {
+          provide: MessagingWsRateLimitService,
+          useValue: wsRateLimit,
         },
       ],
     }).compile();

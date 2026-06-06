@@ -8,9 +8,7 @@ export interface MatchListItemViewModel {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** Display score; mirrors legacy list `overall` / `finalScore`. */
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   updatedAt: string;
   shortReason?: string;
   explainability?: MatchExplainabilityDto;
@@ -62,8 +60,7 @@ export function mapMatchesApiListItemToViewModel(
     matchId,
     a: { id: userAId, name: userAName },
     b: { id: userBId, name: userBName },
-    overall: score,
-    finalScore: typeof finalScore === 'number' ? finalScore : undefined,
+    finalScore: score,
     updatedAt,
     ...(typeof sr === 'string' ? { shortReason: sr } : {}),
     ...(isExplainabilityDto(expl) ? { explainability: expl } : {}),

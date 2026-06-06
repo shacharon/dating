@@ -9,6 +9,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { MatchRecordDto } from '../src/matches/match.types';
+import { resolveEngineFinalScore } from '../src/matches/match-score.util';
 
 const MATCHES_DIR =
   process.env.MATCHES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'matches');
@@ -51,12 +52,16 @@ async function loadAllMatches(): Promise<LoadedMatch[]> {
     try {
       const raw = await readFile(join(MATCHES_DIR, file), 'utf8');
       const parsed = JSON.parse(raw) as unknown;
-      if (parsed && typeof parsed === 'object' && 'overall' in parsed) {
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        ('finalScore' in parsed || 'overall' in parsed)
+      ) {
         const record = parsed as MatchRecordDto;
-        const finalScore = record.finalScore ?? record.overall;
+        const finalScore = resolveEngineFinalScore(record);
         matches.push({
           record,
-          finalScore: typeof finalScore === 'number' ? finalScore : 0,
+          finalScore,
           tier: getTier(record),
           dealbreakers: getDealbreakers(record),
         });

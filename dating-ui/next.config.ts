@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,4 +39,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const uploadEnabled = Boolean(process.env.SENTRY_AUTH_TOKEN?.trim());
+
+const sentryConfig = process.env.NODE_ENV === 'production' ? withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: {
+    disable: !uploadEnabled,
+  },
+}) : nextConfig;
+
+export default sentryConfig;

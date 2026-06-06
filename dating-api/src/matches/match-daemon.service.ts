@@ -6,15 +6,18 @@ import type {
   MatchRecordDto,
 } from './match.types';
 import { MatchesService } from './matches.service';
+import {
+  resolveEngineFinalScore,
+  type EngineFinalScoreSource,
+} from './match-score.util';
 
 function recordToIndexItem(record: MatchRecordDto): MatchIndexItemDto {
-  const score = record.finalScore ?? record.overall;
+  const score = resolveEngineFinalScore(record);
   return {
     matchId: record.matchId,
     a: record.a,
     b: record.b,
-    overall: score,
-    finalScore: record.finalScore ?? record.overall,
+    finalScore: score,
     coverage: record.coverage,
     frictionRisk: record.frictionRisk,
     coveragePercent: record.coveragePercent,
@@ -44,8 +47,8 @@ function recordToIndexItem(record: MatchRecordDto): MatchIndexItemDto {
   };
 }
 
-function finalScoreOf(record: MatchRecordDto): number {
-  return record.finalScore ?? record.overall;
+function finalScoreOf(record: EngineFinalScoreSource): number {
+  return resolveEngineFinalScore(record);
 }
 
 function formatPenaltyOrBonus(
@@ -94,7 +97,7 @@ export class MatchDaemonService {
     const items = records
       .map(recordToIndexItem)
       .sort(
-        (a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall),
+        (a, b) => finalScoreOf(b) - finalScoreOf(a),
       );
 
     const generatedAt = new Date().toISOString();
@@ -175,7 +178,7 @@ export class MatchDaemonService {
     return {
       ...index,
       items: [...index.items].sort(
-        (a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall),
+        (a, b) => finalScoreOf(b) - finalScoreOf(a),
       ),
     };
   }

@@ -32,4 +32,9 @@ export type AppCopySchema = {
     storyTitle: string;
     storySubtitle: string;
   };
+  notifications: {
+    messageToast: (name: string) => string;
+    messageToastAction: string;
+    messageToastDismiss: string;
+  };
 };

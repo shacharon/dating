@@ -25,7 +25,6 @@ const minimalRecord: MatchRecordDto = {
   bId: 'b',
   a: { id: 'a', name: 'Alex' },
   b: { id: 'b', name: 'Blake' },
-  overall: 80,
   createdAt: '2020-01-01T00:00:00.000Z',
   updatedAt: '2020-01-01T00:00:00.000Z',
   aToB: 80,
@@ -149,7 +148,6 @@ describe('matches API smoke (integration)', () => {
         relationshipFit: null,
         coverage: null,
         friction: null,
-        overall: null,
         finalScore: null,
       },
     });

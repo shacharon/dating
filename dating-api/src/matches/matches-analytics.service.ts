@@ -7,6 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { MatchesService } from './matches.service';
 import type { MatchRecordDto } from './match.types';
+import { resolveEngineFinalScore } from './match-score.util';
 
 export interface ScoreDistribution {
   '0-20': number;
@@ -51,7 +52,7 @@ export interface MatchAnalyticsLog {
 }
 
 function scoreFromRecord(r: MatchRecordDto): number {
-  const s = r.finalScore ?? r.overall;
+  const s = resolveEngineFinalScore(r);
   return Number.isFinite(s) ? s : 0;
 }
 

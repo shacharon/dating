@@ -1,5 +1,6 @@
 import type { ChildrenUnsureDirectionsDto } from './match.types';
 import type { MatchListItemDto } from './matches.service';
+import { resolveEngineFinalScore } from './match-score.util';
 import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
 import {
@@ -43,7 +44,7 @@ export interface DatingMatchPreviewDto {
 export function mapMatchListItemToPreview(
   item: MatchListItemDto,
 ): DatingMatchPreviewDto {
-  const engineScore = item.finalScore ?? item.overall;
+  const engineScore = resolveEngineFinalScore(item);
   const rankScore = getDisplayScore(item);
   const otherPerson = item.b;
   const chips =

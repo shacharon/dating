@@ -42,10 +42,9 @@ describe('children_unsure hardening', () => {
   });
 
   describe('getDisplayScore', () => {
-    it('prefers rankingScore then finalScore then overall', () => {
-      expect(getDisplayScore({ overall: 50, finalScore: 60, rankingScore: 55 })).toBe(55);
-      expect(getDisplayScore({ overall: 50, finalScore: 60 })).toBe(60);
-      expect(getDisplayScore({ overall: 50 })).toBe(50);
+    it('prefers rankingScore then finalScore', () => {
+      expect(getDisplayScore({ finalScore: 60, rankingScore: 55 })).toBe(55);
+      expect(getDisplayScore({ finalScore: 60 })).toBe(60);
     });
   });
 

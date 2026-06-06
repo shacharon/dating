@@ -106,14 +106,10 @@ export function computeRelationshipBalance(
     else if (d.severity === 'WARNING')
       maxDealbreakerSeverityScore = Math.max(maxDealbreakerSeverityScore, 1);
   }
-  let negativeScore = 0.5 + maxDealbreakerSeverityScore;
-  if (
-    n(signalsA.emotionalDepth, 5) <= 3 &&
-    n(signalsB.emotionalDepth, 5) <= 3
-  ) {
-    negativeScore += 1;
-  }
-  negativeScore = Math.max(0.5, Math.min(10, negativeScore));
+  const negativeScore = Math.max(
+    0.5,
+    Math.min(10, 0.5 + maxDealbreakerSeverityScore),
+  );
 
   const ratio =
     negativeScore > 0 ? positiveScore / negativeScore : positiveScore;

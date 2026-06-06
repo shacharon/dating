@@ -13,6 +13,7 @@ import type { ProfileJsonPayload } from '../src/profiles/profiles-json.service';
 import type { MatchRecordDto } from '../src/matches/match.types';
 import { compareWithStatus } from '../src/matches/match-engine';
 import type { CompareResultDto } from '../src/matches/match-engine';
+import { resolveEngineFinalScore } from '../src/matches/match-score.util';
 
 const ROOT = process.cwd();
 const PROFILES_DIR = process.env.PROFILES_DATA_DIR?.trim() || join(ROOT, 'data', 'profiles');
@@ -27,7 +28,7 @@ function isRecord(x: unknown): x is MatchRecordDto {
     'matchId' in x &&
     'aId' in x &&
     'bId' in x &&
-    'overall' in x
+    ('finalScore' in x || 'overall' in x)
   );
 }
 
@@ -94,7 +95,8 @@ function isReady(
 async function main(): Promise<void> {
   const [profiles, records] = await Promise.all([loadProfiles(), loadMatchRecords()]);
   const byScore = [...records].sort(
-    (a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall),
+    (a, b) =>
+      resolveEngineFinalScore(b) - resolveEngineFinalScore(a),
   );
   const top20 = byScore.slice(0, 20);
   const rand = mulberry32(SEED);
@@ -132,7 +134,7 @@ async function main(): Promise<void> {
         matchId: rec.matchId,
         aId: rec.aId,
         bId: rec.bId,
-        finalScore: rec.finalScore ?? rec.overall,
+        finalScore: resolveEngineFinalScore(rec),
         friction: rec.friction ?? 0,
         chips: [],
         tensionChip: null,
@@ -151,7 +153,7 @@ async function main(): Promise<void> {
         matchId: rec.matchId,
         aId: rec.aId,
         bId: rec.bId,
-        finalScore: rec.finalScore ?? rec.overall,
+        finalScore: resolveEngineFinalScore(rec),
         friction: rec.friction ?? 0,
         chips: [],
         tensionChip: null,

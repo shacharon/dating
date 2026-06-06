@@ -26,4 +26,9 @@ export const esCopy: AppCopySchema = {
     storySubtitle:
       "Guarda un borrador o finaliza para enviar tu perfil a analisis.",
   },
+  notifications: {
+    messageToast: (name: string) => `${name} te envio un mensaje`,
+    messageToastAction: "Ver",
+    messageToastDismiss: "Cerrar",
+  },
 };

@@ -1,4 +1,7 @@
-import { computeDealbreakers } from './dealbreakers';
+import {
+  applyDealbreakerCap,
+  computeDealbreakers,
+} from './dealbreakers';
 import { RELATIONSHIP_CLARITY_MISMATCH_CODE } from './kids-family-ownership';
 import type { DerivedContext } from './deriveContext';
 
@@ -7,7 +10,7 @@ function ctx(overrides: Partial<DerivedContext> = {}): DerivedContext {
 }
 
 describe('computeDealbreakers', () => {
-  it('EMOTIONAL_DEPTH_FLOOR produces STRONG_FLAG when both emotionalDepth <= 3', () => {
+  it('does not trigger EMOTIONAL_DEPTH_FLOOR when both emotionalDepth <= 3', () => {
     const result = computeDealbreakers({
       a: {
         signals: { emotionalDepth: 2 },
@@ -19,10 +22,46 @@ describe('computeDealbreakers', () => {
       },
     });
 
+    expect(result.some((d) => d.code === 'EMOTIONAL_DEPTH_FLOOR')).toBe(false);
+  });
+
+  it('EMOTIONAL_DEPTH_FLOOR PENALTY when one depth >= 8 and other <= 2', () => {
+    const result = computeDealbreakers({
+      a: { signals: { emotionalDepth: 9 }, ctx: ctx() },
+      b: { signals: { emotionalDepth: 2 }, ctx: ctx() },
+    });
+
     const db = result.find((d) => d.code === 'EMOTIONAL_DEPTH_FLOOR');
     expect(db).toBeDefined();
-    expect(db!.severity).toBe('STRONG_FLAG');
-    expect(db!.evidence.length).toBeGreaterThan(0);
+    expect(db!.severity).toBe('PENALTY');
+    expect(db!.evidence.some((e) => e.includes('mismatch'))).toBe(true);
+  });
+
+  it('EMOTIONAL_DEPTH_FLOOR at boundary 8 vs 2', () => {
+    const result = computeDealbreakers({
+      a: { signals: { emotionalDepth: 8 }, ctx: ctx() },
+      b: { signals: { emotionalDepth: 2 }, ctx: ctx() },
+    });
+
+    expect(result.some((d) => d.code === 'EMOTIONAL_DEPTH_FLOOR')).toBe(true);
+  });
+
+  it('does not trigger EMOTIONAL_DEPTH_FLOOR at 8 vs 3', () => {
+    const result = computeDealbreakers({
+      a: { signals: { emotionalDepth: 8 }, ctx: ctx() },
+      b: { signals: { emotionalDepth: 3 }, ctx: ctx() },
+    });
+
+    expect(result.some((d) => d.code === 'EMOTIONAL_DEPTH_FLOOR')).toBe(false);
+  });
+
+  it('does not trigger EMOTIONAL_DEPTH_FLOOR at 7 vs 2 (high threshold is 8)', () => {
+    const result = computeDealbreakers({
+      a: { signals: { emotionalDepth: 7 }, ctx: ctx() },
+      b: { signals: { emotionalDepth: 2 }, ctx: ctx() },
+    });
+
+    expect(result.some((d) => d.code === 'EMOTIONAL_DEPTH_FLOOR')).toBe(false);
   });
 
   it('does not trigger EMOTIONAL_DEPTH_FLOOR when only one has low emotionalDepth', () => {
@@ -63,5 +102,24 @@ describe('computeDealbreakers', () => {
     const db = result.find((d) => d.code === RELATIONSHIP_CLARITY_MISMATCH_CODE);
     expect(db).toBeDefined();
     expect(db!.severity).toBe('HARD');
+  });
+});
+
+describe('applyDealbreakerCap', () => {
+  it('scores higher for bilateral low depth than under old bilateral STRONG_FLAG rule', () => {
+    const bilateralLow = computeDealbreakers({
+      a: { signals: { emotionalDepth: 2 }, ctx: ctx() },
+      b: { signals: { emotionalDepth: 2 }, ctx: ctx() },
+    });
+    const directionalMismatch = computeDealbreakers({
+      a: { signals: { emotionalDepth: 9 }, ctx: ctx() },
+      b: { signals: { emotionalDepth: 2 }, ctx: ctx() },
+    });
+
+    const scoreBilateralLow = applyDealbreakerCap(70, bilateralLow);
+    const scoreDirectional = applyDealbreakerCap(70, directionalMismatch);
+
+    expect(scoreBilateralLow).toBe(70);
+    expect(scoreDirectional).toBe(55);
   });
 });

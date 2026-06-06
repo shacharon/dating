@@ -1,6 +1,8 @@
 /**
  * Deterministic scoring formulas for the match engine.
  * Pure functions; no framework deps.
+ *
+ * @deprecated Divergent legacy helper — production uses `engine/scoring.compatibility()`.
  */
 
 /** Clamp value to [lo, hi] (inclusive). */

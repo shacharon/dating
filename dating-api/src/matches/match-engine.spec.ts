@@ -1,6 +1,6 @@
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import { compare, compareWithStatus, hasAnalyzedSignals } from './match-engine';
-import { COMPATIBILITY_SIGNAL_KEYS, TIER1_KEYS } from '../compatibility/compatibility-score';
+import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
 import type { SignalKey } from '../compatibility/compatibility-score';
 import * as compatibilityScore from '../compatibility/compatibility-score';
 
@@ -79,7 +79,7 @@ describe('match-engine compare', () => {
       expect(result.relationshipFit).toBeNull();
       expect(result.coverage).toBeNull();
       expect(result.friction).toBeNull();
-      expect(result.overall).toBeNull();
+      expect(result.finalScore).toBeNull();
       expect(result.compatibility).not.toBe(100);
     }
   });
@@ -92,6 +92,7 @@ describe('match-engine compare', () => {
     const result = compare(profileA, profileB);
 
     expect(result).toHaveProperty('compatibility');
+    expect(result).toHaveProperty('valuesAlignment');
     expect(result).toHaveProperty('finalScore');
     expect(result).toHaveProperty('friction');
     expect(result).toHaveProperty('coveragePercent');
@@ -102,6 +103,9 @@ describe('match-engine compare', () => {
     expect(result.explainability.positiveChips.length).toBeLessThanOrEqual(3);
     expect(result.explainability.reasonShort.length).toBeGreaterThan(10);
     expect(typeof result.compatibility).toBe('number');
+    expect(typeof result.valuesAlignment).toBe('number');
+    expect(result.valuesAlignment).toBeGreaterThanOrEqual(0);
+    expect(result.valuesAlignment).toBeLessThanOrEqual(100);
     expect(typeof result.finalScore).toBe('number');
     expect(typeof result.friction).toBe('number');
     expect(typeof result.coveragePercent).toBe('number');
@@ -125,14 +129,15 @@ describe('match-engine compare', () => {
     expect(Array.isArray(result.infoFlags)).toBe(true);
   });
 
-  it('overallScore equals finalScore (backward compat)', () => {
+  it('compare result exposes finalScore only (no overallScore alias)', () => {
     const signals = makeSignals({});
     const profileA = makeProfile('a', 'A', signals);
     const profileB = makeProfile('b', 'B', signals);
 
     const result = compare(profileA, profileB);
 
-    expect(result.overallScore).toBe(result.finalScore);
+    expect(result).toHaveProperty('finalScore');
+    expect(result).not.toHaveProperty('overallScore');
   });
 
   it('does not upscale real 0..100 compatibility scores (8 stays 8, not 80)', () => {
@@ -163,7 +168,8 @@ describe('match-engine compare', () => {
     expect(result.aToB).toBe(8);
     expect(result.bToA).toBe(8);
     expect(result.compatibility).toBeGreaterThanOrEqual(0);
-    expect(result.compatibility).toBeLessThan(20);
+    // Low directionals (8) stay low in blend; valuesAlignment weight (15%) can lift compat above 20
+    expect(result.compatibility).toBeLessThan(40);
   });
 
   it('coveragePercent = round(100 * comparableSignals / totalSignals)', () => {
@@ -216,8 +222,7 @@ describe('match-engine compare', () => {
   });
 
   it('full Tier1 match outscores Tier3-only match', () => {
-    const tier1Signals: Record<string, number> = {};
-    for (const k of TIER1_KEYS) tier1Signals[k] = 5;
+    const tier1Signals = makeSignals({});
     const tier3Signals: Record<string, number> = {
       physicalPriority: 5,
       healthBodyConsciousness: 5,
@@ -231,6 +236,8 @@ describe('match-engine compare', () => {
     const tier1Result = compare(tier1A, tier1B);
     const tier3Result = compare(tier3A, tier3B);
 
+    expect(tier1Result.coveragePercent).toBe(100);
+    expect(tier3Result.coveragePercent).toBeLessThan(50);
     expect(tier1Result.finalScore).toBeGreaterThan(tier3Result.finalScore);
   });
 
@@ -296,7 +303,7 @@ describe('match-engine compare path coverage', () => {
     expect(insufficient.relationshipFit).toBeNull();
     expect(insufficient.coverage).toBeNull();
     expect(insufficient.friction).toBeNull();
-    expect(insufficient.overall).toBeNull();
+    expect(insufficient.finalScore).toBeNull();
   });
 
   it('2. Normal analyzed pair: full coverage, deterministic key fields', () => {
@@ -306,7 +313,7 @@ describe('match-engine compare path coverage', () => {
 
     const result = compare(profileA, profileB);
 
-    expect(result.overallScore).toBe(result.finalScore);
+    expect(result).not.toHaveProperty('overallScore');
     expect(result.coverage).toBe(result.coveragePercent);
     expect(result.coveragePercent).toBe(100);
     expect(result.scoreCoverageFactor).toBe(1);
@@ -341,6 +348,8 @@ describe('match-engine compare path coverage', () => {
     expect(result.confidence).toBeLessThan(0.8);
     expect(result.infoFlags).toContain('LOW_CONFIDENCE');
     expect(result.finalScoreBeforeSparseCalibration).toBeUndefined();
+    expect(result.finalScore).toBeLessThanOrEqual(55);
+    expect(result.debug?.provenance).toContain('sparse_final_cap');
   });
 
   it('4. Asymmetry pair: one profile few signals, other many (minPresent <= 6, maxPresent >= 9)', () => {
@@ -402,7 +411,38 @@ describe('match-engine compare path coverage', () => {
     expect(result.finalScoreBeforeSparseCalibration).toBeUndefined();
     expect(result.infoFlags).toContain('LOW_COVERAGE');
     expect(result.finalScore).toBeGreaterThanOrEqual(0);
-    expect(result.finalScore).toBeLessThanOrEqual(90);
+    expect(result.finalScore).toBeLessThanOrEqual(55);
+    expect(result.debug?.provenance).toContain('sparse_final_cap');
+  });
+
+  it('sparse final cap: minPresent <= 5 on sparser profile', () => {
+    const fewKeys = COMPATIBILITY_SIGNAL_KEYS.slice(0, 5);
+    const signalsFew: Record<string, number> = {};
+    const signalsMany: Record<string, number> = {};
+    for (const k of fewKeys) signalsFew[k] = 5;
+    for (const k of COMPATIBILITY_SIGNAL_KEYS) signalsMany[k] = 5;
+    const profileA = makeProfile('a', 'A', signalsFew, 50);
+    const profileB = makeProfile('b', 'B', signalsMany, 50);
+
+    const result = compare(profileA, profileB);
+
+    expect(result.coveragePercent).toBe(
+      Math.round(100 * (fewKeys.length / COMPATIBILITY_SIGNAL_KEYS.length)),
+    );
+    expect(result.finalScore).toBeLessThanOrEqual(55);
+    expect(result.debug?.provenance).toContain('sparse_final_cap');
+  });
+
+  it('full coverage pair: no sparse final cap (finalScore may reach 90)', () => {
+    const signals = makeSignals({});
+    const profileA = makeProfile('a', 'A', signals, 80);
+    const profileB = makeProfile('b', 'B', signals, 80);
+
+    const result = compare(profileA, profileB);
+
+    expect(result.coveragePercent).toBe(100);
+    expect(result.debug?.provenance).not.toContain('sparse_final_cap');
+    expect(result.finalScore).toBeGreaterThan(55);
   });
 
   it('7. Directional display inflation path: coverage <= 65 and high directionals get 0.96 scale', () => {
@@ -423,5 +463,57 @@ describe('match-engine compare path coverage', () => {
       expect(result.aToB).toBeLessThanOrEqual(96);
       expect(result.bToA).toBeLessThanOrEqual(96);
     }
+  });
+
+  it('VISIBILITY_NEED_MISMATCH uses LLM derivedContext when stored on evaluation', () => {
+    const signals = makeSignals({});
+    const profileA = makeProfile('a', 'A', signals, 50);
+    const profileB = makeProfile('b', 'B', signals, 50);
+    profileA.evaluation = {
+      ...profileA.evaluation,
+      derivedContext: {
+        version: 'v1',
+        occupationClass: null,
+        visibilityNeed: 2,
+        lifeStage: 5,
+      },
+    };
+    profileB.evaluation = {
+      ...profileB.evaluation,
+      derivedContext: {
+        version: 'v1',
+        occupationClass: null,
+        visibilityNeed: 8,
+        lifeStage: 5,
+      },
+    };
+
+    const result = compare(profileA, profileB);
+
+    expect(
+      result.dealbreakers?.some((d) => d.code === 'VISIBILITY_NEED_MISMATCH'),
+    ).toBe(true);
+  });
+
+  it('VISIBILITY_NEED_MISMATCH via regex when derivedContext absent', () => {
+    const signals = makeSignals({});
+    const profileA = makeProfile('a', 'A', signals, 50);
+    const profileB = makeProfile('b', 'B', signals, 50);
+    profileA.texts = {
+      aboutMe: 'I keep to myself and prefer a private quiet life.',
+      aboutPartner: '',
+      aboutRelationship: '',
+    };
+    profileB.texts = {
+      aboutMe: 'Very social and outgoing, visible public networking life.',
+      aboutPartner: '',
+      aboutRelationship: '',
+    };
+
+    const result = compare(profileA, profileB);
+
+    expect(
+      result.dealbreakers?.some((d) => d.code === 'VISIBILITY_NEED_MISMATCH'),
+    ).toBe(true);
   });
 });

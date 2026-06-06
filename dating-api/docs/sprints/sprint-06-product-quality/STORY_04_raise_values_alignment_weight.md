@@ -1,20 +1,15 @@
 # Story 4: Raise valuesAlignment weight
 
 **Sprint:** 6  
-**Status:** Not started  
-**Depends on:** Story 2 (optional)
+**Status:** **Done** (engineering gate — 2026-06-03)  
+**Closeout order:** 4  
+**Depends on:** Story 2 (optional — can run in parallel)
 
 ---
 
 ## Why
 
-The final compatibility formula weights `valuesAlignment` at only **5%**:
-
-```
-0.35·aToB + 0.35·bToA + 0.25·relationshipFit + 0.05·valuesAlignment
-```
-
-Tier 1 values signals (traditionalism, spirituality, financialMindset, relationshipClarity, lifestylePace, attachmentSecurity) are among the most predictive for long-term compatibility but barely move the final score.
+The final compatibility formula weighted `valuesAlignment` at only **5%**. Tier 1 values signals are among the most predictive for long-term compatibility but barely moved the blended compatibility score.
 
 ---
 
@@ -26,51 +21,59 @@ Tier 1 values signals (traditionalism, spirituality, financialMindset, relations
 
 ### Acceptance criteria
 
-- [ ] **Formula updated** in `engine/scoring.ts`:
-  - Proposed: `0.30·aToB + 0.30·bToA + 0.25·relationshipFit + 0.15·valuesAlignment`
-  - Architect may adjust ±0.05 if tests show better calibration; must document final weights
-- [ ] **Weights sum to 1.0** — verified in unit test
-- [ ] **Match engine tests updated** — golden/fixture scores recalculated
-- [ ] **Regression test** — pair with large Tier 1 gap scores lower than pair with large Tier 3 gap (lifestylePace vs physicalPriority)
-- [ ] **Document in match-engine-overview.md** — formula section updated
-- [ ] **No change to computeValuesAlignment()** — only the weight in `compatibility()` changes
-- [ ] **Explain output** — if match explain includes component breakdown, valuesAlignment contribution visible
+- [x] **Formula updated** in `engine/scoring.ts`: `0.30·aToB + 0.30·bToA + 0.25·relationshipFit + 0.15·valuesAlignment`
+- [x] **Weights sum to 1.0** — `COMPATIBILITY_BLEND_WEIGHTS` unit test
+- [x] **Match engine tests updated** — `engine.scoring.spec.ts`, `match-engine.spec.ts`
+- [x] **Regression test** — Tier1 spirituality gap lowers `compatibility` vs Tier3-only gap
+- [x] **Document in match-engine-overview.md** — formula + values blend note
+- [x] **No change to computeValuesAlignment()** — blend weight only
+- [x] **Explain output** — `CompareResultDto.valuesAlignment` on compare/recompute
 
 ### Out of scope (this story)
 
 - Changing Tier 1 key list
 - Changing pair score curve `(1−gap/10)²`
 - A/B test infrastructure
+- Recomputing all stored match records (operator)
 
 ---
 
-## Technical notes (guidance, not prescriptive)
+## Shipped (engineering)
 
-See `handoffs/STORY_04_raise_values_alignment_weight/agent-0-architect.md` after architect run.
-
-Current code (`dating-api/src/engine/scoring.ts`):
-
-```typescript
-return 0.35 * aToB + 0.35 * bToA + 0.25 * relationshipFit + 0.05 * valuesAlignment;
-```
-
-Impact: existing match rankings will shift. PM handoff should note this as expected behavior change.
+| Deliverable | Detail |
+|-------------|--------|
+| `COMPATIBILITY_BLEND_WEIGHTS` | 0.30 / 0.30 / 0.25 / 0.15 |
+| `CompareResultDto.valuesAlignment` | Uncapped display; blend uses cap 85 |
+| Legacy `matches/scoring.ts` | Marked deprecated (not production) |
 
 ---
 
 ## Definition of done
 
-- [ ] New weights in `scoring.ts`
-- [ ] `scoring.spec.ts` + `match-engine.spec.ts` pass with updated expectations
-- [ ] Documentation updated
-- [ ] Sample compare output attached in PM handoff showing values-sensitive pair delta
+- [x] New weights in `scoring.ts`
+- [x] `engine.scoring.spec.ts` + `match-engine.spec.ts` pass
+- [x] Documentation updated
+- [x] Sample compare delta in PM handoff (`agent-3-pm.md`)
+
+---
+
+## Agent run
+
+```text
+--agent 0 sprint 6 story 4   ✅
+--agent 1 sprint 6 story 4   ✅
+--agent 2 sprint 6 story 4   ✅
+--agent 3 sprint 6 story 4   ✅
+```
+
+Handoffs: `handoffs/STORY_04_raise_values_alignment_weight/agent-*.md`
 
 ---
 
 ## Manual smoke
 
-1. Compare two pairs in dev: (A) high spirituality gap, (B) high physicalPriority gap → A ranks lower after change  
-2. Identical profiles still score ~100
+1. Compare two pairs: (A) spirituality 2 vs 9, (B) physicalPriority 2 vs 9 → A lower `compatibility` / `valuesAlignment`  
+2. Identical profiles → `valuesAlignment` ≈ 100
 
 ---
 
@@ -78,4 +81,5 @@ Impact: existing match rankings will shift. PM handoff should note this as expec
 
 | Item | Target |
 |------|--------|
-| Data-driven weight calibration | future, needs analytics (Sprint 7) |
+| Data-driven weight calibration | Sprint 7 funnel / analytics |
+| Bulk match recompute after weight change | Operator |

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { MessageToastProvider } from "@/components/message-toast-provider";
 import { NavAuth } from "@/components/nav-auth";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -37,10 +38,11 @@ function landingUrlWithNext(): string {
  * ahead of session confirmation. Sends stale/invalid sessions to public landing with `next`.
  */
 export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
-  const { status, lastError, refresh } = useAuth();
+  const { status, user, lastError, refresh } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
+  const [navPending, setNavPending] = useState(false);
   const copy = getCopy(locale);
 
   const homeActive = pathname === "/dating";
@@ -58,6 +60,10 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
     if (status !== "unauthenticated") return;
     router.replace(landingUrlWithNext());
   }, [status, router]);
+
+  useEffect(() => {
+    setNavPending(false);
+  }, [pathname]);
 
   useEffect(() => {
     setLocale(readStoredLocale());
@@ -144,35 +150,45 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
             <Link
               href="/dating"
-              className={`${navLinkBase} ${homeActive ? navLinkActive : navLinkInactive}`}
+              prefetch
+              onClick={() => setNavPending(true)}
+              className={`${navLinkBase} ${homeActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
               aria-current={homeActive ? "page" : undefined}
             >
               {copy.nav.home}
             </Link>
             <Link
               href="/dating/me-matches"
-              className={`${navLinkBase} ${matchesActive ? navLinkActive : navLinkInactive}`}
+              prefetch
+              onClick={() => setNavPending(true)}
+              className={`${navLinkBase} ${matchesActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
               aria-current={matchesActive ? "page" : undefined}
             >
               {copy.nav.matches}
             </Link>
             <Link
               href="/dating/conversations"
-              className={`${navLinkBase} ${conversationsActive ? navLinkActive : navLinkInactive}`}
+              prefetch
+              onClick={() => setNavPending(true)}
+              className={`${navLinkBase} ${conversationsActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
               aria-current={conversationsActive ? "page" : undefined}
             >
               {copy.nav.conversations}
             </Link>
             <Link
               href="/dating/profile"
-              className={`${navLinkBase} ${profileActive ? navLinkActive : navLinkInactive}`}
+              prefetch
+              onClick={() => setNavPending(true)}
+              className={`${navLinkBase} ${profileActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
               aria-current={profileActive ? "page" : undefined}
             >
               {copy.nav.profile}
             </Link>
             <Link
               href="/dating/analysis"
-              className={`${navLinkBase} ${analysisActive ? navLinkActive : navLinkInactive}`}
+              prefetch
+              onClick={() => setNavPending(true)}
+              className={`${navLinkBase} ${analysisActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
               aria-current={analysisActive ? "page" : undefined}
             >
               {copy.nav.analysis}
@@ -183,7 +199,13 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </nav>
-      {children}
+      {user ? (
+        <MessageToastProvider sessionUserId={user.id}>
+          {children}
+        </MessageToastProvider>
+      ) : (
+        children
+      )}
     </>
   );
 }

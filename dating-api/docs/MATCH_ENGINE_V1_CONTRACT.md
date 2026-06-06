@@ -111,7 +111,7 @@ Includes **evaluationSummary** (from read model display summary), same scoring f
 
 ## 7. Explicit non-sources (must not drive V1 engine)
 
-- **`MatchmakingProfile`** and legacy matchmaking tables.  
+- **`MatchmakingProfile`** and legacy matchmaking tables — **retired** (removed from `schema.prisma`, 2026-06); historical only.  
 - **Legacy `ProfilesPrismaService` match / analyze paths** (not used by `MeMatchesService`).  
 - **`UserProfile.interestsTop` / `sig*`** — not selected for V1 match reads; not passed into `buildMeMatchesParticipantReadModel`.  
 - **`GET /api/v1/me/profile/matches`** (`MeProfileMatchesService`) — candidate-only listing **without** `compareWithStatus` / scored DTO shape; not the V1 scored engine contract.

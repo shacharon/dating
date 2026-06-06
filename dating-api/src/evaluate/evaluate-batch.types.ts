@@ -33,6 +33,16 @@ export interface ExtendedSignals {
   _usage?: LLMUsageStats;
 }
 
+/** v1 dealbreaker context from profile analysis LLM. Scoring-relevant. */
+export interface DerivedContextV1 {
+  version: 'v1';
+  occupationClass: 'STANDARD' | 'SHIFT_UNPREDICTABLE' | 'TRAVEL_HEAVY' | null;
+  visibilityNeed: number;
+  lifeStage: number;
+  confidence?: number;
+  evidence?: string[];
+}
+
 export interface EvaluateBatchInput {
   aboutMe: string;
   aboutRelationship: string;
@@ -85,11 +95,14 @@ export interface EvaluateBatchResult {
    * Omitted on legacy stored evaluations until re-run.
    */
   enrichment?: EnrichmentV1;
+  /** LLM-inferred dealbreaker context (occupation, visibility, life stage). */
+  derivedContext?: DerivedContextV1;
   /** Raw LLM payloads + post-process stage diffs for evaluate-time LLM calls (observability only). */
   _evaluateLlmTraces?: {
     evalRequestId: string;
     summary?: EvaluateLlmCallTrace;
     relationshipMotivation?: EvaluateLlmCallTrace;
     attractionTraits?: EvaluateLlmCallTrace;
+    derivedContext?: EvaluateLlmCallTrace;
   };
 }

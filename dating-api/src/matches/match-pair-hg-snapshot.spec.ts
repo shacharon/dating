@@ -171,7 +171,7 @@ describe('match_pair_hg_snapshot', () => {
         bId: 'b',
         a: { id: 'a', name: 'A' },
         b: { id: 'b', name: 'B' },
-        overall: 80,
+        finalScore: 80,
         createdAt: '',
         updatedAt: '',
         aToB: 0,

@@ -3,6 +3,9 @@ import { MessageStatus, type Prisma } from '@prisma/client';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
 import { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { ErrorCodes } from '../logging/error-codes';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { hashConversationId } from '../analytics/hash-conversation-id';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { logProfanityIfDetected } from './conversation-message-profanity';
@@ -35,6 +38,7 @@ export class MeConversationMessagesService {
     private readonly messageRateLimit: ConversationMessageRateLimitService,
     private readonly realtime: RealtimePublisher,
     private readonly newMessageEmail: NewMessageEmailService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async listMessages(
@@ -213,6 +217,10 @@ export class MeConversationMessagesService {
       `me conversations message send conversationId=${conversationId} userId=${sessionUserId}`,
       ErrorCodes.ME_CONVERSATIONS_MESSAGE_SEND_OK,
     );
+
+    this.analytics.track(sessionUserId, ProductAnalyticsEvents.MESSAGE_SENT, {
+      conversationIdHash: hashConversationId(conversationId),
+    });
 
     const dto = toMessageDto(row);
     this.publishMessageNewBestEffort(

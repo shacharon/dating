@@ -14,7 +14,10 @@ import type { MessagingSocketRegistry } from './messaging-socket-registry.servic
 import type { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 import type { MessagingWsSessionService } from './messaging-ws-session.service';
 import type { RealtimePublisher } from './realtime-publisher.service';
+import type { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
+import type { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { WsRateLimitExceededError } from './messaging-ws-rate-limit.error';
 import type { Namespace, Socket } from 'socket.io';
 
@@ -44,13 +47,17 @@ describe('MessagingGateway', () => {
     trace: jest.fn(),
   } as unknown as StructuredObservabilityService;
 
+  const sentry = {
+    captureMessage: jest.fn(),
+    captureException: jest.fn(),
+  } as unknown as SentryBridgeService;
+
   const conversations = {
     assertActiveConversationParticipant: jest.fn(),
   } as unknown as MeConversationsService;
 
   const rateLimit = {
-    assertCanReceive: jest.fn(),
-    recordReceive: jest.fn(),
+    consumeInboundSlot: jest.fn().mockResolvedValue(undefined),
   } as unknown as MessagingWsRateLimitService;
 
   const wsSession = {
@@ -64,6 +71,10 @@ describe('MessagingGateway', () => {
     disconnectBySessionId: jest.fn(),
   } as unknown as MessagingSocketRegistry;
 
+  const analytics = {
+    track: jest.fn(),
+  } as unknown as AnalyticsService;
+
   let gateway: MessagingGateway;
 
   beforeEach(() => {
@@ -73,10 +84,12 @@ describe('MessagingGateway', () => {
       wsAuth,
       publisher,
       obs,
+      sentry,
       conversations,
       rateLimit,
       wsSession,
       socketRegistry,
+      analytics,
     );
     gateway.server = {} as Namespace;
   });
@@ -107,6 +120,11 @@ describe('MessagingGateway', () => {
       expect.stringContaining('user_a'),
       ErrorCodes.MESSAGING_WS_CONNECT_OK,
     );
+    expect(analytics.track).toHaveBeenCalledWith(
+      'user_a',
+      ProductAnalyticsEvents.MESSAGING_WS_CONNECTED,
+      { activeConnections: 1 },
+    );
   });
 
   it('disconnects and logs auth failure on invalid handshake', async () => {
@@ -124,6 +142,7 @@ describe('MessagingGateway', () => {
       expect.stringContaining('invalid_session'),
       ErrorCodes.MESSAGING_WS_AUTH_FAILED,
     );
+    expect(analytics.track).not.toHaveBeenCalled();
   });
 
   it('emits subscribe.ok for active participant', async () => {
@@ -188,13 +207,13 @@ describe('MessagingGateway', () => {
 
     expect((client.data as { subscribedConversationIds: Set<string> })
       .subscribedConversationIds.size).toBe(0);
-    expect(rateLimit.recordReceive).toHaveBeenCalled();
+    expect(rateLimit.consumeInboundSlot).toHaveBeenCalled();
   });
 
   it('disconnects when inbound rate limit exceeded', async () => {
-    (rateLimit.assertCanReceive as jest.Mock).mockImplementation(() => {
-      throw new WsRateLimitExceededError();
-    });
+    (rateLimit.consumeInboundSlot as jest.Mock).mockRejectedValue(
+      new WsRateLimitExceededError(),
+    );
     const client = mockSocket();
     client.data = { userId: 'user_a', sessionId: 'sess_a' };
 
@@ -246,6 +265,11 @@ describe('MessagingGateway', () => {
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringMatching(/user_b.*sess_b/),
       ErrorCodes.MESSAGING_WS_DISCONNECT_OK,
+    );
+    expect(analytics.track).toHaveBeenCalledWith(
+      'user_b',
+      ProductAnalyticsEvents.MESSAGING_WS_DISCONNECTED,
+      { activeConnections: 1 },
     );
   });
 });

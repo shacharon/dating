@@ -7,13 +7,21 @@ export function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
+/** Blend weights for compatibility(); must sum to 1. */
+export const COMPATIBILITY_BLEND_WEIGHTS = {
+  aToB: 0.3,
+  bToA: 0.3,
+  relationshipFit: 0.25,
+  valuesAlignment: 0.15,
+} as const;
+
 /**
  * compatibility =
- * 0.35 * A_to_B +
- * 0.35 * B_to_A +
+ * 0.30 * A_to_B +
+ * 0.30 * B_to_A +
  * 0.25 * relationshipFit +
- * 0.05 * valuesAlignment
- * (valuesAlignment reduced to limit double-counting of shared vibe signals.)
+ * 0.15 * valuesAlignment
+ * (valuesAlignmentForCompat in match-engine is capped at 85 before blend input.)
  */
 export function compatibility(
   aToB: number,
@@ -21,8 +29,12 @@ export function compatibility(
   relationshipFit: number,
   valuesAlignment: number,
 ): number {
+  const w = COMPATIBILITY_BLEND_WEIGHTS;
   return (
-    0.35 * aToB + 0.35 * bToA + 0.25 * relationshipFit + 0.05 * valuesAlignment
+    w.aToB * aToB +
+    w.bToA * bToA +
+    w.relationshipFit * relationshipFit +
+    w.valuesAlignment * valuesAlignment
   );
 }
 

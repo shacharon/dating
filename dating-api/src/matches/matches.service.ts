@@ -4,6 +4,7 @@ import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type { MatchPairRuntimeBundle } from '../profiles/profiles-prisma.service';
 import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
 import { compareWithStatus } from './match-engine';
+import { resolveEngineFinalScore } from './match-score.util';
 import type {
   CompareGuardFailureResultDto,
   CompareResultDto,
@@ -80,7 +81,6 @@ export interface CompareGuardMatchDto {
   relationshipFit: null;
   coverage: null;
   friction: null;
-  overall: null;
   finalScore: null;
 }
 
@@ -341,7 +341,6 @@ export class MatchesService {
           relationshipFit: null,
           coverage: null,
           friction: null,
-          overall: null,
           finalScore: null,
         },
       };
@@ -363,7 +362,6 @@ export class MatchesService {
           relationshipFit: null,
           coverage: null,
           friction: null,
-          overall: null,
           finalScore: null,
         },
       };
@@ -378,7 +376,6 @@ export class MatchesService {
       bId,
       a: { id: profileA.id, name: profileA.name },
       b: { id: profileB.id, name: profileB.name },
-      overall: compareResult.finalScore,
       createdAt: now,
       updatedAt: now,
       aToB: compareResult.aToB,
@@ -387,6 +384,7 @@ export class MatchesService {
       coverage: compareResult.coverage,
       frictionRisk: compareResult.frictionRisk,
       compatibility: compareResult.compatibility,
+      valuesAlignment: compareResult.valuesAlignment,
       finalScore: compareResult.finalScore,
       rawScore: compareResult.rawScore,
       friction: compareResult.friction,
@@ -496,7 +494,8 @@ export class MatchesService {
           : true,
       )
       .sort(
-        (a, b) => (b.finalScore ?? b.overall) - (a.finalScore ?? a.overall),
+        (a, b) =>
+          resolveEngineFinalScore(b) - resolveEngineFinalScore(a),
       );
     if (this.isHgListAdmissionGateEnabled()) {
       const snapshotMap = await loadMatchPairHgSnapshotMap(

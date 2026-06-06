@@ -219,14 +219,16 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
     });
   }
 
-  // 4) Emotional depth floor (both very low)
+  // 4) Emotional depth directional mismatch (high vs low — not bilateral low)
   const aDepth = n(a.signals.emotionalDepth, 5);
   const bDepth = n(b.signals.emotionalDepth, 5);
-  if (aDepth <= 3 && bDepth <= 3) {
+  const emotionalDepthHighVsLow =
+    (aDepth >= 8 && bDepth <= 2) || (bDepth >= 8 && aDepth <= 2);
+  if (emotionalDepthHighVsLow) {
     out.push({
       code: 'EMOTIONAL_DEPTH_FLOOR',
-      severity: 'STRONG_FLAG',
-      evidence: [`emotionalDepth low on both: ${aDepth}, ${bDepth}`],
+      severity: 'PENALTY',
+      evidence: [`emotionalDepth mismatch: ${aDepth} vs ${bDepth}`],
     });
   }
 

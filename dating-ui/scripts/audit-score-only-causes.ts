@@ -218,7 +218,7 @@ async function main(): Promise<void> {
   for (const [aId, bId] of picked) {
     const cmp = await fetchJson<{
       status?: string;
-      match?: { finalScore?: number; overall?: number };
+      match?: { finalScore?: number };
     }>(`${API}/matches/compare`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
 
     if (cmp.status === 'NOT_ANALYZED') continue;
 
-    const score = Number(cmp.match?.finalScore ?? cmp.match?.overall ?? 0);
+    const score = Number(cmp.match?.finalScore ?? 0);
     const [da, db] = await Promise.all([
       fetchJson<{ profile?: { evaluation?: { enrichment?: { signals?: EnrichmentSignalsLike } } } }>(
         `${API}/profiles/${encodeURIComponent(aId)}`,

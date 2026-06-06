@@ -1,6 +1,7 @@
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 import type { MatchListItemDto, MatchRecordDto } from './match.types';
+import { resolveEngineFinalScore } from './match-score.util';
 import { compareWithStatus } from './match-engine';
 import { buildShortReason } from './match-short-reason';
 import { toCanonicalMatchId } from './match-id';
@@ -44,7 +45,6 @@ export function buildMatchRecordsFromProfiles(
         bId,
         a: { id: profileA.id, name: profileA.name },
         b: { id: profileB.id, name: profileB.name },
-        overall: compareResult.finalScore,
         createdAt: now,
         updatedAt: now,
         aToB: compareResult.aToB,
@@ -53,6 +53,7 @@ export function buildMatchRecordsFromProfiles(
         coverage: compareResult.coverage,
         frictionRisk: compareResult.frictionRisk,
         compatibility: compareResult.compatibility,
+        valuesAlignment: compareResult.valuesAlignment,
         finalScore: compareResult.finalScore,
         rawScore: compareResult.rawScore,
         friction: compareResult.friction,
@@ -91,7 +92,7 @@ export function buildMatchListItems(
   hgPairSnapshotTelemetry: HolyGrailPairSnapshotTelemetryService,
 ): MatchListItemDto[] {
   return records.map((r) => {
-    const finalScore = r.finalScore ?? r.overall;
+    const finalScore = resolveEngineFinalScore(r);
     const dealbreakersRaw = r.dealbreakers ?? r.debug?.dealbreakers ?? [];
     const dealbreakers = dealbreakersRaw.map((d) => ({
       code: d.code,
@@ -127,7 +128,6 @@ export function buildMatchListItems(
       matchId: r.matchId,
       a: r.a,
       b: r.b,
-      overall: r.overall,
       finalScore,
       engineFinalScore,
       rankingScore,

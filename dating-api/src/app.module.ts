@@ -2,6 +2,7 @@ import { join } from 'node:path';
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthSessionConfigModule } from './config/auth-session-config.module';
 import { AppController } from './app.controller';
@@ -27,6 +28,7 @@ import { SessionModule } from './session/session.module';
     // Resolve `.env` from the dating-api package root (compiled `dist/` or `src/`), not `process.cwd()`,
     // so DATABASE_URL loads when Nest is started from a parent directory or via tooling.
     ConfigModule.forRoot({ isGlobal: true, envFilePath: join(__dirname, '..', '.env') }),
+    AnalyticsModule,
     AuthSessionConfigModule,
     PhotoStorageModule,
     PrismaModule,

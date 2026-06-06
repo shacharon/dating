@@ -1,14 +1,15 @@
 # Story 3: Remove LOW_INFO_PROFILE_IDS hardcode
 
 **Sprint:** 5  
-**Status:** Not started  
+**Status:** **Done** (engineering gate — 2026-06-03)  
+**Closeout order:** 5  
 **Depends on:** —
 
 ---
 
 ## Why
 
-`match-engine.ts` contains `LOW_INFO_PROFILE_IDS = new Set(['19'])` — a hardcoded test profile id that caps `finalScore` at 55. This is not maintainable, not discoverable, and wrong for production. Coverage-based scoring already exists; this hack should be replaced.
+`match-engine.ts` hardcoded profile `19` (SHORT stub) to cap `finalScore` at 55. That was not maintainable and did not generalize to other sparse profiles.
 
 ---
 
@@ -20,12 +21,12 @@
 
 ### Acceptance criteria
 
-- [ ] **Remove `LOW_INFO_PROFILE_IDS`** — delete constant and all references in `match-engine.ts`
-- [ ] **Coverage-based cap** — profiles below a documented coverage threshold (e.g. `< 0.4` or existing `MIN_COVERAGE_FOR_CONFIDENT_SCORE`) get `finalScore` capped (architect picks threshold and cap value)
-- [ ] **Document in match-engine-overview.md** — replace LOW_INFO section with coverage cap rule
-- [ ] **No profile-id special cases** — grep confirms no other hardcoded profile id hacks
-- [ ] **Tests updated** — remove tests asserting profile `19` behavior; add coverage-threshold cap tests
-- [ ] **Backward compat** — existing high-coverage profiles unaffected
+- [x] **Remove `LOW_INFO_PROFILE_IDS`** — deleted from `match-engine.ts`
+- [x] **Coverage-based cap** — `coveragePercent < 50` OR `minPresent <= 5` → `finalScore ≤ 55` (`coverage-policy.ts`)
+- [x] **Document in match-engine-overview.md** — sparse final cap rule
+- [x] **No profile-id special cases** — grep clean in `src/matches/`
+- [x] **Tests updated** — `coverage-policy.spec.ts` + `match-engine.spec.ts`
+- [x] **Backward compat** — full-coverage pairs unaffected
 
 ### Out of scope (this story)
 
@@ -34,40 +35,43 @@
 
 ---
 
-## Technical notes (guidance, not prescriptive)
+## Shipped (engineering)
 
-See `handoffs/STORY_03_remove_low_info_profile_ids/agent-0-architect.md` after architect run.
-
-Current code location:
-
-```typescript
-// dating-api/src/matches/match-engine.ts
-const LOW_INFO_PROFILE_IDS = new Set<string>(['19']);
-// ... caps finalScore at 55 when either profile in set
-```
-
-Existing coverage machinery:
-- `compatibility-score.ts` — `coverage`, `MIN_COVERAGE_FOR_CONFIDENT_SCORE`
-- `matches/coverage-policy.ts` — `scoreCoverageFactor`
-
-Architect should prefer reusing existing coverage policy over inventing a parallel cap.
+| Deliverable | Detail |
+|-------------|--------|
+| `coverage-policy.ts` | `LOW_COVERAGE_PERCENT_THRESHOLD=50`, `SPARSE_MIN_PRESENT_SIGNALS=5`, `SPARSE_FINAL_SCORE_CAP=55` |
+| `match-engine.ts` | `applySparseFinalScoreCap`; provenance `sparse_final_cap` |
+| Docs | `match-engine-overview.md` updated |
 
 ---
 
 ## Definition of done
 
-- [ ] `LOW_INFO_PROFILE_IDS` removed
-- [ ] Coverage-based cap implemented and documented
-- [ ] `match-engine.spec.ts` updated — all pass
-- [ ] `docs/match-engine-overview.md` updated
-- [ ] `npm run build` + match-engine tests pass
+- [x] `LOW_INFO_PROFILE_IDS` removed
+- [x] Coverage-based cap implemented and documented
+- [x] `match-engine.spec.ts` updated — all pass
+- [x] `docs/match-engine-overview.md` updated
+- [x] `npm run build` + tests — **1280/1280**
+
+---
+
+## Agent run
+
+```text
+--agent 0 sprint 5 story 3   ✅
+--agent 1 sprint 5 story 3   ✅
+--agent 2 sprint 5 story 3   ✅
+--agent 3 sprint 5 story 3   ✅
+```
+
+Handoffs: `handoffs/STORY_03_remove_low_info_profile_ids/agent-*.md`
 
 ---
 
 ## Manual smoke
 
-1. Rebuild matches for a profile with very sparse signals → score capped appropriately  
-2. Rebuild matches for a fully analyzed profile → score unchanged vs before (within rounding)
+1. Rebuild matches for sparse profile → `finalScore ≤ 55`, `sparse_final_cap` in provenance  
+2. Rebuild matches for full profile → score unchanged (within rounding)
 
 ---
 
@@ -76,3 +80,4 @@ Architect should prefer reusing existing coverage policy over inventing a parall
 | Item | Target |
 |------|--------|
 | UI "low confidence" indicator | future sprint |
+| Golden pairs validate + bulk recompute | operator |

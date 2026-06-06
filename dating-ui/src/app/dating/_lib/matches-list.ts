@@ -12,8 +12,7 @@ export interface MatchListItemApi {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   rankingScore?: number;
   engineFinalScore?: number;
   children_unsure?: {
@@ -87,8 +86,4 @@ export function mapListItemToCard(item: MatchListItemApi): GenericMatchCardModel
     ...(childrenUnsure ? { childrenUnsure: true } : {}),
     ...(holyGrailDiagnostics ? { holyGrailDiagnostics } : {}),
   };
-}
-
-export function sortMatchesByScoreDesc(cards: GenericMatchCardModel[]): GenericMatchCardModel[] {
-  return [...cards].sort((a, b) => b.score - a.score);
 }

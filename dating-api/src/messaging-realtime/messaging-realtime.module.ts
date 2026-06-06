@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
+import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { MeProfileModule } from '../me-profile/me-profile.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -20,6 +21,7 @@ import { RealtimePublisher } from './realtime-publisher.service';
     UsersModule,
     AuthSessionConfigModule,
     StructuredLoggingModule,
+    SimpleLoggerModule,
     MessagingSocketRegistryModule,
     forwardRef(() => MeProfileModule),
   ],

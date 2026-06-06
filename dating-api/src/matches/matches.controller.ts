@@ -15,6 +15,7 @@ import type {
   MatchIndexDto,
   MatchRecordDto,
 } from './match.types';
+import { resolveEngineFinalScore } from './match-score.util';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { MatchDaemonService } from './match-daemon.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -133,7 +134,7 @@ export class MatchesController {
     const { match, rowA, rowB } = ctx;
     const normalized: MatchRecordDto = {
       ...match,
-      finalScore: match.finalScore ?? match.overall,
+      finalScore: resolveEngineFinalScore(match),
     };
     const { children_unsure, holyGrail, telemetry } =
       await computeMatchDetailPairHg(

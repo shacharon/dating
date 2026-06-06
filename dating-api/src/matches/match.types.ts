@@ -16,8 +16,6 @@ export interface MatchRecordDto {
   bId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** @deprecated Use finalScore instead. Kept for backward compatibility. */
-  overall: number;
   createdAt: string;
   updatedAt: string;
   aToB: number;
@@ -26,7 +24,8 @@ export interface MatchRecordDto {
   coverage: number;
   frictionRisk: number;
   compatibility?: number;
-  finalScore?: number;
+  valuesAlignment?: number;
+  finalScore: number;
   /** Raw score before clamp (from engine). */
   rawScore?: number;
   friction?: number;
@@ -57,9 +56,7 @@ export interface MatchListItemDto {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** @deprecated Use finalScore instead. */
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   updatedAt: string;
   /** Dealbreakers applied to this match. */
   dealbreakers: Array<{ code: string; severity?: string }>;
@@ -112,9 +109,7 @@ export interface MatchIndexItemDto {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** @deprecated Use finalScore instead. */
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   coverage: number;
   frictionRisk: number;
   coveragePercent?: number;

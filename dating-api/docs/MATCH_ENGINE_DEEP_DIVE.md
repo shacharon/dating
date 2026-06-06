@@ -796,7 +796,7 @@ Complete test suite in `enrichment-canonical-labels.spec.ts`:
 - `evaluateHolyGrailPairDirections` hard filters
 
 **Out of scope (legacy):**
-- `MatchmakingProfile` tables
+- `MatchmakingProfile` tables — **retired** (removed from `schema.prisma`, 2026-06)
 - Legacy `ProfilesPrismaService` paths
 - `UserProfile.interestsTop` / `sig*` columns (write-only cache)
 - Alternate scoring services

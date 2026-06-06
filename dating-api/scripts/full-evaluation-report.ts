@@ -8,6 +8,7 @@
 
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { resolveEngineFinalScore } from '../src/matches/match-score.util';
 
 const MATCHES_DIR = process.env.MATCHES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'matches');
 const PROFILES_DIR = process.env.PROFILES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'profiles');
@@ -63,7 +64,7 @@ async function loadAllMatches(): Promise<MatchRecord[]> {
           bId: parsed.bId || '',
           a: parsed.a,
           b: parsed.b,
-          finalScore: parsed.finalScore ?? parsed.overall ?? 0,
+          finalScore: resolveEngineFinalScore(parsed),
           compatibility: parsed.compatibility ?? 0,
           friction: parsed.friction ?? 0,
           coveragePercent: parsed.coveragePercent ?? parsed.coverage ?? 0,

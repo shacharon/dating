@@ -37,19 +37,24 @@ import {
 import {
   ATTRACTION_SYSTEM_PROMPT,
   ATTRACTION_TRAITS_SYSTEM_PROMPT,
+  DERIVED_CONTEXT_SYSTEM_PROMPT,
   MOTIVATION_SYSTEM_PROMPT,
   SUMMARY_SYSTEM_PROMPT,
 } from './evaluate-llm-prompts';
+import { sanitizeDerivedContextForPersist } from './derived-context-sanitize';
 import {
   AnalysisPresentationSchema,
   AttractionResultSchema,
   AttractionTraitsResultSchema,
+  LlmDerivedContextRawSchema,
   RelationshipMotivationResultSchema,
   type AttractionResult,
   type AttractionTraitsResult,
+  type LlmDerivedContextRaw,
   type RelationshipMotivationResult,
 } from './evaluate-inference-schemas';
 import type {
+  DerivedContextV1,
   ExtendedSignals,
   EvaluateBatchInput,
   EvaluateBatchResult,
@@ -85,6 +90,7 @@ export type {
 export type { Chip, ChipsBundle } from './chips-builder';
 
 export type {
+  DerivedContextV1,
   ExtendedSignals,
   EvaluateBatchInput,
   EvaluateBatchResult,
@@ -415,6 +421,71 @@ export class EvaluateService {
   }
 
   /**
+   * Infer occupation class, visibility need, and life stage from profile texts.
+   * Used for dealbreaker context at match time (persisted on evaluationJson).
+   */
+  async inferDerivedContext(
+    aboutMe: string,
+    aboutPartner: string,
+    aboutRelationship: string,
+    opts?: { collectTrace?: boolean },
+  ): Promise<
+    DerivedContextV1 & { _evaluateLlmTrace?: EvaluateLlmCallTrace }
+  > {
+    const user = [
+      'aboutMe:',
+      aboutMe.trim() || '(empty)',
+      '',
+      'aboutPartner:',
+      aboutPartner.trim() || '(empty)',
+      '',
+      'aboutRelationship:',
+      aboutRelationship.trim() || '(empty)',
+    ].join('\n');
+
+    const requestId = randomUUID();
+    const { value, rawText } = await this.llm.completeJSON<LlmDerivedContextRaw>({
+      modelKey: 'fast',
+      system: DERIVED_CONTEXT_SYSTEM_PROMPT,
+      user,
+      schema: LlmDerivedContextRawSchema,
+      temperature: 0.2,
+      maxTokens: 400,
+      timeoutMs: 15_000,
+      requestId,
+      purpose: 'evaluate-derived-context',
+    });
+
+    this.logger.log(
+      JSON.stringify(
+        buildEvaluateRawLlmLogPayload(
+          { purpose: 'evaluate-derived-context', requestId },
+          value,
+          rawText,
+        ),
+      ),
+      'EvaluateService',
+    );
+
+    const out = sanitizeDerivedContextForPersist(value);
+    const trace = buildEvaluateLlmTrace({
+      purpose: 'evaluate-derived-context',
+      requestId,
+      parsedJson: value,
+      rawText,
+      afterStages: [{ name: 'after_sanitize', value: out }],
+    });
+    this.logger.log(
+      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
+      'EvaluateService',
+    );
+    if (opts?.collectTrace) {
+      return { ...out, _evaluateLlmTrace: trace };
+    }
+    return out;
+  }
+
+  /**
    * Detect structural lifestyle conflicts between two profiles' signal maps.
    * Deterministic rules (pace, status, socialBattery, independence, Tier1 values).
    */
@@ -446,12 +517,34 @@ export class EvaluateService {
         profileId,
       );
 
-    // Start all evaluation LLM calls together (summary + optional extended signals).
+    // Start all evaluation LLM calls together (summary + optional extended signals + derived context).
     const displayPromise = this.generateSummaryFromSignals(
       self,
       partner,
       relationship,
     );
+    const derivedContextPromise = (async (): Promise<
+      | (DerivedContextV1 & { dcTrace?: EvaluateLlmCallTrace })
+      | undefined
+    > => {
+      try {
+        const pack = await this.inferDerivedContext(
+          aboutMe.trim(),
+          aboutPartner.trim(),
+          aboutRelationship.trim(),
+          { collectTrace: true },
+        );
+        const { _evaluateLlmTrace: dcTrace, ...derivedContext } = pack;
+        return { ...derivedContext, dcTrace };
+      } catch (err) {
+        this.logger.warn(
+          `Derived context inference failed: ${err instanceof Error ? err.message : String(err)}`,
+          'EvaluateService',
+        );
+        return undefined;
+      }
+    })();
+
     const extendedSignalsPromise = (async (): Promise<
       | (Pick<
           ExtendedSignals,
@@ -537,8 +630,11 @@ export class EvaluateService {
         ? DISPLAY_NOTE_LOW_QUALITY
         : undefined;
 
-    // Await optional extended signals that started in parallel with summary.
-    const inferredExtendedSignals = await extendedSignalsPromise;
+    // Await optional extended signals and derived context (parallel with summary).
+    const [inferredExtendedSignals, inferredDerivedContext] = await Promise.all([
+      extendedSignalsPromise,
+      derivedContextPromise,
+    ]);
     const explicitExtendedLists = buildExplicitExtendedLists(
       aboutMe.trim(),
       aboutPartner.trim(),
@@ -617,6 +713,12 @@ export class EvaluateService {
         extendedSignals,
         chips,
         enrichment,
+        ...(inferredDerivedContext && {
+          derivedContext: (() => {
+            const { dcTrace: _dc, ...dc } = inferredDerivedContext;
+            return dc;
+          })(),
+        }),
         _evaluateLlmTraces: {
           evalRequestId,
           summary: summaryLlmTrace,
@@ -625,6 +727,9 @@ export class EvaluateService {
           }),
           ...(inferredExtendedSignals?.attTrace && {
             attractionTraits: inferredExtendedSignals.attTrace,
+          }),
+          ...(inferredDerivedContext?.dcTrace && {
+            derivedContext: inferredDerivedContext.dcTrace,
           }),
         },
       },

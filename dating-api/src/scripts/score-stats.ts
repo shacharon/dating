@@ -10,6 +10,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { MatchRecordDto } from '../matches/match.types';
+import { resolveEngineFinalScore } from '../matches/match-score.util';
 
 const MATCHES_DIR = process.env.MATCHES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'matches');
 
@@ -104,7 +105,7 @@ async function main(): Promise<void> {
       const covFactor = r.coverageFactor ?? 1;
       const fricPen = r.frictionPenalty ?? 0;
       const rawScoreValue = r.rawScore ?? compat * covFactor - fricPen;
-      const finalScoreValue = r.finalScore ?? r.overall ?? 0;
+      const finalScoreValue = resolveEngineFinalScore(r);
 
       rawScores.push(rawScoreValue);
       finalScores.push(finalScoreValue);

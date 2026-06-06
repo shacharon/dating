@@ -14,6 +14,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { compare, hasAnalyzedSignals } from '../src/matches/match-engine';
 import type { ProfileJsonPayload } from '../src/profiles/profiles-json.service';
+import { resolveEngineFinalScore } from '../src/matches/match-score.util';
 
 const PROFILES_DIR = process.env.PROFILES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'profiles');
 const MATCHES_DIR = process.env.MATCHES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'matches');
@@ -80,7 +81,7 @@ async function loadBaselineMatches(): Promise<Map<string, BaselineMatch>> {
             bId: parsed.bId,
             aName: parsed.a?.name || `#${parsed.aId}`,
             bName: parsed.b?.name || `#${parsed.bId}`,
-            finalScore: parsed.finalScore ?? parsed.overall ?? 0,
+            finalScore: resolveEngineFinalScore(parsed),
             compatibility: parsed.compatibility ?? 0,
             friction: parsed.friction ?? 0,
             coverage: parsed.coveragePercent ?? parsed.coverage ?? 0,

@@ -38,12 +38,22 @@ describe('computeRelationshipBalance', () => {
     expect(result.ratio).toBeLessThan(4);
   });
 
+  it('bilateral low emotionalDepth without dealbreakers keeps baseline negativeScore', () => {
+    const result = computeRelationshipBalance({
+      signalsA: { emotionalDepth: 2, directness: 3 },
+      signalsB: { emotionalDepth: 2, directness: 3 },
+      dealbreakers: [],
+    });
+
+    expect(result.negativeScore).toBe(0.5);
+  });
+
   it('ratio < 2 when negative score dominates', () => {
     const result = computeRelationshipBalance({
       signalsA: { emotionalDepth: 2, directness: 3 },
       signalsB: { emotionalDepth: 2, directness: 3 },
       dealbreakers: [
-        { code: 'EMOTIONAL_DEPTH_FLOOR', severity: 'STRONG_FLAG', evidence: [] },
+        { code: 'EMOTIONAL_DEPTH_FLOOR', severity: 'PENALTY', evidence: [] },
         { code: 'VISIBILITY_NEED_MISMATCH', severity: 'HARD', evidence: [] },
       ],
     });

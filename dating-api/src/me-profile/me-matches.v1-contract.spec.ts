@@ -5,6 +5,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { UserProfileStatus } from '@prisma/client';
+import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
@@ -149,11 +150,13 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
       };
       const photoStorage = { read: jest.fn() };
       const mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
+      const analytics = { track: jest.fn() } as unknown as AnalyticsService;
       service = new MeMatchesService(
         prisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
         mutualMatches as never,
+        analytics,
       );
     });
 

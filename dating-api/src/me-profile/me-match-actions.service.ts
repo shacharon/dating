@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MatchActionType, MutualMatchStatus } from '@prisma/client';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { PrismaService } from '../prisma/prisma.service';
 import type { MatchActionDto, MatchActionStateDto } from './me-match-actions.dto';
 import { MeMatchesService } from './me-matches.service';
@@ -21,6 +23,7 @@ export class MeMatchActionsService {
     private readonly meMatches: MeMatchesService,
     private readonly mutualMatches: MutualMatchesService,
     private readonly mutualMatchEmail: MutualMatchEmailService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async getActionState(
@@ -117,7 +120,21 @@ export class MeMatchActionsService {
       void this.mutualMatchEmail.notifyNewMutualMatchBestEffort(
         detectResult.mutualMatch,
       );
+      const { id: mutualMatchId } = detectResult.mutualMatch;
+      this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_MUTUAL_CREATED, {
+        mutualMatchId,
+        otherUserId: targetUserId,
+      });
+      this.analytics.track(targetUserId, ProductAnalyticsEvents.MATCH_MUTUAL_CREATED, {
+        mutualMatchId,
+        otherUserId: actorUserId,
+      });
     }
+
+    this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_ACTION, {
+      action: action.toLowerCase(),
+      candidateProfileId: profileId,
+    });
 
     return {
       id: row.id,
@@ -174,6 +191,11 @@ export class MeMatchActionsService {
           targetUserId,
         },
       },
+    });
+
+    this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_ACTION, {
+      action: 'undo',
+      candidateProfileId,
     });
   }
 }

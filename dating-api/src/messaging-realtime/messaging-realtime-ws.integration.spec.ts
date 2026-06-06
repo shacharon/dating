@@ -26,6 +26,7 @@ import {
   MESSAGING_WS_NAMESPACE,
 } from './messaging-realtime.constants';
 import { WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW } from './messaging-ws-inbound.constants';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { MessagingRealtimeModule } from './messaging-realtime.module';
 import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 
@@ -69,6 +70,7 @@ describe('Messaging realtime WS (integration)', () => {
         SessionModule,
         UsersModule,
         StructuredLoggingModule,
+        AnalyticsModule,
         MessagingRealtimeModule,
       ],
     })
@@ -253,8 +255,8 @@ describe('Messaging realtime WS (integration)', () => {
     try {
       await waitForConnect(socket);
 
-      for (let i = 0; i <= WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW; i++) {
-        rateLimit.recordReceive('user_ws_1');
+      for (let i = 0; i < WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+        await rateLimit.consumeInboundSlot('user_ws_1');
       }
 
       socket.emit(MESSAGING_EVENT_CONVERSATION_SUBSCRIBE, {

@@ -71,6 +71,8 @@ export interface CapsCalibrationState {
   finalScoreBeforeSparseCalibration: number | undefined;
   finalScoreClamped: number;
   preCapFinalScore: number;
+  /** True when sparse coverage final cap policy applies (coverage < 50% or minPresent <= 5). */
+  sparseFinalCapApplied?: boolean;
 }
 
 export function applyCapsAndCalibration(

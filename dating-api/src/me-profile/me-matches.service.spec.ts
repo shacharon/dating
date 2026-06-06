@@ -3,6 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
+import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
@@ -151,11 +152,13 @@ describe('MeMatchesService', () => {
     photoStorage = { read: jest.fn() };
     obs = { trace: jest.fn(), error: jest.fn() };
     mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
+    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
       photoStorage as never,
       mutualMatches as never,
+      analytics,
     );
   });
 
@@ -1426,7 +1429,7 @@ describe('MeMatchesService', () => {
         relationshipFit: null,
         coverage: null,
         friction: null,
-        overall: null,
+        finalScore: null,
       } as never);
       try {
         const detail = await service.getById(viewerUserId, candidateProfileId);
@@ -1662,6 +1665,7 @@ describe('MeMatchesService', () => {
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
         mutualMatches as never,
+        { track: jest.fn() } as unknown as AnalyticsService,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -1691,6 +1695,7 @@ describe('MeMatchesService', () => {
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
         mutualMatches as never,
+        { track: jest.fn() } as unknown as AnalyticsService,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -1727,6 +1732,7 @@ describe('MeMatchesService', () => {
         obs as unknown as StructuredObservabilityService,
         photoStorage as never,
         mutualMatches as never,
+        { track: jest.fn() } as unknown as AnalyticsService,
       );
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);

@@ -28,6 +28,13 @@ REDIS_URL=redis://127.0.0.1:6379 PORT=3002 npm run start:dev
 
 Connect B to port 3002, send message via REST on port 3001 — B should still receive the event.
 
+## Cross-instance rate limit (optional)
+
+With two API processes and `REDIS_URL`:
+
+1. Connect user A to instance 1; flood `conversation.subscribe` / `conversation.unsubscribe` (>30 inbound events in 60s).
+2. Connect the same user to instance 2 — further subscribes should disconnect (shared Redis counter).
+
 ## Pass criteria
 
 - No duplicate `message.new` per message id on a single client.

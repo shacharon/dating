@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MessageStatus, MutualMatchStatus, ProfileGender } from '@prisma/client';
 import { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 
 describe('MeConversationsService', () => {
@@ -33,7 +34,8 @@ describe('MeConversationsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MeConversationsService(prisma, obs);
+    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
+    service = new MeConversationsService(prisma, obs, analytics);
     (prisma.message.count as jest.Mock).mockResolvedValue(0);
   });
 

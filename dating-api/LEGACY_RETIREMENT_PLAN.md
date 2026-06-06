@@ -1,18 +1,23 @@
 # Legacy MatchmakingProfile Cluster Retirement Plan
 
-**Status:** Planning phase — awaiting Decision Gate 0  
-**Date:** 2026-04-24  
-**Scope:** Four legacy Prisma tables + associated runtime code
+**Status:** Runtime retired (2026-06) — Sprint 7 Stories 1–2 complete for code/tooling  
+**Date:** 2026-04-24 (plan); 2026-06-03 (tooling archive)  
+**Scope:** Four legacy Prisma tables + associated runtime code (tables no longer in `schema.prisma`)
+
+**Phase F (partner prefs):** `UserProfilePreference` is the product home; migration `20260502103000_phase_f_drop_user_profile_preference_columns`. Gender bridge: `UserProfile.desiredPartnerGenders` JSON.
+
+**Retired scripts:** `scripts/archive/retired-matchmaking-profile/README.md`  
+**Supported ops:** `scripts/OPERATIONAL_SCRIPTS.md`
 
 ---
 
 ## Current state
 
-**Active path (production-ready):**  
+**Active path (production):**  
 `GET /api/v1/me/matches` → `MeMatchesService` → `UserProfile` + `UserProfileEvaluation`  
-✅ Zero dependencies on legacy cluster (proven via tests + code analysis)
+✅ No `MatchmakingProfile` in Prisma schema or supported npm scripts
 
-**Legacy surfaces still operational:**
+**Admin legacy routes (DI seam — `legacy/` module):**
 
 | Route | Controller | Backend |
 |-------|------------|---------|
@@ -23,16 +28,16 @@
 | `POST /api/v1/matches/rebuild` | `MatchesController` | `MatchDaemonService` |
 | `GET /api/v1/matches/top` | tombstone only | (no DB) |
 
-**In-repo consumers:**
-- POC pages: `/poc/matches`, `/poc/auto-matches`, `app/auto-matches`
-- Scripts: `analyze-all-resume.ps1`, `smoke-test.sh`, `matches-api-smoke.mjs`
-- Seeds/validation: `seed-*.ts`, `hg-*.ts`, `backfill-*.ts`
+**Removed (2026-04–06):**
+- POC pages (`dating-ui/src/app/poc/**`) — Story 1
+- Frozen analyze/V2 extraction cluster — Story 1
+- MatchmakingProfile npm scripts + CI `hg-ranking-signal-guard` workflow — Story 2
 
 ---
 
 ## Slice 9: Script/tooling cleanup (pre-Migration 4)
 
-**Status:** In progress (2026-04-27)  
+**Status:** ✅ Complete (2026-06-03, Sprint 7 Story 2)  
 **Goal:** no **supported runnable** script depends on `MatchmakingProfile`.
 
 ### Classification
@@ -41,28 +46,8 @@
 - `scripts/truncate-all-tables.ts` (kept runnable, no `MatchmakingProfile` reference)
 - `scripts/validate-phase4-matching.ts` (kept runnable, legacy runtime contract check without DB access to legacy table)
 
-**Archived/deleted (legacy tooling removed; cannot be executed directly)**
-- `scripts/analyze-all.ts`
-- `scripts/backfill-hg-gap-structured.ts`
-- `scripts/backfill-hg-validation-ranking-signals.ts`
-- `scripts/backfill-legacy-synthetic-structured.ts`
-- `scripts/ci-seed-hg-validation-minimal.ts`
-- `scripts/hg-full-system-validation.ts`
-- `scripts/hg-hard-filter-audit.ts`
-- `scripts/hg-soft-pass-simulation.ts`
-- `scripts/hg-strong-low-evidence-audit.ts`
-- `scripts/hg-v2-enrichment-batch-analysis.ts`
-- `scripts/hg-validation-report.ts`
-- `scripts/interest-tags-v2-validation.lib.ts`
-- `scripts/personality-v2-validation.lib.ts`
-- `scripts/recompute-soft-pass-audit.ts`
-- `scripts/seed-interest-tags-v2-validation.ts`
-- `scripts/seed-interest-v2-validation.ts`
-- `scripts/seed-lifestyle-v2-validation.ts`
-- `scripts/seed-personality-v2-validation.ts`
-- `scripts/seed-profiles.ts`
-- `scripts/v1-signal-families-batch-analysis.ts`
-- `scripts/validate-lifestyle-signals-v2.ts`
+**Archived** (under `scripts/archive/retired-matchmaking-profile/` — do not run; see README there)
+- All MatchmakingProfile-era seed/validate/HG audit scripts formerly under `scripts/` (28 files, 2026-06-03)
 
 **Deleted (not part of new-model path)**
 - `scripts/fix-auth-userprofile-table.sql`

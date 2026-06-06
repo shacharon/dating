@@ -1,7 +1,8 @@
 # Story 4: Product funnel analytics
 
 **Sprint:** 7  
-**Status:** Not started  
+**Status:** **Done** (engineering gate; operator log smoke pending)  
+**Closeout order:** 9 (last) — **closed 2026-06-03**  
 **Depends on:** Sprint 5 Story 2 (Sentry)
 
 ---
@@ -20,7 +21,7 @@ There is no visibility into the product funnel: profile submit → match shown �
 
 ### Acceptance criteria
 
-- [ ] **Event schema defined** — stable event names and properties (no PII in properties):
+- [x] **Event schema defined** — stable event names and properties (no PII in properties):
   - `profile.submitted`
   - `match.list_viewed`
   - `match.action` (like | pass | block | undo)
@@ -28,13 +29,13 @@ There is no visibility into the product funnel: profile submit → match shown �
   - `conversation.opened`
   - `message.sent` (conversationId hash only, no body)
   - `messaging.ws_connected` / `messaging.ws_disconnected`
-- [ ] **API emission** — server-side events on state transitions (match action, mutual create, message send)
-- [ ] **UI emission (optional)** — client events for page views if using client SDK
-- [ ] **Provider** — PostHog, Mixpanel, or structured log sink (architect picks; env-gated)
-- [ ] **PII policy** — no email, name, message text, or profile content in event payloads
-- [ ] **Sentry separation** — analytics events ≠ error events
-- [ ] **Tests** — unit test that event emitter called on match action; mock provider
-- [ ] **Dashboard doc** — how to view funnel in chosen provider (or log query examples)
+- [x] **API emission** — server-side events on state transitions (match action, mutual create, message send)
+- [ ] **UI emission (optional)** — client events for page views if using client SDK *(deferred)*
+- [x] **Provider** — structured log sink v1 (env-gated); PostHog v2 follow-up
+- [x] **PII policy** — no email, name, message text, or profile content in event payloads
+- [x] **Sentry separation** — analytics events ≠ error events
+- [x] **Tests** — unit test that event emitter called on match action; mock provider
+- [x] **Dashboard doc** — `docs/analytics/PRODUCT_FUNNEL.md`
 
 ### Out of scope (this story)
 
@@ -60,11 +61,24 @@ Integration points:
 
 ## Definition of done
 
-- [ ] Event schema documented
-- [ ] ≥5 key events emitting in API
-- [ ] Provider wired (or structured JSON logs with `event:` prefix if no third-party)
-- [ ] PII audit in code review
-- [ ] `.env.example` updated
+- [x] Event schema documented
+- [x] ≥5 key events emitting in API (8 events)
+- [x] Provider wired (`logKind: product_analytics` JSON lines)
+- [x] PII audit in code review
+- [x] `.env.example` updated
+
+---
+
+## Agent run
+
+```text
+--agent 0 sprint 7 story 4
+--agent 1 sprint 7 story 4
+--agent 2 sprint 7 story 4
+--agent 3 sprint 7 story 4
+```
+
+Handoffs: `handoffs/STORY_04_product_funnel_analytics/agent-*.md`
 
 ---
 

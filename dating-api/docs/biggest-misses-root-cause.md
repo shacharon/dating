@@ -40,7 +40,7 @@
 
 **Classification:** RELATIONSHIP_SCORING_PROBLEM (balance tier drives both relationshipFit and friction floor; friction policy is correct but fed by RED tier).
 
-- Balance tier RED is triggered by EMOTIONAL_DEPTH_FLOOR (both emotionalDepth ≤ 3).
+- Balance tier RED was triggered by EMOTIONAL_DEPTH_FLOOR (both emotionalDepth ≤ 3) **and** a duplicate balance bump — **fixed Sprint 6 Story 2** (directional mismatch only; bilateral low no longer penalized).
 - RED forces: (1) relationshipFit −10 → relationshipStyle 50, (2) friction floor 4 → frictionPenalty 12.
 - Tension rules themselves contribute 0; the only “friction” is the policy floor.
 

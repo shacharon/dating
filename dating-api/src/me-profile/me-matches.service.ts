@@ -15,6 +15,8 @@ import {
   reciprocalProductGenderEligibility,
   type ProductProfilePartnerGenderPreferenceSource,
 } from './user-profile-matching-bridge.contract';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
@@ -139,6 +141,7 @@ export class MeMatchesService {
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly mutualMatches: MutualMatchesService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   // ─── Shared candidate select ───────────────────────────────────────────────
@@ -390,6 +393,11 @@ export class MeMatchesService {
       `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length}`,
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
+
+    this.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
+      matchCount: matches.length,
+      viewerProfileId: viewer.id,
+    });
 
     return {
       status: 'ready',

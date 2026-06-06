@@ -102,3 +102,26 @@ export const AnalysisPresentationSchema = z.object({
     },
   );
 export type AnalysisPresentation = z.infer<typeof AnalysisPresentationSchema>;
+
+/** Occupation/lifestyle class for dealbreaker context (LLM + persist). */
+export const OCCUPATION_CLASS_VALUES = [
+  'STANDARD',
+  'SHIFT_UNPREDICTABLE',
+  'TRAVEL_HEAVY',
+] as const;
+export type OccupationClass = (typeof OCCUPATION_CLASS_VALUES)[number];
+
+/** Raw LLM output for derived dealbreaker context (profile-level). */
+export const LlmDerivedContextRawSchema = z
+  .object({
+    occupationClass: z
+      .enum(OCCUPATION_CLASS_VALUES)
+      .nullable()
+      .optional(),
+    visibilityNeed: z.number().optional(),
+    lifeStage: z.number().optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    evidence: z.array(z.string()).max(5).optional(),
+  })
+  .strict();
+export type LlmDerivedContextRaw = z.infer<typeof LlmDerivedContextRawSchema>;
