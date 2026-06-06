@@ -1,5 +1,6 @@
 import { emitProductLog } from '@/lib/observability/product-logger';
 import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
+import { isInternalRouteBlocked } from '@/lib/internal-routes-gate';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -20,6 +21,10 @@ function needsAuthSession(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  if (isInternalRouteBlocked(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
 
   if (pathname === '/login') {
     const landing = new URL('/', request.url);
@@ -65,5 +70,13 @@ export const config = {
     '/app/:path*',
     '/settings',
     '/settings/:path*',
+    '/profiles',
+    '/profiles/:path*',
+    '/evaluate',
+    '/evaluate/:path*',
+    '/auto-matches',
+    '/auto-matches/:path*',
+    '/dev',
+    '/dev/:path*',
   ],
 };

@@ -18,6 +18,8 @@ import { LegacyBackendModule } from './legacy/legacy-backend.module';
 import { MatchesModule } from './matches/matches.module';
 import { MessagingRealtimeModule } from './messaging-realtime/messaging-realtime.module';
 import { MeProfileModule } from './me-profile/me-profile.module';
+import { MeAccountModule } from './me-account/me-account.module';
+import { ReportsModule } from './reports/reports.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PhotoStorageModule } from './photo-storage/photo-storage.module';
@@ -40,6 +42,8 @@ import { SessionModule } from './session/session.module';
     ContradictionModule,
     ProfilesModule,
     MeProfileModule,
+    ReportsModule,
+    MeAccountModule,
     MessagingRealtimeModule,
     MatchesModule,
     HolyGrailMatchingModule,

@@ -15,6 +15,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileService } from './me-profile.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 
 describe('MeProfileService', () => {
   const userId = 'user_svc_1';
@@ -47,6 +48,7 @@ describe('MeProfileService', () => {
     };
     userProfileEvaluation: { findFirst: jest.Mock };
     userProfilePreference: { upsert: jest.Mock };
+    userProfilePhoto: { count: jest.Mock };
   };
   let service: MeProfileService;
   let obs: jest.Mocked<
@@ -56,6 +58,7 @@ describe('MeProfileService', () => {
     >
   >;
   let analysis: jest.Mocked<Pick<MeProfileAnalysisService, 'runForUser'>>;
+  let analytics: { track: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -74,6 +77,9 @@ describe('MeProfileService', () => {
       userProfilePreference: {
         upsert: jest.fn().mockResolvedValue({}),
       },
+      userProfilePhoto: {
+        count: jest.fn().mockResolvedValue(1),
+      },
     };
     obs = {
       trace: jest.fn(),
@@ -82,14 +88,14 @@ describe('MeProfileService', () => {
       httpServerError: jest.fn(),
     };
     analysis = { runForUser: jest.fn().mockResolvedValue(undefined) };
-    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
+    analytics = { track: jest.fn() };
     const photoStorage = {} as never;
     service = new MeProfileService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
       analysis as unknown as MeProfileAnalysisService,
       photoStorage,
-      analytics,
+      analytics as unknown as AnalyticsService,
     );
   });
 
@@ -464,6 +470,26 @@ describe('MeProfileService', () => {
       },
     );
 
+    it('throws UnprocessableEntityException when no approved photo', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({
+        ...baseRow,
+        status: UserProfileStatus.DRAFT,
+        gender: ProfileGender.FEMALE,
+      });
+      prisma.userProfilePhoto.count.mockResolvedValue(0);
+
+      await expect(service.submitForUser(userId)).rejects.toMatchObject({
+        response: expect.objectContaining({ error: 'photo_required' }),
+      });
+      expect(analytics.track).toHaveBeenCalledWith(
+        userId,
+        ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
+        { surface: 'submit' },
+      );
+      expect(prisma.userProfile.update).not.toHaveBeenCalled();
+      expect(analysis.runForUser).not.toHaveBeenCalled();
+    });
+
     it.each([S.SUBMITTED, S.ANALYZING])(
       'throws UnprocessableEntityException when status is %s',
       async (status) => {
@@ -763,6 +789,7 @@ describe('MeProfileService', () => {
           }),
         },
         userProfileEvaluation: { findFirst: jest.fn().mockResolvedValue(null) },
+        userProfilePhoto: { count: jest.fn().mockResolvedValue(1) },
       };
       const svc = new MeProfileService(
         newModelOnlyPrisma as unknown as PrismaService,

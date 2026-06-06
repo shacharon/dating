@@ -42,6 +42,11 @@ export class EmailNotificationConfigService {
     return Number.isFinite(n) && n > 0 ? n : 15;
   }
 
+  /** Ops inbox for user reports (Sprint 9 Story 4). Unset = no ops email. */
+  get reportOpsEmail(): string | undefined {
+    return trimOrUndefined(this.config.get<string>('REPORT_OPS_EMAIL'));
+  }
+
   get isSendingEnabled(): boolean {
     return this.provider === 'resend';
   }

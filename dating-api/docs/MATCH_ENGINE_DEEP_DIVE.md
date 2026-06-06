@@ -222,6 +222,7 @@ export interface MeMatchDetailDto extends MeMatchItemDto {
 |-------|---------------------|
 | **Viewer profile missing** | List: `not_ready` / `no_profile`. |
 | **Viewer not `ANALYZED`** | List: `not_ready` / `not_analyzed`. |
+| **Viewer has no approved photo** | List: `not_ready` / `no_photo`. Detail/actions: `404`. Submit: `422` / `photo_required`. |
 | **Missing latest evaluation** (viewer or analyzed candidate) | `InternalServerErrorException` (list) or not applicable where candidate skipped. |
 | **Reciprocal gender eligibility** | Candidate omitted from list; detail `404` if ineligible. |
 | **HG hard eligibility** | Both directions `FAIL` → omit list row; detail `404`. |

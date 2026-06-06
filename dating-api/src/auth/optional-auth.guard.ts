@@ -32,7 +32,7 @@ export class OptionalAuthGuard implements CanActivate {
     }
 
     const user = await this.users.findById(validated.userId);
-    if (!user || user.status !== USER_STATUS_ACTIVE) {
+    if (!user || user.deletedAt != null || user.status !== USER_STATUS_ACTIVE) {
       return true;
     }
 

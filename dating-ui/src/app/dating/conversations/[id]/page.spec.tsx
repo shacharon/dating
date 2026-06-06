@@ -659,6 +659,18 @@ describe('ConversationDetailPage', () => {
     unmount();
   });
 
+  it('opens report dialog from overflow menu', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-report-open')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('conversation-report-open'));
+    expect(screen.getByTestId('report-user-dialog')).toBeTruthy();
+    unmount();
+  });
+
   it('cancels unmatch without calling API', async () => {
     const { unmount } = render(<ConversationDetailPage />);
 

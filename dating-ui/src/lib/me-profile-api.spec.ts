@@ -271,6 +271,19 @@ describe('me-profile-api', () => {
     expect(result.reason).toBe('not_analyzed');
   });
 
+  it('fetchMyMatches returns not_ready dto when API signals no_photo (UI guard redirects to profile)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ status: 'not_ready', reason: 'no_photo' }),
+      }),
+    );
+    const result = await fetchMyMatches();
+    expect(result.status).toBe('not_ready');
+    expect(result.reason).toBe('no_photo');
+  });
+
   it('fetchMyMatches returns ready dto with matches array on success', async () => {
     const match = {
       id: 'prof-cand-1',

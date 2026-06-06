@@ -25,6 +25,8 @@ import {
   formatMatchedOnDate,
   formatMessageTime,
 } from '../conversation-display';
+import { ReportUserDialog } from '@/components/report-user-dialog';
+import { getCopy, readStoredLocale } from '@/lib/i18n';
 import {
   useMessagingSocket,
   type MessagingConnectionStatus,
@@ -70,6 +72,7 @@ export default function ConversationDetailPage() {
   const [unmatchConfirmOpen, setUnmatchConfirmOpen] = useState(false);
   const [unmatchSaving, setUnmatchSaving] = useState(false);
   const [unmatchError, setUnmatchError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [messages, setMessages] = useState<MessageDto[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messagesError, setMessagesError] = useState<string | null>(null);
@@ -566,6 +569,21 @@ export default function ConversationDetailPage() {
             </section>
 
             <div className="flex flex-col items-start gap-2">
+              <details className="relative" data-testid="conversation-report-menu">
+                <summary className="cursor-pointer list-none text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200">
+                  ⋯
+                </summary>
+                <div className="absolute left-0 top-full z-10 mt-1 min-w-[10rem] rounded border border-zinc-200 bg-white py-1 shadow dark:border-zinc-700 dark:bg-zinc-900">
+                  <button
+                    type="button"
+                    data-testid="conversation-report-open"
+                    onClick={() => setReportOpen(true)}
+                    className="block w-full px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    {getCopy(readStoredLocale()).reportUser.linkLabel}
+                  </button>
+                </div>
+              </details>
               {unmatchConfirmOpen ? (
                 <div
                   className="w-full rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 dark:border-red-900/50 dark:bg-red-950/20"
@@ -619,6 +637,15 @@ export default function ConversationDetailPage() {
           </>
         )}
       </div>
+      {data && id ? (
+        <ReportUserDialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          contextType="CONVERSATION"
+          contextId={id}
+          subjectLabel={otherName}
+        />
+      ) : null}
     </div>
   );
 }

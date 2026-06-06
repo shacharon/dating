@@ -63,6 +63,46 @@ export const ME_PARTNER_GENDER_CHOICES: readonly MeProfileGender[] = [
 /** Mirrors dating-api `UserProfileOnboardingStep`. */
 export type MeProfileOnboardingStep = 'BASIC' | 'TEXTS' | 'COMPLETED';
 
+/** HG partner preference scalars (UserProfilePreference row). */
+export type MinimumPartnerEducationPreference =
+  | 'ANY'
+  | 'HIGH_SCHOOL'
+  | 'SOME_COLLEGE'
+  | 'BACHELORS'
+  | 'GRADUATE';
+
+export type AcceptedPartnerSmokingPreference =
+  | 'NONE_ONLY'
+  | 'SOCIAL_OK'
+  | 'ANY';
+
+export type AcceptedPartnerAlcoholPreference =
+  | 'NONE_ONLY'
+  | 'MODERATE_OK'
+  | 'ANY';
+
+export type PartnerWantsChildrenPreference =
+  | 'MUST_WANT'
+  | 'MUST_NOT_WANT'
+  | 'NO_REQUIREMENT';
+
+export type PartnerHasChildrenPreference =
+  | 'ACCEPT'
+  | 'DOES_NOT_ACCEPT'
+  | 'NO_REQUIREMENT';
+
+export type AcceptedPartnerReligionPreference =
+  | 'NONE'
+  | 'CHRISTIAN'
+  | 'JEWISH'
+  | 'MUSLIM'
+  | 'HINDU'
+  | 'BUDDHIST'
+  | 'SPIRITUAL_NON_AFFILIATED'
+  | 'OTHER';
+
+export type SimilarityPreferenceValue = 'similar' | 'different' | 'balanced';
+
 export interface MeProfileDto {
   id: string;
   userId: string;
@@ -84,6 +124,16 @@ export interface MeProfileDto {
   lastAnalysisError?: string | null;
   createdAt: string;
   updatedAt: string;
+  partnerAgeMin?: number | null;
+  partnerAgeMax?: number | null;
+  minimumPartnerEducation?: MinimumPartnerEducationPreference | null;
+  acceptedPartnerSmoking?: AcceptedPartnerSmokingPreference[];
+  acceptedPartnerAlcohol?: AcceptedPartnerAlcoholPreference[];
+  partnerWantsChildren?: PartnerWantsChildrenPreference | null;
+  partnerHasChildren?: PartnerHasChildrenPreference | null;
+  acceptedPartnerReligions?: AcceptedPartnerReligionPreference[];
+  maxDistanceKm?: number | null;
+  similarityPreference?: SimilarityPreferenceValue | null;
 }
 
 export interface CreateMeProfileBody {
@@ -98,6 +148,16 @@ export interface CreateMeProfileBody {
   city?: string | null;
   country?: string | null;
   locationLabel?: string | null;
+  partnerAgeMin?: number | null;
+  partnerAgeMax?: number | null;
+  minimumPartnerEducation?: MinimumPartnerEducationPreference | null;
+  acceptedPartnerSmoking?: AcceptedPartnerSmokingPreference[];
+  acceptedPartnerAlcohol?: AcceptedPartnerAlcoholPreference[];
+  partnerWantsChildren?: PartnerWantsChildrenPreference | null;
+  partnerHasChildren?: PartnerHasChildrenPreference | null;
+  acceptedPartnerReligions?: AcceptedPartnerReligionPreference[];
+  maxDistanceKm?: number | null;
+  similarityPreference?: SimilarityPreferenceValue | null;
 }
 
 export type PatchMeProfileBody = CreateMeProfileBody;
@@ -397,6 +457,8 @@ export interface MeMatchItemDto {
   profileAnalysisStale?: boolean;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /** Relative path to primary photo file endpoint; null when absent. */
+  primaryPhotoUrl?: string | null;
   yourAction?: 'LIKE' | 'PASS' | 'BLOCK' | null;
 }
 
@@ -404,7 +466,7 @@ export interface MeMatchItemDto {
 export interface MeMatchesListDto {
   status: 'ready' | 'not_ready';
   /** Present when `status = 'not_ready'`. */
-  reason?: 'no_profile' | 'not_analyzed';
+  reason?: 'no_profile' | 'not_analyzed' | 'no_photo';
   viewerProfileId?: string;
   viewerGender?: string | null;
   viewerAcceptedPartnerGenders?: string[] | null;

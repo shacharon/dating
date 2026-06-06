@@ -14,6 +14,9 @@ import {
 } from '@/lib/me-profile-api';
 import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
 import { MatchCelebrationModal } from '@/components/match-celebration-modal';
+import { MatchPhoto } from '@/components/match-photo';
+import { ReportUserDialog } from '@/components/report-user-dialog';
+import { getCopy, readStoredLocale } from '@/lib/i18n';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 
@@ -47,6 +50,7 @@ export default function MeMatchDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
   const [blockError, setBlockError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ conversationId: string } | null>(
     null,
   );
@@ -190,6 +194,12 @@ export default function MeMatchDetailPage() {
         {/* Match detail */}
         {!loading && !error && data && (
           <article className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <MatchPhoto
+              variant="hero"
+              photoUrl={data.primaryPhotoUrl ?? null}
+              displayName={matchDetailTitle(data)}
+              testId="match-detail-photo"
+            />
             <header className="border-b border-zinc-100 bg-zinc-50/80 px-6 py-5 dark:border-zinc-800 dark:bg-zinc-900/80">
               <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                 Match
@@ -205,42 +215,53 @@ export default function MeMatchDetailPage() {
             </header>
 
             <div className="space-y-5 px-6 py-5 text-sm">
+              {(() => {
+                const oneLineTakeaway =
+                  data.recommendation?.primaryTakeaway ??
+                  data.explainability?.reasonShort ??
+                  null;
+                return oneLineTakeaway ? (
+                  <p
+                    data-testid="match-detail-takeaway"
+                    className="text-base leading-relaxed text-zinc-800 dark:text-zinc-200"
+                  >
+                    {oneLineTakeaway}
+                  </p>
+                ) : null;
+              })()}
 
-              {/* Score + explainability */}
-              {data.matchScore != null && (
-                <section className="flex items-start gap-4">
-                  <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800/50">
-                    <span className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
-                      {data.matchScore}
-                    </span>
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500">score</span>
+              {data.explainability &&
+              (data.explainability.positiveChips.length > 0 ||
+                data.explainability.tensionChip) ? (
+                <section data-testid="match-detail-chips">
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.explainability.positiveChips.map((chip) => (
+                      <span
+                        key={chip}
+                        className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                    {data.explainability.tensionChip ? (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                        {data.explainability.tensionChip}
+                      </span>
+                    ) : null}
                   </div>
-                  {data.explainability && (
-                    <div className="min-w-0 space-y-2">
-                      {data.explainability.positiveChips.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {data.explainability.positiveChips.map((chip) => (
-                            <span
-                              key={chip}
-                              className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                            >
-                              {chip}
-                            </span>
-                          ))}
-                          {data.explainability.tensionChip && (
-                            <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                              {data.explainability.tensionChip}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {data.explainability.reasonShort}
-                      </p>
-                    </div>
-                  )}
                 </section>
-              )}
+              ) : null}
+
+              {data.matchScore != null ? (
+                <p
+                  data-testid="match-detail-score"
+                  className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400"
+                >
+                  {getCopy(readStoredLocale()).launch.matchDetail.matchScoreLabel(
+                    data.matchScore,
+                  )}
+                </p>
+              ) : null}
 
               {data.matchExplanationTraits && data.matchExplanationTraits.length > 0 && (
                 <section className="rounded-lg border border-zinc-100 bg-zinc-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -273,22 +294,13 @@ export default function MeMatchDetailPage() {
                 </section>
               )}
 
-              {/* Recommendation takeaway */}
-              {data.recommendation?.primaryTakeaway && (
+              {data.recommendation?.caution ? (
                 <section className="rounded-lg border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    Takeaway
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    {data.recommendation.caution}
                   </p>
-                  <p className="mt-1.5 leading-relaxed text-zinc-700 dark:text-zinc-300">
-                    {data.recommendation.primaryTakeaway}
-                  </p>
-                  {data.recommendation.caution && (
-                    <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                      {data.recommendation.caution}
-                    </p>
-                  )}
                 </section>
-              )}
+              ) : null}
 
               {/* Analysis summary */}
               {data.evaluationSummary ? (
@@ -444,6 +456,15 @@ export default function MeMatchDetailPage() {
                     Block
                   </button>
                 )}
+                <button
+                  type="button"
+                  data-testid="match-detail-report"
+                  onClick={() => setReportOpen(true)}
+                  disabled={actionSaving}
+                  className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
+                >
+                  {getCopy(readStoredLocale()).reportUser.linkLabel}
+                </button>
                 {blockError && (
                   <div
                     className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
@@ -475,6 +496,15 @@ export default function MeMatchDetailPage() {
           }}
         />
       )}
+      {data && id ? (
+        <ReportUserDialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          contextType="MATCH_PROFILE"
+          contextId={id}
+          subjectLabel={matchDetailTitle(data)}
+        />
+      ) : null}
     </div>
   );
 }

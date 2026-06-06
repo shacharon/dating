@@ -10,13 +10,18 @@ import {
   type MeLatestAnalysisDto,
 } from '@/lib/me-profile-api';
 import { mapEvaluationToViewModel } from '@/lib/analysis-presentation';
+import { AnalysisProgressPanel } from '@/components/analysis-progress-panel';
 import {
-  ANALYSIS_STATUS_CHECK_FIRST_MS,
-  ANALYSIS_STATUS_CHECK_SECOND_MS,
+  ANALYSIS_POLL_INITIAL_MS,
+  ANALYSIS_POLL_MAX_DURATION_MS,
+  computeAutoRedirectOnComplete,
+  nextPollDelayMs,
+  shouldShowWaitingPanel,
+  shouldStopPolling,
+} from './analysis-progress-poll';
+import {
   isAlreadyRunningSubmitError,
   isAnalysisInFlight,
-  runFeedbackAfterStatusCheck,
-  RUN_FEEDBACK,
 } from './analysis-run-ux';
 
 async function loadAnalysisPageState(): Promise<{
@@ -31,8 +36,6 @@ async function loadAnalysisPageState(): Promise<{
   return { latest, profile };
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
@@ -41,13 +44,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function InsightCard({
-  title,
-  text,
-}: {
-  title: string;
-  text: string;
-}) {
+function InsightCard({ title, text }: { title: string; text: string }) {
   return (
     <article className="rounded-2xl border border-zinc-200/80 bg-white px-5 py-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
       <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
@@ -83,8 +80,6 @@ function ReferenceCard({ title, text }: { title: string; text: string | null }) 
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function DatingAnalysisPage() {
   const router = useRouter();
   const [data, setData] = useState<MeLatestAnalysisDto | null>(null);
@@ -92,77 +87,87 @@ export default function DatingAnalysisPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reAnalyzeSubmitting, setReAnalyzeSubmitting] = useState(false);
-  const [reRunLocked, setReRunLocked] = useState(false);
-  const [runFeedback, setRunFeedback] = useState<string | null>(null);
-  const [refreshHintShown, setRefreshHintShown] = useState(false);
-  const statusCheckTimeoutsRef = useRef<
-    ReturnType<typeof setTimeout>[]
-  >([]);
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [autoRedirectOnComplete, setAutoRedirectOnComplete] = useState(false);
+  const autoRedirectRef = useRef(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollStartedAtRef = useRef<number | null>(null);
+  const pollDelayRef = useRef(ANALYSIS_POLL_INITIAL_MS);
 
-  const clearStatusChecks = useCallback(() => {
-    for (const id of statusCheckTimeoutsRef.current) {
-      clearTimeout(id);
+  const clearPoll = useCallback(() => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
     }
-    statusCheckTimeoutsRef.current = [];
+    pollStartedAtRef.current = null;
+    pollDelayRef.current = ANALYSIS_POLL_INITIAL_MS;
   }, []);
 
-  const applyLoadedState = useCallback(
-    (latest: MeLatestAnalysisDto, p: MeProfileDto | null) => {
-      setData(latest);
-      setProfile(p);
-    },
-    [],
-  );
-
-  const scheduleStatusChecksRef = useRef<() => void>(() => {});
-
-  const performStatusCheck = useCallback(
-    async (checkIndex: 1 | 2): Promise<boolean> => {
-      try {
-        const { latest, profile: p } = await loadAnalysisPageState();
+  const handleProfileTerminal = useCallback(
+    async (p: MeProfileDto) => {
+      if (p.status === 'ANALYZED') {
+        const latest = await fetchMyLatestAnalysis();
         if (latest) setData(latest);
-        if (p) setProfile(p);
-
-        const nextFeedback = runFeedbackAfterStatusCheck(
-          checkIndex,
-          p?.status,
-        );
-        if (nextFeedback === null) {
-          clearStatusChecks();
-          setRunFeedback(null);
-          setRefreshHintShown(false);
-          setReRunLocked(false);
-          return false;
+        if (autoRedirectRef.current) {
+          setRedirecting(true);
+          router.replace('/dating/me-matches');
+          return;
         }
-        if (checkIndex === 2 && nextFeedback !== undefined) {
-          setRefreshHintShown(true);
-        } else if (nextFeedback !== undefined) {
-          setRunFeedback(nextFeedback);
-        }
-        return true;
-      } catch {
-        if (checkIndex === 2) {
-          setRefreshHintShown(true);
-        }
-        return true;
+        setPollEnabled(false);
+        clearPoll();
+        return;
+      }
+      if (p.status === 'FAILED') {
+        setPollEnabled(false);
+        clearPoll();
       }
     },
-    [clearStatusChecks],
+    [clearPoll, router],
   );
 
-  const scheduleStatusChecks = useCallback(() => {
-    clearStatusChecks();
-    statusCheckTimeoutsRef.current = [
-      setTimeout(() => {
-        void performStatusCheck(1);
-      }, ANALYSIS_STATUS_CHECK_FIRST_MS),
-      setTimeout(() => {
-        void performStatusCheck(2);
-      }, ANALYSIS_STATUS_CHECK_SECOND_MS),
-    ];
-  }, [clearStatusChecks, performStatusCheck]);
+  const runPollTick = useCallback(async () => {
+    try {
+      const p = await fetchMyProfile();
+      if (!p) return;
+      setProfile(p);
+      if (shouldStopPolling(p.status)) {
+        await handleProfileTerminal(p);
+        return;
+      }
+    } catch {
+      /* keep polling */
+    }
 
-  scheduleStatusChecksRef.current = scheduleStatusChecks;
+    if (
+      pollStartedAtRef.current != null &&
+      Date.now() - pollStartedAtRef.current >= ANALYSIS_POLL_MAX_DURATION_MS
+    ) {
+      setPollEnabled(false);
+      clearPoll();
+      return;
+    }
+
+    pollDelayRef.current = nextPollDelayMs(pollDelayRef.current);
+    pollTimeoutRef.current = setTimeout(() => {
+      void runPollTick();
+    }, pollDelayRef.current);
+  }, [clearPoll, handleProfileTerminal]);
+
+  const startPoll = useCallback(
+    (redirectOnComplete: boolean) => {
+      clearPoll();
+      autoRedirectRef.current = redirectOnComplete;
+      setAutoRedirectOnComplete(redirectOnComplete);
+      setPollEnabled(true);
+      pollStartedAtRef.current = Date.now();
+      pollDelayRef.current = ANALYSIS_POLL_INITIAL_MS;
+      pollTimeoutRef.current = setTimeout(() => {
+        void runPollTick();
+      }, pollDelayRef.current);
+    },
+    [clearPoll, runPollTick],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -174,11 +179,14 @@ export default function DatingAnalysisPage() {
           router.replace('/onboarding');
           return;
         }
-        applyLoadedState(latest, p);
-        if (isAnalysisInFlight(p?.status)) {
-          setReRunLocked(true);
-          setRunFeedback(RUN_FEEDBACK.inProgress);
-          scheduleStatusChecksRef.current();
+        setData(latest);
+        setProfile(p);
+        const redirectOnComplete = computeAutoRedirectOnComplete(
+          p,
+          latest.evaluationId,
+        );
+        if (redirectOnComplete) {
+          startPoll(true);
         }
       } catch (e) {
         if (!cancelled)
@@ -190,27 +198,26 @@ export default function DatingAnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, applyLoadedState]);
+  }, [router, startPoll]);
 
   useEffect(() => {
     return () => {
-      clearStatusChecks();
+      clearPoll();
     };
-  }, [clearStatusChecks]);
+  }, [clearPoll]);
 
-  const analysisInFlight = isAnalysisInFlight(profile?.status);
+  const waitingPanel = shouldShowWaitingPanel(profile, data?.evaluationId);
+  const showResults =
+    !waitingPanel && profile?.status === 'ANALYZED' && !!data?.evaluationId;
+  const analysisFailed = profile?.status === 'FAILED' && waitingPanel;
   const vm = mapEvaluationToViewModel(data?.evaluationJson ?? null);
 
   async function onReAnalyze() {
-    if (reAnalyzeSubmitting || analysisInFlight || reRunLocked) {
+    if (reAnalyzeSubmitting || isAnalysisInFlight(profile?.status)) {
       return;
     }
-
-    setReRunLocked(true);
-    setRefreshHintShown(false);
-    setRunFeedback(RUN_FEEDBACK.inProgress);
     setReAnalyzeSubmitting(true);
-    scheduleStatusChecks();
+    startPoll(true);
     try {
       const updated = await submitMyProfileForAnalysis();
       setProfile(updated);
@@ -224,23 +231,19 @@ export default function DatingAnalysisPage() {
           /* keep prior profile */
         }
       } else {
-        clearStatusChecks();
-        setRunFeedback(RUN_FEEDBACK.submitFailed);
-        setRefreshHintShown(false);
-        setReRunLocked(false);
+        clearPoll();
+        setPollEnabled(false);
+        autoRedirectRef.current = false;
+        setAutoRedirectOnComplete(false);
       }
     } finally {
       setReAnalyzeSubmitting(false);
     }
   }
 
-  const reRunButtonDisabled =
-    reAnalyzeSubmitting || analysisInFlight || reRunLocked;
-
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
       <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-8 sm:px-6 sm:py-10">
-
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
             Loading analysis…
@@ -256,25 +259,16 @@ export default function DatingAnalysisPage() {
           </div>
         )}
 
-        {!loading && !error && data && !data.evaluationId && (
-          <div className="rounded-2xl border border-zinc-200/80 bg-white px-6 py-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-              No analysis yet
-            </h1>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Complete your profile and submit for analysis—this page will fill in automatically.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push('/onboarding/basic?edit=1')}
-              className="mt-4 inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-            >
-              Edit profile
-            </button>
-          </div>
+        {!loading && !error && waitingPanel && (
+          <AnalysisProgressPanel
+            profileStatus={profile?.status}
+            failed={analysisFailed}
+            redirecting={redirecting}
+            onRetry={() => void onReAnalyze()}
+          />
         )}
 
-        {!loading && !error && data?.evaluationId && (
+        {!loading && !error && showResults && data && (
           <>
             <section className="rounded-2xl border border-zinc-200/80 bg-white px-6 py-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none sm:px-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -291,28 +285,16 @@ export default function DatingAnalysisPage() {
                 <button
                   type="button"
                   onClick={() => void onReAnalyze()}
-                  disabled={reRunButtonDisabled}
-                  aria-busy={reAnalyzeSubmitting || analysisInFlight}
+                  disabled={reAnalyzeSubmitting || pollEnabled}
+                  aria-busy={reAnalyzeSubmitting || pollEnabled}
+                  data-testid="analysis-rerun-button"
                   className="inline-flex shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
                 >
-                  {reAnalyzeSubmitting
-                    ? 'Starting…'
-                    : analysisInFlight
-                      ? 'Analysis running…'
-                      : 'Re-run analysis'}
+                  {reAnalyzeSubmitting || pollEnabled
+                    ? 'Analysis running…'
+                    : 'Re-run analysis'}
                 </button>
               </div>
-              {(runFeedback || refreshHintShown) && (
-                <p
-                  className="mt-2 text-xs text-zinc-500 dark:text-zinc-400"
-                  role="status"
-                  data-testid="analysis-run-feedback"
-                >
-                  {refreshHintShown
-                    ? RUN_FEEDBACK.stillRunningRefresh
-                    : runFeedback}
-                </p>
-              )}
               {vm.note && (
                 <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">{vm.note}</p>
               )}

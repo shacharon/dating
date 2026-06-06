@@ -8,6 +8,8 @@ import {
   submitMyProfileForAnalysis,
   type MeMatchesListDto,
 } from '@/lib/me-profile-api';
+import { MatchPhoto } from '@/components/match-photo';
+import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import {
   matchListPrimaryLabel,
   matchListSecondaryMeta,
@@ -53,7 +55,9 @@ export default function MeMatchesPage() {
   const loadMatches = useCallback(async () => {
     const dto = await fetchMyMatches();
     if (dto.status === 'not_ready') {
-      router.replace(dto.reason === 'no_profile' ? '/onboarding' : '/dating/analysis');
+      if (dto.reason === 'no_profile') router.replace('/onboarding');
+      else if (dto.reason === 'no_photo') router.replace('/dating/profile');
+      else router.replace('/dating/analysis');
       return;
     }
     setData(dto);
@@ -67,7 +71,9 @@ export default function MeMatchesPage() {
       .then((dto) => {
         if (cancelled) return;
         if (dto.status === 'not_ready') {
-          router.replace(dto.reason === 'no_profile' ? '/onboarding' : '/dating/analysis');
+          if (dto.reason === 'no_profile') router.replace('/onboarding');
+          else if (dto.reason === 'no_photo') router.replace('/dating/profile');
+          else router.replace('/dating/analysis');
           return;
         }
         setData(dto);
@@ -192,17 +198,7 @@ export default function MeMatchesPage() {
 
         {/* Empty */}
         {!loading && !error && matches.length === 0 && (
-          <div
-            className="rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900"
-            role="status"
-          >
-            <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              No matches yet
-            </p>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              This updates as more people join and complete their profiles.
-            </p>
-          </div>
+          <MatchListEmptyState />
         )}
 
         {/* Match list */}
@@ -214,8 +210,13 @@ export default function MeMatchesPage() {
                   href={`/dating/me-matches/${m.id}`}
                   className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/60"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-4">
+                    <MatchPhoto
+                      variant="list"
+                      photoUrl={m.primaryPhotoUrl ?? null}
+                      displayName={matchListPrimaryLabel(m)}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
                       {(() => {
                         const secondary = matchListSecondaryMeta(m);
                         return (

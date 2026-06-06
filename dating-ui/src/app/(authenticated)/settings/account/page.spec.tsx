@@ -1,0 +1,31 @@
+/** @vitest-environment jsdom */
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+
+vi.mock('@/contexts/auth-context', () => ({
+  useAuth: () => ({
+    refresh: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
+import SettingsAccountPage from '@/app/(authenticated)/settings/account/page';
+
+describe('SettingsAccountPage', () => {
+  it('links to privacy, terms, and notification preferences', () => {
+    render(<SettingsAccountPage />);
+    expect(screen.getByTestId('account-link-privacy').getAttribute('href')).toBe(
+      '/privacy',
+    );
+    expect(screen.getByTestId('account-link-terms').getAttribute('href')).toBe(
+      '/terms',
+    );
+    expect(
+      screen.getByTestId('account-link-notifications').getAttribute('href'),
+    ).toBe('/dating/profile#notification-prefs');
+    expect(screen.getByTestId('delete-account-section')).toBeTruthy();
+  });
+});

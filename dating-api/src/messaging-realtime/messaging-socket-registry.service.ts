@@ -49,6 +49,27 @@ export class MessagingSocketRegistry {
     }
   }
 
+  disconnectByUserId(userId: string): void {
+    const set = this.byUserId.get(userId);
+    if (!set) {
+      return;
+    }
+    for (const socket of [...set]) {
+      const data = socket.data as MessagingSocketData | undefined;
+      if (data?.sessionId) {
+        const sessionSet = this.bySession.get(data.sessionId);
+        if (sessionSet) {
+          sessionSet.delete(socket);
+          if (sessionSet.size === 0) {
+            this.bySession.delete(data.sessionId);
+          }
+        }
+      }
+      socket.disconnect(true);
+    }
+    this.byUserId.delete(userId);
+  }
+
   disconnectBySessionId(sessionId: string): void {
     const set = this.bySession.get(sessionId);
     if (!set) {

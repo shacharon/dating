@@ -32,6 +32,8 @@ export const ErrorCodes = {
   ME_PROFILE_SUBMIT_SUCCESS: 'ME_PROFILE_SUBMIT_SUCCESS',
   /** Me profile: POST /submit rejected because profile is in a non-submittable state */
   ME_PROFILE_SUBMIT_INVALID_STATE: 'ME_PROFILE_SUBMIT_INVALID_STATE',
+  /** Me profile: POST /submit rejected because viewer has no approved photo */
+  ME_PROFILE_PHOTO_REQUIRED: 'ME_PROFILE_PHOTO_REQUIRED',
   /** Me profile: POST /submit unexpected persistence failure */
   ME_PROFILE_SUBMIT_FAILED: 'ME_PROFILE_SUBMIT_FAILED',
   /** Me profile: analysis skipped — profile not found or not in SUBMITTED state */
@@ -111,6 +113,15 @@ export const ErrorCodes = {
   EMAIL_SKIPPED_PROVIDER_DISABLED: 'EMAIL_SKIPPED_PROVIDER_DISABLED',
   EMAIL_UNSUBSCRIBE_OK: 'EMAIL_UNSUBSCRIBE_OK',
   EMAIL_UNSUBSCRIBE_INVALID: 'EMAIL_UNSUBSCRIBE_INVALID',
+
+  /** Sprint 9 Story 4 — user report submitted. */
+  USER_REPORT_CREATED: 'USER_REPORT_CREATED',
+  USER_REPORT_OPS_EMAIL_OK: 'USER_REPORT_OPS_EMAIL_OK',
+  USER_REPORT_OPS_EMAIL_FAILED: 'USER_REPORT_OPS_EMAIL_FAILED',
+
+  /** Sprint 9 Story 5 — account deletion. */
+  ACCOUNT_DELETE_SUCCESS: 'ACCOUNT_DELETE_SUCCESS',
+  ACCOUNT_DELETE_PHOTO_STORAGE_FAILED: 'ACCOUNT_DELETE_PHOTO_STORAGE_FAILED',
 
   /** Generic HTTP layer */
   HTTP_EXCEPTION: 'HTTP_EXCEPTION',

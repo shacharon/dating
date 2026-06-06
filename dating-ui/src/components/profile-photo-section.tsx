@@ -9,6 +9,13 @@ import {
   uploadMyProfilePhoto,
   type MeProfilePhotoDto,
 } from '@/lib/me-profile-api';
+import {
+  APP_LOCALE_CHANGE_EVENT,
+  APP_LOCALE_STORAGE_KEY,
+  getCopy,
+  readStoredLocale,
+  type AppLocale,
+} from '@/lib/i18n';
 
 const MAX_PHOTOS = 3;
 
@@ -23,7 +30,11 @@ function statusLabel(status: MeProfilePhotoDto['status']): string {
   return 'pending';
 }
 
-export function ProfilePhotoSection() {
+export function ProfilePhotoSection({
+  requiredForMatching = false,
+}: {
+  requiredForMatching?: boolean;
+}) {
   const [photos, setPhotos] = useState<MeProfilePhotoDto[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -31,6 +42,32 @@ export function ProfilePhotoSection() {
   const [uploading, setUploading] = useState<UploadingPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+
+  useEffect(() => {
+    setLocale(readStoredLocale());
+    const onLocaleChanged = (event: Event) => {
+      const e = event as CustomEvent<AppLocale>;
+      if (e.detail) {
+        setLocale(e.detail);
+        return;
+      }
+      setLocale(readStoredLocale());
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
+        setLocale(readStoredLocale());
+      }
+    };
+    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  const photoGateCopy = getCopy(locale).photoGate;
 
   async function refreshPhotos() {
     const rows = await listMyProfilePhotos();
@@ -147,11 +184,21 @@ export function ProfilePhotoSection() {
   }
 
   return (
-    <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+    <section
+      id="profile-photos"
+      className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          Photos
-        </h2>
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+            Photos
+          </h2>
+          {requiredForMatching ? (
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+              {photoGateCopy.requiredForMatchingHint}
+            </p>
+          ) : null}
+        </div>
         <label
           className={`rounded border px-3 py-1.5 text-xs font-medium ${canUpload ? 'cursor-pointer border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800' : 'cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'}`}
           aria-disabled={!canUpload}

@@ -132,6 +132,20 @@ export class SessionService {
     return res.count > 0;
   }
 
+  /** Sets `revokedAt` on all active sessions for a user. Returns rows updated. */
+  async revokeAllSessionsForUser(userId: string): Promise<number> {
+    const id = userId.trim();
+    if (!id) {
+      return 0;
+    }
+    const now = new Date();
+    const res = await this.prisma.userSession.updateMany({
+      where: { userId: id, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    return res.count;
+  }
+
   private requirePepper(): string {
     const pepper = this.authSessionConfig.sessionSecretPepper;
     if (!pepper) {

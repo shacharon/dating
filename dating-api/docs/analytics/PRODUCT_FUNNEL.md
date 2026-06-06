@@ -7,6 +7,7 @@ Sprint 7 Story 4 — server-side funnel events as structured JSON logs (`logKind
 | Event | When | Properties |
 |-------|------|------------|
 | `profile.submitted` | Profile transitions to `SUBMITTED` | `profileId`, `priorStatus` |
+| `profile.photo_gate_blocked` | Match list `not_ready(no_photo)` or submit rejected for missing photo | `surface` (`match_list` \| `submit`) |
 | `match.list_viewed` | Match list returns `status: ready` | `matchCount`, `viewerProfileId` |
 | `match.action` | Like / pass / block / undo | `action`, `candidateProfileId` |
 | `match.mutual_created` | New mutual match row created | `mutualMatchId`, `otherUserId` (×2 users) |
@@ -14,6 +15,8 @@ Sprint 7 Story 4 — server-side funnel events as structured JSON logs (`logKind
 | `message.sent` | Message persisted | `conversationIdHash` |
 | `messaging.ws_connected` | WS auth + registry success | `activeConnections` |
 | `messaging.ws_disconnected` | WS disconnect (authenticated) | `activeConnections` |
+| `user.reported` | User report persisted | `reason` (enum only) |
+| `account.deleted` | User account soft-deleted | _(empty — `userId` in envelope only)_ |
 
 ## PII policy
 

@@ -1,7 +1,7 @@
 # Story 1: Photos in match browse
 
 **Sprint:** 9  
-**Status:** Planned  
+**Status:** Done (engineering gate — manual smoke pending operator)  
 **Depends on:** — (API already exposes `primaryPhotoUrl` on match DTOs)
 
 ---
@@ -20,14 +20,14 @@ Users cannot evaluate attraction from text-only cards. The API already returns `
 
 ### Acceptance criteria
 
-- [ ] **Match list** — each row shows primary photo thumbnail (or neutral placeholder when absent)
-- [ ] **Match detail** — photo hero above score/explainability; uses authenticated photo URL
-- [ ] **Conversation list** — other user's primary photo on each row (reuse same URL pattern)
-- [ ] **Conversation header** — peer avatar in thread view when photo exists
-- [ ] **Celebration modal** — unchanged behavior; verify still works with shared photo component
-- [ ] **Loading / error** — broken image → placeholder; no layout shift
-- [ ] **PII-safe** — photo URLs remain session-authenticated endpoints (no public CDN URLs in HTML)
-- [ ] **Tests** — list/detail/conversation render with and without `primaryPhotoUrl`
+- [x] **Match list** — each row shows primary photo thumbnail (or neutral placeholder when absent)
+- [x] **Match detail** — photo hero above score/explainability; uses authenticated photo URL
+- [x] **Conversation list** — other user's primary photo on each row (reuse same URL pattern) *(pre-shipped Sprint 2–3; regression verified)*
+- [x] **Conversation header** — peer avatar in thread view when photo exists *(pre-shipped; regression verified)*
+- [x] **Celebration modal** — unchanged behavior; verify still works with shared photo component
+- [x] **Loading / error** — broken image → placeholder; no layout shift
+- [x] **PII-safe** — photo URLs remain session-authenticated endpoints (no public CDN URLs in HTML)
+- [x] **Tests** — list/detail/conversation render with and without `primaryPhotoUrl`
 
 ### Out of scope (this story)
 
@@ -49,10 +49,10 @@ Users cannot evaluate attraction from text-only cards. The API already returns `
 
 ## Definition of done
 
-- [ ] Photos visible on match list, detail, conversation list, and chat header
-- [ ] Placeholder when no approved primary photo
-- [ ] UI unit tests updated
-- [ ] Manual smoke: two users with photos see each other's faces in browse + chat list
+- [x] Photos visible on match list, detail, conversation list, and chat header
+- [x] Placeholder when no approved primary photo
+- [x] UI unit tests updated
+- [ ] Manual smoke: two users with photos see each other's faces in browse + chat list *(operator)*
 
 ---
 
@@ -65,9 +65,27 @@ Users cannot evaluate attraction from text-only cards. The API already returns `
 
 ---
 
+## Shipped (2026-06-06)
+
+| Area | Deliverable |
+|------|-------------|
+| Shared UI | `MatchPhoto` — `list` / `hero` / `celebration` / `header` variants; placeholder initials; `onError` fallback |
+| URL helper | `matchPhotoSrc` re-export of `conversationPhotoSrc` |
+| Match list | Thumbnail per row (`/dating/me-matches`) |
+| Match detail | Full-width hero above header (`/dating/me-matches/[id]`) |
+| Modal | `MatchCelebrationModal` uses `MatchPhoto variant="celebration"` |
+| Types | `primaryPhotoUrl` on UI `MeMatchItemDto` |
+| Tests | **218/218** UI suite; +10 story-focused tests |
+
+Handoffs: `handoffs/STORY_01_photos_in_match_browse/agent-*.md`
+
+---
+
 ## Deferred / follow-up
 
 | Item | Target |
 |------|--------|
+| Operator two-browser photo smoke | Manual smoke section above |
+| Refactor conversations to `MatchPhoto` | Optional cleanup |
 | Multi-photo gallery on detail | Future sprint |
 | Blur until mutual match | Product decision |

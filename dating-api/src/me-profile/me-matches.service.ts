@@ -23,6 +23,7 @@ import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { MutualMatchesService } from './mutual-matches.service';
+import { countApprovedPhotosForProfile, viewerHasApprovedPhoto } from './me-profile-photo-gate';
 import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
 import {
   buildMatchExplanationTraits,
@@ -75,8 +76,9 @@ export interface MeMatchesListResponseDto {
    * Present when `status = 'not_ready'`.
    * - `no_profile` — viewer has never created a product profile.
    * - `not_analyzed` — profile exists but has not completed analysis yet.
+   * - `no_photo` — profile is analyzed but viewer has no approved photo.
    */
-  reason?: 'no_profile' | 'not_analyzed';
+  reason?: 'no_profile' | 'not_analyzed' | 'no_photo';
   /** Present when `status = 'ready'`. */
   viewerProfileId?: string;
   viewerGender?: string | null;
@@ -187,6 +189,7 @@ export class MeMatchesService {
       select: { id: true, isPrimary: true },
     },
     _count: { select: { evaluations: true } },
+    user: { select: { deletedAt: true } },
   } as const;
 
   // ─── list ──────────────────────────────────────────────────────────────────
@@ -218,6 +221,21 @@ export class MeMatchesService {
         ErrorCodes.ME_MATCHES_LIST_NOT_READY,
       );
       return { status: 'not_ready', reason: 'not_analyzed' };
+    }
+
+    const approvedPhotoCount = await countApprovedPhotosForProfile(
+      this.prisma,
+      viewer.id,
+    );
+    if (approvedPhotoCount < 1) {
+      this.obs.trace(
+        `me matches list: no approved photo profileId=${viewer.id} userId=${userId}`,
+        ErrorCodes.ME_MATCHES_LIST_NOT_READY,
+      );
+      this.analytics.track(userId, ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED, {
+        surface: 'match_list',
+      });
+      return { status: 'not_ready', reason: 'no_photo' };
     }
 
     const asOf = new Date();
@@ -260,7 +278,11 @@ export class MeMatchesService {
     }
 
     const candidateRows = await this.prisma.userProfile.findMany({
-      where: { userId: { not: userId }, status: STATUS_ANALYZED },
+      where: {
+        userId: { not: userId },
+        status: STATUS_ANALYZED,
+        user: { deletedAt: null },
+      },
       select: this.candidateSelect,
     });
 
@@ -440,6 +462,12 @@ export class MeMatchesService {
       );
     }
 
+    if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
+      throw new NotFoundException(
+        'Your profile is not ready for matching. Add at least one photo first.',
+      );
+    }
+
     const asOf = new Date();
     const viewerBridge = buildProductProfileMatchingBridge(
       viewer,
@@ -452,7 +480,11 @@ export class MeMatchesService {
       select: this.candidateSelect,
     });
 
-    if (!candidate || candidate.status !== STATUS_ANALYZED) {
+    if (
+      !candidate ||
+      candidate.status !== STATUS_ANALYZED ||
+      candidate.user?.deletedAt != null
+    ) {
       throw new NotFoundException('Match not found.');
     }
 
@@ -517,6 +549,12 @@ export class MeMatchesService {
       );
     }
 
+    if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
+      throw new NotFoundException(
+        'Your profile is not ready for matching. Add at least one photo first.',
+      );
+    }
+
     const asOf = new Date();
     const viewerBridge = buildProductProfileMatchingBridge(
       viewer,
@@ -530,7 +568,11 @@ export class MeMatchesService {
       select: this.candidateSelect,
     });
 
-    if (!candidate || candidate.status !== STATUS_ANALYZED) {
+    if (
+      !candidate ||
+      candidate.status !== STATUS_ANALYZED ||
+      candidate.user?.deletedAt != null
+    ) {
       throw new NotFoundException('Match not found.');
     }
 
@@ -697,9 +739,10 @@ export class MeMatchesService {
         aboutPartner: true,
         aboutRelationship: true,
         preference: true,
+        user: { select: { deletedAt: true } },
       },
     });
-    if (!candidate) {
+    if (!candidate || candidate.user?.deletedAt != null) {
       throw new NotFoundException('Match not found.');
     }
 

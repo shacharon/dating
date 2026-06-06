@@ -403,6 +403,11 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
       expect(screen.getByText("It's a match!")).toBeTruthy();
     });
     expect(screen.getByRole('dialog').textContent).toContain('Rivka');
+    const photo = screen.getByTestId('match-celebration-photo');
+    expect(photo.tagName).toBe('IMG');
+    expect(photo.getAttribute('src')).toBe(
+      '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
+    );
   });
 
   it('navigates to conversation when Send a message is clicked', async () => {
@@ -460,5 +465,103 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
       expect(link.getAttribute('href')).toBe('/dating/conversations/mutual_row_1');
     });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+describe('MeMatchDetailPage (match photos)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMyMatchById.mockResolvedValue(baseMatch);
+    fetchMatchAction.mockResolvedValue(noActionState);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders hero photo when primaryPhotoUrl is set', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      primaryPhotoUrl: '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      const photo = screen.getByTestId('match-detail-photo');
+      expect(photo.tagName).toBe('IMG');
+      expect(photo.getAttribute('src')).toBe(
+        '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
+      );
+    });
+  });
+
+  it('renders placeholder hero when primaryPhotoUrl is null', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      primaryPhotoUrl: null,
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      const photo = screen.getByTestId('match-detail-photo');
+      expect(photo.tagName).toBe('DIV');
+      expect(photo.textContent).toBe('F');
+    });
+  });
+
+  it('opens report dialog from match detail footer', async () => {
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-report')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('match-detail-report'));
+
+    expect(screen.getByTestId('report-user-dialog')).toBeTruthy();
+  });
+});
+
+describe('MeMatchDetailPage (human-first layout)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMatchAction.mockResolvedValue(noActionState);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('shows takeaway before de-emphasized score label', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      matchScore: 72,
+      explainability: {
+        positiveChips: ['Shared values'],
+        reasonShort: 'Strong alignment on communication style',
+      },
+      recommendation: {
+        primaryTakeaway: 'You both prioritize honest, calm connection.',
+        caution: null,
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
+      expect(screen.getByTestId('match-detail-score')).toBeTruthy();
+    });
+
+    const takeaway = screen.getByTestId('match-detail-takeaway');
+    const score = screen.getByTestId('match-detail-score');
+    expect(
+      takeaway.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(score.textContent).toBe('Match score · 72');
+    expect(score.className).toContain('text-sm');
+    expect(document.querySelector('.text-2xl')).toBeNull();
   });
 });

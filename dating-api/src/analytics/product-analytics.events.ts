@@ -7,6 +7,9 @@ export const ProductAnalyticsEvents = {
   MESSAGE_SENT: 'message.sent',
   MESSAGING_WS_CONNECTED: 'messaging.ws_connected',
   MESSAGING_WS_DISCONNECTED: 'messaging.ws_disconnected',
+  USER_REPORTED: 'user.reported',
+  ACCOUNT_DELETED: 'account.deleted',
+  PROFILE_PHOTO_GATE_BLOCKED: 'profile.photo_gate_blocked',
 } as const;
 
 export type ProductAnalyticsEventName =

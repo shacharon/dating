@@ -66,6 +66,7 @@ model User {
   emailNotificationsEnabled   Boolean    @default(true)
   inAppNotificationsEnabled   Boolean    @default(true)
   lastLoginAt                 DateTime?
+  deletedAt                   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -76,6 +77,10 @@ model User {
   mutualMatchesAsUser1 MutualMatch[] @relation("MutualMatchUser1")
   mutualMatchesAsUser2 MutualMatch[] @relation("MutualMatchUser2")
   messages              Message[]
+  reportsAsReporter     UserReport[] @relation("ReportsByReporter")
+  reportsAsReported     UserReport[] @relation("ReportsByReported")
+
+  @@index([deletedAt])
 }
 
 model UserProfile {
@@ -264,6 +269,44 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+}
+
+enum UserReportReason {
+  HARASSMENT
+  SPAM
+  FAKE_PROFILE
+  INAPPROPRIATE_CONTENT
+  OTHER
+}
+
+enum UserReportStatus {
+  OPEN
+  DISMISSED
+  ACTION_TAKEN
+}
+
+enum UserReportContextType {
+  MATCH_PROFILE
+  CONVERSATION
+}
+
+model UserReport {
+  id             String                @id @default(cuid())
+  reporterUserId String
+  reporter       User                  @relation("ReportsByReporter", fields: [reporterUserId], references: [id])
+  reportedUserId String
+  reported       User                  @relation("ReportsByReported", fields: [reportedUserId], references: [id])
+  reason         UserReportReason
+  details        String?               @db.VarChar(1000)
+  contextType    UserReportContextType
+  contextId      String
+  status         UserReportStatus      @default(OPEN)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reportedUserId, status])
+  @@index([reporterUserId, reportedUserId, reason, createdAt])
 }
 
 model UserSession {

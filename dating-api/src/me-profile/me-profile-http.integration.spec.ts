@@ -94,6 +94,7 @@ describe('me profile HTTP (integration)', () => {
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       delete: jest.fn(),
+      count: jest.fn().mockResolvedValue(1),
     },
     matchAction: {
       upsert: jest.fn(),
@@ -214,6 +215,7 @@ describe('me profile HTTP (integration)', () => {
     prismaMock.userProfilePhoto.update.mockReset();
     prismaMock.userProfilePhoto.updateMany.mockReset();
     prismaMock.userProfilePhoto.delete.mockReset();
+    prismaMock.userProfilePhoto.count.mockReset();
     prismaMock.matchAction.upsert.mockReset();
     prismaMock.matchAction.findMany.mockReset();
     prismaMock.matchAction.findMany.mockResolvedValue([]);
@@ -237,6 +239,7 @@ describe('me profile HTTP (integration)', () => {
     prismaMock.userProfilePhoto.findMany.mockResolvedValue([]);
     prismaMock.userProfilePhoto.findFirst.mockResolvedValue(null);
     prismaMock.userProfilePhoto.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.userProfilePhoto.count.mockResolvedValue(1);
     photoStorageMock.save.mockResolvedValue(undefined);
     photoStorageMock.delete.mockResolvedValue(undefined);
     photoStorageMock.read.mockResolvedValue(Buffer.from([1, 2, 3]));
@@ -557,6 +560,35 @@ describe('me profile HTTP (integration)', () => {
       .expect(422);
 
     expect(res.body).toMatchObject({ error: 'onboarding_texts_incomplete' });
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /api/v1/me/profile returns 400 when partnerAgeMin exceeds partnerAgeMax', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_inc',
+      userId: USER_ID,
+      status: UserProfileStatus.DRAFT,
+      onboardingStep: 'COMPLETED',
+      aboutMe: 'me',
+      aboutPartner: 'partner',
+      aboutRelationship: 'rel',
+      gender: 'MALE' as const,
+      desiredPartnerGenders: ['FEMALE'] as unknown,
+      preference: null,
+    });
+
+    const res = await request(app.getHttpServer())
+      .patch('/api/v1/me/profile')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ partnerAgeMin: 40, partnerAgeMax: 30 })
+      .expect(400);
+
+    expect(
+      Array.isArray(res.body.message)
+        ? res.body.message.join(' ')
+        : String(res.body.message),
+    ).toMatch(/partnerAgeMin must be less than or equal to partnerAgeMax/i);
     expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 
@@ -1394,6 +1426,39 @@ describe('me profile HTTP (integration)', () => {
     expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 
+  it('POST /api/v1/me/profile/submit returns 422 when no approved photo', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_submit_nophoto',
+      userId: USER_ID,
+      status: 'DRAFT' as UserProfileStatus,
+      onboardingStep: 'BASIC',
+      aboutMe: 'ready',
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: null,
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: null,
+      city: null,
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+    });
+    prismaMock.userProfilePhoto.count.mockResolvedValue(0);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile/submit')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(422);
+
+    expect(res.body).toMatchObject({ error: 'photo_required' });
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+  });
+
   it('POST /api/v1/me/profile/submit returns 200 and sets status SUBMITTED from DRAFT', async () => {
     const raw = await loginAndCookie();
     const draftRow = {
@@ -1709,6 +1774,20 @@ describe('me profile HTTP (integration)', () => {
 
       expect(res.body.status).toBe('not_ready');
       expect(res.body.reason).toBe('not_analyzed');
+    });
+
+    it('returns 200 not_ready(no_photo) when viewer is ANALYZED but has no approved photos', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfilePhoto.count.mockResolvedValue(0);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('not_ready');
+      expect(res.body.reason).toBe('no_photo');
     });
 
     it('returns 200 ready with empty matches when no candidates exist', async () => {

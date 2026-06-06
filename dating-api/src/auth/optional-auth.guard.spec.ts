@@ -89,6 +89,26 @@ describe('OptionalAuthGuard', () => {
     expect(req.authUser).toBeUndefined();
   });
 
+  it('returns true without authUser when user has deletedAt set', async () => {
+    const req = { cookies: { [cookieName]: 'tok' } } as unknown as AuthenticatedRequest;
+    sessions.validateSessionToken.mockResolvedValue({
+      sessionId: 's1',
+      userId: 'u1',
+      expiresAt: new Date('2038-01-01'),
+    });
+    users.findById.mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.com',
+      displayName: null,
+      avatarUrl: null,
+      status: UserStatus.ACTIVE,
+      deletedAt: new Date('2026-06-06T00:00:00.000Z'),
+    });
+
+    await expect(guard.canActivate(mockContext(req))).resolves.toBe(true);
+    expect(req.authUser).toBeUndefined();
+  });
+
   it('sets authUser and authSession when session and ACTIVE user are valid', async () => {
     const req = { cookies: { [cookieName]: 'tok' } } as unknown as AuthenticatedRequest;
     const validated = {

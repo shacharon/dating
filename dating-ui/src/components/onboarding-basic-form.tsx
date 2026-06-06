@@ -397,7 +397,7 @@ export function OnboardingBasicForm() {
         </div>
       </section>
 
-      <ProfilePhotoSection />
+      <ProfilePhotoSection requiredForMatching />
 
       <div className="flex flex-wrap items-center gap-3">
         <button

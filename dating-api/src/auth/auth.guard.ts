@@ -44,7 +44,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const user = await this.users.findById(validated.userId);
-    if (!user) {
+    if (!user || user.deletedAt != null) {
       this.obs.error(
         'auth guard: user not found for session',
         ErrorCodes.AUTH_GUARD_UNAUTHORIZED,

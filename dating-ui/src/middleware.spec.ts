@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { middleware } from './middleware';
 
@@ -96,10 +96,45 @@ describe('middleware (Phase 2 profile routes)', () => {
     const res = middleware(req);
     expect(res.headers.get('location')).toBeNull();
   });
+});
 
-  it('does not treat /profiles as /profile (no redirect from middleware for /profiles)', () => {
+describe('middleware (internal routes prod gate)', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    delete process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES;
+  });
+
+  it('returns 404 for /evaluate in production', () => {
+    process.env.NODE_ENV = 'production';
+    const req = new NextRequest(new URL('http://localhost:3000/evaluate'));
+    req.cookies.set('dating_session', 'opaque-token');
+    const res = middleware(req);
+    expect(res.status).toBe(404);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('returns 404 for /profiles in production', () => {
+    process.env.NODE_ENV = 'production';
     const req = new NextRequest(new URL('http://localhost:3000/profiles'));
     const res = middleware(req);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 for /dev in production', () => {
+    process.env.NODE_ENV = 'production';
+    const req = new NextRequest(new URL('http://localhost:3000/dev/tools'));
+    req.cookies.set('dating_session', 'opaque-token');
+    const res = middleware(req);
+    expect(res.status).toBe(404);
+  });
+
+  it('allows /profiles in non-production', () => {
+    process.env.NODE_ENV = 'test';
+    const req = new NextRequest(new URL('http://localhost:3000/profiles'));
+    const res = middleware(req);
+    expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
   });
 });

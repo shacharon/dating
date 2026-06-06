@@ -242,4 +242,21 @@ describe('SessionService', () => {
       expect(prisma.userSession.updateMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('revokeAllSessionsForUser', () => {
+    it('revokes all active sessions for user', async () => {
+      prisma.userSession.updateMany.mockResolvedValue({ count: 3 });
+      const count = await service.revokeAllSessionsForUser('user-abc');
+      expect(count).toBe(3);
+      expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-abc', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+    });
+
+    it('returns 0 for blank userId', async () => {
+      await expect(service.revokeAllSessionsForUser('  ')).resolves.toBe(0);
+      expect(prisma.userSession.updateMany).not.toHaveBeenCalled();
+    });
+  });
 });

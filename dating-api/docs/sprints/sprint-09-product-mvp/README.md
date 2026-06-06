@@ -3,7 +3,7 @@
 **Epic:** Trust, browse UX, and settings — make the dating loop usable by strangers  
 **Duration:** ~2 weeks (6 stories)  
 **Goal:** Users see faces in the feed, control match preferences, report bad actors, manage their account legally, and get guided through sparse/empty states.  
-**Status:** Planned  
+**Status:** Complete (6/6 engineering gate — manual smoke pending operator)  
 **Depends on:** [Sprint 8](../sprint-08-in-app-notifications/README.md) (notifications complete), [Sprint 7 Story 4](../sprint-07-tech-debt/STORY_04_product_funnel_analytics.md) (funnel events for launch KPIs)
 
 ---
@@ -12,11 +12,10 @@
 
 Sprints 1–8 shipped the **core loop** (match → like → mutual → chat) and retention plumbing (email, in-app toast, nav unread, prefs). The product is still not launch-ready for real users:
 
-- Match browse is **text-only** while photos exist on the API
-- **Block** exists but **report** does not; photos are stub auto-approved
-- **Settings** pages are placeholders (`Account`, `Match preferences`, profile sub-pages)
-- No **privacy / terms / delete account**
-- **Empty pool** and **analysis waiting** UX do not guide cohort launches
+- Match browse lacked **photos in list/detail** *(Story 1 done)*
+- **Legal + account deletion** shipped (Story 5); photos still stub auto-approved
+- **Settings** — match preferences + account (privacy, delete) wired; **photo gate** shipped (Story 2)
+- **Empty pool** and **analysis waiting** UX shipped (Story 6); cohort runbook in `LAUNCH_COHORT_RUNBOOK.md`
 
 This sprint closes the gap between “engineering MVP” and “product MVP.”
 
@@ -26,12 +25,12 @@ This sprint closes the gap between “engineering MVP” and “product MVP.”
 
 | # | Story | Status | Depends on |
 |---|--------|--------|------------|
-| 1 | [Photos in match browse](./STORY_01_photos_in_match_browse.md) | Planned | — |
-| 2 | [Photo gate + profile completeness](./STORY_02_photo_gate_profile_completeness.md) | Planned | Story 1 (display patterns) |
-| 3 | [Match preferences UI](./STORY_03_match_preferences_ui.md) | Planned | — |
-| 4 | [Report user](./STORY_04_report_user.md) | Planned | — |
-| 5 | [Legal pages + account deletion](./STORY_05_legal_and_account_deletion.md) | Planned | — |
-| 6 | [Launch UX polish](./STORY_06_launch_ux_polish.md) | Planned | Stories 1–3 (recommended) |
+| 1 | [Photos in match browse](./STORY_01_photos_in_match_browse.md) | **Done** (engineering gate — manual smoke pending operator) | — |
+| 2 | [Photo gate + profile completeness](./STORY_02_photo_gate_profile_completeness.md) | **Done** (engineering gate — manual smoke pending operator) | Story 1 (display patterns) |
+| 3 | [Match preferences UI](./STORY_03_match_preferences_ui.md) | **Done** (engineering gate — manual smoke pending operator) | — |
+| 4 | [Report user](./STORY_04_report_user.md) | **Done** (engineering gate — manual smoke pending operator) | — |
+| 5 | [Legal pages + account deletion](./STORY_05_legal_and_account_deletion.md) | **Done** (engineering gate — manual smoke pending operator) | — |
+| 6 | [Launch UX polish](./STORY_06_launch_ux_polish.md) | **Done** (engineering gate — manual smoke pending operator) | Stories 1–3 (recommended) |
 
 **Recommended order:** 1 → 3 → 4 → 5 → 2 → 6 (or run 1 + 3 + 4 + 5 in parallel, then 2, then 6).
 
@@ -117,7 +116,7 @@ Handoffs: `handoffs/<story-slug>/agent-*.md`
 ## End-to-end smoke (after all stories)
 
 1. `cd dating-api && npx prisma migrate deploy && npm test`
-2. `cd dating-ui && npm test && npm run build`
+2. `cd dating-ui && npm test && npm run build` *(build currently fails on legacy `/dating/matches` — fix or gate before prod deploy)*
 3. Login → onboarding → photo → submit → matches (with photos) → like → mutual → chat
 4. Settings: prefs save; notifications toggles still work (Sprint 8)
 5. Report + block flows independent

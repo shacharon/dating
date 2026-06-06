@@ -1,14 +1,10 @@
 /** @vitest-environment jsdom */
-import { act, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  ANALYSIS_STATUS_CHECK_FIRST_MS,
-  ANALYSIS_STATUS_CHECK_SECOND_MS,
-  RUN_FEEDBACK,
-} from './analysis-run-ux';
+import { ANALYSIS_POLL_INITIAL_MS } from './analysis-progress-poll';
 import DatingAnalysisPage from './page';
 
 const mocked = vi.hoisted(() => ({
@@ -86,7 +82,7 @@ function findReRunButton(container: HTMLElement): HTMLButtonElement {
     container.querySelectorAll('button[type="button"]'),
   ) as HTMLButtonElement[];
   const btn = buttons.find((b) =>
-    /re-run analysis|analysis running|starting/i.test(b.textContent ?? ''),
+    /re-run analysis|analysis running/i.test(b.textContent ?? ''),
   );
   if (!btn) throw new Error('Re-run button not found');
   return btn;
@@ -98,6 +94,7 @@ describe('DatingAnalysisPage', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
     mocked.replaceMock.mockReset();
     mocked.fetchMyLatestAnalysisMock.mockReset();
@@ -105,7 +102,7 @@ describe('DatingAnalysisPage', () => {
     mocked.submitMyProfileForAnalysisMock.mockReset();
   });
 
-  it('renders summary and separated cards', async () => {
+  it('renders summary and separated cards when already analyzed', async () => {
     mockAnalyzedPageLoad();
 
     const div = document.createElement('div');
@@ -124,12 +121,13 @@ describe('DatingAnalysisPage', () => {
     expect(text).toContain('About you');
     expect(text).toContain('How you relate');
     expect(text).toContain('Who you want');
+    expect(screen.queryByTestId('analysis-progress-panel')).toBeNull();
 
     root.unmount();
     div.remove();
   });
 
-  it('disables re-run on initial load when profile status is ANALYZING', async () => {
+  it('shows waiting panel when profile status is ANALYZING on mount', async () => {
     mocked.fetchMyLatestAnalysisMock.mockResolvedValue({
       userProfileId: 'prof_3',
       evaluationId: 'eval_3',
@@ -156,23 +154,72 @@ describe('DatingAnalysisPage', () => {
       updatedAt: '2026-05-02T00:00:00.000Z',
     });
 
-    const div = document.createElement('div');
-    document.body.appendChild(div);
-    const root = createRoot(div);
+    render(createElement(DatingAnalysisPage));
+    await flush();
+
+    expect(screen.getByTestId('analysis-progress-panel')).toBeTruthy();
+    expect(screen.getByTestId('analysis-step-analyzing')).toBeTruthy();
+    expect(screen.queryByTestId('analysis-rerun-button')).toBeNull();
+  });
+
+  it('redirects to matches when poll observes ANALYZED during wait session', async () => {
+    mocked.fetchMyLatestAnalysisMock.mockResolvedValue({
+      userProfileId: 'prof_wait',
+      evaluationId: null,
+      createdAt: '2026-05-02T16:00:00.000Z',
+      evaluationJson: null,
+    });
+    mocked.fetchMyProfileMock.mockResolvedValue({
+      id: 'prof_wait',
+      userId: 'user_wait',
+      status: 'SUBMITTED',
+      onboardingStep: 'COMPLETED',
+      aboutMe: 'A',
+      aboutPartner: 'B',
+      aboutRelationship: 'C',
+      createdAt: '2026-05-01T00:00:00.000Z',
+      updatedAt: '2026-05-02T00:00:00.000Z',
+    });
+
+    render(createElement(DatingAnalysisPage));
+    await flush();
+
+    expect(screen.getByTestId('analysis-progress-panel')).toBeTruthy();
+
+    mocked.fetchMyProfileMock.mockResolvedValue({
+      id: 'prof_wait',
+      userId: 'user_wait',
+      status: 'ANALYZED',
+      onboardingStep: 'COMPLETED',
+      aboutMe: 'A',
+      aboutPartner: 'B',
+      aboutRelationship: 'C',
+      createdAt: '2026-05-01T00:00:00.000Z',
+      updatedAt: '2026-05-02T00:00:00.000Z',
+    });
+    mocked.fetchMyLatestAnalysisMock.mockResolvedValue(analyzedLatest);
 
     await act(async () => {
-      root.render(createElement(DatingAnalysisPage));
+      await vi.advanceTimersByTimeAsync(ANALYSIS_POLL_INITIAL_MS);
     });
     await flush();
 
-    const btn = findReRunButton(div);
-    expect(btn.textContent).toContain('Analysis running');
-    expect(btn.disabled).toBe(true);
-    expect(div.textContent).toContain(RUN_FEEDBACK.inProgress);
-    expect(div.textContent).not.toContain('Could not start analysis');
+    expect(mocked.replaceMock).toHaveBeenCalledWith('/dating/me-matches');
+  });
 
-    root.unmount();
-    div.remove();
+  it('does not redirect when user opens page with ANALYZED results on mount', async () => {
+    mockAnalyzedPageLoad();
+
+    render(createElement(DatingAnalysisPage));
+    await flush();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ANALYSIS_POLL_INITIAL_MS * 2);
+    });
+    await flush();
+
+    expect(mocked.replaceMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('analysis-rerun-button')).toBeTruthy();
   });
 
   it('disables re-run immediately on click and submits once', async () => {
@@ -200,7 +247,7 @@ describe('DatingAnalysisPage', () => {
     expect(mocked.submitMyProfileForAnalysisMock).toHaveBeenCalledTimes(1);
     const btnAfterClick = findReRunButton(div);
     expect(btnAfterClick.disabled).toBe(true);
-    expect(div.textContent).toContain(RUN_FEEDBACK.inProgress);
+    expect(btnAfterClick.textContent).toMatch(/analysis running/i);
 
     await act(async () => {
       btnAfterClick.click();
@@ -212,94 +259,19 @@ describe('DatingAnalysisPage', () => {
     div.remove();
   });
 
-  it('after first status check completes, refreshes analysis and re-enables re-run', async () => {
-    mockAnalyzedPageLoad();
-    mocked.submitMyProfileForAnalysisMock.mockResolvedValue({
-      ...analyzedProfile,
-      status: 'SUBMITTED',
-    });
-
-    const div = document.createElement('div');
-    document.body.appendChild(div);
-    const root = createRoot(div);
-
-    await act(async () => {
-      root.render(createElement(DatingAnalysisPage));
-    });
-    await flush();
-
-    findReRunButton(div).click();
-    await flush();
-
-    mocked.fetchMyLatestAnalysisMock.mockResolvedValue({
-      ...analyzedLatest,
-      evaluationId: 'eval_new',
-      createdAt: '2026-05-02T17:00:00.000Z',
-      evaluationJson: {
-        display: {
-          overallNarrative: 'Updated narrative after re-run.',
-          aboutMeInsight: 'Updated about you.',
-          relationshipInsight: 'Updated relate.',
-          partnerInsight: 'Updated partner.',
-        },
-        flags: [],
-      },
-    });
+  it('shows failed panel with retry when status is FAILED after re-run', async () => {
+    mocked.fetchMyLatestAnalysisMock.mockResolvedValue(analyzedLatest);
     mocked.fetchMyProfileMock.mockResolvedValue({
       ...analyzedProfile,
-      status: 'ANALYZED',
-    });
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(ANALYSIS_STATUS_CHECK_FIRST_MS);
-    });
-    await flush();
-
-    expect(div.textContent).toContain('Updated narrative after re-run.');
-    const btn = findReRunButton(div);
-    expect(btn.disabled).toBe(false);
-    expect(div.textContent).not.toContain(RUN_FEEDBACK.stillRunningRefresh);
-
-    root.unmount();
-    div.remove();
-  });
-
-  it('after second status check while still running keeps button disabled with neutral refresh message', async () => {
-    mockAnalyzedPageLoad();
-    mocked.submitMyProfileForAnalysisMock.mockResolvedValue({
-      ...analyzedProfile,
-      status: 'SUBMITTED',
+      status: 'FAILED',
     });
 
     render(createElement(DatingAnalysisPage));
-    await screen.findByText(/warm, thoughtful/);
-
-    mocked.fetchMyProfileMock.mockResolvedValue({
-      ...analyzedProfile,
-      status: 'ANALYZING',
-    });
-
-    await act(async () => {
-      findReRunButton(document.body).click();
-    });
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(ANALYSIS_STATUS_CHECK_FIRST_MS);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(
-        ANALYSIS_STATUS_CHECK_SECOND_MS - ANALYSIS_STATUS_CHECK_FIRST_MS,
-      );
-    });
     await flush();
 
-    expect(screen.getByTestId('analysis-run-feedback').textContent).toBe(
-      RUN_FEEDBACK.stillRunningRefresh,
-    );
-
-    const btn = findReRunButton(document.body);
-    expect(btn.disabled).toBe(true);
-    expect(screen.queryByText('Could not start analysis')).toBeNull();
+    expect(screen.getByTestId('analysis-progress-panel')).toBeTruthy();
+    expect(screen.getByTestId('analysis-progress-retry')).toBeTruthy();
+    expect(screen.queryByTestId('analysis-rerun-button')).toBeNull();
   });
 
   it('does not render raw clinical legacy summary text', async () => {

@@ -1,33 +1,37 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { MatchRecommendationDto } from '@/lib/me-profile-api';
 
-const { fetchMyMatches, submitMyProfileForAnalysis } = vi.hoisted(() => ({
+const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, replaceMock } = vi.hoisted(() => ({
   fetchMyMatches: vi.fn(),
   submitMyProfileForAnalysis: vi.fn(),
+  fetchMyProfile: vi.fn(),
+  replaceMock: vi.fn(),
 }));
 
 vi.mock('@/lib/me-profile-api', () => ({
   fetchMyMatches,
   submitMyProfileForAnalysis,
+  fetchMyProfile,
 }));
 
 import MeMatchesPage from './page';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: replaceMock }),
 }));
 
 vi.mock('next/link', () => ({
   default ({
     children,
     href,
+    ...props
   }: {
     children: React.ReactNode;
     href: string;
   }) {
-    return <a href={href}>{children}</a>;
+    return <a href={href} {...props}>{children}</a>;
   },
 }));
 
@@ -46,6 +50,61 @@ const baseMatch = {
   },
   recommendation: null as MatchRecommendationDto | null,
 };
+
+describe('MeMatchesPage (empty list)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'ANALYZED',
+      onboardingStep: 'COMPLETED',
+      locationLabel: 'Tel Aviv',
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('renders actionable empty state when matches array is empty', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
+    });
+    expect(screen.getByTestId('match-empty-edit-preferences')).toBeTruthy();
+    expect(screen.getByTestId('match-empty-edit-profile')).toBeTruthy();
+    expect(screen.getByTestId('match-empty-invite-copy')).toBeTruthy();
+    unmount();
+  });
+});
+
+describe('MeMatchesPage (not_ready redirects)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('redirects to profile when reason is no_photo', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'not_ready',
+      reason: 'no_photo',
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/dating/profile');
+    });
+    unmount();
+  });
+});
 
 describe('MeMatchesPage (viewer analysis stale)', () => {
   beforeEach(() => {
@@ -265,5 +324,52 @@ describe('MeMatchesPage (blocked list exclusion)', () => {
       document.querySelector('a[href="/dating/me-matches/prof-blocked"]'),
     ).toBeNull();
     unmount();
+  });
+});
+
+describe('MeMatchesPage (match photos)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders photo thumbnail when primaryPhotoUrl is set', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          primaryPhotoUrl: '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
+        },
+      ],
+    });
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      const photo = screen.getByTestId('match-list-photo');
+      expect(photo.tagName).toBe('IMG');
+      expect(photo.getAttribute('src')).toBe(
+        '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
+      );
+    });
+  });
+
+  it('renders placeholder when primaryPhotoUrl is null', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [{ ...baseMatch, primaryPhotoUrl: null }],
+    });
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      const photo = screen.getByTestId('match-list-photo');
+      expect(photo.tagName).toBe('DIV');
+      expect(photo.textContent).toBe('F');
+    });
   });
 });

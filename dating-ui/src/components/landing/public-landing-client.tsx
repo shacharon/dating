@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -122,6 +123,22 @@ export function PublicLandingClient() {
           ) : null}
         </div>
       ) : null}
+
+      <footer
+        dir="ltr"
+        lang="en"
+        className="mt-16 text-center text-sm text-zinc-500 dark:text-zinc-400"
+      >
+        <Link href="/privacy" className="hover:text-zinc-700 dark:hover:text-zinc-300">
+          Privacy
+        </Link>
+        <span className="mx-2" aria-hidden="true">
+          ·
+        </span>
+        <Link href="/terms" className="hover:text-zinc-700 dark:hover:text-zinc-300">
+          Terms
+        </Link>
+      </footer>
     </main>
   );
 }

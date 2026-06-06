@@ -34,6 +34,7 @@ import {
   latestEvaluationForProfile,
   MeProfileAnalysisService,
 } from './me-profile-analysis.service';
+import { viewerHasApprovedPhoto } from './me-profile-photo-gate';
 
 const PROFILE_GENDER_VALUES = new Set<string>(
   Object.values(ProfileGender) as string[],
@@ -920,6 +921,23 @@ export class MeProfileService {
         error: 'gender_required',
         message:
           'Choose a gender (other than prefer-not-to-say) before submitting the profile for analysis.',
+      });
+      markHttpExceptionObservabilityLogged(ex);
+      throw ex;
+    }
+
+    if (!(await viewerHasApprovedPhoto(this.prisma, existing.id))) {
+      this.obs.error(
+        `me profile submit rejected: no approved photo profileId=${existing.id}`,
+        ErrorCodes.ME_PROFILE_PHOTO_REQUIRED,
+      );
+      this.analytics.track(userId, ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED, {
+        surface: 'submit',
+      });
+      const ex = new UnprocessableEntityException({
+        error: 'photo_required',
+        message:
+          'Upload at least one approved photo before submitting for analysis.',
       });
       markHttpExceptionObservabilityLogged(ex);
       throw ex;

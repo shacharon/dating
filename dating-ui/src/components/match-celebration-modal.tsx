@@ -1,6 +1,6 @@
 'use client';
 
-import { conversationPhotoSrc } from '@/lib/conversations-api';
+import { MatchPhoto } from '@/components/match-photo';
 
 export interface MatchCelebrationModalProps {
   open: boolean;
@@ -18,8 +18,6 @@ export function MatchCelebrationModal({
   onSendMessage,
 }: MatchCelebrationModalProps) {
   if (!open) return null;
-
-  const src = conversationPhotoSrc(photoUrl);
 
   return (
     <div
@@ -51,21 +49,14 @@ export function MatchCelebrationModal({
             It&apos;s a match!
           </h2>
 
-          {src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src}
-              alt=""
-              className="mt-5 h-28 w-28 rounded-full object-cover ring-4 ring-emerald-100 dark:ring-emerald-900/50"
+          <div className="mt-5">
+            <MatchPhoto
+              variant="celebration"
+              photoUrl={photoUrl}
+              displayName={candidateName}
+              testId="match-celebration-photo"
             />
-          ) : (
-            <div
-              className="mt-5 flex h-28 w-28 items-center justify-center rounded-full bg-zinc-100 text-3xl font-semibold text-zinc-400 ring-4 ring-emerald-100 dark:bg-zinc-800 dark:text-zinc-500 dark:ring-emerald-900/50"
-              aria-hidden
-            >
-              {candidateName.charAt(0).toUpperCase()}
-            </div>
-          )}
+          </div>
 
           <p className="mt-4 text-lg font-medium text-zinc-900 dark:text-zinc-100">
             {candidateName}

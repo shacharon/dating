@@ -29,6 +29,7 @@ import {
   AcceptedPartnerSmoking,
 } from '../../canonical/matching-canonical.types';
 import { BirthDateNotFutureConstraint } from '../validators/birth-date-not-future.constraint';
+import { PartnerAgeRangeConstraint } from '../validators/partner-age-range.constraint';
 
 /**
  * Fields the client may set on POST/PATCH `/api/v1/me/profile`.
@@ -138,6 +139,7 @@ export class MeProfileWritableFieldsDto {
   @IsInt()
   @Min(18)
   @Max(99)
+  @Validate(PartnerAgeRangeConstraint)
   partnerAgeMax?: number | null;
 
   @IsOptional()

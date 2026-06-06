@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { profileToFormFields, resolveEditableProfile } from '@/lib/profile-form';
 import type { ProfileDraft } from '../_lib/types';
 import { NotificationPreferencesSection } from '@/components/notification-preferences-section';
+import { PhotoGateBanner } from '@/components/photo-gate-banner';
+import { ProfileCompletenessHints } from '@/components/profile-completeness-hints';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 
 function genderDisplay(g: string): string {
@@ -125,7 +127,26 @@ export default function ProfilePage() {
           Review your answers before finding matches.
         </p>
 
+        <PhotoGateBanner />
+        <ProfileCompletenessHints draft={draft} />
+
         <NotificationPreferencesSection />
+
+        <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+          <h2 className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Matching
+          </h2>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            Age range, partner gender, lifestyle, and other filters for your match list.
+          </p>
+          <Link
+            href="/settings/preferences"
+            data-testid="profile-match-preferences-link"
+            className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+          >
+            Match preferences →
+          </Link>
+        </section>
 
         <div className="space-y-4">
           <ProfilePhotoSection />

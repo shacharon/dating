@@ -160,8 +160,9 @@ export class MeProfileController {
    * Official product match endpoint. All match UI flows use this route.
    * 
    * Phase 3 Step 5 — product matches list for the authenticated user.
-   * Returns `{ status: 'not_ready', reason }` when the viewer has no analyzed profile
-   * instead of a hard 4xx, giving the UI a clean signal to show an onboarding prompt.
+   * Returns `{ status: 'not_ready', reason }` when the viewer has no analyzed profile,
+   * no approved photo, or has not completed onboarding — giving the UI a clean signal
+   * to show an onboarding or profile prompt (`no_profile` | `not_analyzed` | `no_photo`).
    */
   @Get('matches')
   getMatchesList(@CurrentUser() user: AuthMeResponseDto) {

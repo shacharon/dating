@@ -190,9 +190,15 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
           >
             {copy.nav.editStoryProfile}
           </Link>
-          <span className={menuItemDisabledClass} role="menuitem" aria-disabled="true">
-            Match Preferences (TODO)
-          </span>
+          <Link
+            href="/settings/preferences"
+            prefetch
+            className={menuItemClass}
+            role="menuitem"
+            onClick={() => onAvatarMenuNavigate('/settings/preferences')}
+          >
+            {copy.profile.matchPreferencesLink}
+          </Link>
           <Link
             href="/settings/language"
             prefetch

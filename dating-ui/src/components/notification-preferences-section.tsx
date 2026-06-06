@@ -65,6 +65,7 @@ export function NotificationPreferencesSection() {
 
   return (
     <section
+      id="notification-prefs"
       className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
       aria-labelledby="notification-prefs-title"
     >

@@ -11,6 +11,7 @@ import * as matchEngine from '../matches/match-engine';
 import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import * as MeProfileEngineMapper from './me-profile-engine.mapper';
 import { MeMatchesService } from './me-matches.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 
 const S_ANALYZED = 'ANALYZED' as UserProfileStatus;
 const S_DRAFT = 'DRAFT' as UserProfileStatus;
@@ -104,7 +105,7 @@ describe('MeMatchesService', () => {
   let prisma: {
     userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
     userProfileEvaluation: { findFirst: jest.Mock };
-    userProfilePhoto: { findFirst: jest.Mock };
+    userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
     matchAction: { findMany: jest.Mock; findUnique: jest.Mock };
   };
 
@@ -126,6 +127,7 @@ describe('MeMatchesService', () => {
   let service: MeMatchesService;
   let photoStorage: { read: jest.Mock };
   let mutualMatches: { findActiveByUserPair: jest.Mock };
+  let analytics: { track: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -143,6 +145,7 @@ describe('MeMatchesService', () => {
       },
       userProfilePhoto: {
         findFirst: jest.fn(),
+        count: jest.fn().mockResolvedValue(1),
       },
       matchAction: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -152,13 +155,13 @@ describe('MeMatchesService', () => {
     photoStorage = { read: jest.fn() };
     obs = { trace: jest.fn(), error: jest.fn() };
     mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
-    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
+    analytics = { track: jest.fn() };
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
       photoStorage as never,
       mutualMatches as never,
-      analytics,
+      analytics as unknown as AnalyticsService,
     );
   });
 
@@ -183,6 +186,34 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('not_ready');
       expect(result.reason).toBe('not_analyzed');
+    });
+
+    it('returns not_ready(no_photo) when viewer is ANALYZED but has no approved photos', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfilePhoto.count.mockResolvedValue(0);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('not_ready');
+      expect(result.reason).toBe('no_photo');
+      expect(analytics.track).toHaveBeenCalledWith(
+        viewerUserId,
+        ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
+        { surface: 'match_list' },
+      );
+      expect(analytics.track).not.toHaveBeenCalledWith(
+        viewerUserId,
+        ProductAnalyticsEvents.MATCH_LIST_VIEWED,
+        expect.anything(),
+      );
+      expect(prisma.userProfileEvaluation.findFirst).not.toHaveBeenCalled();
     });
 
     it('returns ready with empty matches when no candidates exist', async () => {
@@ -1164,6 +1195,22 @@ describe('MeMatchesService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
+    it('throws NotFoundException when viewer has no approved photo', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfilePhoto.count.mockResolvedValue(0);
+
+      await expect(
+        service.getById(viewerUserId, candidateProfileId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
     it('throws NotFoundException when candidate profile does not exist', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
@@ -1444,6 +1491,22 @@ describe('MeMatchesService', () => {
   // ─── assertMatchCandidateVisible() ────────────────────────────────────────
 
   describe('assertMatchCandidateVisible()', () => {
+    it('throws NotFoundException when viewer has no approved photo', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfilePhoto.count.mockResolvedValue(0);
+
+      await expect(
+        service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
     it('throws NotFoundException when viewer blocked the candidate', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
@@ -1655,6 +1718,9 @@ describe('MeMatchesService', () => {
             version: 'v1',
           }),
         },
+        userProfilePhoto: {
+          count: jest.fn().mockResolvedValue(1),
+        },
         matchAction: {
           findMany: jest.fn().mockResolvedValue([]),
         },
@@ -1721,6 +1787,9 @@ describe('MeMatchesService', () => {
             createdAt: new Date(),
             version: 'v1',
           }),
+        },
+        userProfilePhoto: {
+          count: jest.fn().mockResolvedValue(1),
         },
         matchAction: {
           findUnique: jest.fn().mockResolvedValue(null),
@@ -2135,7 +2204,11 @@ describe('MeMatchesService', () => {
 
       expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { userId: { not: viewerUserId }, status: 'ANALYZED' },
+          where: {
+            userId: { not: viewerUserId },
+            status: 'ANALYZED',
+            user: { deletedAt: null },
+          },
         }),
       );
 
