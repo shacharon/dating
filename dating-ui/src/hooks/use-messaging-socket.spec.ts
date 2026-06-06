@@ -5,7 +5,8 @@ import type { MessageDto } from '@/lib/conversations-api';
 import { useMessagingSocket } from './use-messaging-socket';
 
 const {
-  createMessagingSocket,
+  acquireMessagingSocket,
+  releaseMessagingSocket,
   messageNewHandlerRef,
   connectHandlerRef,
   disconnectHandlerRef,
@@ -15,11 +16,15 @@ const {
     current: ((msg: MessageDto) => void) | null;
   } = { current: null };
   const connectHandlerRef: { current: (() => void) | null } = { current: null };
-  const disconnectHandlerRef: { current: (() => void) | null } = {
+  const disconnectHandlerRef: {
+    current: ((reason: string) => void) | null;
+  } = {
     current: null,
   };
 
   const socket = {
+    active: true,
+    connected: false,
     on: vi.fn((event: string, fn: () => void) => {
       if (event === 'message.new') {
         messageNewHandlerRef.current = fn as (msg: MessageDto) => void;
@@ -28,7 +33,7 @@ const {
         connectHandlerRef.current = fn;
       }
       if (event === 'disconnect') {
-        disconnectHandlerRef.current = fn;
+        disconnectHandlerRef.current = fn as (reason: string) => void;
       }
     }),
     off: vi.fn(),
@@ -41,7 +46,8 @@ const {
     messageNewHandlerRef,
     connectHandlerRef,
     disconnectHandlerRef,
-    createMessagingSocket: vi.fn(() => socket),
+    acquireMessagingSocket: vi.fn(() => socket),
+    releaseMessagingSocket: vi.fn(),
     fetchConversationMessages: vi.fn(),
   };
 });
@@ -50,7 +56,8 @@ vi.mock('@/lib/messaging-socket', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/messaging-socket')>();
   return {
     ...actual,
-    createMessagingSocket,
+    acquireMessagingSocket,
+    releaseMessagingSocket,
     MESSAGING_EVENT_MESSAGE_NEW: 'message.new',
   };
 });
@@ -105,7 +112,7 @@ describe('useMessagingSocket', () => {
   it('connects and forwards message.new for the open conversation', () => {
     renderHook(() => useMessagingSocket(defaultOptions));
 
-    expect(createMessagingSocket).toHaveBeenCalledTimes(1);
+    expect(acquireMessagingSocket).toHaveBeenCalledTimes(1);
     expect(messageNewHandlerRef.current).toBeTruthy();
     messageNewHandlerRef.current!(openMessage);
     expect(onMessageNew).toHaveBeenCalledWith(openMessage);
@@ -130,7 +137,7 @@ describe('useMessagingSocket', () => {
       }),
     );
 
-    expect(createMessagingSocket).toHaveBeenCalledTimes(1);
+    expect(acquireMessagingSocket).toHaveBeenCalledTimes(1);
     connectHandlerRef.current!();
     expect(fetchConversationMessages).not.toHaveBeenCalled();
   });
@@ -157,12 +164,12 @@ describe('useMessagingSocket', () => {
       useMessagingSocket({ ...defaultOptions, enabled: false }),
     );
 
-    expect(createMessagingSocket).not.toHaveBeenCalled();
+    expect(acquireMessagingSocket).not.toHaveBeenCalled();
   });
 
   it('emits conversation.subscribe on connect when conversationId is set', () => {
     renderHook(() => useMessagingSocket(defaultOptions));
-    const socket = createMessagingSocket.mock.results.at(-1)?.value as {
+    const socket = acquireMessagingSocket.mock.results.at(-1)?.value as {
       emit: ReturnType<typeof vi.fn>;
     };
     connectHandlerRef.current!();
@@ -174,7 +181,7 @@ describe('useMessagingSocket', () => {
 
   it('emits conversation.unsubscribe on cleanup when conversationId is set', () => {
     const { unmount } = renderHook(() => useMessagingSocket(defaultOptions));
-    const socket = createMessagingSocket.mock.results[0]?.value as {
+    const socket = acquireMessagingSocket.mock.results[0]?.value as {
       emit: ReturnType<typeof vi.fn>;
     };
     connectHandlerRef.current!();
@@ -192,7 +199,7 @@ describe('useMessagingSocket', () => {
         conversationId: undefined,
       }),
     );
-    const socket = createMessagingSocket.mock.results[0]?.value as {
+    const socket = acquireMessagingSocket.mock.results[0]?.value as {
       emit: ReturnType<typeof vi.fn>;
     };
     connectHandlerRef.current!();
@@ -243,10 +250,20 @@ describe('useMessagingSocket', () => {
     renderHook(() => useMessagingSocket(defaultOptions));
 
     connectHandlerRef.current!();
-    disconnectHandlerRef.current!();
+    disconnectHandlerRef.current!('ping timeout');
 
     expect(onConnectionChange).toHaveBeenCalledWith('connected');
     expect(onConnectionChange).toHaveBeenCalledWith('reconnecting');
+  });
+
+  it('ignores transport close during active upgrade', () => {
+    renderHook(() => useMessagingSocket(defaultOptions));
+
+    connectHandlerRef.current!();
+    disconnectHandlerRef.current!('transport close');
+
+    expect(onConnectionChange).toHaveBeenCalledWith('connected');
+    expect(onConnectionChange).not.toHaveBeenCalledWith('reconnecting');
   });
 
   it('allows only one catch-up fetch at a time when connect fires twice quickly', async () => {
@@ -286,16 +303,15 @@ describe('useMessagingSocket', () => {
   it('does not report reconnecting on disconnect before first connect', () => {
     renderHook(() => useMessagingSocket(defaultOptions));
 
-    disconnectHandlerRef.current!();
+    disconnectHandlerRef.current!('ping timeout');
 
     expect(onConnectionChange).not.toHaveBeenCalled();
   });
 
-  it('disconnects on unmount', () => {
+  it('releases shared socket on unmount', () => {
     const { unmount } = renderHook(() => useMessagingSocket(defaultOptions));
 
-    const socket = createMessagingSocket.mock.results[0]?.value as {
-      disconnect: ReturnType<typeof vi.fn>;
+    const socket = acquireMessagingSocket.mock.results[0]?.value as {
       off: ReturnType<typeof vi.fn>;
     };
     unmount();
@@ -308,6 +324,6 @@ describe('useMessagingSocket', () => {
       'disconnect',
       expect.any(Function),
     );
-    expect(socket.disconnect).toHaveBeenCalled();
+    expect(releaseMessagingSocket).toHaveBeenCalledTimes(1);
   });
 });

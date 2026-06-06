@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 
 const {
   fetchMyConversationById,
@@ -10,7 +10,8 @@ const {
   unmatchMyConversation,
   mockPush,
   getRealtimeMode,
-  createMessagingSocket,
+  acquireMessagingSocket,
+  releaseMessagingSocket,
   messageNewHandlerRef,
   connectHandlerRef,
   disconnectHandlerRef,
@@ -19,11 +20,15 @@ const {
     current: ((msg: unknown) => void) | null;
   } = { current: null };
   const connectHandlerRef: { current: (() => void) | null } = { current: null };
-  const disconnectHandlerRef: { current: (() => void) | null } = {
+  const disconnectHandlerRef: {
+    current: ((reason: string) => void) | null;
+  } = {
     current: null,
   };
 
-  const createMessagingSocket = vi.fn(() => ({
+  const acquireMessagingSocket = vi.fn(() => ({
+    active: true,
+    connected: false,
     on: vi.fn((event: string, fn: () => void) => {
       if (event === 'message.new') {
         messageNewHandlerRef.current = fn as (msg: unknown) => void;
@@ -32,10 +37,11 @@ const {
         connectHandlerRef.current = fn;
       }
       if (event === 'disconnect') {
-        disconnectHandlerRef.current = fn;
+        disconnectHandlerRef.current = fn as (reason: string) => void;
       }
     }),
     off: vi.fn(),
+    emit: vi.fn(),
     connect: vi.fn(),
     disconnect: vi.fn(),
   }));
@@ -48,7 +54,8 @@ const {
     unmatchMyConversation: vi.fn(),
     mockPush: vi.fn(),
     getRealtimeMode: vi.fn(() => 'poll' as const),
-    createMessagingSocket,
+    acquireMessagingSocket,
+    releaseMessagingSocket: vi.fn(),
     messageNewHandlerRef,
     connectHandlerRef,
     disconnectHandlerRef,
@@ -77,8 +84,11 @@ vi.mock('@/lib/conversation-focus', () => ({
 }));
 
 vi.mock('@/lib/messaging-socket', () => ({
-  createMessagingSocket,
+  acquireMessagingSocket,
+  releaseMessagingSocket,
   MESSAGING_EVENT_MESSAGE_NEW: 'message.new',
+  MESSAGING_EVENT_CONVERSATION_SUBSCRIBE: 'conversation.subscribe',
+  MESSAGING_EVENT_CONVERSATION_UNSUBSCRIBE: 'conversation.unsubscribe',
   MESSAGING_WS_NAMESPACE: '/ws/messaging',
 }));
 
@@ -91,6 +101,19 @@ vi.mock('@/contexts/auth-context', () => ({
     logout: vi.fn(),
     lastError: null,
     clearLastError: vi.fn(),
+  }),
+}));
+
+const { refreshNavUnread } = vi.hoisted(() => ({
+  refreshNavUnread: vi.fn(),
+}));
+
+vi.mock('@/contexts/conversation-unread-context', () => ({
+  useConversationUnread: () => ({
+    totalUnread: 0,
+    refresh: refreshNavUnread,
+    reconcileFromList: vi.fn(),
+    bumpFromMessage: vi.fn(),
   }),
 }));
 
@@ -165,6 +188,7 @@ describe('ConversationDetailPage', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -233,6 +257,16 @@ describe('ConversationDetailPage', () => {
     unmount();
   });
 
+  it('refreshes nav unread after successful mark-as-read', async () => {
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(markConversationAsRead).toHaveBeenCalledWith('mutual_abc');
+      expect(refreshNavUnread).toHaveBeenCalled();
+    });
+    unmount();
+  });
+
   it('calls markConversationAsRead again when tab becomes visible after debounce', async () => {
     const nowSpy = vi.spyOn(Date, 'now');
     nowSpy.mockReturnValue(0);
@@ -252,7 +286,7 @@ describe('ConversationDetailPage', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     expect(markConversationAsRead.mock.calls.length).toBe(callsAfterMount);
 
-    nowSpy.mockReturnValue(6000);
+    nowSpy.mockReturnValue(16_000);
     document.dispatchEvent(new Event('visibilitychange'));
 
     await waitFor(() => {
@@ -264,7 +298,7 @@ describe('ConversationDetailPage', () => {
     unmount();
   });
 
-  it('skips mark-as-read on visibility within 5s debounce', async () => {
+  it('skips mark-as-read on visibility within 15s debounce', async () => {
     const nowSpy = vi.spyOn(Date, 'now');
     nowSpy.mockReturnValue(1000);
 
@@ -697,7 +731,7 @@ describe('ConversationDetailPage', () => {
       const { unmount } = render(<ConversationDetailPage />);
 
       await waitFor(() => {
-        expect(createMessagingSocket).toHaveBeenCalled();
+        expect(acquireMessagingSocket).toHaveBeenCalled();
         expect(messageNewHandlerRef.current).toBeTruthy();
       });
 
@@ -755,7 +789,7 @@ describe('ConversationDetailPage', () => {
         connectHandlerRef.current!();
       });
       await act(async () => {
-        disconnectHandlerRef.current!();
+        disconnectHandlerRef.current!('ping timeout');
       });
 
       expect(screen.getByTestId('conversation-reconnecting')).toBeTruthy();
@@ -793,7 +827,7 @@ describe('ConversationDetailPage', () => {
         connectHandlerRef.current!();
       });
       await act(async () => {
-        disconnectHandlerRef.current!();
+        disconnectHandlerRef.current!('ping timeout');
       });
       expect(screen.getByTestId('conversation-reconnecting')).toBeTruthy();
 
@@ -841,18 +875,15 @@ describe('ConversationDetailPage', () => {
       unmount();
     });
 
-    it('disconnects socket on unmount', async () => {
+    it('releases shared socket on unmount', async () => {
       const { unmount } = render(<ConversationDetailPage />);
 
       await waitFor(() => {
-        expect(createMessagingSocket).toHaveBeenCalled();
+        expect(acquireMessagingSocket).toHaveBeenCalled();
       });
 
-      const socket = createMessagingSocket.mock.results[0]?.value as {
-        disconnect: ReturnType<typeof vi.fn>;
-      };
       unmount();
-      expect(socket.disconnect).toHaveBeenCalled();
+      expect(releaseMessagingSocket).toHaveBeenCalled();
     });
 
     it('does not duplicate self-sent message when echo has same id', async () => {
@@ -898,7 +929,7 @@ describe('ConversationDetailPage', () => {
       });
 
       if (disconnectHandlerRef.current) {
-        disconnectHandlerRef.current();
+        disconnectHandlerRef.current('ping timeout');
       }
 
       expect(screen.queryByTestId('conversation-reconnecting')).toBeNull();

@@ -18,6 +18,14 @@ function parseUser(json: unknown): AuthUser | null {
     displayName: typeof o.displayName === "string" ? o.displayName : null,
     avatarUrl: typeof o.avatarUrl === "string" ? o.avatarUrl : null,
     status: o.status,
+    emailNotificationsEnabled:
+      typeof o.emailNotificationsEnabled === "boolean"
+        ? o.emailNotificationsEnabled
+        : true,
+    inAppNotificationsEnabled:
+      typeof o.inAppNotificationsEnabled === "boolean"
+        ? o.inAppNotificationsEnabled
+        : true,
   };
 }
 

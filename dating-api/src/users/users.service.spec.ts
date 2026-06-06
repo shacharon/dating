@@ -104,6 +104,30 @@ describe('UsersService', () => {
     });
   });
 
+  it('updateNotificationPreferences updates whitelisted fields only', async () => {
+    prisma.user.update.mockResolvedValue({
+      emailNotificationsEnabled: false,
+      inAppNotificationsEnabled: true,
+    });
+
+    const result = await service.updateNotificationPreferences('user-1', {
+      emailNotificationsEnabled: false,
+    });
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { emailNotificationsEnabled: false },
+      select: {
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: true,
+      },
+    });
+    expect(result).toEqual({
+      emailNotificationsEnabled: false,
+      inAppNotificationsEnabled: true,
+    });
+  });
+
   it('createFromGoogleIdentity inserts when no row for googleId', async () => {
     prisma.user.findUnique.mockResolvedValue(null);
     prisma.user.create.mockResolvedValue({

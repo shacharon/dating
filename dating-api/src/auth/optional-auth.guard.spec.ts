@@ -112,6 +112,8 @@ describe('OptionalAuthGuard', () => {
       displayName: 'A',
       avatarUrl: null,
       status: UserStatus.ACTIVE,
+      emailNotificationsEnabled: true,
+      inAppNotificationsEnabled: true,
     });
     expect(req.authSession).toEqual(validated);
   });

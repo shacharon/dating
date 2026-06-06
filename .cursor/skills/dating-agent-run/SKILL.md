@@ -82,6 +82,16 @@ If missing → stop, tell user which `--agent` to run first.
   - Sprint 1: `dating-api/docs/epics/EPIC_MATCH_ACTIONS.md`
   - Sprints 2-3: `dating-api/docs/epics/EPIC_MUTUAL_MATCH_MESSAGING.md`
 
+## Runtime verification (agents 0, 1, 2)
+
+Stories touching **realtime**, **Next proxy**, **session cookies**, or **migrations** must follow [dating-runtime-verification](../dating-runtime-verification/SKILL.md):
+
+| Agent | Gate |
+|-------|------|
+| **0** | Document runtime topology in handoff |
+| **1** | Browser Network smoke + `migrate deploy` when applicable |
+| **2** | Do not approve mocks-only transport; verify topology in code |
+
 ---
 
 ## Reply format

@@ -31,6 +31,14 @@ Review implementations, write tests, fix issues.
 - Integration tests for API endpoints
 - UI tests for interactions + error states
 
+### Runtime / browser (mandatory when diff touches realtime, proxy, or migrations)
+Load [dating-runtime-verification](../dating-runtime-verification/SKILL.md).
+
+- Mocked `socket.io-client` / `fetch` tests **do not** satisfy transport verification alone
+- Confirm architect **Runtime topology** matches code
+- **Critical:** migration without `migrate deploy` note; socket via flaky Next WS proxy; duplicate socket instances
+- **Do not approve** realtime stories with mocks-only transport coverage and no browser/integration gate
+
 ## Test patterns
 
 ### API integration (Jest + supertest)
@@ -66,6 +74,7 @@ it('shows Like button and handles click', async () => {
 1. Issues (Critical / Major / Minor) with fixes
 2. Test files — happy path + error + edge cases
 3. Run tests; report pass/fail
+4. **Runtime verification** row in handoff — browser Network checklist or API `socket.io-client` integration result (pass / deferred / N/A)
 
 ## Do not
 

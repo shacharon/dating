@@ -5,7 +5,8 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 const {
   fetchMyConversations,
   getRealtimeMode,
-  createMessagingSocket,
+  acquireMessagingSocket,
+  releaseMessagingSocket,
   messageNewHandlerRef,
   setActiveConversationId,
   getActiveConversationId,
@@ -19,7 +20,7 @@ const {
   return {
     fetchMyConversations: vi.fn(),
     getRealtimeMode: vi.fn(() => 'poll' as const),
-    createMessagingSocket: vi.fn(() => ({
+    acquireMessagingSocket: vi.fn(() => ({
       on: vi.fn((event: string, fn: () => void) => {
         if (event === 'message.new') {
           messageNewHandlerRef.current = fn as (msg: unknown) => void;
@@ -29,6 +30,7 @@ const {
       connect: vi.fn(),
       disconnect: vi.fn(),
     })),
+    releaseMessagingSocket: vi.fn(),
     messageNewHandlerRef,
     setActiveConversationId: vi.fn((id: string | null) => {
       activeId = id;
@@ -47,7 +49,8 @@ vi.mock('@/lib/realtime-mode', () => ({
 }));
 
 vi.mock('@/lib/messaging-socket', () => ({
-  createMessagingSocket,
+  acquireMessagingSocket,
+  releaseMessagingSocket,
   MESSAGING_EVENT_MESSAGE_NEW: 'message.new',
 }));
 
@@ -65,6 +68,19 @@ vi.mock('@/contexts/auth-context', () => ({
     logout: vi.fn(),
     lastError: null,
     clearLastError: vi.fn(),
+  }),
+}));
+
+const { reconcileFromList } = vi.hoisted(() => ({
+  reconcileFromList: vi.fn(),
+}));
+
+vi.mock('@/contexts/conversation-unread-context', () => ({
+  useConversationUnread: () => ({
+    totalUnread: 0,
+    refresh: vi.fn(),
+    reconcileFromList,
+    bumpFromMessage: vi.fn(),
   }),
 }));
 
@@ -248,7 +264,7 @@ describe('ConversationsPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('conversations-list')).toBeTruthy();
     });
-    expect(createMessagingSocket).not.toHaveBeenCalled();
+    expect(acquireMessagingSocket).not.toHaveBeenCalled();
     expect(messageNewHandlerRef.current).toBeNull();
     unmount();
   });

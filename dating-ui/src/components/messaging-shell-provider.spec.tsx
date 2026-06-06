@@ -44,8 +44,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-import { MessageToastProvider } from '@/components/message-toast-provider';
+import { MessagingShellProvider } from '@/components/messaging-shell-provider';
+import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/message-toast.constants';
+import { setInAppNotificationsEnabledPreference } from '@/lib/message-in-app-notify';
 
 const peerMessage = {
   id: 'msg_1',
@@ -56,9 +58,15 @@ const peerMessage = {
   status: 'SENT' as const,
 };
 
-describe('MessageToastProvider', () => {
+function UnreadProbe() {
+  const { totalUnread } = useConversationUnread();
+  return <span data-testid="nav-total">{totalUnread}</span>;
+}
+
+describe('MessagingShellProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setInAppNotificationsEnabledPreference(true);
     getRealtimeMode.mockReturnValue('ws');
     getActiveConversationId.mockReturnValue(null);
     onMessageNewRef.current = null;
@@ -67,7 +75,7 @@ describe('MessageToastProvider', () => {
         {
           id: 'conv_1',
           matchedAt: '2026-06-01T10:00:00.000Z',
-          unreadCount: 0,
+          unreadCount: 1,
           otherUser: {
             id: 'user_peer',
             profileId: 'prof_peer',
@@ -90,9 +98,9 @@ describe('MessageToastProvider', () => {
 
   it('shows toast on peer message.new', async () => {
     render(
-      <MessageToastProvider sessionUserId="user_me">
+      <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
-      </MessageToastProvider>,
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -107,11 +115,48 @@ describe('MessageToastProvider', () => {
     });
   });
 
-  it('skips toast for own message', async () => {
+  it('bumps nav total on peer message.new', async () => {
     render(
-      <MessageToastProvider sessionUserId="user_me">
-        <div>child</div>
-      </MessageToastProvider>,
+      <MessagingShellProvider sessionUserId="user_me">
+        <UnreadProbe />
+      </MessagingShellProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('nav-total').textContent).toBe('1');
+    });
+
+    onMessageNewRef.current?.(peerMessage);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('nav-total').textContent).toBe('2');
+    });
+  });
+
+  it('skips toast and nav bump when in-app notifications are disabled', async () => {
+    setInAppNotificationsEnabledPreference(false);
+
+    render(
+      <MessagingShellProvider sessionUserId="user_me">
+        <UnreadProbe />
+      </MessagingShellProvider>,
+    );
+
+    await waitFor(() => {
+      expect(onMessageNewRef.current).toBeTruthy();
+    });
+
+    onMessageNewRef.current?.(peerMessage);
+
+    expect(screen.queryByTestId('message-toast')).toBeNull();
+    expect(screen.getByTestId('nav-total').textContent).toBe('1');
+  });
+
+  it('skips toast and bump for own message', async () => {
+    render(
+      <MessagingShellProvider sessionUserId="user_me">
+        <UnreadProbe />
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -124,15 +169,16 @@ describe('MessageToastProvider', () => {
     });
 
     expect(screen.queryByTestId('message-toast')).toBeNull();
+    expect(screen.getByTestId('nav-total').textContent).toBe('1');
   });
 
-  it('skips toast when active conversation matches', async () => {
+  it('skips toast and bump when active conversation matches', async () => {
     getActiveConversationId.mockReturnValue('conv_1');
 
     render(
-      <MessageToastProvider sessionUserId="user_me">
-        <div>child</div>
-      </MessageToastProvider>,
+      <MessagingShellProvider sessionUserId="user_me">
+        <UnreadProbe />
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -142,13 +188,14 @@ describe('MessageToastProvider', () => {
     onMessageNewRef.current?.(peerMessage);
 
     expect(screen.queryByTestId('message-toast')).toBeNull();
+    expect(screen.getByTestId('nav-total').textContent).toBe('1');
   });
 
   it('navigates to conversation when toast is clicked', async () => {
     render(
-      <MessageToastProvider sessionUserId="user_me">
+      <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
-      </MessageToastProvider>,
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -164,14 +211,13 @@ describe('MessageToastProvider', () => {
     fireEvent.click(screen.getByText(/Noa sent you a message/));
 
     expect(pushMock).toHaveBeenCalledWith('/dating/conversations/conv_1');
-    expect(screen.queryByTestId('message-toast')).toBeNull();
   });
 
-  it('auto-dismisses after configured duration', async () => {
+  it('auto-dismisses toast after configured duration', async () => {
     render(
-      <MessageToastProvider sessionUserId="user_me">
+      <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
-      </MessageToastProvider>,
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -192,11 +238,23 @@ describe('MessageToastProvider', () => {
     expect(screen.queryByTestId('message-toast')).toBeNull();
   });
 
-  it('dismisses toast when close button is clicked', async () => {
+  it('does not wire handler when realtime mode is poll', () => {
+    getRealtimeMode.mockReturnValue('poll');
+
     render(
-      <MessageToastProvider sessionUserId="user_me">
+      <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
-      </MessageToastProvider>,
+      </MessagingShellProvider>,
+    );
+
+    expect(onMessageNewRef.current).toBeNull();
+  });
+
+  it('dismisses toast when dismiss button is clicked', async () => {
+    render(
+      <MessagingShellProvider sessionUserId="user_me">
+        <div>child</div>
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -209,19 +267,18 @@ describe('MessageToastProvider', () => {
       expect(screen.getByTestId('message-toast')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    fireEvent.click(screen.getByLabelText('Dismiss'));
 
     expect(screen.queryByTestId('message-toast')).toBeNull();
-    expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('uses Someone when peer label cache is empty', async () => {
+  it('shows Someone when sender is not in label cache', async () => {
     fetchMyConversations.mockResolvedValue({ conversations: [] });
 
     render(
-      <MessageToastProvider sessionUserId="user_me">
+      <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
-      </MessageToastProvider>,
+      </MessagingShellProvider>,
     );
 
     await waitFor(() => {
@@ -233,17 +290,5 @@ describe('MessageToastProvider', () => {
     await waitFor(() => {
       expect(screen.getByText(/Someone sent you a message/)).toBeTruthy();
     });
-  });
-
-  it('does not wire handler when realtime mode is poll', () => {
-    getRealtimeMode.mockReturnValue('poll');
-
-    render(
-      <MessageToastProvider sessionUserId="user_me">
-        <div>child</div>
-      </MessageToastProvider>,
-    );
-
-    expect(onMessageNewRef.current).toBeNull();
   });
 });

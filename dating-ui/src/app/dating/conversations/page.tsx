@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
 import {
   conversationPhotoSrc,
@@ -21,6 +22,7 @@ import {
 
 export default function ConversationsPage() {
   const { user } = useAuth();
+  const { reconcileFromList } = useConversationUnread();
   const realtimeMode = getRealtimeMode();
   const [conversations, setConversations] = useState<ConversationListItemDto[]>(
     [],
@@ -30,8 +32,10 @@ export default function ConversationsPage() {
 
   const load = useCallback(async () => {
     const dto = await fetchMyConversations();
-    setConversations(dto.conversations ?? []);
-  }, []);
+    const list = dto.conversations ?? [];
+    setConversations(list);
+    reconcileFromList(list);
+  }, [reconcileFromList]);
 
   const handleListMessageNew = useCallback(
     (msg: MessageDto) => {
@@ -59,10 +63,7 @@ export default function ConversationsPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchMyConversations()
-      .then((dto) => {
-        if (!cancelled) setConversations(dto.conversations ?? []);
-      })
+    load()
       .catch((e: unknown) => {
         if (!cancelled) {
           setError(
@@ -76,7 +77,7 @@ export default function ConversationsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     const onVisible = () => {

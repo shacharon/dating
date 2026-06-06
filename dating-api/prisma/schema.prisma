@@ -64,6 +64,7 @@ model User {
   avatarUrl   String?
   status                      UserStatus @default(ACTIVE)
   emailNotificationsEnabled   Boolean    @default(true)
+  inAppNotificationsEnabled   Boolean    @default(true)
   lastLoginAt                 DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

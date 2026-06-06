@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -38,7 +39,9 @@ import { MeMatchActionsService } from './me-match-actions.service';
 import { MeMatchesService } from './me-matches.service';
 import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileService } from './me-profile.service';
+import { PatchNotificationPreferencesDto } from './dto/patch-notification-preferences.dto';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
+import { UsersService } from '../users/users.service';
 
 /**
  * Authenticated product profile (1:1 with `User`). User id is always from the session — never from the client path or body.
@@ -54,7 +57,29 @@ export class MeProfileController {
     private readonly conversations: MeConversationsService,
     private readonly conversationMessages: MeConversationMessagesService,
     private readonly obs: StructuredObservabilityService,
+    private readonly users: UsersService,
   ) {}
+
+  /**
+   * Sprint 8 Story 3 — update email / in-app notification preferences (User row).
+   */
+  @Patch('notification-preferences')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(MeProfileValidationPipe)
+  patchNotificationPreferences(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Body() body: PatchNotificationPreferencesDto,
+  ) {
+    if (
+      body.emailNotificationsEnabled === undefined &&
+      body.inAppNotificationsEnabled === undefined
+    ) {
+      throw new BadRequestException(
+        'At least one notification preference must be provided',
+      );
+    }
+    return this.users.updateNotificationPreferences(user.id, body);
+  }
 
   /**
    * Sprint 2 Story 2 — active mutual matches for the session user (conversation list entry point).

@@ -17,6 +17,8 @@ export const esCopy: AppCopySchema = {
     editStoryProfile: "Editar perfil de historia",
     language: "Idioma",
     logout: "Cerrar sesion",
+    conversationsUnreadLabel: (count: number) =>
+      `${count} mensaje${count === 1 ? "" : "s"} sin leer`,
   },
   onboarding: {
     basicsTitle: "Paso 1 — Basico",
@@ -30,5 +32,18 @@ export const esCopy: AppCopySchema = {
     messageToast: (name: string) => `${name} te envio un mensaje`,
     messageToastAction: "Ver",
     messageToastDismiss: "Cerrar",
+  },
+  profile: {
+    notifications: {
+      notificationsTitle: "Notificaciones",
+      inAppLabel: "Mostrar alertas en la app",
+      inAppHelp:
+        "Aviso cuando recibes un mensaje con la app abierta.",
+      emailLabel: "Enviarme correo cuando no estoy en linea",
+      emailHelp:
+        "Correo cuando no estas en linea. El enlace de baja en los correos sigue funcionando.",
+      saveError:
+        "No se pudieron guardar las preferencias. Intentalo de nuevo.",
+    },
   },
 };

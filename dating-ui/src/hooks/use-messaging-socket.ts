@@ -6,10 +6,11 @@ import {
   type MessageDto,
 } from '@/lib/conversations-api';
 import {
-  createMessagingSocket,
+  acquireMessagingSocket,
   MESSAGING_EVENT_CONVERSATION_SUBSCRIBE,
   MESSAGING_EVENT_CONVERSATION_UNSUBSCRIBE,
   MESSAGING_EVENT_MESSAGE_NEW,
+  releaseMessagingSocket,
 } from '@/lib/messaging-socket';
 
 export type MessagingConnectionStatus = 'connected' | 'reconnecting';
@@ -39,7 +40,7 @@ export function useMessagingSocket(options: UseMessagingSocketOptions): void {
       return;
     }
 
-    const socket = createMessagingSocket();
+    const socket = acquireMessagingSocket();
     let wasConnected = false;
     let catchUpInFlight = false;
 
@@ -89,16 +90,27 @@ export function useMessagingSocket(options: UseMessagingSocketOptions): void {
       void runCatchUp();
     };
 
-    const onDisconnect = () => {
-      if (wasConnected) {
-        onConnectionChange?.('reconnecting');
+    const onDisconnect = (reason: string) => {
+      if (!wasConnected) {
+        return;
       }
+      // Polling→WebSocket upgrade closes the polling transport; not a real outage.
+      if (reason === 'transport close' && socket.active) {
+        return;
+      }
+      if (reason === 'io client disconnect') {
+        return;
+      }
+      onConnectionChange?.('reconnecting');
     };
+
+    if (socket.connected) {
+      onConnect();
+    }
 
     socket.on(MESSAGING_EVENT_MESSAGE_NEW, onEvent);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.connect();
 
     return () => {
       if (conversationId) {
@@ -109,7 +121,7 @@ export function useMessagingSocket(options: UseMessagingSocketOptions): void {
       socket.off(MESSAGING_EVENT_MESSAGE_NEW, onEvent);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.disconnect();
+      releaseMessagingSocket();
     };
   }, [
     enabled,

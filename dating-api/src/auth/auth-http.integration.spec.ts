@@ -209,6 +209,8 @@ describe('auth HTTP (integration)', () => {
         displayName: 'Who',
         avatarUrl: null,
         status: UserStatus.ACTIVE,
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: false,
       });
 
       const res = await request(app.getHttpServer())
@@ -222,6 +224,8 @@ describe('auth HTTP (integration)', () => {
         displayName: 'Who',
         avatarUrl: null,
         status: 'ACTIVE',
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: false,
       });
       expect(prismaMock.userSession.findUnique).toHaveBeenCalledWith({
         where: { sessionTokenHash: hash },
@@ -375,6 +379,8 @@ describe('auth HTTP (integration)', () => {
         displayName: 'API',
         avatarUrl: null,
         status: 'ACTIVE',
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: true,
       });
       expect(login.body).not.toHaveProperty('rawToken');
       expect(login.body).not.toHaveProperty('sessionToken');
@@ -496,6 +502,8 @@ describe('auth HTTP (integration)', () => {
         displayName: 'Repeat',
         avatarUrl: null,
         status: 'ACTIVE',
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: true,
       });
       expect(login.body).not.toHaveProperty('sessionToken');
       expect(login.body).not.toHaveProperty('rawToken');

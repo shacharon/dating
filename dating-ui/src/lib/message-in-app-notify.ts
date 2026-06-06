@@ -1,12 +1,18 @@
 import { getActiveConversationId } from '@/lib/conversation-focus';
 import type { MessageDto } from '@/lib/conversations-api';
 
-/** Story 3: wire from AuthUser.inAppNotificationsEnabled */
-export function isInAppNotificationsEnabled(): boolean {
-  return true;
+let cachedInAppEnabled = true;
+
+export function setInAppNotificationsEnabledPreference(enabled: boolean): void {
+  cachedInAppEnabled = enabled;
 }
 
-export function shouldShowMessageToast(
+export function isInAppNotificationsEnabled(): boolean {
+  return cachedInAppEnabled;
+}
+
+/** Proactive in-app alerts: toast + nav live bump */
+export function shouldShowInAppAlert(
   msg: MessageDto,
   sessionUserId: string,
 ): boolean {
@@ -20,4 +26,18 @@ export function shouldShowMessageToast(
     return false;
   }
   return true;
+}
+
+export function shouldShowMessageToast(
+  msg: MessageDto,
+  sessionUserId: string,
+): boolean {
+  return shouldShowInAppAlert(msg, sessionUserId);
+}
+
+export function shouldBumpUnreadForMessage(
+  msg: MessageDto,
+  sessionUserId: string,
+): boolean {
+  return shouldShowInAppAlert(msg, sessionUserId);
 }

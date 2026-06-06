@@ -25,6 +25,7 @@ Load and apply: [../../dating-architect/SKILL.md](../../dating-architect/SKILL.m
 - [ ] Design Prisma schema + migration notes
 - [ ] Define API contracts (copy-paste ready)
 - [ ] Service signatures + module placement
+- [ ] **Runtime topology** if realtime / proxy / cookies — [dating-runtime-verification](../../dating-runtime-verification/SKILL.md)
 - [ ] **Do not** write implementation code or tests
 
 ## Handoff (mandatory)

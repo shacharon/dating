@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import {
   conversationPhotoSrc,
   fetchConversationMessages,
@@ -32,6 +33,7 @@ import { setActiveConversationId } from '@/lib/conversation-focus';
 import { getRealtimeMode } from '@/lib/realtime-mode';
 
 const POLL_INTERVAL_MS = 3000;
+const MARK_READ_DEBOUNCE_MS = 15_000;
 
 function scrollListToBottom(listEl: HTMLDivElement | null) {
   if (!listEl) return;
@@ -60,6 +62,7 @@ export default function ConversationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { refresh: refreshNavUnread } = useConversationUnread();
   const id = typeof params.id === 'string' ? params.id : '';
   const [data, setData] = useState<ConversationDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +91,11 @@ export default function ConversationDetailPage() {
     try {
       await markConversationAsRead(id);
       lastMarkReadAtRef.current = Date.now();
+      void refreshNavUnread();
     } catch {
       // silent — read tracking must not block messaging
     }
-  }, [id]);
+  }, [id, refreshNavUnread]);
 
   useEffect(() => {
     lastMarkReadAtRef.current = 0;
@@ -137,7 +141,7 @@ export default function ConversationDetailPage() {
     if (!id) return;
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
-      if (Date.now() - lastMarkReadAtRef.current < 5000) return;
+      if (Date.now() - lastMarkReadAtRef.current < MARK_READ_DEBOUNCE_MS) return;
       void tryMarkRead();
     };
     document.addEventListener('visibilitychange', onVisible);

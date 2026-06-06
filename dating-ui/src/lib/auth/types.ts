@@ -5,6 +5,8 @@ export type AuthUser = {
   displayName: string | null;
   avatarUrl: string | null;
   status: string;
+  emailNotificationsEnabled: boolean;
+  inAppNotificationsEnabled: boolean;
 };
 
 export type AuthStatus =

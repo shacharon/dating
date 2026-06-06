@@ -16,6 +16,7 @@ import {
   isTransientAuthMeFailure,
 } from "@/lib/auth/auth-api";
 import type { AuthStatus, AuthUser } from "@/lib/auth/types";
+import { setInAppNotificationsEnabledPreference } from "@/lib/message-in-app-notify";
 import {
   emitProductLog,
   getObservabilityRoute,
@@ -36,6 +37,12 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function syncInAppNotificationPreference(user: AuthUser | null): void {
+  setInAppNotificationsEnabledPreference(
+    user?.inAppNotificationsEnabled ?? true,
+  );
+}
 
 function apiUnavailableMessage(status: number): string {
   if (status === 0) {
@@ -62,22 +69,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (r.ok) {
       setLastError(null);
       setUser(r.user);
+      syncInAppNotificationPreference(r.user);
       setStatus("authenticated");
       return;
     }
     if (r.status === 401) {
       setUser(null);
+      syncInAppNotificationPreference(null);
       setLastError(null);
       setStatus("unauthenticated");
       return;
     }
     if (isTransientAuthMeFailure(r.status)) {
       setUser(null);
+      syncInAppNotificationPreference(null);
       setLastError(apiUnavailableMessage(r.status));
       setStatus("error");
       return;
     }
     setUser(null);
+    syncInAppNotificationPreference(null);
     setLastError(null);
     setStatus("unauthenticated");
   }, []);
@@ -96,10 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const verify = await fetchAuthMeWithRetry();
       if (verify.ok) {
         setUser(verify.user);
+        syncInAppNotificationPreference(verify.user);
         setStatus("authenticated");
         return true;
       }
       setUser(null);
+      syncInAppNotificationPreference(null);
       if (isTransientAuthMeFailure(verify.status)) {
         setLastError(apiUnavailableMessage(verify.status));
         setStatus("error");
@@ -112,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
     setUser(null);
+    syncInAppNotificationPreference(null);
     setStatus("unauthenticated");
     setLastError(r.message);
     return false;
@@ -124,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authLogout();
     } finally {
       setUser(null);
+      syncInAppNotificationPreference(null);
       setStatus("unauthenticated");
       router.replace("/");
     }

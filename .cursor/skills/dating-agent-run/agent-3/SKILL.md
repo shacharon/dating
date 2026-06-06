@@ -23,6 +23,7 @@ Load and apply: [../../dating-pm-contractor/SKILL.md](../../dating-pm-contractor
 ## Your job this step
 
 - [ ] Verify DoD against handoffs from agents 0–2
+- [ ] Realtime/proxy stories: confirm runtime topology + browser Network smoke not deferred without tracker — [dating-runtime-verification](../../dating-runtime-verification/SKILL.md)
 - [ ] Update story Status + DoD checkboxes in story file
 - [ ] Update sprint README checklist status
 - [ ] **Do not** implement code

@@ -78,6 +78,11 @@ describe('email unsubscribe HTTP (integration)', () => {
       where: { id: 'user_unsub_1' },
       data: { emailNotificationsEnabled: false },
     });
+    const updateData = prismaMock.user.update.mock.calls[0]?.[0]?.data as Record<
+      string,
+      unknown
+    >;
+    expect(updateData).not.toHaveProperty('inAppNotificationsEnabled');
   });
 
   it('GET unsubscribe with invalid token returns 400', async () => {

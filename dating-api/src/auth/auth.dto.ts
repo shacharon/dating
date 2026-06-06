@@ -7,6 +7,8 @@ export interface AuthMeResponseDto {
   displayName: string | null;
   avatarUrl: string | null;
   status: UserStatus;
+  emailNotificationsEnabled: boolean;
+  inAppNotificationsEnabled: boolean;
 }
 
 /** POST /api/v1/auth/google request body (no user id from client). */
@@ -24,5 +26,7 @@ export function toAuthMeResponseDto(user: User): AuthMeResponseDto {
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
     status: user.status,
+    emailNotificationsEnabled: user.emailNotificationsEnabled ?? true,
+    inAppNotificationsEnabled: user.inAppNotificationsEnabled ?? true,
   };
 }

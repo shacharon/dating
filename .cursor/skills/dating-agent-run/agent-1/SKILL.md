@@ -23,7 +23,8 @@ Load and apply: [../../dating-senior-dev/SKILL.md](../../dating-senior-dev/SKILL
 ## Your job this step
 
 - [ ] Implement per architect handoff (schema migration, API, UI)
-- [ ] Manual smoke the happy path
+- [ ] `npx prisma migrate deploy` when schema changed
+- [ ] Manual smoke in **real browser** for realtime/auth — [dating-runtime-verification](../../dating-runtime-verification/SKILL.md)
 - [ ] **Do not** write full test suite (agent 2's job)
 
 ## Handoff (mandatory)
@@ -32,6 +33,6 @@ Write: `dating-api/docs/sprints/<sprint>/handoffs/<story>/agent-1-dev.md`
 
 Template: [../handoff-template.md](../handoff-template.md)
 
-Include: files changed, how to run migration/dev server, smoke steps done, deferred gaps.
+Include: files changed, how to run migration/dev server, **browser Network smoke** (pass/deferred), deferred gaps.
 
 **Next (user runs manually):** `--agent 2 story <m>`

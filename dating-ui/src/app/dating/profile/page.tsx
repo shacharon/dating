@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { profileToFormFields, resolveEditableProfile } from '@/lib/profile-form';
 import type { ProfileDraft } from '../_lib/types';
+import { NotificationPreferencesSection } from '@/components/notification-preferences-section';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 
 function genderDisplay(g: string): string {
@@ -54,7 +55,11 @@ export default function ProfilePage() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
-        <div className="mx-auto max-w-xl">
+        <div className="mx-auto max-w-xl space-y-6">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Profile
+          </h1>
+          <NotificationPreferencesSection />
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
         </div>
       </div>
@@ -68,6 +73,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
             Profile
           </h1>
+          <NotificationPreferencesSection />
           <p className="text-sm text-red-600 dark:text-red-400" role="alert">
             {loadError}
           </p>
@@ -89,6 +95,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
             Profile
           </h1>
+          <NotificationPreferencesSection />
           <p className="text-zinc-600 dark:text-zinc-400">
             You don’t have a profile yet. Complete onboarding to review and find matches.
           </p>
@@ -117,6 +124,8 @@ export default function ProfilePage() {
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Review your answers before finding matches.
         </p>
+
+        <NotificationPreferencesSection />
 
         <div className="space-y-4">
           <ProfilePhotoSection />

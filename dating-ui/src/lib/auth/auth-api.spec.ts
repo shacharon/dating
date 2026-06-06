@@ -80,6 +80,31 @@ describe('auth-api', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('fetchAuthMe parses notification preference flags', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      json: async () => ({
+        id: 'u1',
+        email: 'a@b.com',
+        displayName: 'A',
+        avatarUrl: null,
+        status: 'ACTIVE',
+        emailNotificationsEnabled: false,
+        inAppNotificationsEnabled: true,
+      }),
+    } as Response);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const r = await fetchAuthMe();
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.user.emailNotificationsEnabled).toBe(false);
+      expect(r.user.inAppNotificationsEnabled).toBe(true);
+    }
+  });
+
   it('fetchAuthMe captures x-request-id from response for logs', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const body = {

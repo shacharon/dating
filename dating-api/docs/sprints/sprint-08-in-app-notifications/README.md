@@ -3,7 +3,7 @@
 **Epic:** Notification channels — complete the in-app layer without touching email  
 **Duration:** ~1 week (3 stories)  
 **Goal:** Toast alerts, nav unread indicator, and user-facing channel preferences. Email stays a separate offline channel (Sprint 6).  
-**Status:** In progress (1/3 stories done)  
+**Status:** Done (engineering gate — manual smoke pending operator)  
 **Depends on:** [Sprint 4](../sprint-04-realtime-messaging/README.md) (WS `message.new`), [Sprint 6](../sprint-06-product-quality/STORY_01_email_push_notifications.md) (email — **do not merge channels**)
 
 ---
@@ -34,8 +34,8 @@ Mutual match follows the same split: in-app modal (Sprint 2 Story 4) + email whe
 | # | Story | Status | Depends on |
 |---|--------|--------|------------|
 | 1 | [In-app toast on new message](./STORY_01_in_app_toast_notifications.md) | **Done** (manual smoke pending operator) | Sprint 4 Story 2 |
-| 2 | [Nav unread indicator](./STORY_02_nav_unread_indicator.md) | Planned | Sprint 3 Story 5 |
-| 3 | [Notification preferences (separate toggles)](./STORY_03_notification_preferences.md) | Planned | Sprint 6 Story 1 |
+| 2 | [Nav unread indicator](./STORY_02_nav_unread_indicator.md) | **Done** (manual smoke pending operator) | Sprint 3 Story 5 |
+| 3 | [Notification preferences (separate toggles)](./STORY_03_notification_preferences.md) | **Done** (manual smoke pending operator) | Sprint 6 Story 1 |
 
 ---
 

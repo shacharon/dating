@@ -33,6 +33,7 @@ Close stories, track DoD, coordinate the agent pipeline.
 - [ ] UI implemented
 - [ ] Tests passing
 - [ ] Manual smoke done
+- [ ] **Browser / runtime verification** (realtime/proxy stories) — see [dating-runtime-verification](../dating-runtime-verification/SKILL.md); do not mark Done if CR deferred Network smoke without explicit operator follow-up
 - [ ] Story status = Done in README
 
 ## Do not

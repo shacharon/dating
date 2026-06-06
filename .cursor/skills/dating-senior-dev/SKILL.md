@@ -64,6 +64,15 @@ export async function apiMethod(): Promise<ResultDto> {
 - User can only access own data
 - UI: loading/error/success states; zinc/emerald/red palette
 
+## Local dev smoke (before agent-2 handoff)
+
+Load [dating-runtime-verification](../dating-runtime-verification/SKILL.md) when the story touches realtime, auth transport, or schema migrations.
+
+- Run `npx prisma migrate deploy` after schema changes
+- Smoke in a **real browser** — DevTools Network for socket/auth, not only terminal tests
+- Prefer **one shared** messaging socket (`acquireMessagingSocket`); do not open per-page sockets without architect approval
+- Socket in dev: direct API origin on **same hostname as UI** — do not route WebSocket through Next `/socket.io` rewrite unless CR documents WS upgrade proof
+
 ## Example: user-to-user action
 
 ```typescript

@@ -17,6 +17,8 @@ export const enCopy: AppCopySchema = {
     editStoryProfile: "Edit Story Profile",
     language: "Language",
     logout: "Logout",
+    conversationsUnreadLabel: (count: number) =>
+      `${count} unread message${count === 1 ? "" : "s"}`,
   },
   onboarding: {
     basicsTitle: "Step 1 — Basics",
@@ -28,5 +30,16 @@ export const enCopy: AppCopySchema = {
     messageToast: (name: string) => `${name} sent you a message`,
     messageToastAction: "View",
     messageToastDismiss: "Dismiss",
+  },
+  profile: {
+    notifications: {
+      notificationsTitle: "Notifications",
+      inAppLabel: "Show in-app alerts",
+      inAppHelp: "Toast when you receive a message while the app is open.",
+      emailLabel: "Email me when I'm away",
+      emailHelp:
+        "Email when you're not online. Unsubscribe link in emails still works.",
+      saveError: "Could not save notification settings. Please try again.",
+    },
   },
 };

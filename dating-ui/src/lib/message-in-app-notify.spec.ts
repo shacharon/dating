@@ -11,6 +11,9 @@ vi.mock('@/lib/conversation-focus', () => ({
 
 import {
   isInAppNotificationsEnabled,
+  setInAppNotificationsEnabledPreference,
+  shouldBumpUnreadForMessage,
+  shouldShowInAppAlert,
   shouldShowMessageToast,
 } from '@/lib/message-in-app-notify';
 
@@ -26,6 +29,7 @@ const baseMsg: MessageDto = {
 describe('shouldShowMessageToast', () => {
   beforeEach(() => {
     getActiveConversationId.mockReturnValue(null);
+    setInAppNotificationsEnabledPreference(true);
   });
 
   it('shows toast for peer message when thread is not active', () => {
@@ -49,10 +53,52 @@ describe('shouldShowMessageToast', () => {
   it('skips when session user id is empty', () => {
     expect(shouldShowMessageToast(baseMsg, '')).toBe(false);
   });
+
+  it('skips when in-app notifications are disabled', () => {
+    setInAppNotificationsEnabledPreference(false);
+    expect(shouldShowMessageToast(baseMsg, 'user_me')).toBe(false);
+  });
+});
+
+describe('shouldBumpUnreadForMessage', () => {
+  beforeEach(() => {
+    getActiveConversationId.mockReturnValue(null);
+    setInAppNotificationsEnabledPreference(true);
+  });
+
+  it('bumps for peer message when in-app enabled', () => {
+    expect(shouldBumpUnreadForMessage(baseMsg, 'user_me')).toBe(true);
+  });
+
+  it('skips own messages', () => {
+    expect(
+      shouldBumpUnreadForMessage({ ...baseMsg, senderId: 'user_me' }, 'user_me'),
+    ).toBe(false);
+  });
+
+  it('skips when in-app notifications are disabled', () => {
+    setInAppNotificationsEnabledPreference(false);
+    expect(shouldBumpUnreadForMessage(baseMsg, 'user_me')).toBe(false);
+  });
+});
+
+describe('shouldShowInAppAlert', () => {
+  beforeEach(() => {
+    setInAppNotificationsEnabledPreference(true);
+  });
+
+  it('matches toast and nav bump rules', () => {
+    expect(shouldShowInAppAlert(baseMsg, 'user_me')).toBe(true);
+    setInAppNotificationsEnabledPreference(false);
+    expect(shouldShowInAppAlert(baseMsg, 'user_me')).toBe(false);
+  });
 });
 
 describe('isInAppNotificationsEnabled', () => {
-  it('defaults to true until Story 3', () => {
+  it('reflects cached preference', () => {
+    setInAppNotificationsEnabledPreference(false);
+    expect(isInAppNotificationsEnabled()).toBe(false);
+    setInAppNotificationsEnabledPreference(true);
     expect(isInAppNotificationsEnabled()).toBe(true);
   });
 });

@@ -4,15 +4,17 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageToastProvider } from "@/components/message-toast-provider";
+import { MessagingShellProvider } from "@/components/messaging-shell-provider";
 import { NavAuth } from "@/components/nav-auth";
 import { useAuth } from "@/contexts/auth-context";
+import { useConversationUnread } from "@/contexts/conversation-unread-context";
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
   DEFAULT_LOCALE,
   getCopy,
   readStoredLocale,
+  type AppCopySchema,
   type AppLocale,
 } from "@/lib/i18n";
 
@@ -32,6 +34,104 @@ function landingUrlWithNext(): string {
   return `${u.pathname}${u.search}`;
 }
 
+function DatingMainNav({
+  copy,
+  locale,
+  navPending,
+  onNavClick,
+  pathname,
+}: {
+  copy: AppCopySchema;
+  locale: AppLocale;
+  navPending: boolean;
+  onNavClick: () => void;
+  pathname: string;
+}) {
+  const { totalUnread } = useConversationUnread();
+
+  const homeActive = pathname === "/dating";
+  const matchesActive =
+    pathname === "/dating/me-matches" ||
+    pathname.startsWith("/dating/me-matches/");
+  const conversationsActive =
+    pathname === "/dating/conversations" ||
+    pathname.startsWith("/dating/conversations/");
+  const profileActive = pathname === "/dating/profile";
+  const analysisActive =
+    pathname === "/dating/analysis" || pathname.startsWith("/dating/analysis/");
+
+  const pendingClass = navPending ? "cursor-wait opacity-60" : "";
+
+  return (
+    <nav
+      className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
+      aria-label="Main"
+    >
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+          <Link
+            href="/dating"
+            prefetch
+            onClick={onNavClick}
+            className={`${navLinkBase} ${homeActive ? navLinkActive : navLinkInactive} ${pendingClass}`}
+            aria-current={homeActive ? "page" : undefined}
+          >
+            {copy.nav.home}
+          </Link>
+          <Link
+            href="/dating/me-matches"
+            prefetch
+            onClick={onNavClick}
+            className={`${navLinkBase} ${matchesActive ? navLinkActive : navLinkInactive} ${pendingClass}`}
+            aria-current={matchesActive ? "page" : undefined}
+          >
+            {copy.nav.matches}
+          </Link>
+          <Link
+            href="/dating/conversations"
+            prefetch
+            onClick={onNavClick}
+            className={`${navLinkBase} ${conversationsActive ? navLinkActive : navLinkInactive} ${pendingClass}`}
+            aria-current={conversationsActive ? "page" : undefined}
+          >
+            {copy.nav.conversations}
+            {totalUnread > 0 ? (
+              <span
+                data-testid="nav-conversations-unread"
+                aria-label={copy.nav.conversationsUnreadLabel(totalUnread)}
+                className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-xs font-semibold text-white dark:bg-emerald-500"
+              >
+                {totalUnread > 99 ? "99+" : totalUnread}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            href="/dating/profile"
+            prefetch
+            onClick={onNavClick}
+            className={`${navLinkBase} ${profileActive ? navLinkActive : navLinkInactive} ${pendingClass}`}
+            aria-current={profileActive ? "page" : undefined}
+          >
+            {copy.nav.profile}
+          </Link>
+          <Link
+            href="/dating/analysis"
+            prefetch
+            onClick={onNavClick}
+            className={`${navLinkBase} ${analysisActive ? navLinkActive : navLinkInactive} ${pendingClass}`}
+            aria-current={analysisActive ? "page" : undefined}
+          >
+            {copy.nav.analysis}
+          </Link>
+        </div>
+        <div className="flex shrink-0 items-center border-t border-zinc-100 pt-2 sm:border-t-0 sm:pt-0 dark:border-zinc-800">
+          <NavAuth locale={locale} />
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 /**
  * Authenticated product chrome only (never import under `(public)`).
  * Gates **page** content until `GET /api/v1/auth/me` resolves so protected UI does not flash
@@ -44,17 +144,6 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
   const [navPending, setNavPending] = useState(false);
   const copy = getCopy(locale);
-
-  const homeActive = pathname === "/dating";
-  const matchesActive =
-    pathname === "/dating/me-matches" ||
-    pathname.startsWith("/dating/me-matches/");
-  const conversationsActive =
-    pathname === "/dating/conversations" ||
-    pathname.startsWith("/dating/conversations/");
-  const profileActive = pathname === "/dating/profile";
-  const analysisActive =
-    pathname === "/dating/analysis" || pathname.startsWith("/dating/analysis/");
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
@@ -140,72 +229,20 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  if (!user) {
+    return children;
+  }
+
   return (
-    <>
-      <nav
-        className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
-        aria-label="Main"
-      >
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-            <Link
-              href="/dating"
-              prefetch
-              onClick={() => setNavPending(true)}
-              className={`${navLinkBase} ${homeActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
-              aria-current={homeActive ? "page" : undefined}
-            >
-              {copy.nav.home}
-            </Link>
-            <Link
-              href="/dating/me-matches"
-              prefetch
-              onClick={() => setNavPending(true)}
-              className={`${navLinkBase} ${matchesActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
-              aria-current={matchesActive ? "page" : undefined}
-            >
-              {copy.nav.matches}
-            </Link>
-            <Link
-              href="/dating/conversations"
-              prefetch
-              onClick={() => setNavPending(true)}
-              className={`${navLinkBase} ${conversationsActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
-              aria-current={conversationsActive ? "page" : undefined}
-            >
-              {copy.nav.conversations}
-            </Link>
-            <Link
-              href="/dating/profile"
-              prefetch
-              onClick={() => setNavPending(true)}
-              className={`${navLinkBase} ${profileActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
-              aria-current={profileActive ? "page" : undefined}
-            >
-              {copy.nav.profile}
-            </Link>
-            <Link
-              href="/dating/analysis"
-              prefetch
-              onClick={() => setNavPending(true)}
-              className={`${navLinkBase} ${analysisActive ? navLinkActive : navLinkInactive} ${navPending ? "cursor-wait opacity-60" : ""}`}
-              aria-current={analysisActive ? "page" : undefined}
-            >
-              {copy.nav.analysis}
-            </Link>
-          </div>
-          <div className="flex shrink-0 items-center border-t border-zinc-100 pt-2 sm:border-t-0 sm:pt-0 dark:border-zinc-800">
-            <NavAuth locale={locale} />
-          </div>
-        </div>
-      </nav>
-      {user ? (
-        <MessageToastProvider sessionUserId={user.id}>
-          {children}
-        </MessageToastProvider>
-      ) : (
-        children
-      )}
-    </>
+    <MessagingShellProvider sessionUserId={user.id}>
+      <DatingMainNav
+        copy={copy}
+        locale={locale}
+        navPending={navPending}
+        onNavClick={() => setNavPending(true)}
+        pathname={pathname}
+      />
+      {children}
+    </MessagingShellProvider>
   );
 }

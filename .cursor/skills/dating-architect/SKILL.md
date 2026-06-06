@@ -45,6 +45,7 @@ Design systems, schemas, and API contracts. **No implementation.**
 3. **Service method signatures**
 4. **Migration plan** — forward, backfill, rollback
 5. **Integration points** — modules to create/modify
+6. **Runtime topology** (when story touches realtime, cookies, or Next proxy) — see [dating-runtime-verification](../dating-runtime-verification/SKILL.md)
 
 ## Example: MatchAction (user-to-user)
 
@@ -73,6 +74,18 @@ Response: { id, actorUserId, targetUserId, targetProfileIdSnapshot, action, crea
 Logic: Resolve profileId → targetUserId + snapshot; upsert on (actorUserId, targetUserId)
 ```
 
+## Runtime topology (realtime / auth / proxy stories)
+
+Load [dating-runtime-verification](../dating-runtime-verification/SKILL.md) and include in the architect handoff:
+
+- Where the **browser** connects for REST vs socket (same-origin proxy vs direct API)
+- **Cookie host** alignment (`localhost` vs `127.0.0.1`)
+- **One shared socket** vs multiple connections
+- **Expected DevTools Network** signal (e.g. WebSocket 101, no polling storm)
+
+Handoff without this section is **incomplete** for realtime stories.
+
 ## Do not
 
 - Implement code, write tests, or write user stories
+- Leave socket/proxy/cookie behavior implicit — mocked tests will not catch dev gaps

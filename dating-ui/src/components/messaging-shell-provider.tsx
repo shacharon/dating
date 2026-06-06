@@ -7,9 +7,14 @@ import {
   useState,
   type ReactNode,
   type ReactElement,
+  type RefObject,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { MessageToastView } from '@/components/message-toast';
+import {
+  ConversationUnreadProvider,
+  useConversationUnread,
+} from '@/contexts/conversation-unread-context';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
 import {
   APP_LOCALE_CHANGE_EVENT,
@@ -19,8 +24,11 @@ import {
   readStoredLocale,
   type AppLocale,
 } from '@/lib/i18n';
-import { fetchMyConversations, type MessageDto } from '@/lib/conversations-api';
-import { shouldShowMessageToast } from '@/lib/message-in-app-notify';
+import { type MessageDto } from '@/lib/conversations-api';
+import {
+  shouldBumpUnreadForMessage,
+  shouldShowMessageToast,
+} from '@/lib/message-in-app-notify';
 import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/message-toast.constants';
 import {
   buildPeerLabelIndex,
@@ -34,18 +42,20 @@ type ToastState = {
   conversationId: string;
 } | null;
 
-export function MessageToastProvider({
+function MessagingShellInner({
   sessionUserId,
+  peerLabelsRef,
   children,
 }: {
   sessionUserId: string;
+  peerLabelsRef: RefObject<PeerLabelIndex>;
   children: ReactNode;
 }): ReactElement {
   const router = useRouter();
   const realtimeMode = getRealtimeMode();
+  const { refresh, bumpFromMessage } = useConversationUnread();
   const [toast, setToast] = useState<ToastState>(null);
   const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
-  const peerLabelsRef = useRef<PeerLabelIndex>(new Map());
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearDismissTimer = useCallback(() => {
@@ -72,47 +82,36 @@ export function MessageToastProvider({
     [clearDismissTimer],
   );
 
-  const refreshPeerLabels = useCallback(async () => {
-    try {
-      const dto = await fetchMyConversations();
-      peerLabelsRef.current = buildPeerLabelIndex(dto.conversations ?? []);
-    } catch {
-      // best-effort — toast falls back to "Someone"
-    }
-  }, []);
-
-  const handleToastMessageNew = useCallback(
+  const handleMessageNew = useCallback(
     (msg: MessageDto) => {
-      if (!shouldShowMessageToast(msg, sessionUserId)) {
-        return;
+      if (shouldShowMessageToast(msg, sessionUserId)) {
+        const label = resolvePeerLabel(peerLabelsRef.current, msg.senderId);
+        showToast(label, msg.conversationId);
       }
-      const label = resolvePeerLabel(peerLabelsRef.current, msg.senderId);
-      showToast(label, msg.conversationId);
+      if (shouldBumpUnreadForMessage(msg, sessionUserId)) {
+        bumpFromMessage(msg.conversationId);
+      }
     },
-    [sessionUserId, showToast],
+    [sessionUserId, showToast, bumpFromMessage, peerLabelsRef],
   );
 
   useMessagingSocket({
     enabled: realtimeMode === 'ws' && Boolean(sessionUserId),
-    onMessageNew: handleToastMessageNew,
+    onMessageNew: handleMessageNew,
     getLastMessageId: () => undefined,
     onMessagesMerged: () => {},
   });
 
   useEffect(() => {
-    if (realtimeMode !== 'ws') {
-      return;
-    }
-    void refreshPeerLabels();
     const onVisible = () => {
       if (document.visibilityState !== 'visible') {
         return;
       }
-      void refreshPeerLabels();
+      void refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [realtimeMode, refreshPeerLabels]);
+  }, [refresh]);
 
   useEffect(() => {
     setLocale(readStoredLocale());
@@ -158,5 +157,33 @@ export function MessageToastProvider({
         />
       ) : null}
     </>
+  );
+}
+
+export function MessagingShellProvider({
+  sessionUserId,
+  children,
+}: {
+  sessionUserId: string;
+  children: ReactNode;
+}): ReactElement {
+  const peerLabelsRef = useRef<PeerLabelIndex>(new Map());
+
+  const onConversationsFetched = useCallback(
+    (conversations: Parameters<typeof buildPeerLabelIndex>[0]) => {
+      peerLabelsRef.current = buildPeerLabelIndex(conversations);
+    },
+    [],
+  );
+
+  return (
+    <ConversationUnreadProvider onConversationsFetched={onConversationsFetched}>
+      <MessagingShellInner
+        sessionUserId={sessionUserId}
+        peerLabelsRef={peerLabelsRef}
+      >
+        {children}
+      </MessagingShellInner>
+    </ConversationUnreadProvider>
   );
 }

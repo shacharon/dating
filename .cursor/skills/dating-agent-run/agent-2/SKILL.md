@@ -24,6 +24,7 @@ Load and apply: [../../dating-code-review/SKILL.md](../../dating-code-review/SKI
 ## Your job this step
 
 - [ ] Review code for security, logic, patterns
+- [ ] **Runtime / transport gate** — [dating-runtime-verification](../../dating-runtime-verification/SKILL.md) (no mocks-only approval for realtime)
 - [ ] Write/fix tests; run test commands
 - [ ] Fix critical/major issues found
 
@@ -33,6 +34,6 @@ Write: `dating-api/docs/sprints/<sprint>/handoffs/<story>/agent-2-cr.md`
 
 Template: [../handoff-template.md](../handoff-template.md)
 
-Include: verdict (approved | fixed), test paths, commands + results, remaining issues.
+Include: verdict (approved | fixed), test paths, commands + results, **runtime verification** (browser Network or API socket integration), remaining issues.
 
 **Next (user runs manually):** `--agent 3 story <m>` — or `--agent 1 story <m>` if major fixes needed

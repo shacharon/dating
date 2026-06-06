@@ -31,10 +31,23 @@
 
 ---
 
+## Runtime topology (architect — realtime / proxy / cookies only)
+
+- REST browser target:
+- Socket browser target:
+- Cookie host rule:
+- Connection policy (singleton / per-page):
+- Expected Network tab:
+
+---
+
 ## Tests / verification
 
-- [ ] Command run: `...`
+- [ ] Unit/integration command: `...`
 - [ ] Result: pass / fail / not run (architect/pm)
+- [ ] `prisma migrate deploy` (if schema changed): yes / N/A
+- [ ] Browser Network smoke (dev/CR): pass / deferred / N/A
+- [ ] Socket transport: WebSocket 101 / polling-only / not checked
 
 ---
 

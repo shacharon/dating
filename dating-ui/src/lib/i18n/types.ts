@@ -25,6 +25,7 @@ export type AppCopySchema = {
     editStoryProfile: string;
     language: string;
     logout: string;
+    conversationsUnreadLabel: (count: number) => string;
   };
   onboarding: {
     basicsTitle: string;
@@ -36,5 +37,15 @@ export type AppCopySchema = {
     messageToast: (name: string) => string;
     messageToastAction: string;
     messageToastDismiss: string;
+  };
+  profile: {
+    notifications: {
+      notificationsTitle: string;
+      inAppLabel: string;
+      inAppHelp: string;
+      emailLabel: string;
+      emailHelp: string;
+      saveError: string;
+    };
   };
 };
