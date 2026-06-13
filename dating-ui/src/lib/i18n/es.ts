@@ -187,6 +187,12 @@ export const esCopy: AppCopySchema = {
     requiredForMatchingHint:
       "Se requiere al menos una foto antes de poder ver coincidencias.",
   },
+  photoModeration: {
+    statusPending: "En revision",
+    statusApproved: "Aprobada",
+    statusRejected: "Rechazada",
+    rejectionPrefix: "Motivo:",
+  },
   profileCompleteness: {
     title: "Lista de perfil",
     photo: "Foto subida",
@@ -221,6 +227,12 @@ export const esCopy: AppCopySchema = {
     },
     matchDetail: {
       matchScoreLabel: (score: number) => `Puntuacion · ${score}`,
+      feedback: {
+        prompt: 'Te resulto util esta sugerencia?',
+        thanks: 'Gracias por tu opinion.',
+        positiveLabel: 'Sugerencia util',
+        negativeLabel: 'Sugerencia poco util',
+      },
     },
   },
 };

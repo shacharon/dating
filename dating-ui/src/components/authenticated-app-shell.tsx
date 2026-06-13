@@ -8,6 +8,7 @@ import { MessagingShellProvider } from "@/components/messaging-shell-provider";
 import { NavAuth } from "@/components/nav-auth";
 import { useAuth } from "@/contexts/auth-context";
 import { useConversationUnread } from "@/contexts/conversation-unread-context";
+import { hasSessionCookie } from "@/lib/session-cookie";
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
@@ -212,6 +213,22 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   }
 
   if (status === "loading") {
+    if (hasSessionCookie()) {
+      return (
+        <>
+          <header
+            className="border-b border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-950"
+            aria-live="polite"
+          >
+            <p className="mx-auto max-w-5xl text-xs text-zinc-500">
+              Syncing session…
+            </p>
+          </header>
+          {children}
+        </>
+      );
+    }
+
     return (
       <>
         <header

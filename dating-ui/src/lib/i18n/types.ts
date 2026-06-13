@@ -160,6 +160,12 @@ export type AppCopySchema = {
     bannerLink: string;
     requiredForMatchingHint: string;
   };
+  photoModeration: {
+    statusPending: string;
+    statusApproved: string;
+    statusRejected: string;
+    rejectionPrefix: string;
+  };
   profileCompleteness: {
     title: string;
     photo: string;
@@ -192,6 +198,12 @@ export type AppCopySchema = {
     };
     matchDetail: {
       matchScoreLabel: (score: number) => string;
+      feedback: {
+        prompt: string;
+        thanks: string;
+        positiveLabel: string;
+        negativeLabel: string;
+      };
     };
   };
 };

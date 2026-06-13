@@ -145,6 +145,27 @@ describe('UsersService', () => {
         email: 'a@b.com',
         displayName: 'A',
         lastLoginAt: expect.any(Date),
+        referredByUserId: null,
+      }),
+    });
+  });
+
+  it('createFromGoogleIdentity stores referredByUserId when provided', async () => {
+    prisma.user.create.mockResolvedValue({
+      id: 'new-ref',
+      ...identity,
+      status: UserStatus.ACTIVE,
+      referredByUserId: 'user_referrer',
+      lastLoginAt: new Date(),
+    });
+
+    await service.createFromGoogleIdentity(identity, {
+      referredByUserId: 'user_referrer',
+    });
+
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        referredByUserId: 'user_referrer',
       }),
     });
   });

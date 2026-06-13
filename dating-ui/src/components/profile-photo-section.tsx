@@ -24,10 +24,23 @@ type UploadingPreview = {
   url: string;
 };
 
-function statusLabel(status: MeProfilePhotoDto['status']): string {
-  if (status === 'APPROVED') return 'approved';
-  if (status === 'REJECTED') return 'rejected';
-  return 'pending';
+function statusBadgeClass(status: MeProfilePhotoDto['status']): string {
+  if (status === 'APPROVED') {
+    return 'bg-emerald-800/90 text-white';
+  }
+  if (status === 'REJECTED') {
+    return 'bg-red-800/90 text-white';
+  }
+  return 'bg-amber-600/90 text-white';
+}
+
+function statusText(
+  status: MeProfilePhotoDto['status'],
+  copy: ReturnType<typeof getCopy>['photoModeration'],
+): string {
+  if (status === 'APPROVED') return copy.statusApproved;
+  if (status === 'REJECTED') return copy.statusRejected;
+  return copy.statusPending;
 }
 
 export function ProfilePhotoSection({
@@ -68,6 +81,7 @@ export function ProfilePhotoSection({
   }, []);
 
   const photoGateCopy = getCopy(locale).photoGate;
+  const moderationCopy = getCopy(locale).photoModeration;
 
   async function refreshPhotos() {
     const rows = await listMyProfilePhotos();
@@ -266,9 +280,16 @@ export function ProfilePhotoSection({
                   No preview
                 </div>
               )}
-              <div className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-                {statusLabel(photo.status)}
+              <div
+                className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] ${statusBadgeClass(photo.status)}`}
+              >
+                {statusText(photo.status, moderationCopy)}
               </div>
+              {photo.status === 'REJECTED' && photo.rejectionReason ? (
+                <div className="absolute inset-x-1 bottom-10 rounded bg-red-950/80 px-1.5 py-1 text-[10px] text-red-50">
+                  {moderationCopy.rejectionPrefix} {photo.rejectionReason}
+                </div>
+              ) : null}
               {photo.isPrimary ? (
                 <div className="absolute right-1 top-1 rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white dark:bg-zinc-100 dark:text-zinc-900">
                   primary

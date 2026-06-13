@@ -10,6 +10,12 @@ export const ProductAnalyticsEvents = {
   USER_REPORTED: 'user.reported',
   ACCOUNT_DELETED: 'account.deleted',
   PROFILE_PHOTO_GATE_BLOCKED: 'profile.photo_gate_blocked',
+  PHOTO_MODERATION_PENDING: 'photo.moderation_pending',
+  PHOTO_MODERATION_DECIDED: 'photo.moderation_decided',
+  REPORT_OPS_RESOLVED: 'report.ops_resolved',
+  MATCH_FEEDBACK: 'match.feedback',
+  REFERRAL_LANDING_VIEWED: 'referral.landing_viewed',
+  REFERRAL_SIGNUP_COMPLETED: 'referral.signup_completed',
 } as const;
 
 export type ProductAnalyticsEventName =

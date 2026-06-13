@@ -33,14 +33,11 @@ Batch before cohort launch:
 
 ---
 
-## Pre-deploy blocker (not Story 6 regression)
+## Pre-deploy blocker (resolved Sprint 10 Story 1)
 
-`cd dating-ui && npm run build` fails on legacy **`/dating/matches/children-unsure-badge.tsx`** (missing exports from `_lib/children-unsure.ts`). Options before prod:
+~~`cd dating-ui && npm run build` fails on legacy `/dating/matches/children-unsure-badge.tsx`.~~
 
-- Fix or remove legacy compare route, **or**
-- Add `/matches` to prod middleware gate (runbook §5 notes dev-only).
-
-Story 6 gates `/profiles`, `/evaluate`, `/auto-matches`, `/dev/*` only.
+**Resolved (2026-06-06):** [Sprint 10 Story 1](../sprint-10-trust-and-ops/STORY_01_prod_deploy_hygiene.md) — legacy detail UI removed, prod gates `/matches` + `/dating/matches`, **`npm run build` green**.
 
 ---
 

@@ -8,10 +8,12 @@ import {
   listMyProfilePhotos,
   fetchMyMatches,
   fetchMyProfile,
+  fetchMatchFeedback,
   patchMyProfile,
   setPrimaryMyProfilePhoto,
   submitMyProfileForAnalysis,
   uploadMyProfilePhoto,
+  upsertMatchFeedback,
 } from '@/lib/me-profile-api';
 
 function mockResponse(init: {
@@ -475,6 +477,50 @@ describe('me-profile-api', () => {
     expect(fetch).toHaveBeenCalledWith(
       'http://api.test/api/v1/me/profile/photos/ph1/file',
       expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    );
+  });
+
+  it('fetchMatchFeedback parses GET response', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ sentiment: 'POSITIVE' }),
+      }),
+    );
+    await expect(fetchMatchFeedback('prof-1')).resolves.toEqual({
+      sentiment: 'POSITIVE',
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/matches/prof-1/feedback',
+      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    );
+  });
+
+  it('upsertMatchFeedback PUTs lowercase sentiment', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            matchProfileId: 'prof-1',
+            sentiment: 'NEGATIVE',
+            createdAt: '2026-06-06T10:00:00.000Z',
+            updatedAt: '2026-06-06T10:00:00.000Z',
+          }),
+      }),
+    );
+    await expect(upsertMatchFeedback('prof-1', 'negative')).resolves.toMatchObject({
+      sentiment: 'NEGATIVE',
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      'http://api.test/api/v1/me/matches/prof-1/feedback',
+      expect.objectContaining({
+        method: 'PUT',
+        credentials: 'include',
+        body: JSON.stringify({ sentiment: 'negative' }),
+      }),
     );
   });
 });

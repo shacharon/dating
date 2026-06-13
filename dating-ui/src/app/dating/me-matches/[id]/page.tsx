@@ -6,10 +6,12 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   blockMatch,
   fetchMatchAction,
+  fetchMatchFeedback,
   fetchMyMatchById,
   likeMatch,
   passMatch,
   undoMatchAction,
+  upsertMatchFeedback,
   type MeMatchDetailDto,
 } from '@/lib/me-profile-api';
 import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
@@ -19,6 +21,7 @@ import { ReportUserDialog } from '@/components/report-user-dialog';
 import { getCopy, readStoredLocale } from '@/lib/i18n';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
+type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
 
 function actionStatusMessage(action: YourAction): string | null {
   switch (action) {
@@ -56,19 +59,27 @@ export default function MeMatchDetailPage() {
   );
   const [mutualMatch, setMutualMatch] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [feedbackSentiment, setFeedbackSentiment] =
+    useState<FeedbackSentiment>(null);
+  const [feedbackThanksVisible, setFeedbackThanksVisible] = useState(false);
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+
+  const feedbackCopy = getCopy(readStoredLocale()).launch.matchDetail.feedback;
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    Promise.all([fetchMyMatchById(id), fetchMatchAction(id)])
-      .then(([dto, actionState]) => {
+    Promise.all([fetchMyMatchById(id), fetchMatchAction(id), fetchMatchFeedback(id)])
+      .then(([dto, actionState, feedbackState]) => {
         if (cancelled) return;
         setData(dto);
         setYourAction(actionState.action);
         setMutualMatch(actionState.mutualMatch);
         setConversationId(actionState.conversationId);
+        setFeedbackSentiment(feedbackState.sentiment);
       })
       .catch((e: unknown) => {
         if (!cancelled)
@@ -138,6 +149,23 @@ export default function MeMatchDetailPage() {
       );
     } finally {
       setActionSaving(false);
+    }
+  }
+
+  async function handleFeedback(sentiment: 'positive' | 'negative') {
+    if (!id || feedbackSaving) return;
+    setFeedbackError(null);
+    setFeedbackSaving(true);
+    try {
+      const result = await upsertMatchFeedback(id, sentiment);
+      setFeedbackSentiment(result.sentiment);
+      setFeedbackThanksVisible(true);
+    } catch (e: unknown) {
+      setFeedbackError(
+        e instanceof Error ? e.message : 'Failed to submit feedback',
+      );
+    } finally {
+      setFeedbackSaving(false);
     }
   }
 
@@ -251,6 +279,64 @@ export default function MeMatchDetailPage() {
                   </div>
                 </section>
               ) : null}
+
+              <section
+                data-testid="match-feedback"
+                className="rounded-lg border border-zinc-200 bg-zinc-50/60 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40"
+              >
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {feedbackCopy.prompt}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="match-feedback-positive"
+                    aria-label={feedbackCopy.positiveLabel}
+                    aria-pressed={feedbackSentiment === 'POSITIVE'}
+                    disabled={feedbackSaving}
+                    onClick={() => void handleFeedback('positive')}
+                    className={`rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                      feedbackSentiment === 'POSITIVE'
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span aria-hidden="true">👍</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="match-feedback-negative"
+                    aria-label={feedbackCopy.negativeLabel}
+                    aria-pressed={feedbackSentiment === 'NEGATIVE'}
+                    disabled={feedbackSaving}
+                    onClick={() => void handleFeedback('negative')}
+                    className={`rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                      feedbackSentiment === 'NEGATIVE'
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span aria-hidden="true">👎</span>
+                  </button>
+                </div>
+                {feedbackThanksVisible && (
+                  <p
+                    data-testid="match-feedback-thanks"
+                    className="mt-2 text-sm text-zinc-600 dark:text-zinc-400"
+                    role="status"
+                  >
+                    {feedbackCopy.thanks}
+                  </p>
+                )}
+                {feedbackError && (
+                  <div
+                    className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+                    role="alert"
+                  >
+                    {feedbackError}
+                  </div>
+                )}
+              </section>
 
               {data.matchScore != null ? (
                 <p

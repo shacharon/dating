@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { mergeRequestLogContext } from '../logging/request-log-context';
@@ -24,6 +26,7 @@ import {
 import { toAuthMeResponseDto, type AuthMeResponseDto } from './auth.dto';
 import { GoogleAuthService } from './google-auth.service';
 import { isPrismaUniqueConstraintViolation } from './prisma-auth.errors';
+import { ReferralAttributionService } from './referral-attribution.service';
 
 function forbiddenAuthError(code: AuthErrorCode): ForbiddenException {
   return new ForbiddenException({
@@ -48,6 +51,8 @@ export class AuthService {
     private readonly googleAuth: GoogleAuthService,
     private readonly obs: StructuredObservabilityService,
     private readonly socketRegistry: MessagingSocketRegistry,
+    private readonly referralAttribution: ReferralAttributionService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   /**
@@ -57,7 +62,7 @@ export class AuthService {
   async loginWithGoogleIdToken(
     req: Request,
     res: Response,
-    body: { idToken?: unknown },
+    body: { idToken?: unknown; referredByUserId?: unknown },
   ): Promise<AuthMeResponseDto> {
     this.obs.trace(
       'google id token login started',
@@ -70,7 +75,14 @@ export class AuthService {
       }
 
       const profile = await this.googleAuth.verifyIdToken(raw);
-      const user = await this.resolveGoogleLoginUser(profile);
+      const referredByUserId =
+        typeof body.referredByUserId === 'string'
+          ? body.referredByUserId
+          : undefined;
+      const { user } = await this.resolveGoogleLoginUser(
+        profile,
+        referredByUserId,
+      );
 
       const forwarded = req.headers['x-forwarded-for'];
       const ip =
@@ -149,9 +161,13 @@ export class AuthService {
   /**
    * Find/create/update user for Google identity; only ACTIVE users may receive a session.
    */
-  private async resolveGoogleLoginUser(profile: GoogleIdentity): Promise<User> {
+  private async resolveGoogleLoginUser(
+    profile: GoogleIdentity,
+    referredByUserId?: string,
+  ): Promise<{ user: User; isNewUser: boolean }> {
     const byGoogle = await this.users.findByGoogleId(profile.googleId);
     let user: User;
+    let isNewUser = false;
 
     if (byGoogle) {
       if (byGoogle.status !== USER_STATUS_ACTIVE) {
@@ -187,8 +203,27 @@ export class AuthService {
           rethrowCause(cause);
         }
       } else {
+        const resolvedReferrer =
+          await this.referralAttribution.resolveReferrerUserId(
+            referredByUserId,
+            '',
+          );
         try {
-          user = await this.users.createFromGoogleIdentity(profile);
+          user = await this.users.createFromGoogleIdentity(profile, {
+            referredByUserId: resolvedReferrer,
+          });
+          isNewUser = true;
+          if (resolvedReferrer) {
+            this.obs.trace(
+              `event=referral_signup_attributed userId=${user.id} referredByUserId=${resolvedReferrer}`,
+              ErrorCodes.REFERRAL_SIGNUP_ATTRIBUTED,
+            );
+            this.analytics.track(
+              user.id,
+              ProductAnalyticsEvents.REFERRAL_SIGNUP_COMPLETED,
+              {},
+            );
+          }
         } catch (cause: unknown) {
           if (isPrismaUniqueConstraintViolation(cause)) {
             throw forbiddenAuthError(AUTH_ERROR_CODES.email_in_use);
@@ -201,6 +236,6 @@ export class AuthService {
     if (user.status !== USER_STATUS_ACTIVE) {
       throw forbiddenAuthError(AUTH_ERROR_CODES.disabled_user);
     }
-    return user;
+    return { user, isNewUser };
   }
 }

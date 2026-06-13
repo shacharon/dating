@@ -1,6 +1,10 @@
 import { getApiBase } from "@/lib/api-base";
 import type { AuthUser } from "@/lib/auth/types";
 import {
+  clearStoredReferralRef,
+  readStoredReferralRef,
+} from "@/lib/referral-attribution";
+import {
   emitProductLog,
   getObservabilityRoute,
 } from "@/lib/observability/product-logger";
@@ -30,9 +34,26 @@ function parseUser(json: unknown): AuthUser | null {
 }
 
 /** Covers nest `--watch` restarts (~5–15s) without treating logged-out users as errors. */
-const AUTH_ME_RETRY_DELAYS_MS = [
+const AUTH_ME_BOOTSTRAP_RETRY_DELAYS_MS = [
   250, 500, 750, 1000, 1500, 2000, 2500, 3000,
 ] as const;
+
+/** Background refresh — do not block UI for minutes when API is down. */
+const AUTH_ME_SILENT_RETRY_DELAYS_MS = [200, 400] as const;
+
+export type AuthMeRetryOptions = {
+  maxAttempts?: number;
+  /** bootstrap: first load (default). silent: tab focus / background refresh. */
+  profile?: 'bootstrap' | 'silent';
+};
+
+function retryDelaysForProfile(
+  profile: AuthMeRetryOptions['profile'],
+): readonly number[] {
+  return profile === 'silent'
+    ? AUTH_ME_SILENT_RETRY_DELAYS_MS
+    : AUTH_ME_BOOTSTRAP_RETRY_DELAYS_MS;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,12 +69,15 @@ export function isTransientAuthMeFailure(status: number): boolean {
  * is still starting or briefly restarting (`nest start --watch`).
  */
 export async function fetchAuthMeWithRetry(
-  options?: { maxAttempts?: number },
+  options?: AuthMeRetryOptions,
 ): Promise<
   | { ok: true; user: AuthUser }
   | { ok: false; status: number; authError?: string }
 > {
-  const maxAttempts = options?.maxAttempts ?? AUTH_ME_RETRY_DELAYS_MS.length + 1;
+  const profile = options?.profile ?? 'bootstrap';
+  const delays = retryDelaysForProfile(profile);
+  const maxAttempts =
+    options?.maxAttempts ?? delays.length + 1;
   let last: Awaited<ReturnType<typeof fetchAuthMe>> = { ok: false, status: 0 };
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -61,7 +85,7 @@ export async function fetchAuthMeWithRetry(
     if (last.ok || !isTransientAuthMeFailure(last.status)) {
       return last;
     }
-    const delay = AUTH_ME_RETRY_DELAYS_MS[attempt];
+    const delay = delays[attempt];
     if (delay == null) break;
     await sleep(delay);
   }
@@ -158,6 +182,11 @@ export async function exchangeGoogleIdToken(
 > {
   const base = getApiBase();
   const route = getObservabilityRoute();
+  const referredByUserId = readStoredReferralRef();
+  const body: { idToken: string; referredByUserId?: string } = { idToken };
+  if (referredByUserId) {
+    body.referredByUserId = referredByUserId;
+  }
   let res: Response;
   try {
     res = await fetch(`${base}/api/v1/auth/google`, {
@@ -167,7 +196,7 @@ export async function exchangeGoogleIdToken(
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify(body),
     });
   } catch {
     emitProductLog({
@@ -187,6 +216,7 @@ export async function exchangeGoogleIdToken(
   if (res.status === 200) {
     const user = parseUser(await res.json());
     if (user) {
+      clearStoredReferralRef();
       emitProductLog({
         level: "trace",
         route,

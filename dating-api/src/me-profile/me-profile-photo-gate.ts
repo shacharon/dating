@@ -16,3 +16,11 @@ export async function viewerHasApprovedPhoto(
 ): Promise<boolean> {
   return (await countApprovedPhotosForProfile(prisma, profileId)) >= 1;
 }
+
+/** True when candidate profile has ≥1 APPROVED photo (browse eligibility). */
+export async function candidateHasApprovedPhoto(
+  prisma: Pick<PrismaService, 'userProfilePhoto'>,
+  profileId: string,
+): Promise<boolean> {
+  return viewerHasApprovedPhoto(prisma, profileId);
+}

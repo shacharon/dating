@@ -19,6 +19,16 @@ describe('isInternalRouteBlocked', () => {
     delete process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES;
     expect(isInternalRouteBlocked('/evaluate')).toBe(true);
     expect(isInternalRouteBlocked('/profiles/compare')).toBe(true);
+    expect(isInternalRouteBlocked('/matches')).toBe(true);
+    expect(isInternalRouteBlocked('/dating/matches')).toBe(true);
+    expect(isInternalRouteBlocked('/dating/matches/abc')).toBe(true);
+  });
+
+  it('does not block product match browse path', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES;
+    expect(isInternalRouteBlocked('/dating/me-matches')).toBe(false);
+    expect(isInternalRouteBlocked('/dating/me-matches/abc')).toBe(false);
   });
 
   it('allows internal routes in development', () => {

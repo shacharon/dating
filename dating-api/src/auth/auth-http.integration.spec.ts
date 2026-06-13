@@ -577,4 +577,168 @@ describe('auth HTTP (integration)', () => {
       }
     });
   });
+
+  describe('referral attribution (Story 6)', () => {
+    it('POST /api/v1/public/funnel/referral-landing-view returns 204', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/public/funnel/referral-landing-view')
+        .send({ refPresent: true })
+        .expect(204);
+    });
+
+    it('POST /api/v1/public/funnel/referral-landing-view accepts refPresent false', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/public/funnel/referral-landing-view')
+        .send({ refPresent: false })
+        .expect(204);
+    });
+
+    it('POST /api/v1/public/funnel/referral-landing-view returns 400 for invalid body', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/public/funnel/referral-landing-view')
+        .send({ refPresent: 'yes' })
+        .expect(400);
+    });
+
+    it('POST /api/v1/auth/google new user with valid referrer passes referredByUserId to create', async () => {
+      const identity = {
+        googleId: 'google-ref-new',
+        email: 'refnew@example.com',
+        displayName: 'Ref New',
+        avatarUrl: null as string | null,
+      };
+      verifyIdToken.mockResolvedValue(identity);
+      usersServiceMock.findByGoogleId.mockResolvedValue(null);
+      usersServiceMock.findByEmail.mockResolvedValue(null);
+      usersServiceMock.findById.mockResolvedValue({
+        id: 'user_referrer',
+        status: UserStatus.ACTIVE,
+        deletedAt: null,
+      });
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: 'user_new_ref',
+        email: identity.email,
+        googleId: identity.googleId,
+        displayName: identity.displayName,
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+        referredByUserId: 'user_referrer',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-ref', referredByUserId: 'user_referrer' })
+        .expect(200);
+
+      expect(usersServiceMock.createFromGoogleIdentity).toHaveBeenCalledWith(
+        identity,
+        { referredByUserId: 'user_referrer' },
+      );
+    });
+
+    it('POST /api/v1/auth/google new user with invalid referrer creates without attribution', async () => {
+      const identity = {
+        googleId: 'google-ref-invalid',
+        email: 'refinvalid@example.com',
+        displayName: 'Ref Invalid',
+        avatarUrl: null as string | null,
+      };
+      verifyIdToken.mockResolvedValue(identity);
+      usersServiceMock.findByGoogleId.mockResolvedValue(null);
+      usersServiceMock.findByEmail.mockResolvedValue(null);
+      usersServiceMock.findById.mockResolvedValue(null);
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: 'user_no_ref',
+        email: identity.email,
+        googleId: identity.googleId,
+        displayName: identity.displayName,
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+        referredByUserId: null,
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-noref', referredByUserId: 'user_missing' })
+        .expect(200);
+
+      expect(usersServiceMock.createFromGoogleIdentity).toHaveBeenCalledWith(
+        identity,
+        { referredByUserId: null },
+      );
+    });
+
+    it('POST /api/v1/auth/google new user with deleted referrer creates without attribution', async () => {
+      const identity = {
+        googleId: 'google-ref-deleted',
+        email: 'refdeleted@example.com',
+        displayName: 'Ref Deleted',
+        avatarUrl: null as string | null,
+      };
+      verifyIdToken.mockResolvedValue(identity);
+      usersServiceMock.findByGoogleId.mockResolvedValue(null);
+      usersServiceMock.findByEmail.mockResolvedValue(null);
+      usersServiceMock.findById.mockResolvedValue({
+        id: 'user_deleted_referrer',
+        status: UserStatus.ACTIVE,
+        deletedAt: new Date(),
+      });
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: 'user_no_ref_deleted',
+        email: identity.email,
+        googleId: identity.googleId,
+        displayName: identity.displayName,
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+        referredByUserId: null,
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({
+          idToken: 'jwt-deleted-ref',
+          referredByUserId: 'user_deleted_referrer',
+        })
+        .expect(200);
+
+      expect(usersServiceMock.createFromGoogleIdentity).toHaveBeenCalledWith(
+        identity,
+        { referredByUserId: null },
+      );
+    });
+
+    it('POST /api/v1/auth/google returning user ignores referredByUserId', async () => {
+      const identity = {
+        googleId: 'google-return-ref',
+        email: 'returnref@example.com',
+        displayName: 'Return',
+        avatarUrl: null as string | null,
+      };
+      verifyIdToken.mockResolvedValue(identity);
+      usersServiceMock.findByGoogleId.mockResolvedValue({
+        id: 'user_existing_ref',
+        email: identity.email,
+        googleId: identity.googleId,
+        displayName: 'Old',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+      usersServiceMock.updateLoginFields.mockResolvedValue({
+        id: 'user_existing_ref',
+        email: identity.email,
+        googleId: identity.googleId,
+        displayName: identity.displayName,
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-return', referredByUserId: 'user_referrer' })
+        .expect(200);
+
+      expect(usersServiceMock.createFromGoogleIdentity).not.toHaveBeenCalled();
+      expect(usersServiceMock.findById).not.toHaveBeenCalled();
+    });
+  });
 });

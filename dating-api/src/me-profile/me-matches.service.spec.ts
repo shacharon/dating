@@ -65,6 +65,7 @@ function makeProfileRow(overrides: {
   updatedAt?: Date;
   /** Joined `UserProfilePreference` row (Phase F: HG prefs live here only). */
   preference?: ReturnType<typeof makePrefRow> | null;
+  photos?: Array<{ id: string; isPrimary: boolean }>;
 }) {
   return {
     id: overrides.id,
@@ -91,7 +92,8 @@ function makeProfileRow(overrides: {
     education: null as string | null,
     religion: null as string | null,
     preference: overrides.preference !== undefined ? overrides.preference : null,
-    photos: [] as Array<{ id: string; isPrimary: boolean }>,
+    photos:
+      overrides.photos ?? [{ id: 'photo_default', isPrimary: true }],
   };
 }
 
@@ -103,7 +105,7 @@ describe('MeMatchesService', () => {
   const candidateProfileId = 'prof_cand_1';
 
   let prisma: {
-    userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
+    userProfile: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
     userProfileEvaluation: { findFirst: jest.Mock };
     userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
     matchAction: { findMany: jest.Mock; findUnique: jest.Mock };
@@ -134,6 +136,7 @@ describe('MeMatchesService', () => {
       userProfile: {
         findUnique: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
       userProfileEvaluation: {
         findFirst: jest
@@ -457,6 +460,7 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
         }),
       );
+      prisma.userProfile.count.mockResolvedValue(1);
       prisma.userProfile.findMany.mockResolvedValue([
         {
           ...makeProfileRow({
@@ -465,7 +469,7 @@ describe('MeMatchesService', () => {
             gender: 'FEMALE',
             desiredPartnerGenders: ['MALE'],
           }),
-          photos: [],
+          photos: [{ id: 'photo_other', isPrimary: false }],
         },
       ]);
 
@@ -473,9 +477,12 @@ describe('MeMatchesService', () => {
 
       expect(result.matches).toHaveLength(1);
       expect(result.matches?.[0].primaryPhotoUrl).toBeNull();
-      expect(result.matches?.[0].approvedPhotoCount).toBe(0);
+      expect(result.matches?.[0].approvedPhotoCount).toBe(1);
       expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: expect.objectContaining({
+            photos: { some: { status: 'APPROVED' } },
+          }),
           select: expect.objectContaining({
             photos: expect.objectContaining({
               where: { status: 'APPROVED' },
@@ -483,6 +490,34 @@ describe('MeMatchesService', () => {
           }),
         }),
       );
+    });
+
+    it('excludes candidates with zero approved photos from list', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.count.mockResolvedValue(2);
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: candidateProfileId,
+          userId: 'user_cand',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+        }),
+      ]);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result.status).toBe('ready');
+      expect(result.matches).toHaveLength(1);
+      expect(result.totalCandidatesBeforeFilter).toBe(1);
+      expect(result.filteredNoPhotoCandidates).toBe(1);
+      expect(result.matches!.every((m) => m.approvedPhotoCount >= 1)).toBe(true);
     });
 
     it('list() reads reciprocal partner genders from UserProfilePreference when row exists (not desiredPartnerGenders JSON)', async () => {
@@ -1243,6 +1278,31 @@ describe('MeMatchesService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
+    it('throws NotFoundException when candidate has no approved photos (no info leak)', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+            photos: [],
+          }),
+        );
+
+      await expect(
+        service.getById(viewerUserId, candidateProfileId),
+      ).rejects.toThrow('Match not found.');
+    });
+
     it('returns match detail when candidate is eligible', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
@@ -1490,6 +1550,111 @@ describe('MeMatchesService', () => {
 
   // ─── assertMatchCandidateVisible() ────────────────────────────────────────
 
+  describe('getPrimaryPhotoFileById()', () => {
+    const photoId = 'photo_primary';
+    const candUserId = 'user_cand';
+
+    function mockBrowsePhotoFileAccess(opts?: {
+      viewerPhotoCount?: number;
+      candidatePhotoCount?: number;
+      mutual?: boolean;
+    }) {
+      const viewerPhotoCount = opts?.viewerPhotoCount ?? 1;
+      const candidatePhotoCount = opts?.candidatePhotoCount ?? 1;
+      mutualMatches.findActiveByUserPair.mockResolvedValue(
+        opts?.mutual ? { id: 'mutual_1' } : null,
+      );
+      prisma.userProfile.findUnique.mockImplementation(
+        (args: {
+          where: { userId?: string; id?: string };
+          include?: unknown;
+          select?: unknown;
+        }) => {
+          if (args.where.id === candidateProfileId) {
+            return Promise.resolve({
+              id: candidateProfileId,
+              userId: candUserId,
+              status: S_ANALYZED,
+              birthDate: new Date('1990-06-15T00:00:00.000Z'),
+              gender: 'FEMALE',
+              desiredPartnerGenders: ['MALE'],
+              city: 'TLV',
+              country: 'IL',
+              locationLabel: 'Tel Aviv, IL',
+              aboutMe: 'About me',
+              aboutPartner: 'About partner',
+              aboutRelationship: 'About relationship',
+              preference: null,
+              user: { deletedAt: null },
+            });
+          }
+          if (args.where.userId === viewerUserId) {
+            return Promise.resolve(
+              makeProfileRow({
+                id: viewerProfileId,
+                userId: viewerUserId,
+                gender: 'MALE',
+                desiredPartnerGenders: ['FEMALE'],
+              }),
+            );
+          }
+          return Promise.resolve(null);
+        },
+      );
+      prisma.userProfilePhoto.count.mockImplementation(
+        ({ where }: { where: { profileId: string } }) => {
+          if (where.profileId === viewerProfileId) {
+            return Promise.resolve(viewerPhotoCount);
+          }
+          if (where.profileId === candidateProfileId) {
+            return Promise.resolve(candidatePhotoCount);
+          }
+          return Promise.resolve(0);
+        },
+      );
+    }
+
+    it('throws NotFoundException when viewer has no approved photo (non-mutual)', async () => {
+      mockBrowsePhotoFileAccess({ viewerPhotoCount: 0 });
+
+      await expect(
+        service.getPrimaryPhotoFileById(viewerUserId, candidateProfileId, photoId),
+      ).rejects.toThrow('Match not found.');
+
+      expect(prisma.userProfilePhoto.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when candidate has no approved photo (non-mutual)', async () => {
+      mockBrowsePhotoFileAccess({ candidatePhotoCount: 0 });
+
+      await expect(
+        service.getPrimaryPhotoFileById(viewerUserId, candidateProfileId, photoId),
+      ).rejects.toThrow('Match not found.');
+
+      expect(prisma.userProfilePhoto.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('skips browse photo gates when an active mutual exists', async () => {
+      mockBrowsePhotoFileAccess({
+        viewerPhotoCount: 0,
+        candidatePhotoCount: 0,
+        mutual: true,
+      });
+      prisma.userProfilePhoto.findFirst.mockResolvedValue({
+        mimeType: 'image/jpeg',
+        storageKey: 'uploads/key.jpg',
+      });
+      photoStorage.read.mockResolvedValue(Buffer.from([1, 2]));
+
+      await expect(
+        service.getPrimaryPhotoFileById(viewerUserId, candidateProfileId, photoId),
+      ).resolves.toEqual({
+        contentType: 'image/jpeg',
+        content: Buffer.from([1, 2]),
+      });
+    });
+  });
+
   describe('assertMatchCandidateVisible()', () => {
     it('throws NotFoundException when viewer has no approved photo', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
@@ -1530,6 +1695,31 @@ describe('MeMatchesService', () => {
       await expect(
         service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws NotFoundException when candidate has no approved photos', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+            photos: [],
+          }),
+        );
+
+      await expect(
+        service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
+      ).rejects.toThrow('Match not found.');
     });
   });
 
@@ -1710,6 +1900,7 @@ describe('MeMatchesService', () => {
           findMany: jest.fn().mockResolvedValue([
             makeProfileRow({ id: candidateProfileId, userId: 'user_cand', gender: 'FEMALE', desiredPartnerGenders: ['MALE'] }),
           ]),
+          count: jest.fn().mockResolvedValue(1),
         },
         userProfileEvaluation: {
           findFirst: jest.fn().mockResolvedValue({
@@ -2202,12 +2393,23 @@ describe('MeMatchesService', () => {
         }),
       );
 
+      expect(prisma.userProfile.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: { not: viewerUserId },
+            status: 'ANALYZED',
+            user: { deletedAt: null },
+          },
+        }),
+      );
+
       expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             userId: { not: viewerUserId },
             status: 'ANALYZED',
             user: { deletedAt: null },
+            photos: { some: { status: 'APPROVED' } },
           },
         }),
       );

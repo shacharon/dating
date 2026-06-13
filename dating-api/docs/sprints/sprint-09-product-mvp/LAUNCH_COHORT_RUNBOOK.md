@@ -34,13 +34,17 @@ Placeholder — fill after first launch week.
 
 ## 3. Manual moderation
 
-**Photos (v1):** Stub pipeline may auto-approve; ops still review new uploads daily.
+**Photos (Sprint 10 Story 2):** Uploads enter `PENDING` until ops approve in **`/admin/photos`** (requires `ADMIN_USER_IDS` + session).
 
-- [ ] Scan new photos for policy violations (nudity, minors, spam, contact info in image).
-- [ ] Reject or remove via admin tooling; document reason.
+**Admin access (Sprint 11 Story 0):** In production, `/admin` returns **404** unless `NEXT_PUBLIC_ADMIN_ENABLED=1` **and** a network gate (VPN / Cloudflare Access) is in place. See [ADMIN_ACCESS.md](../../ops/ADMIN_ACCESS.md).
+
+- [ ] Review pending queue daily at `/admin/photos` (approve / reject with optional reason).
+- [ ] Scan approved photos for policy violations (nudity, minors, spam, contact info in image).
 - [ ] Re-check reported users (Story 4 report flow).
 
-**Reports:** Triage `report.user` analytics events weekly; block abusive accounts.
+**Local dev escape hatch:** `PHOTO_MODERATION_AUTO_APPROVE=1` skips the queue (do not set in production).
+
+**Reports:** Triage OPEN reports daily at **`/admin/reports`** (dismiss or mark action taken). Keep `REPORT_OPS_EMAIL` as backup; block abusive accounts when action taken.
 
 ---
 
@@ -78,10 +82,12 @@ Blocked when `NODE_ENV=production` unless escape hatch is set.
 | `/evaluate`, `/evaluate/*` | 404 |
 | `/auto-matches`, `/auto-matches/*` | 404 |
 | `/dev`, `/dev/*` | 404 |
+| `/matches`, `/matches/*` | 404 |
+| `/dating/matches`, `/dating/matches/*` | 404 |
 
 **Escape hatch (debug only):** `NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES=1` — do not set in prod without ops approval.
 
-**Not blocked in v1:** `/matches` (legacy compare UI) — treat as dev-only; optional follow-up to gate.
+**Product path (not blocked):** `/dating/me-matches` — user match browse.
 
 Implementation: `dating-ui/src/middleware.ts` + `internal-routes-gate.ts`.
 

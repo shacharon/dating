@@ -11,6 +11,7 @@ import { ConversationMessageRateLimitService } from './conversation-message-rate
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { MeConversationsService } from './me-conversations.service';
 import { MeMatchActionsService } from './me-match-actions.service';
+import { MeMatchFeedbackService } from './me-match-feedback.service';
 import { MeMatchesService } from './me-matches.service';
 import { MutualMatchesService } from './mutual-matches.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
@@ -37,6 +38,7 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     MeProfileMatchesService,
     MeMatchesService,
     MeMatchActionsService,
+    MeMatchFeedbackService,
     MeConversationsService,
     ConversationMessageRateLimitService,
     MeConversationMessagesService,

@@ -1,10 +1,13 @@
+/** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetRequestIdContextForTests } from '@/lib/observability/request-id';
 import {
+  exchangeGoogleIdToken,
   fetchAuthMe,
   fetchAuthMeWithRetry,
   isTransientAuthMeFailure,
 } from './auth-api';
+import { REFERRAL_STORAGE_KEY } from '@/lib/referral-attribution';
 
 describe('auth-api', () => {
   const originalFetch = globalThis.fetch;
@@ -80,6 +83,17 @@ describe('auth-api', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('fetchAuthMeWithRetry silent profile stops after fewer attempts', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('net down'));
+    globalThis.fetch = fetchMock;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const r = await fetchAuthMeWithRetry({ profile: 'silent' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.status).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('fetchAuthMe parses notification preference flags', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       status: 200,
@@ -133,5 +147,34 @@ describe('auth-api', () => {
       });
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).requestId).toBe('auth-rid-99');
+  });
+
+  it('exchangeGoogleIdToken sends stored referral ref and clears on success', async () => {
+    const ref = 'c123456789012345678901234';
+    sessionStorage.setItem(REFERRAL_STORAGE_KEY, ref);
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      json: async () => ({
+        id: 'u-new',
+        email: 'new@b.com',
+        displayName: 'N',
+        avatarUrl: null,
+        status: 'ACTIVE',
+      }),
+    } as Response);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const r = await exchangeGoogleIdToken('jwt-ref');
+    expect(r.ok).toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      'http://auth.test/api/v1/auth/google',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ idToken: 'jwt-ref', referredByUserId: ref }),
+      }),
+    );
+    expect(sessionStorage.getItem(REFERRAL_STORAGE_KEY)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 # Match quality audit — manual review template
 
-Use together with `scripts/match-quality-audit.ts` JSON output ([V1 contract](./MATCH_ENGINE_V1_CONTRACT.md)).
+Use together with the admin drill-down UI (`/admin/match-quality` → **View audit**) or `scripts/match-quality-audit.ts` JSON output ([V1 contract](./MATCH_ENGINE_V1_CONTRACT.md)).
 
 ## Row template (markdown)
 

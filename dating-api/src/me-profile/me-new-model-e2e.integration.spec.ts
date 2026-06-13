@@ -136,6 +136,20 @@ function withAnalyzedPreference(row: Record<string, unknown> | null): Record<str
   return { ...row, preference: testUserProfilePreferenceForProfile(row) };
 }
 
+function enrichMatchProfileRow(
+  row: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  const enriched = withAnalyzedPreference(row);
+  if (!enriched || enriched['status'] !== 'ANALYZED') return enriched;
+  return {
+    ...enriched,
+    photos: enriched['photos'] ?? [
+      { id: `photo_${String(enriched['id'])}`, isPrimary: true },
+    ],
+    user: { deletedAt: null },
+  };
+}
+
 function makeBaseProfileRow(id: string, userId: string): Record<string, unknown> {
   return {
     id,
@@ -192,6 +206,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      count: jest.fn(),
     },
     userProfileEvaluation: {
       findFirst: jest.fn(),
@@ -204,6 +219,11 @@ describe('Two-user new-model E2E flow (integration)', () => {
     matchAction: {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue(null),
+    },
+    userProfilePhoto: {
+      count: jest.fn().mockResolvedValue(1),
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     // ── Legacy tables: Proxy firewall ─────────────────────────────────
     // Any property access (findMany, create, upsert, …) throws immediately.
@@ -262,21 +282,47 @@ describe('Two-user new-model E2E flow (integration)', () => {
         else if (where.userId === USER_B.id) row = profileB;
         else if (where.id === PROF_A_ID) row = profileA;
         else if (where.id === PROF_B_ID) row = profileB;
-        return withAnalyzedPreference(row);
+        return enrichMatchProfileRow(row);
       },
     );
 
     prismaMock.userProfile.findMany.mockImplementation(
-      async ({ where }: { where?: { userId?: { not?: string }; status?: string } } = {}) => {
+      async ({
+        where,
+      }: {
+        where?: {
+          userId?: { not?: string };
+          status?: string;
+          photos?: { some?: { status?: string } };
+          user?: { deletedAt?: null };
+        };
+      } = {}) => {
         const candidates = [profileA, profileB].filter(Boolean);
         return candidates
           .filter((p) => {
             if (!p) return false;
             if (where?.userId?.not && p['userId'] === where.userId.not) return false;
             if (where?.status && p['status'] !== where.status) return false;
+            if (where?.photos?.some && p['status'] !== 'ANALYZED') return false;
             return true;
           })
-          .map((p) => withAnalyzedPreference(p as Record<string, unknown>)!);
+          .map((p) => enrichMatchProfileRow(p as Record<string, unknown>)!);
+      },
+    );
+
+    prismaMock.userProfile.count.mockImplementation(
+      async ({
+        where,
+      }: {
+        where?: { userId?: { not?: string }; status?: string };
+      } = {}) => {
+        const candidates = [profileA, profileB].filter(Boolean);
+        return candidates.filter((p) => {
+          if (!p) return false;
+          if (where?.userId?.not && p['userId'] === where.userId.not) return false;
+          if (where?.status && p['status'] !== where.status) return false;
+          return true;
+        }).length;
       },
     );
 

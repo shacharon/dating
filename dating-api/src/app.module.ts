@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthSessionConfigModule } from './config/auth-session-config.module';
+import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ContradictionModule } from './contradiction/contradiction.module';
@@ -42,6 +43,7 @@ import { SessionModule } from './session/session.module';
     ContradictionModule,
     ProfilesModule,
     MeProfileModule,
+    AdminModule,
     ReportsModule,
     MeAccountModule,
     MessagingRealtimeModule,

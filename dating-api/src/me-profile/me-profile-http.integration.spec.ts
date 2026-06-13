@@ -79,6 +79,7 @@ describe('me profile HTTP (integration)', () => {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     },
     userProfileEvaluation: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -101,6 +102,10 @@ describe('me profile HTTP (integration)', () => {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
       delete: jest.fn(),
+    },
+    matchFeedback: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
     },
     mutualMatch: {
       upsert: jest.fn(),
@@ -208,6 +213,8 @@ describe('me profile HTTP (integration)', () => {
     );
     prismaMock.userProfile.findUnique.mockReset();
     prismaMock.userProfile.findFirst.mockReset();
+    prismaMock.userProfile.count.mockReset();
+    prismaMock.userProfile.count.mockResolvedValue(0);
     prismaMock.userProfile.findFirst.mockResolvedValue(null);
     prismaMock.userProfilePhoto.findMany.mockReset();
     prismaMock.userProfilePhoto.findFirst.mockReset();
@@ -221,6 +228,8 @@ describe('me profile HTTP (integration)', () => {
     prismaMock.matchAction.findMany.mockResolvedValue([]);
     prismaMock.matchAction.findUnique?.mockReset?.();
     prismaMock.matchAction.delete?.mockReset?.();
+    prismaMock.matchFeedback.findUnique?.mockReset?.();
+    prismaMock.matchFeedback.upsert?.mockReset?.();
     prismaMock.mutualMatch.upsert?.mockReset?.();
     prismaMock.mutualMatch.create?.mockReset?.();
     prismaMock.mutualMatch.findFirst?.mockReset?.();
@@ -1794,6 +1803,7 @@ describe('me profile HTTP (integration)', () => {
       const raw = await loginAndCookie();
       mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.count.mockResolvedValue(0);
       prismaMock.userProfile.findMany.mockResolvedValue([]);
 
       const res = await request(app.getHttpServer())
@@ -1805,16 +1815,19 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.viewerProfileId).toBe('prof_viewer_s5');
       expect(res.body.matches).toHaveLength(0);
       expect(res.body.totalCandidatesBeforeFilter).toBe(0);
+      expect(res.body.filteredNoPhotoCandidates).toBe(0);
     });
 
     it('returns 200 ready — gender-mismatched candidate excluded', async () => {
       const raw = await loginAndCookie();
       mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.count.mockResolvedValue(1);
       // Candidate is FEMALE — viewer (FEMALE) wants MALE only → excluded
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
           id: 'prof_s5_cand_1',
+          userId: 'user_s5_cand_1',
           status: UserProfileStatus.ANALYZED,
           birthDate: new Date('1992-03-15T00:00:00.000Z'),
           gender: 'FEMALE',
@@ -1826,6 +1839,7 @@ describe('me profile HTTP (integration)', () => {
           aboutPartner: null,
           aboutRelationship: null,
           analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
+          photos: [{ id: 'photo_cand_1', isPrimary: true }],
           _count: { evaluations: 1 },
           ...HG_FIELD_DEFAULTS,
           preference: testUserProfilePreference('prof_s5_cand_1'),
@@ -1846,6 +1860,7 @@ describe('me profile HTTP (integration)', () => {
       const raw = await loginAndCookie();
       mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.count.mockResolvedValue(1);
       // Candidate is MALE — viewer (FEMALE) wants MALE, candidate has no filter → included
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
@@ -1890,6 +1905,7 @@ describe('me profile HTTP (integration)', () => {
       const raw = await loginAndCookie();
       mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.count.mockResolvedValue(2);
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
           id: 'prof_s5_cand_2',
@@ -1905,7 +1921,7 @@ describe('me profile HTTP (integration)', () => {
           aboutPartner: null,
           aboutRelationship: null,
           analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
-          photos: [],
+          photos: [{ id: 'photo_cand_2', isPrimary: true }],
           _count: { evaluations: 1 },
           ...HG_FIELD_DEFAULTS,
           preference: testUserProfilePreference('prof_s5_cand_2'),
@@ -1924,7 +1940,7 @@ describe('me profile HTTP (integration)', () => {
           aboutPartner: null,
           aboutRelationship: null,
           analyzedAt: new Date('2026-04-03T11:00:00.000Z'),
-          photos: [],
+          photos: [{ id: 'photo_cand_3', isPrimary: true }],
           _count: { evaluations: 1 },
           ...HG_FIELD_DEFAULTS,
           preference: testUserProfilePreference('prof_s5_cand_3'),
@@ -1959,6 +1975,7 @@ describe('me profile HTTP (integration)', () => {
       const raw = await loginAndCookie();
       mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.count.mockResolvedValue(2);
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
           id: 'prof_s5_cand_2',
@@ -1974,7 +1991,7 @@ describe('me profile HTTP (integration)', () => {
           aboutPartner: null,
           aboutRelationship: null,
           analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
-          photos: [],
+          photos: [{ id: 'photo_cand_2', isPrimary: true }],
           _count: { evaluations: 1 },
           ...HG_FIELD_DEFAULTS,
           preference: testUserProfilePreference('prof_s5_cand_2'),
@@ -1993,7 +2010,7 @@ describe('me profile HTTP (integration)', () => {
           aboutPartner: null,
           aboutRelationship: null,
           analyzedAt: new Date('2026-04-03T11:00:00.000Z'),
-          photos: [],
+          photos: [{ id: 'photo_cand_3', isPrimary: true }],
           _count: { evaluations: 1 },
           ...HG_FIELD_DEFAULTS,
           preference: testUserProfilePreference('prof_s5_cand_3'),
@@ -2013,6 +2030,44 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.matches).toHaveLength(1);
       expect(res.body.matches[0].id).toBe('prof_s5_cand_3');
       expect(res.body.matches[0].yourAction).toBe('LIKE');
+    });
+
+    it('excludes analyzed candidates with zero approved photos from list', async () => {
+      const raw = await loginAndCookie();
+      mockListEvaluations();
+      prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
+      prismaMock.userProfile.count.mockResolvedValue(2);
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        {
+          id: 'prof_s5_cand_photo',
+          userId: 'user_s5_cand_photo',
+          status: UserProfileStatus.ANALYZED,
+          birthDate: new Date('1988-07-20T00:00:00.000Z'),
+          gender: 'MALE',
+          desiredPartnerGenders: null,
+          city: 'TLV',
+          country: 'IL',
+          locationLabel: 'Tel Aviv, IL',
+          aboutMe: 'Has photo',
+          aboutPartner: null,
+          aboutRelationship: null,
+          analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+          photos: [{ id: 'photo_match_1', isPrimary: true }],
+          _count: { evaluations: 1 },
+          ...HG_FIELD_DEFAULTS,
+          preference: testUserProfilePreference('prof_s5_cand_photo'),
+        },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.status).toBe('ready');
+      expect(res.body.matches).toHaveLength(1);
+      expect(res.body.filteredNoPhotoCandidates).toBe(1);
+      expect(res.body.totalCandidatesBeforeFilter).toBe(1);
     });
   });
 
@@ -2059,10 +2114,24 @@ describe('me profile HTTP (integration)', () => {
       aboutPartner: null,
       aboutRelationship: null,
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_s5_primary', isPrimary: true }],
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
       preference: testUserProfilePreference('prof_s5_det_cand'),
+      user: { deletedAt: null },
     };
+
+    it('returns 404 when candidate has no approved photos — no existence leak', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce({ ...candidateProfile, photos: [] });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+    });
 
     it('returns 401 without session', async () => {
       await request(app.getHttpServer())
@@ -2194,6 +2263,316 @@ describe('me profile HTTP (integration)', () => {
 
       expect(prismaMock.userProfilePhoto.findFirst).not.toHaveBeenCalled();
     });
+
+    it('returns 404 for match photo when viewer has no approved photo', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce({
+          ...candidateProfile,
+          preference: testUserProfilePreference('prof_s5_det_cand'),
+        });
+      prismaMock.userProfilePhoto.count.mockImplementation(
+        async (args: { where: { profileId: string } }) =>
+          args.where.profileId === viewerProfile.id ? 0 : 1,
+      );
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand/photos/photo_s5_primary/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.userProfilePhoto.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 for match photo when candidate has no approved photo', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce({
+          ...candidateProfile,
+          preference: testUserProfilePreference('prof_s5_det_cand'),
+        });
+      prismaMock.userProfilePhoto.count.mockImplementation(
+        async (args: { where: { profileId: string } }) =>
+          args.where.profileId === candidateProfile.id ? 0 : 1,
+      );
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_s5_det_cand/photos/photo_s5_primary/file')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.userProfilePhoto.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Sprint 10 Story 4: match feedback ─────────────────────────────────────
+
+  describe('PUT/GET /api/v1/me/matches/:id/feedback', () => {
+    const CANDIDATE_USER_ID = 'user_feedback_cand_1';
+
+    const viewerProfile = {
+      id: 'prof_viewer_feedback',
+      userId: USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      onboardingStep: 'COMPLETED',
+      name: '',
+      aboutMe: 'I like hiking',
+      aboutPartner: 'Looking for warmth',
+      aboutRelationship: 'Long term',
+      birthDate: new Date('1990-01-10T00:00:00.000Z'),
+      gender: 'FEMALE' as const,
+      desiredPartnerGenders: ['MALE'],
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      submittedAt: new Date('2026-04-01T08:00:00.000Z'),
+      analyzedAt: new Date('2026-04-01T09:00:00.000Z'),
+      lastAnalysisError: null as string | null,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-04-01'),
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_viewer_feedback', {
+        acceptedPartnerGenders: ['MALE'],
+      }),
+      signals: [],
+      interests: [],
+    };
+
+    const candidateProfile = {
+      id: 'prof_feedback_cand',
+      userId: CANDIDATE_USER_ID,
+      status: UserProfileStatus.ANALYZED,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      gender: 'MALE' as const,
+      desiredPartnerGenders: null,
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      aboutMe: 'Male candidate detail',
+      aboutPartner: null,
+      aboutRelationship: null,
+      analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
+      updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_feedback_primary', isPrimary: true }],
+      _count: { evaluations: 1 },
+      ...HG_FIELD_DEFAULTS,
+      preference: testUserProfilePreference('prof_feedback_cand'),
+      signals: [],
+      interests: [],
+      user: { deletedAt: null },
+    };
+
+    function mockEligibleMatchDetail() {
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return viewerProfile;
+          }
+          if (args.where.id === candidateProfile.id) {
+            const sel = args.select;
+            const isUserIdOnlyLookup =
+              sel &&
+              sel.userId === true &&
+              sel.id === true &&
+              Object.keys(sel).length === 2;
+            if (isUserIdOnlyLookup) {
+              return {
+                id: candidateProfile.id,
+                userId: candidateProfile.userId,
+              };
+            }
+            return candidateProfile;
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_feedback_1',
+        profileId: candidateProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Warm and grounded individual.' } },
+      });
+      prismaMock.matchAction.findUnique.mockResolvedValue(null);
+    }
+
+    it('returns 401 without session on GET', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .expect(401);
+    });
+
+    it('returns 401 without session on PUT', async () => {
+      await request(app.getHttpServer())
+        .put('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .send({ sentiment: 'positive' })
+        .expect(401);
+    });
+
+    it('GET returns null sentiment when no feedback row', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchFeedback.findUnique.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({ sentiment: null });
+    });
+
+    it('PUT positive upserts and GET returns POSITIVE', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      const createdAt = new Date('2026-06-06T10:00:00.000Z');
+      const updatedAt = new Date('2026-06-06T10:00:00.000Z');
+      prismaMock.matchFeedback.upsert.mockResolvedValue({
+        matchProfileId: candidateProfile.id,
+        sentiment: 'POSITIVE',
+        createdAt,
+        updatedAt,
+      });
+      prismaMock.matchFeedback.findUnique.mockResolvedValue({
+        sentiment: 'POSITIVE',
+      });
+
+      const putRes = await request(app.getHttpServer())
+        .put('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ sentiment: 'positive' })
+        .expect(200);
+
+      expect(putRes.body).toMatchObject({
+        matchProfileId: 'prof_feedback_cand',
+        sentiment: 'POSITIVE',
+      });
+
+      const getRes = await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(getRes.body).toEqual({ sentiment: 'POSITIVE' });
+    });
+
+    it('PUT negative updates existing row', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      prismaMock.matchFeedback.upsert.mockResolvedValue({
+        matchProfileId: candidateProfile.id,
+        sentiment: 'NEGATIVE',
+        createdAt: new Date('2026-06-06T10:00:00.000Z'),
+        updatedAt: new Date('2026-06-06T11:00:00.000Z'),
+      });
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ sentiment: 'negative' })
+        .expect(200);
+
+      expect(res.body.sentiment).toBe('NEGATIVE');
+      expect(prismaMock.matchFeedback.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { sentiment: 'NEGATIVE' },
+        }),
+      );
+    });
+
+    it('PUT on self profile returns 400 cannot_feedback_self', async () => {
+      const raw = await loginAndCookie();
+      const selfViewerProfile = {
+        ...viewerProfile,
+        gender: 'FEMALE' as const,
+        desiredPartnerGenders: ['FEMALE'],
+        preference: testUserProfilePreference('prof_viewer_feedback', {
+          acceptedPartnerGenders: ['FEMALE'],
+        }),
+      };
+      prismaMock.userProfile.findUnique.mockImplementation(
+        async (args: {
+          where: { userId?: string; id?: string };
+          select?: Record<string, unknown>;
+        }) => {
+          if (args.where.userId === USER_ID) {
+            return selfViewerProfile;
+          }
+          if (args.where.id === selfViewerProfile.id) {
+            return {
+              ...selfViewerProfile,
+              photos: [{ id: 'photo_self', isPrimary: true }],
+              user: { deletedAt: null },
+              _count: { evaluations: 1 },
+            };
+          }
+          return null;
+        },
+      );
+      prismaMock.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_self',
+        profileId: selfViewerProfile.id,
+        version: 'v1',
+        createdAt: new Date('2026-04-02T12:00:00.000Z'),
+        evaluationJson: { display: { summary: 'Self summary.' } },
+      });
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/me/matches/${selfViewerProfile.id}/feedback`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ sentiment: 'positive' })
+        .expect(400);
+
+      expect(res.body.error).toBe('cannot_feedback_self');
+      expect(prismaMock.matchFeedback.upsert).not.toHaveBeenCalled();
+    });
+
+    it('GET on invisible candidate returns 404', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(404);
+
+      expect(prismaMock.matchFeedback.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('PUT with invalid sentiment returns 400', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+
+      await request(app.getHttpServer())
+        .put('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ sentiment: 'maybe' })
+        .expect(400);
+
+      expect(prismaMock.matchFeedback.upsert).not.toHaveBeenCalled();
+    });
+
+    it('PUT on invisible candidate returns 404', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.userProfile.findUnique
+        .mockResolvedValueOnce(viewerProfile)
+        .mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .put('/api/v1/me/matches/prof_feedback_cand/feedback')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ sentiment: 'positive' })
+        .expect(404);
+
+      expect(prismaMock.matchFeedback.upsert).not.toHaveBeenCalled();
+    });
   });
 
   // ─── Sprint 1 Story 3: GET /api/v1/me/matches/:id/actions ────────────────
@@ -2244,11 +2623,13 @@ describe('me profile HTTP (integration)', () => {
       aboutRelationship: null,
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
       updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_action_primary', isPrimary: true }],
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
       preference: testUserProfilePreference('prof_action_cand'),
       signals: [],
       interests: [],
+      user: { deletedAt: null },
     };
 
     function mockEligibleMatchDetail() {
@@ -2416,11 +2797,13 @@ describe('me profile HTTP (integration)', () => {
       aboutRelationship: null,
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
       updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_action_primary', isPrimary: true }],
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
       preference: testUserProfilePreference('prof_action_cand'),
       signals: [],
       interests: [],
+      user: { deletedAt: null },
     };
 
     function mockEligibleMatchDetail() {
@@ -2514,6 +2897,8 @@ describe('me profile HTTP (integration)', () => {
               ...selfViewerProfile,
               id: selfViewerProfile.id,
               userId: USER_ID,
+              photos: [{ id: 'photo_self', isPrimary: true }],
+              user: { deletedAt: null },
               _count: { evaluations: 1 },
             };
           }
@@ -2942,11 +3327,13 @@ describe('me profile HTTP (integration)', () => {
       aboutRelationship: null,
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
       updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_action_primary', isPrimary: true }],
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
       preference: testUserProfilePreference('prof_action_cand'),
       signals: [],
       interests: [],
+      user: { deletedAt: null },
     };
 
     function mockEligibleMatchDetail() {
@@ -3177,11 +3564,13 @@ describe('me profile HTTP (integration)', () => {
       aboutRelationship: null,
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
       updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_action_primary', isPrimary: true }],
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
       preference: testUserProfilePreference('prof_action_cand'),
       signals: [],
       interests: [],
+      user: { deletedAt: null },
     };
 
     function mockEligibleMatchDetail() {
@@ -4572,11 +4961,13 @@ describe('me profile HTTP (integration)', () => {
       aboutRelationship: null,
       analyzedAt: new Date('2026-04-02T11:00:00.000Z'),
       updatedAt: new Date('2026-04-02T11:00:00.000Z'),
+      photos: [{ id: 'photo_action_primary', isPrimary: true }],
       _count: { evaluations: 1 },
       ...HG_FIELD_DEFAULTS,
       preference: testUserProfilePreference('prof_action_cand'),
       signals: [],
       interests: [],
+      user: { deletedAt: null },
     };
 
     function mockEligibleMatchDetail() {
@@ -4771,10 +5162,10 @@ describe('me profile HTTP (integration)', () => {
         mimeType: 'image/jpeg',
         sizeBytes: 4,
         position: 0,
-        isPrimary: true,
-        status: 'APPROVED',
-        moderationProvider: 'stub',
-        moderationResultJson: { decision: 'approved' },
+        isPrimary: false,
+        status: 'PENDING',
+        moderationProvider: 'manual_queue',
+        moderationResultJson: null,
         rejectionReason: null,
         createdAt: new Date('2026-05-01T00:00:00.000Z'),
         updatedAt: new Date('2026-05-01T00:00:00.000Z'),
@@ -4790,10 +5181,10 @@ describe('me profile HTTP (integration)', () => {
         mimeType: 'image/jpeg',
         sizeBytes: 4,
         position: 0,
-        isPrimary: true,
-        status: 'APPROVED',
-        moderationProvider: 'stub',
-        moderationResultJson: { decision: 'approved' },
+        isPrimary: false,
+        status: 'PENDING',
+        moderationProvider: 'manual_queue',
+        moderationResultJson: null,
         rejectionReason: null,
         createdAt: new Date('2026-05-01T00:00:00.000Z'),
         updatedAt: new Date('2026-05-01T00:00:00.000Z'),
@@ -4809,7 +5200,15 @@ describe('me profile HTTP (integration)', () => {
         .expect(201);
 
       expect(res.body.id).toBe('photo_1');
-      expect(res.body.status).toBe('APPROVED');
+      expect(res.body.status).toBe('PENDING');
+      expect(prismaMock.userProfilePhoto.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'PENDING',
+            isPrimary: false,
+          }),
+        }),
+      );
       expect(photoStorageMock.save).toHaveBeenCalled();
     });
 

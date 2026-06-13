@@ -87,7 +87,12 @@ Partner genders and HG preference scalars/arrays when row exists; otherwise lega
 
 Each match row includes: `id`, `gender`, `ageYears`, `locationLabel`, `analyzedAt`, `hasEvaluation`, `matchScore`, `profileAnalysisStale` (optional), `primaryPhotoUrl`, `approvedPhotoCount`, `explainability`, `recommendation`.
 
-Ready payload may include `viewerProfileId`, `viewerGender`, `viewerAcceptedPartnerGenders`, `viewerProfileAnalysisStale` (optional; true when `UserProfile.updatedAt` is after the viewer’s latest evaluation `createdAt`), `totalCandidatesBeforeFilter`, `matches`. Detail route does **not** include `viewerProfileAnalysisStale`.
+Ready payload may include `viewerProfileId`, `viewerGender`, `viewerAcceptedPartnerGenders`, `viewerProfileAnalysisStale` (optional; true when `UserProfile.updatedAt` is after the viewer’s latest evaluation `createdAt`), `totalCandidatesBeforeFilter`, `filteredNoPhotoCandidates`, `matches`. Detail route does **not** include `viewerProfileAnalysisStale`.
+
+| Field | Meaning |
+|-------|---------|
+| `totalCandidatesBeforeFilter` | Photo-eligible analyzed candidates (≥1 `APPROVED` photo), before gender / HG / block in-memory filters |
+| `filteredNoPhotoCandidates` | Analyzed candidates excluded because they have zero `APPROVED` photos |
 
 ### `GET /api/v1/me/matches/:id` — `MeMatchDetailDto`
 
@@ -102,6 +107,7 @@ Includes **evaluationSummary** (from read model display summary), same scoring f
 | **Viewer profile missing** | List: `not_ready` / `no_profile`. |
 | **Viewer not `ANALYZED`** | List: `not_ready` / `not_analyzed`. |
 | **Viewer has no approved photo** | List: `not_ready` / `no_photo`. Detail/actions: `404`. Submit: `422` / `photo_required`. |
+| **Candidate has no approved photo** | Omitted from list; detail / non-mutual photo file / match actions → `404`. Count in `filteredNoPhotoCandidates` on list. |
 | **Missing latest evaluation** (viewer or analyzed candidate) | `InternalServerErrorException` (list) or not applicable where candidate skipped. |
 | **Reciprocal gender eligibility** | Candidate omitted from list; detail `404` if ineligible. |
 | **HG hard eligibility** | Both directions `FAIL` → omit list row; detail `404`. |

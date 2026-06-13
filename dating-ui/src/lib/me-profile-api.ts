@@ -53,7 +53,12 @@ export const ME_PROFILE_GENDERS: readonly MeProfileGender[] = [
 ] as const;
 
 /** Openness to match; excludes `PREFER_NOT_TO_SAY` (not meaningful for partner filters). */
-export const ME_PARTNER_GENDER_CHOICES: readonly MeProfileGender[] = [
+export type MePartnerGenderChoice = Exclude<
+  MeProfileGender,
+  'PREFER_NOT_TO_SAY'
+>;
+
+export const ME_PARTNER_GENDER_CHOICES: readonly MePartnerGenderChoice[] = [
   'MALE',
   'FEMALE',
   'NON_BINARY',
@@ -710,6 +715,102 @@ export async function fetchMatchAction(
     throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
   }
   return readJson<MatchActionStateDto>(res);
+}
+
+/** Response shape of `GET /api/v1/me/matches/:id/feedback`. */
+export interface MatchFeedbackStateDto {
+  sentiment: 'POSITIVE' | 'NEGATIVE' | null;
+}
+
+/** Response shape of `PUT /api/v1/me/matches/:id/feedback`. */
+export interface MatchFeedbackDto {
+  matchProfileId: string;
+  sentiment: 'POSITIVE' | 'NEGATIVE';
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Returns the viewer's quality feedback for a match candidate, if any.
+ */
+export async function fetchMatchFeedback(
+  profileId: string,
+): Promise<MatchFeedbackStateDto> {
+  const base = getApiBase();
+  const path = `/api/v1/me/matches/${encodeURIComponent(profileId)}/feedback`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (res.status === 401) {
+    throw new Error('You must be logged in to view match feedback.');
+  }
+  if (res.status === 404) {
+    throw new Error('Match not found.');
+  }
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<MatchFeedbackStateDto>(res);
+}
+
+/**
+ * Records thumbs up/down quality feedback for a match candidate.
+ */
+export async function upsertMatchFeedback(
+  profileId: string,
+  sentiment: 'positive' | 'negative',
+): Promise<MatchFeedbackDto> {
+  const base = getApiBase();
+  const path = `/api/v1/me/matches/${encodeURIComponent(profileId)}/feedback`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'PUT',
+      ...credFetch,
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ sentiment }),
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (res.status === 401) {
+    throw new Error('You must be logged in to submit match feedback.');
+  }
+  if (res.status === 404) {
+    throw new Error('Match not found.');
+  }
+  if (res.status === 400) {
+    const errBody = await res.text();
+    try {
+      const parsed = JSON.parse(errBody) as {
+        error?: string;
+        message?: string | string[];
+      };
+      if (parsed.error === 'cannot_feedback_self') {
+        throw new Error('You cannot submit feedback on your own profile.');
+      }
+      const msg = parsed.message;
+      if (typeof msg === 'string') throw new Error(msg);
+      if (Array.isArray(msg)) throw new Error(msg.join(', '));
+    } catch (e) {
+      if (e instanceof Error && e.message !== errBody) throw e;
+    }
+    throw new Error('Could not submit match feedback.');
+  }
+  if (!res.ok) {
+    throw new Error(`PUT ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<MatchFeedbackDto>(res);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -34,8 +34,10 @@ import {
 import { SendConversationMessageDto, parseMessageListLimit } from './me-conversation-messages.dto';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { CreateMatchActionDto } from './me-match-actions.dto';
+import { UpsertMatchFeedbackDto } from './me-match-feedback.dto';
 import { MeConversationsService } from './me-conversations.service';
 import { MeMatchActionsService } from './me-match-actions.service';
+import { MeMatchFeedbackService } from './me-match-feedback.service';
 import { MeMatchesService } from './me-matches.service';
 import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileService } from './me-profile.service';
@@ -54,6 +56,7 @@ export class MeProfileController {
     private readonly meMatches: MeProfileMatchesService,
     private readonly matches: MeMatchesService,
     private readonly matchActions: MeMatchActionsService,
+    private readonly matchFeedback: MeMatchFeedbackService,
     private readonly conversations: MeConversationsService,
     private readonly conversationMessages: MeConversationMessagesService,
     private readonly obs: StructuredObservabilityService,
@@ -219,6 +222,28 @@ export class MeProfileController {
     @Param('id') id: string,
   ) {
     return this.matchActions.deleteAction(user.id, id);
+  }
+
+  /**
+   * Sprint 10 Story 4 — viewer sentiment toward a match suggestion (detail only).
+   */
+  @Get('matches/:id/feedback')
+  getMatchFeedback(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+  ) {
+    return this.matchFeedback.getFeedback(user.id, id);
+  }
+
+  @Put('matches/:id/feedback')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(MeProfileValidationPipe)
+  upsertMatchFeedback(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') id: string,
+    @Body() body: UpsertMatchFeedbackDto,
+  ) {
+    return this.matchFeedback.upsertFeedback(user.id, id, body.sentiment);
   }
 
   @Get('matches/:id/photos/:photoId/file')

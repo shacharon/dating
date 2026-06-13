@@ -5,6 +5,8 @@ import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/re
 const {
   fetchMyMatchById,
   fetchMatchAction,
+  fetchMatchFeedback,
+  upsertMatchFeedback,
   likeMatch,
   passMatch,
   undoMatchAction,
@@ -13,6 +15,8 @@ const {
 } = vi.hoisted(() => ({
   fetchMyMatchById: vi.fn(),
   fetchMatchAction: vi.fn(),
+  fetchMatchFeedback: vi.fn(),
+  upsertMatchFeedback: vi.fn(),
   likeMatch: vi.fn(),
   passMatch: vi.fn(),
   undoMatchAction: vi.fn(),
@@ -23,6 +27,8 @@ const {
 vi.mock('@/lib/me-profile-api', () => ({
   fetchMyMatchById,
   fetchMatchAction,
+  fetchMatchFeedback,
+  upsertMatchFeedback,
   likeMatch,
   passMatch,
   undoMatchAction,
@@ -54,6 +60,10 @@ const noActionState = {
   conversationId: null,
 };
 
+const noFeedbackState = {
+  sentiment: null as const,
+};
+
 const baseActionFields = {
   mutualMatch: false,
   conversationId: null,
@@ -81,6 +91,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     vi.clearAllMocks();
     fetchMyMatchById.mockResolvedValue(baseMatch);
     fetchMatchAction.mockResolvedValue(noActionState);
+    fetchMatchFeedback.mockResolvedValue(noFeedbackState);
     likeMatch.mockResolvedValue({
       id: 'action-1',
       actorUserId: 'user-1',
@@ -528,6 +539,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchMatchAction.mockResolvedValue(noActionState);
+    fetchMatchFeedback.mockResolvedValue(noFeedbackState);
   });
 
   afterEach(() => {
@@ -563,5 +575,128 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     expect(score.textContent).toBe('Match score · 72');
     expect(score.className).toContain('text-sm');
     expect(document.querySelector('.text-2xl')).toBeNull();
+  });
+
+  it('shows feedback section before de-emphasized score label', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      matchScore: 72,
+      explainability: {
+        positiveChips: ['Shared values'],
+        reasonShort: 'Strong alignment on communication style',
+      },
+      recommendation: {
+        primaryTakeaway: 'You both prioritize honest, calm connection.',
+        caution: null,
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-feedback')).toBeTruthy();
+      expect(screen.getByTestId('match-detail-score')).toBeTruthy();
+    });
+
+    const feedback = screen.getByTestId('match-feedback');
+    const score = screen.getByTestId('match-detail-score');
+    expect(
+      feedback.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});
+
+describe('MeMatchDetailPage (match feedback)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMyMatchById.mockResolvedValue(baseMatch);
+    fetchMatchAction.mockResolvedValue(noActionState);
+    fetchMatchFeedback.mockResolvedValue(noFeedbackState);
+    upsertMatchFeedback.mockResolvedValue({
+      matchProfileId: 'prof-cand-1',
+      sentiment: 'POSITIVE',
+      createdAt: '2026-06-06T10:00:00.000Z',
+      updatedAt: '2026-06-06T10:00:00.000Z',
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('reflects loaded feedback sentiment on positive thumb', async () => {
+    fetchMatchFeedback.mockResolvedValue({ sentiment: 'POSITIVE' });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-feedback-positive')).toBeTruthy();
+    });
+
+    expect(
+      screen.getByTestId('match-feedback-positive').getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      screen.getByTestId('match-feedback-negative').getAttribute('aria-pressed'),
+    ).toBe('false');
+    expect(screen.queryByTestId('match-feedback-thanks')).toBeNull();
+  });
+
+  it('clicking thumbs up submits feedback and shows thanks', async () => {
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-feedback-positive')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('match-feedback-positive'));
+
+    await waitFor(() => {
+      expect(upsertMatchFeedback).toHaveBeenCalledWith('prof-cand-1', 'positive');
+      expect(screen.getByTestId('match-feedback-thanks')).toBeTruthy();
+    });
+
+    expect(screen.getByTestId('match-feedback-thanks').textContent).toBe(
+      'Thanks for your feedback.',
+    );
+  });
+
+  it('switching to thumbs down updates selected state', async () => {
+    upsertMatchFeedback
+      .mockResolvedValueOnce({
+        matchProfileId: 'prof-cand-1',
+        sentiment: 'POSITIVE',
+        createdAt: '2026-06-06T10:00:00.000Z',
+        updatedAt: '2026-06-06T10:00:00.000Z',
+      })
+      .mockResolvedValueOnce({
+        matchProfileId: 'prof-cand-1',
+        sentiment: 'NEGATIVE',
+        createdAt: '2026-06-06T10:00:00.000Z',
+        updatedAt: '2026-06-06T11:00:00.000Z',
+      });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-feedback-positive')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('match-feedback-positive'));
+    await waitFor(() => {
+      expect(screen.getByTestId('match-feedback-thanks')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('match-feedback-negative'));
+
+    await waitFor(() => {
+      expect(upsertMatchFeedback).toHaveBeenLastCalledWith(
+        'prof-cand-1',
+        'negative',
+      );
+      expect(
+        screen.getByTestId('match-feedback-negative').getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
   });
 });

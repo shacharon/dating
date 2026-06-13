@@ -34,7 +34,10 @@ export class UsersService {
   }
 
   /** First-time Google login: creates the `User` row (no product `UserProfile` row yet). */
-  async createFromGoogleIdentity(identity: GoogleIdentity): Promise<User> {
+  async createFromGoogleIdentity(
+    identity: GoogleIdentity,
+    options?: { referredByUserId?: string | null },
+  ): Promise<User> {
     return this.prisma.user.create({
       data: {
         email: identity.email.trim(),
@@ -42,6 +45,7 @@ export class UsersService {
         displayName: identity.displayName,
         avatarUrl: identity.avatarUrl,
         lastLoginAt: new Date(),
+        referredByUserId: options?.referredByUserId ?? null,
       },
     });
   }

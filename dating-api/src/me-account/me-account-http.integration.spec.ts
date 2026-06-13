@@ -51,6 +51,7 @@ describe('me-account HTTP (integration)', () => {
     userProfileInterest: { deleteMany: jest.fn() },
     userProfilePreference: { deleteMany: jest.fn() },
     matchAction: { deleteMany: jest.fn() },
+    matchFeedback: { deleteMany: jest.fn() },
     mutualMatch: { updateMany: jest.fn() },
     message: { updateMany: jest.fn() },
     userSession: {

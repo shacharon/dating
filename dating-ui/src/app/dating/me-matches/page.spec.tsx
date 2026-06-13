@@ -16,6 +16,12 @@ vi.mock('@/lib/me-profile-api', () => ({
   fetchMyProfile,
 }));
 
+vi.mock('@/contexts/auth-context', () => ({
+  useAuth: () => ({
+    user: { id: 'c123456789012345678901234' },
+  }),
+}));
+
 import MeMatchesPage from './page';
 
 vi.mock('next/navigation', () => ({

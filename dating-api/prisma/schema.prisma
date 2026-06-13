@@ -70,6 +70,10 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  referredByUserId String?
+  referredBy       User?  @relation("UserReferrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referrals        User[] @relation("UserReferrals")
+
   profile  UserProfile?
   sessions UserSession[]
   matchActionsAsActor  MatchAction[] @relation("MatchActionsByActor")
@@ -79,8 +83,10 @@ model User {
   messages              Message[]
   reportsAsReporter     UserReport[] @relation("ReportsByReporter")
   reportsAsReported     UserReport[] @relation("ReportsByReported")
+  matchFeedbacks        MatchFeedback[]
 
   @@index([deletedAt])
+  @@index([referredByUserId])
 }
 
 model UserProfile {
@@ -130,8 +136,9 @@ model UserProfile {
   evaluations UserProfileEvaluation[]
   signals     UserProfileSignal[]
   interests   UserProfileInterest[]
-  photos      UserProfilePhoto[]
-  preference  UserProfilePreference?
+  photos                 UserProfilePhoto[]
+  preference             UserProfilePreference?
+  matchFeedbacksReceived MatchFeedback[]
 
   @@index([status, gender, birthDate])
   @@index([status, gender, city])
@@ -221,6 +228,7 @@ model UserProfilePhoto {
 
   @@unique([profileId, position])
   @@index([profileId])
+  @@index([status, createdAt])
 }
 
 model MatchAction {
@@ -301,12 +309,33 @@ model UserReport {
   contextType    UserReportContextType
   contextId      String
   status         UserReportStatus      @default(OPEN)
+  opsNote        String?               @db.VarChar(500)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
   @@index([status, createdAt])
   @@index([reportedUserId, status])
   @@index([reporterUserId, reportedUserId, reason, createdAt])
+}
+
+enum MatchFeedbackSentiment {
+  POSITIVE
+  NEGATIVE
+}
+
+model MatchFeedback {
+  id             String                 @id @default(cuid())
+  userId         String
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchProfileId String
+  matchProfile   UserProfile            @relation(fields: [matchProfileId], references: [id], onDelete: Cascade)
+  sentiment      MatchFeedbackSentiment
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@unique([userId, matchProfileId])
+  @@index([userId, createdAt])
+  @@index([matchProfileId])
 }
 
 model UserSession {

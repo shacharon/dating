@@ -178,6 +178,12 @@ export const enCopy: AppCopySchema = {
     requiredForMatchingHint:
       "At least one photo is required before you can see matches.",
   },
+  photoModeration: {
+    statusPending: "Under review",
+    statusApproved: "Approved",
+    statusRejected: "Rejected",
+    rejectionPrefix: "Reason:",
+  },
   profileCompleteness: {
     title: "Profile checklist",
     photo: "Photo uploaded",
@@ -211,6 +217,12 @@ export const enCopy: AppCopySchema = {
     },
     matchDetail: {
       matchScoreLabel: (score: number) => `Match score · ${score}`,
+      feedback: {
+        prompt: 'Was this a helpful suggestion?',
+        thanks: 'Thanks for your feedback.',
+        positiveLabel: 'Helpful suggestion',
+        negativeLabel: 'Not a helpful suggestion',
+      },
     },
   },
 };

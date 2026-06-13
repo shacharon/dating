@@ -1,5 +1,6 @@
 import { UserProfilePhotoStatus } from '@prisma/client';
 import {
+  candidateHasApprovedPhoto,
   countApprovedPhotosForProfile,
   viewerHasApprovedPhoto,
 } from './me-profile-photo-gate';
@@ -36,5 +37,16 @@ describe('me-profile-photo-gate', () => {
     await expect(
       viewerHasApprovedPhoto(prisma as never, profileId),
     ).resolves.toBe(true);
+  });
+
+  it('candidateHasApprovedPhoto delegates to approved photo count', async () => {
+    const count = jest.fn().mockResolvedValue(1);
+    const prisma = { userProfilePhoto: { count } };
+    await expect(
+      candidateHasApprovedPhoto(prisma as never, profileId),
+    ).resolves.toBe(true);
+    expect(count).toHaveBeenCalledWith({
+      where: { profileId, status: UserProfilePhotoStatus.APPROVED },
+    });
   });
 });

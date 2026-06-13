@@ -1,5 +1,6 @@
 import { emitProductLog } from '@/lib/observability/product-logger';
 import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
+import { isAdminRouteBlocked } from '@/lib/admin-routes-gate';
 import { isInternalRouteBlocked } from '@/lib/internal-routes-gate';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -9,6 +10,7 @@ const SESSION_COOKIE =
 
 function needsAuthSession(pathname: string): boolean {
   return (
+    pathname.startsWith('/admin') ||
     pathname.startsWith('/dating') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/settings') ||
@@ -23,6 +25,10 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   if (isInternalRouteBlocked(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  if (isAdminRouteBlocked(pathname)) {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -78,5 +84,9 @@ export const config = {
     '/auto-matches/:path*',
     '/dev',
     '/dev/:path*',
+    '/matches',
+    '/matches/:path*',
+    '/admin',
+    '/admin/:path*',
   ],
 };

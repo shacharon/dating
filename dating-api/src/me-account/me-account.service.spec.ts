@@ -43,6 +43,7 @@ describe('MeAccountService', () => {
     },
     userProfile: { update: jest.fn().mockResolvedValue({}) },
     matchAction: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    matchFeedback: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     mutualMatch: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     message: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
     user: { update: jest.fn().mockResolvedValue({}) },
@@ -112,6 +113,12 @@ describe('MeAccountService', () => {
     });
     expect(tx.matchAction.deleteMany).toHaveBeenCalledWith({
       where: { actorUserId: 'user-1' },
+    });
+    expect(tx.matchFeedback.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+    });
+    expect(tx.matchFeedback.deleteMany).toHaveBeenCalledWith({
+      where: { matchProfileId: 'prof-1' },
     });
     expect(tx.mutualMatch.updateMany).toHaveBeenCalledWith({
       where: {

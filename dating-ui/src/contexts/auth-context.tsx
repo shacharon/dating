@@ -28,7 +28,7 @@ type AuthContextValue = {
   status: AuthStatus;
   user: AuthUser | null;
   /** Runs `GET /api/v1/auth/me` with cookies; updates `user` / `status`. */
-  refresh: () => Promise<void>;
+  refresh: (options?: { silent?: boolean }) => Promise<void>;
   /** `POST /api/v1/auth/google`; returns whether session was established. */
   signInWithGoogleIdToken: (idToken: string) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -57,15 +57,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setStatus("loading");
+  const refresh = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setStatus("loading");
+    }
     emitProductLog({
       level: "trace",
       route: getObservabilityRoute(),
-      message: "auth bootstrap: refresh session",
+      message: silent
+        ? "auth bootstrap: silent refresh session"
+        : "auth bootstrap: refresh session",
       errorCode: UiErrorCodes.UI_AUTH_BOOTSTRAP,
     });
-    const r = await fetchAuthMeWithRetry();
+    const r = await fetchAuthMeWithRetry(
+      silent ? { profile: "silent" } : { profile: "bootstrap" },
+    );
     if (r.ok) {
       setLastError(null);
       setUser(r.user);

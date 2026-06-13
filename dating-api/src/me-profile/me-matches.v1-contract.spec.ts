@@ -65,7 +65,7 @@ function makeProfileRow(overrides: {
     education: null as string | null,
     religion: null as string | null,
     preference: null,
-    photos: [] as Array<{ id: string; isPrimary: boolean }>,
+    photos: [{ id: 'photo_v1', isPrimary: true }] as Array<{ id: string; isPrimary: boolean }>,
     signals: [] as Array<{ signalKey: string; signalValue: number; evalVersion: string }>,
     interests: [] as Array<{ tag: string; rank: number; evalVersion: string }>,
   };
@@ -86,6 +86,8 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
     expect(text).toContain('GET /api/v1/me/matches');
     expect(text).toContain('buildMeMatchesParticipantReadModel');
     expect(text).toContain('evalVersion');
+    expect(text).toContain('filteredNoPhotoCandidates');
+    expect(text).toContain('Candidate has no approved photo');
   });
 
   describe('MeMatchesService read-model import policy (V1)', () => {
@@ -117,9 +119,9 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
 
   describe('V1 list vs detail DTO fields', () => {
     let prisma: {
-      userProfile: { findUnique: jest.Mock; findMany: jest.Mock };
+      userProfile: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
       userProfileEvaluation: { findFirst: jest.Mock };
-      userProfilePhoto: { findFirst: jest.Mock };
+      userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
       matchAction: { findUnique: jest.Mock };
     };
     let service: MeMatchesService;
@@ -129,6 +131,7 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         userProfile: {
           findUnique: jest.fn(),
           findMany: jest.fn().mockResolvedValue([]),
+          count: jest.fn().mockResolvedValue(0),
         },
         userProfileEvaluation: {
           findFirst: jest
@@ -138,7 +141,10 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
                 Promise.resolve(defaultLatestEval(profileId)),
             ),
         },
-        userProfilePhoto: { findFirst: jest.fn() },
+        userProfilePhoto: {
+          findFirst: jest.fn(),
+          count: jest.fn().mockResolvedValue(1),
+        },
         matchAction: {
           findUnique: jest.fn().mockResolvedValue(null),
           findMany: jest.fn().mockResolvedValue([]),

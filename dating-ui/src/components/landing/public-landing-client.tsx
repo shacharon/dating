@@ -8,6 +8,12 @@ import {
   getObservabilityRoute,
 } from "@/lib/observability/product-logger";
 import { UiErrorCodes } from "@/lib/observability/ui-error-codes";
+import {
+  captureReferralFromSearchParams,
+  readStoredReferralRef,
+} from "@/lib/referral-attribution";
+import { postReferralLandingView } from "@/lib/referral-attribution-api";
+import { hasSessionCookie } from "@/lib/session-cookie";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -43,6 +49,11 @@ export function PublicLandingClient() {
     }
   }, [status, router, nextPath]);
 
+  useEffect(() => {
+    captureReferralFromSearchParams(searchParams);
+    void postReferralLandingView(readStoredReferralRef() != null);
+  }, [searchParams]);
+
   const onGoogleCredential = useCallback(
     async (idToken: string) => {
       emitProductLog({
@@ -64,7 +75,9 @@ export function PublicLandingClient() {
     [signInWithGoogleIdToken, router, nextPath, clearLastError],
   );
 
-  const showBootstrapLoading = status === "loading" && !signingIn;
+  /** Only block landing when a session cookie might auto-redirect (avoid blank wait for new visitors). */
+  const showBootstrapLoading =
+    status === "loading" && hasSessionCookie() && !signingIn;
   const showCta =
     status === "unauthenticated" || status === "error" || signingIn;
 

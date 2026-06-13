@@ -30,7 +30,8 @@
     "smoke:ws-preflight": "ts-node --project tsconfig.json scripts/smoke-ws-preflight.ts",
     "holy-grail:backfill": "ts-node src/holy-grail-matching/backfill-holy-grail-structured.ts",
     "phase-f:expand-analyzed": "ts-node --project tsconfig.json scripts/phase-f-expand-analyzed-profiles.ts",
-    "verify:personality-traits": "ts-node scripts/personality-traits-e2e-verify.ts"
+    "verify:personality-traits": "ts-node scripts/personality-traits-e2e-verify.ts",
+    "match-quality:compare": "ts-node --project tsconfig.json scripts/match-quality-compare.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

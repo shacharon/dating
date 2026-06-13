@@ -4,7 +4,11 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { MatchActionType, type UserProfileStatus } from '@prisma/client';
+import {
+  MatchActionType,
+  UserProfilePhotoStatus,
+  type UserProfileStatus,
+} from '@prisma/client';
 import {
   latestEvaluationForProfile,
   latestEvaluationsForProfileIds,
@@ -23,7 +27,11 @@ import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { MutualMatchesService } from './mutual-matches.service';
-import { countApprovedPhotosForProfile, viewerHasApprovedPhoto } from './me-profile-photo-gate';
+import {
+  candidateHasApprovedPhoto,
+  countApprovedPhotosForProfile,
+  viewerHasApprovedPhoto,
+} from './me-profile-photo-gate';
 import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
 import {
   buildMatchExplanationTraits,
@@ -88,7 +96,16 @@ export interface MeMatchesListResponseDto {
    * their latest `UserProfileEvaluation` (`UserProfile.updatedAt > evaluation.createdAt`).
    */
   viewerProfileAnalysisStale?: boolean;
+  /**
+   * Photo-eligible analyzed candidates (≥1 APPROVED photo), before gender / HG / block filters.
+   * Present when `status = 'ready'`.
+   */
   totalCandidatesBeforeFilter?: number;
+  /**
+   * Analyzed candidates excluded because they have zero APPROVED photos.
+   * Present when `status = 'ready'`.
+   */
+  filteredNoPhotoCandidates?: number;
   matches?: MeMatchItemDto[];
 }
 
@@ -277,16 +294,19 @@ export class MeMatchesService {
       );
     }
 
-    const candidateRows = await this.prisma.userProfile.findMany({
-      where: {
-        userId: { not: userId },
-        status: STATUS_ANALYZED,
-        user: { deletedAt: null },
-      },
-      select: this.candidateSelect,
-    });
+    const [totalAnalyzedCandidates, candidateRows] = await Promise.all([
+      this.prisma.userProfile.count({
+        where: this.matchCandidateBaseWhere(userId),
+      }),
+      this.prisma.userProfile.findMany({
+        where: this.matchCandidatePhotoEligibleWhere(userId),
+        select: this.candidateSelect,
+      }),
+    ]);
 
     const totalBeforeFilter = candidateRows.length;
+    const filteredNoPhotoCandidates =
+      totalAnalyzedCandidates - totalBeforeFilter;
 
     const latestEvalByProfile = await latestEvaluationsForProfileIds(
       this.prisma,
@@ -412,7 +432,7 @@ export class MeMatchesService {
     });
 
     this.obs.trace(
-      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length}`,
+      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates}`,
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
 
@@ -430,6 +450,7 @@ export class MeMatchesService {
         : null,
       viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
       totalCandidatesBeforeFilter: totalBeforeFilter,
+      filteredNoPhotoCandidates,
       matches,
     };
   }
@@ -487,6 +508,8 @@ export class MeMatchesService {
     ) {
       throw new NotFoundException('Match not found.');
     }
+
+    this.assertCandidateHasApprovedPhotosInRow(candidate);
 
     const candidateBridge = buildProductProfileMatchingBridge(
       candidate,
@@ -575,6 +598,8 @@ export class MeMatchesService {
     ) {
       throw new NotFoundException('Match not found.');
     }
+
+    this.assertCandidateHasApprovedPhotosInRow(candidate);
 
     const candidateBridge = buildProductProfileMatchingBridge(
       candidate,
@@ -762,6 +787,10 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
 
+    if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
+      throw new NotFoundException('Match not found.');
+    }
+
     if (candidate.status !== STATUS_ANALYZED) {
       throw new NotFoundException('Match not found.');
     }
@@ -786,9 +815,36 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
 
+    if (!(await candidateHasApprovedPhoto(this.prisma, candidate.id))) {
+      throw new NotFoundException('Match not found.');
+    }
+
     await this.assertViewerHasNotBlockedTarget(userId, candidate.userId);
 
     return this.readApprovedPrimaryPhotoFile(candidateProfileId, photoId);
+  }
+
+  private matchCandidateBaseWhere(viewerUserId: string) {
+    return {
+      userId: { not: viewerUserId },
+      status: STATUS_ANALYZED,
+      user: { deletedAt: null },
+    };
+  }
+
+  private matchCandidatePhotoEligibleWhere(viewerUserId: string) {
+    return {
+      ...this.matchCandidateBaseWhere(viewerUserId),
+      photos: { some: { status: UserProfilePhotoStatus.APPROVED } },
+    };
+  }
+
+  private assertCandidateHasApprovedPhotosInRow(candidate: {
+    photos?: ReadonlyArray<unknown>;
+  }): void {
+    if ((candidate.photos ?? []).length < 1) {
+      throw new NotFoundException('Match not found.');
+    }
   }
 
   private async readApprovedPrimaryPhotoFile(

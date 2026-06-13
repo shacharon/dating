@@ -469,6 +469,16 @@ export class MeProfileService {
       ? Math.max(...existing.map((p) => p.position)) + 1
       : 0;
 
+    const autoApprove = process.env.PHOTO_MODERATION_AUTO_APPROVE === '1';
+    const status = autoApprove
+      ? UserProfilePhotoStatus.APPROVED
+      : UserProfilePhotoStatus.PENDING;
+    const moderationProvider = autoApprove ? 'stub' : 'manual_queue';
+    const moderationResultJson = autoApprove
+      ? { decision: 'approved', reason: 'stub_auto_approve' }
+      : Prisma.DbNull;
+    const isPrimary = autoApprove && !approvedExists;
+
     const created = await this.prisma.userProfilePhoto.create({
       data: {
         profileId: profile.id,
@@ -477,10 +487,10 @@ export class MeProfileService {
         mimeType: file.mimetype,
         sizeBytes: file.size,
         position: nextPosition,
-        status: UserProfilePhotoStatus.APPROVED, // Stub moderation: auto-approve.
-        moderationProvider: 'stub',
-        moderationResultJson: { decision: 'approved', reason: 'stub_auto_approve' },
-        isPrimary: !approvedExists,
+        status,
+        moderationProvider,
+        moderationResultJson,
+        isPrimary,
       },
     });
 
@@ -496,11 +506,14 @@ export class MeProfileService {
         where: { id: created.id },
         data: { storageKey },
       });
-      if (!approvedExists) {
+      if (autoApprove && isPrimary) {
         await this.prisma.userProfilePhoto.updateMany({
           where: { profileId: profile.id, id: { not: created.id } },
           data: { isPrimary: false },
         });
+      }
+      if (status === UserProfilePhotoStatus.PENDING) {
+        this.analytics.track(userId, ProductAnalyticsEvents.PHOTO_MODERATION_PENDING, {});
       }
       return this.toPhotoDto(updated);
     } catch (e) {

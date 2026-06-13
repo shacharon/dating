@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { fetchMyProfile } from '@/lib/me-profile-api';
 import {
   APP_LOCALE_CHANGE_EVENT,
@@ -10,8 +11,10 @@ import {
   readStoredLocale,
   type AppLocale,
 } from '@/lib/i18n';
+import { buildInviteUrl } from '@/lib/referral-attribution';
 
 export function MatchListEmptyState() {
+  const { user } = useAuth();
   const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
   const [place, setPlace] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -62,7 +65,14 @@ export function MatchListEmptyState() {
   }, []);
 
   async function onCopyInviteLink() {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/` : '/';
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : '';
+    const url =
+      user?.id && origin
+        ? buildInviteUrl(origin, user.id)
+        : origin
+          ? `${origin}/`
+          : '/';
     try {
       await navigator.clipboard.writeText(url);
       setInviteCopied(true);

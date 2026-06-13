@@ -18,11 +18,26 @@ export class RedisIoAdapter extends IoAdapter {
       return;
     }
 
-    const pubClient = createClient({ url });
-    const subClient = pubClient.duplicate();
-    await Promise.all([pubClient.connect(), subClient.connect()]);
-    this.redisAdapter = createAdapter(pubClient, subClient);
-    setMessagingRedisAdapterBound(true);
+    try {
+      const pubClient = createClient({ url });
+      const subClient = pubClient.duplicate();
+      pubClient.on('error', (err) => {
+        console.warn('[RedisIoAdapter] pub client error:', err.message);
+      });
+      subClient.on('error', (err) => {
+        console.warn('[RedisIoAdapter] sub client error:', err.message);
+      });
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      this.redisAdapter = createAdapter(pubClient, subClient);
+      setMessagingRedisAdapterBound(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(
+        `[RedisIoAdapter] Redis unavailable (${message}) — continuing in single-instance mode. ` +
+          'Unset REDIS_URL for local dev or start Redis.',
+      );
+      setMessagingRedisAdapterBound(false);
+    }
   }
 
   override createIOServer(port: number, options?: ServerOptions): Server {

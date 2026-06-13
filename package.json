@@ -1,0 +1,16 @@
+{
+  "name": "dating",
+  "private": true,
+  "description": "Dating monorepo — run API + UI together from the repo root",
+  "scripts": {
+    "dev": "concurrently -k -n api,ui -c blue,green \"npm run dev:api\" \"npm run dev:ui\"",
+    "dev:ready": "concurrently -k -n api,ui -c blue,green \"npm run dev:api:ready\" \"npm run dev:ui\"",
+    "dev:api": "npm run start:dev --prefix dating-api",
+    "dev:api:ready": "npm run start:dev:ready --prefix dating-api",
+    "dev:ui": "node scripts/wait-for-api.mjs && npm run dev:webpack --prefix dating-ui",
+    "wait:api": "node scripts/wait-for-api.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

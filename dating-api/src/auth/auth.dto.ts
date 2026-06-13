@@ -14,6 +14,8 @@ export interface AuthMeResponseDto {
 /** POST /api/v1/auth/google request body (no user id from client). */
 export interface GoogleIdTokenLoginDto {
   idToken: string;
+  /** Optional referrer user id captured from landing `?ref=` (validated server-side). */
+  referredByUserId?: string;
 }
 
 /** POST /api/v1/auth/logout success body. */

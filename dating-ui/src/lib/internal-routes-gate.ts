@@ -3,6 +3,8 @@ export const INTERNAL_ROUTE_PREFIXES = [
   '/evaluate',
   '/auto-matches',
   '/dev',
+  '/matches',
+  '/dating/matches',
 ] as const;
 
 export function isInternalRouteBlocked(pathname: string): boolean {

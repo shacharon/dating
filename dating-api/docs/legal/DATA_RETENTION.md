@@ -11,6 +11,7 @@ Factual summary for operators and legal review. User-facing summary lives in the
 | Analysis output | `UserProfileEvaluation`, signals, interests deleted |
 | Match preferences | `UserProfilePreference` row deleted |
 | Match actions by deleted user | `MatchAction` rows where user is actor deleted |
+| Match feedback by deleted user | `MatchFeedback` rows where user is actor deleted |
 | Sessions | All sessions revoked |
 | Message bodies from deleted user | Replaced with `[deleted user]`; status `DELETED` |
 | Active mutual matches | Set to `UNMATCHED` |
@@ -20,6 +21,7 @@ Factual summary for operators and legal review. User-facing summary lives in the
 | Data | Reason |
 |------|--------|
 | `User.id` | FK integrity; row scrubbed (`email`, `googleId`, names removed) |
+| `User.referredByUserId` | Referral attribution on anonymized user row (no export in v1) |
 | `UserReport` rows | Moderation / ops triage |
 | `MutualMatch` metadata | Analytics; status `UNMATCHED` |
 | Messages as placeholders | Other participant conversation history |
@@ -31,4 +33,5 @@ After deletion, `email` and `googleId` are scrubbed to free unique constraints. 
 
 ## Ops access
 
-Query `UserReport` and anonymized `User` rows directly in the database. No admin triage UI in v1.
+- **User reports:** Triage OPEN reports at **`/admin/reports`** (requires `ADMIN_USER_IDS` + session). Ops email (`REPORT_OPS_EMAIL`) remains a backup alert.
+- **Other retained data:** Query anonymized `User` rows directly in the database when needed.

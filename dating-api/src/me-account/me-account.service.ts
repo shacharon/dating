@@ -131,6 +131,12 @@ export class MeAccountService {
       }
 
       await tx.matchAction.deleteMany({ where: { actorUserId: userId } });
+      await tx.matchFeedback.deleteMany({ where: { userId } });
+      if (profile) {
+        await tx.matchFeedback.deleteMany({
+          where: { matchProfileId: profile.id },
+        });
+      }
 
       await tx.mutualMatch.updateMany({
         where: {

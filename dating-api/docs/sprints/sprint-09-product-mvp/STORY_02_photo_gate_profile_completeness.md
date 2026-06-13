@@ -33,7 +33,7 @@ Stub moderation auto-approves all uploads, so the only enforceable quality gate 
 
 - Rejecting low-quality photos (moderation provider)
 - Requiring N photos (keep max 3; min 1)
-- Blocking candidates without photos from *other* users' lists (optional follow-up)
+- ~~Blocking candidates without photos from *other* users' lists~~ — **shipped [Sprint 10 Story 5](../sprint-10-trust-and-ops/STORY_05_candidate_photo_filter.md)**
 
 ---
 
@@ -85,6 +85,6 @@ Stub moderation auto-approves all uploads, so the only enforceable quality gate 
 
 | Item | Target |
 |------|--------|
-| Hide photo-less candidates from others' lists | Story or engine follow-up |
+| Hide photo-less candidates from others' lists | **Done** — [Sprint 10 Story 5](../sprint-10-trust-and-ops/STORY_05_candidate_photo_filter.md) |
 | Minimum text length before submit | Product decision |
 | Coalesce duplicate `listMyProfilePhotos` on profile page | Optional polish |
