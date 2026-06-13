@@ -137,6 +137,16 @@ describe('MeMatchDetailPage (match actions)', () => {
     });
   });
 
+  it('shows decorative heart on Like button with text accessible name', async () => {
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      const likeBtn = screen.getByRole('button', { name: /^like$/i });
+      const heart = likeBtn.querySelector('span[aria-hidden="true"]');
+      expect(heart?.textContent).toBe('❤️');
+    });
+  });
+
   it('records like on Like click', async () => {
     render(<MeMatchDetailPage />);
 
@@ -723,9 +733,12 @@ describe('MeMatchDetailPage (i18n)', () => {
     render(<MeMatchDetailPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: heCopy.matches.detail.like }),
-      ).toBeTruthy();
+      const likeBtn = screen.getByRole('button', {
+        name: heCopy.matches.detail.like,
+      });
+      expect(likeBtn.querySelector('span[aria-hidden="true"]')?.textContent).toBe(
+        '❤️',
+      );
       expect(
         screen.getByRole('button', { name: heCopy.matches.detail.pass }),
       ).toBeTruthy();

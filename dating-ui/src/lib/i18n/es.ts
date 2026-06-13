@@ -183,6 +183,13 @@ export const esCopy: AppCopySchema = {
     conversationsUnreadLabel: (count: number) =>
       `${count} mensaje${count === 1 ? "" : "s"} sin leer`,
   },
+  gender: {
+    MALE: "Hombre",
+    FEMALE: "Mujer",
+    NON_BINARY: "No binario",
+    OTHER: "Otro",
+    PREFER_NOT_TO_SAY: "Prefiero no decirlo",
+  },
   onboarding: {
     basicsTitle: "Paso 1 — Basico",
     basicsSubtitle:
@@ -190,6 +197,54 @@ export const esCopy: AppCopySchema = {
     storyTitle: "Paso 2 — Tu historia",
     storySubtitle:
       "Guarda un borrador o finaliza para enviar tu perfil a analisis.",
+    syncingProfile: "Sincronizando perfil…",
+    loadFailed: "No se pudo cargar el perfil",
+    saveFailed: "Error al guardar",
+    savedFlash: "Guardado.",
+    saveProgress: "Guardar progreso",
+    continueLater: "Continuar mas tarde",
+    basicForm: {
+      sectionTitle: "Basico",
+      googleNameLabel: "Nombre de Google",
+      googleNameHelp:
+        "De tu cuenta de Google (solo lectura). Usa el apodo abajo para como apareces aqui.",
+      nicknameLabel: "Apodo",
+      nicknamePlaceholder: "Como quieres que te llamen",
+      birthDateLabel: "Fecha de nacimiento",
+      ageDisplay: (age: number) => `Edad: ${age}`,
+      genderLabel: "Genero",
+      genderSelectPlaceholder: "— Seleccionar —",
+      partnerGendersLegend: "Abierto/a a emparejar con",
+      partnerGendersRequiredHint: "(obligatorio para continuar)",
+      partnerGendersRequiredError:
+        "Elige al menos un genero con el que estes abierto/a a emparejar antes de continuar.",
+      genderRequiredError: (preferNotToSay: string) =>
+        `Elige un genero (distinto de "${preferNotToSay}") antes de continuar — es obligatorio para el analisis.`,
+      cityLabel: "Ciudad",
+      cityPlaceholder: "p. ej. Tel Aviv",
+      countryLabel: "Pais",
+      countryPlaceholder: "p. ej. IL",
+      locationLabelLabel: "Etiqueta de ubicacion",
+      locationLabelPlaceholder: "p. ej. Tel Aviv, Israel",
+      continueToStory: "Continuar a la historia",
+    },
+    textsForm: {
+      intro:
+        "Unos parrafos cortos nos ayudan a entenderte. Puedes guardar y volver, o finalizar para ejecutar el analisis.",
+      aboutMeLabel: "Sobre mi",
+      aboutMePlaceholder: "Describe quien eres…",
+      aboutPartnerLabel: "Sobre la pareja",
+      aboutPartnerPlaceholder: "Que buscas en una pareja…",
+      aboutRelationshipLabel: "Sobre la relacion",
+      aboutRelationshipPlaceholder: "Que quieres de una relacion…",
+      finishAndAnalyze: "Finalizar y analizar",
+      submitting: "Enviando…",
+      backToBasics: "Volver a lo basico",
+      genderMissingError:
+        "Vuelve a lo basico y elige un genero antes de enviar a analisis.",
+      verifyFailedError: "No se pudo verificar tu perfil. Intentalo de nuevo.",
+      finishFailedError: "No se pudo finalizar el registro",
+    },
   },
   notifications: {
     messageToast: (name: string) => `${name} te envio un mensaje`,
@@ -211,6 +266,19 @@ export const esCopy: AppCopySchema = {
     matchPreferencesLink: "Preferencias de coincidencias",
     matchPreferencesLinkHelp:
       "Rango de edad, genero de pareja, estilo de vida y otros filtros.",
+    viewPage: {
+      titleProfile: "Perfil",
+      titleReview: "Tu perfil",
+      subtitle: "Revisa tus respuestas antes de buscar coincidencias.",
+      matchingSectionTitle: "Emparejamiento",
+      matchPreferencesLinkCta: (label: string) => `${label} →`,
+      backToOnboarding: "Volver al registro",
+      noProfileBody:
+        "Aun no tienes perfil. Completa el registro para revisarlo y encontrar coincidencias.",
+      editLink: "Editar",
+      findMatchesLink: "Buscar coincidencias",
+      emptyValue: "—",
+    },
   },
   matchPreferences: {
     title: "Preferencias de coincidencias",

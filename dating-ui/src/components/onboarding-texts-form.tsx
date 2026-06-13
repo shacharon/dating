@@ -8,11 +8,15 @@ import {
   patchMyProfile,
   submitMyProfileForAnalysis,
 } from '@/lib/me-profile-api';
+import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
 
 export function OnboardingTextsForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { copy } = useAppLocale();
+  const ob = copy.onboarding;
+  const tf = ob.textsForm;
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
@@ -54,7 +58,7 @@ export function OnboardingTextsForm() {
         setProfileSyncing(false);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Failed to load profile');
+          setLoadError(e instanceof Error ? e.message : ob.loadFailed);
           setProfileSyncing(false);
         }
       }
@@ -62,7 +66,7 @@ export function OnboardingTextsForm() {
     return () => {
       cancelled = true;
     };
-  }, [router, resumeOptions]);
+  }, [router, resumeOptions, ob.loadFailed]);
 
   async function handleSaveProgress() {
     setSaveError(null);
@@ -77,7 +81,7 @@ export function OnboardingTextsForm() {
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Save failed');
+      setSaveError(e instanceof Error ? e.message : ob.saveFailed);
     }
   }
 
@@ -89,13 +93,11 @@ export function OnboardingTextsForm() {
         !latest?.gender ||
         latest.gender === 'PREFER_NOT_TO_SAY'
       ) {
-        setFinishError(
-          'Go back to basics and choose a gender before submitting for analysis.',
-        );
+        setFinishError(tf.genderMissingError);
         return;
       }
     } catch {
-      setFinishError('Could not verify your profile. Try again.');
+      setFinishError(tf.verifyFailedError);
       return;
     }
 
@@ -113,7 +115,9 @@ export function OnboardingTextsForm() {
       router.replace('/dating/analysis');
     } catch (e) {
       setFinishing(false);
-      setFinishError(e instanceof Error ? e.message : 'Could not finish onboarding');
+      setFinishError(
+        e instanceof Error ? e.message : tf.finishFailedError,
+      );
     }
   }
 
@@ -132,7 +136,7 @@ export function OnboardingTextsForm() {
 
       {profileSyncing ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
-          Syncing profile…
+          {ob.syncingProfile}
         </p>
       ) : null}
 
@@ -141,13 +145,12 @@ export function OnboardingTextsForm() {
         aria-busy={profileSyncing}
       >
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        A few short paragraphs help us understand you. You can save and come
-        back, or finish to run analysis.
+        {tf.intro}
       </p>
 
       <div>
         <label htmlFor="ot-about-me" className={labelClass}>
-          About me
+          {tf.aboutMeLabel}
         </label>
         <textarea
           id="ot-about-me"
@@ -155,13 +158,13 @@ export function OnboardingTextsForm() {
           onChange={(e) => setAboutMe(e.target.value)}
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
-          placeholder="Describe yourself…"
+          placeholder={tf.aboutMePlaceholder}
         />
       </div>
 
       <div>
         <label htmlFor="ot-about-partner" className={labelClass}>
-          About partner
+          {tf.aboutPartnerLabel}
         </label>
         <textarea
           id="ot-about-partner"
@@ -169,13 +172,13 @@ export function OnboardingTextsForm() {
           onChange={(e) => setAboutPartner(e.target.value)}
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
-          placeholder="What you look for in a partner…"
+          placeholder={tf.aboutPartnerPlaceholder}
         />
       </div>
 
       <div>
         <label htmlFor="ot-about-rel" className={labelClass}>
-          About relationship
+          {tf.aboutRelationshipLabel}
         </label>
         <textarea
           id="ot-about-rel"
@@ -183,7 +186,7 @@ export function OnboardingTextsForm() {
           onChange={(e) => setAboutRelationship(e.target.value)}
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
-          placeholder="What you want from a relationship…"
+          placeholder={tf.aboutRelationshipPlaceholder}
         />
       </div>
 
@@ -194,7 +197,7 @@ export function OnboardingTextsForm() {
           disabled={finishing || profileSyncing}
           className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
-          Save progress
+          {ob.saveProgress}
         </button>
         <button
           type="button"
@@ -202,7 +205,7 @@ export function OnboardingTextsForm() {
           disabled={finishing || profileSyncing}
           className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          {finishing ? 'Submitting…' : 'Finish & analyze'}
+          {finishing ? tf.submitting : tf.finishAndAnalyze}
         </button>
         <Link
           href={
@@ -214,14 +217,14 @@ export function OnboardingTextsForm() {
           className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
           aria-disabled={profileSyncing}
         >
-          Back to basics
+          {tf.backToBasics}
         </Link>
       </div>
       </div>
 
       {savedFlash ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
-          Saved.
+          {ob.savedFlash}
         </p>
       ) : null}
       {saveError ? (

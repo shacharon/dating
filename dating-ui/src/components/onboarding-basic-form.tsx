@@ -12,19 +12,9 @@ import {
   patchMyProfile,
   type MeProfileGender,
 } from '@/lib/me-profile-api';
+import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
-
-function genderLabel(g: MeProfileGender): string {
-  const labels: Record<MeProfileGender, string> = {
-    MALE: 'Male',
-    FEMALE: 'Female',
-    NON_BINARY: 'Non-binary',
-    OTHER: 'Other',
-    PREFER_NOT_TO_SAY: 'Prefer not to say',
-  };
-  return labels[g];
-}
 
 function ageFromBirthInput(iso: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -41,6 +31,10 @@ export function OnboardingBasicForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { copy } = useAppLocale();
+  const ob = copy.onboarding;
+  const bf = ob.basicForm;
+  const genderCopy = copy.gender;
   const googleName = user?.displayName?.trim() || '—';
 
   const [nickname, setNickname] = useState('');
@@ -110,7 +104,7 @@ export function OnboardingBasicForm() {
         setProfileSyncing(false);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Failed to load profile');
+          setLoadError(e instanceof Error ? e.message : ob.loadFailed);
           setProfileSyncing(false);
         }
       }
@@ -118,7 +112,7 @@ export function OnboardingBasicForm() {
     return () => {
       cancelled = true;
     };
-  }, [router, resumeOptions]);
+  }, [router, resumeOptions, ob.loadFailed]);
 
   function setPartnerGender(g: MeProfileGender, checked: boolean) {
     setDesiredPartnerGenders((prev) => {
@@ -166,14 +160,12 @@ export function OnboardingBasicForm() {
     if (advanceToTexts) {
       if (!gender.trim() || gender === 'PREFER_NOT_TO_SAY') {
         setGenderStepError(
-          'Choose a gender (other than “prefer not to say”) before continuing — it is required when you submit for analysis.',
+          bf.genderRequiredError(genderCopy.PREFER_NOT_TO_SAY),
         );
         return false;
       }
       if (desiredPartnerGenders.length === 0) {
-        setPartnerError(
-          'Choose at least one gender you are open to matching with before continuing.',
-        );
+        setPartnerError(bf.partnerGendersRequiredError);
         return false;
       }
     }
@@ -203,7 +195,7 @@ export function OnboardingBasicForm() {
       }
       return true;
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Save failed');
+      setSaveError(e instanceof Error ? e.message : ob.saveFailed);
       return false;
     }
   }
@@ -238,7 +230,7 @@ export function OnboardingBasicForm() {
 
       {profileSyncing ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
-          Syncing profile…
+          {ob.syncingProfile}
         </p>
       ) : null}
 
@@ -248,24 +240,23 @@ export function OnboardingBasicForm() {
       >
       <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
         <h2 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          Basics
+          {bf.sectionTitle}
         </h2>
 
         <div className="mb-4 rounded border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
           <span className="font-medium text-zinc-600 dark:text-zinc-400">
-            Google name
+            {bf.googleNameLabel}
           </span>
           <p className="text-zinc-900 dark:text-zinc-100">{googleName}</p>
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            From your Google account (read-only). Use nickname below for how you
-            appear here.
+            {bf.googleNameHelp}
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label htmlFor="onb-nickname" className={labelClass}>
-              Nickname
+              {bf.nicknameLabel}
             </label>
             <input
               id="onb-nickname"
@@ -273,14 +264,14 @@ export function OnboardingBasicForm() {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               className={inputClass}
-              placeholder="How you want to be called"
+              placeholder={bf.nicknamePlaceholder}
               autoComplete="off"
               maxLength={80}
             />
           </div>
           <div>
             <label htmlFor="onb-birth" className={labelClass}>
-              Birth date
+              {bf.birthDateLabel}
             </label>
             <input
               id="onb-birth"
@@ -292,13 +283,13 @@ export function OnboardingBasicForm() {
             />
             {derivedAge !== null ? (
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Age: {derivedAge}
+                {bf.ageDisplay(derivedAge)}
               </p>
             ) : null}
           </div>
           <div>
             <label htmlFor="onb-gender" className={labelClass}>
-              Gender
+              {bf.genderLabel}
             </label>
             <select
               id="onb-gender"
@@ -309,10 +300,10 @@ export function OnboardingBasicForm() {
               }}
               className={inputClass}
             >
-              <option value="">— Select —</option>
+              <option value="">{bf.genderSelectPlaceholder}</option>
               {ME_PROFILE_GENDERS.map((g) => (
                 <option key={g} value={g}>
-                  {genderLabel(g)}
+                  {genderCopy[g]}
                 </option>
               ))}
             </select>
@@ -326,8 +317,8 @@ export function OnboardingBasicForm() {
 
         <fieldset className="mt-4">
           <legend className={`${labelClass} mb-2`}>
-            Open to matching with{' '}
-            <span className="font-normal text-zinc-500">(required to continue)</span>
+            {bf.partnerGendersLegend}{' '}
+            <span className="font-normal text-zinc-500">{bf.partnerGendersRequiredHint}</span>
           </legend>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {ME_PARTNER_GENDER_CHOICES.map((g) => (
@@ -341,7 +332,7 @@ export function OnboardingBasicForm() {
                   onChange={(e) => setPartnerGender(g, e.target.checked)}
                   className="rounded border-zinc-400 text-zinc-900 dark:border-zinc-500"
                 />
-                {genderLabel(g)}
+                {genderCopy[g]}
               </label>
             ))}
           </div>
@@ -355,7 +346,7 @@ export function OnboardingBasicForm() {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="onb-city" className={labelClass}>
-              City
+              {bf.cityLabel}
             </label>
             <input
               id="onb-city"
@@ -363,13 +354,13 @@ export function OnboardingBasicForm() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               className={inputClass}
-              placeholder="e.g. Tel Aviv"
+              placeholder={bf.cityPlaceholder}
               autoComplete="address-level2"
             />
           </div>
           <div>
             <label htmlFor="onb-country" className={labelClass}>
-              Country
+              {bf.countryLabel}
             </label>
             <input
               id="onb-country"
@@ -377,13 +368,13 @@ export function OnboardingBasicForm() {
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className={inputClass}
-              placeholder="e.g. IL"
+              placeholder={bf.countryPlaceholder}
               autoComplete="country-name"
             />
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="onb-loc-label" className={labelClass}>
-              Location label
+              {bf.locationLabelLabel}
             </label>
             <input
               id="onb-loc-label"
@@ -391,7 +382,7 @@ export function OnboardingBasicForm() {
               value={locationLabel}
               onChange={(e) => setLocationLabel(e.target.value)}
               className={inputClass}
-              placeholder="e.g. Tel Aviv, Israel"
+              placeholder={bf.locationLabelPlaceholder}
             />
           </div>
         </div>
@@ -406,7 +397,7 @@ export function OnboardingBasicForm() {
           disabled={profileSyncing}
           className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
-          Save progress
+          {ob.saveProgress}
         </button>
         <button
           type="button"
@@ -414,21 +405,21 @@ export function OnboardingBasicForm() {
           disabled={profileSyncing}
           className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          Continue to story
+          {bf.continueToStory}
         </button>
         <Link
           href="/dating"
           className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
           aria-disabled={profileSyncing}
         >
-          Continue later
+          {ob.continueLater}
         </Link>
       </div>
       </div>
 
       {savedFlash ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
-          Saved.
+          {ob.savedFlash}
         </p>
       ) : null}
       {saveError ? (

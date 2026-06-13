@@ -182,11 +182,61 @@ export type AppCopySchema = {
     logout: string;
     conversationsUnreadLabel: (count: number) => string;
   };
+  gender: {
+    MALE: string;
+    FEMALE: string;
+    NON_BINARY: string;
+    OTHER: string;
+    PREFER_NOT_TO_SAY: string;
+  };
   onboarding: {
     basicsTitle: string;
     basicsSubtitle: string;
     storyTitle: string;
     storySubtitle: string;
+    syncingProfile: string;
+    loadFailed: string;
+    saveFailed: string;
+    savedFlash: string;
+    saveProgress: string;
+    continueLater: string;
+    basicForm: {
+      sectionTitle: string;
+      googleNameLabel: string;
+      googleNameHelp: string;
+      nicknameLabel: string;
+      nicknamePlaceholder: string;
+      birthDateLabel: string;
+      ageDisplay: (age: number) => string;
+      genderLabel: string;
+      genderSelectPlaceholder: string;
+      partnerGendersLegend: string;
+      partnerGendersRequiredHint: string;
+      partnerGendersRequiredError: string;
+      genderRequiredError: (preferNotToSay: string) => string;
+      cityLabel: string;
+      cityPlaceholder: string;
+      countryLabel: string;
+      countryPlaceholder: string;
+      locationLabelLabel: string;
+      locationLabelPlaceholder: string;
+      continueToStory: string;
+    };
+    textsForm: {
+      intro: string;
+      aboutMeLabel: string;
+      aboutMePlaceholder: string;
+      aboutPartnerLabel: string;
+      aboutPartnerPlaceholder: string;
+      aboutRelationshipLabel: string;
+      aboutRelationshipPlaceholder: string;
+      finishAndAnalyze: string;
+      submitting: string;
+      backToBasics: string;
+      genderMissingError: string;
+      verifyFailedError: string;
+      finishFailedError: string;
+    };
   };
   notifications: {
     messageToast: (name: string) => string;
@@ -204,6 +254,18 @@ export type AppCopySchema = {
     };
     matchPreferencesLink: string;
     matchPreferencesLinkHelp: string;
+    viewPage: {
+      titleProfile: string;
+      titleReview: string;
+      subtitle: string;
+      matchingSectionTitle: string;
+      matchPreferencesLinkCta: (label: string) => string;
+      backToOnboarding: string;
+      noProfileBody: string;
+      editLink: string;
+      findMatchesLink: string;
+      emptyValue: string;
+    };
   };
   matchPreferences: {
     title: string;

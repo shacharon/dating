@@ -182,11 +182,66 @@ export const enCopy: AppCopySchema = {
     conversationsUnreadLabel: (count: number) =>
       `${count} unread message${count === 1 ? "" : "s"}`,
   },
+  gender: {
+    MALE: "Male",
+    FEMALE: "Female",
+    NON_BINARY: "Non-binary",
+    OTHER: "Other",
+    PREFER_NOT_TO_SAY: "Prefer not to say",
+  },
   onboarding: {
     basicsTitle: "Step 1 — Basics",
     basicsSubtitle: "Save anytime; your answers reload from the server when you return.",
     storyTitle: "Step 2 — Your story",
     storySubtitle: "Save a draft, or finish to submit your profile for analysis.",
+    syncingProfile: "Syncing profile…",
+    loadFailed: "Failed to load profile",
+    saveFailed: "Save failed",
+    savedFlash: "Saved.",
+    saveProgress: "Save progress",
+    continueLater: "Continue later",
+    basicForm: {
+      sectionTitle: "Basics",
+      googleNameLabel: "Google name",
+      googleNameHelp:
+        "From your Google account (read-only). Use nickname below for how you appear here.",
+      nicknameLabel: "Nickname",
+      nicknamePlaceholder: "How you want to be called",
+      birthDateLabel: "Birth date",
+      ageDisplay: (age: number) => `Age: ${age}`,
+      genderLabel: "Gender",
+      genderSelectPlaceholder: "— Select —",
+      partnerGendersLegend: "Open to matching with",
+      partnerGendersRequiredHint: "(required to continue)",
+      partnerGendersRequiredError:
+        "Choose at least one gender you are open to matching with before continuing.",
+      genderRequiredError: (preferNotToSay: string) =>
+        `Choose a gender (other than "${preferNotToSay}") before continuing — it is required when you submit for analysis.`,
+      cityLabel: "City",
+      cityPlaceholder: "e.g. Tel Aviv",
+      countryLabel: "Country",
+      countryPlaceholder: "e.g. IL",
+      locationLabelLabel: "Location label",
+      locationLabelPlaceholder: "e.g. Tel Aviv, Israel",
+      continueToStory: "Continue to story",
+    },
+    textsForm: {
+      intro:
+        "A few short paragraphs help us understand you. You can save and come back, or finish to run analysis.",
+      aboutMeLabel: "About me",
+      aboutMePlaceholder: "Describe yourself…",
+      aboutPartnerLabel: "About partner",
+      aboutPartnerPlaceholder: "What you look for in a partner…",
+      aboutRelationshipLabel: "About relationship",
+      aboutRelationshipPlaceholder: "What you want from a relationship…",
+      finishAndAnalyze: "Finish & analyze",
+      submitting: "Submitting…",
+      backToBasics: "Back to basics",
+      genderMissingError:
+        "Go back to basics and choose a gender before submitting for analysis.",
+      verifyFailedError: "Could not verify your profile. Try again.",
+      finishFailedError: "Could not finish onboarding",
+    },
   },
   notifications: {
     messageToast: (name: string) => `${name} sent you a message`,
@@ -206,6 +261,19 @@ export const enCopy: AppCopySchema = {
     matchPreferencesLink: "Match preferences",
     matchPreferencesLinkHelp:
       "Age range, partner gender, lifestyle, and other matching filters.",
+    viewPage: {
+      titleProfile: "Profile",
+      titleReview: "Your profile",
+      subtitle: "Review your answers before finding matches.",
+      matchingSectionTitle: "Matching",
+      matchPreferencesLinkCta: (label: string) => `${label} →`,
+      backToOnboarding: "Back to onboarding",
+      noProfileBody:
+        "You don't have a profile yet. Complete onboarding to review and find matches.",
+      editLink: "Edit",
+      findMatchesLink: "Find matches",
+      emptyValue: "—",
+    },
   },
   matchPreferences: {
     title: "Match preferences",
