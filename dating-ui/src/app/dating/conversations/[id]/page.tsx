@@ -26,7 +26,7 @@ import {
   formatMessageTime,
 } from '../conversation-display';
 import { ReportUserDialog } from '@/components/report-user-dialog';
-import { getCopy, readStoredLocale } from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 import {
   useMessagingSocket,
   type MessagingConnectionStatus,
@@ -64,6 +64,9 @@ export default function ConversationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { locale, copy } = useAppLocale();
+  const detailCopy = copy.conversations.detail;
+  const formatCopy = copy.conversations.format;
   const { refresh: refreshNavUnread } = useConversationUnread();
   const id = typeof params.id === 'string' ? params.id : '';
   const [data, setData] = useState<ConversationDetailDto | null>(null);
@@ -123,7 +126,7 @@ export default function ConversationDetailPage() {
       .catch((e: unknown) => {
         if (!cancelled) {
           setError(
-            e instanceof Error ? e.message : 'Failed to load conversation',
+            e instanceof Error ? e.message : detailCopy.loadFailed,
           );
         }
       })
@@ -171,7 +174,7 @@ export default function ConversationDetailPage() {
       .catch((e: unknown) => {
         if (!cancelled) {
           setMessagesError(
-            e instanceof Error ? e.message : 'Failed to load messages',
+            e instanceof Error ? e.message : detailCopy.loadMessagesFailed,
           );
         }
       })
@@ -302,7 +305,7 @@ export default function ConversationDetailPage() {
       });
     } catch (e: unknown) {
       setMessagesError(
-        e instanceof Error ? e.message : 'Failed to load earlier messages',
+        e instanceof Error ? e.message : detailCopy.loadEarlierFailed,
       );
     } finally {
       setLoadingEarlier(false);
@@ -321,7 +324,7 @@ export default function ConversationDetailPage() {
       await new Promise((r) => setTimeout(r, SEND_COOLDOWN_MS));
     } catch (e: unknown) {
       setSendError(
-        e instanceof Error ? e.message : 'Failed to send message',
+        e instanceof Error ? e.message : detailCopy.sendFailed,
       );
     } finally {
       setSending(false);
@@ -345,7 +348,7 @@ export default function ConversationDetailPage() {
     } catch (e: unknown) {
       setUnmatchConfirmOpen(false);
       setUnmatchError(
-        e instanceof Error ? e.message : 'Failed to unmatch',
+        e instanceof Error ? e.message : detailCopy.unmatchFailed,
       );
     } finally {
       setUnmatchSaving(false);
@@ -367,13 +370,13 @@ export default function ConversationDetailPage() {
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             data-testid="conversation-back-link"
           >
-            ← Back to conversations
+            {detailCopy.backToList}
           </Link>
         </nav>
 
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
-            Loading…
+            {copy.common.loading}
           </p>
         )}
 
@@ -422,7 +425,7 @@ export default function ConversationDetailPage() {
                     className="text-sm text-zinc-400 dark:text-zinc-500"
                     data-testid="conversation-matched-date"
                   >
-                    {formatMatchedOnDate(data.matchedAt)}
+                    {formatMatchedOnDate(data.matchedAt, formatCopy, locale)}
                   </p>
                 </div>
               </div>
@@ -430,7 +433,7 @@ export default function ConversationDetailPage() {
 
             <section
               className="flex min-h-64 flex-col rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
-              aria-label="Messaging"
+              aria-label={detailCopy.messagingAria}
               data-testid="conversation-messaging"
             >
               {realtimeMode === 'ws' && socketReconnecting && (
@@ -439,7 +442,7 @@ export default function ConversationDetailPage() {
                   data-testid="conversation-reconnecting"
                   className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
                 >
-                  Reconnecting…
+                  {detailCopy.reconnecting}
                 </p>
               )}
               <div
@@ -453,7 +456,7 @@ export default function ConversationDetailPage() {
                     role="status"
                     data-testid="conversation-messages-loading"
                   >
-                    Loading messages…
+                    {detailCopy.loadingMessages}
                   </p>
                 )}
 
@@ -475,9 +478,7 @@ export default function ConversationDetailPage() {
                     className="mx-auto rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
                     data-testid="conversation-load-earlier"
                   >
-                    {loadingEarlier
-                      ? 'Loading…'
-                      : 'Load earlier messages'}
+                    {loadingEarlier ? copy.common.loading : detailCopy.loadEarlier}
                   </button>
                 )}
 
@@ -488,7 +489,7 @@ export default function ConversationDetailPage() {
                       className="text-center text-sm text-zinc-500 dark:text-zinc-400"
                       data-testid="conversation-messages-empty"
                     >
-                      No messages yet. Say hi!
+                      {detailCopy.emptyMessages}
                     </p>
                   )}
 
@@ -514,7 +515,7 @@ export default function ConversationDetailPage() {
                         className="px-1 text-xs text-zinc-400 dark:text-zinc-500"
                         data-testid="conversation-message-time"
                       >
-                        {formatMessageTime(msg.createdAt)}
+                        {formatMessageTime(msg.createdAt, formatCopy, locale)}
                       </span>
                     </div>
                   );
@@ -531,7 +532,7 @@ export default function ConversationDetailPage() {
                   </div>
                 )}
                 <label className="sr-only" htmlFor="conversation-message-input">
-                  Message
+                  {detailCopy.messageLabel}
                 </label>
                 <textarea
                   id="conversation-message-input"
@@ -540,7 +541,7 @@ export default function ConversationDetailPage() {
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={handleMessageKeyDown}
                   disabled={sending}
-                  placeholder="Type a message…"
+                  placeholder={detailCopy.messagePlaceholder}
                   className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                 />
                 <div className="mt-2 flex items-center justify-between gap-2">
@@ -562,7 +563,7 @@ export default function ConversationDetailPage() {
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
                     data-testid="conversation-send-button"
                   >
-                    {sending ? 'Sending…' : 'Send'}
+                    {sending ? detailCopy.sending : detailCopy.send}
                   </button>
                 </div>
               </div>
@@ -580,7 +581,7 @@ export default function ConversationDetailPage() {
                     onClick={() => setReportOpen(true)}
                     className="block w-full px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   >
-                    {getCopy(readStoredLocale()).reportUser.linkLabel}
+                    {copy.reportUser.linkLabel}
                   </button>
                 </div>
               </details>
@@ -590,8 +591,7 @@ export default function ConversationDetailPage() {
                   data-testid="conversation-unmatch-confirm"
                 >
                   <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                    Unmatch {otherName}? You&apos;ll no longer see their
-                    messages. This can&apos;t be undone.
+                    {detailCopy.unmatchConfirm(otherName)}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
@@ -600,7 +600,7 @@ export default function ConversationDetailPage() {
                       disabled={unmatchSaving}
                       className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
-                      Cancel
+                      {copy.common.cancel}
                     </button>
                     <button
                       type="button"
@@ -608,7 +608,7 @@ export default function ConversationDetailPage() {
                       disabled={unmatchSaving}
                       className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/40"
                     >
-                      {unmatchSaving ? 'Saving…' : 'Unmatch'}
+                      {unmatchSaving ? detailCopy.sending : detailCopy.unmatch}
                     </button>
                   </div>
                 </div>
@@ -622,7 +622,7 @@ export default function ConversationDetailPage() {
                   disabled={unmatchSaving}
                   className="text-sm font-medium text-red-600 underline-offset-4 hover:text-red-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
                 >
-                  Unmatch
+                  {detailCopy.unmatch}
                 </button>
               )}
               {unmatchError && (

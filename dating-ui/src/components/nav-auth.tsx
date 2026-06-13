@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
-import { DEFAULT_LOCALE, getCopy, type AppLocale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, getCopy, getLocaleDirection, type AppLocale } from "@/lib/i18n";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -34,13 +34,14 @@ function initialsForUser(user: AuthUser): string {
 }
 
 const menuItemClass =
-  "block w-full px-4 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800";
+  "block w-full px-4 py-2 text-start text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800";
 const menuItemDisabledClass =
-  "block w-full cursor-not-allowed px-4 py-2 text-left text-sm text-zinc-400 dark:text-zinc-500";
+  "block w-full cursor-not-allowed px-4 py-2 text-start text-sm text-zinc-400 dark:text-zinc-500";
 
 export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
   const { status, user, logout, lastError, clearLastError } = useAuth();
   const copy = getCopy(locale);
+  const menuDir = getLocaleDirection(locale);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -104,7 +105,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             className="max-w-[14rem] truncate text-xs text-red-600 dark:text-red-400"
             title={lastError}
           >
-            Cannot reach API
+            {copy.navAuth.apiUnreachable}
           </span>
         ) : null}
         {lastError ? (
@@ -113,14 +114,14 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             className="text-xs text-zinc-500 underline dark:text-zinc-400"
             onClick={() => clearLastError()}
           >
-            Dismiss
+            {copy.navAuth.dismiss}
           </button>
         ) : null}
         <Link
           href="/"
           className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
         >
-          Sign in
+          {copy.navAuth.signIn}
         </Link>
       </div>
     );
@@ -139,7 +140,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
         className="flex h-9 w-9 shrink-0 overflow-hidden rounded-full border border-zinc-300 bg-zinc-100 ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:ring-offset-zinc-950 dark:focus-visible:ring-zinc-500"
         aria-expanded={menuOpen}
         aria-haspopup="true"
-        aria-label="Account menu"
+        aria-label={copy.navAuth.accountMenuAria}
         aria-busy={navPendingHref !== null}
         onClick={() => setMenuOpen((o) => !o)}
       >
@@ -162,6 +163,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
           className="absolute right-0 z-50 mt-1 min-w-[13rem] rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
           role="menu"
           aria-label="Account"
+          dir={menuDir}
         >
           <Link
             href="/settings/account"

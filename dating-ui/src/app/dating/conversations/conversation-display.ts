@@ -1,3 +1,4 @@
+import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import type { ConversationListItemDto, ConversationOtherUserDto } from '@/lib/conversations-api';
 
 function metaParts(
@@ -36,27 +37,43 @@ export function conversationSecondaryMeta(
   return meta || null;
 }
 
-export function formatMatchedAt(matchedAt: string): string {
+function formatTimeOfDay(date: Date, locale: AppLocale): string {
+  return date.toLocaleTimeString(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function formatMatchedAt(
+  matchedAt: string,
+  format: AppCopySchema['conversations']['format'],
+  locale: AppLocale,
+): string {
   const date = new Date(matchedAt);
   if (Number.isNaN(date.getTime())) return matchedAt;
   const now = Date.now();
   const diffMs = now - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   if (diffDays < 1) {
-    return `Matched today at ${date.toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-    })}`;
+    return format.matchedTodayAt(formatTimeOfDay(date, locale));
   }
-  if (diffDays === 1) return 'Matched yesterday';
-  if (diffDays < 7) return `Matched ${diffDays} days ago`;
-  return `Matched on ${date.toLocaleDateString(undefined, { dateStyle: 'medium' })}`;
+  if (diffDays === 1) return format.matchedYesterday;
+  if (diffDays < 7) return format.matchedDaysAgo(diffDays);
+  return format.matchedOn(
+    date.toLocaleDateString(locale, { dateStyle: 'medium' }),
+  );
 }
 
-export function formatMatchedOnDate(matchedAt: string): string {
+export function formatMatchedOnDate(
+  matchedAt: string,
+  format: AppCopySchema['conversations']['format'],
+  locale: AppLocale,
+): string {
   const date = new Date(matchedAt);
   if (Number.isNaN(date.getTime())) return matchedAt;
-  return `Matched on ${date.toLocaleDateString(undefined, { dateStyle: 'medium' })}`;
+  return format.matchedOn(
+    date.toLocaleDateString(locale, { dateStyle: 'medium' }),
+  );
 }
 
 function isSameCalendarDay(a: Date, b: Date): boolean {
@@ -67,14 +84,11 @@ function isSameCalendarDay(a: Date, b: Date): boolean {
   );
 }
 
-function formatTimeOfDay(date: Date): string {
-  return date.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-export function formatMessageTime(createdAt: string): string {
+export function formatMessageTime(
+  createdAt: string,
+  format: AppCopySchema['conversations']['format'],
+  locale: AppLocale,
+): string {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return createdAt;
 
@@ -82,17 +96,17 @@ export function formatMessageTime(createdAt: string): string {
   const diffMs = now.getTime() - date.getTime();
   const diffMin = Math.floor(diffMs / (1000 * 60));
 
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 1) return format.justNow;
+  if (diffMin < 60) return format.minutesAgo(diffMin);
 
-  const time = formatTimeOfDay(date);
+  const time = formatTimeOfDay(date, locale);
   if (isSameCalendarDay(date, now)) return time;
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (isSameCalendarDay(date, yesterday)) return `Yesterday ${time}`;
+  if (isSameCalendarDay(date, yesterday)) return format.yesterdayAt(time);
 
-  return `${date.toLocaleDateString(undefined, { dateStyle: 'medium' })} ${time}`;
+  return `${date.toLocaleDateString(locale, { dateStyle: 'medium' })} ${time}`;
 }
 
 export function conversationListItemLabel(item: ConversationListItemDto): string {

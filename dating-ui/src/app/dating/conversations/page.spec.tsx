@@ -84,6 +84,8 @@ vi.mock('@/contexts/conversation-unread-context', () => ({
   }),
 }));
 
+import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
 import ConversationsPage from './page';
 
 vi.mock('next/link', () => ({
@@ -499,6 +501,60 @@ describe('ConversationsPage', () => {
         ).toBeNull();
       });
       unmount();
+    });
+  });
+});
+
+describe('ConversationsPage (i18n)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    getRealtimeMode.mockReturnValue('poll');
+    messageNewHandlerRef.current = null;
+    setActiveConversationId(null);
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('renders Hebrew list copy when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    fetchMyConversations.mockResolvedValue({ conversations: [] });
+
+    render(<ConversationsPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', {
+          level: 1,
+          name: heCopy.conversations.list.title,
+        }),
+      ).toBeTruthy();
+      expect(screen.getByText(heCopy.conversations.list.subtitle)).toBeTruthy();
+      expect(screen.getByText(heCopy.conversations.list.emptyTitle)).toBeTruthy();
+    });
+  });
+
+  it('still renders participant meta in English when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    fetchMyConversations.mockResolvedValue({
+      conversations: [
+        {
+          id: 'mutual_1',
+          otherUser,
+          matchedAt: '2026-05-31T12:00:00.000Z',
+          unreadCount: 0,
+        },
+      ],
+    });
+
+    render(<ConversationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Noa')).toBeTruthy();
+      expect(screen.getByText('FEMALE · 32y · Tel Aviv')).toBeTruthy();
     });
   });
 });

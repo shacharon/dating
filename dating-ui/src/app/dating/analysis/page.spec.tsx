@@ -4,6 +4,8 @@ import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
 import { ANALYSIS_POLL_INITIAL_MS } from './analysis-progress-poll';
 import DatingAnalysisPage from './page';
 
@@ -324,5 +326,23 @@ describe('DatingAnalysisPage', () => {
 
     root.unmount();
     div.remove();
+  });
+
+  it('renders Hebrew section headings when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    mockAnalyzedPageLoad();
+
+    render(createElement(DatingAnalysisPage));
+    await flush();
+
+    expect(screen.getByText(heCopy.analysisPage.sectionHowWeRead)).toBeTruthy();
+    expect(screen.getByText(heCopy.analysisPage.sectionWhatYouWrote)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'You come across as warm, thoughtful, and clear about connection.',
+      ),
+    ).toBeTruthy();
+
+    localStorage.clear();
   });
 });

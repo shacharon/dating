@@ -14,6 +14,7 @@ import {
   APP_LOCALE_STORAGE_KEY,
   DEFAULT_LOCALE,
   getCopy,
+  getLocaleDirection,
   readStoredLocale,
   type AppCopySchema,
   type AppLocale,
@@ -183,7 +184,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
       <>
         <header className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
           <p className="mx-auto max-w-5xl text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            Cannot reach dating-api
+            {copy.appShell.apiUnreachableTitle}
           </p>
         </header>
         <div className="mx-auto max-w-lg px-4 py-10 text-sm text-zinc-600 dark:text-zinc-400">
@@ -197,7 +198,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
             onClick={() => void refresh()}
             className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            Retry connection
+            {copy.appShell.retryConnection}
           </button>
         </div>
       </>
@@ -207,7 +208,9 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   if (status === "unauthenticated") {
     return (
       <header className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <p className="mx-auto max-w-5xl text-sm text-zinc-500">Redirecting…</p>
+        <p className="mx-auto max-w-5xl text-sm text-zinc-500">
+          {copy.appShell.redirecting}
+        </p>
       </header>
     );
   }
@@ -221,7 +224,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
             aria-live="polite"
           >
             <p className="mx-auto max-w-5xl text-xs text-zinc-500">
-              Syncing session…
+              {copy.common.syncingSession}
             </p>
           </header>
           {children}
@@ -236,11 +239,11 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
           aria-label="Main"
         >
           <div className="mx-auto max-w-5xl text-sm text-zinc-500">
-            Checking session…
+            {copy.common.checkingSession}
           </div>
         </header>
         <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-zinc-500">
-          Loading…
+          {copy.common.loading}
         </div>
       </>
     );
@@ -251,15 +254,17 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <MessagingShellProvider sessionUserId={user.id}>
-      <DatingMainNav
-        copy={copy}
-        locale={locale}
-        navPending={navPending}
-        onNavClick={() => setNavPending(true)}
-        pathname={pathname}
-      />
-      {children}
-    </MessagingShellProvider>
+    <div dir={getLocaleDirection(locale)}>
+      <MessagingShellProvider sessionUserId={user.id}>
+        <DatingMainNav
+          copy={copy}
+          locale={locale}
+          navPending={navPending}
+          onNavClick={() => setNavPending(true)}
+          pathname={pathname}
+        />
+        {children}
+      </MessagingShellProvider>
+    </div>
   );
 }

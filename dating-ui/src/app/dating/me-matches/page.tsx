@@ -10,41 +10,32 @@ import {
 } from '@/lib/me-profile-api';
 import { MatchPhoto } from '@/components/match-photo';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
+import { useAppLocale } from '@/lib/i18n';
 import {
   matchListPrimaryLabel,
   matchListSecondaryMeta,
 } from './match-display';
 
-function matchActionBadge(action: NonNullable<
-  NonNullable<MeMatchesListDto['matches']>[number]['yourAction']
->) {
+function matchActionBadge(
+  action: NonNullable<
+    NonNullable<MeMatchesListDto['matches']>[number]['yourAction']
+  >,
+  copy: ReturnType<typeof useAppLocale>['copy']['matches']['list']['actionBadge'],
+) {
   switch (action) {
     case 'LIKE':
-      return {
-        label: 'Liked',
-        className:
-          'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-        ariaLabel: 'You liked this match',
-      };
+      return copy.liked;
     case 'PASS':
-      return {
-        label: 'Passed',
-        className:
-          'rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
-        ariaLabel: 'You passed on this match',
-      };
+      return copy.passed;
     case 'BLOCK':
-      return {
-        label: 'Blocked',
-        className:
-          'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400',
-        ariaLabel: 'You blocked this match',
-      };
+      return copy.blocked;
   }
 }
 
 export default function MeMatchesPage() {
   const router = useRouter();
+  const { locale, copy } = useAppLocale();
+  const listCopy = copy.matches.list;
   const [data, setData] = useState<MeMatchesListDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,7 +71,7 @@ export default function MeMatchesPage() {
       })
       .catch((e: unknown) => {
         if (!cancelled)
-          setError(e instanceof Error ? e.message : 'Failed to load matches');
+          setError(e instanceof Error ? e.message : listCopy.loadFailed);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -88,7 +79,7 @@ export default function MeMatchesPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, listCopy.loadFailed]);
 
   const matches = data?.status === 'ready' ? (data.matches ?? []) : [];
 
@@ -98,12 +89,10 @@ export default function MeMatchesPage() {
     setRefreshSuccess(null);
     try {
       await submitMyProfileForAnalysis();
-      setRefreshSuccess(
-        'Refresh started — scores will update once analysis completes.',
-      );
+      setRefreshSuccess(listCopy.refreshStarted);
       await loadMatches();
     } catch (e: unknown) {
-      setRefreshError(e instanceof Error ? e.message : 'Refresh failed');
+      setRefreshError(e instanceof Error ? e.message : listCopy.refreshFailed);
     } finally {
       setRefreshBusy(false);
     }
@@ -113,39 +102,36 @@ export default function MeMatchesPage() {
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
       <div className="mx-auto max-w-2xl space-y-8 px-6 py-10">
 
-        {/* Nav */}
         <nav className="flex flex-wrap gap-4 text-sm">
           <Link
             href="/dating/analysis"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
-            ← Your analysis
+            {listCopy.backToAnalysis}
           </Link>
           <Link
             href="/onboarding/basic?edit=1"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
-            Edit profile
+            {listCopy.editProfile}
           </Link>
         </nav>
 
         <header>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Your matches
+            {listCopy.title}
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            People whose profile and preferences are compatible with yours.
+            {listCopy.subtitle}
           </p>
         </header>
 
-        {/* Loading */}
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
-            Loading…
+            {copy.common.loading}
           </p>
         )}
 
-        {/* Error */}
         {!loading && error && (
           <div
             className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
@@ -155,7 +141,6 @@ export default function MeMatchesPage() {
           </div>
         )}
 
-        {/* Viewer analysis stale (success/error after refresh stay visible below) */}
         {!loading &&
           !error &&
           data?.status === 'ready' &&
@@ -163,11 +148,10 @@ export default function MeMatchesPage() {
             <div
               className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-800 dark:bg-amber-950/40"
               role="region"
-              aria-label="Profile analysis out of date"
+              aria-label={listCopy.staleRegionAria}
             >
               <p className="text-sm text-amber-900 dark:text-amber-100">
-                Your profile changed since the last analysis. Match scores may be
-                out of date.
+                {listCopy.staleMessage}
               </p>
               <button
                 type="button"
@@ -176,7 +160,7 @@ export default function MeMatchesPage() {
                 disabled={refreshBusy}
                 onClick={() => void handleRefreshAnalysis()}
               >
-                Refresh analysis
+                {listCopy.refreshAnalysis}
               </button>
             </div>
           )}
@@ -196,12 +180,10 @@ export default function MeMatchesPage() {
           </p>
         )}
 
-        {/* Empty */}
         {!loading && !error && matches.length === 0 && (
           <MatchListEmptyState />
         )}
 
-        {/* Match list */}
         {!loading && !error && matches.length > 0 && (
           <ul className="flex flex-col gap-3">
             {matches.map((m) => (
@@ -239,8 +221,8 @@ export default function MeMatchesPage() {
                       )}
                       {m.analyzedAt && (
                         <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                          Analyzed{' '}
-                          {new Date(m.analyzedAt).toLocaleDateString(undefined, {
+                          {listCopy.analyzedPrefix}{' '}
+                          {new Date(m.analyzedAt).toLocaleDateString(locale, {
                             dateStyle: 'medium',
                           })}
                         </p>
@@ -248,10 +230,19 @@ export default function MeMatchesPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       {m.yourAction != null && (() => {
-                        const badge = matchActionBadge(m.yourAction);
+                        const badge = matchActionBadge(
+                          m.yourAction,
+                          listCopy.actionBadge,
+                        );
                         return (
                           <span
-                            className={badge.className}
+                            className={
+                              m.yourAction === 'LIKE'
+                                ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                : m.yourAction === 'PASS'
+                                  ? 'rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+                                  : 'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                            }
                             aria-label={badge.ariaLabel}
                           >
                             {badge.label}

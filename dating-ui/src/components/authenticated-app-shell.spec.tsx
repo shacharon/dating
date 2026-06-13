@@ -28,10 +28,39 @@ vi.mock('@/components/nav-auth', () => ({
   NavAuth: () => <div data-testid="nav-auth" />,
 }));
 
+const authState = vi.hoisted(() => ({
+  status: 'authenticated' as 'authenticated' | 'error' | 'loading' | 'unauthenticated',
+  user: {
+    id: 'user_me',
+    email: 'a@test.com',
+    displayName: 'A',
+    avatarUrl: null,
+    status: 'ACTIVE' as const,
+    emailNotificationsEnabled: true,
+    inAppNotificationsEnabled: true,
+  },
+  refresh: vi.fn(),
+  signInWithGoogleIdToken: vi.fn(),
+  logout: vi.fn(),
+  lastError: null as string | null,
+  clearLastError: vi.fn(),
+}));
+
 vi.mock('@/contexts/auth-context', () => ({
-  useAuth: () => ({
-    status: 'authenticated',
-    user: {
+  useAuth: () => authState,
+}));
+
+import { AuthenticatedAppShell } from '@/components/authenticated-app-shell';
+import {
+  APP_LOCALE_STORAGE_KEY,
+  writeStoredLocale,
+} from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
+
+describe('AuthenticatedAppShell locale', () => {
+  beforeEach(() => {
+    authState.status = 'authenticated';
+    authState.user = {
       id: 'user_me',
       email: 'a@test.com',
       displayName: 'A',
@@ -39,19 +68,67 @@ vi.mock('@/contexts/auth-context', () => ({
       status: 'ACTIVE',
       emailNotificationsEnabled: true,
       inAppNotificationsEnabled: true,
-    },
-    refresh: vi.fn(),
-    signInWithGoogleIdToken: vi.fn(),
-    logout: vi.fn(),
-    lastError: null,
-    clearLastError: vi.fn(),
-  }),
-}));
+    };
+    authState.lastError = null;
+    localStorage.clear();
+    fetchMyConversations.mockResolvedValue({ conversations: [] });
+  });
 
-import { AuthenticatedAppShell } from '@/components/authenticated-app-shell';
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('wraps authenticated chrome in RTL when locale is Hebrew', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'בית' })).toBeTruthy();
+    });
+
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(nav.closest('[dir="rtl"]')).toBeTruthy();
+  });
+
+  it('updates main nav labels when locale changes without reload', async () => {
+    render(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+    });
+
+    writeStoredLocale('he');
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'בית' })).toBeTruthy();
+    });
+  });
+});
 
 describe('AuthenticatedAppShell nav unread', () => {
   beforeEach(() => {
+    authState.status = 'authenticated';
+    authState.user = {
+      id: 'user_me',
+      email: 'a@test.com',
+      displayName: 'A',
+      avatarUrl: null,
+      status: 'ACTIVE',
+      emailNotificationsEnabled: true,
+      inAppNotificationsEnabled: true,
+    };
+    authState.lastError = null;
+    localStorage.clear();
     fetchMyConversations.mockResolvedValue({
       conversations: [
         {
@@ -152,5 +229,77 @@ describe('AuthenticatedAppShell nav unread', () => {
     });
 
     expect(screen.queryByTestId('nav-conversations-unread')).toBeNull();
+  });
+
+  it('uses Hebrew unread aria label when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('nav-conversations-unread')).toBeTruthy();
+    });
+
+    expect(
+      screen.getByTestId('nav-conversations-unread').getAttribute('aria-label'),
+    ).toBe(heCopy.nav.conversationsUnreadLabel(2));
+  });
+});
+
+describe('AuthenticatedAppShell auth error i18n', () => {
+  beforeEach(() => {
+    authState.status = 'error';
+    authState.user = null;
+    authState.lastError = null;
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    authState.status = 'authenticated';
+    authState.user = {
+      id: 'user_me',
+      email: 'a@test.com',
+      displayName: 'A',
+      avatarUrl: null,
+      status: 'ACTIVE',
+      emailNotificationsEnabled: true,
+      inAppNotificationsEnabled: true,
+    };
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('renders appShell error copy in English by default', () => {
+    render(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    expect(screen.getByText('Cannot reach dating-api')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Retry connection' }),
+    ).toBeTruthy();
+  });
+
+  it('renders appShell error copy in Hebrew when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(heCopy.appShell.apiUnreachableTitle)).toBeTruthy();
+    });
+    expect(
+      screen.getByRole('button', { name: heCopy.appShell.retryConnection }),
+    ).toBeTruthy();
   });
 });

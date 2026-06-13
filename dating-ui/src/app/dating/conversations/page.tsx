@@ -13,6 +13,7 @@ import {
 } from '@/lib/conversations-api';
 import { getActiveConversationId } from '@/lib/conversation-focus';
 import { incrementUnreadForConversation } from '@/lib/conversation-list-unread';
+import { useAppLocale } from '@/lib/i18n';
 import { getRealtimeMode } from '@/lib/realtime-mode';
 import {
   conversationPrimaryLabel,
@@ -22,6 +23,9 @@ import {
 
 export default function ConversationsPage() {
   const { user } = useAuth();
+  const { locale, copy } = useAppLocale();
+  const listCopy = copy.conversations.list;
+  const formatCopy = copy.conversations.format;
   const { reconcileFromList } = useConversationUnread();
   const realtimeMode = getRealtimeMode();
   const [conversations, setConversations] = useState<ConversationListItemDto[]>(
@@ -67,7 +71,7 @@ export default function ConversationsPage() {
       .catch((e: unknown) => {
         if (!cancelled) {
           setError(
-            e instanceof Error ? e.message : 'Failed to load conversations',
+            e instanceof Error ? e.message : listCopy.loadFailed,
           );
         }
       })
@@ -77,7 +81,7 @@ export default function ConversationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [load]);
+  }, [load, listCopy.loadFailed]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -96,22 +100,22 @@ export default function ConversationsPage() {
             href="/dating/me-matches"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
-            ← Your matches
+            {listCopy.backToMatches}
           </Link>
         </nav>
 
         <header>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Conversations
+            {listCopy.title}
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Your mutual matches — open a conversation to message.
+            {listCopy.subtitle}
           </p>
         </header>
 
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
-            Loading…
+            {copy.common.loading}
           </p>
         )}
 
@@ -126,7 +130,7 @@ export default function ConversationsPage() {
               className="mt-3 block text-sm font-medium underline"
               onClick={() => void load().catch(() => undefined)}
             >
-              Try again
+              {listCopy.tryAgain}
             </button>
           </div>
         )}
@@ -138,16 +142,16 @@ export default function ConversationsPage() {
             data-testid="conversations-empty"
           >
             <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              No matches yet. Keep swiping!
+              {listCopy.emptyTitle}
             </p>
             <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              When you and someone both like each other, they will appear here.
+              {listCopy.emptyBody}
             </p>
             <Link
               href="/dating/me-matches"
               className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
             >
-              Browse matches
+              {listCopy.browseMatches}
             </Link>
           </div>
         )}
@@ -190,14 +194,14 @@ export default function ConversationsPage() {
                           </p>
                         )}
                         <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {formatMatchedAt(item.matchedAt)}
+                          {formatMatchedAt(item.matchedAt, formatCopy, locale)}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         {item.unreadCount > 0 && (
                           <span
                             data-testid="conversation-unread-badge"
-                            aria-label={`${item.unreadCount} unread message${item.unreadCount === 1 ? '' : 's'}`}
+                            aria-label={listCopy.unreadAria(item.unreadCount)}
                             className="flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-xs font-semibold text-white dark:bg-emerald-500"
                           >
                             {item.unreadCount > 99 ? '99+' : item.unreadCount}

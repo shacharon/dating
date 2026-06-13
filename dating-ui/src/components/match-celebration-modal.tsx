@@ -1,6 +1,7 @@
 'use client';
 
 import { MatchPhoto } from '@/components/match-photo';
+import { useAppLocale } from '@/lib/i18n';
 
 export interface MatchCelebrationModalProps {
   open: boolean;
@@ -17,6 +18,9 @@ export function MatchCelebrationModal({
   photoUrl,
   onSendMessage,
 }: MatchCelebrationModalProps) {
+  const { copy } = useAppLocale();
+  const celebrationCopy = copy.matches.celebration;
+
   if (!open) return null;
 
   return (
@@ -35,7 +39,7 @@ export function MatchCelebrationModal({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={celebrationCopy.closeAria}
           className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
         >
           ✕
@@ -46,7 +50,7 @@ export function MatchCelebrationModal({
             id="match-celebration-title"
             className="text-2xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400"
           >
-            It&apos;s a match!
+            {celebrationCopy.title}
           </h2>
 
           <div className="mt-5">
@@ -67,7 +71,7 @@ export function MatchCelebrationModal({
             onClick={onSendMessage}
             className="mt-6 w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
           >
-            Send a message
+            {celebrationCopy.sendMessage}
           </button>
         </div>
       </div>

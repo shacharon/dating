@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ["en", "es"] as const;
+export const SUPPORTED_LOCALES = ["en", "es", "he"] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
@@ -13,6 +13,161 @@ export type AppCopySchema = {
     loading: string;
     save: string;
     cancel: string;
+    syncingSession: string;
+    checkingSession: string;
+  };
+  landing: {
+    title: string;
+    subtitle: string;
+    checkingSession: string;
+    googleSignIn: string;
+    signingIn: string;
+    retryApi: string;
+    privacyLink: string;
+    termsLink: string;
+  };
+  languageSettings: {
+    title: string;
+    label: string;
+    description: string;
+    optionEn: string;
+    optionEs: string;
+    optionHe: string;
+  };
+  appShell: {
+    apiUnreachableTitle: string;
+    retryConnection: string;
+    redirecting: string;
+  };
+  matches: {
+    list: {
+      backToAnalysis: string;
+      editProfile: string;
+      title: string;
+      subtitle: string;
+      analyzedPrefix: string;
+      staleRegionAria: string;
+      staleMessage: string;
+      refreshAnalysis: string;
+      refreshStarted: string;
+      refreshFailed: string;
+      loadFailed: string;
+      actionBadge: {
+        liked: { label: string; ariaLabel: string };
+        passed: { label: string; ariaLabel: string };
+        blocked: { label: string; ariaLabel: string };
+      };
+    };
+    detail: {
+      backToMatches: string;
+      matchLabel: string;
+      whyYouMatch: string;
+      traitStrong: string;
+      traitModerate: string;
+      aboutThem: string;
+      noSummary: string;
+      analyzedPrefix: string;
+      youMatched: string;
+      viewConversation: string;
+      actionStatus: {
+        liked: string;
+        passed: string;
+        blocked: string;
+      };
+      undoLikeAria: string;
+      undoPassAria: string;
+      saving: string;
+      undo: string;
+      like: string;
+      pass: string;
+      block: string;
+      blockConfirm: string;
+      blockPermanently: string;
+      backToMatchesButton: string;
+      loadFailed: string;
+      likeFailed: string;
+      passFailed: string;
+      undoFailed: string;
+      feedbackFailed: string;
+      blockFailed: string;
+    };
+    celebration: {
+      title: string;
+      sendMessage: string;
+      closeAria: string;
+    };
+  };
+  conversations: {
+    format: {
+      matchedTodayAt: (time: string) => string;
+      matchedYesterday: string;
+      matchedDaysAgo: (days: number) => string;
+      matchedOn: (date: string) => string;
+      justNow: string;
+      minutesAgo: (minutes: number) => string;
+      yesterdayAt: (time: string) => string;
+    };
+    list: {
+      backToMatches: string;
+      title: string;
+      subtitle: string;
+      tryAgain: string;
+      emptyTitle: string;
+      emptyBody: string;
+      browseMatches: string;
+      unreadAria: (count: number) => string;
+      loadFailed: string;
+    };
+    detail: {
+      backToList: string;
+      messagingAria: string;
+      reconnecting: string;
+      loadingMessages: string;
+      loadEarlier: string;
+      emptyMessages: string;
+      messageLabel: string;
+      messagePlaceholder: string;
+      send: string;
+      sending: string;
+      unmatch: string;
+      unmatchConfirm: (name: string) => string;
+      loadFailed: string;
+      unmatchFailed: string;
+      loadMessagesFailed: string;
+      loadEarlierFailed: string;
+      sendFailed: string;
+    };
+  };
+  navAuth: {
+    apiUnreachable: string;
+    dismiss: string;
+    signIn: string;
+    accountMenuAria: string;
+  };
+  datingHub: {
+    title: string;
+    subtitle: string;
+    getStarted: string;
+    viewMatches: string;
+  };
+  analysisPage: {
+    loading: string;
+    loadFailed: string;
+    loadFailedHint: string;
+    reRunAnalysis: string;
+    analysisRunning: string;
+    lastRunPrefix: string;
+    sectionHowWeRead: string;
+    sectionWhatYouWrote: string;
+    insightAboutYou: string;
+    insightHowYouRelate: string;
+    insightWhoYouWant: string;
+    referenceAboutMe: string;
+    referenceRelationshipStyle: string;
+    referencePartnerPreference: string;
+    referenceEmpty: string;
+    showMore: string;
+    showLess: string;
   };
   nav: {
     home: string;

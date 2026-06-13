@@ -1,5 +1,6 @@
 import { enCopy } from "@/lib/i18n/en";
 import { esCopy } from "@/lib/i18n/es";
+import { heCopy } from "@/lib/i18n/he";
 import {
   DEFAULT_LOCALE,
   SUPPORTED_LOCALES,
@@ -13,6 +14,7 @@ export const APP_LOCALE_CHANGE_EVENT = "dating-ui:locale-change";
 const COPY_BY_LOCALE: Record<AppLocale, AppCopySchema> = {
   en: enCopy,
   es: esCopy,
+  he: heCopy,
 };
 
 export { DEFAULT_LOCALE, SUPPORTED_LOCALES };
@@ -47,3 +49,14 @@ export function writeStoredLocale(locale: AppLocale): void {
     new CustomEvent<AppLocale>(APP_LOCALE_CHANGE_EVENT, { detail: locale }),
   );
 }
+
+/** Text direction for layout (`dir` attribute). Hebrew is RTL; EN/ES are LTR. */
+export function getLocaleDirection(locale: AppLocale): "ltr" | "rtl" {
+  return locale === "he" ? "rtl" : "ltr";
+}
+
+export function getLocaleHtmlLang(locale: AppLocale): string {
+  return locale;
+}
+
+export { useAppLocale } from "@/lib/i18n/use-app-locale";

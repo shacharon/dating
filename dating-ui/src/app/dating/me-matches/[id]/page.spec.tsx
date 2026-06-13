@@ -52,6 +52,8 @@ vi.mock('next/link', () => ({
   },
 }));
 
+import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
 import MeMatchDetailPage from './page';
 
 const noActionState = {
@@ -697,6 +699,86 @@ describe('MeMatchDetailPage (match feedback)', () => {
       expect(
         screen.getByTestId('match-feedback-negative').getAttribute('aria-pressed'),
       ).toBe('true');
+    });
+  });
+});
+
+describe('MeMatchDetailPage (i18n)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    fetchMyMatchById.mockResolvedValue(baseMatch);
+    fetchMatchAction.mockResolvedValue(noActionState);
+    fetchMatchFeedback.mockResolvedValue(noFeedbackState);
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('renders Hebrew detail chrome when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: heCopy.matches.detail.like }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: heCopy.matches.detail.pass }),
+      ).toBeTruthy();
+      expect(screen.getByText(heCopy.matches.detail.matchLabel)).toBeTruthy();
+      expect(screen.getByText(heCopy.matches.detail.aboutThem)).toBeTruthy();
+      expect(screen.getByText(heCopy.matches.detail.backToMatches)).toBeTruthy();
+    });
+  });
+
+  it('still renders API takeaway in English when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Aligned values')).toBeTruthy();
+      expect(screen.getByText('Emotional depth')).toBeTruthy();
+    });
+  });
+
+  it('shows Hebrew celebration title when locale is he and like is mutual', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    likeMatch.mockResolvedValue({
+      id: 'action-mutual',
+      actorUserId: 'user-1',
+      targetUserId: 'user-2',
+      targetProfileIdSnapshot: 'prof-cand-1',
+      action: 'LIKE',
+      createdAt: '2026-05-31T10:00:00.000Z',
+      mutualMatch: true,
+      conversationId: 'mutual_row_1',
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: heCopy.matches.detail.like }),
+      ).toBeTruthy();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: heCopy.matches.detail.like }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeTruthy();
+      expect(
+        screen.getByRole('heading', {
+          level: 2,
+          name: heCopy.matches.celebration.title,
+        }),
+      ).toBeTruthy();
     });
   });
 });

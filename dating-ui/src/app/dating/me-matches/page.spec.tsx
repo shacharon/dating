@@ -2,6 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { MatchRecommendationDto } from '@/lib/me-profile-api';
+import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
 
 const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, replaceMock } = vi.hoisted(() => ({
   fetchMyMatches: vi.fn(),
@@ -376,6 +378,49 @@ describe('MeMatchesPage (match photos)', () => {
       const photo = screen.getByTestId('match-list-photo');
       expect(photo.tagName).toBe('DIV');
       expect(photo.textContent).toBe('F');
+    });
+  });
+});
+
+describe('MeMatchesPage (i18n)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [{ ...baseMatch, yourAction: 'LIKE' as const }],
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('renders Hebrew list copy when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', {
+          level: 1,
+          name: heCopy.matches.list.title,
+        }),
+      ).toBeTruthy();
+      expect(screen.getByText(heCopy.matches.list.subtitle)).toBeTruthy();
+      expect(screen.getByText(heCopy.matches.list.actionBadge.liked.label)).toBeTruthy();
+    });
+  });
+
+  it('still renders API reasonShort in English when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Aligned')).toBeTruthy();
     });
   });
 });

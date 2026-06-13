@@ -1,5 +1,6 @@
 "use client";
 
+import { LocaleDocumentSync } from "@/components/locale-document-sync";
 import { ProductErrorBoundary } from "@/components/product-error-boundary";
 import { AuthProvider } from "@/contexts/auth-context";
 import type { ReactNode } from "react";
@@ -7,7 +8,10 @@ import type { ReactNode } from "react";
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ProductErrorBoundary>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        <LocaleDocumentSync />
+        {children}
+      </AuthProvider>
     </ProductErrorBoundary>
   );
 }

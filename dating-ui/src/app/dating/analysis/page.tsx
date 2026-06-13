@@ -23,6 +23,8 @@ import {
   isAlreadyRunningSubmitError,
   isAnalysisInFlight,
 } from './analysis-run-ux';
+import { useAppLocale } from '@/lib/i18n';
+import type { AppCopySchema } from '@/lib/i18n/types';
 
 async function loadAnalysisPageState(): Promise<{
   latest: MeLatestAnalysisDto | null;
@@ -53,9 +55,17 @@ function InsightCard({ title, text }: { title: string; text: string }) {
   );
 }
 
-function ReferenceCard({ title, text }: { title: string; text: string | null }) {
+function ReferenceCard({
+  title,
+  text,
+  copy,
+}: {
+  title: string;
+  text: string | null;
+  copy: AppCopySchema['analysisPage'];
+}) {
   const limit = 220;
-  const safeText = text?.trim() ? text.trim() : 'Nothing saved here yet.';
+  const safeText = text?.trim() ? text.trim() : copy.referenceEmpty;
   const [expanded, setExpanded] = useState(false);
   const isLong = safeText.length > limit;
   const shownText =
@@ -73,7 +83,7 @@ function ReferenceCard({ title, text }: { title: string; text: string | null }) 
           className="mt-3 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           onClick={() => setExpanded((v) => !v)}
         >
-          {expanded ? 'Show less' : 'Show more'}
+          {expanded ? copy.showLess : copy.showMore}
         </button>
       )}
     </article>
@@ -82,6 +92,8 @@ function ReferenceCard({ title, text }: { title: string; text: string | null }) 
 
 export default function DatingAnalysisPage() {
   const router = useRouter();
+  const { locale, copy } = useAppLocale();
+  const pageCopy = copy.analysisPage;
   const [data, setData] = useState<MeLatestAnalysisDto | null>(null);
   const [profile, setProfile] = useState<MeProfileDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -190,7 +202,7 @@ export default function DatingAnalysisPage() {
         }
       } catch (e) {
         if (!cancelled)
-          setError(e instanceof Error ? e.message : 'Could not load analysis.');
+          setError(e instanceof Error ? e.message : pageCopy.loadFailed);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -246,7 +258,7 @@ export default function DatingAnalysisPage() {
       <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-8 sm:px-6 sm:py-10">
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
-            Loading analysis…
+            {pageCopy.loading}
           </p>
         )}
 
@@ -255,7 +267,7 @@ export default function DatingAnalysisPage() {
             className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
             role="alert"
           >
-            We couldn't load your analysis. Try again.
+            {pageCopy.loadFailed} {pageCopy.loadFailedHint}
           </div>
         )}
 
@@ -291,8 +303,8 @@ export default function DatingAnalysisPage() {
                   className="inline-flex shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
                 >
                   {reAnalyzeSubmitting || pollEnabled
-                    ? 'Analysis running…'
-                    : 'Re-run analysis'}
+                    ? pageCopy.analysisRunning
+                    : pageCopy.reRunAnalysis}
                 </button>
               </div>
               {vm.note && (
@@ -300,8 +312,8 @@ export default function DatingAnalysisPage() {
               )}
               {data.createdAt && (
                 <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-600">
-                  Last run{' '}
-                  {new Date(data.createdAt).toLocaleString(undefined, {
+                  {pageCopy.lastRunPrefix}{' '}
+                  {new Date(data.createdAt).toLocaleString(locale, {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })}
@@ -310,28 +322,34 @@ export default function DatingAnalysisPage() {
             </section>
 
             <section className="space-y-3">
-              <SectionHeading>How we read your profile</SectionHeading>
+              <SectionHeading>{pageCopy.sectionHowWeRead}</SectionHeading>
               <div className="grid gap-3 md:grid-cols-3">
-                <InsightCard title="About you" text={vm.aboutMeInsight} />
-                <InsightCard title="How you relate" text={vm.relationshipInsight} />
+                <InsightCard title={pageCopy.insightAboutYou} text={vm.aboutMeInsight} />
+                <InsightCard title={pageCopy.insightHowYouRelate} text={vm.relationshipInsight} />
                 <InsightCard
-                  title="Who you want"
+                  title={pageCopy.insightWhoYouWant}
                   text={vm.partnerPreferenceInsight}
                 />
               </div>
             </section>
 
             <section className="space-y-3">
-              <SectionHeading>What you wrote</SectionHeading>
+              <SectionHeading>{pageCopy.sectionWhatYouWrote}</SectionHeading>
               <div className="grid gap-3 md:grid-cols-3">
-                <ReferenceCard title="About me" text={profile?.aboutMe ?? null} />
                 <ReferenceCard
-                  title="Relationship style"
-                  text={profile?.aboutRelationship ?? null}
+                  title={pageCopy.referenceAboutMe}
+                  text={profile?.aboutMe ?? null}
+                  copy={pageCopy}
                 />
                 <ReferenceCard
-                  title="Partner preference"
+                  title={pageCopy.referenceRelationshipStyle}
+                  text={profile?.aboutRelationship ?? null}
+                  copy={pageCopy}
+                />
+                <ReferenceCard
+                  title={pageCopy.referencePartnerPreference}
                   text={profile?.aboutPartner ?? null}
+                  copy={pageCopy}
                 />
               </div>
             </section>

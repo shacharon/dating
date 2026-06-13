@@ -122,6 +122,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
 import ConversationDetailPage from './page';
 
 vi.mock('next/link', () => ({
@@ -992,6 +994,89 @@ describe('ConversationDetailPage', () => {
 
       intervalSpy.mockRestore();
       unmount();
+    });
+  });
+});
+
+describe('ConversationDetailPage (i18n)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    localStorage.clear();
+    getRealtimeMode.mockReturnValue('poll');
+    fetchMyConversationById.mockResolvedValue(detail);
+    fetchConversationMessages.mockResolvedValue({
+      messages: [],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+    markConversationAsRead.mockResolvedValue({
+      lastReadAt: '2026-06-01T18:00:00.000Z',
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('renders Hebrew messaging chrome when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', {
+          name: heCopy.conversations.detail.send,
+        }),
+      ).toBeTruthy();
+      expect(
+        screen.getByLabelText(heCopy.conversations.detail.messageLabel),
+      ).toBeTruthy();
+      expect(
+        screen.getByPlaceholderText(
+          heCopy.conversations.detail.messagePlaceholder,
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  it('still renders message bodies in English when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    fetchConversationMessages.mockResolvedValue({
+      messages: [
+        {
+          id: 'msg_1',
+          conversationId: 'mutual_abc',
+          senderId: 'user_cand_1',
+          text: 'Thanks for saying hi!',
+          createdAt: '2026-05-31T16:00:00.000Z',
+          status: 'SENT' as const,
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Thanks for saying hi!')).toBeTruthy();
+    });
+  });
+
+  it('shows localized loadMessagesFailed when messages fetch rejects non-Error', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    fetchConversationMessages.mockRejectedValue('network');
+
+    render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(heCopy.conversations.detail.loadMessagesFailed),
+      ).toBeTruthy();
     });
   });
 });

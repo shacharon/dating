@@ -18,33 +18,17 @@ import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
 import { MatchCelebrationModal } from '@/components/match-celebration-modal';
 import { MatchPhoto } from '@/components/match-photo';
 import { ReportUserDialog } from '@/components/report-user-dialog';
-import { getCopy, readStoredLocale } from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
 
-function actionStatusMessage(action: YourAction): string | null {
-  switch (action) {
-    case 'LIKE':
-      return 'You liked this person';
-    case 'PASS':
-      return 'You passed on this person';
-    case 'BLOCK':
-      return 'You blocked this person';
-    default:
-      return null;
-  }
-}
-
-function undoAriaLabel(action: 'LIKE' | 'PASS'): string {
-  return action === 'LIKE'
-    ? 'Undo your like on this match'
-    : 'Undo your pass on this match';
-}
-
 export default function MeMatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { locale, copy } = useAppLocale();
+  const detailCopy = copy.matches.detail;
+  const feedbackCopy = copy.launch.matchDetail.feedback;
   const [data, setData] = useState<MeMatchDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +49,24 @@ export default function MeMatchDetailPage() {
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
-  const feedbackCopy = getCopy(readStoredLocale()).launch.matchDetail.feedback;
+  function actionStatusMessage(action: YourAction): string | null {
+    switch (action) {
+      case 'LIKE':
+        return detailCopy.actionStatus.liked;
+      case 'PASS':
+        return detailCopy.actionStatus.passed;
+      case 'BLOCK':
+        return detailCopy.actionStatus.blocked;
+      default:
+        return null;
+    }
+  }
+
+  function undoAriaLabel(action: 'LIKE' | 'PASS'): string {
+    return action === 'LIKE'
+      ? detailCopy.undoLikeAria
+      : detailCopy.undoPassAria;
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -83,7 +84,7 @@ export default function MeMatchDetailPage() {
       })
       .catch((e: unknown) => {
         if (!cancelled)
-          setError(e instanceof Error ? e.message : 'Failed to load match');
+          setError(e instanceof Error ? e.message : detailCopy.loadFailed);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -118,8 +119,8 @@ export default function MeMatchDetailPage() {
         e instanceof Error
           ? e.message
           : action === 'LIKE'
-            ? 'Failed to like match'
-            : 'Failed to pass on match',
+            ? detailCopy.likeFailed
+            : detailCopy.passFailed,
       );
     } finally {
       setActionSaving(false);
@@ -145,7 +146,7 @@ export default function MeMatchDetailPage() {
       setConversationId(actionState.conversationId);
     } catch (e: unknown) {
       setActionError(
-        e instanceof Error ? e.message : 'Failed to undo match action',
+        e instanceof Error ? e.message : detailCopy.undoFailed,
       );
     } finally {
       setActionSaving(false);
@@ -162,7 +163,7 @@ export default function MeMatchDetailPage() {
       setFeedbackThanksVisible(true);
     } catch (e: unknown) {
       setFeedbackError(
-        e instanceof Error ? e.message : 'Failed to submit feedback',
+        e instanceof Error ? e.message : detailCopy.feedbackFailed,
       );
     } finally {
       setFeedbackSaving(false);
@@ -179,7 +180,7 @@ export default function MeMatchDetailPage() {
     } catch (e: unknown) {
       setBlockConfirmOpen(false);
       setBlockError(
-        e instanceof Error ? e.message : 'Failed to block match',
+        e instanceof Error ? e.message : detailCopy.blockFailed,
       );
     } finally {
       setActionSaving(false);
@@ -198,14 +199,14 @@ export default function MeMatchDetailPage() {
             href="/dating/me-matches"
             className="text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
-            ← Back to matches
+            {detailCopy.backToMatches}
           </Link>
         </nav>
 
         {/* Loading */}
         {loading && (
           <p className="text-sm text-zinc-400 dark:text-zinc-500" role="status">
-            Loading…
+            {copy.common.loading}
           </p>
         )}
 
@@ -230,7 +231,7 @@ export default function MeMatchDetailPage() {
             />
             <header className="border-b border-zinc-100 bg-zinc-50/80 px-6 py-5 dark:border-zinc-800 dark:bg-zinc-900/80">
               <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                Match
+                {detailCopy.matchLabel}
               </p>
               <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                 {matchDetailTitle(data)}
@@ -343,7 +344,7 @@ export default function MeMatchDetailPage() {
                   data-testid="match-detail-score"
                   className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400"
                 >
-                  {getCopy(readStoredLocale()).launch.matchDetail.matchScoreLabel(
+                  {copy.launch.matchDetail.matchScoreLabel(
                     data.matchScore,
                   )}
                 </p>
@@ -352,7 +353,7 @@ export default function MeMatchDetailPage() {
               {data.matchExplanationTraits && data.matchExplanationTraits.length > 0 && (
                 <section className="rounded-lg border border-zinc-100 bg-zinc-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/40">
                   <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    Why you match
+                    {detailCopy.whyYouMatch}
                   </p>
                   <ul className="mt-3 space-y-3">
                     {data.matchExplanationTraits.map((trait) => (
@@ -368,7 +369,9 @@ export default function MeMatchDetailPage() {
                                 : 'text-xs font-medium text-zinc-500 dark:text-zinc-400'
                             }
                           >
-                            {trait.strength === 'strong' ? 'Strong' : 'Moderate'}
+                            {trait.strength === 'strong'
+                              ? detailCopy.traitStrong
+                              : detailCopy.traitModerate}
                           </span>
                         </div>
                         <p className="mt-0.5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -392,7 +395,7 @@ export default function MeMatchDetailPage() {
               {data.evaluationSummary ? (
                 <section>
                   <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    About them
+                    {detailCopy.aboutThem}
                   </p>
                   <p className="mt-2 leading-relaxed text-zinc-700 dark:text-zinc-300">
                     {data.evaluationSummary}
@@ -400,14 +403,14 @@ export default function MeMatchDetailPage() {
                 </section>
               ) : (
                 <p className="text-zinc-400 dark:text-zinc-500">
-                  No analysis summary available yet.
+                  {detailCopy.noSummary}
                 </p>
               )}
 
               {data.analyzedAt && (
                 <p className="text-xs text-zinc-300 dark:text-zinc-600">
-                  Analyzed{' '}
-                  {new Date(data.analyzedAt).toLocaleString(undefined, {
+                  {detailCopy.analyzedPrefix}{' '}
+                  {new Date(data.analyzedAt).toLocaleString(locale, {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })}
@@ -419,14 +422,14 @@ export default function MeMatchDetailPage() {
               {mutualMatch && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                    You matched!
+                    {detailCopy.youMatched}
                   </span>
                   {conversationId && (
                     <Link
                       href={`/dating/conversations/${conversationId}`}
                       className="text-xs font-medium text-emerald-600 underline-offset-4 hover:underline dark:text-emerald-400"
                     >
-                      View conversation
+                      {detailCopy.viewConversation}
                     </Link>
                   )}
                 </div>
@@ -448,14 +451,14 @@ export default function MeMatchDetailPage() {
                         aria-label={undoAriaLabel(yourAction)}
                         className="text-sm font-medium text-zinc-500 underline-offset-4 hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
                       >
-                        {actionSaving ? 'Saving…' : 'Undo'}
+                        {actionSaving ? detailCopy.saving : detailCopy.undo}
                       </button>
                       {actionSaving && (
                         <p
                           className="text-xs text-zinc-400 dark:text-zinc-500"
                           role="status"
                         >
-                          Saving…
+                          {detailCopy.saving}
                         </p>
                       )}
                       {actionError && (
@@ -478,7 +481,7 @@ export default function MeMatchDetailPage() {
                       disabled={actionSaving}
                       className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                     >
-                      {actionSaving ? 'Saving…' : 'Like'}
+                      {actionSaving ? detailCopy.saving : detailCopy.like}
                     </button>
                     <button
                       type="button"
@@ -486,12 +489,12 @@ export default function MeMatchDetailPage() {
                       disabled={actionSaving}
                       className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
-                      Pass
+                      {detailCopy.pass}
                     </button>
                   </div>
                   {actionSaving && (
                     <p className="text-xs text-zinc-400 dark:text-zinc-500" role="status">
-                      Saving…
+                      {detailCopy.saving}
                     </p>
                   )}
                   {actionError && (
@@ -508,7 +511,7 @@ export default function MeMatchDetailPage() {
                 {blockConfirmOpen ? (
                   <div className="rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 dark:border-red-900/50 dark:bg-red-950/20">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                      Are you sure? This can&apos;t be undone.
+                      {detailCopy.blockConfirm}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
@@ -517,7 +520,7 @@ export default function MeMatchDetailPage() {
                         disabled={actionSaving}
                         className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                       >
-                        Cancel
+                        {copy.common.cancel}
                       </button>
                       <button
                         type="button"
@@ -525,7 +528,7 @@ export default function MeMatchDetailPage() {
                         disabled={actionSaving}
                         className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/40"
                       >
-                        {actionSaving ? 'Saving…' : 'Block permanently'}
+                        {actionSaving ? detailCopy.saving : detailCopy.blockPermanently}
                       </button>
                     </div>
                   </div>
@@ -539,7 +542,7 @@ export default function MeMatchDetailPage() {
                     disabled={actionSaving}
                     className="text-sm font-medium text-red-600 underline-offset-4 hover:text-red-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
                   >
-                    Block
+                    {detailCopy.block}
                   </button>
                 )}
                 <button
@@ -549,7 +552,7 @@ export default function MeMatchDetailPage() {
                   disabled={actionSaving}
                   className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
                 >
-                  {getCopy(readStoredLocale()).reportUser.linkLabel}
+                  {copy.reportUser.linkLabel}
                 </button>
                 {blockError && (
                   <div
@@ -564,7 +567,7 @@ export default function MeMatchDetailPage() {
                 href="/dating/me-matches"
                 className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
               >
-                Back to matches
+                {detailCopy.backToMatchesButton}
               </Link>
             </footer>
           </article>

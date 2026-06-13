@@ -5,7 +5,7 @@ import { Suspense } from "react";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "הגעת לירושלים",
+  title: "Find your match",
   description: "Dating app — sign in with Google",
 };
 
