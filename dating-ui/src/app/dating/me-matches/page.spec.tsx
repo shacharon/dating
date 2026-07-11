@@ -289,6 +289,53 @@ describe('MeMatchesPage (yourAction badges)', () => {
     unmount();
   });
 
+  it('shows hard-blocked badge, reasons, and keeps Liked chip', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          yourAction: 'LIKE' as const,
+          hardBlocked: {
+            disabled: true as const,
+            reasons: [
+              {
+                code: 'DB_SMOKING_EXCLUDED_TRAIT_PRESENT',
+                dimension: 'smoking',
+                direction: 'viewer_to_them' as const,
+                message: 'English fallback should not show',
+                evidence: {
+                  viewerQuote: "I don't want smokers",
+                  counterpartyQuote: 'I smoke',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('This match is no longer eligible'),
+      ).toBeTruthy();
+    });
+    expect(screen.getByText('No longer a match')).toBeTruthy();
+    expect(screen.getByText('You liked this profile')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'This person smokes, while your preferences exclude smokers.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/You: "I don't want smokers"/)).toBeTruthy();
+    expect(screen.queryByText('Edit your story')).toBeNull();
+    expect(screen.queryByText('→')).toBeNull();
+    expect(screen.queryByText('70')).toBeNull();
+    unmount();
+  });
+
   it('shows nickname as primary label when provided', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',

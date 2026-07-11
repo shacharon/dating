@@ -214,6 +214,13 @@ export interface MatchingFacts {
   dateOfBirth?: string;
   /** Primary location label (e.g. city or region), display/storage only at this layer. */
   primaryLocationLabel?: string;
+  /**
+   * Tag → AFFIRMED/DENIED from free-text self-fact hints (Sprint 17).
+   * Columns above win when set; this fills gaps for extract-at-read.
+   */
+  dealbreakerSelfFacts?: Readonly<
+    Partial<Record<string, 'AFFIRMED' | 'DENIED'>>
+  >;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +233,18 @@ export interface MatchingFacts {
  * When a field is **present**, the candidate must satisfy that constraint (per Step 3).
  * Explicit `ANY` / `NO_REQUIREMENT` remain valid **user-authored** values when stored.
  */
+/**
+ * Partner-preference dealbreaker/requirement signals (Sprint 17).
+ * Sparse — absent / empty means no classifier-derived hard dims.
+ * Structural twin of holy-grail `DealbreakerSignal` (kept here to avoid import cycles).
+ */
+export interface MatchingDealbreakerSignal {
+  readonly tag: string;
+  readonly classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE' | 'SOFT';
+  readonly evidence: string;
+  readonly confidence: number;
+}
+
 export interface MatchingPreferences {
   acceptedPartnerGenders?: readonly AcceptedPartnerGender[];
   /** Inclusive age bounds; omit either side if open-ended. */
@@ -236,6 +255,8 @@ export interface MatchingPreferences {
    * Omit if distance is not a hard constraint.
    */
   maxDistanceKm?: number;
+  /** Classifier-derived partner preferences (Sprint 17 Story 2). */
+  dealbreakerSignals?: readonly MatchingDealbreakerSignal[];
 }
 
 // ---------------------------------------------------------------------------

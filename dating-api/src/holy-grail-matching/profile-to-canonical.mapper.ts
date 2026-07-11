@@ -42,6 +42,8 @@ const MAPPING_INPUT_KEYS = new Set<string>([
   'structuredPreferences',
   'searchOverrides',
   'rankingSignals',
+  'dealbreakerSignals',
+  'dealbreakerSelfFacts',
 ]);
 
 const RANKING_SIGNALS_KEYS = new Set<string>([
@@ -373,6 +375,12 @@ function buildFacts(input: HolyGrailProfileMappingInput): MatchingFacts {
   if (!sf) {
     const tags = buildInterestTags(input);
     if (tags) facts.interestTags = tags;
+    if (
+      input.dealbreakerSelfFacts !== undefined &&
+      Object.keys(input.dealbreakerSelfFacts).length > 0
+    ) {
+      facts.dealbreakerSelfFacts = { ...input.dealbreakerSelfFacts };
+    }
     return facts;
   }
 
@@ -508,6 +516,13 @@ function buildFacts(input: HolyGrailProfileMappingInput): MatchingFacts {
 
   const tags = buildInterestTags(input);
   if (tags) facts.interestTags = tags;
+
+  if (
+    input.dealbreakerSelfFacts !== undefined &&
+    Object.keys(input.dealbreakerSelfFacts).length > 0
+  ) {
+    facts.dealbreakerSelfFacts = { ...input.dealbreakerSelfFacts };
+  }
 
   return facts;
 }
@@ -671,11 +686,18 @@ export function mapProfileSourceToMatchingCanonical(
   validateRankingSignalsSlice(input.rankingSignals);
 
   const profileId = assertNonEmptyProfileId(input.profileId);
+  const preferences = buildPreferences(input.structuredPreferences);
+  if (
+    input.dealbreakerSignals !== undefined &&
+    input.dealbreakerSignals.length > 0
+  ) {
+    preferences.dealbreakerSignals = [...input.dealbreakerSignals];
+  }
   const base: MatchingCanonicalModel = {
     version: MATCHING_CANONICAL_MODEL_VERSION,
     profileId,
     facts: buildFacts(input),
-    preferences: buildPreferences(input.structuredPreferences),
+    preferences,
     searchOverrides: parseSearchOverrides(input.searchOverrides),
   };
   if (input.rankingSignals !== undefined) {

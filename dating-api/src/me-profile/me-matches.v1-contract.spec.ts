@@ -122,7 +122,8 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
       userProfile: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
       userProfileEvaluation: { findFirst: jest.Mock };
       userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
-      matchAction: { findUnique: jest.Mock };
+      matchAction: { findUnique: jest.Mock; findMany: jest.Mock };
+      mutualMatch: { findMany: jest.Mock };
     };
     let service: MeMatchesService;
 
@@ -147,6 +148,9 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         },
         matchAction: {
           findUnique: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        mutualMatch: {
           findMany: jest.fn().mockResolvedValue([]),
         },
       };

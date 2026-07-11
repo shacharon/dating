@@ -41,11 +41,38 @@ export {
   type HolyGrailDimensionBlockingPolicy,
   type HolyGrailDimensionOutcomeCounts,
 } from './eligibility.evaluator';
+export {
+  evaluateDealbreakerDimensions,
+  foldDealbreakerIntoOverall,
+  resolveCounterpartyTraitPolarity,
+  selfFactHintsToPolarityMap,
+  type DealbreakerSelfFactPolarity,
+} from './dealbreaker-eligibility';
 export { adaptHolyGrailEvaluationToLegacyDimensionMap } from './evaluation-to-legacy-dimension-map';
 export { buildHolyGrailEligibilityAuditV1 } from './build-eligibility-audit';
+export {
+  applyDealbreakerGuardrails,
+  DEALBREAKER_HARD_MIN_CONFIDENCE,
+  DEALBREAKER_HARD_DISABLED_TAGS_ENV,
+  getCachedDealbreakerHardDisabledTags,
+  readDealbreakerHardDisabledTagsFromEnv,
+  resetDealbreakerHardDisabledTagsCacheForTests,
+  wouldDemoteHardDealbreaker,
+} from './dealbreaker-guardrails';
+export {
+  accumulateDealbreakerOutcomeCounts,
+  countDealbreakerClassificationVolume,
+  emptyDealbreakerTagOutcomeCounts,
+  formatDealbreakerClassificationVolumeForLog,
+  formatDealbreakerConfidenceForLog,
+  formatDealbreakerOutcomeCountsForLog,
+  formatKillSwitchTagsForLog,
+  hardConfidencePercentiles,
+} from './dealbreaker-telemetry';
 export type {
   HolyGrailEligibilityAuditV1,
   HolyGrailDimensionAuditRow,
+  HolyGrailDealbreakerAuditRow,
 } from './eligibility-audit.types';
 export {
   HolyGrailPairDecisions,
@@ -150,3 +177,33 @@ export {
   type InterestTagsScopeExtraction,
   type InterestTagsTextExtraction,
 } from './interest-tags-text.extract';
+export {
+  ALL_DEALBREAKER_TAGS,
+  DEALBREAKER_ALIAS_TO_BASE,
+  DEALBREAKER_TAGS,
+  DEALBREAKER_TAG_SET,
+  DEALBREAKER_TAXONOMY_VERSION,
+  dealbreakerCategoryForTag,
+  isDealbreakerTag,
+  type DealbreakerCategory,
+  type DealbreakerClassification,
+  type DealbreakerTag,
+} from './dealbreaker-taxonomy';
+export {
+  extractDealbreakerSignalsFromFreeText,
+  extractSelfFactHintsFromFreeText,
+  isNegatedBefore,
+  type DealbreakerSignal,
+  type DealbreakerSignalsTextExtraction,
+  type EmittedDealbreakerClassification,
+  type SelfFactHint,
+  type SelfFactHintField,
+} from './dealbreaker-signals-text.extract';
+export {
+  buildHardBlockReasons,
+  isExistingHardBlockCandidate,
+  toHardBlockedDto,
+  type HardBlockDirection,
+  type HardBlockedDto,
+  type HardBlockReasonDto,
+} from './hard-block-reasons';

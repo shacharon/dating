@@ -19,6 +19,7 @@ import { MatchCelebrationModal } from '@/components/match-celebration-modal';
 import { MatchPhoto } from '@/components/match-photo';
 import { ReportUserDialog } from '@/components/report-user-dialog';
 import { useAppLocale } from '@/lib/i18n';
+import { formatHardBlockReason } from '../hard-block-display';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
@@ -188,6 +189,7 @@ export default function MeMatchDetailPage() {
   }
 
   const statusMessage = actionStatusMessage(yourAction);
+  const isHardBlocked = data?.hardBlocked != null;
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -242,6 +244,54 @@ export default function MeMatchDetailPage() {
                 </p>
               )}
             </header>
+
+            {data.hardBlocked && (
+              <div
+                className="border-b border-amber-200 bg-amber-50 px-6 py-4 dark:border-amber-900/50 dark:bg-amber-950/30"
+                role="region"
+                aria-label={detailCopy.hardBlocked.banner}
+                data-testid="match-detail-hard-blocked"
+              >
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  {detailCopy.hardBlocked.banner}
+                </p>
+                {yourAction === 'LIKE' && (
+                  <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">
+                    {detailCopy.hardBlocked.youLikedThisProfile}
+                  </p>
+                )}
+                <p className="mt-3 text-xs font-medium text-amber-800 dark:text-amber-200">
+                  {detailCopy.hardBlocked.reasonsHeading}
+                </p>
+                <ul className="mt-1 space-y-2">
+                  {data.hardBlocked.reasons.map((r) => {
+                    const formatted = formatHardBlockReason(
+                      r,
+                      detailCopy.hardBlocked,
+                    );
+                    return (
+                      <li
+                        key={`${r.direction}:${r.dimension}:${r.code}`}
+                        className="text-sm text-amber-950 dark:text-amber-50"
+                      >
+                        <p>{formatted.primary}</p>
+                        {formatted.evidence && (
+                          <p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/80">
+                            {formatted.evidence}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Link
+                  href="/settings/preferences"
+                  className="mt-3 inline-block text-sm font-medium text-amber-900 underline-offset-4 hover:underline dark:text-amber-100"
+                >
+                  {detailCopy.hardBlocked.reviewPreferences}
+                </Link>
+              </div>
+            )}
 
             <div className="space-y-5 px-6 py-5 text-sm">
               {(() => {
@@ -447,7 +497,7 @@ export default function MeMatchDetailPage() {
                       <button
                         type="button"
                         onClick={() => void handleUndo()}
-                        disabled={actionSaving}
+                        disabled={actionSaving || isHardBlocked}
                         aria-label={undoAriaLabel(yourAction)}
                         className="text-sm font-medium text-zinc-500 underline-offset-4 hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
                       >
@@ -472,6 +522,13 @@ export default function MeMatchDetailPage() {
                     </>
                   )}
                 </div>
+              ) : isHardBlocked ? (
+                <p
+                  className="text-sm text-zinc-500 dark:text-zinc-400"
+                  role="status"
+                >
+                  {detailCopy.hardBlocked.actionsDisabled}
+                </p>
               ) : (
                 <div className="flex flex-col items-start gap-2">
                   <div className="flex flex-wrap gap-2">

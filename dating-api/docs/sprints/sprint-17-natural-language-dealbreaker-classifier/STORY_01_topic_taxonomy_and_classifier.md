@@ -1,7 +1,7 @@
 # Story 1: Revive + extend the topic taxonomy and deterministic classifier
 
 **Sprint:** 17
-**Status:** Not started
+**Status:** Done
 **Depends on:** — (can start in parallel with Sprint 16)
 
 ---
@@ -20,10 +20,10 @@
 
 ### Acceptance criteria
 
-- [ ] **Revive the taxonomy:** restore `NegativeCategory`, `NEGATIVE_TAGS`, `ALL_NEGATIVE_TAGS`, `NEGATIVE_TAG_SET` from `extracted-negatives.interface.ts` into an active module (e.g. `dealbreaker-taxonomy.ts`), versioned like `INTEREST_TAG_SET` / `PERSONALITY_TRAIT_TAG_SET`.
-- [ ] **Extend with requirement counterparts** where sensible: `no_kids` ↔ `kids_required` and `no_pets` ↔ `pets_required` already exist as a pair; add symmetric pairs for behavioral tags where a "only X" product case is real (e.g. `only_non_smokers`), and extend `must_be_local` / `long_distance_impossible` similarly. Values/social tags (`political_incompatibility`, `jealousy`, `control`, `clingy`, `drama`, `emotional_unavailability`, `commitment_phobic`) stay **exclude-only** — do not invent a require-direction for tags where it has no real product meaning.
-- [ ] **New classification type:** `DealbreakerClassification = 'HARD_EXCLUDE' | 'HARD_REQUIRE' | 'SOFT' | 'NEUTRAL'` (replaces the old binary `hard`/`soft`).
-- [ ] **New extraction output shape**, per profile per domain (`self` / `partner` — reuse the existing self-vs-partner-text split, do **not** conflate a self-fact with a partner-preference):
+- [x] **Revive the taxonomy:** restore `NegativeCategory`, `NEGATIVE_TAGS`, `ALL_NEGATIVE_TAGS`, `NEGATIVE_TAG_SET` from `extracted-negatives.interface.ts` into an active module (e.g. `dealbreaker-taxonomy.ts`), versioned like `INTEREST_TAG_SET` / `PERSONALITY_TRAIT_TAG_SET`.
+- [x] **Extend with requirement counterparts** where sensible: `no_kids` ↔ `kids_required` and `no_pets` ↔ `pets_required` already exist as a pair; add symmetric pairs for behavioral tags where a "only X" product case is real (e.g. `only_non_smokers`), and extend `must_be_local` / `long_distance_impossible` similarly. Values/social tags (`political_incompatibility`, `jealousy`, `control`, `clingy`, `drama`, `emotional_unavailability`, `commitment_phobic`) stay **exclude-only** — do not invent a require-direction for tags where it has no real product meaning.
+- [x] **New classification type:** `DealbreakerClassification = 'HARD_EXCLUDE' | 'HARD_REQUIRE' | 'SOFT' | 'NEUTRAL'` (replaces the old binary `hard`/`soft`).
+- [x] **New extraction output shape**, per profile per domain (`self` / `partner` — reuse the existing self-vs-partner-text split, do **not** conflate a self-fact with a partner-preference):
 
   ```ts
   export interface DealbreakerSignal {
@@ -34,13 +34,13 @@
   }
   ```
 
-- [ ] **Deterministic detection, following the existing enrichment discipline** (`enrichment-v2.ts`, `interest-tags-text.extract.ts`):
+- [x] **Deterministic detection, following the existing enrichment discipline** (`enrichment-v2.ts`, `interest-tags-text.extract.ts`):
   - Regex pattern per tag, matched against `aboutMe` + `aboutPartner` + `aboutRelationship`.
   - **Negation detection** reused from the existing `isNegatedBefore`-style window check.
   - **Polarity detection**: phrasing that unambiguously signals exclusion ("don't want", "won't date", "dealbreaker", "no smokers", explicit negation of the trait as a requirement) → `HARD_EXCLUDE`. Phrasing that unambiguously signals a positive-only requirement ("only", "must", "non-negotiable: X") → `HARD_REQUIRE`. Anything softer ("prefer not to", "not a huge fan of", "would be nice if") or ambiguous → `SOFT`. No match → `NEUTRAL` (tag absent from output, not an explicit zero).
   - **Context-window disambiguation** reused where a tag has known false-positive patterns (mirror the existing cooking-job / fermentation-lab / fungi-lab-tech patterns as the template for any topic that needs it).
-- [ ] **Self-fact carve-out:** a statement about the profile owner's own trait (e.g. "I smoke", domain = self) is captured separately as a self-fact update (existing `UserProfile` self-fact columns from Sprint 15 — `smokingFrequency`, etc.) and **never** enters `DealbreakerSignal` output, which is partner-preference-only.
-- [ ] **Tests:** table-driven spec covering every tag × the 4 classifications × at least one negation case and one context-disambiguation case per tag family, mirroring `enrichment-canonical-labels.spec.ts`'s structure. Include your exact examples as literal test cases:
+- [x] **Self-fact carve-out:** a statement about the profile owner's own trait (e.g. "I smoke", domain = self) is captured separately as a self-fact update (existing `UserProfile` self-fact columns from Sprint 15 — `smokingFrequency`, etc.) and **never** enters `DealbreakerSignal` output, which is partner-preference-only.
+- [x] **Tests:** table-driven spec covering every tag × the 4 classifications × at least one negation case and one context-disambiguation case per tag family, mirroring `enrichment-canonical-labels.spec.ts`'s structure. Include your exact examples as literal test cases:
   - "I smoke" → no `DealbreakerSignal` (self-fact only, not a preference)
   - "I don't want smokers" → `{ tag: 'smoking', classification: 'HARD_EXCLUDE' }`
   - "I don't care about smoking" → `{ tag: 'smoking', classification: 'SOFT' }`
@@ -57,8 +57,15 @@
 
 ## Definition of done
 
-- [ ] Taxonomy revived, extended with sensible requirement counterparts, versioned
-- [ ] Classifier is pure and deterministic; same input text always produces the same `DealbreakerSignal[]`
-- [ ] Table-driven tests cover all 4 classifications per tag family, including negation and disambiguation cases
-- [ ] Zero LLM calls, zero network calls in this module
-- [ ] Full `dating-api` test suite green
+- [x] Taxonomy revived, extended with sensible requirement counterparts, versioned
+- [x] Classifier is pure and deterministic; same input text always produces the same `DealbreakerSignal[]`
+- [x] Table-driven tests cover all 4 classifications per tag family, including negation and disambiguation cases
+- [x] Zero LLM calls, zero network calls in this module
+- [x] Full `dating-api` test suite green
+
+### Implementation notes (PM close)
+
+- Live modules: `dealbreaker-taxonomy.ts`, `dealbreaker-signals-text.extract.ts` (+ spec); `extracted-negatives.interface.ts` deprecated and re-exports taxonomy.
+- Self-fact carve-out emits `SelfFactHint[]` (not persisted yet — Story 2).
+- Agent 4: **N/A** for new matches scenarios (classifier not wired); baseline E2E smoke green.
+- Test surface verified this pipeline: holy-grail-matching **225** + baseline me-new-model E2E **16**.

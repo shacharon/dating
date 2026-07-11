@@ -1,5 +1,12 @@
 import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-profile-api';
 
+function usableLocationLabel(locationLabel: string | null): string | null {
+  const trimmed = locationLabel?.trim() ?? '';
+  // Hide empty / junk single-character labels (e.g. stray "e").
+  if (trimmed.length <= 1) return null;
+  return trimmed;
+}
+
 function matchMetaParts(
   gender: string | null,
   ageYears: number | null,
@@ -8,7 +15,7 @@ function matchMetaParts(
   return [
     gender,
     ageYears != null ? `${ageYears}y` : null,
-    locationLabel,
+    usableLocationLabel(locationLabel),
   ].filter((part): part is string => Boolean(part));
 }
 
@@ -38,7 +45,7 @@ export function matchDetailTitle(m: MeMatchDetailDto): string {
 export function matchDetailSubtitle(m: MeMatchDetailDto): string | null {
   if (m.nickname?.trim()) {
     const meta = matchMetaParts(m.gender, m.ageYears, m.locationLabel).join(' · ');
-    return meta || m.locationLabel;
+    return meta || null;
   }
-  return m.locationLabel;
+  return usableLocationLabel(m.locationLabel);
 }

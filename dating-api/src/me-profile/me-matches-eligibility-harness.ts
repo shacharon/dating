@@ -159,6 +159,10 @@ export class EligibilityTestHarness {
   private readonly sessionMap = new Map<string, { userId: string; hash: string }>();
   private readonly identitiesByGoogleId = new Map<string, HarnessIdentity>();
   private readonly identitiesById = new Map<string, HarnessIdentity>();
+  /** Key: `${actorUserId}:${targetUserId}` */
+  private readonly matchActions = new Map<string, Record<string, unknown>>();
+  /** Key: `${userId1}:${userId2}` (sorted pair) */
+  private readonly mutualMatches = new Map<string, Record<string, unknown>>();
 
   private readonly verifyIdToken = jest.fn();
 
@@ -387,8 +391,168 @@ export class EligibilityTestHarness {
       ),
     },
     matchAction: {
-      findMany: jest.fn().mockResolvedValue([]),
-      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: { actorUserId?: string };
+        } = {}) => {
+          const rows = [...this.matchActions.values()];
+          if (where?.actorUserId === undefined) return rows;
+          return rows.filter((r) => r['actorUserId'] === where.actorUserId);
+        },
+      ),
+      findUnique: jest.fn(
+        async ({
+          where,
+        }: {
+          where: {
+            actorUserId_targetUserId: {
+              actorUserId: string;
+              targetUserId: string;
+            };
+          };
+        }) => {
+          const { actorUserId, targetUserId } = where.actorUserId_targetUserId;
+          return (
+            this.matchActions.get(`${actorUserId}:${targetUserId}`) ?? null
+          );
+        },
+      ),
+      upsert: jest.fn(
+        async ({
+          where,
+          create,
+          update,
+        }: {
+          where: {
+            actorUserId_targetUserId: {
+              actorUserId: string;
+              targetUserId: string;
+            };
+          };
+          create: Record<string, unknown>;
+          update: Record<string, unknown>;
+        }) => {
+          const { actorUserId, targetUserId } = where.actorUserId_targetUserId;
+          const key = `${actorUserId}:${targetUserId}`;
+          const existing = this.matchActions.get(key);
+          if (existing) {
+            const merged = { ...existing, ...update };
+            this.matchActions.set(key, merged);
+            return merged;
+          }
+          const row = {
+            id: `ma_${actorUserId}_${targetUserId}`,
+            createdAt: new Date(),
+            ...create,
+          };
+          this.matchActions.set(key, row);
+          return row;
+        },
+      ),
+      delete: jest.fn(
+        async ({
+          where,
+        }: {
+          where: {
+            actorUserId_targetUserId: {
+              actorUserId: string;
+              targetUserId: string;
+            };
+          };
+        }) => {
+          const { actorUserId, targetUserId } = where.actorUserId_targetUserId;
+          const key = `${actorUserId}:${targetUserId}`;
+          const existing = this.matchActions.get(key);
+          this.matchActions.delete(key);
+          return existing ?? {};
+        },
+      ),
+    },
+    mutualMatch: {
+      findMany: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: {
+            status?: string;
+            OR?: Array<{ userId1?: string; userId2?: string }>;
+          };
+        } = {}) => {
+          let rows = [...this.mutualMatches.values()];
+          if (where?.status) {
+            rows = rows.filter((r) => r['status'] === where.status);
+          }
+          if (where?.OR && where.OR.length > 0) {
+            rows = rows.filter((r) =>
+              where.OR!.some(
+                (clause) =>
+                  (clause.userId1 !== undefined &&
+                    r['userId1'] === clause.userId1) ||
+                  (clause.userId2 !== undefined &&
+                    r['userId2'] === clause.userId2),
+              ),
+            );
+          }
+          return rows;
+        },
+      ),
+      findUnique: jest.fn(
+        async ({
+          where,
+        }: {
+          where: { userId1_userId2: { userId1: string; userId2: string } };
+        }) => {
+          const { userId1, userId2 } = where.userId1_userId2;
+          return this.mutualMatches.get(`${userId1}:${userId2}`) ?? null;
+        },
+      ),
+      findFirst: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: {
+            userId1?: string;
+            userId2?: string;
+            status?: string;
+          };
+        } = {}) => {
+          for (const row of this.mutualMatches.values()) {
+            if (
+              where?.userId1 !== undefined &&
+              row['userId1'] !== where.userId1
+            ) {
+              continue;
+            }
+            if (
+              where?.userId2 !== undefined &&
+              row['userId2'] !== where.userId2
+            ) {
+              continue;
+            }
+            if (where?.status !== undefined && row['status'] !== where.status) {
+              continue;
+            }
+            return row;
+          }
+          return null;
+        },
+      ),
+      create: jest.fn(
+        async ({ data }: { data: Record<string, unknown> }) => {
+          const userId1 = data['userId1'] as string;
+          const userId2 = data['userId2'] as string;
+          const row = {
+            id: `mm_${userId1}_${userId2}`,
+            status: 'ACTIVE',
+            createdAt: new Date(),
+            ...data,
+          };
+          this.mutualMatches.set(`${userId1}:${userId2}`, row);
+          return row;
+        },
+      ),
     },
     userProfilePhoto: {
       count: jest.fn().mockResolvedValue(1),
@@ -510,10 +674,36 @@ export class EligibilityTestHarness {
     });
   }
 
+  /** Real GET /api/v1/me/profile. */
+  async getProfile(cookie: string) {
+    return request(this.app.getHttpServer())
+      .get('/api/v1/me/profile')
+      .set('Cookie', [this.cookieHeader(cookie)]);
+  }
+
   /** Real GET /api/v1/me/matches. */
   async getMatches(cookie: string) {
     return request(this.app.getHttpServer())
       .get('/api/v1/me/matches')
       .set('Cookie', [this.cookieHeader(cookie)]);
+  }
+
+  /** Real GET /api/v1/me/matches/:id. */
+  async getMatchById(cookie: string, candidateProfileId: string) {
+    return request(this.app.getHttpServer())
+      .get(`/api/v1/me/matches/${encodeURIComponent(candidateProfileId)}`)
+      .set('Cookie', [this.cookieHeader(cookie)]);
+  }
+
+  /** Real POST /api/v1/me/matches/:id/actions. */
+  async postMatchAction(
+    cookie: string,
+    candidateProfileId: string,
+    action: 'LIKE' | 'PASS' | 'BLOCK',
+  ) {
+    return request(this.app.getHttpServer())
+      .post(`/api/v1/me/matches/${encodeURIComponent(candidateProfileId)}/actions`)
+      .set('Cookie', [this.cookieHeader(cookie)])
+      .send({ action });
   }
 }

@@ -72,6 +72,7 @@ export const ErrorCodes = {
    * candidate evaluated.
    */
   ME_MATCHES_HG_DIMENSION_OUTCOMES: 'ME_MATCHES_HG_DIMENSION_OUTCOMES',
+  ME_MATCHES_HG_DEALBREAKER_OUTCOMES: 'ME_MATCHES_HG_DEALBREAKER_OUTCOMES',
   /** Me conversations: GET /me/conversations — list returned */
   ME_CONVERSATIONS_LIST_OK: 'ME_CONVERSATIONS_LIST_OK',
   /** Me conversations: GET /me/conversations/:id — detail returned */

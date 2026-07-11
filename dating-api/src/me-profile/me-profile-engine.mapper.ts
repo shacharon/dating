@@ -364,6 +364,7 @@ export function buildChildrenUnsureRowFromNewModel(
       id: profile.id,
       aboutMe: profile.aboutMe ?? undefined,
       aboutPartner: profile.aboutPartner,
+      aboutRelationship: profile.aboutRelationship,
       holyGrailStructuredFacts: facts,
       holyGrailStructuredPreferences: prefs,
       // Phase 2: extractionV2 not populated (ranking signals are Phase 3).

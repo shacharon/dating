@@ -48,6 +48,9 @@ function makeProfileRow(overrides: {
   wantsChildren?: string | null;
   smokingFrequency?: string | null;
   alcoholUse?: string | null;
+  aboutMe?: string | null;
+  aboutPartner?: string | null;
+  aboutRelationship?: string | null;
   updatedAt?: Date;
   /** Joined `UserProfilePreference` row (Phase F: HG prefs live here only). */
   preference?: ReturnType<typeof makePrefRow> | null;
@@ -65,9 +68,9 @@ function makeProfileRow(overrides: {
     city: 'TLV',
     country: 'IL',
     locationLabel: 'Tel Aviv, IL',
-    aboutMe: 'About me text',
-    aboutPartner: 'About partner text',
-    aboutRelationship: 'About relationship text',
+    aboutMe: overrides.aboutMe ?? 'About me text',
+    aboutPartner: overrides.aboutPartner ?? 'About partner text',
+    aboutRelationship: overrides.aboutRelationship ?? 'About relationship text',
     analyzedAt: new Date('2026-04-01T10:00:00.000Z'),
     updatedAt: overrides.updatedAt ?? new Date('2026-04-01T10:00:00.000Z'),
     _count: { evaluations: overrides.evaluationCount ?? 1 },
@@ -95,6 +98,7 @@ describe('MeMatchesService', () => {
     userProfileEvaluation: { findFirst: jest.Mock };
     userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
     matchAction: { findMany: jest.Mock; findUnique: jest.Mock };
+    mutualMatch: { findMany: jest.Mock };
   };
 
   /** Default latest eval for any profile id (ORDER BY createdAt DESC LIMIT 1 contract). */
@@ -139,6 +143,9 @@ describe('MeMatchesService', () => {
       matchAction: {
         findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue(null),
+      },
+      mutualMatch: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
     photoStorage = { read: jest.fn() };
@@ -768,6 +775,175 @@ describe('MeMatchesService', () => {
       expect(result.matches).toHaveLength(1);
     });
 
+    // Sprint 18 Story 1 — existing vs new hard-block visibility
+    describe('existing hard-block visibility (Sprint 18)', () => {
+      const smokingViewer = () =>
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          aboutPartner: "I don't want smokers",
+        });
+      const smokingCandidate = (id: string, userId: string) =>
+        makeProfileRow({
+          id,
+          userId,
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+          aboutMe: 'I smoke',
+        });
+
+      it('omits new hard-FAIL candidate (no LIKE / mutual)', async () => {
+        prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
+        prisma.userProfile.findMany.mockResolvedValue([
+          smokingCandidate(candidateProfileId, 'user_cand'),
+        ]);
+        prisma.matchAction.findMany.mockResolvedValue([]);
+        prisma.mutualMatch.findMany.mockResolvedValue([]);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.status).toBe('ready');
+        expect(result.matches).toHaveLength(0);
+      });
+
+      it('omits PASS-only hard-FAIL candidate', async () => {
+        prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
+        prisma.userProfile.findMany.mockResolvedValue([
+          smokingCandidate(candidateProfileId, 'user_cand'),
+        ]);
+        prisma.matchAction.findMany.mockResolvedValue([
+          { targetUserId: 'user_cand', action: 'PASS' },
+        ]);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.matches).toHaveLength(0);
+      });
+
+      it('keeps Liked hard-FAIL candidate with hardBlocked + smoking reasons', async () => {
+        prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
+        prisma.userProfile.findMany.mockResolvedValue([
+          smokingCandidate(candidateProfileId, 'user_cand'),
+        ]);
+        prisma.matchAction.findMany.mockResolvedValue([
+          { targetUserId: 'user_cand', action: 'LIKE' },
+        ]);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.status).toBe('ready');
+        expect(result.matches).toHaveLength(1);
+        const item = result.matches![0]!;
+        expect(item.id).toBe(candidateProfileId);
+        expect(item.yourAction).toBe('LIKE');
+        expect(item.hardBlocked?.disabled).toBe(true);
+        expect(item.hardBlocked!.reasons.length).toBeGreaterThanOrEqual(1);
+        expect(
+          item.hardBlocked!.reasons.some(
+            (r) =>
+              r.dimension === 'smoking' &&
+              r.direction === 'viewer_to_them' &&
+              r.evidence?.viewerQuote != null &&
+              r.evidence?.counterpartyQuote != null,
+          ),
+        ).toBe(true);
+      });
+
+      it('keeps hard-FAIL candidate with ACTIVE mutual and no LIKE', async () => {
+        prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
+        prisma.userProfile.findMany.mockResolvedValue([
+          smokingCandidate(candidateProfileId, 'user_cand'),
+        ]);
+        prisma.matchAction.findMany.mockResolvedValue([]);
+        prisma.mutualMatch.findMany.mockResolvedValue([
+          { userId1: viewerUserId, userId2: 'user_cand' },
+        ]);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.matches).toHaveLength(1);
+        expect(result.matches![0]!.hardBlocked?.disabled).toBe(true);
+      });
+
+      it('sorts hard-blocked existing after eligible matches', async () => {
+        prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
+        prisma.userProfile.findMany.mockResolvedValue([
+          smokingCandidate('prof_blocked', 'user_blocked'),
+          makeProfileRow({
+            id: 'prof_ok',
+            userId: 'user_ok',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+            aboutMe: 'I love hiking',
+          }),
+        ]);
+        prisma.matchAction.findMany.mockResolvedValue([
+          { targetUserId: 'user_blocked', action: 'LIKE' },
+        ]);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.matches?.map((m) => m.id)).toEqual([
+          'prof_ok',
+          'prof_blocked',
+        ]);
+        expect(result.matches![0]!.hardBlocked).toBeUndefined();
+        expect(result.matches![1]!.hardBlocked?.disabled).toBe(true);
+      });
+    });
+
+  });
+
+  describe('getById() — existing hard-block visibility (Sprint 18)', () => {
+    const smokingViewer = () =>
+      makeProfileRow({
+        id: viewerProfileId,
+        userId: viewerUserId,
+        gender: 'MALE',
+        desiredPartnerGenders: ['FEMALE'],
+        aboutPartner: "I don't want smokers",
+      });
+    const smokingCandidate = () =>
+      makeProfileRow({
+        id: candidateProfileId,
+        userId: 'user_cand',
+        gender: 'FEMALE',
+        desiredPartnerGenders: ['MALE'],
+        aboutMe: 'I smoke',
+      });
+
+    it('404s hard-FAIL when candidate is not existing', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(smokingViewer())
+        .mockResolvedValueOnce(smokingCandidate());
+      prisma.matchAction.findUnique.mockResolvedValue(null);
+      mutualMatches.findActiveByUserPair.mockResolvedValue(null);
+
+      await expect(
+        service.getById(viewerUserId, candidateProfileId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns 200 + hardBlocked when Liked hard-FAIL', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(smokingViewer())
+        .mockResolvedValueOnce(smokingCandidate());
+      // assertViewerHasNotBlockedTarget
+      prisma.matchAction.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ action: 'LIKE' });
+      mutualMatches.findActiveByUserPair.mockResolvedValue(null);
+
+      const detail = await service.getById(viewerUserId, candidateProfileId);
+
+      expect(detail.id).toBe(candidateProfileId);
+      expect(detail.hardBlocked?.disabled).toBe(true);
+      expect(detail.hardBlocked!.reasons.some((r) => r.dimension === 'smoking')).toBe(
+        true,
+      );
+    });
   });
 
   // ─── list() — matchScore from UserProfileEvaluation ──────────────────────
@@ -1807,6 +1983,9 @@ describe('MeMatchesService', () => {
           count: jest.fn().mockResolvedValue(1),
         },
         matchAction: {
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        mutualMatch: {
           findMany: jest.fn().mockResolvedValue([]),
         },
       };

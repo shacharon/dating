@@ -4,6 +4,13 @@ import type {
   UserProfileStatus,
 } from '@prisma/client';
 
+export type InferredDealbreakerDto = {
+  tag: string;
+  classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE';
+  evidence: string;
+  confidence: number;
+};
+
 /**
  * GET / POST / PATCH success body for `/api/v1/me/profile`.
  * Dates serialize to ISO 8601 strings in JSON responses.
@@ -45,4 +52,10 @@ export class MeProfileResponseDto {
   partnerAgeMin!: number | null;
   partnerAgeMax!: number | null;
   maxDistanceKm!: number | null;
+
+  /**
+   * Post-guardrail HARD_EXCLUDE / HARD_REQUIRE inferred from free text (Sprint 17).
+   * Empty when none. Read-only — not a user-configured setting.
+   */
+  inferredDealbreakers!: InferredDealbreakerDto[];
 }

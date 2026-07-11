@@ -9,9 +9,22 @@ export interface HolyGrailDimensionAuditRow {
   readonly ruleRef?: string;
 }
 
+/** Classifier-derived hard dealbreaker/requirement row with evidence trail. */
+export interface HolyGrailDealbreakerAuditRow {
+  readonly tag: string;
+  readonly result: MatchingDimensionResult;
+  readonly classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE';
+  readonly evidence: string;
+  readonly confidence: number;
+  readonly reasonCode: string;
+  /** True when kill-switch or confidence floor demoted this tag before eval. */
+  readonly guardrailDemoted?: boolean;
+}
+
 /**
  * Layer 4 — Serializable audit bundle for one directional evaluation.
  * Version independently from `matching_canonical_v1`.
+ * Additive optional `dealbreakerDimensions` (Sprint 17 Story 3).
  */
 export interface HolyGrailEligibilityAuditV1 {
   readonly auditVersion: 'holy_grail_eligibility_audit_v1';
@@ -21,4 +34,6 @@ export interface HolyGrailEligibilityAuditV1 {
   readonly searcherProfileId: string;
   readonly counterpartyProfileId: string;
   readonly dimensions: readonly HolyGrailDimensionAuditRow[];
+  /** Present when searcher had hard dealbreaker dims (post-guardrail). */
+  readonly dealbreakerDimensions?: readonly HolyGrailDealbreakerAuditRow[];
 }

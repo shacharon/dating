@@ -3,6 +3,7 @@ export interface ChildrenUnsureProfileRow {
   readonly id: string;
   readonly aboutMe?: string;
   readonly aboutPartner?: string | null;
+  readonly aboutRelationship?: string | null;
   readonly holyGrailStructuredFacts: unknown;
   readonly holyGrailStructuredPreferences: unknown;
   readonly extractionV2?: {

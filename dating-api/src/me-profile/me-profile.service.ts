@@ -23,6 +23,7 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import { PrismaService } from '../prisma/prisma.service';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
+import { extractDealbreakerSignalsFromFreeText } from '../holy-grail-matching/dealbreaker-signals-text.extract';
 import type {
   CreateMeProfileDto,
   MeLatestAnalysisResponseDto,
@@ -211,6 +212,25 @@ function toResponse(
   row: UserProfile,
   preference: UserProfilePreference | null,
 ): MeProfileResponseDto {
+  const inferredDealbreakers = extractDealbreakerSignalsFromFreeText({
+    aboutMe: row.aboutMe,
+    aboutPartner: row.aboutPartner,
+    aboutRelationship: row.aboutRelationship,
+  }).signals
+    .filter(
+      (s): s is typeof s & {
+        classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE';
+      } =>
+        s.classification === 'HARD_EXCLUDE' ||
+        s.classification === 'HARD_REQUIRE',
+    )
+    .map((s) => ({
+      tag: s.tag as string,
+      classification: s.classification,
+      evidence: s.evidence,
+      confidence: s.confidence,
+    }));
+
   return {
     id: row.id,
     userId: row.userId,
@@ -243,6 +263,7 @@ function toResponse(
     partnerAgeMin: preference?.partnerAgeMin ?? null,
     partnerAgeMax: preference?.partnerAgeMax ?? null,
     maxDistanceKm: preference?.maxDistanceKm ?? null,
+    inferredDealbreakers,
   };
 }
 

@@ -52,6 +52,37 @@ export const enCopy: AppCopySchema = {
         passed: { label: "Passed", ariaLabel: "You passed on this match" },
         blocked: { label: "Blocked", ariaLabel: "You blocked this match" },
       },
+      hardBlocked: {
+        badge: "No longer a match",
+        badgeAria: "This match is no longer eligible",
+        youLikedThisProfile: "You liked this profile",
+        moreReasonsCount: (count) => `+ ${count} more mismatch${count === 1 ? '' : 'es'}`,
+        smokingExcludedViewerToThem:
+          "This person smokes, while your preferences exclude smokers.",
+        smokingExcludedThemToViewer:
+          "You smoke, while their preferences exclude smokers.",
+        smokingRequiredViewerToThem:
+          "This person doesn't smoke, while you only want smokers.",
+        smokingRequiredThemToViewer:
+          "You don't smoke, while they only want smokers.",
+        ageViewerToThem: "Their age is outside your preferred age range.",
+        ageThemToViewer: "Your age is outside their preferred age range.",
+        genderViewerToThem:
+          "Their gender is outside your partner gender preferences.",
+        genderThemToViewer:
+          "Your gender is outside their partner gender preferences.",
+        proximityViewerToThem: "They are outside your preferred distance.",
+        proximityThemToViewer: "You are outside their preferred distance.",
+        genericViewerToThem:
+          "Something in their profile conflicts with your preferences.",
+        genericThemToViewer:
+          "Something in your profile conflicts with their preferences.",
+        evidenceBoth: (viewerQuote, counterpartyQuote) =>
+          `You: "${viewerQuote}" · Them: "${counterpartyQuote}"`,
+        evidenceViewer: (viewerQuote) => `You: "${viewerQuote}"`,
+        evidenceCounterparty: (counterpartyQuote) => `Them: "${counterpartyQuote}"`,
+      },
+      updatedPrefix: "Updated",
     },
     detail: {
       backToMatches: "← Back to matches",
@@ -85,6 +116,38 @@ export const enCopy: AppCopySchema = {
       undoFailed: "Failed to undo match action",
       feedbackFailed: "Failed to submit feedback",
       blockFailed: "Failed to block match",
+      hardBlocked: {
+        banner: "No longer a match",
+        reasonsHeading: "Why",
+        reviewPreferences: "Review preferences",
+        actionsDisabled:
+          "Like and Pass are unavailable while this match is blocked by preferences.",
+        youLikedThisProfile: "You liked this profile",
+        smokingExcludedViewerToThem:
+          "This person smokes, while your preferences exclude smokers.",
+        smokingExcludedThemToViewer:
+          "You smoke, while their preferences exclude smokers.",
+        smokingRequiredViewerToThem:
+          "This person doesn't smoke, while you only want smokers.",
+        smokingRequiredThemToViewer:
+          "You don't smoke, while they only want smokers.",
+        ageViewerToThem: "Their age is outside your preferred age range.",
+        ageThemToViewer: "Your age is outside their preferred age range.",
+        genderViewerToThem:
+          "Their gender is outside your partner gender preferences.",
+        genderThemToViewer:
+          "Your gender is outside their partner gender preferences.",
+        proximityViewerToThem: "They are outside your preferred distance.",
+        proximityThemToViewer: "You are outside their preferred distance.",
+        genericViewerToThem:
+          "Something in their profile conflicts with your preferences.",
+        genericThemToViewer:
+          "Something in your profile conflicts with their preferences.",
+        evidenceBoth: (viewerQuote, counterpartyQuote) =>
+          `You: "${viewerQuote}" · Them: "${counterpartyQuote}"`,
+        evidenceViewer: (viewerQuote) => `You: "${viewerQuote}"`,
+        evidenceCounterparty: (counterpartyQuote) => `Them: "${counterpartyQuote}"`,
+      },
     },
     celebration: {
       title: "It's a match!",
@@ -301,6 +364,16 @@ export const enCopy: AppCopySchema = {
       FEMALE: "Female",
       NON_BINARY: "Non-binary",
       OTHER: "Other",
+      PREFER_NOT_TO_SAY: "Prefer not to say",
+    },
+    inferredDealbreakers: {
+      title: "What we read as dealbreakers",
+      disclaimer:
+        "Inferred from your story text — not a setting you configured. Edit your story to change what we read.",
+      empty: "We haven't inferred any dealbreakers or hard requirements from your text yet.",
+      dealbreakerLine: (quote) => `We read this as a dealbreaker: "${quote}"`,
+      requirementLine: (quote) => `We read this as a requirement: "${quote}"`,
+      editStoryCta: "Edit your story",
     },
   },
   reportUser: {

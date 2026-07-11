@@ -37,6 +37,11 @@ import { extractInterestTagsV1FromFreeText } from '../interest-tags-text.extract
 import { extractLifestyleSignalsFromFreeText } from '../lifestyle-signals-text.extract';
 import { extractPersonalityTraitsFromFreeText } from '../personality-traits-text.extract';
 import {
+  extractDealbreakerSignalsFromFreeText,
+  extractSelfFactHintsFromFreeText,
+} from '../dealbreaker-signals-text.extract';
+import { selfFactHintsToPolarityMap } from '../dealbreaker-eligibility';
+import {
   matchingCanonicalEnumMemberSet,
   pickMatchingCanonicalEnumMember,
 } from '../holy-grail-canonical-enum';
@@ -320,6 +325,7 @@ export function buildHolyGrailProfileMappingInputFromDbRow(args: {
   signalSelf?: ProfileSignalSelfRow | null;
   aboutMe?: string | null;
   aboutPartner?: string | null;
+  aboutRelationship?: string | null;
 }): HolyGrailProfileMappingInput {
   const sf = parseHolyGrailStructuredFactsFromJson(
     args.holyGrailStructuredFacts,
@@ -331,6 +337,11 @@ export function buildHolyGrailProfileMappingInputFromDbRow(args: {
   const baseRanking = buildHolyGrailRankingSignalsFromDbSelfRow(
     args.signalSelf ?? null,
   );
+  const textFields = {
+    aboutMe: args.aboutMe,
+    aboutPartner: args.aboutPartner,
+    aboutRelationship: args.aboutRelationship,
+  };
   const pt = extractPersonalityTraitsFromFreeText({
     aboutMe: args.aboutMe,
     aboutPartner: args.aboutPartner,
@@ -343,6 +354,10 @@ export function buildHolyGrailProfileMappingInputFromDbRow(args: {
     aboutMe: args.aboutMe,
     aboutPartner: args.aboutPartner,
   });
+  const dealbreakerExt = extractDealbreakerSignalsFromFreeText(textFields);
+  const selfHints = extractSelfFactHintsFromFreeText(textFields);
+  const dealbreakerSelfFacts = selfFactHintsToPolarityMap(selfHints);
+
   const rankingSignals: MatchingRankingSignalsSnapshot = {
     ...baseRanking,
     ...(pt.self.tags.length > 0
@@ -379,6 +394,12 @@ export function buildHolyGrailProfileMappingInputFromDbRow(args: {
     ...(sf !== undefined ? { structuredFacts: sf } : {}),
     ...(sp !== undefined ? { structuredPreferences: sp } : {}),
     rankingSignals,
+    ...(dealbreakerExt.signals.length > 0
+      ? { dealbreakerSignals: [...dealbreakerExt.signals] }
+      : {}),
+    ...(Object.keys(dealbreakerSelfFacts).length > 0
+      ? { dealbreakerSelfFacts }
+      : {}),
   };
 }
 
@@ -390,6 +411,7 @@ export type HolyGrailRankingAwareDbRow = {
   readonly id: string;
   readonly aboutMe?: string;
   readonly aboutPartner?: string | null;
+  readonly aboutRelationship?: string | null;
   readonly holyGrailStructuredFacts: unknown;
   readonly holyGrailStructuredPreferences: unknown;
   readonly signalSnapshots?: ProfileSignalSelfRow[];
@@ -407,5 +429,6 @@ export function buildHolyGrailProfileMappingInputFromRankingAwareDbRow(
     signalSelf: selfSnap ?? null,
     aboutMe: row.aboutMe,
     aboutPartner: row.aboutPartner,
+    aboutRelationship: row.aboutRelationship,
   });
 }

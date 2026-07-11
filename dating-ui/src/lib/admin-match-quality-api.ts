@@ -99,6 +99,17 @@ export type MatchQualityAuditReport = {
     primaryTakeaway: string;
     suggestedNextAction: string;
   } | null;
+  holyGrailEligibility?: {
+    overallHardEligibility: 'PASS' | 'FAIL';
+    dealbreakerDimensions: Array<{
+      tag: string;
+      result: string;
+      classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE';
+      evidence: string;
+      confidence: number;
+      reasonCode: string;
+    }>;
+  };
 };
 
 export type CandidateAuditResponse = {

@@ -19,6 +19,7 @@ describe('adaptHolyGrailEvaluationToLegacyDimensionMap', () => {
         AGE: { status: 'FAIL', reasonCode: 'bad' },
         PROXIMITY: { status: 'SKIPPED', reasonCode: 'geo' },
       },
+      dealbreakerDimensions: {},
       overallHardEligibility: 'FAIL',
       eligibilityFlags: { children_unsure: false },
     };
@@ -36,6 +37,7 @@ describe('adaptHolyGrailEvaluationToLegacyDimensionMap', () => {
     dims.GENDER = { status: 'SOFT_PASS', reasonCode: 'soft' };
     const evaluation: HolyGrailDirectionalEvaluationResult = {
       dimensions: dims,
+      dealbreakerDimensions: {},
       overallHardEligibility: 'PASS',
       eligibilityFlags: { children_unsure: false },
     };
@@ -51,6 +53,7 @@ describe('adaptHolyGrailEvaluationToLegacyDimensionMap', () => {
     };
     const evaluation: HolyGrailDirectionalEvaluationResult = {
       dimensions: dims,
+      dealbreakerDimensions: {},
       overallHardEligibility: 'FAIL',
       eligibilityFlags: { children_unsure: false },
     };

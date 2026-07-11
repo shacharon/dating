@@ -197,6 +197,49 @@ export default function AdminMatchQualityCandidatePage() {
                   </p>
                 </>
               ) : null}
+              {data.audit.holyGrailEligibility ? (
+                <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                  <p className="mb-2 font-medium text-zinc-700 dark:text-zinc-300">
+                    Dealbreaker eligibility (viewer → candidate)
+                  </p>
+                  <p className="mb-2 text-xs text-zinc-500">
+                    Overall:{' '}
+                    {data.audit.holyGrailEligibility.overallHardEligibility}
+                  </p>
+                  {data.audit.holyGrailEligibility.dealbreakerDimensions
+                    .length === 0 ? (
+                    <p className="text-xs text-zinc-500">No hard dealbreaker dimensions.</p>
+                  ) : (
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-zinc-500">
+                          <th className="py-1 pr-2">Tag</th>
+                          <th className="py-1 pr-2">Result</th>
+                          <th className="py-1 pr-2">Class</th>
+                          <th className="py-1 pr-2">Confidence</th>
+                          <th className="py-1">Evidence</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.audit.holyGrailEligibility.dealbreakerDimensions.map(
+                          (row) => (
+                            <tr
+                              key={`${row.tag}-${row.reasonCode}`}
+                              className="align-top text-zinc-700 dark:text-zinc-300"
+                            >
+                              <td className="py-1 pr-2 font-mono">{row.tag}</td>
+                              <td className="py-1 pr-2">{row.result}</td>
+                              <td className="py-1 pr-2">{row.classification}</td>
+                              <td className="py-1 pr-2">{row.confidence}</td>
+                              <td className="py-1">{row.evidence}</td>
+                            </tr>
+                          ),
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : null}
 

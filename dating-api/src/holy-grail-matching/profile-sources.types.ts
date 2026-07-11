@@ -16,6 +16,7 @@ import type {
   ExerciseLevelSelf,
   GenderIdentity,
   LivingSituationSelf,
+  MatchingDealbreakerSignal,
   MatchingRankingSignalsSnapshot,
   MatchingSearchOverrides,
   PoliticsSelf,
@@ -125,6 +126,17 @@ export interface HolyGrailProfileMappingInput {
    * (not primary `WEIGHTS` signals; no eligibility) — `docs/HOLY_GRAIL_MATCHING.md` § Production-freeze (V2 enrichment).
    */
   readonly rankingSignals?: MatchingRankingSignalsSnapshot;
+  /**
+   * Extract-at-read dealbreaker partner-preference signals (Sprint 17 Story 2).
+   * Mapper-only — not part of structured preferences JSON allow-list.
+   */
+  readonly dealbreakerSignals?: readonly MatchingDealbreakerSignal[];
+  /**
+   * Extract-at-read self-fact polarity map for dealbreaker tags (Sprint 17 Story 2).
+   */
+  readonly dealbreakerSelfFacts?: Readonly<
+    Partial<Record<string, 'AFFIRMED' | 'DENIED'>>
+  >;
 }
 
 /** @deprecated Use `HolyGrailProfileMappingInput`; kept for short-term grep compatibility. */

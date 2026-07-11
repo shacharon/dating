@@ -1,7 +1,7 @@
 # Story 3: Auditability, safety guardrails, and user visibility
 
 **Sprint:** 17
-**Status:** Not started
+**Status:** Done
 **Depends on:** Story 2 (classifier wired into eligibility + ranking)
 
 ---
@@ -20,42 +20,50 @@ A misclassified sentence here is a **silent** hard-exclude with *less* visibilit
 
 ### A. Operator auditability
 
-- [ ] `match-quality-audit.ts` / `build-eligibility-audit.ts`: surface every `HARD_EXCLUDE`/`HARD_REQUIRE` dimension's evidence quote + confidence in the audit JSON, alongside the existing PASS/FAIL/SKIPPED/UNKNOWN breakdown from Sprint 16.
-- [ ] Production telemetry (extending Sprint 16's per-dimension outcome counter): log classification volume per tag — how often each tag fires `HARD_EXCLUDE` / `HARD_REQUIRE` / `SOFT`, and the confidence distribution — so a low-precision tag is visible before it causes complaints, not after.
-- [ ] Add a `docs/engine/examples/` style worked example for at least 3 tags (one behavioral, one lifestyle, one values/social) showing real (synthetic) input text → classification → evidence → eligibility outcome, for future reviewers.
+- [x] `match-quality-audit.ts` / `build-eligibility-audit.ts`: surface every `HARD_EXCLUDE`/`HARD_REQUIRE` dimension's evidence quote + confidence in the audit JSON (incl. hard-excluded candidates after CR fix).
+- [x] Production telemetry: `event=hg_dealbreaker_outcomes` — classification volume, per-tag outcomes, confidence percentiles, kill-switch tags.
+- [x] Worked examples under `docs/engine/examples/dealbreaker-*.md` (smoking, kids_required, commitment_phobic).
 
 ### B. Conservative defaults (guardrails)
 
-- [ ] Confidence threshold: classifications below a documented minimum confidence (propose starting at a high bar, e.g. only exact/near-exact phrase-pattern matches qualify for `HARD_EXCLUDE`/`HARD_REQUIRE` at all — no threshold tuning via a magic float) never reach `HARD_EXCLUDE`/`HARD_REQUIRE`; they fall back to `SOFT`.
-- [ ] Explicit test suite of known-ambiguous real-world phrasings (collect from actual `aboutMe`/`aboutPartner` patterns if available, or construct representative ones) that must **not** trigger a hard classification — this is the regression suite that protects future taxonomy/regex edits from silently tightening into over-blocking.
-- [ ] A kill switch: ability to disable a single misbehaving tag's hard-classification (route it to `SOFT`-only) without a deploy, for fast incident response if a tag turns out to be over-firing in production.
+- [x] Confidence floor `DEALBREAKER_HARD_MIN_CONFIDENCE = 0.9` — mid-confidence HARD demoted to SOFT (not a product tuning knob).
+- [x] Ambiguous-phrasing regression suite: `dealbreaker-ambiguous-guardrails.spec.ts` (do-not-delete guardrail).
+- [x] Kill switch: `DEALBREAKER_HARD_DISABLED_TAGS` env + `docs/ops/dealbreaker-kill-switch.md` (env + restart; proven in HTTP E2E).
 
 ### C. User visibility (read-only this story)
 
-- [ ] User's own profile/settings surfaces a short, plain-language list of what the engine currently reads as their dealbreakers/requirements, each with the exact quote it came from (e.g. "We read this as a dealbreaker: 'I don't want to date smokers.'"). Read-only — no edit/override control this story (a plausible fast-follow, not required here).
-- [ ] Copy makes clear this is inferred from their own profile text, not a setting they configured — sets the right mental model and gives them a path (edit their bio) to change it if the inference is wrong.
-- [ ] i18n keys for this new surface (`en` / `es` / `he`); parity test stays green.
+- [x] `GET /api/v1/me/profile` → `inferredDealbreakers` (hard only, post-guardrail); preferences UI section on `/settings/preferences`.
+- [x] Copy frames inference from profile text + edit-story path (en/es/he).
+- [x] i18n `AppCopySchema.inferredDealbreakers` parity across `en` / `es` / `he`.
 
 ### Acceptance criteria
 
-- [ ] Every `HARD_EXCLUDE`/`HARD_REQUIRE` classification in a production match decision is traceable, via the audit tool, to the exact quote and confidence that produced it.
-- [ ] The known-ambiguous phrasing regression suite is green and documented as the guardrail it is (a future PR that breaks one of these tests should read as "you just made a dealbreaker fire on ambiguous text," not as a flaky test to delete).
-- [ ] A tag can be forced to `SOFT`-only without a code deploy.
-- [ ] Users can see, in their own settings, what got classified as a dealbreaker/requirement from their own text.
+- [x] Hard classifications traceable via admin match-quality audit (`holyGrailEligibility` + evidence/confidence).
+- [x] Ambiguous phrasing regression suite green and documented as guardrail.
+- [x] Tag forceable to SOFT-only via env kill switch (E2E: smoking kill switch → smoker included).
+- [x] Users see inferred dealbreakers/requirements in settings (API + UI; E2E on profile GET).
 
 ### Out of scope (this story)
 
 - Edit/override UI for a misclassified dealbreaker (fast-follow candidate)
 - Any change to the classifier's detection logic itself (Story 1) or eligibility/ranking wiring (Story 2) beyond the kill switch
+- Soft ranking live-path connection (Option C — sprint follow-up)
 - Notifying users proactively (e.g. push/email) about their classified dealbreakers — this is a passive settings surface, not an active notification
 
 ---
 
 ## Definition of done
 
-- [ ] Audit tooling shows evidence + confidence for every hard classification
-- [ ] Production telemetry on classification volume/confidence per tag exists
-- [ ] Conservative-default guardrail tests exist and are documented as regression protection, not incidental coverage
-- [ ] Per-tag kill switch exists and is documented in an ops runbook
-- [ ] Read-only user-visible dealbreaker/requirement list ships, with i18n parity
-- [ ] Full `dating-api` + `dating-ui` test suites green
+- [x] Audit tooling shows evidence + confidence for every hard classification
+- [x] Production telemetry on classification volume/confidence per tag exists
+- [x] Conservative-default guardrail tests exist and are documented as regression protection, not incidental coverage
+- [x] Per-tag kill switch exists and is documented in an ops runbook
+- [x] Read-only user-visible dealbreaker/requirement list ships, with i18n parity
+- [x] Full `dating-api` integration suite green (`integration.spec` 300); UI i18n typed parity for new keys
+
+### Implementation notes (PM close)
+
+- Guardrails choke inside `extractDealbreakerSignalsFromFreeText`; NEVER_BLOCKS unchanged.
+- Soft ranking remains deferred (Option C) — not Story 3 scope.
+- Pipeline: architect → dev → CR (audit-on-exclude + env re-read) → E2E (kill switch + inferredDealbreakers) → PM.
+- Agent 4: complete — `me-new-model-e2e-dealbreaker-guardrails.integration.spec.ts`; baselines unmodified.

@@ -14,6 +14,11 @@ import {
   HOLY_GRAIL_DIMENSION_KEYS,
   type HolyGrailDimensionKey,
 } from './holy-grail-dimensions';
+import {
+  evaluateDealbreakerDimensions,
+  foldDealbreakerIntoOverall,
+} from './dealbreaker-eligibility';
+// DEFERRED: soft ranking (sprint 17 architect Option C) — do not wire into live matchScore.
 
 /**
  * Per-dimension Layer 3 outcome (internal). `PASS` and `SOFT_PASS` always allow;
@@ -86,7 +91,14 @@ export interface HolyGrailDirectionalEvaluationResult {
     HolyGrailDimensionKey,
     HolyGrailDimensionEvaluation
   >;
-  /** FAIL if any resolved dimension is FAIL; otherwise PASS. */
+  /**
+   * Dynamic classifier-derived dims (Sprint 17). Only HARD_* searcher tags appear.
+   * Raw status; overall uses NEVER_BLOCKS via foldDealbreakerIntoOverall.
+   */
+  readonly dealbreakerDimensions: Readonly<
+    Record<string, HolyGrailDimensionEvaluation>
+  >;
+  /** FAIL if any resolved fixed or dealbreaker dimension is FAIL; otherwise PASS. */
   readonly overallHardEligibility: 'PASS' | 'FAIL';
   readonly eligibilityFlags: HolyGrailEligibilityFlags;
 }
@@ -215,9 +227,19 @@ export function evaluateHolyGrailDirectional(args: {
   const evaluatedAt = args.evaluatedAt ?? new Date();
   const pref = mergeEffectiveMatchingPreferences(args.searcher);
   const dimensions = evaluateAll(pref, args.counterparty.facts, evaluatedAt);
+  const dealbreakerDimensions = evaluateDealbreakerDimensions({
+    searcherSignals: pref.dealbreakerSignals ?? [],
+    counterpartyFacts: args.counterparty.facts,
+    counterpartySelfFacts: args.counterparty.facts.dealbreakerSelfFacts,
+  });
+  const fixedOverall = overallFromDimensions(dimensions);
   return {
     dimensions,
-    overallHardEligibility: overallFromDimensions(dimensions),
+    dealbreakerDimensions,
+    overallHardEligibility: foldDealbreakerIntoOverall(
+      fixedOverall,
+      dealbreakerDimensions,
+    ),
     eligibilityFlags: eligibilityFlagsFromDimensions(),
   };
 }

@@ -92,7 +92,15 @@ export interface MeProfileDto {
   partnerAgeMin?: number | null;
   partnerAgeMax?: number | null;
   maxDistanceKm?: number | null;
+  inferredDealbreakers?: InferredDealbreakerDto[];
 }
+
+export type InferredDealbreakerDto = {
+  tag: string;
+  classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE';
+  evidence: string;
+  confidence: number;
+};
 
 export interface CreateMeProfileBody {
   aboutMe?: string | null;
@@ -393,6 +401,24 @@ export interface MatchExplanationTrait {
   strength: 'strong' | 'moderate';
 }
 
+export type HardBlockDirection = 'viewer_to_them' | 'them_to_viewer';
+
+export type HardBlockReasonDto = {
+  code: string;
+  dimension: string;
+  direction: HardBlockDirection;
+  message: string;
+  evidence?: {
+    viewerQuote?: string;
+    counterpartyQuote?: string;
+  };
+};
+
+export type HardBlockedDto = {
+  disabled: true;
+  reasons: HardBlockReasonDto[];
+};
+
 export interface MeMatchItemDto {
   /** `UserProfile.id` of the candidate. */
   id: string;
@@ -411,6 +437,8 @@ export interface MeMatchItemDto {
   /** Relative path to primary photo file endpoint; null when absent. */
   primaryPhotoUrl?: string | null;
   yourAction?: 'LIKE' | 'PASS' | 'BLOCK' | null;
+  /** Present when hard-ineligible but already Liked / mutual with the viewer. */
+  hardBlocked?: HardBlockedDto;
 }
 
 /** Full response shape of `GET /api/v1/me/matches`. */
@@ -451,6 +479,8 @@ export interface MeMatchDetailDto {
   recommendation: MatchRecommendationDto | null;
   /** Relative path to primary photo file endpoint; null when absent. */
   primaryPhotoUrl?: string | null;
+  /** Present when hard-ineligible but already Liked / mutual with the viewer. */
+  hardBlocked?: HardBlockedDto;
 }
 
 /**

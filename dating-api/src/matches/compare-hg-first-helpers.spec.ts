@@ -8,6 +8,7 @@ import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matchin
 function dir(overall: 'PASS' | 'FAIL'): HolyGrailDirectionalEvaluationResult {
   return {
     dimensions: {} as unknown as HolyGrailDirectionalEvaluationResult['dimensions'],
+    dealbreakerDimensions: {},
     overallHardEligibility: overall,
     eligibilityFlags: { children_unsure: false },
   };

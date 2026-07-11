@@ -1,7 +1,7 @@
 # Story 2: Wire classifier output into Holy Grail eligibility + ranking
 
 **Sprint:** 17
-**Status:** Not started
+**Status:** Done
 **Depends on:** Story 1 (`DealbreakerSignal` classifier), [Sprint 16](../../sprint-16-matching-strictness-control/README.md) (evaluator `UNKNOWN`/blocking-policy foundation)
 
 ---
@@ -20,37 +20,36 @@ Story 1 produces classified signals in memory; nothing reads them yet. This stor
 
 ### A. Persistence + canonical mapping
 
-- [ ] `HolyGrailStructuredFactsPersisted` / preferences JSON columns gain a slot for `dealbreakerSignals: DealbreakerSignal[]` per profile (self side only needed at read time — see below), written during profile analysis, following the same allow-list + validate pattern as every other structured HG key (`holy-grail-structured-contract.ts`).
-- [ ] `profile-to-canonical.mapper.ts`: map persisted `dealbreakerSignals` onto the canonical model — no widened defaults, absent tag = no signal for that tag (same sparse-preferences discipline as every other field in this mapper).
+- [x] **Superseded (architect):** no Prisma JSON column this story — **extract-at-read** from `aboutMe` / `aboutPartner` / `aboutRelationship` in `buildHolyGrailProfileMappingInputFromDbRow` (same discipline as personality/lifestyle/interest). Durable analysis-time cache deferred (Story 3 / later).
+- [x] `profile-to-canonical.mapper.ts`: map `dealbreakerSignals` / `dealbreakerSelfFacts` onto the canonical model — no widened defaults, absent tag = no signal for that tag (same sparse-preferences discipline as every other field in this mapper).
 
 ### B. Evaluator — dynamic per-tag dimensions
 
-- [ ] Extend `HOLY_GRAIL_DIMENSION_KEYS` conceptually with **dynamic** tag-keyed dimensions (not a fixed enum growth per tag — model as `Record<tag, HolyGrailDimensionEvaluation>` alongside the existing fixed `GENDER`/`AGE`/`PROXIMITY` dimensions, or a parallel `dealbreakerDimensions` map on `HolyGrailDirectionalEvaluationResult`).
-- [ ] For each tag where the **searcher** has a `HARD_EXCLUDE` or `HARD_REQUIRE` classification (from their own partner-preference text):
-  - Look up the **counterparty's own self-fact** for that tag (if the taxonomy has a matching self-fact field; for tags with no direct self-fact column, use the counterparty's own `DealbreakerSignal` self-domain output from Story 1, if any).
+- [x] Extend with **dynamic** tag-keyed dimensions via parallel `dealbreakerDimensions` on `HolyGrailDirectionalEvaluationResult` (not a fixed enum growth per tag).
+- [x] For each tag where the **searcher** has a `HARD_EXCLUDE` or `HARD_REQUIRE` classification (from their own partner-preference text):
+  - Look up the **counterparty's own self-fact** for that tag (columns + `dealbreakerSelfFacts` hints).
   - Counterparty has an explicit, classified **conflicting** self-fact → `FAIL`.
   - Counterparty has an explicit, classified **matching** self-fact → `PASS`.
   - Counterparty said **nothing** on this topic → `UNKNOWN`.
-- [ ] **Blocking policy for these dynamic dimensions is `NEVER_BLOCKS` on `UNKNOWN`** (per the README's locked decision) — reuse Sprint 16's `resolveDimensionOutcome(rawStatus, 'NEVER_BLOCKS')` directly. This is the one line that prevents this story from recreating the Sprint 15 bug: a searcher's stated dealbreaker only excludes candidates who **said the conflicting thing**, never candidates who simply didn't bring up the topic.
-- [ ] `overallHardEligibility` folds these dynamic dimensions into the same "no `FAIL`" rule as `GENDER`/`AGE`/`PROXIMITY` — no separate code path, one aggregation rule.
+- [x] **Blocking policy for these dynamic dimensions is `NEVER_BLOCKS` on `UNKNOWN`** (per the README's locked decision).
+- [x] `overallHardEligibility` folds these dynamic dimensions into the same "no `FAIL`" rule as `GENDER`/`AGE`/`PROXIMITY`.
 
 ### C. Ranking overlay — SOFT / NEUTRAL
 
-- [ ] New bounded overlay function (e.g. `computeDealbreakerSoftSignalRankBonus`), modeled directly on `computePersonalityTraitRankBonus` / `computeLifestyleSignalsRankBonus` / `computeInterestTagsRankBonus` in `holy-grail-five-signal-ranking.ts`: additive, capped (propose `DEALBREAKER_SOFT_RANK_BONUS_MAX = 2`, consistent with the existing locked caps), grounded evidence in the rank note, **never** touches `overallHardEligibility`.
-- [ ] `SOFT` classifications (either direction — searcher's soft preference matching/mismatching counterparty's self-fact) contribute a small bonus/penalty within the cap. `NEUTRAL` (no signal at all) contributes nothing, same as today's "both sides empty" case in the existing overlays.
-- [ ] This function participates in `computeHolyGrailFiveSignalRank` (`includeNonDbRankingOverlays = true` path) — **not** in `computeHolyGrailRankingPurityRank`, preserving the existing purity contract (production ordering stays DB-signal-only unless/until this overlay family is promoted the same way personality/lifestyle/interest tags were, with its own batch evidence).
+- [x] **Superseded (architect Option C):** soft ranking **deferred**. Live `/me/matches` sorts by V1 `compareWithStatus`, not five-signal ranking — a five-signal overlay would be dead code. Soft bonuses must not touch `compareWithStatus` this story. Tracked follow-up once ranking architecture is resolved.
 
 ### Acceptance criteria
 
-- [ ] Searcher states "I don't want smokers"; counterparty's own text says "I smoke" → directional evaluation `FAIL` on that tag; counterparty's text says nothing about smoking → `PASS`-equivalent (not blocked); counterparty's text says "I don't smoke" → passes with a grounded match.
-- [ ] Searcher states "only smokers" (`HARD_REQUIRE`); counterparty silent on smoking → not blocked; counterparty explicitly non-smoker → `FAIL`; counterparty explicitly smoker → `PASS`.
-- [ ] Searcher states "don't care about smoking" or says nothing → no eligibility effect; any signal on either side flows only into the capped ranking overlay.
-- [ ] `computeHolyGrailRankingPurityRank` output is **byte-identical** before/after this story for any pair with no classifier signals (regression guard on the production ordering path).
-- [ ] Matrix tests: tag × {searcher classification} × {counterparty self-fact known-matching / known-conflicting / unknown} → correct `PASS`/`FAIL`/ranking-only outcome per the table above.
+- [x] Searcher states "I don't want smokers"; counterparty's own text says "I smoke" → directional evaluation `FAIL` on that tag; counterparty's text says nothing about smoking → not blocked; counterparty's text says "I don't smoke" → passes with a grounded match. (unit + HTTP E2E)
+- [x] Searcher states "only smokers" (`HARD_REQUIRE`); counterparty silent on smoking → not blocked; counterparty explicitly non-smoker → `FAIL`; counterparty explicitly smoker → `PASS`. (unit; HTTP covers conflict exclusion)
+- [x] Searcher states "don't care about smoking" or says nothing → no eligibility effect. (**Ranking overlay deferred** — Option C; SOFT has no live order impact.)
+- [x] `computeHolyGrailRankingPurityRank` / five-signal / `compareWithStatus` **untouched** — purity path unchanged by construction (Option C).
+- [x] Matrix tests: tag × {searcher classification} × {counterparty self-fact known-matching / known-conflicting / unknown} → correct `PASS`/`FAIL`/eligibility-only outcome (ranking-only rows N/A under Option C).
 
 ### Out of scope (this story)
 
 - Promoting the soft overlay into the DB-only purity path (would need its own batch evidence, like the V2 enrichment freeze did)
+- Soft ranking connection to live `/me/matches` order (Option C deferral)
 - Auditability/telemetry surfacing and user-visible settings (Story 3)
 - Any topic not in Story 1's revived taxonomy
 
@@ -58,8 +57,14 @@ Story 1 produces classified signals in memory; nothing reads them yet. This stor
 
 ## Definition of done
 
-- [ ] `HARD_EXCLUDE`/`HARD_REQUIRE` tags produce real `FAIL`/`PASS` via dynamic per-tag dimensions
-- [ ] Those dimensions use `NEVER_BLOCKS`-on-`UNKNOWN` — silence never excludes
-- [ ] `SOFT`/`NEUTRAL` signals flow only into a new capped ranking overlay, modeled on the existing personality/lifestyle/interest-tag pattern
-- [ ] Production purity ranking path is provably unchanged for pairs without classifier signals
-- [ ] Full `dating-api` test suite green, including new matrix tests
+- [x] `HARD_EXCLUDE`/`HARD_REQUIRE` tags produce real `FAIL`/`PASS` via dynamic per-tag dimensions
+- [x] Those dimensions use `NEVER_BLOCKS`-on-`UNKNOWN` — silence never excludes
+- [x] `SOFT`/`NEUTRAL` do **not** affect eligibility; capped ranking overlay **deferred** (architect Option C — supersedes original DoD ranking bullet)
+- [x] Production ranking modules (`compareWithStatus`, five-signal) **untouched** this story
+- [x] Full `dating-api` test suite green, including matrix + HTTP harness E2E (`me-new-model-e2e-dealbreaker.integration.spec.ts`)
+
+### Implementation notes (PM close)
+
+- Live path: extract-at-read → canonical → `evaluateDealbreakerDimensions` → `dealbreakerDimensions` + `NEVER_BLOCKS` fold in `evaluateHolyGrailDirectional`.
+- Agent 4: **complete** — 4 smoking HTTP scenarios; baselines unmodified; `integration.spec` 298 passed.
+- Soft ranking remains a sprint-level open item (README Option C follow-up); Story 3 owns audit/visibility.

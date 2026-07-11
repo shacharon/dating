@@ -1,12 +1,24 @@
 /**
  * Read-only match quality audit for operators (CLI). Uses the same V1 service path as
  * GET /api/v1/me/matches/:id — no alternate scoring or legacy candidate-list services.
+ *
+ * HG dealbreaker eligibility is computed even when getById 404s (hard-excluded candidates),
+ * so operators can see evidence for silent exclusions (Sprint 17 Story 3).
  */
 
+import { NotFoundException } from '@nestjs/common';
 import type { MeMatchDetailDto, MeMatchesService } from './me-matches.service';
 import { latestEvaluationForProfile } from './me-profile-analysis.service';
-import { resolveMeMatchesEngineInputSourceMode } from './me-profile-engine.mapper';
+import {
+  buildMeMatchesParticipantReadModel,
+  resolveMeMatchesEngineInputSourceMode,
+} from './me-profile-engine.mapper';
 import type { PrismaService } from '../prisma/prisma.service';
+import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
+import { adaptHolyGrailEvaluationToLegacyDimensionMap } from '../holy-grail-matching/evaluation-to-legacy-dimension-map';
+import { buildHolyGrailEligibilityAuditV1 } from '../holy-grail-matching/build-eligibility-audit';
+import { extractDealbreakerSignalsFromFreeText } from '../holy-grail-matching/dealbreaker-signals-text.extract';
+import type { HolyGrailDealbreakerAuditRow } from '../holy-grail-matching/eligibility-audit.types';
 
 const signalsSelect = {
   select: { signalKey: true, signalValue: true, evalVersion: true },
@@ -56,6 +68,11 @@ export interface MatchQualityAuditReport {
       }
     | { skipped: true; reason: string }
     | { notReady: true; reason: string | undefined };
+  /** Viewer→candidate HG hard eligibility + dealbreaker evidence (Sprint 17 Story 3). */
+  holyGrailEligibility?: {
+    overallHardEligibility: 'PASS' | 'FAIL';
+    dealbreakerDimensions: HolyGrailDealbreakerAuditRow[];
+  };
 }
 
 export interface BuildMatchQualityAuditOptions {
@@ -70,8 +87,9 @@ export interface BuildMatchQualityAuditOptions {
 }
 
 /**
- * Builds a JSON-serializable audit report. Primary data from {@link MeMatchesService.getById};
- * engine input source uses the same normalized guard as {@link assembleEvaluationPayload}.
+ * Builds a JSON-serializable audit report.
+ * Detail path uses {@link MeMatchesService.getById} when the candidate is list-visible;
+ * hard-excluded pairs still return HG dealbreaker evidence (Story 3 AC).
  */
 export async function buildMatchQualityAuditJson(
   options: BuildMatchQualityAuditOptions,
@@ -85,7 +103,15 @@ export async function buildMatchQualityAuditJson(
     includeListContext,
   } = options;
 
-  const detail = await meMatches.getById(viewerUserId, candidateProfileId);
+  let detail: MeMatchDetailDto | null = null;
+  try {
+    detail = await meMatches.getById(viewerUserId, candidateProfileId);
+  } catch (e) {
+    if (!(e instanceof NotFoundException)) {
+      throw e;
+    }
+    // Candidate hard-excluded (or otherwise not visible) — continue for HG audit.
+  }
 
   const viewerRow = await prisma.userProfile.findUnique({
     where: { userId: viewerUserId },
@@ -107,7 +133,7 @@ export async function buildMatchQualityAuditJson(
 
   if (!viewerRow || !candidateRow) {
     throw new Error(
-      'match-quality-audit: viewer or candidate profile row missing after getById',
+      'match-quality-audit: viewer or candidate profile row missing',
     );
   }
 
@@ -143,7 +169,7 @@ export async function buildMatchQualityAuditJson(
     }
   }
 
-  const traits = detail.matchExplanationTraits?.map((t) => ({
+  const traits = detail?.matchExplanationTraits?.map((t) => ({
     group: t.group,
     label: t.label,
     evidence: t.evidence,
@@ -178,18 +204,85 @@ export async function buildMatchQualityAuditJson(
       ),
     },
     compare: {
-      outcome: detail.matchScore !== null ? 'scored' : 'guard',
+      outcome:
+        detail !== null && detail.matchScore !== null ? 'scored' : 'guard',
     },
-    matchScore: detail.matchScore,
-    profileAnalysisStale: detail.profileAnalysisStale,
-    explainability: detail.explainability,
-    recommendation: detail.recommendation,
-    evaluationSummary: detail.evaluationSummary,
+    matchScore: detail?.matchScore ?? null,
+    profileAnalysisStale: detail?.profileAnalysisStale,
+    explainability: detail?.explainability ?? null,
+    recommendation: detail?.recommendation ?? null,
+    evaluationSummary: detail?.evaluationSummary ?? null,
     listContext,
   };
 
   if (traits !== undefined && traits.length > 0) {
     report.matchExplanationTraits = traits;
+  }
+
+  if (viewerEval && candidateEval) {
+    const viewerFull = await prisma.userProfile.findUnique({
+      where: { id: viewerRow.id },
+      include: { preference: true },
+    });
+    const candidateFull = await prisma.userProfile.findUnique({
+      where: { id: candidateRow.id },
+      include: { preference: true },
+    });
+    if (viewerFull && candidateFull) {
+      const { preference: viewerPref, ...viewerCore } = viewerFull;
+      const { preference: candidatePref, ...candidateCore } = candidateFull;
+      const viewerRead = buildMeMatchesParticipantReadModel(
+        viewerCore,
+        viewerPref ?? null,
+        viewerEval,
+        {
+          signals: viewerSignals,
+          interests: viewerInterests,
+          useNormalized: engineReadNormalized,
+        },
+      );
+      const candidateRead = buildMeMatchesParticipantReadModel(
+        candidateCore,
+        candidatePref ?? null,
+        candidateEval,
+        {
+          signals: candidateSignals,
+          interests: candidateInterests,
+          useNormalized: engineReadNormalized,
+        },
+      );
+      const hgDirections = evaluateHolyGrailPairDirections(
+        viewerRead.hg.row,
+        candidateRead.hg.row,
+      );
+      if (hgDirections !== null) {
+        const hardSignals = extractDealbreakerSignalsFromFreeText({
+          aboutMe: viewerFull.aboutMe,
+          aboutPartner: viewerFull.aboutPartner,
+          aboutRelationship: viewerFull.aboutRelationship,
+        }).signals.filter(
+          (s) =>
+            s.classification === 'HARD_EXCLUDE' ||
+            s.classification === 'HARD_REQUIRE',
+        );
+        const eligibilityAudit = buildHolyGrailEligibilityAuditV1({
+          searcherProfileId: viewerRow.id,
+          counterpartyProfileId: candidateRow.id,
+          evaluatedAt: new Date(),
+          dimensions: adaptHolyGrailEvaluationToLegacyDimensionMap(
+            hgDirections.aToB,
+          ),
+          dealbreakerDimensions: hgDirections.aToB.dealbreakerDimensions,
+          searcherHardSignals: hardSignals,
+        });
+        report.holyGrailEligibility = {
+          overallHardEligibility: hgDirections.aToB.overallHardEligibility,
+          dealbreakerDimensions: [
+            ...(eligibilityAudit.dealbreakerDimensions ?? []),
+          ],
+        };
+      }
+    }
   }
 
   return report;

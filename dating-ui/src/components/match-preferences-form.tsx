@@ -23,6 +23,7 @@ import {
   fetchMyProfile,
   ME_PARTNER_GENDER_CHOICES,
   patchMyProfile,
+  type InferredDealbreakerDto,
   type MeProfileGender,
 } from '@/lib/me-profile-api';
 
@@ -39,6 +40,9 @@ export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolea
   const [form, setForm] = useState<MatchPreferencesFormState>(
     emptyMatchPreferencesFormState(),
   );
+  const [inferredDealbreakers, setInferredDealbreakers] = useState<
+    InferredDealbreakerDto[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [noProfile, setNoProfile] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -80,6 +84,7 @@ export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolea
           return;
         }
         setForm(profileToMatchPreferencesForm(profile));
+        setInferredDealbreakers(profile.inferredDealbreakers ?? []);
       } catch (e) {
         if (!cancelled) {
           setLoadError(
@@ -256,6 +261,41 @@ export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolea
               className="mt-1 w-full max-w-xs rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
             />
           </label>
+        </section>
+
+        <section
+          className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+          data-testid="inferred-dealbreakers"
+        >
+          <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            {mp.inferredDealbreakers.title}
+          </h2>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            {mp.inferredDealbreakers.disclaimer}
+          </p>
+          {inferredDealbreakers.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+              {mp.inferredDealbreakers.empty}
+            </p>
+          ) : (
+            <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+              {inferredDealbreakers.map((item) => (
+                <li key={`${item.tag}-${item.classification}-${item.evidence}`}>
+                  {item.classification === 'HARD_REQUIRE'
+                    ? mp.inferredDealbreakers.requirementLine(item.evidence)
+                    : mp.inferredDealbreakers.dealbreakerLine(item.evidence)}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-sm">
+            <Link
+              href="/onboarding/texts?edit=1"
+              className="text-emerald-700 underline dark:text-emerald-400"
+            >
+              {mp.inferredDealbreakers.editStoryCta}
+            </Link>
+          </p>
         </section>
 
         {validationError ? (

@@ -213,6 +213,9 @@ describe('Two-user new-model E2E flow (integration)', () => {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue(null),
     },
+    mutualMatch: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     userProfilePhoto: {
       count: jest.fn().mockResolvedValue(1),
       findFirst: jest.fn().mockResolvedValue(null),

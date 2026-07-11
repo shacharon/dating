@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   MatchActionType,
+  MutualMatchStatus,
   UserProfilePhotoStatus,
   type UserProfileStatus,
 } from '@prisma/client';
@@ -38,6 +39,27 @@ import {
   emptyHolyGrailDimensionOutcomeCounts,
   formatHolyGrailDimensionOutcomeCountsForLog,
 } from '../holy-grail-matching/eligibility.evaluator';
+import {
+  accumulateDealbreakerOutcomeCounts,
+  countDealbreakerClassificationVolume,
+  emptyDealbreakerTagOutcomeCounts,
+  formatDealbreakerClassificationVolumeForLog,
+  formatDealbreakerConfidenceForLog,
+  formatDealbreakerOutcomeCountsForLog,
+  formatKillSwitchTagsForLog,
+} from '../holy-grail-matching/dealbreaker-telemetry';
+import {
+  extractDealbreakerSignalsFromFreeText,
+  extractSelfFactHintsFromFreeText,
+} from '../holy-grail-matching/dealbreaker-signals-text.extract';
+import { getCachedDealbreakerHardDisabledTags } from '../holy-grail-matching/dealbreaker-guardrails';
+import {
+  buildHardBlockReasons,
+  isExistingHardBlockCandidate,
+  toHardBlockedDto,
+  type HardBlockedDto,
+} from '../holy-grail-matching/hard-block-reasons';
+import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matching/eligibility.evaluator';
 import {
   buildMatchExplanationTraits,
   type MatchExplanationTrait,
@@ -81,6 +103,11 @@ export interface MeMatchItemDto {
   recommendation: MatchRecommendationDto | null;
   /** Viewer's action toward this candidate's user, if any. */
   yourAction: 'LIKE' | 'PASS' | 'BLOCK' | null;
+  /**
+   * Present when this candidate is hard-ineligible but “existing” for the viewer
+   * (LIKE and/or ACTIVE MutualMatch). Absent for eligible matches.
+   */
+  hardBlocked?: HardBlockedDto;
 }
 
 export interface MeMatchesListResponseDto {
@@ -140,6 +167,11 @@ export interface MeMatchDetailDto {
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /**
+   * Present when this candidate is hard-ineligible but “existing” for the viewer
+   * (LIKE and/or ACTIVE MutualMatch). Absent for eligible matches.
+   */
+  hardBlocked?: HardBlockedDto;
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -335,8 +367,31 @@ export class MeMatchesService {
       ).map((row) => [row.targetUserId, row.action]),
     );
 
+    const mutualCounterpartUserIds = new Set<string>();
+    for (const m of await this.prisma.mutualMatch.findMany({
+      where: {
+        status: MutualMatchStatus.ACTIVE,
+        OR: [{ userId1: userId }, { userId2: userId }],
+      },
+      select: { userId1: true, userId2: true },
+    })) {
+      mutualCounterpartUserIds.add(
+        m.userId1 === userId ? m.userId2 : m.userId1,
+      );
+    }
+
     const matches: MeMatchItemDto[] = [];
     const hgDimensionOutcomeCounts = emptyHolyGrailDimensionOutcomeCounts();
+    const dealbreakerOutcomeCounts = emptyDealbreakerTagOutcomeCounts();
+    const viewerTextFields = {
+      aboutMe: viewerProfileCore.aboutMe,
+      aboutPartner: viewerProfileCore.aboutPartner,
+      aboutRelationship: viewerProfileCore.aboutRelationship,
+    };
+    const viewerDealbreakerSignals =
+      extractDealbreakerSignalsFromFreeText(viewerTextFields).signals;
+    const viewerSelfHints =
+      extractSelfFactHintsFromFreeText(viewerTextFields);
 
     for (const row of candidateRows) {
       const candidateBridge = buildProductProfileMatchingBridge(
@@ -399,13 +454,47 @@ export class MeMatchesService {
           hgDimensionOutcomeCounts,
           hgDirections.bToA,
         );
+        accumulateDealbreakerOutcomeCounts(
+          dealbreakerOutcomeCounts,
+          hgDirections.aToB,
+        );
+        accumulateDealbreakerOutcomeCounts(
+          dealbreakerOutcomeCounts,
+          hgDirections.bToA,
+        );
       }
-      if (
+
+      const isHgHardFail =
         hgDirections !== null &&
         (hgDirections.aToB.overallHardEligibility === 'FAIL' ||
-          hgDirections.bToA.overallHardEligibility === 'FAIL')
-      ) {
-        continue;
+          hgDirections.bToA.overallHardEligibility === 'FAIL');
+
+      let hardBlocked: HardBlockedDto | undefined;
+      if (isHgHardFail) {
+        const yourAction = matchActionToYourAction(
+          actionByTargetUserId.get(row.userId) ?? null,
+        );
+        if (
+          !isExistingHardBlockCandidate({
+            yourAction,
+            hasActiveMutual: mutualCounterpartUserIds.has(row.userId),
+          })
+        ) {
+          continue;
+        }
+        hardBlocked = this.buildHardBlockedDto(
+          hgDirections!,
+          viewerDealbreakerSignals,
+          viewerSelfHints,
+          {
+            aboutMe: candidateProfileCore.aboutMe,
+            aboutPartner: candidateProfileCore.aboutPartner,
+            aboutRelationship: candidateProfileCore.aboutRelationship,
+          },
+        );
+        if (hardBlocked === undefined) {
+          continue;
+        }
       }
 
       if (actionByTargetUserId.get(row.userId) === MatchActionType.BLOCK) {
@@ -444,12 +533,18 @@ export class MeMatchesService {
         approvedPhotoCount: approvedPhotos.length,
         explainability,
         recommendation,
-        yourAction: actionByTargetUserId.get(row.userId) ?? null,
+        yourAction: matchActionToYourAction(
+          actionByTargetUserId.get(row.userId) ?? null,
+        ),
+        ...(hardBlocked !== undefined ? { hardBlocked } : {}),
       });
     }
 
-    // Sort matches by matchScore DESC (null scores sort last)
+    // Eligible first (score DESC); hard-blocked existing append at bottom (score DESC within).
     matches.sort((a, b) => {
+      const aBlocked = a.hardBlocked ? 1 : 0;
+      const bBlocked = b.hardBlocked ? 1 : 0;
+      if (aBlocked !== bBlocked) return aBlocked - bBlocked;
       const aScore = a.matchScore ?? -1;
       const bScore = b.matchScore ?? -1;
       return bScore - aScore;
@@ -463,6 +558,14 @@ export class MeMatchesService {
     this.obs.trace(
       `event=hg_dimension_outcomes profileId=${viewer.id} ${formatHolyGrailDimensionOutcomeCountsForLog(hgDimensionOutcomeCounts)}`,
       ErrorCodes.ME_MATCHES_HG_DIMENSION_OUTCOMES,
+    );
+
+    const dealbreakerClassVol = countDealbreakerClassificationVolume(
+      viewerDealbreakerSignals,
+    );
+    this.obs.trace(
+      `event=hg_dealbreaker_outcomes profileId=${viewer.id} ${formatDealbreakerOutcomeCountsForLog(dealbreakerOutcomeCounts)} ${formatDealbreakerClassificationVolumeForLog(dealbreakerClassVol)} ${formatDealbreakerConfidenceForLog(viewerDealbreakerSignals)} ${formatKillSwitchTagsForLog(getCachedDealbreakerHardDisabledTags())}`,
+      ErrorCodes.ME_MATCHES_HG_DEALBREAKER_OUTCOMES,
     );
 
     this.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
@@ -716,12 +819,52 @@ export class MeMatchesService {
       viewerRead.hg.row,
       candidateRead.hg.row,
     );
+
+    let hardBlocked: HardBlockedDto | undefined;
     if (
       hgDirections !== null &&
       (hgDirections.aToB.overallHardEligibility === 'FAIL' ||
         hgDirections.bToA.overallHardEligibility === 'FAIL')
     ) {
-      throw new NotFoundException('Match not found.');
+      const [actionRow, mutual] = await Promise.all([
+        this.prisma.matchAction.findUnique({
+          where: {
+            actorUserId_targetUserId: {
+              actorUserId: userId,
+              targetUserId: candidate.userId,
+            },
+          },
+          select: { action: true },
+        }),
+        this.mutualMatches.findActiveByUserPair(userId, candidate.userId),
+      ]);
+      const yourAction = matchActionToYourAction(actionRow?.action ?? null);
+      if (
+        !isExistingHardBlockCandidate({
+          yourAction,
+          hasActiveMutual: mutual != null,
+        })
+      ) {
+        throw new NotFoundException('Match not found.');
+      }
+      const viewerTextFields = {
+        aboutMe: viewerCoreDetail.aboutMe,
+        aboutPartner: viewerCoreDetail.aboutPartner,
+        aboutRelationship: viewerCoreDetail.aboutRelationship,
+      };
+      hardBlocked = this.buildHardBlockedDto(
+        hgDirections,
+        extractDealbreakerSignalsFromFreeText(viewerTextFields).signals,
+        extractSelfFactHintsFromFreeText(viewerTextFields),
+        {
+          aboutMe: candidateCoreDetail.aboutMe,
+          aboutPartner: candidateCoreDetail.aboutPartner,
+          aboutRelationship: candidateCoreDetail.aboutRelationship,
+        },
+      );
+      if (hardBlocked === undefined) {
+        throw new NotFoundException('Match not found.');
+      }
     }
 
     const evaluationSummary = candidateRead.evaluationDisplaySummary;
@@ -772,6 +915,7 @@ export class MeMatchesService {
       approvedPhotoCount: (candidate.photos ?? []).length,
       explainability,
       recommendation,
+      ...(hardBlocked !== undefined ? { hardBlocked } : {}),
     };
   }
 
@@ -922,9 +1066,49 @@ export class MeMatchesService {
       throw new NotFoundException('Match not found.');
     }
   }
+
+  private buildHardBlockedDto(
+    hgDirections: {
+      aToB: HolyGrailDirectionalEvaluationResult;
+      bToA: HolyGrailDirectionalEvaluationResult;
+    },
+    viewerSignals: ReturnType<
+      typeof extractDealbreakerSignalsFromFreeText
+    >['signals'],
+    viewerSelfHints: ReturnType<typeof extractSelfFactHintsFromFreeText>,
+    candidateText: {
+      aboutMe?: string | null;
+      aboutPartner?: string | null;
+      aboutRelationship?: string | null;
+    },
+  ): HardBlockedDto | undefined {
+    const counterpartySignals =
+      extractDealbreakerSignalsFromFreeText(candidateText).signals;
+    const counterpartySelfHints =
+      extractSelfFactHintsFromFreeText(candidateText);
+    return toHardBlockedDto(
+      buildHardBlockReasons({
+        aToB: hgDirections.aToB,
+        bToA: hgDirections.bToA,
+        viewerSignals,
+        counterpartySignals,
+        viewerSelfHints,
+        counterpartySelfHints,
+      }),
+    );
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function matchActionToYourAction(
+  action: MatchActionType | null | undefined,
+): 'LIKE' | 'PASS' | 'BLOCK' | null {
+  if (action === MatchActionType.LIKE) return 'LIKE';
+  if (action === MatchActionType.PASS) return 'PASS';
+  if (action === MatchActionType.BLOCK) return 'BLOCK';
+  return null;
+}
 
 /**
  * Partner-gender read path for `/api/v1/me/matches` only: prefer `UserProfilePreference.acceptedPartnerGenders`

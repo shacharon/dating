@@ -137,6 +137,49 @@ describe('MeMatchDetailPage (match actions)', () => {
     });
   });
 
+  it('shows hard-blocked banner and hides Like/Pass when hardBlocked', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      hardBlocked: {
+        disabled: true as const,
+        reasons: [
+          {
+            code: 'DB_SMOKING_EXCLUDED_TRAIT_PRESENT',
+            dimension: 'smoking',
+            direction: 'viewer_to_them' as const,
+            message: 'fallback',
+            evidence: {
+              viewerQuote: "I don't want smokers",
+              counterpartyQuote: 'I smoke',
+            },
+          },
+        ],
+      },
+    });
+    fetchMatchAction.mockResolvedValue(noActionState);
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-hard-blocked')).toBeTruthy();
+    });
+    expect(screen.getByText('No longer a match')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'This person smokes, while your preferences exclude smokers.',
+      ),
+    ).toBeTruthy();
+    const prefsLink = screen.getByRole('link', { name: 'Review preferences' });
+    expect(prefsLink.getAttribute('href')).toBe('/settings/preferences');
+    expect(screen.queryByRole('button', { name: /^like$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^pass$/i })).toBeNull();
+    expect(
+      screen.getByText(
+        /Like and Pass are unavailable while this match is blocked by preferences/,
+      ),
+    ).toBeTruthy();
+  });
+
   it('shows decorative heart on Like button with text accessible name', async () => {
     render(<MeMatchDetailPage />);
 

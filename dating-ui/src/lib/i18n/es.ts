@@ -40,6 +40,7 @@ export const esCopy: AppCopySchema = {
       subtitle:
         "Personas cuyo perfil y preferencias son compatibles con las tuyas.",
       analyzedPrefix: "Analizado",
+      updatedPrefix: "Actualizado",
       staleRegionAria: "Analisis de perfil desactualizado",
       staleMessage:
         "Tu perfil cambio desde el ultimo analisis. Las puntuaciones pueden estar desactualizadas.",
@@ -53,6 +54,36 @@ export const esCopy: AppCopySchema = {
         passed: { label: "Paso", ariaLabel: "Pasaste esta coincidencia" },
         blocked: { label: "Bloqueado", ariaLabel: "Bloqueaste esta coincidencia" },
       },
+      hardBlocked: {
+        badge: "Ya no es coincidencia",
+        badgeAria: "Esta coincidencia ya no es elegible",
+        youLikedThisProfile: "Te gusto este perfil",
+        moreReasonsCount: (count) => `+ ${count} diferencia${count === 1 ? '' : 's'} más`,
+        smokingExcludedViewerToThem:
+          "Esta persona fuma, y tus preferencias excluyen fumadores.",
+        smokingExcludedThemToViewer:
+          "Tu fumas, y sus preferencias excluyen fumadores.",
+        smokingRequiredViewerToThem:
+          "Esta persona no fuma, y tu solo quieres fumadores.",
+        smokingRequiredThemToViewer:
+          "Tu no fumas, y ellos solo quieren fumadores.",
+        ageViewerToThem: "Su edad esta fuera de tu rango preferido.",
+        ageThemToViewer: "Tu edad esta fuera de su rango preferido.",
+        genderViewerToThem:
+          "Su genero no esta en tus preferencias de pareja.",
+        genderThemToViewer:
+          "Tu genero no esta en sus preferencias de pareja.",
+        proximityViewerToThem: "Estan fuera de tu distancia preferida.",
+        proximityThemToViewer: "Estas fuera de su distancia preferida.",
+        genericViewerToThem:
+          "Algo en su perfil entra en conflicto con tus preferencias.",
+        genericThemToViewer:
+          "Algo en tu perfil entra en conflicto con sus preferencias.",
+        evidenceBoth: (viewerQuote, counterpartyQuote) =>
+          `“${viewerQuote}” · “${counterpartyQuote}”`,
+        evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
+        evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
+      },
     },
     detail: {
       backToMatches: "← Volver a coincidencias",
@@ -63,6 +94,7 @@ export const esCopy: AppCopySchema = {
       aboutThem: "Sobre esta persona",
       noSummary: "Aun no hay resumen de analisis.",
       analyzedPrefix: "Analizado",
+      updatedPrefix: "Actualizado",
       youMatched: "¡Hay coincidencia!",
       viewConversation: "Ver conversacion",
       actionStatus: {
@@ -86,6 +118,38 @@ export const esCopy: AppCopySchema = {
       undoFailed: "No se pudo deshacer la accion",
       feedbackFailed: "No se pudo enviar la opinion",
       blockFailed: "No se pudo bloquear",
+      hardBlocked: {
+        banner: "Ya no es coincidencia",
+        reasonsHeading: "Por que",
+        reviewPreferences: "Revisar preferencias",
+        actionsDisabled:
+          "Me gusta y Paso no estan disponibles mientras las preferencias bloquean esta coincidencia.",
+        youLikedThisProfile: "Te gusto este perfil",
+        smokingExcludedViewerToThem:
+          "Esta persona fuma, y tus preferencias excluyen fumadores.",
+        smokingExcludedThemToViewer:
+          "Tu fumas, y sus preferencias excluyen fumadores.",
+        smokingRequiredViewerToThem:
+          "Esta persona no fuma, y tu solo quieres fumadores.",
+        smokingRequiredThemToViewer:
+          "Tu no fumas, y ellos solo quieren fumadores.",
+        ageViewerToThem: "Su edad esta fuera de tu rango preferido.",
+        ageThemToViewer: "Tu edad esta fuera de su rango preferido.",
+        genderViewerToThem:
+          "Su genero no esta en tus preferencias de pareja.",
+        genderThemToViewer:
+          "Tu genero no esta en sus preferencias de pareja.",
+        proximityViewerToThem: "Estan fuera de tu distancia preferida.",
+        proximityThemToViewer: "Estas fuera de su distancia preferida.",
+        genericViewerToThem:
+          "Algo en su perfil entra en conflicto con tus preferencias.",
+        genericThemToViewer:
+          "Algo en tu perfil entra en conflicto con sus preferencias.",
+        evidenceBoth: (viewerQuote, counterpartyQuote) =>
+          `“${viewerQuote}” · “${counterpartyQuote}”`,
+        evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
+        evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
+      },
     },
     celebration: {
       title: "¡Hay coincidencia!",
@@ -310,6 +374,19 @@ export const esCopy: AppCopySchema = {
       FEMALE: "Mujer",
       NON_BINARY: "No binario",
       OTHER: "Otro",
+      PREFER_NOT_TO_SAY: "Prefiero no decirlo",
+    },
+    inferredDealbreakers: {
+      title: "Lo que leemos como trato de ruptura",
+      disclaimer:
+        "Inferido del texto de tu historia — no es un ajuste que hayas configurado. Edita tu historia para cambiar lo que leemos.",
+      empty:
+        "Aun no hemos inferido tratos de ruptura ni requisitos duros a partir de tu texto.",
+      dealbreakerLine: (quote) =>
+        `Lo leimos como un trato de ruptura: “${quote}”`,
+      requirementLine: (quote) =>
+        `Lo leimos como un requisito: “${quote}”`,
+      editStoryCta: "Editar tu historia",
     },
   },
   reportUser: {

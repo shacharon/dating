@@ -39,6 +39,7 @@ export const heCopy: AppCopySchema = {
       title: "ההתאמות שלך",
       subtitle: "אנשים שהפרופיל וההעדפות שלהם תואמים לשלך.",
       analyzedPrefix: "נותח",
+      updatedPrefix: "עודכן",
       staleRegionAria: "ניתוח הפרופיל לא מעודכן",
       staleMessage:
         "הפרופיל שלך השתנה מאז הניתוח האחרון. ציוני ההתאמה עלולים להיות לא מעודכנים.",
@@ -51,6 +52,32 @@ export const heCopy: AppCopySchema = {
         passed: { label: "דילגתי", ariaLabel: "דילגת על ההתאמה הזו" },
         blocked: { label: "חסום", ariaLabel: "חסמת את ההתאמה הזו" },
       },
+      hardBlocked: {
+        badge: "כבר לא התאמה",
+        badgeAria: "ההתאמה הזו כבר לא כשירה",
+        youLikedThisProfile: "אהבת את הפרופיל הזה",
+        moreReasonsCount: (count) => `+ ${count} אי התאמות נוספות`,
+        smokingExcludedViewerToThem:
+          "האדם הזה מעשן, וההעדפות שלך מוציאות מעשנים.",
+        smokingExcludedThemToViewer:
+          "את/ה מעשן/ת, וההעדפות שלהם מוציאות מעשנים.",
+        smokingRequiredViewerToThem:
+          "האדם הזה לא מעשן, ואת/ה מחפש/ת רק מעשנים.",
+        smokingRequiredThemToViewer:
+          "את/ה לא מעשן/ת, והם מחפשים רק מעשנים.",
+        ageViewerToThem: "הגיל שלהם מחוץ לטווח הגילאים שהעדפת.",
+        ageThemToViewer: "הגיל שלך מחוץ לטווח הגילאים שהם העדיפו.",
+        genderViewerToThem: "המגדר שלהם לא כלול בהעדפות הזוגיות שלך.",
+        genderThemToViewer: "המגדר שלך לא כלול בהעדפות הזוגיות שלהם.",
+        proximityViewerToThem: "הם מחוץ למרחק שהעדפת.",
+        proximityThemToViewer: "את/ה מחוץ למרחק שהם העדיפו.",
+        genericViewerToThem: "משהו בפרופיל שלהם מתנגש עם ההעדפות שלך.",
+        genericThemToViewer: "משהו בפרופיל שלך מתנגש עם ההעדפות שלהם.",
+        evidenceBoth: (viewerQuote, counterpartyQuote) =>
+          `“${viewerQuote}” · “${counterpartyQuote}”`,
+        evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
+        evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
+      },
     },
     detail: {
       backToMatches: "← חזרה להתאמות",
@@ -61,6 +88,7 @@ export const heCopy: AppCopySchema = {
       aboutThem: "עליהם",
       noSummary: "עדיין אין סיכום ניתוח.",
       analyzedPrefix: "נותח",
+      updatedPrefix: "עודכן",
       youMatched: "יש התאמה!",
       viewConversation: "צפייה בשיחה",
       actionStatus: {
@@ -84,6 +112,34 @@ export const heCopy: AppCopySchema = {
       undoFailed: "לא ניתן לבטל פעולה",
       feedbackFailed: "לא ניתן לשלוח משוב",
       blockFailed: "לא ניתן לחסום",
+      hardBlocked: {
+        banner: "כבר לא התאמה",
+        reasonsHeading: "למה",
+        reviewPreferences: "סקירת העדפות",
+        actionsDisabled:
+          "אהבתי ודילוג אינם זמינים כשהעדפות חוסמות את ההתאמה הזו.",
+        youLikedThisProfile: "אהבת את הפרופיל הזה",
+        smokingExcludedViewerToThem:
+          "האדם הזה מעשן, וההעדפות שלך מוציאות מעשנים.",
+        smokingExcludedThemToViewer:
+          "את/ה מעשן/ת, וההעדפות שלהם מוציאות מעשנים.",
+        smokingRequiredViewerToThem:
+          "האדם הזה לא מעשן, ואת/ה מחפש/ת רק מעשנים.",
+        smokingRequiredThemToViewer:
+          "את/ה לא מעשן/ת, והם מחפשים רק מעשנים.",
+        ageViewerToThem: "הגיל שלהם מחוץ לטווח הגילאים שהעדפת.",
+        ageThemToViewer: "הגיל שלך מחוץ לטווח הגילאים שהם העדיפו.",
+        genderViewerToThem: "המגדר שלהם לא כלול בהעדפות הזוגיות שלך.",
+        genderThemToViewer: "המגדר שלך לא כלול בהעדפות הזוגיות שלהם.",
+        proximityViewerToThem: "הם מחוץ למרחק שהעדפת.",
+        proximityThemToViewer: "את/ה מחוץ למרחק שהם העדיפו.",
+        genericViewerToThem: "משהו בפרופיל שלהם מתנגש עם ההעדפות שלך.",
+        genericThemToViewer: "משהו בפרופיל שלך מתנגש עם ההעדפות שלהם.",
+        evidenceBoth: (viewerQuote, counterpartyQuote) =>
+          `“${viewerQuote}” · “${counterpartyQuote}”`,
+        evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
+        evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
+      },
     },
     celebration: {
       title: "יש התאמה!",
@@ -298,6 +354,16 @@ export const heCopy: AppCopySchema = {
       FEMALE: "אישה",
       NON_BINARY: "לא בינארי",
       OTHER: "אחר",
+      PREFER_NOT_TO_SAY: "מעדיפ/ה לא לומר",
+    },
+    inferredDealbreakers: {
+      title: "מה שקראנו כקווים אדומים",
+      disclaimer:
+        "מוסק מטקסט הסיפור בפרופיל — לא הגדרה שקבעתם. ערכו את הסיפור כדי לשנות את מה שאנחנו קוראים.",
+      empty: "עדיין לא הסקנו קווים אדומים או דרישות קשיחות מהטקסט שלכם.",
+      dealbreakerLine: (quote) => `קראנו את זה כקו אדום: “${quote}”`,
+      requirementLine: (quote) => `קראנו את זה כדרישה: “${quote}”`,
+      editStoryCta: "עריכת הסיפור",
     },
   },
   reportUser: {

@@ -46,6 +46,7 @@ export type AppCopySchema = {
       title: string;
       subtitle: string;
       analyzedPrefix: string;
+      updatedPrefix: string;
       staleRegionAria: string;
       staleMessage: string;
       refreshAnalysis: string;
@@ -57,6 +58,27 @@ export type AppCopySchema = {
         passed: { label: string; ariaLabel: string };
         blocked: { label: string; ariaLabel: string };
       };
+      hardBlocked: {
+        badge: string;
+        badgeAria: string;
+        youLikedThisProfile: string;
+        moreReasonsCount: (count: number) => string;
+        smokingExcludedViewerToThem: string;
+        smokingExcludedThemToViewer: string;
+        smokingRequiredViewerToThem: string;
+        smokingRequiredThemToViewer: string;
+        ageViewerToThem: string;
+        ageThemToViewer: string;
+        genderViewerToThem: string;
+        genderThemToViewer: string;
+        proximityViewerToThem: string;
+        proximityThemToViewer: string;
+        genericViewerToThem: string;
+        genericThemToViewer: string;
+        evidenceBoth: (viewerQuote: string, counterpartyQuote: string) => string;
+        evidenceViewer: (viewerQuote: string) => string;
+        evidenceCounterparty: (counterpartyQuote: string) => string;
+      };
     };
     detail: {
       backToMatches: string;
@@ -67,6 +89,7 @@ export type AppCopySchema = {
       aboutThem: string;
       noSummary: string;
       analyzedPrefix: string;
+      updatedPrefix: string;
       youMatched: string;
       viewConversation: string;
       actionStatus: {
@@ -90,6 +113,28 @@ export type AppCopySchema = {
       undoFailed: string;
       feedbackFailed: string;
       blockFailed: string;
+      hardBlocked: {
+        banner: string;
+        reasonsHeading: string;
+        reviewPreferences: string;
+        actionsDisabled: string;
+        youLikedThisProfile: string;
+        smokingExcludedViewerToThem: string;
+        smokingExcludedThemToViewer: string;
+        smokingRequiredViewerToThem: string;
+        smokingRequiredThemToViewer: string;
+        ageViewerToThem: string;
+        ageThemToViewer: string;
+        genderViewerToThem: string;
+        genderThemToViewer: string;
+        proximityViewerToThem: string;
+        proximityThemToViewer: string;
+        genericViewerToThem: string;
+        genericThemToViewer: string;
+        evidenceBoth: (viewerQuote: string, counterpartyQuote: string) => string;
+        evidenceViewer: (viewerQuote: string) => string;
+        evidenceCounterparty: (counterpartyQuote: string) => string;
+      };
     };
     celebration: {
       title: string;
@@ -288,7 +333,15 @@ export type AppCopySchema = {
       ageMax: string;
       maxDistanceKm: string;
     };
-    partnerGender: Record<"MALE" | "FEMALE" | "NON_BINARY" | "OTHER", string>;
+    partnerGender: Record<"MALE" | "FEMALE" | "NON_BINARY" | "OTHER" | "PREFER_NOT_TO_SAY", string>;
+    inferredDealbreakers: {
+      title: string;
+      disclaimer: string;
+      empty: string;
+      dealbreakerLine: (quote: string) => string;
+      requirementLine: (quote: string) => string;
+      editStoryCta: string;
+    };
   };
   reportUser: {
     linkLabel: string;

@@ -1,30 +1,43 @@
 /**
- * Profile negatives / dealbreakers — explicit anti-preferences layer.
- * V2 extraction only; V1 does not extract negatives.
+ * @deprecated Use `holy-grail-matching/dealbreaker-taxonomy` +
+ * `dealbreaker-signals-text.extract` instead. Tag lists are no longer
+ * maintained here — re-exported from the single source of truth.
  *
+ * Profile negatives / dealbreakers — explicit anti-preferences layer.
  * STRICT RULE: ONLY explicit negation evidence. NO inference.
  */
 
-export type NegativeCategory = 'behavioral' | 'lifestyle' | 'values' | 'social';
+import {
+  ALL_DEALBREAKER_TAGS,
+  DEALBREAKER_TAGS,
+  DEALBREAKER_TAG_SET,
+  type DealbreakerCategory,
+  type DealbreakerTag,
+} from '../holy-grail-matching/dealbreaker-taxonomy';
 
+/** @deprecated Use DealbreakerCategory from dealbreaker-taxonomy. */
+export type NegativeCategory = DealbreakerCategory;
+
+/** @deprecated Replaced by DealbreakerClassification (HARD_EXCLUDE | HARD_REQUIRE | SOFT). */
 export type NegativeStrength = 'hard' | 'soft';
 
+/** @deprecated Use DealbreakerSignal from dealbreaker-signals-text.extract. */
 export interface NegativeItem {
   category: NegativeCategory;
-  tag: string; // canonical tag (e.g., "smoking", "no_kids", "clingy")
-  strength: NegativeStrength; // hard = dealbreaker, soft = preference
-  evidence: string; // exact quote from text
-  confidence: number; // 0-1
+  tag: string;
+  strength: NegativeStrength;
+  evidence: string;
+  confidence: number;
 }
 
-/** Negatives extracted from a single domain (self or partner). */
+/** @deprecated */
 export interface DomainNegatives {
   domain: 'self' | 'partner' | 'relationship';
   items: NegativeItem[];
   version: 'v1';
 }
 
-/** Full negatives extraction result for all three domains. */
+/** @deprecated */
 export interface ExtractedNegatives {
   version: 'v1';
   self: NegativeItem[];
@@ -32,40 +45,17 @@ export interface ExtractedNegatives {
   relationship: NegativeItem[];
 }
 
-/** Canonical negative tags by category. */
-export const NEGATIVE_TAGS = {
-  behavioral: ['smoking', 'drugs', 'excessive_drinking', 'vaping'],
-  lifestyle: [
-    'no_kids',
-    'kids_required',
-    'no_pets',
-    'pets_required',
-    'no_remote_work',
-    'must_be_local',
-    'long_distance_impossible',
-  ],
-  values: [
-    'political_incompatibility',
-    'religious_incompatibility',
-    'moral_incompatibility',
-  ],
-  social: [
-    'jealousy',
-    'control',
-    'clingy',
-    'drama',
-    'emotional_unavailability',
-    'commitment_phobic',
-  ],
-} as const;
+/**
+ * @deprecated Use DEALBREAKER_TAGS — includes requirement counterparts.
+ * Legacy shape kept for any stale imports; values are the live taxonomy.
+ */
+export const NEGATIVE_TAGS = DEALBREAKER_TAGS;
 
-export const ALL_NEGATIVE_TAGS = [
-  ...NEGATIVE_TAGS.behavioral,
-  ...NEGATIVE_TAGS.lifestyle,
-  ...NEGATIVE_TAGS.values,
-  ...NEGATIVE_TAGS.social,
-] as const;
+/** @deprecated Use ALL_DEALBREAKER_TAGS. */
+export const ALL_NEGATIVE_TAGS = ALL_DEALBREAKER_TAGS;
 
-export type NegativeTag = (typeof ALL_NEGATIVE_TAGS)[number];
+/** @deprecated Use DealbreakerTag. */
+export type NegativeTag = DealbreakerTag;
 
-export const NEGATIVE_TAG_SET = new Set<string>(ALL_NEGATIVE_TAGS);
+/** @deprecated Use DEALBREAKER_TAG_SET. */
+export const NEGATIVE_TAG_SET = DEALBREAKER_TAG_SET;
