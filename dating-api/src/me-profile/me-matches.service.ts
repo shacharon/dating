@@ -34,6 +34,11 @@ import {
 } from './me-profile-photo-gate';
 import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
 import {
+  accumulateHolyGrailDimensionOutcomeCounts,
+  emptyHolyGrailDimensionOutcomeCounts,
+  formatHolyGrailDimensionOutcomeCountsForLog,
+} from '../holy-grail-matching/eligibility.evaluator';
+import {
   buildMatchExplanationTraits,
   type MatchExplanationTrait,
 } from '../matches/match-explanation-traits';
@@ -196,7 +201,9 @@ export class MeMatchesService {
     // HG structured preferences live on UserProfilePreference (Phase F).
     preference: true,
     // Normalized signal / interest rows for ENGINE_READ_NORMALIZED assembly.
-    signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
+    signals: {
+      select: { signalKey: true, signalValue: true, evalVersion: true },
+    },
     interests: {
       select: { tag: true, rank: true, evalVersion: true },
       orderBy: { rank: 'asc' as const },
@@ -216,7 +223,9 @@ export class MeMatchesService {
       where: { userId },
       include: {
         preference: true,
-        signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
+        signals: {
+          select: { signalKey: true, signalValue: true, evalVersion: true },
+        },
         interests: {
           select: { tag: true, rank: true, evalVersion: true },
           orderBy: { rank: 'asc' },
@@ -249,9 +258,13 @@ export class MeMatchesService {
         `me matches list: no approved photo profileId=${viewer.id} userId=${userId}`,
         ErrorCodes.ME_MATCHES_LIST_NOT_READY,
       );
-      this.analytics.track(userId, ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED, {
-        surface: 'match_list',
-      });
+      this.analytics.track(
+        userId,
+        ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
+        {
+          surface: 'match_list',
+        },
+      );
       return { status: 'not_ready', reason: 'no_photo' };
     }
 
@@ -323,6 +336,7 @@ export class MeMatchesService {
     );
 
     const matches: MeMatchItemDto[] = [];
+    const hgDimensionOutcomeCounts = emptyHolyGrailDimensionOutcomeCounts();
 
     for (const row of candidateRows) {
       const candidateBridge = buildProductProfileMatchingBridge(
@@ -376,6 +390,16 @@ export class MeMatchesService {
         viewerRead.hg.row,
         candidateRead.hg.row,
       );
+      if (hgDirections !== null) {
+        accumulateHolyGrailDimensionOutcomeCounts(
+          hgDimensionOutcomeCounts,
+          hgDirections.aToB,
+        );
+        accumulateHolyGrailDimensionOutcomeCounts(
+          hgDimensionOutcomeCounts,
+          hgDirections.bToA,
+        );
+      }
       if (
         hgDirections !== null &&
         (hgDirections.aToB.overallHardEligibility === 'FAIL' ||
@@ -436,6 +460,11 @@ export class MeMatchesService {
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
 
+    this.obs.trace(
+      `event=hg_dimension_outcomes profileId=${viewer.id} ${formatHolyGrailDimensionOutcomeCountsForLog(hgDimensionOutcomeCounts)}`,
+      ErrorCodes.ME_MATCHES_HG_DIMENSION_OUTCOMES,
+    );
+
     this.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
       matchCount: matches.length,
       viewerProfileId: viewer.id,
@@ -469,7 +498,9 @@ export class MeMatchesService {
       where: { userId: viewerUserId },
       include: {
         preference: true,
-        signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
+        signals: {
+          select: { signalKey: true, signalValue: true, evalVersion: true },
+        },
         interests: {
           select: { tag: true, rank: true, evalVersion: true },
           orderBy: { rank: 'asc' },
@@ -558,7 +589,9 @@ export class MeMatchesService {
       where: { userId },
       include: {
         preference: true,
-        signals: { select: { signalKey: true, signalValue: true, evalVersion: true } },
+        signals: {
+          select: { signalKey: true, signalValue: true, evalVersion: true },
+        },
         interests: {
           select: { tag: true, rank: true, evalVersion: true },
           orderBy: { rank: 'asc' },
@@ -710,8 +743,7 @@ export class MeMatchesService {
         result.explainability.positiveChips,
         result.finalScore,
       );
-      matchExplanationTraits =
-        built.length > 0 ? built : undefined;
+      matchExplanationTraits = built.length > 0 ? built : undefined;
     }
 
     this.obs.trace(

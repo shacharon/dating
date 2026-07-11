@@ -25,6 +25,7 @@ Load and apply: [../../dating-senior-dev/SKILL.md](../../dating-senior-dev/SKILL
 - [ ] Implement per architect handoff (schema migration, API, UI)
 - [ ] `npx prisma migrate deploy` when schema changed
 - [ ] Manual smoke in **real browser** for realtime/auth — [dating-runtime-verification](../../dating-runtime-verification/SKILL.md)
+- [ ] Extend the shared E2E harness for eligibility/preference/ranking changes — [dating-e2e-verification](../../dating-e2e-verification/SKILL.md)
 - [ ] **Do not** write full test suite (agent 2's job)
 
 ## Handoff (mandatory)

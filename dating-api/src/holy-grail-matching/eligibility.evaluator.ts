@@ -1,6 +1,7 @@
 /**
  * Layer-3 Holy Grail hard eligibility (structured prefs vs counterparty facts).
  * Kept dimensions: GENDER, AGE, PROXIMITY only (Sprint 15 Story 1).
+ * Sprint 16 Story 1: distinct UNKNOWN for missing/withheld facts + per-dimension blocking policy.
  */
 import type {
   MatchingCanonicalModel,
@@ -15,14 +16,55 @@ import {
 } from './holy-grail-dimensions';
 
 /**
- * Per-dimension Layer 3 outcome (internal). Only `FAIL` blocks `overallHardEligibility`;
- * `PASS` and `SOFT_PASS` allow; `SKIPPED` is inert.
+ * Per-dimension Layer 3 outcome (internal). `PASS` and `SOFT_PASS` always allow;
+ * `SKIPPED` (no preference set) is always inert. `FAIL` (a genuine, known mismatch)
+ * always blocks. `UNKNOWN` (the fact is missing/withheld, not mismatched) blocks or
+ * not depending on the dimension's `HolyGrailDimensionBlockingPolicy` — see
+ * {@link resolveDimensionOutcome}. Sprint 16 Story 1.
  */
 export type HolyGrailHardEligibilityStatus =
   | 'PASS'
   | 'FAIL'
+  | 'UNKNOWN'
   | 'SKIPPED'
   | 'SOFT_PASS';
+
+/**
+ * Whether a dimension's `UNKNOWN` outcome (fact missing/withheld) blocks
+ * `overallHardEligibility`. `GENDER`/`AGE`/`PROXIMITY` are `BLOCKS_ON_UNKNOWN`
+ * (unchanged net behavior from before this status existed). `NEVER_BLOCKS` exists
+ * for future classifier-derived dimensions (Sprint 17).
+ */
+export type HolyGrailDimensionBlockingPolicy =
+  | 'BLOCKS_ON_UNKNOWN'
+  | 'NEVER_BLOCKS';
+
+/** Explicit, not inferred — Sprint 17 extends this map with per-classifier-tag entries. */
+export const HOLY_GRAIL_DIMENSION_BLOCKING_POLICY: Record<
+  HolyGrailDimensionKey,
+  HolyGrailDimensionBlockingPolicy
+> = {
+  GENDER: 'BLOCKS_ON_UNKNOWN',
+  AGE: 'BLOCKS_ON_UNKNOWN',
+  PROXIMITY: 'BLOCKS_ON_UNKNOWN',
+};
+
+/**
+ * Resolves a dimension's raw status against its blocking policy into the effective
+ * status used to compute `overallHardEligibility`. Pure, total (all 5 raw statuses ×
+ * both policy values are defined) — the per-dimension `status` shown in
+ * {@link HolyGrailDimensionEvaluation} is always the raw, unresolved value; only
+ * `overallHardEligibility` uses the resolved one.
+ */
+export function resolveDimensionOutcome(
+  rawStatus: HolyGrailHardEligibilityStatus,
+  policy: HolyGrailDimensionBlockingPolicy,
+): HolyGrailHardEligibilityStatus {
+  if (rawStatus === 'UNKNOWN' && policy === 'BLOCKS_ON_UNKNOWN') {
+    return 'FAIL';
+  }
+  return rawStatus;
+}
 
 export interface HolyGrailDimensionEvaluation {
   readonly status: HolyGrailHardEligibilityStatus;
@@ -44,7 +86,7 @@ export interface HolyGrailDirectionalEvaluationResult {
     HolyGrailDimensionKey,
     HolyGrailDimensionEvaluation
   >;
-  /** FAIL if any dimension is FAIL; otherwise PASS (SKIPPED / SOFT_PASS / PASS do not block). */
+  /** FAIL if any resolved dimension is FAIL; otherwise PASS. */
   readonly overallHardEligibility: 'PASS' | 'FAIL';
   readonly eligibilityFlags: HolyGrailEligibilityFlags;
 }
@@ -81,7 +123,7 @@ function evalGender(
   }
   const gid = facts.genderIdentity;
   if (gid === undefined || gid === GenderIdentity.PREFER_NOT_TO_SAY) {
-    return d('FAIL', 'PARTNER_GENDER_MISSING_OR_WITHHELD');
+    return d('UNKNOWN', 'PARTNER_GENDER_MISSING_OR_WITHHELD');
   }
   if (genders.some((g) => (g as string) === (gid as string))) {
     return d('PASS', 'GENDER_IN_ALLOWLIST');
@@ -101,11 +143,11 @@ function evalAge(
   }
   const dob = facts.dateOfBirth;
   if (dob === undefined) {
-    return d('FAIL', 'PARTNER_DOB_MISSING');
+    return d('UNKNOWN', 'PARTNER_DOB_MISSING');
   }
   const age = ageWholeYearsUtcFromYmd(dob, evaluatedAt);
   if (age === undefined) {
-    return d('FAIL', 'PARTNER_DOB_INVALID');
+    return d('UNKNOWN', 'PARTNER_DOB_INVALID');
   }
   if (min !== undefined && age < min) {
     return d('FAIL', 'AGE_BELOW_MIN');
@@ -142,7 +184,11 @@ function overallFromDimensions(
   dims: Record<HolyGrailDimensionKey, HolyGrailDimensionEvaluation>,
 ): 'PASS' | 'FAIL' {
   for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
-    if (dims[k].status === 'FAIL') {
+    const effective = resolveDimensionOutcome(
+      dims[k].status,
+      HOLY_GRAIL_DIMENSION_BLOCKING_POLICY[k],
+    );
+    if (effective === 'FAIL') {
       return 'FAIL';
     }
   }
@@ -174,4 +220,45 @@ export function evaluateHolyGrailDirectional(args: {
     overallHardEligibility: overallFromDimensions(dimensions),
     eligibilityFlags: eligibilityFlagsFromDimensions(),
   };
+}
+
+// ─── Outcome telemetry (evidence base for Sprint 17) ───
+// Pure, DI-free. Callers (e.g. MeMatchesService) accumulate and emit via obs.
+
+export type HolyGrailDimensionOutcomeCounts = Record<
+  HolyGrailDimensionKey,
+  Record<HolyGrailHardEligibilityStatus, number>
+>;
+
+const ALL_HOLY_GRAIL_HARD_ELIGIBILITY_STATUSES: readonly HolyGrailHardEligibilityStatus[] =
+  ['PASS', 'FAIL', 'UNKNOWN', 'SKIPPED', 'SOFT_PASS'];
+
+export function emptyHolyGrailDimensionOutcomeCounts(): HolyGrailDimensionOutcomeCounts {
+  const out = {} as HolyGrailDimensionOutcomeCounts;
+  for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
+    out[k] = { PASS: 0, FAIL: 0, UNKNOWN: 0, SKIPPED: 0, SOFT_PASS: 0 };
+  }
+  return out;
+}
+
+/** Mutates `counts` in place — call once per directional evaluation. */
+export function accumulateHolyGrailDimensionOutcomeCounts(
+  counts: HolyGrailDimensionOutcomeCounts,
+  evaluation: HolyGrailDirectionalEvaluationResult,
+): void {
+  for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
+    counts[k][evaluation.dimensions[k].status] += 1;
+  }
+}
+
+/** `GENDER:PASS=3,FAIL=1,UNKNOWN=0,SKIPPED=0,SOFT_PASS=0;AGE:...` — stable, greppable. */
+export function formatHolyGrailDimensionOutcomeCountsForLog(
+  counts: HolyGrailDimensionOutcomeCounts,
+): string {
+  return HOLY_GRAIL_DIMENSION_KEYS.map((k) => {
+    const perStatus = ALL_HOLY_GRAIL_HARD_ELIGIBILITY_STATUSES.map(
+      (s) => `${s}=${counts[k][s]}`,
+    ).join(',');
+    return `${k}:${perStatus}`;
+  }).join(';');
 }

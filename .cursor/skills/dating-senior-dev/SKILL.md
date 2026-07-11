@@ -73,6 +73,8 @@ Load [dating-runtime-verification](../dating-runtime-verification/SKILL.md) when
 - Prefer **one shared** messaging socket (`acquireMessagingSocket`); do not open per-page sockets without architect approval
 - Socket in dev: direct API origin on **same hostname as UI** — do not route WebSocket through Next `/socket.io` rewrite unless CR documents WS upgrade proof
 
+Load [dating-e2e-verification](../dating-e2e-verification/SKILL.md) when the story touches eligibility, preference dimensions, or ranking — extend `me-matches-eligibility-harness.ts`, don't hand-roll a new harness.
+
 ## Example: user-to-user action
 
 ```typescript

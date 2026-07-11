@@ -29,10 +29,17 @@ export { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapp
 export {
   evaluateHolyGrailDirectional,
   mergeEffectiveMatchingPreferences,
+  resolveDimensionOutcome,
+  HOLY_GRAIL_DIMENSION_BLOCKING_POLICY,
+  emptyHolyGrailDimensionOutcomeCounts,
+  accumulateHolyGrailDimensionOutcomeCounts,
+  formatHolyGrailDimensionOutcomeCountsForLog,
   type HolyGrailDirectionalEvaluationResult,
   type HolyGrailDimensionEvaluation,
   type HolyGrailEligibilityFlags,
   type HolyGrailHardEligibilityStatus,
+  type HolyGrailDimensionBlockingPolicy,
+  type HolyGrailDimensionOutcomeCounts,
 } from './eligibility.evaluator';
 export { adaptHolyGrailEvaluationToLegacyDimensionMap } from './evaluation-to-legacy-dimension-map';
 export { buildHolyGrailEligibilityAuditV1 } from './build-eligibility-audit';

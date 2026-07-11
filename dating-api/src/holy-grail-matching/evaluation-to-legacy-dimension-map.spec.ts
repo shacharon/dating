@@ -42,4 +42,21 @@ describe('adaptHolyGrailEvaluationToLegacyDimensionMap', () => {
     const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evaluation);
     expect(legacy.GENDER).toBe(MatchingDimensionResults.MATCH);
   });
+
+  it('maps UNKNOWN → UNKNOWN (Sprint 16 Story 1)', () => {
+    const dims = baseDims();
+    dims.GENDER = {
+      status: 'UNKNOWN',
+      reasonCode: 'PARTNER_GENDER_MISSING_OR_WITHHELD',
+    };
+    const evaluation: HolyGrailDirectionalEvaluationResult = {
+      dimensions: dims,
+      overallHardEligibility: 'FAIL',
+      eligibilityFlags: { children_unsure: false },
+    };
+    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evaluation);
+    expect(legacy.GENDER).toBe(MatchingDimensionResults.UNKNOWN);
+    expect(legacy.GENDER).not.toBe(MatchingDimensionResults.SKIPPED);
+    expect(legacy.GENDER).not.toBe(MatchingDimensionResults.NO_MATCH);
+  });
 });

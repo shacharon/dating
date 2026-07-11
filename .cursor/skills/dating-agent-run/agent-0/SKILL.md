@@ -26,6 +26,7 @@ Load and apply: [../../dating-architect/SKILL.md](../../dating-architect/SKILL.m
 - [ ] Define API contracts (copy-paste ready)
 - [ ] Service signatures + module placement
 - [ ] **Runtime topology** if realtime / proxy / cookies — [dating-runtime-verification](../../dating-runtime-verification/SKILL.md)
+- [ ] **E2E verification plan** if eligibility / preference dimensions / ranking — [dating-e2e-verification](../../dating-e2e-verification/SKILL.md)
 - [ ] **Do not** write implementation code or tests
 
 ## Handoff (mandatory)

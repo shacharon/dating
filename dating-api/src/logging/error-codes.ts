@@ -64,7 +64,14 @@ export const ErrorCodes = {
    * Me matches: reciprocal partner-gender filter read `UserProfile.desiredPartnerGenders` JSON because
    * no `UserProfilePreference` row exists for that profile (`/api/v1/me/matches` only).
    */
-  ME_MATCHES_PARTNER_GENDER_LEGACY_JSON: 'ME_MATCHES_PARTNER_GENDER_LEGACY_JSON',
+  ME_MATCHES_PARTNER_GENDER_LEGACY_JSON:
+    'ME_MATCHES_PARTNER_GENDER_LEGACY_JSON',
+  /**
+   * Sprint 16 Story 1 — per-dimension HG eligibility outcome counts (PASS/FAIL/UNKNOWN/
+   * SKIPPED/SOFT_PASS) for one `/api/v1/me/matches` request, aggregated across every
+   * candidate evaluated.
+   */
+  ME_MATCHES_HG_DIMENSION_OUTCOMES: 'ME_MATCHES_HG_DIMENSION_OUTCOMES',
   /** Me conversations: GET /me/conversations — list returned */
   ME_CONVERSATIONS_LIST_OK: 'ME_CONVERSATIONS_LIST_OK',
   /** Me conversations: GET /me/conversations/:id — detail returned */
@@ -99,8 +106,7 @@ export const ErrorCodes = {
   /** Sprint 4 Story 6 — session revoked/expired; socket disconnected. */
   MESSAGING_WS_SESSION_INVALIDATED: 'MESSAGING_WS_SESSION_INVALIDATED',
   /** Sprint 4 Story 2 — message.new publish failed (best-effort; HTTP send still OK). */
-  MESSAGING_MESSAGE_NEW_PUBLISH_FAILED:
-    'MESSAGING_MESSAGE_NEW_PUBLISH_FAILED',
+  MESSAGING_MESSAGE_NEW_PUBLISH_FAILED: 'MESSAGING_MESSAGE_NEW_PUBLISH_FAILED',
 
   /** Sprint 6 Story 1 — transactional email notifications. */
   EMAIL_MUTUAL_MATCH_SEND_OK: 'EMAIL_MUTUAL_MATCH_SEND_OK',

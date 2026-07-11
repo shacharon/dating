@@ -1,0 +1,519 @@
+/**
+ * Shared boot/state harness for the Sprint 16/17 eligibility + ranking regression specs
+ * (`me-new-model-e2e-eligibility.integration.spec.ts`, `me-new-model-e2e-ranking.integration.spec.ts`).
+ *
+ * Mirrors the exact pattern established by `me-new-model-e2e.integration.spec.ts`:
+ *  - Real Nest app boot (`Test.createTestingModule` + `app.init()`), real HTTP via supertest.
+ *  - `PrismaService` replaced by a hand-rolled in-memory mock (plain JS `Map`s simulate DB rows —
+ *    no real Postgres). Generalized here to N profiles (keyed by profile id) instead of the
+ *    fixed two-user A/B shape, so multi-candidate ranking scenarios can reuse it too.
+ *  - `MeProfileAnalysisService` stubbed; profile state is manually advanced to `ANALYZED` with a
+ *    fixture `evaluationJson` via {@link EligibilityTestHarness.markAnalyzed}, simulating the
+ *    async analysis worker completing.
+ *  - `MeProfileValidationPipe` overridden as a pass-through (same as the reference spec) — DTO
+ *    validation itself is covered elsewhere (`me-profile-http.integration.spec.ts`); these specs
+ *    care about eligibility/ranking behavior, not input validation.
+ *
+ * IMPORTANT: partner preferences (`partnerAgeMin`/`partnerAgeMax`/`desiredPartnerGenders`) are set
+ * through the **real** HTTP `POST`/`PATCH /api/v1/me/profile` path, exactly like a real client would
+ * — never poked directly into the mock. `MeProfileService.upsertPreference` dual-writes those onto
+ * `UserProfilePreference` inside the same transaction as the profile write; this harness's
+ * `userProfilePreference.upsert` mock persists that state so later `GET /api/v1/me/matches` calls
+ * read it back exactly as production would via `include: { preference: true }`.
+ */
+
+import { INestApplication } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import cookieParser from 'cookie-parser';
+import request from 'supertest';
+import type { App } from 'supertest/types';
+import { UserStatus } from '@prisma/client';
+import { AuthModule } from '../auth/auth.module';
+import { GoogleAuthService } from '../auth/google-auth.service';
+import { AuthSessionConfigModule } from '../config/auth-session-config.module';
+import { AuthSessionConfigService } from '../config/auth-session-config.service';
+import { LLM_CONFIG } from '../llm/llm.constants';
+import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
+import { SimpleLoggerModule } from '../logger/simple-logger.module';
+import { StructuredLoggingModule } from '../logging/structured-logging.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
+import { hashSessionToken } from '../session/session-token.crypto';
+import { SessionModule } from '../session/session.module';
+import { UsersModule } from '../users/users.module';
+import { UsersService } from '../users/users.service';
+import { MeProfileAnalysisService } from './me-profile-analysis.service';
+import { AnalyticsModule } from '../analytics/analytics.module';
+import { MeProfileModule } from './me-profile.module';
+import { MeProfileValidationPipe } from './me-profile-validation.pipe';
+
+export const PEPPER = 'e2e-eligibility-test-pepper';
+export const SESSION_COOKIE = 'dating_session';
+
+export const configStub = {
+  googleClientId: 'google-client-id',
+  sessionSecretPepper: PEPPER,
+  sessionCookieName: SESSION_COOKIE,
+  sessionTtlDays: 14,
+  cookieDomain: undefined as string | undefined,
+  cookieSecure: false,
+  corsOrigin: 'http://localhost:3000',
+};
+
+/** Minimal evaluation JSON that passes the engine's hasNumericSelfSignals check. */
+export function makeEvalJson(
+  signals: Record<string, number>,
+  summary = 'Thoughtful and grounded.',
+) {
+  return {
+    self: { signals },
+    partner: { signals: {} },
+    relationship: { signals: {} },
+    display: { summary },
+  };
+}
+
+export const DEFAULT_SELF_SIGNALS = {
+  ambition: 0.6,
+  socialBattery: 0.5,
+  emotionalDepth: 0.7,
+  attachmentSecurity: 0.6,
+};
+
+export const VALID_EVAL_JSON = makeEvalJson(DEFAULT_SELF_SIGNALS);
+
+export interface HarnessIdentity {
+  readonly id: string;
+  readonly googleId: string;
+  readonly email: string;
+  readonly displayName: string;
+}
+
+/** Deterministic identity for a given short test-local key (e.g. "g1-searcher"). */
+export function makeIdentity(key: string): HarnessIdentity {
+  return {
+    id: `user_${key}`,
+    googleId: `g-${key}`,
+    email: `${key}@elig.test`,
+    displayName: `User ${key}`,
+  };
+}
+
+function extractCookieValue(
+  headers: Record<string, unknown>,
+  name: string,
+): string | undefined {
+  const setCookie = headers['set-cookie'];
+  if (!Array.isArray(setCookie)) return undefined;
+  for (const line of setCookie) {
+    if (typeof line === 'string' && line.startsWith(`${name}=`)) {
+      return line.split(';')[0].slice(name.length + 1);
+    }
+  }
+  return undefined;
+}
+
+function makeBaseProfileRow(id: string, userId: string): Record<string, unknown> {
+  return {
+    id,
+    userId,
+    name: '',
+    nickname: null,
+    status: 'DRAFT',
+    onboardingStep: 'BASIC',
+    aboutMe: null,
+    aboutPartner: null,
+    aboutRelationship: null,
+    birthDate: null,
+    gender: null,
+    desiredPartnerGenders: null,
+    city: null,
+    country: null,
+    locationLabel: null,
+    submittedAt: null,
+    analyzedAt: null,
+    lastAnalysisError: null,
+    childrenStatus: null,
+    wantsChildren: null,
+    smokingFrequency: null,
+    alcoholUse: null,
+    education: null,
+    religion: null,
+    _count: { evaluations: 0 },
+    createdAt: new Date('2026-04-18T10:00:00.000Z'),
+    updatedAt: new Date('2026-04-18T10:00:00.000Z'),
+  };
+}
+
+/**
+ * Generalized (N-profile) in-memory Prisma-backed test harness for real HTTP flows through
+ * signup → profile create/patch → submit → simulate ANALYZED → GET /api/v1/me/matches.
+ */
+export class EligibilityTestHarness {
+  app!: INestApplication<App>;
+
+  private readonly profiles = new Map<string, Record<string, unknown>>();
+  private readonly evaluations = new Map<string, Record<string, unknown>>();
+  private readonly preferences = new Map<string, Record<string, unknown>>();
+  private readonly sessionMap = new Map<string, { userId: string; hash: string }>();
+  private readonly identitiesByGoogleId = new Map<string, HarnessIdentity>();
+  private readonly identitiesById = new Map<string, HarnessIdentity>();
+
+  private readonly verifyIdToken = jest.fn();
+
+  private readonly usersServiceMock = {
+    findById: jest.fn(async (id: string) => {
+      const identity = this.identitiesById.get(id);
+      if (!identity) return null;
+      return {
+        id: identity.id,
+        email: identity.email,
+        displayName: identity.displayName,
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      };
+    }),
+    findByEmail: jest.fn(),
+    findByGoogleId: jest.fn(async () => null),
+    createFromGoogleIdentity: jest.fn(
+      async (identity: { googleId: string; email: string; displayName: string }) => {
+        const found = this.identitiesByGoogleId.get(identity.googleId);
+        if (!found) {
+          throw new Error(`Harness: unknown googleId ${identity.googleId}`);
+        }
+        return {
+          id: found.id,
+          email: found.email,
+          googleId: found.googleId,
+          displayName: found.displayName,
+          avatarUrl: null,
+          status: UserStatus.ACTIVE,
+        };
+      },
+    ),
+    updateLoginFields: jest.fn(),
+  };
+
+  private attachRelations(
+    row: Record<string, unknown> | null,
+  ): Record<string, unknown> | null {
+    if (!row) return row;
+    const withPref = {
+      ...row,
+      preference: this.preferences.get(row['id'] as string) ?? null,
+    };
+    if (withPref['status'] !== 'ANALYZED') return withPref;
+    return {
+      ...withPref,
+      photos: withPref['photos'] ?? [
+        { id: `photo_${withPref['id'] as string}`, isPrimary: true },
+      ],
+      user: { deletedAt: null },
+    };
+  }
+
+  private profileIdForUserId(userId: string): string {
+    return `prof_${userId}`;
+  }
+
+  readonly prismaMock = {
+    $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(this.prismaMock)),
+    userSession: {
+      create: jest.fn(async ({ data }: { data: { expiresAt: Date } }) => ({
+        id: `sess_${Date.now()}_${Math.random()}`,
+        expiresAt: data.expiresAt,
+      })),
+      findUnique: jest.fn(
+        async ({ where }: { where: { sessionTokenHash: string } }) => {
+          for (const [userId, sess] of this.sessionMap) {
+            if (sess.hash === where.sessionTokenHash) {
+              return {
+                id: `sess_row_${userId}`,
+                userId,
+                sessionTokenHash: sess.hash,
+                expiresAt: new Date('2038-01-01T00:00:00.000Z'),
+                revokedAt: null,
+              };
+            }
+          }
+          return null;
+        },
+      ),
+      update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({}),
+    },
+    userProfile: {
+      findUnique: jest.fn(
+        async ({ where }: { where: { userId?: string; id?: string } }) => {
+          let row: Record<string, unknown> | null = null;
+          if (where.userId !== undefined) {
+            row = this.profiles.get(this.profileIdForUserId(where.userId)) ?? null;
+          } else if (where.id !== undefined) {
+            row = this.profiles.get(where.id) ?? null;
+          }
+          return this.attachRelations(row);
+        },
+      ),
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: {
+            userId?: { not?: string };
+            status?: string;
+            photos?: { some?: { status?: string } };
+            user?: { deletedAt?: null };
+          };
+        } = {}) => {
+          const rows = [...this.profiles.values()];
+          return rows
+            .filter((p) => {
+              if (where?.userId?.not && p['userId'] === where.userId.not) return false;
+              if (where?.status && p['status'] !== where.status) return false;
+              if (where?.photos?.some && p['status'] !== 'ANALYZED') return false;
+              return true;
+            })
+            .map((p) => this.attachRelations(p)!);
+        },
+      ),
+      count: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: { userId?: { not?: string }; status?: string };
+        } = {}) => {
+          const rows = [...this.profiles.values()];
+          return rows.filter((p) => {
+            if (where?.userId?.not && p['userId'] === where.userId.not) return false;
+            if (where?.status && p['status'] !== where.status) return false;
+            return true;
+          }).length;
+        },
+      ),
+      create: jest.fn(
+        async ({
+          data,
+        }: {
+          data: Record<string, unknown> & { user?: { connect?: { id?: string } } };
+        }) => {
+          const userId = data.user?.connect?.id as string;
+          const id = this.profileIdForUserId(userId);
+          const { user: _user, ...rest } = data;
+          const row: Record<string, unknown> = {
+            ...makeBaseProfileRow(id, userId),
+            ...rest,
+          };
+          this.profiles.set(id, row);
+          return row;
+        },
+      ),
+      update: jest.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { userId?: string; id?: string };
+          data: Record<string, unknown>;
+        }) => {
+          const id = where.id ?? this.profileIdForUserId(where.userId as string);
+          const state = this.profiles.get(id);
+          if (!state) throw new Error(`Harness: no profile to update for id=${id}`);
+          const updated = { ...state, ...data, updatedAt: new Date() };
+          this.profiles.set(id, updated);
+          return updated;
+        },
+      ),
+    },
+    userProfilePreference: {
+      upsert: jest.fn(
+        async ({
+          where,
+          create,
+          update,
+        }: {
+          where: { profileId: string };
+          create: Record<string, unknown>;
+          update: Record<string, unknown>;
+        }) => {
+          const { profileId } = where;
+          const existing = this.preferences.get(profileId);
+          const merged = existing
+            ? { ...existing, ...update, updatedAt: new Date() }
+            : {
+                id: `pref_${profileId}`,
+                profileId,
+                partnerAgeMin: null,
+                partnerAgeMax: null,
+                maxDistanceKm: null,
+                acceptedPartnerGenders: [] as string[],
+                updatedAt: new Date(),
+                ...create,
+              };
+          this.preferences.set(profileId, merged);
+          return merged;
+        },
+      ),
+    },
+    userProfileEvaluation: {
+      findFirst: jest.fn(async ({ where }: { where: { profileId: string } }) =>
+        this.evaluations.get(where.profileId) ?? null,
+      ),
+      findMany: jest.fn(
+        async ({ where }: { where?: { profileId?: { in?: string[] } } } = {}) => {
+          const ids = where?.profileId?.in ?? [];
+          return ids
+            .map((id) => this.evaluations.get(id))
+            .filter((row): row is Record<string, unknown> => row !== undefined);
+        },
+      ),
+      create: jest.fn(
+        async ({
+          data,
+        }: {
+          data: { profileId: string; version: string; evaluationJson: unknown };
+        }) => {
+          const row = {
+            id: `eval_${data.profileId}`,
+            profileId: data.profileId,
+            version: data.version,
+            evaluationJson: data.evaluationJson,
+            createdAt: new Date(),
+          };
+          this.evaluations.set(data.profileId, row);
+          return row;
+        },
+      ),
+    },
+    matchAction: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
+    userProfilePhoto: {
+      count: jest.fn().mockResolvedValue(1),
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  };
+
+  async init(): Promise<void> {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
+        AuthSessionConfigModule,
+        PrismaModule,
+        SessionModule,
+        UsersModule,
+        StructuredLoggingModule,
+        SimpleLoggerModule,
+        AnalyticsModule,
+        AuthModule,
+        MeProfileModule,
+      ],
+    })
+      .overrideProvider(PrismaService).useValue(this.prismaMock)
+      .overrideProvider(AuthSessionConfigService).useValue(configStub)
+      .overrideProvider(GoogleAuthService).useValue({ verifyIdToken: this.verifyIdToken })
+      .overrideProvider(UsersService).useValue(this.usersServiceMock)
+      .overrideProvider(LLM_CONFIG).useValue({ openai: { apiKey: 'test-key-not-used' }, models: new Map() })
+      .overrideProvider(MeProfileAnalysisService).useValue({ runForUser: jest.fn().mockResolvedValue(undefined) })
+      .overrideProvider(MeProfileValidationPipe).useValue({ transform: (v: unknown) => v })
+      .compile();
+
+    this.app = moduleFixture.createNestApplication();
+    this.app.use(requestCorrelationMiddleware);
+    this.app.use(cookieParser());
+    await this.app.init();
+  }
+
+  async close(): Promise<void> {
+    await this.app.close();
+  }
+
+  cookieHeader(raw: string): string {
+    return `${SESSION_COOKIE}=${raw}`;
+  }
+
+  /** Signup + login via real POST /api/v1/auth/google; returns the raw session cookie value. */
+  async signupAndLogin(identity: HarnessIdentity): Promise<string> {
+    this.identitiesByGoogleId.set(identity.googleId, identity);
+    this.identitiesById.set(identity.id, identity);
+    this.verifyIdToken.mockResolvedValueOnce({
+      googleId: identity.googleId,
+      email: identity.email,
+      displayName: identity.displayName,
+      avatarUrl: null,
+    });
+
+    const loginRes = await request(this.app.getHttpServer())
+      .post('/api/v1/auth/google')
+      .send({ idToken: `mock-jwt-${identity.id}` });
+
+    if (loginRes.status !== 200) {
+      throw new Error(
+        `Harness signup failed for ${identity.id}: ${loginRes.status} ${JSON.stringify(loginRes.body)}`,
+      );
+    }
+
+    const raw = extractCookieValue(loginRes.headers as Record<string, unknown>, SESSION_COOKIE);
+    if (!raw) throw new Error(`Harness: no session cookie set for ${identity.id}`);
+
+    this.sessionMap.set(identity.id, { userId: identity.id, hash: hashSessionToken(raw, PEPPER) });
+    return raw;
+  }
+
+  /** Real POST /api/v1/me/profile. */
+  async createProfile(cookie: string, body: Record<string, unknown>) {
+    return request(this.app.getHttpServer())
+      .post('/api/v1/me/profile')
+      .set('Cookie', [this.cookieHeader(cookie)])
+      .send(body);
+  }
+
+  /** Real PATCH /api/v1/me/profile — the production path for setting HG partner preferences. */
+  async patchProfile(cookie: string, body: Record<string, unknown>) {
+    return request(this.app.getHttpServer())
+      .patch('/api/v1/me/profile')
+      .set('Cookie', [this.cookieHeader(cookie)])
+      .send(body);
+  }
+
+  /** Real POST /api/v1/me/profile/submit. */
+  async submitProfile(cookie: string) {
+    return request(this.app.getHttpServer())
+      .post('/api/v1/me/profile/submit')
+      .set('Cookie', [this.cookieHeader(cookie)]);
+  }
+
+  /**
+   * Simulates the async analysis worker completing: advances the profile to ANALYZED and
+   * writes a fixture `UserProfileEvaluation` row — exactly the technique used by the reference
+   * spec's Step 4/Step 6. Must be called after a successful `submitProfile`.
+   */
+  markAnalyzed(profileId: string, evaluationJson: unknown = VALID_EVAL_JSON): void {
+    const row = this.profiles.get(profileId);
+    if (!row) throw new Error(`Harness: cannot mark unknown profile ANALYZED: ${profileId}`);
+    this.profiles.set(profileId, {
+      ...row,
+      status: 'ANALYZED',
+      analyzedAt: new Date('2026-04-18T10:05:00.000Z'),
+      lastAnalysisError: null,
+      _count: { evaluations: 1 },
+    });
+    this.evaluations.set(profileId, {
+      id: `eval_${profileId}`,
+      profileId,
+      version: 'v1',
+      evaluationJson,
+      createdAt: new Date('2026-04-18T10:05:00.000Z'),
+    });
+  }
+
+  /** Real GET /api/v1/me/matches. */
+  async getMatches(cookie: string) {
+    return request(this.app.getHttpServer())
+      .get('/api/v1/me/matches')
+      .set('Cookie', [this.cookieHeader(cookie)]);
+  }
+}

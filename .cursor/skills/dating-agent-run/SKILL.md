@@ -22,9 +22,12 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 | **0** | [agent-0/SKILL.md](./agent-0/SKILL.md) | [dating-architect](../dating-architect/SKILL.md) | `agent-0-architect.md` |
 | **1** | [agent-1/SKILL.md](./agent-1/SKILL.md) | [dating-senior-dev](../dating-senior-dev/SKILL.md) | `agent-1-dev.md` |
 | **2** | [agent-2/SKILL.md](./agent-2/SKILL.md) | [dating-code-review](../dating-code-review/SKILL.md) | `agent-2-cr.md` |
+| **4** | [agent-4/SKILL.md](./agent-4/SKILL.md) | [dating-e2e-tester](../dating-e2e-tester/SKILL.md) | `agent-4-e2e.md` |
 | **3** | [agent-3/SKILL.md](./agent-3/SKILL.md) | [dating-pm-contractor](../dating-pm-contractor/SKILL.md) | `agent-3-pm.md` |
 
-**Examples:** `--agent 0 sprint 2 story 1` · `--agent 1 sprint 2 story 1` · `--agent 0 sprint 1 STORY_01_like`
+**Run order is 0 → 1 → 2 → 4 → 3** (agent numbers are stable command tokens, not run order — 4 was added later and slots in before 3). **Agent 4 only applies** to stories touching eligibility, preference dimensions, ranking, or the matches endpoints; otherwise skip it and go straight from `--agent 2` to `--agent 3`.
+
+**Examples:** `--agent 0 sprint 2 story 1` · `--agent 1 sprint 2 story 1` · `--agent 0 sprint 1 STORY_01_like` · `--agent 4 sprint 16 story 1`
 
 ---
 
@@ -67,7 +70,8 @@ Create if missing when writing.
 | 0 | none |
 | 1 | `agent-0-architect.md` |
 | 2 | `agent-1-dev.md` |
-| 3 | all `agent-*.md` for this story |
+| 4 | `agent-2-cr.md` (skip entirely if story doesn't touch matching engine — see below) |
+| 3 | `agent-2-cr.md`, plus `agent-4-e2e.md` if agent 4 was applicable |
 
 If missing → stop, tell user which `--agent` to run first.
 
@@ -92,6 +96,18 @@ Stories touching **realtime**, **Next proxy**, **session cookies**, or **migrati
 | **1** | Browser Network smoke + `migrate deploy` when applicable |
 | **2** | Do not approve mocks-only transport; verify topology in code |
 
+## Matching engine E2E verification (agents 0, 1, 2, 4, 3)
+
+Stories touching **eligibility**, **preference dimensions**, or **ranking order** (e.g. Sprint 16, Sprint 17) must follow [dating-e2e-verification](../dating-e2e-verification/SKILL.md). Deep execution belongs to **Agent 4** — agents 0/1/2 plan and don't block on it, agent 3 gates on Agent 4's handoff:
+
+| Agent | Gate |
+|-------|------|
+| **0** | Document E2E verification plan in handoff (which baseline specs stay green, which new scenarios are needed) |
+| **1** | Extend `me-matches-eligibility-harness.ts` if trivial; full scenario coverage is agent 4's job, not required to block agent 1's handoff |
+| **2** | Do not approve mocks-only eligibility/ranking coverage in the *unit* test sense; flag that agent 4 is required next |
+| **4** | Owns actual E2E execution: baseline specs green, new scenarios added, real test run reported. Sends real bugs back to `--agent 1` |
+| **3** | Do not mark Done if agent 4 was applicable but skipped, or its scenario was deferred without a tracked follow-up |
+
 ---
 
 ## Reply format
@@ -103,5 +119,5 @@ Stories touching **realtime**, **Next proxy**, **session cookies**, or **migrati
 
 **Summary:** ...
 
-**Next (when you're ready):** `--agent <n+1> sprint <s> story <m>`
+**Next (when you're ready):** `--agent <next> sprint <s> story <m>` (next in run order 0 → 1 → 2 → 4 → 3, skipping 4 when not applicable — not simply `<n>+1`)
 ```

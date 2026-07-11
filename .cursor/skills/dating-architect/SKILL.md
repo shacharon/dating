@@ -46,6 +46,7 @@ Design systems, schemas, and API contracts. **No implementation.**
 4. **Migration plan** — forward, backfill, rollback
 5. **Integration points** — modules to create/modify
 6. **Runtime topology** (when story touches realtime, cookies, or Next proxy) — see [dating-runtime-verification](../dating-runtime-verification/SKILL.md)
+7. **E2E verification plan** (when story touches eligibility, preference dimensions, or ranking) — see [dating-e2e-verification](../dating-e2e-verification/SKILL.md)
 
 ## Example: MatchAction (user-to-user)
 
@@ -84,6 +85,16 @@ Load [dating-runtime-verification](../dating-runtime-verification/SKILL.md) and 
 - **Expected DevTools Network** signal (e.g. WebSocket 101, no polling storm)
 
 Handoff without this section is **incomplete** for realtime stories.
+
+## E2E verification plan (eligibility / preference / ranking stories)
+
+Load [dating-e2e-verification](../dating-e2e-verification/SKILL.md) and include in the architect handoff:
+
+- Which existing baseline E2E specs this story must keep green
+- Which new scenario(s) need a new test
+- Whether the change affects eligibility (gating), ranking (order), or both
+
+Handoff without this section is **incomplete** for eligibility/ranking stories.
 
 ## Do not
 

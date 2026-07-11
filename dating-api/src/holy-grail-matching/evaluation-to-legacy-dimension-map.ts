@@ -13,7 +13,8 @@ import {
  * shape expected by `buildHolyGrailPairDecisionV1` / `buildHolyGrailEligibilityAuditV1`.
  * `reasonCode`, `overallHardEligibility`, and `eligibilityFlags` stay on `HolyGrailDirectionalEvaluationResult` only.
  *
- * Layer 3 `SKIPPED` → `SKIPPED` (not `UNKNOWN`) so pair-decision can ignore ineligible dimensions.
+ * Layer 3 `SKIPPED` → `SKIPPED` (no preference set). Layer 3 `UNKNOWN` → `UNKNOWN`
+ * (fact missing/withheld — Sprint 16 Story 1; previously collapsed into FAIL/NO_MATCH).
  */
 export function adaptHolyGrailEvaluationToLegacyDimensionMap(
   evaluation: HolyGrailDirectionalEvaluationResult,
@@ -25,6 +26,8 @@ export function adaptHolyGrailEvaluationToLegacyDimensionMap(
       out[key] = MatchingDimensionResults.MATCH;
     } else if (status === 'FAIL') {
       out[key] = MatchingDimensionResults.NO_MATCH;
+    } else if (status === 'UNKNOWN') {
+      out[key] = MatchingDimensionResults.UNKNOWN;
     } else {
       out[key] = MatchingDimensionResults.SKIPPED;
     }

@@ -39,6 +39,13 @@ Load [dating-runtime-verification](../dating-runtime-verification/SKILL.md).
 - **Critical:** migration without `migrate deploy` note; socket via flaky Next WS proxy; duplicate socket instances
 - **Do not approve** realtime stories with mocks-only transport coverage and no browser/integration gate
 
+### Matching engine E2E (mandatory when diff touches eligibility, preference dimensions, or ranking)
+Load [dating-e2e-verification](../dating-e2e-verification/SKILL.md). Deep E2E execution is **agent 4**'s job (`dating-e2e-tester`), not this step's — your job here is to flag that it's required, not to run it yourself.
+
+- Unit tests on `eligibility.evaluator.ts` / `holy-grail-five-signal-ranking.ts` alone **do not** satisfy this — a real-HTTP scenario through the shared harness is still needed, from agent 4
+- Note in your handoff that `--agent 4 story <m>` is required next for this story
+- **Do not approve as fully done** eligibility/ranking stories until agent 4's handoff exists and passes — that check happens at agent 3, but don't imply this step alone cleared it
+
 ## Test patterns
 
 ### API integration (Jest + supertest)
