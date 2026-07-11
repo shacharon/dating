@@ -3,73 +3,43 @@ import { HOLY_GRAIL_DIMENSION_KEYS } from './holy-grail-dimensions';
 import type { HolyGrailDirectionalEvaluationResult } from './eligibility.evaluator';
 import { adaptHolyGrailEvaluationToLegacyDimensionMap } from './evaluation-to-legacy-dimension-map';
 
-function evalResult(
-  dims: HolyGrailDirectionalEvaluationResult['dimensions'],
-): HolyGrailDirectionalEvaluationResult {
-  const children_unsure = dims.PARTNER_WANTS_CHILDREN.status === 'SOFT_PASS';
-  return { dimensions: dims, overallHardEligibility: 'PASS', eligibilityFlags: { children_unsure } };
+function baseDims(): HolyGrailDirectionalEvaluationResult['dimensions'] {
+  return {
+    GENDER: { status: 'PASS', reasonCode: 'G' },
+    AGE: { status: 'PASS', reasonCode: 'A' },
+    PROXIMITY: { status: 'SKIPPED', reasonCode: 'P' },
+  };
 }
 
 describe('adaptHolyGrailEvaluationToLegacyDimensionMap', () => {
-  it('maps mixed PASS / FAIL / SKIPPED to MATCH / NO_MATCH / UNKNOWN', () => {
-    const base = Object.fromEntries(
-      HOLY_GRAIL_DIMENSION_KEYS.map((k) => [
-        k,
-        { status: 'SKIPPED' as const, reasonCode: 'X' },
-      ]),
-    ) as HolyGrailDirectionalEvaluationResult['dimensions'];
-    base.GENDER = { status: 'PASS', reasonCode: 'G' };
-    base.AGE = { status: 'FAIL', reasonCode: 'A' };
-    base.RELIGION = { status: 'SKIPPED', reasonCode: 'R' };
-
-    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evalResult(base));
+  it('maps PASS → MATCH, FAIL → NO_MATCH, SKIPPED → SKIPPED', () => {
+    const evaluation: HolyGrailDirectionalEvaluationResult = {
+      dimensions: {
+        GENDER: { status: 'PASS', reasonCode: 'ok' },
+        AGE: { status: 'FAIL', reasonCode: 'bad' },
+        PROXIMITY: { status: 'SKIPPED', reasonCode: 'geo' },
+      },
+      overallHardEligibility: 'FAIL',
+      eligibilityFlags: { children_unsure: false },
+    };
+    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evaluation);
     expect(legacy.GENDER).toBe(MatchingDimensionResults.MATCH);
     expect(legacy.AGE).toBe(MatchingDimensionResults.NO_MATCH);
-    expect(legacy.RELIGION).toBe(MatchingDimensionResults.SKIPPED);
-    for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
-      if (k === 'GENDER' || k === 'AGE' || k === 'RELIGION') continue;
-      expect(legacy[k]).toBe(MatchingDimensionResults.SKIPPED);
-    }
+    expect(legacy.PROXIMITY).toBe(MatchingDimensionResults.SKIPPED);
+    expect(Object.keys(legacy).sort()).toEqual(
+      [...HOLY_GRAIL_DIMENSION_KEYS].sort(),
+    );
   });
 
-  it('all SKIPPED -> all SKIPPED in legacy map', () => {
-    const dims = Object.fromEntries(
-      HOLY_GRAIL_DIMENSION_KEYS.map((k) => [
-        k,
-        { status: 'SKIPPED' as const, reasonCode: 'SKIP' },
-      ]),
-    ) as HolyGrailDirectionalEvaluationResult['dimensions'];
-    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evalResult(dims));
-    for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
-      expect(legacy[k]).toBe(MatchingDimensionResults.SKIPPED);
-    }
-  });
-
-  it('SOFT_PASS maps to MATCH (same as PASS for Layer 4)', () => {
-    const dims = Object.fromEntries(
-      HOLY_GRAIL_DIMENSION_KEYS.map((k) => [
-        k,
-        { status: 'SKIPPED' as const, reasonCode: 'SKIP' },
-      ]),
-    ) as HolyGrailDirectionalEvaluationResult['dimensions'];
-    dims.PARTNER_WANTS_CHILDREN = {
-      status: 'SOFT_PASS',
-      reasonCode: 'WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT',
+  it('maps SOFT_PASS → MATCH (does not block)', () => {
+    const dims = baseDims();
+    dims.GENDER = { status: 'SOFT_PASS', reasonCode: 'soft' };
+    const evaluation: HolyGrailDirectionalEvaluationResult = {
+      dimensions: dims,
+      overallHardEligibility: 'PASS',
+      eligibilityFlags: { children_unsure: false },
     };
-    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evalResult(dims));
-    expect(legacy.PARTNER_WANTS_CHILDREN).toBe(MatchingDimensionResults.MATCH);
-  });
-
-  it('FAIL preserved exactly as NO_MATCH', () => {
-    const dims = Object.fromEntries(
-      HOLY_GRAIL_DIMENSION_KEYS.map((k) => [
-        k,
-        { status: 'FAIL' as const, reasonCode: 'F' },
-      ]),
-    ) as HolyGrailDirectionalEvaluationResult['dimensions'];
-    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evalResult(dims));
-    for (const k of HOLY_GRAIL_DIMENSION_KEYS) {
-      expect(legacy[k]).toBe(MatchingDimensionResults.NO_MATCH);
-    }
+    const legacy = adaptHolyGrailEvaluationToLegacyDimensionMap(evaluation);
+    expect(legacy.GENDER).toBe(MatchingDimensionResults.MATCH);
   });
 });

@@ -9,9 +9,7 @@
  */
 
 import type {
-  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
-  AcceptedPartnerSmoking,
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
@@ -20,9 +18,6 @@ import type {
   LivingSituationSelf,
   MatchingRankingSignalsSnapshot,
   MatchingSearchOverrides,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   PoliticsSelf,
   ReligionSelf,
   RelationshipStatusSelf,
@@ -30,7 +25,6 @@ import type {
   SmokingFrequencySelf,
   WantsChildrenSelf,
   WorkStudySituationSelf,
-  SimilarityPreference,
 } from '../canonical/matching-canonical.types';
 import {
   HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS,
@@ -75,14 +69,7 @@ type HolyGrailStructuredPreferencesFieldMap = {
   acceptedPartnerGenders: readonly AcceptedPartnerGender[];
   partnerAgeMin: number;
   partnerAgeMax: number;
-  minimumPartnerEducation: MinimumPartnerEducation;
-  acceptedPartnerSmoking: readonly AcceptedPartnerSmoking[];
-  acceptedPartnerAlcohol: readonly AcceptedPartnerAlcohol[];
-  partnerWantsChildren: PartnerWantsChildrenRequirement;
-  partnerHasChildren: PartnerHasChildrenAcceptance;
-  acceptedPartnerReligions: readonly ReligionSelf[];
   maxDistanceKm: number;
-  similarityPreference: SimilarityPreference | null;
 };
 
 /**

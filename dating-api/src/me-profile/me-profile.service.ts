@@ -242,14 +242,7 @@ function toResponse(
     // HG structured preferences (Phase F: UserProfilePreference only)
     partnerAgeMin: preference?.partnerAgeMin ?? null,
     partnerAgeMax: preference?.partnerAgeMax ?? null,
-    minimumPartnerEducation: preference?.minimumPartnerEducation ?? null,
-    acceptedPartnerSmoking: preference?.acceptedPartnerSmoking ?? [],
-    acceptedPartnerAlcohol: preference?.acceptedPartnerAlcohol ?? [],
-    partnerWantsChildren: preference?.partnerWantsChildren ?? null,
-    partnerHasChildren: preference?.partnerHasChildren ?? null,
-    acceptedPartnerReligions: preference?.acceptedPartnerReligions ?? [],
     maxDistanceKm: preference?.maxDistanceKm ?? null,
-    similarityPreference: preference?.similarityPreference ?? null,
   };
 }
 
@@ -258,14 +251,7 @@ type PreferenceFields = {
   acceptedPartnerGenders?: string[];
   partnerAgeMin?: number | null;
   partnerAgeMax?: number | null;
-  minimumPartnerEducation?: string | null;
-  acceptedPartnerSmoking?: string[];
-  acceptedPartnerAlcohol?: string[];
-  partnerWantsChildren?: string | null;
-  partnerHasChildren?: string | null;
-  acceptedPartnerReligions?: string[];
   maxDistanceKm?: number | null;
-  similarityPreference?: string | null;
 };
 
 /**
@@ -285,21 +271,7 @@ function toPreferenceData(
   }
   if (body.partnerAgeMin !== undefined) data.partnerAgeMin = body.partnerAgeMin;
   if (body.partnerAgeMax !== undefined) data.partnerAgeMax = body.partnerAgeMax;
-  if (body.minimumPartnerEducation !== undefined)
-    data.minimumPartnerEducation = body.minimumPartnerEducation;
-  if (body.acceptedPartnerSmoking !== undefined)
-    data.acceptedPartnerSmoking = body.acceptedPartnerSmoking ?? [];
-  if (body.acceptedPartnerAlcohol !== undefined)
-    data.acceptedPartnerAlcohol = body.acceptedPartnerAlcohol ?? [];
-  if (body.partnerWantsChildren !== undefined)
-    data.partnerWantsChildren = body.partnerWantsChildren;
-  if (body.partnerHasChildren !== undefined)
-    data.partnerHasChildren = body.partnerHasChildren;
-  if (body.acceptedPartnerReligions !== undefined)
-    data.acceptedPartnerReligions = body.acceptedPartnerReligions ?? [];
   if (body.maxDistanceKm !== undefined) data.maxDistanceKm = body.maxDistanceKm;
-  if (body.similarityPreference !== undefined)
-    data.similarityPreference = body.similarityPreference;
   return data;
 }
 

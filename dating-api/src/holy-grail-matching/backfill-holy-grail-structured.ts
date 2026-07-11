@@ -1,16 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
-import {
-  AcceptedPartnerAlcohol,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  ReligionSelf,
-} from '../canonical/matching-canonical.types';
 import { HolyGrailStructuredWriteService } from './holy-grail-structured-write.service';
 import { HolyGrailRetrievalService } from './retrieval/holy-grail-retrieval.service';
 import { PrismaHolyGrailProfileSourceRepository } from './retrieval/prisma-holy-grail-profile-source.repository';
 import { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapper';
-import { extractSimilarityPreferenceFromFreeText } from './similarity-preference-text.extract';
 import { evaluateHolyGrailDirectional } from './eligibility.evaluator';
 import {
   HOLY_GRAIL_DIMENSION_KEYS,
@@ -27,23 +20,9 @@ const VALIDATION_CANDIDATE_LIMIT = Number(
   process.env.HG_VALIDATE_CANDIDATES ?? '300',
 );
 
-const TARGET_PREF_KEYS = new Set([
-  'partnerAgeMin',
-  'partnerAgeMax',
-  'minimumPartnerEducation',
-  'acceptedPartnerReligions',
-  'acceptedPartnerAlcohol',
-  'partnerHasChildren',
-  'similarityPreference',
-]);
+const TARGET_PREF_KEYS = new Set(['partnerAgeMin', 'partnerAgeMax']);
 
-const TARGET_DIMENSIONS: HolyGrailDimensionKey[] = [
-  'AGE',
-  'EDUCATION',
-  'RELIGION',
-  'ALCOHOL',
-  'PARTNER_HAS_CHILDREN',
-];
+const TARGET_DIMENSIONS: HolyGrailDimensionKey[] = ['AGE'];
 
 function asObject(v: unknown): JsonRecord {
   if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -154,104 +133,6 @@ function inferPartnerAgeRange(
   return out;
 }
 
-function inferPartnerHasChildren(
-  text: string,
-): PartnerHasChildrenAcceptance | undefined {
-  if (
-    /\b(no kids|must not have kids|without kids|childfree only|prefer childfree|prefer no kids|no children)\b/i.test(
-      text,
-    )
-  ) {
-    return PartnerHasChildrenAcceptance.DOES_NOT_ACCEPT;
-  }
-  if (
-    /\b(kids are okay|kids ok|children are okay|single parent is okay|open to someone with kids|okay with children|okay with kids|has kids is fine)\b/i.test(
-      text,
-    )
-  ) {
-    return PartnerHasChildrenAcceptance.ACCEPT;
-  }
-  return undefined;
-}
-
-function inferAcceptedPartnerAlcohol(
-  text: string,
-): AcceptedPartnerAlcohol | undefined {
-  if (
-    /\b(non[- ]drinker only|no alcohol|must not drink|doesn'?t drink only)\b/i.test(
-      text,
-    )
-  ) {
-    return AcceptedPartnerAlcohol.NONE_ONLY;
-  }
-  if (
-    /\b(no heavy drinkers|social drinking is okay|drinks socially is fine|moderate drinkers? ok|occasional drinking is fine|social drinker|drinks occasionally)\b/i.test(
-      text,
-    )
-  ) {
-    return AcceptedPartnerAlcohol.MODERATE_OK;
-  }
-  if (
-    /\b(alcohol is fine|drinking is fine|okay with drinking|no alcohol preference|party drinker|party drinking)\b/i.test(
-      text,
-    )
-  ) {
-    return AcceptedPartnerAlcohol.ANY;
-  }
-  return undefined;
-}
-
-function inferMinimumPartnerEducation(
-  text: string,
-): MinimumPartnerEducation | undefined {
-  if (/\b(phd|doctorate|master'?s or higher|graduate degree)\b/i.test(text)) {
-    return MinimumPartnerEducation.GRADUATE;
-  }
-  if (
-    /\b(at least a bachelor'?s|bachelor'?s or higher|has a degree|college degree|academic|university degree|higher education)\b/i.test(
-      text,
-    )
-  ) {
-    return MinimumPartnerEducation.BACHELORS;
-  }
-  if (
-    /\b(at least some college|college educated|educated|college|university)\b/i.test(
-      text,
-    )
-  ) {
-    return MinimumPartnerEducation.SOME_COLLEGE;
-  }
-  if (/\b(high school minimum|at least high school)\b/i.test(text)) {
-    return MinimumPartnerEducation.HIGH_SCHOOL;
-  }
-  return undefined;
-}
-
-function inferAcceptedPartnerReligions(
-  text: string,
-): ReligionSelf[] | undefined {
-  if (/\b(not religious|secular)\b/i.test(text)) return [ReligionSelf.NONE];
-  if (/\b(keeps kosher|kosher)\b/i.test(text)) return [ReligionSelf.JEWISH];
-
-  const out: ReligionSelf[] = [];
-  if (/\b(jewish only|prefer jewish|jewish partner)\b/i.test(text))
-    out.push(ReligionSelf.JEWISH);
-  if (/\b(christian only|prefer christian|christian partner)\b/i.test(text))
-    out.push(ReligionSelf.CHRISTIAN);
-  if (/\b(muslim only|prefer muslim|muslim partner)\b/i.test(text))
-    out.push(ReligionSelf.MUSLIM);
-  if (/\b(hindu only|prefer hindu|hindu partner)\b/i.test(text))
-    out.push(ReligionSelf.HINDU);
-  if (/\b(buddhist only|prefer buddhist|buddhist partner)\b/i.test(text))
-    out.push(ReligionSelf.BUDDHIST);
-  if (/\b(religious|faith|traditional)\b/i.test(text)) {
-    // Explicitly religious language without denomination is too ambiguous.
-    return undefined;
-  }
-  if (out.length === 0) return undefined;
-  return [...new Set(out)];
-}
-
 function buildInferredPreferencePatch(
   aboutMe: string,
   aboutPartner: string,
@@ -260,19 +141,9 @@ function buildInferredPreferencePatch(
   const partnerContext = `${aboutPartner}\n${aboutRelationship}`;
   const selfAge = inferSelfAge(aboutMe);
   const age = inferPartnerAgeRange(partnerContext, selfAge);
-  const similarityPreference = extractSimilarityPreferenceFromFreeText({
-    aboutMe,
-    aboutPartner,
-    aboutRelationship,
-  }).value;
   return {
     partnerAgeMin: age.min,
     partnerAgeMax: age.max,
-    minimumPartnerEducation: inferMinimumPartnerEducation(partnerContext),
-    acceptedPartnerReligions: inferAcceptedPartnerReligions(partnerContext),
-    acceptedPartnerAlcohol: inferAcceptedPartnerAlcohol(partnerContext),
-    partnerHasChildren: inferPartnerHasChildren(partnerContext),
-    similarityPreference,
   };
 }
 

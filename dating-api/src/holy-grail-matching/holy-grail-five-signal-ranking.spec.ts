@@ -22,22 +22,6 @@ function model(
 }
 
 describe('computeHolyGrailRankingPurityRank', () => {
-  it('ignores similarityPreference overlay included in computeHolyGrailFiveSignalRank', () => {
-    const rs = {
-      dailyRhythm: 'dr',
-      autonomyTogetherness: 'at',
-      conflictStyle: 5,
-      lifestylePace: 5,
-      interestsTop: ['a', 'b'],
-    } as const;
-    const searcher = model('s', { ...rs }, { similarityPreference: 'similar' });
-    const candidate = model('c', { ...rs });
-    const pure = computeHolyGrailRankingPurityRank({ searcher, candidate });
-    const full = computeHolyGrailFiveSignalRank({ searcher, candidate });
-    expect(pure.rankBreakdown.some((b) => b.signal === 'similarityPreference')).toBe(false);
-    expect(full.rankBreakdown.some((b) => b.signal === 'similarityPreference')).toBe(true);
-    expect(full.rankScore).toBeGreaterThan(pure.rankScore);
-  });
 });
 
 describe('computeHolyGrailFiveSignalRank', () => {
@@ -127,71 +111,6 @@ describe('computeHolyGrailFiveSignalRank', () => {
     expect(r.rankScore).toBeGreaterThan(0);
     expect(r.rankBreakdown).toHaveLength(6);
     expect(r.rankBreakdown[5].signal).toBe('deterministicSpread');
-  });
-
-  it('similarityPreference similar adds positive Δ when pairwise overlap is high', () => {
-    const rs = {
-      dailyRhythm: 'dr',
-      autonomyTogetherness: 'at',
-      conflictStyle: 7,
-      lifestylePace: 3,
-      interestsTop: ['a', 'b'],
-    } as const;
-    const base = computeHolyGrailFiveSignalRank({
-      searcher: model('s', { ...rs }),
-      candidate: model('c', { ...rs }),
-    });
-    const withPref = computeHolyGrailFiveSignalRank({
-      searcher: model('s', { ...rs }, { similarityPreference: 'similar' }),
-      candidate: model('c', { ...rs }),
-    });
-    expect(base.rankScore).toBe(100);
-    expect(withPref.rankBreakdown.some((b) => b.signal === 'similarityPreference')).toBe(true);
-    const simRow = withPref.rankBreakdown.find((b) => b.signal === 'similarityPreference');
-    expect(simRow?.points).toBeCloseTo(2.5, 5);
-    expect(simRow?.note).toContain('reward_overlap');
-    expect(withPref.rankScore).toBeGreaterThan(100);
-  });
-
-  it('similarityPreference different penalizes high overlap (negative Δ)', () => {
-    const rs = {
-      dailyRhythm: 'x',
-      autonomyTogetherness: 'y',
-      conflictStyle: 5,
-      lifestylePace: 5,
-      interestsTop: ['t'],
-    } as const;
-    const r = computeHolyGrailFiveSignalRank({
-      searcher: model('s1', { ...rs }, { similarityPreference: 'different' }),
-      candidate: model('c1', { ...rs }),
-    });
-    const simRow = r.rankBreakdown.find((b) => b.signal === 'similarityPreference');
-    expect(simRow?.note).toContain('reward_contrast');
-    expect(simRow?.points).toBeLessThan(0);
-  });
-
-  it('similarityPreference balanced uses reward_mid_overlap with positive Δ at moderate O', () => {
-    const s = {
-      dailyRhythm: 'd',
-      autonomyTogetherness: 'a',
-      conflictStyle: 5,
-      lifestylePace: 5,
-      interestsTop: ['x'],
-    } as const;
-    const c = {
-      dailyRhythm: 'd',
-      autonomyTogetherness: 'b',
-      conflictStyle: 5,
-      lifestylePace: 5,
-      interestsTop: ['y'],
-    } as const;
-    const r = computeHolyGrailFiveSignalRank({
-      searcher: model('sb', s, { similarityPreference: 'balanced' }),
-      candidate: model('cm', c),
-    });
-    const row = r.rankBreakdown.find((b) => b.signal === 'similarityPreference');
-    expect(row?.note).toContain('reward_mid_overlap');
-    expect(row!.points).toBeGreaterThan(0);
   });
 
   it('label mismatch earns partial credit vs both missing', () => {

@@ -890,15 +890,8 @@ describe('MeProfileService', () => {
         profileId: 'prof_new',
         partnerAgeMin: 28,
         partnerAgeMax: 40,
-        minimumPartnerEducation: null,
         acceptedPartnerGenders: [] as string[],
-        acceptedPartnerSmoking: ['NONE_ONLY'],
-        acceptedPartnerAlcohol: ['MODERATE_OK'],
-        acceptedPartnerReligions: [] as string[],
-        partnerWantsChildren: null,
-        partnerHasChildren: null,
         maxDistanceKm: null,
-        similarityPreference: null,
         updatedAt: new Date('2026-01-02'),
       };
       prisma.userProfile.findUnique
@@ -912,8 +905,6 @@ describe('MeProfileService', () => {
 
       await service.createForUser(userId, {
         gender: ProfileGender.FEMALE,
-        acceptedPartnerSmoking: ['NONE_ONLY'] as never,
-        acceptedPartnerAlcohol: ['MODERATE_OK'] as never,
         partnerAgeMin: 28,
         partnerAgeMax: 40,
       });
@@ -924,13 +915,10 @@ describe('MeProfileService', () => {
           create: expect.objectContaining({
             profileId: 'prof_new',
             acceptedPartnerGenders: [],
-            acceptedPartnerSmoking: ['NONE_ONLY'],
-            acceptedPartnerAlcohol: ['MODERATE_OK'],
             partnerAgeMin: 28,
             partnerAgeMax: 40,
           }),
           update: expect.objectContaining({
-            acceptedPartnerSmoking: ['NONE_ONLY'],
             partnerAgeMin: 28,
           }),
         }),
@@ -943,15 +931,8 @@ describe('MeProfileService', () => {
         profileId: baseRow.id,
         partnerAgeMin: null,
         partnerAgeMax: null,
-        minimumPartnerEducation: null,
         acceptedPartnerGenders: [] as string[],
-        acceptedPartnerSmoking: [] as string[],
-        acceptedPartnerAlcohol: [] as string[],
-        acceptedPartnerReligions: ['JEWISH'] as string[],
-        partnerWantsChildren: null,
-        partnerHasChildren: null,
         maxDistanceKm: 50,
-        similarityPreference: null,
         updatedAt: new Date('2026-01-02'),
       };
       prisma.userProfile.findUnique
@@ -963,7 +944,6 @@ describe('MeProfileService', () => {
         .mockResolvedValueOnce({ ...baseRow, preference: preferenceAfter });
 
       await service.patchForUser(userId, {
-        acceptedPartnerReligions: ['JEWISH'] as never,
         maxDistanceKm: 50,
       });
 
@@ -972,7 +952,6 @@ describe('MeProfileService', () => {
         expect.objectContaining({
           where: { profileId: baseRow.id },
           update: expect.objectContaining({
-            acceptedPartnerReligions: ['JEWISH'],
             maxDistanceKm: 50,
           }),
         }),

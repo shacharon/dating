@@ -1,10 +1,6 @@
 import {
-  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
-  AcceptedPartnerSmoking,
   GenderIdentity,
-  MinimumPartnerEducation,
-  ReligionSelf,
 } from '../canonical/matching-canonical.types';
 import type { HolyGrailProfileMappingInput } from './profile-sources.types';
 import { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapper';
@@ -77,7 +73,6 @@ describe('mapProfileSourceToMatchingCanonical', () => {
         acceptedPartnerGenders: [AcceptedPartnerGender.MALE],
         partnerAgeMin: 25,
         partnerAgeMax: 55,
-        acceptedPartnerReligions: [ReligionSelf.JEWISH, ReligionSelf.JEWISH],
       },
       searchOverrides: { partnerAgeMax: 60 },
     });
@@ -87,7 +82,6 @@ describe('mapProfileSourceToMatchingCanonical', () => {
     expect(m.preferences.acceptedPartnerGenders).toEqual([AcceptedPartnerGender.MALE]);
     expect(m.preferences.partnerAgeMin).toBe(25);
     expect(m.preferences.partnerAgeMax).toBe(55);
-    expect(m.preferences.acceptedPartnerReligions).toEqual([ReligionSelf.JEWISH]);
     expect(m.searchOverrides.partnerAgeMax).toBe(60);
   });
 
@@ -292,98 +286,15 @@ describe('mapProfileSourceToMatchingCanonical', () => {
     ).toThrow(/non-empty array/);
   });
 
-  it('omits acceptedPartnerReligions when an empty array is provided (normalize to absent)', () => {
-    const m = mapProfileSourceToMatchingCanonical({
-      profileId: 'p',
-      structuredPreferences: { acceptedPartnerReligions: [] },
-    });
-    expect(m.preferences.acceptedPartnerReligions).toBeUndefined();
-  });
-
   it('maps only preference keys that are present on structuredPreferences', () => {
     const m = mapProfileSourceToMatchingCanonical({
       profileId: 'p',
       structuredPreferences: {
-        minimumPartnerEducation: MinimumPartnerEducation.BACHELORS,
-        acceptedPartnerSmoking: AcceptedPartnerSmoking.NONE_ONLY,
+        maxDistanceKm: 25,
       },
     });
     expect(m.preferences).toEqual({
-      minimumPartnerEducation: MinimumPartnerEducation.BACHELORS,
-      acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
+      maxDistanceKm: 25,
     });
-  });
-
-  it('maps acceptedPartnerSmoking/Alcohol arrays as arrays (no scalar collapse)', () => {
-    const m = mapProfileSourceToMatchingCanonical({
-      profileId: 'p',
-      structuredPreferences: {
-        acceptedPartnerSmoking: [
-          AcceptedPartnerSmoking.NONE_ONLY,
-          AcceptedPartnerSmoking.SOCIAL_OK,
-        ],
-        acceptedPartnerAlcohol: [
-          AcceptedPartnerAlcohol.NONE_ONLY,
-          AcceptedPartnerAlcohol.MODERATE_OK,
-        ],
-      },
-    });
-    expect(m.preferences.acceptedPartnerSmoking).toEqual([
-      AcceptedPartnerSmoking.NONE_ONLY,
-      AcceptedPartnerSmoking.SOCIAL_OK,
-    ]);
-    expect(m.preferences.acceptedPartnerAlcohol).toEqual([
-      AcceptedPartnerAlcohol.NONE_ONLY,
-      AcceptedPartnerAlcohol.MODERATE_OK,
-    ]);
-  });
-
-  it('treats empty acceptedPartnerSmoking/Alcohol arrays as absent preference', () => {
-    const m = mapProfileSourceToMatchingCanonical({
-      profileId: 'p',
-      structuredPreferences: {
-        acceptedPartnerSmoking: [],
-        acceptedPartnerAlcohol: [],
-      },
-    });
-    expect(m.preferences.acceptedPartnerSmoking).toBeUndefined();
-    expect(m.preferences.acceptedPartnerAlcohol).toBeUndefined();
-  });
-
-  it('throws on invalid acceptedPartnerSmoking/Alcohol array members', () => {
-    expect(() =>
-      mapProfileSourceToMatchingCanonical({
-        profileId: 'p',
-        structuredPreferences: {
-          acceptedPartnerSmoking: ['BAD_ENUM'] as unknown as AcceptedPartnerSmoking[],
-        },
-      }),
-    ).toThrow(/invalid structuredPreferences\.acceptedPartnerSmoking/);
-    expect(() =>
-      mapProfileSourceToMatchingCanonical({
-        profileId: 'p',
-        structuredPreferences: {
-          acceptedPartnerAlcohol: ['BAD_ENUM'] as unknown as AcceptedPartnerAlcohol[],
-        },
-      }),
-    ).toThrow(/invalid structuredPreferences\.acceptedPartnerAlcohol/);
-  });
-
-  it('maps similarityPreference when set; preserves null; sparse when omitted', () => {
-    expect(
-      mapProfileSourceToMatchingCanonical({
-        profileId: 'p',
-        structuredPreferences: { similarityPreference: 'different' },
-      }).preferences.similarityPreference,
-    ).toBe('different');
-    expect(
-      mapProfileSourceToMatchingCanonical({
-        profileId: 'p',
-        structuredPreferences: { similarityPreference: null },
-      }).preferences.similarityPreference,
-    ).toBeNull();
-    expect(
-      mapProfileSourceToMatchingCanonical({ profileId: 'p' }).preferences.similarityPreference,
-    ).toBeUndefined();
   });
 });

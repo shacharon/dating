@@ -86,14 +86,7 @@ export const HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS = [
   'acceptedPartnerGenders',
   'partnerAgeMin',
   'partnerAgeMax',
-  'minimumPartnerEducation',
-  'acceptedPartnerSmoking',
-  'acceptedPartnerAlcohol',
-  'partnerWantsChildren',
-  'partnerHasChildren',
-  'acceptedPartnerReligions',
   'maxDistanceKm',
-  'similarityPreference',
 ] as const;
 
 export const HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET = new Set<string>(

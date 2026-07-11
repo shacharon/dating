@@ -22,10 +22,6 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { MeProfileService } from '../src/me-profile/me-profile.service';
 import { MeProfileAnalysisService } from '../src/me-profile/me-profile-analysis.service';
 import { MeMatchesService } from '../src/me-profile/me-matches.service';
-import {
-  AcceptedPartnerAlcohol,
-  AcceptedPartnerSmoking,
-} from '../src/canonical/matching-canonical.types';
 
 function parseArgs(argv: string[]) {
   let dryRun = false;
@@ -102,8 +98,6 @@ async function main() {
       city: 'Tel Aviv',
       country: 'IL',
       locationLabel: 'Tel Aviv, IL',
-      acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
-      acceptedPartnerAlcohol: [AcceptedPartnerAlcohol.NONE_ONLY],
     });
 
     const prof = await prisma.userProfile.findUnique({ where: { userId: user.id } });

@@ -119,29 +119,6 @@ describe('HolyGrailRetrievalService', () => {
     expect(r.debug.canonicalMapFailed).toBe(0);
   });
 
-  it('wire DTO exposes similarityPreference on ranked candidate preferences when stored', async () => {
-    repo.searcher = buildHolyGrailProfileMappingInputFromDbRow({
-      profileId: 's',
-      extractionV2: { interests_self: ['x'], interests: [], lifestyleTraits: [] },
-      holyGrailStructuredFacts: null,
-      holyGrailStructuredPreferences: { acceptedPartnerGenders: ['FEMALE'] },
-    });
-    repo.candidates = [
-      buildHolyGrailProfileMappingInputFromDbRow({
-        profileId: 'f',
-        extractionV2: { interests_self: ['x'], interests: [], lifestyleTraits: [] },
-        holyGrailStructuredFacts: { genderIdentity: 'FEMALE' },
-        holyGrailStructuredPreferences: { similarityPreference: 'different' },
-      }),
-    ];
-    const r = await service.retrieveRankedCandidates({
-      searcherProfileId: 's',
-      evaluatedAt: AT,
-    });
-    const w = mapHolyGrailRetrievalResponseToWireDto(r);
-    expect(w.rankedCandidates[0].candidate.preferences.similarityPreference).toBe('different');
-  });
-
   it('orders surviving candidates by current ranker (e.g. shared interests)', async () => {
     repo.searcher = {
       profileId: 's',

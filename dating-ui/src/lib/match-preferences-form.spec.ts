@@ -22,13 +22,6 @@ const baseProfile: MeProfileDto = {
   partnerAgeMin: 28,
   partnerAgeMax: 40,
   maxDistanceKm: 50,
-  minimumPartnerEducation: 'BACHELORS',
-  acceptedPartnerSmoking: ['NONE_ONLY'],
-  acceptedPartnerAlcohol: ['ANY'],
-  partnerWantsChildren: 'NO_REQUIREMENT',
-  partnerHasChildren: 'ACCEPT',
-  acceptedPartnerReligions: ['JEWISH'],
-  similarityPreference: 'balanced',
 };
 
 describe('match-preferences-form', () => {
@@ -38,13 +31,6 @@ describe('match-preferences-form', () => {
       partnerAgeMin: '28',
       partnerAgeMax: '40',
       maxDistanceKm: '50',
-      minimumPartnerEducation: 'BACHELORS',
-      acceptedPartnerSmoking: ['NONE_ONLY'],
-      acceptedPartnerAlcohol: ['ANY'],
-      partnerWantsChildren: 'NO_REQUIREMENT',
-      partnerHasChildren: 'ACCEPT',
-      acceptedPartnerReligions: ['JEWISH'],
-      similarityPreference: 'balanced',
     });
   });
 
@@ -79,20 +65,13 @@ describe('match-preferences-form', () => {
     ).toEqual({ ok: true });
   });
 
-  it('matchPreferencesFormToPatchBody maps scalars and arrays', () => {
+  it('matchPreferencesFormToPatchBody maps scalars', () => {
     const state = profileToMatchPreferencesForm(baseProfile);
     expect(matchPreferencesFormToPatchBody(state)).toEqual({
       desiredPartnerGenders: ['FEMALE', 'NON_BINARY'],
       partnerAgeMin: 28,
       partnerAgeMax: 40,
       maxDistanceKm: 50,
-      minimumPartnerEducation: 'BACHELORS',
-      acceptedPartnerSmoking: ['NONE_ONLY'],
-      acceptedPartnerAlcohol: ['ANY'],
-      partnerWantsChildren: 'NO_REQUIREMENT',
-      partnerHasChildren: 'ACCEPT',
-      acceptedPartnerReligions: ['JEWISH'],
-      similarityPreference: 'balanced',
     });
   });
 
@@ -107,13 +86,6 @@ describe('match-preferences-form', () => {
       partnerAgeMin: null,
       partnerAgeMax: null,
       maxDistanceKm: null,
-      minimumPartnerEducation: null,
-      acceptedPartnerSmoking: [],
-      acceptedPartnerAlcohol: [],
-      partnerWantsChildren: null,
-      partnerHasChildren: null,
-      acceptedPartnerReligions: [],
-      similarityPreference: null,
     });
   });
 

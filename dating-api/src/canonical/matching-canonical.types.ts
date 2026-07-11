@@ -183,52 +183,6 @@ export enum AcceptedPartnerGender {
   OTHER = 'OTHER',
 }
 
-/** Minimum partner education the user will accept. */
-export enum MinimumPartnerEducation {
-  ANY = 'ANY',
-  HIGH_SCHOOL = 'HIGH_SCHOOL',
-  SOME_COLLEGE = 'SOME_COLLEGE',
-  BACHELORS = 'BACHELORS',
-  GRADUATE = 'GRADUATE',
-}
-
-/** Partner smoking levels the user will accept. */
-export enum AcceptedPartnerSmoking {
-  NONE_ONLY = 'NONE_ONLY',
-  SOCIAL_OK = 'SOCIAL_OK',
-  ANY = 'ANY',
-}
-
-/** Partner alcohol use the user will accept. */
-export enum AcceptedPartnerAlcohol {
-  NONE_ONLY = 'NONE_ONLY',
-  MODERATE_OK = 'MODERATE_OK',
-  ANY = 'ANY',
-}
-
-/** Whether the user requires a partner to want (more) children. */
-export enum PartnerWantsChildrenRequirement {
-  MUST_WANT = 'MUST_WANT',
-  MUST_NOT_WANT = 'MUST_NOT_WANT',
-  NO_REQUIREMENT = 'NO_REQUIREMENT',
-}
-
-/** Whether the user accepts a partner who has children. */
-export enum PartnerHasChildrenAcceptance {
-  ACCEPT = 'ACCEPT',
-  DOES_NOT_ACCEPT = 'DOES_NOT_ACCEPT',
-  NO_REQUIREMENT = 'NO_REQUIREMENT',
-}
-
-/** Wire values for `MatchingPreferences.similarityPreference` (preference about partner sameness vs contrast). */
-export const SIMILARITY_PREFERENCE_VALUES = [
-  'similar',
-  'different',
-  'balanced',
-] as const;
-export type SimilarityPreference =
-  (typeof SIMILARITY_PREFERENCE_VALUES)[number];
-
 // ---------------------------------------------------------------------------
 // Layer 1 — Facts (user only; no filtering semantics)
 // ---------------------------------------------------------------------------
@@ -277,27 +231,11 @@ export interface MatchingPreferences {
   /** Inclusive age bounds; omit either side if open-ended. */
   partnerAgeMin?: number;
   partnerAgeMax?: number;
-  minimumPartnerEducation?: MinimumPartnerEducation;
-  acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
-  acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
-  partnerWantsChildren?: PartnerWantsChildrenRequirement;
-  partnerHasChildren?: PartnerHasChildrenAcceptance;
-  /**
-   * When **present** and non-empty: partner religion must be in this set (strict).
-   * Omit when no religion filter (evaluator `SKIPPED`). Do not rely on `[]` on this object;
-   * mapper normalizes an explicit empty array to “omit” by default.
-   */
-  acceptedPartnerReligions?: readonly ReligionSelf[];
   /**
    * Maximum distance from the user's search anchor, in kilometers.
    * Omit if distance is not a hard constraint.
    */
   maxDistanceKm?: number;
-  /**
-   * Preference for partner similarity vs difference (not a self fact).
-   * **Omit** when unset (sparse). **`null`** when explicitly stored as cleared/unknown wire shape.
-   */
-  similarityPreference?: SimilarityPreference | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,14 +251,7 @@ export interface MatchingSearchOverrides {
   acceptedPartnerGenders?: readonly AcceptedPartnerGender[];
   partnerAgeMin?: number;
   partnerAgeMax?: number;
-  minimumPartnerEducation?: MinimumPartnerEducation;
-  acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
-  acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
-  partnerWantsChildren?: PartnerWantsChildrenRequirement;
-  partnerHasChildren?: PartnerHasChildrenAcceptance;
-  acceptedPartnerReligions?: readonly ReligionSelf[];
   maxDistanceKm?: number;
-  similarityPreference?: SimilarityPreference | null;
   /** When set, overrides should not be applied after this instant (ISO 8601). */
   validUntil?: string;
 }

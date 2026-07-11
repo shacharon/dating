@@ -189,14 +189,7 @@ export interface UserProfilePreferenceRow {
   readonly partnerAgeMin: number | null;
   readonly partnerAgeMax: number | null;
   readonly maxDistanceKm: number | null;
-  readonly minimumPartnerEducation: string | null;
   readonly acceptedPartnerGenders: string[];
-  readonly acceptedPartnerSmoking: string[];
-  readonly acceptedPartnerAlcohol: string[];
-  readonly acceptedPartnerReligions: string[];
-  readonly partnerWantsChildren: string | null;
-  readonly partnerHasChildren: string | null;
-  readonly similarityPreference: string | null;
 }
 
 /**
@@ -294,14 +287,7 @@ function isPrefRowEmpty(pref: UserProfilePreferenceRow): boolean {
     pref.partnerAgeMin === null &&
     pref.partnerAgeMax === null &&
     pref.maxDistanceKm === null &&
-    pref.minimumPartnerEducation === null &&
-    pref.acceptedPartnerGenders.length === 0 &&
-    pref.acceptedPartnerSmoking.length === 0 &&
-    pref.acceptedPartnerAlcohol.length === 0 &&
-    pref.acceptedPartnerReligions.length === 0 &&
-    pref.partnerWantsChildren === null &&
-    pref.partnerHasChildren === null &&
-    pref.similarityPreference === null
+    pref.acceptedPartnerGenders.length === 0
   );
 }
 
@@ -368,30 +354,10 @@ export function buildChildrenUnsureRowFromNewModel(
   const ageMin = useNormalizedPrefs ? normPref!.partnerAgeMin : null;
   const ageMax = useNormalizedPrefs ? normPref!.partnerAgeMax : null;
   const distKm = useNormalizedPrefs ? normPref!.maxDistanceKm : null;
-  const minEdu = useNormalizedPrefs ? normPref!.minimumPartnerEducation : null;
-  const partnerWantsChildren = useNormalizedPrefs
-    ? normPref!.partnerWantsChildren
-    : null;
-  const partnerHasChildren = useNormalizedPrefs ? normPref!.partnerHasChildren : null;
-  const similarityPreference = useNormalizedPrefs
-    ? normPref!.similarityPreference
-    : null;
 
   if (ageMin !== null) prefs.partnerAgeMin = ageMin;
   if (ageMax !== null) prefs.partnerAgeMax = ageMax;
   if (distKm !== null) prefs.maxDistanceKm = distKm;
-  if (minEdu !== null) prefs.minimumPartnerEducation = minEdu;
-  if (partnerWantsChildren !== null) prefs.partnerWantsChildren = partnerWantsChildren;
-  if (partnerHasChildren !== null) prefs.partnerHasChildren = partnerHasChildren;
-  if (similarityPreference !== null) prefs.similarityPreference = similarityPreference;
-
-  const smoking = useNormalizedPrefs ? normPref!.acceptedPartnerSmoking : [];
-  const alcohol = useNormalizedPrefs ? normPref!.acceptedPartnerAlcohol : [];
-  const religions = useNormalizedPrefs ? normPref!.acceptedPartnerReligions : [];
-
-  if (smoking.length > 0) prefs.acceptedPartnerSmoking = smoking;
-  if (alcohol.length > 0) prefs.acceptedPartnerAlcohol = alcohol;
-  if (religions.length > 0) prefs.acceptedPartnerReligions = religions;
 
   return {
     row: {

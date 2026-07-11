@@ -119,14 +119,7 @@ function testUserProfilePreferenceForProfile(row: Record<string, unknown>) {
     partnerAgeMin: null,
     partnerAgeMax: null,
     maxDistanceKm: genders.length > 0 ? null : 100,
-    minimumPartnerEducation: null,
     acceptedPartnerGenders: genders,
-    acceptedPartnerSmoking: [] as string[],
-    acceptedPartnerAlcohol: [] as string[],
-    acceptedPartnerReligions: [] as string[],
-    partnerWantsChildren: null,
-    partnerHasChildren: null,
-    similarityPreference: null,
     updatedAt: new Date('2026-04-18T10:00:00.000Z'),
   };
 }

@@ -4,16 +4,11 @@
  */
 
 import {
-  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
-  AcceptedPartnerSmoking,
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
   GenderIdentity,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   ReligionSelf,
   SmokingFrequencySelf,
   WantsChildrenSelf,
@@ -138,34 +133,6 @@ function partnerGenders(selfGender: GenderIdentity, aboutPartner: string): Accep
     : [AcceptedPartnerGender.FEMALE];
 }
 
-function partnerSmokingPref(aboutPartner: string): AcceptedPartnerSmoking | undefined {
-  if (/לא מעשן|רצוי לא מעשן|עדיף לא מעשן|non-smoker|No smoking|doesn't smoke|preferably doesn't smoke|prefer non-smoker|preferably non-smoker/i.test(aboutPartner)) {
-    return AcceptedPartnerSmoking.NONE_ONLY;
-  }
-  if (/עישון כבד|Smoking all day|מעשנת הרבה/i.test(aboutPartner)) return AcceptedPartnerSmoking.NONE_ONLY;
-  return undefined;
-}
-
-function partnerAlcoholPref(aboutPartner: string): AcceptedPartnerAlcohol | undefined {
-  if (/אלכוהול בקטנה|בקטנה זה סבבה/i.test(aboutPartner)) return AcceptedPartnerAlcohol.MODERATE_OK;
-  return undefined;
-}
-
-function partnerHasChildrenPref(aboutPartner: string): PartnerHasChildrenAcceptance | undefined {
-  if (/אין לי בעיה אם יש לה ילדים|אין בעיה אם יש|okay with kids|fine if she has kids|fine if he has kids|Kids are not a dealbreaker|נוח לו עם ילדים|ילדים זה לא פסול/i.test(aboutPartner)) {
-    return PartnerHasChildrenAcceptance.ACCEPT;
-  }
-  return undefined;
-}
-
-function partnerReligions(aboutPartner: string, aboutMe: string): ReligionSelf[] | undefined {
-  const t = `${aboutMe} ${aboutPartner}`;
-  if (/יראת שמיים|faith|values-driven|traditional in daily|מסורת בסיסית|ערכים/i.test(t)) {
-    return [ReligionSelf.JEWISH];
-  }
-  return undefined;
-}
-
 export function deriveLegacySyntheticStructuredLayers(row: {
   readonly id: string;
   readonly aboutMe: string;
@@ -196,36 +163,6 @@ export function deriveLegacySyntheticStructuredLayers(row: {
     structuredPreferencesPatch.partnerAgeMax = band.max;
   }
   structuredPreferencesPatch.acceptedPartnerGenders = partnerGenders(gender, ap);
-
-  const sm = partnerSmokingPref(ap);
-  if (sm !== undefined) structuredPreferencesPatch.acceptedPartnerSmoking = sm;
-
-  const al = partnerAlcoholPref(ap);
-  if (al !== undefined) structuredPreferencesPatch.acceptedPartnerAlcohol = al;
-
-  const ph = partnerHasChildrenPref(ap);
-  if (ph !== undefined) structuredPreferencesPatch.partnerHasChildren = ph;
-
-  const rel = partnerReligions(ap, am);
-  if (rel !== undefined) structuredPreferencesPatch.acceptedPartnerReligions = rel;
-
-  if (structuredPreferencesPatch.minimumPartnerEducation === undefined) {
-    structuredPreferencesPatch.minimumPartnerEducation = MinimumPartnerEducation.ANY;
-  }
-
-  if (structuredPreferencesPatch.acceptedPartnerAlcohol === undefined) {
-    structuredPreferencesPatch.acceptedPartnerAlcohol = AcceptedPartnerAlcohol.ANY;
-  }
-
-  if (structuredPreferencesPatch.acceptedPartnerSmoking === undefined) {
-    structuredPreferencesPatch.acceptedPartnerSmoking = AcceptedPartnerSmoking.ANY;
-  }
-
-  if (structuredPreferencesPatch.partnerHasChildren === undefined) {
-    structuredPreferencesPatch.partnerHasChildren = PartnerHasChildrenAcceptance.NO_REQUIREMENT;
-  }
-
-  structuredPreferencesPatch.partnerWantsChildren = PartnerWantsChildrenRequirement.NO_REQUIREMENT;
 
   return { structuredFactsPatch, structuredPreferencesPatch };
 }

@@ -43,28 +43,6 @@ describe('holy-grail structured write merge', () => {
     expect(out.smoking).toBeUndefined();
   });
 
-  it('preferences partial merge; empty acceptedPartnerReligions removes key', () => {
-    const existing = {
-      acceptedPartnerGenders: ['MALE'],
-      acceptedPartnerReligions: ['JEWISH'],
-    };
-    const out = mergeHolyGrailStructuredPreferencesPatch(existing, {
-      partnerAgeMin: 25,
-      acceptedPartnerReligions: [],
-    }) as Record<string, unknown>;
-    expect(out.acceptedPartnerGenders).toEqual(['MALE']);
-    expect(out.partnerAgeMin).toBe(25);
-    expect(out.acceptedPartnerReligions).toBeUndefined();
-  });
-
-  it('similarityPreference null patch stores JSON null (does not delete key)', () => {
-    const out = mergeHolyGrailStructuredPreferencesPatch(
-      { acceptedPartnerGenders: ['MALE'] },
-      { similarityPreference: null },
-    ) as Record<string, unknown>;
-    expect(out.acceptedPartnerGenders).toEqual(['MALE']);
-    expect(out.similarityPreference).toBeNull();
-  });
 });
 
 describe('HolyGrailStructuredWriteService', () => {

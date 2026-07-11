@@ -1,5 +1,4 @@
 import {
-  PartnerWantsChildrenRequirement,
   WantsChildrenSelf,
   MATCHING_CANONICAL_MODEL_VERSION,
 } from '../canonical/matching-canonical.types';
@@ -33,9 +32,8 @@ function model(
 }
 
 describe('match_pair_hg_snapshot', () => {
-  it('round-trips children directions via hgChildrenStatus + policy version', () => {
+  it('round-trips inert children_unsure (always false after Sprint 15) via hgChildrenStatus', () => {
     const a = model('a', {
-      preferences: { partnerWantsChildren: PartnerWantsChildrenRequirement.MUST_WANT },
       facts: { wantsChildren: WantsChildrenSelf.YES },
     });
     const b = model('b', {
@@ -46,8 +44,10 @@ describe('match_pair_hg_snapshot', () => {
 
     const payload = buildPairHgSnapshotPayload('a__b', aToB, bToA);
     expect(payload.hgPolicyVersion).toBe(HG_LIST_PRODUCT_POLICY_VERSION);
-    expect(payload.childrenUnsure).toBe(true);
-    expect(payload.hgRankPenaltyApplied).toBe(true);
+    // PARTNER_WANTS_CHILDREN removed — flag is inert / always false
+    expect(payload.childrenUnsure).toBe(false);
+    expect(payload.hgRankPenaltyApplied).toBe(false);
+    expect(payload.hgChildrenStatus).toBe('SKIPPED:SKIPPED');
 
     const row = {
       matchId: payload.matchId,
@@ -65,7 +65,7 @@ describe('match_pair_hg_snapshot', () => {
     expect(ch.ok).toBe(true);
     if (ch.ok) {
       expect(ch.dto).toEqual({
-        profile_a_to_profile_b: true,
+        profile_a_to_profile_b: false,
         profile_b_to_profile_a: false,
       });
     }

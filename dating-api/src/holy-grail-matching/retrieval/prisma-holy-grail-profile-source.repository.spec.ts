@@ -70,6 +70,29 @@ describe('holy-grail-structured-db-json / DB row → mapping input', () => {
     });
   });
 
+  it('ignores Sprint-15-removed preference keys in stale HG prefs JSON', () => {
+    expect(
+      parseHolyGrailStructuredPreferencesFromJson({
+        acceptedPartnerGenders: ['FEMALE'],
+        partnerAgeMin: 25,
+        partnerAgeMax: 35,
+        maxDistanceKm: 40,
+        similarityPreference: 'balanced',
+        minimumPartnerEducation: 'BACHELORS',
+        acceptedPartnerSmoking: ['NONE_ONLY'],
+        acceptedPartnerAlcohol: ['ANY'],
+        acceptedPartnerReligions: ['JEWISH'],
+        partnerWantsChildren: 'MUST_WANT',
+        partnerHasChildren: 'ACCEPT',
+      }),
+    ).toEqual({
+      acceptedPartnerGenders: [AcceptedPartnerGender.FEMALE],
+      partnerAgeMin: 25,
+      partnerAgeMax: 35,
+      maxDistanceKm: 40,
+    });
+  });
+
   it('merges extraction arrays with structured layers from row shape', () => {
     const input = buildHolyGrailProfileMappingInputFromDbRow({
       profileId: 'p1',
@@ -80,17 +103,11 @@ describe('holy-grail-structured-db-json / DB row → mapping input', () => {
       },
       holyGrailStructuredFacts: { genderIdentity: 'NON_BINARY' },
       holyGrailStructuredPreferences: {
-        acceptedPartnerSmoking: ['ANY'],
-        acceptedPartnerAlcohol: ['MODERATE_OK'],
       },
     });
     expect(input.profileId).toBe('p1');
     expect(input.extractionArrays?.interests_self).toEqual(['yoga']);
     expect(input.structuredFacts?.genderIdentity).toBe(GenderIdentity.NON_BINARY);
-    expect(input.structuredPreferences?.acceptedPartnerSmoking).toEqual(['ANY']);
-    expect(input.structuredPreferences?.acceptedPartnerAlcohol).toEqual([
-      'MODERATE_OK',
-    ]);
     expect(input.rankingSignals).toEqual({
       dailyRhythm: null,
       autonomyTogetherness: null,
@@ -98,33 +115,6 @@ describe('holy-grail-structured-db-json / DB row → mapping input', () => {
       lifestylePace: null,
       interestsTop: [],
     });
-  });
-
-  it('treats empty smoking/alcohol arrays as no preference (omitted)', () => {
-    const input = buildHolyGrailProfileMappingInputFromDbRow({
-      profileId: 'p-empty',
-      extractionV2: null,
-      holyGrailStructuredFacts: null,
-      holyGrailStructuredPreferences: {
-        acceptedPartnerSmoking: [],
-        acceptedPartnerAlcohol: [],
-      },
-    });
-    expect(input.structuredPreferences?.acceptedPartnerSmoking).toBeUndefined();
-    expect(input.structuredPreferences?.acceptedPartnerAlcohol).toBeUndefined();
-  });
-
-  it('throws on invalid smoking/alcohol array values', () => {
-    expect(() =>
-      parseHolyGrailStructuredPreferencesFromJson({
-        acceptedPartnerSmoking: ['NOT_A_VALUE'],
-      }),
-    ).toThrow(/invalid acceptedPartnerSmoking/);
-    expect(() =>
-      parseHolyGrailStructuredPreferencesFromJson({
-        acceptedPartnerAlcohol: ['NOPE'],
-      }),
-    ).toThrow(/invalid acceptedPartnerAlcohol/);
   });
 
   it('builds rankingSignals from self snapshot HG columns only (DB runtime)', () => {

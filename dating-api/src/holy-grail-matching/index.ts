@@ -109,10 +109,6 @@ export {
   type HolyGrailStructuredWriteRequest,
 } from './holy-grail-structured-write.service';
 export {
-  extractSimilarityPreferenceFromFreeText,
-  type SimilarityPreferenceTextExtraction,
-} from './similarity-preference-text.extract';
-export {
   extractPersonalityTraitsFromFreeText,
   PERSONALITY_TRAIT_TAGS,
   PERSONALITY_TRAIT_TAG_SET,

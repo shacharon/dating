@@ -1686,14 +1686,7 @@ describe('me profile HTTP (integration)', () => {
       partnerAgeMin: null as number | null,
       partnerAgeMax: null as number | null,
       maxDistanceKm: 100,
-      minimumPartnerEducation: null as string | null,
       acceptedPartnerGenders: opts?.acceptedPartnerGenders ?? ([] as string[]),
-      acceptedPartnerSmoking: [] as string[],
-      acceptedPartnerAlcohol: [] as string[],
-      acceptedPartnerReligions: [] as string[],
-      partnerWantsChildren: null as string | null,
-      partnerHasChildren: null as string | null,
-      similarityPreference: null as string | null,
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
   }

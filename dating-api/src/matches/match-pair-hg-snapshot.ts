@@ -105,9 +105,8 @@ export function buildPairHgSnapshotPayload(
   aToB: HolyGrailDirectionalEvaluationResult,
   bToA: HolyGrailDirectionalEvaluationResult,
 ): PairHgSnapshotUpsertInput {
-  const chA = aToB.dimensions.PARTNER_WANTS_CHILDREN.status;
-  const chB = bToA.dimensions.PARTNER_WANTS_CHILDREN.status;
-  const hgChildrenStatus = `${chA}${HG_CHILDREN_STATUS_SEP}${chB}`;
+  // Sprint 15: PARTNER_WANTS_CHILDREN removed — children soft-pass status is always SKIPPED.
+  const hgChildrenStatus = `SKIPPED${HG_CHILDREN_STATUS_SEP}SKIPPED`;
   const hgOverallStatus = `${aToB.overallHardEligibility}${HG_CHILDREN_STATUS_SEP}${bToA.overallHardEligibility}`;
   const profile_a_to_profile_b = aToB.eligibilityFlags.children_unsure;
   const profile_b_to_profile_a = bToA.eligibilityFlags.children_unsure;

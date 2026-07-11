@@ -2,16 +2,11 @@
  * Fails when structured JSON key allowlists drift from merge normalizers or DB parser coverage.
  */
 import {
-  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
-  AcceptedPartnerSmoking,
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
   GenderIdentity,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   ReligionSelf,
   SmokingFrequencySelf,
   WantsChildrenSelf,
@@ -45,20 +40,11 @@ describe('holy grail ingestion drift guards', () => {
     acceptedPartnerGenders: [AcceptedPartnerGender.FEMALE],
     partnerAgeMin: 25,
     partnerAgeMax: 35,
-    minimumPartnerEducation: MinimumPartnerEducation.HIGH_SCHOOL,
-    acceptedPartnerSmoking: AcceptedPartnerSmoking.NONE_ONLY,
-    acceptedPartnerAlcohol: AcceptedPartnerAlcohol.NONE_ONLY,
-    partnerWantsChildren: PartnerWantsChildrenRequirement.NO_REQUIREMENT,
-    partnerHasChildren: PartnerHasChildrenAcceptance.NO_REQUIREMENT,
-    acceptedPartnerReligions: [ReligionSelf.JEWISH],
     maxDistanceKm: 40,
-    similarityPreference: 'similar',
   };
 
   const prefSamplesForParser: Record<(typeof HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS)[number], unknown> = {
     ...prefSamplesForMerge,
-    acceptedPartnerSmoking: [AcceptedPartnerSmoking.NONE_ONLY],
-    acceptedPartnerAlcohol: [AcceptedPartnerAlcohol.NONE_ONLY],
   };
 
   it('mergeHolyGrailStructuredFactsPatch supports every HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS', () => {

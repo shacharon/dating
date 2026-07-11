@@ -3,27 +3,21 @@ import { mapProfileSourceToMatchingCanonical } from '../profile-to-canonical.map
 import { mapMatchingPreferencesToWireDto } from './holy-grail-retrieval-wire.dto';
 
 describe('holy-grail-retrieval-wire.dto', () => {
-  it('mapMatchingPreferencesToWireDto omits similarityPreference when absent on canonical prefs', () => {
+  it('maps kept preference fields only', () => {
     const m = mapProfileSourceToMatchingCanonical({
       profileId: 'p',
-      structuredPreferences: { acceptedPartnerGenders: [AcceptedPartnerGender.FEMALE] },
+      structuredPreferences: {
+        acceptedPartnerGenders: [AcceptedPartnerGender.FEMALE],
+        partnerAgeMin: 25,
+        partnerAgeMax: 40,
+        maxDistanceKm: 50,
+      },
     });
-    const w = mapMatchingPreferencesToWireDto(m.preferences);
-    expect(w.similarityPreference).toBeUndefined();
-    expect(w.acceptedPartnerGenders).toEqual([AcceptedPartnerGender.FEMALE]);
-  });
-
-  it('mapMatchingPreferencesToWireDto copies similarityPreference and null', () => {
-    const a = mapProfileSourceToMatchingCanonical({
-      profileId: 'p',
-      structuredPreferences: { similarityPreference: 'similar' },
+    expect(mapMatchingPreferencesToWireDto(m.preferences)).toEqual({
+      acceptedPartnerGenders: ['FEMALE'],
+      partnerAgeMin: 25,
+      partnerAgeMax: 40,
+      maxDistanceKm: 50,
     });
-    expect(mapMatchingPreferencesToWireDto(a.preferences).similarityPreference).toBe('similar');
-
-    const b = mapProfileSourceToMatchingCanonical({
-      profileId: 'p',
-      structuredPreferences: { similarityPreference: null },
-    });
-    expect(mapMatchingPreferencesToWireDto(b.preferences).similarityPreference).toBeNull();
   });
 });

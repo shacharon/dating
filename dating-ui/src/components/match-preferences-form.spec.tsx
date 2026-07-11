@@ -60,6 +60,25 @@ describe('MatchPreferencesForm', () => {
     });
   });
 
+  it('does not render removed lifestyle/education/family/similarity controls', async () => {
+    render(<MatchPreferencesForm showTitle />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pref-age-min')).toBeTruthy();
+    });
+
+    expect(screen.queryByTestId('pref-education')).toBeNull();
+    expect(screen.queryByTestId('pref-smoking-ANY')).toBeNull();
+    expect(screen.queryByTestId('pref-alcohol-ANY')).toBeNull();
+    expect(screen.queryByTestId('pref-religion-JEWISH')).toBeNull();
+    expect(screen.queryByTestId('pref-wants-children')).toBeNull();
+    expect(screen.queryByTestId('pref-has-children')).toBeNull();
+    expect(screen.queryByTestId('pref-similarity')).toBeNull();
+    expect(screen.queryByText('Minimum education')).toBeNull();
+    expect(screen.queryByText('Lifestyle')).toBeNull();
+    expect(screen.queryByText('Family')).toBeNull();
+  });
+
   it('patches preferences on save', async () => {
     render(<MatchPreferencesForm />);
 

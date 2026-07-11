@@ -11,15 +11,6 @@ import {
   type AppLocale,
 } from '@/lib/i18n';
 import {
-  ACCEPTED_PARTNER_ALCOHOL_VALUES,
-  ACCEPTED_PARTNER_RELIGION_VALUES,
-  ACCEPTED_PARTNER_SMOKING_VALUES,
-  MINIMUM_PARTNER_EDUCATION_VALUES,
-  PARTNER_HAS_CHILDREN_VALUES,
-  PARTNER_WANTS_CHILDREN_VALUES,
-  SIMILARITY_PREFERENCE_VALUES,
-} from '@/lib/match-preference-options';
-import {
   emptyMatchPreferencesFormState,
   matchPreferencesFormToPatchBody,
   profileToMatchPreferencesForm,
@@ -183,7 +174,7 @@ export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolea
             {mp.fields.partnerGendersHelp}
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
-            {ME_PARTNER_GENDER_CHOICES.map((g) => (
+            {ME_PARTNER_GENDER_CHOICES.map((g: MeProfileGender) => (
               <label
                 key={g}
                 className="flex cursor-pointer items-center gap-2 text-sm text-zinc-900 dark:text-zinc-100"
@@ -265,189 +256,6 @@ export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolea
               className="mt-1 w-full max-w-xs rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
             />
           </label>
-        </section>
-
-        <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-          <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            {mp.sections.education}
-          </h2>
-          <select
-            data-testid="pref-education"
-            value={form.minimumPartnerEducation}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                minimumPartnerEducation: e.target.value,
-              }))
-            }
-            className="mt-3 w-full max-w-md rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-          >
-            <option value="">{mp.fields.notSpecified}</option>
-            {MINIMUM_PARTNER_EDUCATION_VALUES.map((v) => (
-              <option key={v} value={v}>
-                {mp.education[v]}
-              </option>
-            ))}
-          </select>
-        </section>
-
-        <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-          <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            {mp.sections.lifestyle}
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            {mp.fields.multiSelectHelp}
-          </p>
-          <p className="mt-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            {mp.fields.smokingGroup}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-3">
-            {ACCEPTED_PARTNER_SMOKING_VALUES.map((v) => (
-              <label key={v} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  data-testid={`pref-smoking-${v}`}
-                  checked={form.acceptedPartnerSmoking.includes(v)}
-                  onChange={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      acceptedPartnerSmoking: toggleArrayValue(
-                        prev.acceptedPartnerSmoking,
-                        v,
-                      ),
-                    }))
-                  }
-                />
-                {mp.smoking[v]}
-              </label>
-            ))}
-          </div>
-          <p className="mt-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            {mp.fields.alcoholGroup}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-3">
-            {ACCEPTED_PARTNER_ALCOHOL_VALUES.map((v) => (
-              <label key={v} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  data-testid={`pref-alcohol-${v}`}
-                  checked={form.acceptedPartnerAlcohol.includes(v)}
-                  onChange={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      acceptedPartnerAlcohol: toggleArrayValue(
-                        prev.acceptedPartnerAlcohol,
-                        v,
-                      ),
-                    }))
-                  }
-                />
-                {mp.alcohol[v]}
-              </label>
-            ))}
-          </div>
-          <p className="mt-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            {mp.fields.religionGroup}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-3">
-            {ACCEPTED_PARTNER_RELIGION_VALUES.map((v) => (
-              <label key={v} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  data-testid={`pref-religion-${v}`}
-                  checked={form.acceptedPartnerReligions.includes(v)}
-                  onChange={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      acceptedPartnerReligions: toggleArrayValue(
-                        prev.acceptedPartnerReligions,
-                        v,
-                      ),
-                    }))
-                  }
-                />
-                {mp.religion[v]}
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-          <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            {mp.sections.family}
-          </h2>
-          <div className="mt-3 space-y-3">
-            <label className="block text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                {mp.fields.partnerWantsChildren}
-              </span>
-              <select
-                data-testid="pref-wants-children"
-                value={form.partnerWantsChildren}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    partnerWantsChildren: e.target.value,
-                  }))
-                }
-                className="mt-1 w-full max-w-md rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
-              >
-                <option value="">{mp.fields.notSpecified}</option>
-                {PARTNER_WANTS_CHILDREN_VALUES.map((v) => (
-                  <option key={v} value={v}>
-                    {mp.wantsChildren[v]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                {mp.fields.partnerHasChildren}
-              </span>
-              <select
-                data-testid="pref-has-children"
-                value={form.partnerHasChildren}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    partnerHasChildren: e.target.value,
-                  }))
-                }
-                className="mt-1 w-full max-w-md rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
-              >
-                <option value="">{mp.fields.notSpecified}</option>
-                {PARTNER_HAS_CHILDREN_VALUES.map((v) => (
-                  <option key={v} value={v}>
-                    {mp.hasChildren[v]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-
-        <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-          <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            {mp.sections.similarity}
-          </h2>
-          <select
-            data-testid="pref-similarity"
-            value={form.similarityPreference}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                similarityPreference: e.target.value,
-              }))
-            }
-            className="mt-3 w-full max-w-md rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-          >
-            <option value="">{mp.fields.notSpecified}</option>
-            {SIMILARITY_PREFERENCE_VALUES.map((v) => (
-              <option key={v} value={v}>
-                {mp.similarity[v]}
-              </option>
-            ))}
-          </select>
         </section>
 
         {validationError ? (

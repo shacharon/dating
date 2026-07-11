@@ -1,7 +1,5 @@
 import {
-  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
-  AcceptedPartnerSmoking,
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
@@ -9,21 +7,16 @@ import {
   GenderIdentity,
   LivingSituationSelf,
   MATCHING_CANONICAL_MODEL_VERSION,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   PoliticsSelf,
   ReligionSelf,
   RelationshipStatusSelf,
   SexualOrientationSelf,
-  SIMILARITY_PREFERENCE_VALUES,
   SmokingFrequencySelf,
   type MatchingCanonicalModel,
   type MatchingFacts,
   type MatchingPreferences,
   type MatchingRankingSignalsSnapshot,
   type MatchingSearchOverrides,
-  type SimilarityPreference,
   WantsChildrenSelf,
   WorkStudySituationSelf,
 } from '../canonical/matching-canonical.types';
@@ -75,8 +68,6 @@ const STRUCTURED_FACTS_KEYS = HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_KEY_SET;
 const STRUCTURED_PREFERENCES_KEYS =
   HOLY_GRAIL_STRUCTURED_PREFERENCES_MAPPER_KEY_SET;
 const SEARCH_OVERRIDE_KEYS = HOLY_GRAIL_SEARCH_OVERRIDE_KEY_SET;
-
-const SIMILARITY_PREFERENCE_STRINGS = [...SIMILARITY_PREFERENCE_VALUES];
 
 function assertPlainRecord(
   value: unknown,
@@ -528,55 +519,6 @@ function assertPositiveFiniteKm(n: unknown, field: string): number {
   return n;
 }
 
-function dedupeReligions(list: readonly string[], ctx: string): ReligionSelf[] {
-  const allowed = new Set(matchingCanonicalEnumStringValues(ReligionSelf));
-  const out: ReligionSelf[] = [];
-  const seen = new Set<string>();
-  for (const x of list) {
-    if (typeof x !== 'string') {
-      throw new Error(`HolyGrail map: ${ctx} must contain only strings`);
-    }
-    if (!allowed.has(x)) {
-      throw new Error(
-        `HolyGrail map: invalid ${ctx} element ${JSON.stringify(x)} (not in ReligionSelf enum)`,
-      );
-    }
-    if (seen.has(x)) continue;
-    seen.add(x);
-    out.push(x as ReligionSelf);
-  }
-  return out;
-}
-
-function parseEnumArrayWithLegacyScalar<T extends string>(
-  raw: unknown,
-  allowed: readonly T[],
-  ctx: string,
-): T[] | undefined {
-  const allowedSet = new Set<string>(allowed as readonly string[]);
-  const list = Array.isArray(raw) ? raw : [raw];
-  if (Array.isArray(raw) && raw.length === 0) return undefined;
-  if (!Array.isArray(raw)) {
-    if (typeof raw !== 'string' || !allowedSet.has(raw)) {
-      throw new Error(`HolyGrail map: ${ctx} must be an enum string or array`);
-    }
-  }
-  const out: T[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < list.length; i++) {
-    const x = list[i];
-    if (typeof x !== 'string' || !allowedSet.has(x)) {
-      throw new Error(
-        `HolyGrail map: invalid ${ctx}[${i}] ${JSON.stringify(x)} (not in enum)`,
-      );
-    }
-    if (seen.has(x)) continue;
-    seen.add(x);
-    out.push(x as T);
-  }
-  return out.length > 0 ? out : undefined;
-}
-
 function buildPreferences(
   sp: HolyGrailProfileMappingInput['structuredPreferences'],
 ): MatchingPreferences {
@@ -623,78 +565,11 @@ function buildPreferences(
     throw new Error('HolyGrail map: partnerAgeMin must be <= partnerAgeMax');
   }
 
-  if (p.minimumPartnerEducation !== undefined) {
-    out.minimumPartnerEducation = assertStringInEnum(
-      p.minimumPartnerEducation,
-      matchingCanonicalEnumStringValues(MinimumPartnerEducation),
-      'structuredPreferences.minimumPartnerEducation',
-    ) as MinimumPartnerEducation;
-  }
-
-  if (p.acceptedPartnerSmoking !== undefined) {
-    out.acceptedPartnerSmoking = parseEnumArrayWithLegacyScalar(
-      p.acceptedPartnerSmoking,
-      matchingCanonicalEnumStringValues(AcceptedPartnerSmoking),
-      'structuredPreferences.acceptedPartnerSmoking',
-    ) as AcceptedPartnerSmoking[] | undefined;
-  }
-
-  if (p.acceptedPartnerAlcohol !== undefined) {
-    out.acceptedPartnerAlcohol = parseEnumArrayWithLegacyScalar(
-      p.acceptedPartnerAlcohol,
-      matchingCanonicalEnumStringValues(AcceptedPartnerAlcohol),
-      'structuredPreferences.acceptedPartnerAlcohol',
-    ) as AcceptedPartnerAlcohol[] | undefined;
-  }
-
-  if (p.partnerWantsChildren !== undefined) {
-    out.partnerWantsChildren = assertStringInEnum(
-      p.partnerWantsChildren,
-      matchingCanonicalEnumStringValues(PartnerWantsChildrenRequirement),
-      'structuredPreferences.partnerWantsChildren',
-    ) as PartnerWantsChildrenRequirement;
-  }
-
-  if (p.partnerHasChildren !== undefined) {
-    out.partnerHasChildren = assertStringInEnum(
-      p.partnerHasChildren,
-      matchingCanonicalEnumStringValues(PartnerHasChildrenAcceptance),
-      'structuredPreferences.partnerHasChildren',
-    ) as PartnerHasChildrenAcceptance;
-  }
-
-  if (p.acceptedPartnerReligions !== undefined) {
-    if (!Array.isArray(p.acceptedPartnerReligions)) {
-      throw new Error(
-        'HolyGrail map: structuredPreferences.acceptedPartnerReligions must be an array when provided',
-      );
-    }
-    const religions = dedupeReligions(
-      p.acceptedPartnerReligions,
-      'structuredPreferences.acceptedPartnerReligions',
-    );
-    if (religions.length > 0) {
-      out.acceptedPartnerReligions = religions;
-    }
-  }
-
   if (p.maxDistanceKm !== undefined) {
     out.maxDistanceKm = assertPositiveFiniteKm(
       p.maxDistanceKm,
       'structuredPreferences.maxDistanceKm',
     );
-  }
-
-  if (p.similarityPreference !== undefined) {
-    if (p.similarityPreference === null) {
-      out.similarityPreference = null;
-    } else {
-      out.similarityPreference = assertStringInEnum(
-        p.similarityPreference,
-        SIMILARITY_PREFERENCE_STRINGS,
-        'structuredPreferences.similarityPreference',
-      ) as SimilarityPreference;
-    }
   }
 
   return out;
@@ -760,68 +635,11 @@ function parseSearchOverrides(raw: unknown): MatchingSearchOverrides {
       'HolyGrail map: searchOverrides.partnerAgeMin must be <= partnerAgeMax',
     );
   }
-  if (o.minimumPartnerEducation !== undefined) {
-    out.minimumPartnerEducation = assertStringInEnum(
-      o.minimumPartnerEducation,
-      matchingCanonicalEnumStringValues(MinimumPartnerEducation),
-      'searchOverrides.minimumPartnerEducation',
-    ) as MinimumPartnerEducation;
-  }
-  if (o.acceptedPartnerSmoking !== undefined) {
-    out.acceptedPartnerSmoking = parseEnumArrayWithLegacyScalar(
-      o.acceptedPartnerSmoking,
-      matchingCanonicalEnumStringValues(AcceptedPartnerSmoking),
-      'searchOverrides.acceptedPartnerSmoking',
-    ) as AcceptedPartnerSmoking[] | undefined;
-  }
-  if (o.acceptedPartnerAlcohol !== undefined) {
-    out.acceptedPartnerAlcohol = parseEnumArrayWithLegacyScalar(
-      o.acceptedPartnerAlcohol,
-      matchingCanonicalEnumStringValues(AcceptedPartnerAlcohol),
-      'searchOverrides.acceptedPartnerAlcohol',
-    ) as AcceptedPartnerAlcohol[] | undefined;
-  }
-  if (o.partnerWantsChildren !== undefined) {
-    out.partnerWantsChildren = assertStringInEnum(
-      o.partnerWantsChildren,
-      matchingCanonicalEnumStringValues(PartnerWantsChildrenRequirement),
-      'searchOverrides.partnerWantsChildren',
-    ) as PartnerWantsChildrenRequirement;
-  }
-  if (o.partnerHasChildren !== undefined) {
-    out.partnerHasChildren = assertStringInEnum(
-      o.partnerHasChildren,
-      matchingCanonicalEnumStringValues(PartnerHasChildrenAcceptance),
-      'searchOverrides.partnerHasChildren',
-    ) as PartnerHasChildrenAcceptance;
-  }
-  if (o.acceptedPartnerReligions !== undefined) {
-    if (!Array.isArray(o.acceptedPartnerReligions)) {
-      throw new Error(
-        'HolyGrail map: searchOverrides.acceptedPartnerReligions must be an array',
-      );
-    }
-    out.acceptedPartnerReligions = dedupeReligions(
-      o.acceptedPartnerReligions as string[],
-      'searchOverrides.acceptedPartnerReligions',
-    );
-  }
   if (o.maxDistanceKm !== undefined) {
     out.maxDistanceKm = assertPositiveFiniteKm(
       o.maxDistanceKm,
       'searchOverrides.maxDistanceKm',
     );
-  }
-  if (o.similarityPreference !== undefined) {
-    if (o.similarityPreference === null) {
-      out.similarityPreference = null;
-    } else {
-      out.similarityPreference = assertStringInEnum(
-        o.similarityPreference,
-        SIMILARITY_PREFERENCE_STRINGS,
-        'searchOverrides.similarityPreference',
-      ) as SimilarityPreference;
-    }
   }
   if (o.validUntil !== undefined) {
     if (typeof o.validUntil !== 'string' || o.validUntil.trim().length === 0) {

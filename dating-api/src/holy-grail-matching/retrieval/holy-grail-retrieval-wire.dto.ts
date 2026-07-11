@@ -8,18 +8,11 @@
  */
 
 import type {
-  AcceptedPartnerAlcohol,
   AcceptedPartnerGender,
-  AcceptedPartnerSmoking,
   MatchingCanonicalModel,
   MatchingPreferences,
   MatchingRankingSignalsSnapshot,
   MatchingSearchOverrides,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
-  ReligionSelf,
-  SimilarityPreference,
 } from '../../canonical/matching-canonical.types';
 import type { HolyGrailRankSignalBreakdown } from '../holy-grail-five-signal-ranking';
 import type { RankedHolyGrailCandidate } from '../holy-grail-candidate-ranking';
@@ -29,14 +22,7 @@ export interface HolyGrailMatchingPreferencesWireDto {
   readonly acceptedPartnerGenders?: readonly AcceptedPartnerGender[];
   readonly partnerAgeMin?: number;
   readonly partnerAgeMax?: number;
-  readonly minimumPartnerEducation?: MinimumPartnerEducation;
-  readonly acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
-  readonly acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
-  readonly partnerWantsChildren?: PartnerWantsChildrenRequirement;
-  readonly partnerHasChildren?: PartnerHasChildrenAcceptance;
-  readonly acceptedPartnerReligions?: readonly ReligionSelf[];
   readonly maxDistanceKm?: number;
-  readonly similarityPreference?: SimilarityPreference | null;
 }
 
 /** Preference fields stored in `holyGrailStructuredPreferences` JSON (same keys as wire preferences for v1). */
@@ -48,14 +34,7 @@ export interface HolyGrailMatchingSearchOverridesWireDto {
   readonly acceptedPartnerGenders?: readonly AcceptedPartnerGender[];
   readonly partnerAgeMin?: number;
   readonly partnerAgeMax?: number;
-  readonly minimumPartnerEducation?: MinimumPartnerEducation;
-  readonly acceptedPartnerSmoking?: readonly AcceptedPartnerSmoking[];
-  readonly acceptedPartnerAlcohol?: readonly AcceptedPartnerAlcohol[];
-  readonly partnerWantsChildren?: PartnerWantsChildrenRequirement;
-  readonly partnerHasChildren?: PartnerHasChildrenAcceptance;
-  readonly acceptedPartnerReligions?: readonly ReligionSelf[];
   readonly maxDistanceKm?: number;
-  readonly similarityPreference?: SimilarityPreference | null;
   readonly validUntil?: string;
 }
 
@@ -91,29 +70,8 @@ export function mapMatchingPreferencesToWireDto(
     ...(p.partnerAgeMax !== undefined
       ? { partnerAgeMax: p.partnerAgeMax }
       : {}),
-    ...(p.minimumPartnerEducation !== undefined
-      ? { minimumPartnerEducation: p.minimumPartnerEducation }
-      : {}),
-    ...(p.acceptedPartnerSmoking !== undefined
-      ? { acceptedPartnerSmoking: p.acceptedPartnerSmoking }
-      : {}),
-    ...(p.acceptedPartnerAlcohol !== undefined
-      ? { acceptedPartnerAlcohol: p.acceptedPartnerAlcohol }
-      : {}),
-    ...(p.partnerWantsChildren !== undefined
-      ? { partnerWantsChildren: p.partnerWantsChildren }
-      : {}),
-    ...(p.partnerHasChildren !== undefined
-      ? { partnerHasChildren: p.partnerHasChildren }
-      : {}),
-    ...(p.acceptedPartnerReligions !== undefined
-      ? { acceptedPartnerReligions: [...p.acceptedPartnerReligions] }
-      : {}),
     ...(p.maxDistanceKm !== undefined
       ? { maxDistanceKm: p.maxDistanceKm }
-      : {}),
-    ...(p.similarityPreference !== undefined
-      ? { similarityPreference: p.similarityPreference }
       : {}),
   };
 }
@@ -131,29 +89,8 @@ export function mapMatchingSearchOverridesToWireDto(
     ...(o.partnerAgeMax !== undefined
       ? { partnerAgeMax: o.partnerAgeMax }
       : {}),
-    ...(o.minimumPartnerEducation !== undefined
-      ? { minimumPartnerEducation: o.minimumPartnerEducation }
-      : {}),
-    ...(o.acceptedPartnerSmoking !== undefined
-      ? { acceptedPartnerSmoking: o.acceptedPartnerSmoking }
-      : {}),
-    ...(o.acceptedPartnerAlcohol !== undefined
-      ? { acceptedPartnerAlcohol: o.acceptedPartnerAlcohol }
-      : {}),
-    ...(o.partnerWantsChildren !== undefined
-      ? { partnerWantsChildren: o.partnerWantsChildren }
-      : {}),
-    ...(o.partnerHasChildren !== undefined
-      ? { partnerHasChildren: o.partnerHasChildren }
-      : {}),
-    ...(o.acceptedPartnerReligions !== undefined
-      ? { acceptedPartnerReligions: [...o.acceptedPartnerReligions] }
-      : {}),
     ...(o.maxDistanceKm !== undefined
       ? { maxDistanceKm: o.maxDistanceKm }
-      : {}),
-    ...(o.similarityPreference !== undefined
-      ? { similarityPreference: o.similarityPreference }
       : {}),
     ...(o.validUntil !== undefined ? { validUntil: o.validUntil } : {}),
   };

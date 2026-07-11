@@ -281,53 +281,14 @@ export type AppCopySchema = {
       partnerGenders: string;
       age: string;
       distance: string;
-      education: string;
-      lifestyle: string;
-      family: string;
-      similarity: string;
     };
     fields: {
       partnerGendersHelp: string;
       ageMin: string;
       ageMax: string;
       maxDistanceKm: string;
-      minimumPartnerEducation: string;
-      partnerWantsChildren: string;
-      partnerHasChildren: string;
-      similarityPreference: string;
-      multiSelectHelp: string;
-      smokingGroup: string;
-      alcoholGroup: string;
-      religionGroup: string;
-      notSpecified: string;
     };
     partnerGender: Record<"MALE" | "FEMALE" | "NON_BINARY" | "OTHER", string>;
-    education: Record<
-      "ANY" | "HIGH_SCHOOL" | "SOME_COLLEGE" | "BACHELORS" | "GRADUATE",
-      string
-    >;
-    smoking: Record<"NONE_ONLY" | "SOCIAL_OK" | "ANY", string>;
-    alcohol: Record<"NONE_ONLY" | "MODERATE_OK" | "ANY", string>;
-    wantsChildren: Record<
-      "MUST_WANT" | "MUST_NOT_WANT" | "NO_REQUIREMENT",
-      string
-    >;
-    hasChildren: Record<
-      "ACCEPT" | "DOES_NOT_ACCEPT" | "NO_REQUIREMENT",
-      string
-    >;
-    religion: Record<
-      | "NONE"
-      | "CHRISTIAN"
-      | "JEWISH"
-      | "MUSLIM"
-      | "HINDU"
-      | "BUDDHIST"
-      | "SPIRITUAL_NON_AFFILIATED"
-      | "OTHER",
-      string
-    >;
-    similarity: Record<"similar" | "different" | "balanced", string>;
   };
   reportUser: {
     linkLabel: string;

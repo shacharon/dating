@@ -175,21 +175,14 @@ model UserProfileInterest {
 }
 
 model UserProfilePreference {
-  id                       String      @id @default(cuid())
-  profileId                String      @unique
-  profile                  UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  partnerAgeMin            Int?
-  partnerAgeMax            Int?
-  maxDistanceKm            Int?
-  minimumPartnerEducation  String?
-  acceptedPartnerGenders   String[]    @default([])
-  acceptedPartnerSmoking   String[]    @default([])
-  acceptedPartnerAlcohol   String[]    @default([])
-  acceptedPartnerReligions String[]    @default([])
-  partnerWantsChildren     String?
-  partnerHasChildren       String?
-  similarityPreference     String?
-  updatedAt                DateTime    @updatedAt
+  id                     String      @id @default(cuid())
+  profileId              String      @unique
+  profile                UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  partnerAgeMin          Int?
+  partnerAgeMax          Int?
+  maxDistanceKm          Int?
+  acceptedPartnerGenders String[]    @default([])
+  updatedAt              DateTime    @updatedAt
 }
 
 /**

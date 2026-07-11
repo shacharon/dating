@@ -93,6 +93,30 @@ describe('MeProfileWritableFieldsDto / CreateMeProfileDto validation', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
+  it('rejects Sprint-15-removed preference fields on patch (forbidNonWhitelisted)', async () => {
+    const removed = [
+      'minimumPartnerEducation',
+      'acceptedPartnerSmoking',
+      'acceptedPartnerAlcohol',
+      'acceptedPartnerReligions',
+      'partnerWantsChildren',
+      'partnerHasChildren',
+      'similarityPreference',
+    ] as const;
+    for (const field of removed) {
+      const dto = plainToInstance(PatchMeProfileDto, {
+        partnerAgeMin: 25,
+        [field]: field === 'acceptedPartnerSmoking' ? ['ANY'] : 'x',
+      });
+      const errors = await validate(dto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.property === field)).toBe(true);
+    }
+  });
+
   it('PatchMeProfileDto matches create rules for enriched fields', async () => {
     const dto = plainToInstance(PatchMeProfileDto, {
       gender: ProfileGender.OTHER,

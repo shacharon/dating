@@ -8,17 +8,11 @@
 import { Prisma } from '@prisma/client';
 import {
   AcceptedPartnerGender,
-  AcceptedPartnerAlcohol,
-  AcceptedPartnerSmoking,
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
   GenderIdentity,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   ReligionSelf,
-  SIMILARITY_PREFERENCE_VALUES,
   SmokingFrequencySelf,
   WantsChildrenSelf,
 } from '../canonical/matching-canonical.types';
@@ -31,7 +25,6 @@ import {
   isHolyGrailDobYmdString,
 } from './holy-grail-structured-contract';
 
-const SIMILARITY_PREFERENCE_SET = new Set<string>(SIMILARITY_PREFERENCE_VALUES);
 
 export class HolyGrailStructuredWriteError extends Error {
   constructor(message: string) {
@@ -162,32 +155,6 @@ function normalizeGenders(v: unknown): string[] {
   return out;
 }
 
-function normalizeReligionList(v: unknown): string[] {
-  if (!Array.isArray(v)) {
-    throw new HolyGrailStructuredWriteError(
-      'acceptedPartnerReligions must be an array',
-    );
-  }
-  if (v.length === 0) {
-    return [];
-  }
-  const allowed = matchingCanonicalEnumMemberSet(ReligionSelf);
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < v.length; i++) {
-    const x = v[i];
-    if (typeof x !== 'string' || !allowed.has(x)) {
-      throw new HolyGrailStructuredWriteError(
-        `Invalid acceptedPartnerReligions[${i}]: ${JSON.stringify(x)}`,
-      );
-    }
-    if (seen.has(x)) continue;
-    seen.add(x);
-    out.push(x);
-  }
-  return out;
-}
-
 function requirePositiveFiniteKm(v: unknown, field: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
     throw new HolyGrailStructuredWriteError(
@@ -205,43 +172,8 @@ function normalizePrefValue(key: string, v: unknown): unknown {
       return requireIntegerAge(v, 'partnerAgeMin');
     case 'partnerAgeMax':
       return requireIntegerAge(v, 'partnerAgeMax');
-    case 'minimumPartnerEducation':
-      return requireEnum(
-        v,
-        matchingCanonicalEnumMemberSet(MinimumPartnerEducation),
-        'minimumPartnerEducation',
-      );
-    case 'acceptedPartnerSmoking':
-      return requireEnum(
-        v,
-        matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking),
-        'acceptedPartnerSmoking',
-      );
-    case 'acceptedPartnerAlcohol':
-      return requireEnum(
-        v,
-        matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol),
-        'acceptedPartnerAlcohol',
-      );
-    case 'partnerWantsChildren':
-      return requireEnum(
-        v,
-        matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement),
-        'partnerWantsChildren',
-      );
-    case 'partnerHasChildren':
-      return requireEnum(
-        v,
-        matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance),
-        'partnerHasChildren',
-      );
-    case 'acceptedPartnerReligions':
-      return normalizeReligionList(v);
     case 'maxDistanceKm':
       return requirePositiveFiniteKm(v, 'maxDistanceKm');
-    case 'similarityPreference':
-      if (v === null) return null;
-      return requireEnum(v, SIMILARITY_PREFERENCE_SET, 'similarityPreference');
     default:
       throw new HolyGrailStructuredWriteError(
         `Unsupported preference key: ${key}`,
@@ -300,18 +232,6 @@ export function mergeHolyGrailStructuredPreferencesPatch(
       );
     }
     if (raw === null) {
-      if (key === 'similarityPreference') {
-        base[key] = null;
-      } else {
-        delete base[key];
-      }
-      continue;
-    }
-    if (
-      key === 'acceptedPartnerReligions' &&
-      Array.isArray(raw) &&
-      raw.length === 0
-    ) {
       delete base[key];
       continue;
     }

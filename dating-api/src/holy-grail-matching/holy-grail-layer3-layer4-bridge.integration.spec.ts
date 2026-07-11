@@ -2,7 +2,6 @@ import {
   AcceptedPartnerGender,
   GenderIdentity,
   MATCHING_CANONICAL_MODEL_VERSION,
-  PartnerWantsChildrenRequirement,
   WantsChildrenSelf,
 } from '../canonical/matching-canonical.types';
 import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
@@ -111,32 +110,4 @@ describe('Layer 3 → Layer 4 bridge (integration)', () => {
     expect(pair.decision).toBe(HolyGrailPairDecisions.MUTUAL_MATCH);
   });
 
-  it('MUST_WANT × UNSURE: SOFT_PASS on children, legacy MATCH, MUTUAL_MATCH when reciprocal', () => {
-    const a = model('a', {
-      preferences: { partnerWantsChildren: PartnerWantsChildrenRequirement.MUST_WANT },
-      facts: { wantsChildren: WantsChildrenSelf.YES },
-    });
-    const b = model('b', {
-      facts: { wantsChildren: WantsChildrenSelf.UNSURE },
-    });
-    const stc = evaluateHolyGrailDirectional({ searcher: a, counterparty: b, evaluatedAt: AT });
-    const cts = evaluateHolyGrailDirectional({ searcher: b, counterparty: a, evaluatedAt: AT });
-
-    expect(stc.dimensions.PARTNER_WANTS_CHILDREN.status).toBe('SOFT_PASS');
-    expect(stc.eligibilityFlags.children_unsure).toBe(true);
-    expect(stc.overallHardEligibility).toBe('PASS');
-    expect(cts.dimensions.PARTNER_WANTS_CHILDREN.status).toBe('SKIPPED');
-    expect(cts.eligibilityFlags.children_unsure).toBe(false);
-
-    const legacyStc = adaptHolyGrailEvaluationToLegacyDimensionMap(stc);
-    expect(legacyStc.PARTNER_WANTS_CHILDREN).toBe(MatchingDimensionResults.MATCH);
-
-    const pair = buildHolyGrailPairDecisionV1({
-      searcherProfileId: 'a',
-      counterpartyProfileId: 'b',
-      searcherToCounterparty: legacyStc,
-      counterpartyToSearcher: adaptHolyGrailEvaluationToLegacyDimensionMap(cts),
-    });
-    expect(pair.decision).toBe(HolyGrailPairDecisions.MUTUAL_MATCH);
-  });
 });

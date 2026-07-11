@@ -44,12 +44,5 @@ export class MeProfileResponseDto {
   // ── Holy Grail structured preferences (partner requirements) ─────────────────
   partnerAgeMin!: number | null;
   partnerAgeMax!: number | null;
-  minimumPartnerEducation!: string | null;
-  acceptedPartnerSmoking!: string[];
-  acceptedPartnerAlcohol!: string[];
-  partnerWantsChildren!: string | null;
-  partnerHasChildren!: string | null;
-  acceptedPartnerReligions!: string[];
   maxDistanceKm!: number | null;
-  similarityPreference!: string | null;
 }

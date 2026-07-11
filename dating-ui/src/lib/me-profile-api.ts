@@ -68,46 +68,6 @@ export const ME_PARTNER_GENDER_CHOICES: readonly MePartnerGenderChoice[] = [
 /** Mirrors dating-api `UserProfileOnboardingStep`. */
 export type MeProfileOnboardingStep = 'BASIC' | 'TEXTS' | 'COMPLETED';
 
-/** HG partner preference scalars (UserProfilePreference row). */
-export type MinimumPartnerEducationPreference =
-  | 'ANY'
-  | 'HIGH_SCHOOL'
-  | 'SOME_COLLEGE'
-  | 'BACHELORS'
-  | 'GRADUATE';
-
-export type AcceptedPartnerSmokingPreference =
-  | 'NONE_ONLY'
-  | 'SOCIAL_OK'
-  | 'ANY';
-
-export type AcceptedPartnerAlcoholPreference =
-  | 'NONE_ONLY'
-  | 'MODERATE_OK'
-  | 'ANY';
-
-export type PartnerWantsChildrenPreference =
-  | 'MUST_WANT'
-  | 'MUST_NOT_WANT'
-  | 'NO_REQUIREMENT';
-
-export type PartnerHasChildrenPreference =
-  | 'ACCEPT'
-  | 'DOES_NOT_ACCEPT'
-  | 'NO_REQUIREMENT';
-
-export type AcceptedPartnerReligionPreference =
-  | 'NONE'
-  | 'CHRISTIAN'
-  | 'JEWISH'
-  | 'MUSLIM'
-  | 'HINDU'
-  | 'BUDDHIST'
-  | 'SPIRITUAL_NON_AFFILIATED'
-  | 'OTHER';
-
-export type SimilarityPreferenceValue = 'similar' | 'different' | 'balanced';
-
 export interface MeProfileDto {
   id: string;
   userId: string;
@@ -131,14 +91,7 @@ export interface MeProfileDto {
   updatedAt: string;
   partnerAgeMin?: number | null;
   partnerAgeMax?: number | null;
-  minimumPartnerEducation?: MinimumPartnerEducationPreference | null;
-  acceptedPartnerSmoking?: AcceptedPartnerSmokingPreference[];
-  acceptedPartnerAlcohol?: AcceptedPartnerAlcoholPreference[];
-  partnerWantsChildren?: PartnerWantsChildrenPreference | null;
-  partnerHasChildren?: PartnerHasChildrenPreference | null;
-  acceptedPartnerReligions?: AcceptedPartnerReligionPreference[];
   maxDistanceKm?: number | null;
-  similarityPreference?: SimilarityPreferenceValue | null;
 }
 
 export interface CreateMeProfileBody {
@@ -155,14 +108,7 @@ export interface CreateMeProfileBody {
   locationLabel?: string | null;
   partnerAgeMin?: number | null;
   partnerAgeMax?: number | null;
-  minimumPartnerEducation?: MinimumPartnerEducationPreference | null;
-  acceptedPartnerSmoking?: AcceptedPartnerSmokingPreference[];
-  acceptedPartnerAlcohol?: AcceptedPartnerAlcoholPreference[];
-  partnerWantsChildren?: PartnerWantsChildrenPreference | null;
-  partnerHasChildren?: PartnerHasChildrenPreference | null;
-  acceptedPartnerReligions?: AcceptedPartnerReligionPreference[];
   maxDistanceKm?: number | null;
-  similarityPreference?: SimilarityPreferenceValue | null;
 }
 
 export type PatchMeProfileBody = CreateMeProfileBody;

@@ -1,7 +1,9 @@
 /**
  * Deterministic parse of persisted JSON blobs → `HolyGrailProfileMappingInput` slices.
- * Same key allow-lists and value rules as `holy-grail-structured-write.merge.ts` (unknown keys → error;
- * invalid values for present keys → error). `null` / missing column → no slice (`undefined`). Empty `{}` → `undefined`.
+ * Facts JSON: same key allow-lists and value rules as merge write (unknown keys → error;
+ * invalid values for present keys → error). Prefs JSON: unknown / Sprint-15-removed keys are
+ * **ignored** so leftover DB blobs cannot re-enter canonical prefs. `null` / missing column →
+ * no slice (`undefined`). Empty `{}` → `undefined`.
  * Mapper-only **facts** keys (see `HOLY_GRAIL_STRUCTURED_FACTS_MAPPER_ONLY_KEYS`) are not stored in facts JSON and
  * must not appear there (same as merge rejects them on write).
  *
@@ -13,21 +15,14 @@
 
 import {
   AcceptedPartnerGender,
-  AcceptedPartnerAlcohol,
-  AcceptedPartnerSmoking,
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
   GenderIdentity,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   ReligionSelf,
-  SIMILARITY_PREFERENCE_VALUES,
   SmokingFrequencySelf,
   WantsChildrenSelf,
   type MatchingRankingSignalsSnapshot,
-  type SimilarityPreference,
 } from '../../canonical/matching-canonical.types';
 import type {
   HolyGrailProfileMappingInput,
@@ -50,7 +45,6 @@ import {
   HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEYS,
   HOLY_GRAIL_STRUCTURED_FACTS_JSON_KEY_SET,
   HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS,
-  HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET,
   isHolyGrailDobYmdString,
 } from '../holy-grail-structured-contract';
 
@@ -77,22 +71,11 @@ const _holyGrailDbJsonPrefsCoverage: Record<
   acceptedPartnerGenders: true,
   partnerAgeMin: true,
   partnerAgeMax: true,
-  minimumPartnerEducation: true,
-  acceptedPartnerSmoking: true,
-  acceptedPartnerAlcohol: true,
-  partnerWantsChildren: true,
-  partnerHasChildren: true,
-  acceptedPartnerReligions: true,
   maxDistanceKm: true,
-  similarityPreference: true,
 };
 
 void _holyGrailDbJsonFactsCoverage;
 void _holyGrailDbJsonPrefsCoverage;
-
-const SIMILARITY_PREFERENCE_PARSE_SET = new Set<string>(
-  SIMILARITY_PREFERENCE_VALUES,
-);
 
 function asPlainObject(v: unknown): Record<string, unknown> | null {
   if (v === null || typeof v !== 'object' || Array.isArray(v)) return null;
@@ -251,95 +234,6 @@ function parseAcceptedPartnerGendersDbJson(
   return out;
 }
 
-/** When key is present: empty array → undefined (sparse); invalid member → throw. */
-function parseAcceptedPartnerReligionsDbJson(
-  v: unknown,
-): ReligionSelf[] | undefined {
-  if (!Array.isArray(v)) {
-    throw new Error(
-      'HolyGrail structured preferences JSON: acceptedPartnerReligions must be an array when set',
-    );
-  }
-  if (v.length === 0) return undefined;
-  const allowed = matchingCanonicalEnumMemberSet(ReligionSelf);
-  const out: ReligionSelf[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < v.length; i++) {
-    const s = v[i];
-    if (typeof s !== 'string' || !allowed.has(s)) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid acceptedPartnerReligions[${i}]: ${JSON.stringify(s)}`,
-      );
-    }
-    if (seen.has(s)) continue;
-    seen.add(s);
-    out.push(s as ReligionSelf);
-  }
-  return out.length === 0 ? undefined : out;
-}
-
-/**
- * When key is present: empty array -> undefined (sparse/no preference); invalid member -> throw.
- * Legacy compatibility: scalar enum string is accepted and normalized to single-element array.
- */
-function parseAcceptedPartnerSmokingDbJson(
-  v: unknown,
-): AcceptedPartnerSmoking[] | undefined {
-  const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerSmoking);
-  const list = Array.isArray(v) ? v : [v];
-  if (!Array.isArray(v) && (typeof v !== 'string' || !allowed.has(v))) {
-    throw new Error(
-      `HolyGrail structured preferences JSON: invalid acceptedPartnerSmoking ${JSON.stringify(v)}`,
-    );
-  }
-  if (list.length === 0) return undefined;
-  const out: AcceptedPartnerSmoking[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < list.length; i++) {
-    const s = list[i];
-    if (typeof s !== 'string' || !allowed.has(s)) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid acceptedPartnerSmoking[${i}] ${JSON.stringify(s)}`,
-      );
-    }
-    if (seen.has(s)) continue;
-    seen.add(s);
-    out.push(s as AcceptedPartnerSmoking);
-  }
-  return out.length === 0 ? undefined : out;
-}
-
-/**
- * When key is present: empty array -> undefined (sparse/no preference); invalid member -> throw.
- * Legacy compatibility: scalar enum string is accepted and normalized to single-element array.
- */
-function parseAcceptedPartnerAlcoholDbJson(
-  v: unknown,
-): AcceptedPartnerAlcohol[] | undefined {
-  const allowed = matchingCanonicalEnumMemberSet(AcceptedPartnerAlcohol);
-  const list = Array.isArray(v) ? v : [v];
-  if (!Array.isArray(v) && (typeof v !== 'string' || !allowed.has(v))) {
-    throw new Error(
-      `HolyGrail structured preferences JSON: invalid acceptedPartnerAlcohol ${JSON.stringify(v)}`,
-    );
-  }
-  if (list.length === 0) return undefined;
-  const out: AcceptedPartnerAlcohol[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < list.length; i++) {
-    const s = list[i];
-    if (typeof s !== 'string' || !allowed.has(s)) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid acceptedPartnerAlcohol[${i}] ${JSON.stringify(s)}`,
-      );
-    }
-    if (seen.has(s)) continue;
-    seen.add(s);
-    out.push(s as AcceptedPartnerAlcohol);
-  }
-  return out.length === 0 ? undefined : out;
-}
-
 function parseMaxDistanceKmDbJson(v: unknown): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
     throw new Error(
@@ -352,6 +246,7 @@ function parseMaxDistanceKmDbJson(v: unknown): number {
 /**
  * Parses `MatchmakingProfile.holyGrailStructuredPreferences` JSON.
  * Supported keys: `HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEYS`.
+ * Stale removed preference keys (Sprint 15) are ignored so leftover JSON cannot re-enter canonical prefs.
  */
 export function parseHolyGrailStructuredPreferencesFromJson(
   raw: unknown,
@@ -364,14 +259,6 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     );
   }
   if (Object.keys(o).length === 0) return undefined;
-
-  for (const k of Object.keys(o)) {
-    if (!HOLY_GRAIL_STRUCTURED_PREFERENCES_JSON_KEY_SET.has(k)) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: unknown key ${JSON.stringify(k)}`,
-      );
-    }
-  }
 
   let partnerAgeMin: number | undefined;
   let partnerAgeMax: number | undefined;
@@ -404,106 +291,16 @@ export function parseHolyGrailStructuredPreferencesFromJson(
     );
   }
 
-  let minimumPartnerEducation: MinimumPartnerEducation | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'minimumPartnerEducation')) {
-    minimumPartnerEducation = pickMatchingCanonicalEnumMember(
-      o.minimumPartnerEducation,
-      matchingCanonicalEnumMemberSet(MinimumPartnerEducation),
-    ) as MinimumPartnerEducation | undefined;
-    if (minimumPartnerEducation === undefined) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid minimumPartnerEducation ${JSON.stringify(o.minimumPartnerEducation)}`,
-      );
-    }
-  }
-
-  let acceptedPartnerSmoking: AcceptedPartnerSmoking[] | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerSmoking')) {
-    acceptedPartnerSmoking = parseAcceptedPartnerSmokingDbJson(
-      o.acceptedPartnerSmoking,
-    );
-  }
-
-  let acceptedPartnerAlcohol: AcceptedPartnerAlcohol[] | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerAlcohol')) {
-    acceptedPartnerAlcohol = parseAcceptedPartnerAlcoholDbJson(
-      o.acceptedPartnerAlcohol,
-    );
-  }
-
-  let partnerWantsChildren: PartnerWantsChildrenRequirement | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'partnerWantsChildren')) {
-    partnerWantsChildren = pickMatchingCanonicalEnumMember(
-      o.partnerWantsChildren,
-      matchingCanonicalEnumMemberSet(PartnerWantsChildrenRequirement),
-    ) as PartnerWantsChildrenRequirement | undefined;
-    if (partnerWantsChildren === undefined) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid partnerWantsChildren ${JSON.stringify(o.partnerWantsChildren)}`,
-      );
-    }
-  }
-
-  let partnerHasChildren: PartnerHasChildrenAcceptance | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'partnerHasChildren')) {
-    partnerHasChildren = pickMatchingCanonicalEnumMember(
-      o.partnerHasChildren,
-      matchingCanonicalEnumMemberSet(PartnerHasChildrenAcceptance),
-    ) as PartnerHasChildrenAcceptance | undefined;
-    if (partnerHasChildren === undefined) {
-      throw new Error(
-        `HolyGrail structured preferences JSON: invalid partnerHasChildren ${JSON.stringify(o.partnerHasChildren)}`,
-      );
-    }
-  }
-
-  let acceptedPartnerReligions: ReligionSelf[] | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'acceptedPartnerReligions')) {
-    acceptedPartnerReligions = parseAcceptedPartnerReligionsDbJson(
-      o.acceptedPartnerReligions,
-    );
-  }
-
   let maxDistanceKm: number | undefined;
   if (Object.prototype.hasOwnProperty.call(o, 'maxDistanceKm')) {
     maxDistanceKm = parseMaxDistanceKmDbJson(o.maxDistanceKm);
-  }
-
-  let similarityPreference: SimilarityPreference | null | undefined;
-  if (Object.prototype.hasOwnProperty.call(o, 'similarityPreference')) {
-    const sp = o.similarityPreference;
-    if (sp === null) {
-      similarityPreference = null;
-    } else {
-      const picked = pickMatchingCanonicalEnumMember<SimilarityPreference>(
-        sp,
-        SIMILARITY_PREFERENCE_PARSE_SET,
-      );
-      if (picked === undefined) {
-        throw new Error(
-          `HolyGrail structured preferences JSON: invalid similarityPreference ${JSON.stringify(sp)}`,
-        );
-      }
-      similarityPreference = picked;
-    }
   }
 
   const merged = {
     ...(acceptedPartnerGenders !== undefined ? { acceptedPartnerGenders } : {}),
     ...(partnerAgeMin !== undefined ? { partnerAgeMin } : {}),
     ...(partnerAgeMax !== undefined ? { partnerAgeMax } : {}),
-    ...(minimumPartnerEducation !== undefined
-      ? { minimumPartnerEducation }
-      : {}),
-    ...(acceptedPartnerSmoking !== undefined ? { acceptedPartnerSmoking } : {}),
-    ...(acceptedPartnerAlcohol !== undefined ? { acceptedPartnerAlcohol } : {}),
-    ...(partnerWantsChildren !== undefined ? { partnerWantsChildren } : {}),
-    ...(partnerHasChildren !== undefined ? { partnerHasChildren } : {}),
-    ...(acceptedPartnerReligions !== undefined
-      ? { acceptedPartnerReligions }
-      : {}),
     ...(maxDistanceKm !== undefined ? { maxDistanceKm } : {}),
-    ...(similarityPreference !== undefined ? { similarityPreference } : {}),
   } as HolyGrailStructuredPreferencesPersisted;
 
   return Object.keys(merged).length === 0 ? undefined : merged;

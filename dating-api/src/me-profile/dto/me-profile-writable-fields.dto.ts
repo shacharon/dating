@@ -4,7 +4,6 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -18,15 +17,9 @@ import {
   AlcoholUseSelf,
   ChildrenStatusSelf,
   EducationLevelSelf,
-  MinimumPartnerEducation,
-  PartnerHasChildrenAcceptance,
-  PartnerWantsChildrenRequirement,
   ReligionSelf,
-  SIMILARITY_PREFERENCE_VALUES,
   SmokingFrequencySelf,
   WantsChildrenSelf,
-  AcceptedPartnerAlcohol,
-  AcceptedPartnerSmoking,
 } from '../../canonical/matching-canonical.types';
 import { BirthDateNotFutureConstraint } from '../validators/birth-date-not-future.constraint';
 import { PartnerAgeRangeConstraint } from '../validators/partner-age-range.constraint';
@@ -143,43 +136,8 @@ export class MeProfileWritableFieldsDto {
   partnerAgeMax?: number | null;
 
   @IsOptional()
-  @IsEnum(MinimumPartnerEducation)
-  minimumPartnerEducation?: MinimumPartnerEducation | null;
-
-  @IsOptional()
-  @ValidateIf((_, v) => v !== undefined && v !== null)
-  @IsArray()
-  @IsEnum(AcceptedPartnerSmoking, { each: true })
-  acceptedPartnerSmoking?: AcceptedPartnerSmoking[];
-
-  @IsOptional()
-  @ValidateIf((_, v) => v !== undefined && v !== null)
-  @IsArray()
-  @IsEnum(AcceptedPartnerAlcohol, { each: true })
-  acceptedPartnerAlcohol?: AcceptedPartnerAlcohol[];
-
-  @IsOptional()
-  @IsEnum(PartnerWantsChildrenRequirement)
-  partnerWantsChildren?: PartnerWantsChildrenRequirement | null;
-
-  @IsOptional()
-  @IsEnum(PartnerHasChildrenAcceptance)
-  partnerHasChildren?: PartnerHasChildrenAcceptance | null;
-
-  @IsOptional()
-  @ValidateIf((_, v) => v !== undefined && v !== null)
-  @IsArray()
-  @IsEnum(ReligionSelf, { each: true })
-  acceptedPartnerReligions?: ReligionSelf[];
-
-  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(500)
   maxDistanceKm?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(SIMILARITY_PREFERENCE_VALUES)
-  similarityPreference?: (typeof SIMILARITY_PREFERENCE_VALUES)[number] | null;
 }

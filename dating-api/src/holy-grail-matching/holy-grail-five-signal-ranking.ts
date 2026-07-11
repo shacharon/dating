@@ -8,7 +8,7 @@
  * empty-signal hash spread and numeric tie micro. We do **not** require persisting the final float; reproducibility is
  * `(pair ids, five-signal columns, fixed formula)`.
  *
- * **Not** in the purity path: `similarityPreference` adjustment, and personality / lifestyle / interest-tag **rank**
+ * **Not** in the purity path: personality / lifestyle / interest-tag **rank**
  * overlays (derived from structured text on the canonical model, not the five-signal DB slice). Use
  * `computeHolyGrailFiveSignalRank` for analysis, scripts, and tests that need the full composite score.
  *
@@ -21,9 +21,7 @@
 import type {
   MatchingCanonicalModel,
   MatchingRankingSignalsSnapshot,
-  SimilarityPreference,
 } from '../canonical/matching-canonical.types';
-import { mergeEffectiveMatchingPreferences } from './eligibility.evaluator';
 import { INTEREST_TAG_SET } from './interest-tags-text.extract';
 import { LIFESTYLE_SIGNAL_TAG_SET } from './lifestyle-signals-text.extract';
 import { PERSONALITY_TRAIT_TAG_SET } from './personality-traits-text.extract';
@@ -39,12 +37,6 @@ const WEIGHTS = {
 
 /** When all five dimensions contribute 0, add spread in (0, EMPTY_SPREAD_MAX] from stable pair hash (no RNG). */
 const EMPTY_SPREAD_MAX = 2.5;
-
-/**
- * Max absolute adjustment from `similarityPreference` (same scale order as EMPTY_SPREAD_MAX).
- * Applied only when the searcher has `similar` | `different` | `balanced` and pairwise overlap `O` is observable.
- */
-const SIMILARITY_RANK_BONUS_MAX = 2.5;
 
 /**
  * **LOCKED 2** — secondary overlay cap; not a primary `WEIGHTS` signal; no eligibility. Contract change + batch proof
@@ -76,10 +68,9 @@ const NUMERIC_SCALE = 10;
 
 export type HolyGrailFiveSignalKey = keyof typeof WEIGHTS;
 
-/** Breakdown keys: five signals, optional similarityPreference bonus, optional tag-overlap bonuses, optional deterministic empty-pair spread. */
+/** Breakdown keys: five signals, optional tag-overlap bonuses, optional deterministic empty-pair spread. */
 export type HolyGrailRankBreakdownKey =
   | HolyGrailFiveSignalKey
-  | 'similarityPreference'
   | 'personalityTraits'
   | 'lifestyleSignals'
   | 'interestTags'
@@ -208,38 +199,6 @@ function interestsPairScore(
   const jacc = union > 0 ? inter / union : 0;
   const points = jacc * weight;
   return { points, note: `interestsTop:jaccard(${inter}/${union})` };
-}
-
-function labelOverlap01(a: string | null, b: string | null): number | null {
-  const ta = a !== null && a.trim() !== '' ? a.trim() : null;
-  const tb = b !== null && b.trim() !== '' ? b.trim() : null;
-  if (ta !== null && tb !== null) {
-    return ta === tb ? 1 : 0;
-  }
-  return null;
-}
-
-function numericOverlap01(a: number | null, b: number | null): number | null {
-  const okA = a !== null && Number.isFinite(a);
-  const okB = b !== null && Number.isFinite(b);
-  if (!okA || !okB) return null;
-  const gap = Math.abs(a - b);
-  return Math.max(0, NUMERIC_SCALE - gap) / NUMERIC_SCALE;
-}
-
-function jaccardOverlap01(
-  ta: readonly string[],
-  tb: readonly string[],
-): number | null {
-  const setA = new Set(ta.map(normTag).filter((x) => x.length > 0));
-  const setB = new Set(tb.map(normTag).filter((x) => x.length > 0));
-  if (setA.size === 0 || setB.size === 0) return null;
-  let inter = 0;
-  for (const x of setA) {
-    if (setB.has(x)) inter += 1;
-  }
-  const union = setA.size + setB.size - inter;
-  return union > 0 ? inter / union : null;
 }
 
 function filterCanonicalPersonalityTags(
@@ -420,78 +379,13 @@ function computeInterestTagsRankBonus(
 }
 
 /**
- * Mean overlap in \[0,1\] over ranking dimensions that have **pairwise** data on both profiles.
- * Omits one-sided or missing dimensions (no imputed facts). Returns `null` if nothing is comparable.
- */
-function meanPairwiseOverlap01(
-  s: MatchingRankingSignalsSnapshot,
-  c: MatchingRankingSignalsSnapshot,
-): number | null {
-  const parts: number[] = [];
-  const r1 = labelOverlap01(s.dailyRhythm, c.dailyRhythm);
-  if (r1 !== null) parts.push(r1);
-  const r2 = labelOverlap01(s.autonomyTogetherness, c.autonomyTogetherness);
-  if (r2 !== null) parts.push(r2);
-  const r3 = numericOverlap01(s.conflictStyle, c.conflictStyle);
-  if (r3 !== null) parts.push(r3);
-  const r4 = numericOverlap01(s.lifestylePace, c.lifestylePace);
-  if (r4 !== null) parts.push(r4);
-  const r5 = jaccardOverlap01(s.interestsTop, c.interestsTop);
-  if (r5 !== null) parts.push(r5);
-  if (parts.length === 0) return null;
-  return parts.reduce((acc, x) => acc + x, 0) / parts.length;
-}
-
-function similarityPreferenceDelta(
-  pref: SimilarityPreference,
-  o: number,
-): number {
-  const B = SIMILARITY_RANK_BONUS_MAX;
-  if (pref === 'similar') {
-    return B * (2 * o - 1);
-  }
-  if (pref === 'different') {
-    return B * (1 - 2 * o);
-  }
-  return B * (1 - 2 * Math.abs(o - 0.5));
-}
-
-function similarityPreferenceRankNote(
-  pref: SimilarityPreference,
-  o: number,
-  delta: number,
-): string {
-  const kind =
-    pref === 'similar'
-      ? 'reward_overlap'
-      : pref === 'different'
-        ? 'reward_contrast'
-        : 'reward_mid_overlap';
-  const sign = delta >= 0 ? '+' : '';
-  return `similarityPreference:${kind}(O=${o.toFixed(4)},${sign}${delta.toFixed(4)})`;
-}
-
-/**
  * **Primary formula (weights sum to 100):**
  * - **dailyRhythm, autonomyTogetherness:** full weight if both non-empty and equal; **weight×0.15** if both non-empty and differ;
  *   **weight×0.12** if exactly one side has a label; else 0.
  * - **conflictStyle, lifestylePace:** both numeric → `max(0, 10-|a-b|)/10 × weight`; one numeric → `weight×0.26×min(1, v/10)`; else 0.
  * - **interestsTop:** both non-empty → **Jaccard** `|A∩B|/|A∪B| × weight`; one side only → `weight×0.1×min(1, k/5)` for k = tag count on non-empty side.
  *
- * **similarityPreference (searcher effective prefs only; not a hard filter):** when the five-signal sum `P₅ > 0` and
- * effective `similarityPreference` is `similar` \| `different` \| `balanced`, and at least one pairwise overlap
- * slice exists, compute **O** = mean of applicable overlap indices (each in \[0,1\]):
- * - **Labels** (dailyRhythm, autonomyTogetherness): both non-empty → `1` if equal else `0`; otherwise dimension omitted from the mean.
- * - **Numerics** (conflictStyle, lifestylePace): both finite → `(10-|a-b|)/10` clamped to \[0,1\]; otherwise omitted.
- * - **interestsTop:** both sides have ≥1 normalized tag → Jaccard `|A∩B|/|A∪B|`; otherwise omitted.
- * Let **B** = `SIMILARITY_RANK_BONUS_MAX` (2.5). Additive adjustment **Δ** to the five-signal total:
- * - **similar:** `Δ = B × (2O − 1)` — rewards high overlap (O→1), dampens low overlap.
- * - **different:** `Δ = B × (1 − 2O)` — rewards low overlap / contrast (O→0), dampens high overlap.
- * - **balanced:** `Δ = B × (1 − 2|O − ½|)` — peaks at moderate overlap **O = ½**, zero at **O ∈ {0,1}**.
- * Final pre–tie-break score = `max(0, P₅ + Δ)` with a breakdown row `similarityPreference` (points = **Δ**, note encodes rule).
- * If **O** cannot be formed (all dimensions omitted), or preference is unset / `null`, **Δ = 0** (no row).
- *
- * **Empty-pair fallback:** if **P₅** is ~0, add **deterministicRankingSpread** only (no similarity adjustment).
+ * **Empty-pair fallback:** if **P₅** is ~0, add **deterministicRankingSpread** only.
  *
  * **Tie micro:** if total is strictly below 100, add `(fnv32(searcher|candidate|salt) % 1000) / 1e6`; skipped at perfect **100**.
  *
@@ -594,23 +488,6 @@ function computeHolyGrailFiveSignalRankInternal(
     rankScore = spread;
   } else {
     rankScore = primaryFive;
-    if (includeNonDbRankingOverlays) {
-      const eff = mergeEffectiveMatchingPreferences(args.searcher);
-      const sp = eff.similarityPreference;
-      if (sp === 'similar' || sp === 'different' || sp === 'balanced') {
-        const oMean = meanPairwiseOverlap01(s, c);
-        if (oMean !== null) {
-          const delta = similarityPreferenceDelta(sp, oMean);
-          breakdown.push({
-            signal: 'similarityPreference',
-            weight: 0,
-            points: delta,
-            note: similarityPreferenceRankNote(sp, oMean, delta),
-          });
-          rankScore = Math.max(0, primaryFive + delta);
-        }
-      }
-    }
   }
 
   if (includeNonDbRankingOverlays) {
@@ -688,7 +565,7 @@ export function computeHolyGrailRankingPurityRank(args: {
 }
 
 /**
- * Full composite rank: purity score plus optional `similarityPreference` and tag-overlap bonuses.
+ * Full composite rank: purity score plus optional tag-overlap bonuses.
  * Use for offline analysis, validation scripts, and unit tests of overlay math — not for `rankHolyGrailCandidatesAfterHardFilter`.
  */
 export function computeHolyGrailFiveSignalRank(args: {
