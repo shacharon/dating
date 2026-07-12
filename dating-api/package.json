@@ -31,6 +31,8 @@
     "holy-grail:backfill": "ts-node src/holy-grail-matching/backfill-holy-grail-structured.ts",
     "phase-f:expand-analyzed": "ts-node --project tsconfig.json scripts/phase-f-expand-analyzed-profiles.ts",
     "verify:personality-traits": "ts-node scripts/personality-traits-e2e-verify.ts",
+    "seed:sprint21-fixtures": "ts-node --project tsconfig.json scripts/seed-sprint21-fixtures.ts",
+    "verify:sprint21-fixtures": "ts-node --project tsconfig.json scripts/verify-sprint21-fixtures.ts",
     "match-quality:compare": "ts-node --project tsconfig.json scripts/match-quality-compare.ts"
   },
   "dependencies": {
