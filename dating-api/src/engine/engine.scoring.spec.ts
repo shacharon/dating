@@ -44,12 +44,13 @@ describe('engine scoring', () => {
       expect(sum).toBeCloseTo(1, 10);
     });
 
-    it('0.30*A_to_B + 0.30*B_to_A + 0.25*relationshipFit + 0.15*valuesAlignment', () => {
-      const c = compatibility(80, 80, 60, 70);
-      expect(c).toBe(
-        0.3 * 80 + 0.3 * 80 + 0.25 * 60 + 0.15 * 70,
+    it('0.28*A_to_B + 0.28*B_to_A + 0.24*relationshipFit + 0.12*valuesAlignment + 0.08*interestAlignment', () => {
+      const c = compatibility(80, 80, 60, 70, 0);
+      expect(c).toBeCloseTo(
+        0.28 * 80 + 0.28 * 80 + 0.24 * 60 + 0.12 * 70 + 0.08 * 0,
+        10,
       );
-      expect(c).toBe(73.5);
+      expect(c).toBeCloseTo(67.6, 10);
     });
 
     it('tier1 spirituality gap lowers compatibility more than tier3-only gap', () => {
@@ -64,8 +65,8 @@ describe('engine scoring', () => {
         fullMap({ physicalPriority: 2 }),
       );
       expect(tier3GapValues).toBeGreaterThan(tier1GapValues);
-      const compatTier1 = compatibility(dir, dir, rel, tier1GapValues);
-      const compatTier3 = compatibility(dir, dir, rel, tier3GapValues);
+      const compatTier1 = compatibility(dir, dir, rel, tier1GapValues, 0);
+      const compatTier3 = compatibility(dir, dir, rel, tier3GapValues, 0);
       expect(compatTier1).toBeLessThan(compatTier3);
     });
   });
@@ -163,22 +164,22 @@ describe('engine scoring', () => {
     const coveragePercentValue = 55; // coverageFactor = 0.7 + 0.3*0.55 = 0.865
     const frictionValue = 0;
 
-    it('compatibility ≈ 73–74', () => {
-      const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
-      expect(c).toBe(73.5);
-      expect(c).toBeGreaterThanOrEqual(73);
+    it('compatibility ≈ 67–68 (new weights, interestAlignment=0)', () => {
+      const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment, 0);
+      expect(c).toBeCloseTo(67.6, 10);
+      expect(c).toBeGreaterThanOrEqual(65);
     });
     it('coverageFactor = 0.865 when coveragePercent = 55', () => {
       const cf = coverageFactor(coveragePercentValue);
       expect(cf).toBeCloseTo(0.865, 2);
     });
-    it('finalScore between 55–70', () => {
-      const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
+    it('finalScore between 50–70', () => {
+      const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment, 0);
       const cf = coverageFactor(coveragePercentValue);
       const fp = frictionPenalty(frictionValue);
       const raw = rawScore(c, cf, fp);
       const score = finalScore(raw);
-      expect(score).toBeGreaterThanOrEqual(55);
+      expect(score).toBeGreaterThanOrEqual(50);
       expect(score).toBeLessThanOrEqual(70);
     });
   });
@@ -192,7 +193,7 @@ describe('engine scoring', () => {
     const frictionValue = 7;
 
     it('finalScore reduced by softened high-friction penalty, not zeroed', () => {
-      const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
+      const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment, 0);
       const cf = coverageFactor(coveragePercentValue);
       const fp = frictionPenalty(frictionValue);
       expect(fp).toBeCloseTo(18.9, 10);
@@ -230,13 +231,13 @@ describe('engine scoring', () => {
       const scoreCf = 0.85 + 0.15 * (covPercent / 100);
       expect(scoreCf).toBeCloseTo(0.8605, 2);
 
-      const compat = compatibility(100, 100, 0, 0);
-      expect(compat).toBe(60);
+      const compat = compatibility(100, 100, 0, 0, 0);
+      expect(compat).toBeCloseTo(56, 10);
 
       const fp = frictionPenalty(0);
       const raw = rawScore(compat, scoreCf, fp);
       const score = finalScore(raw);
-      expect(score).toBeGreaterThan(50);
+      expect(score).toBeGreaterThanOrEqual(45);
       expect(score).toBeLessThan(55);
     });
   });

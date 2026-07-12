@@ -9,32 +9,37 @@ export function clamp(v: number, min: number, max: number): number {
 
 /** Blend weights for compatibility(); must sum to 1. */
 export const COMPATIBILITY_BLEND_WEIGHTS = {
-  aToB: 0.3,
-  bToA: 0.3,
-  relationshipFit: 0.25,
-  valuesAlignment: 0.15,
+  aToB: 0.28,
+  bToA: 0.28,
+  relationshipFit: 0.24,
+  valuesAlignment: 0.12,
+  interestAlignment: 0.08,
 } as const;
 
 /**
  * compatibility =
- * 0.30 * A_to_B +
- * 0.30 * B_to_A +
- * 0.25 * relationshipFit +
- * 0.15 * valuesAlignment
+ * 0.28 * A_to_B +
+ * 0.28 * B_to_A +
+ * 0.24 * relationshipFit +
+ * 0.12 * valuesAlignment +
+ * 0.08 * interestAlignment
  * (valuesAlignmentForCompat in match-engine is capped at 85 before blend input.)
+ * Weights sum to 1.
  */
 export function compatibility(
   aToB: number,
   bToA: number,
   relationshipFit: number,
   valuesAlignment: number,
+  interestAlignment: number,
 ): number {
   const w = COMPATIBILITY_BLEND_WEIGHTS;
   return (
     w.aToB * aToB +
     w.bToA * bToA +
     w.relationshipFit * relationshipFit +
-    w.valuesAlignment * valuesAlignment
+    w.valuesAlignment * valuesAlignment +
+    w.interestAlignment * interestAlignment
   );
 }
 

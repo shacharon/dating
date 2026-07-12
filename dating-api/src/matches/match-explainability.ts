@@ -12,6 +12,8 @@ export interface MatchExplainabilityDto {
   /** Present only when friction >= 3 and a tension driver exists. */
   tensionChip?: string;
   reasonShort: string;
+  /** Present when both profiles share at least one interest tag. */
+  sharedInterestNote?: string;
 }
 
 export interface MatchExplainabilityInput {
@@ -21,6 +23,8 @@ export interface MatchExplainabilityInput {
   friction: number;
   breakdown: BreakdownEntry[];
   tensionMatrix: Array<{ id: string; penalty: number }>;
+  /** Shared interest tags from both profiles (used for the sharedInterestNote). */
+  sharedInterests?: string[];
 }
 
 /** Fixed product labels per compatibility signal key (deterministic). */
@@ -491,6 +495,12 @@ export function buildReasonShort(
   return body;
 }
 
+function buildSharedInterestNote(shared: string[]): string | undefined {
+  if (shared.length === 0) return undefined;
+  const labels = shared.slice(0, 3).join(', ');
+  return `You both enjoy ${labels}.`;
+}
+
 export function buildMatchExplainability(
   input: MatchExplainabilityInput,
 ): MatchExplainabilityDto {
@@ -503,9 +513,13 @@ export function buildMatchExplainability(
     tensionChip,
     input.breakdown,
   );
+  const sharedInterestNote = buildSharedInterestNote(
+    input.sharedInterests ?? [],
+  );
   return {
     positiveChips,
     ...(tensionChip !== undefined ? { tensionChip } : {}),
     reasonShort,
+    ...(sharedInterestNote !== undefined ? { sharedInterestNote } : {}),
   };
 }

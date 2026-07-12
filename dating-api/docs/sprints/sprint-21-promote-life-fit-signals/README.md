@@ -42,7 +42,7 @@ This is the same "promote a shadow signal into live scoring" move the codebase a
 | # | Story | Priority | Depends on | Status |
 |---|-------|----------|------------|--------|
 | 1 | [Promote conflictStyle to an active compatibility signal](./STORY_01_promote_conflictstyle.md) | **P0** | — | Done |
-| 2 | [Add interestAlignment blend component](./STORY_02_interest_alignment.md) | **P0** | — | Planned |
+| 2 | [Add interestAlignment blend component](./STORY_02_interest_alignment.md) | **P0** | — | Done |
 | 3 | [Recalibrate scores + update golden/calibration tests](./STORY_03_recalibrate.md) | **P0** | Stories 1, 2 | Planned |
 
 **Order:** 1 and 2 can run in parallel; 3 must come last (it depends on both changing the score).

@@ -51,6 +51,10 @@ import {
   type MatchExplainabilityDto,
 } from './match-explainability';
 import {
+  computeInterestAlignment,
+  sharedInterestTags,
+} from './interest-alignment';
+import {
   buildMatchRecommendation,
   type MatchRecommendationDto,
 } from './match-recommendation';
@@ -112,6 +116,8 @@ export interface CompareResultDto {
   compatibility: number;
   /** Tier-1 values alignment (0–100, uncapped); blend uses valuesAlignmentForCompat (cap 85). */
   valuesAlignment: number;
+  /** Jaccard interest overlap (0–100); blend weight 0.08. */
+  interestAlignment: number;
   finalScore: number;
   /** Raw score before final clamp path (compatibility − friction penalty ± edge boost; no coverage multiplier). */
   rawScore: number;
@@ -460,6 +466,7 @@ function computeCompatibilityAndNuancePenalties(
   coveragePercentValue: number,
   signalsA: Record<string, number | null>,
   signalsB: Record<string, number | null>,
+  interestAlignmentValue: number,
 ): number {
   const compatibilityValueRaw = clampTo100(
     compatibilityFormula(
@@ -467,6 +474,7 @@ function computeCompatibilityAndNuancePenalties(
       bToAForCompat,
       relationshipFit,
       valuesAlignmentForCompat,
+      interestAlignmentValue,
     ),
   );
   let compatibilityValue = compatibilityValueRaw;
@@ -562,6 +570,8 @@ function buildFinalResultDto(
   coverageConfidence: CoverageConfidenceState,
   frictionState: FrictionAndPenaltiesState,
   caps: CapsCalibrationState,
+  interestAlignmentValue: number,
+  sharedInterests: string[],
 ): CompareResultDto {
   const { infoFlags } = coverageConfidence;
   let { scoreCoverageFactorValue, coverageFactorValue, confidenceValue } =
@@ -649,6 +659,7 @@ function buildFinalResultDto(
     friction,
     breakdown: compatAB.breakdown ?? [],
     tensionMatrix,
+    sharedInterests,
   });
 
   const recommendation = buildMatchRecommendation({
@@ -666,6 +677,7 @@ function buildFinalResultDto(
     frictionRisk,
     compatibility: compatibilityValue,
     valuesAlignment,
+    interestAlignment: interestAlignmentValue,
     finalScore: finalScoreClamped,
     rawScore: raw,
     friction,
@@ -727,6 +739,13 @@ export function compare(
     profileB,
     step2.balance,
   );
+  const interestsA =
+    profileA.evaluation?.enrichment?.signals?.interestsTop3 ?? [];
+  const interestsB =
+    profileB.evaluation?.enrichment?.signals?.interestsTop3 ?? [];
+  const interestAlignmentValue = computeInterestAlignment(interestsA, interestsB);
+  const shared = sharedInterestTags(interestsA, interestsB);
+
   const step7Compat = computeCompatibilityAndNuancePenalties(
     step4.aToBForCompat,
     step4.bToAForCompat,
@@ -735,6 +754,7 @@ export function compare(
     step3.coveragePercentValue,
     step1.signalsA,
     step1.signalsB,
+    interestAlignmentValue,
   );
   const step8 = computeConfidenceAndInfoFlags(step3.coveragePercentValue);
   const step5 = computeFrictionAndFrictionPenalties(
@@ -792,5 +812,7 @@ export function compare(
     step8,
     step5ForDto,
     step9ForDto,
+    interestAlignmentValue,
+    shared,
   );
 }
