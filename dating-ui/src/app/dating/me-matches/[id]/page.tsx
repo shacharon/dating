@@ -20,6 +20,7 @@ import { MatchPhoto } from '@/components/match-photo';
 import { ReportUserDialog } from '@/components/report-user-dialog';
 import { useAppLocale } from '@/lib/i18n';
 import { formatHardBlockReason } from '../hard-block-display';
+import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
@@ -305,6 +306,20 @@ export default function MeMatchDetailPage() {
                     className="text-base leading-relaxed text-zinc-800 dark:text-zinc-200"
                   >
                     {oneLineTakeaway}
+                  </p>
+                ) : null;
+              })()}
+
+              {(() => {
+                const sharedNote = formatSharedInterestNote(
+                  data.explainability?.sharedInterestNote,
+                );
+                return sharedNote ? (
+                  <p
+                    data-testid="match-detail-shared-interests"
+                    className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400"
+                  >
+                    {sharedNote}
                   </p>
                 ) : null;
               })()}

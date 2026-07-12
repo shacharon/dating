@@ -165,6 +165,27 @@ export function buildEnrichmentDisplayChipsV1(signals: EnrichmentSignalsLike | u
 }
 
 /**
+ * Relabel interest codes inside the API sharedInterestNote sentence.
+ * Input shape: `You both enjoy hiking, extreme_sports.`
+ */
+export function formatSharedInterestNote(
+  note: string | null | undefined,
+): string | null {
+  if (typeof note !== 'string') return null;
+  const trimmed = note.trim();
+  if (!trimmed) return null;
+  const m = /^You both enjoy (.+)\.$/i.exec(trimmed);
+  if (!m) return trimmed;
+  const labels = m[1]
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((tag) => labelInterest(tag) ?? tag);
+  if (labels.length === 0) return trimmed;
+  return `You both enjoy ${labels.join(', ')}.`;
+}
+
+/**
  * UI examples (manual sanity check — not executed):
  *
  * handmade_202604_04 (Erez): Steady 9–5 rhythm · Quality time over quantity · Wants kids soon · Cools down, then talks · Strength training

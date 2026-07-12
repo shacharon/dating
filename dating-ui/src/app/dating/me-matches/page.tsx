@@ -15,6 +15,7 @@ import {
 } from './match-display';
 import { formatHardBlockReason } from './hard-block-display';
 import { useInfiniteMatches } from './use-infinite-matches';
+import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 
 function matchActionBadge(
   action: NonNullable<
@@ -227,6 +228,20 @@ export default function MeMatchesPage() {
                             {m.explainability.reasonShort}
                           </p>
                         )}
+                        {(() => {
+                          if (hardBlocked) return null;
+                          const sharedNote = formatSharedInterestNote(
+                            m.explainability?.sharedInterestNote,
+                          );
+                          return sharedNote ? (
+                            <p
+                              data-testid="match-list-shared-interests"
+                              className="truncate text-xs text-emerald-700 dark:text-emerald-400"
+                            >
+                              {sharedNote}
+                            </p>
+                          ) : null;
+                        })()}
                         {m.analyzedAt && (
                           <p className="text-xs text-zinc-500 dark:text-zinc-400">
                             {listCopy.updatedPrefix}{' '}

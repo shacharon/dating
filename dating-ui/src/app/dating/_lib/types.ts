@@ -10,6 +10,8 @@ export interface MatchExplainabilityDto {
   positiveChips: string[];
   tensionChip?: string;
   reasonShort: string;
+  /** Present when both profiles share at least one interest tag. */
+  sharedInterestNote?: string;
 }
 
 /** Mirrors `MatchRecommendationDto` from dating-api match engine (strict FE contract). */

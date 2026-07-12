@@ -434,6 +434,8 @@ export interface MatchExplainabilityDto {
   /** Present only when friction >= 3 and a tension driver exists. */
   tensionChip?: string;
   reasonShort: string;
+  /** Present when both profiles share at least one interest tag. */
+  sharedInterestNote?: string;
 }
 
 /** User-facing takeaway from the match engine. Null when evaluation is missing. */

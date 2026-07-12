@@ -69,7 +69,16 @@ export function mapMatchesApiListItemToViewModel(
 
 function isExplainabilityDto(v: unknown): v is MatchExplainabilityDto {
   if (!isRecord(v)) return false;
-  return Array.isArray(v.positiveChips) && typeof v.reasonShort === 'string';
+  if (!Array.isArray(v.positiveChips) || typeof v.reasonShort !== 'string') {
+    return false;
+  }
+  if (
+    v.sharedInterestNote !== undefined &&
+    typeof v.sharedInterestNote !== 'string'
+  ) {
+    return false;
+  }
+  return true;
 }
 
 /** Maps GET /api/matches JSON `items` to the legacy-shaped list used by POC tooling. */

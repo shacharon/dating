@@ -632,6 +632,43 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     expect(document.querySelector('.text-2xl')).toBeNull();
   });
 
+  it('renders sharedInterestNote when present', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      explainability: {
+        positiveChips: ['Shared values'],
+        reasonShort: 'Aligned',
+        sharedInterestNote: 'You both enjoy hiking, extreme_sports.',
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-shared-interests')).toBeTruthy();
+    });
+    expect(screen.getByTestId('match-detail-shared-interests').textContent).toBe(
+      'You both enjoy Hiking, Extreme sports.',
+    );
+  });
+
+  it('omits sharedInterestNote when absent', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      explainability: {
+        positiveChips: ['Shared values'],
+        reasonShort: 'Aligned',
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('match-detail-shared-interests')).toBeNull();
+  });
+
   it('shows feedback section before de-emphasized score label', async () => {
     fetchMyMatchById.mockResolvedValue({
       ...baseMatch,
