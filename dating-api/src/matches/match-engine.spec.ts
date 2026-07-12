@@ -18,6 +18,7 @@ function makeProfile(
   signals: Record<string, number>,
   relationshipFitScore = 50,
   evaluationStatus?: ProfileJsonPayload['evaluationStatus'],
+  interestsTop3: string[] = [],
 ): ProfileJsonPayload {
   return {
     id,
@@ -51,6 +52,18 @@ function makeProfile(
         policyVersion: 'product-score-v1',
       },
       flags: [],
+      enrichment: {
+        version: 'v1',
+        signals: {
+          dailyRhythm: null,
+          autonomyTogethernessDepth: null,
+          kidsTimeline: null,
+          conflictStyleDetail: null,
+          relationshipPace: null,
+          communicationMode: null,
+          interestsTop3,
+        },
+      },
     },
     savedAt: new Date().toISOString(),
   };
@@ -515,5 +528,64 @@ describe('match-engine compare path coverage', () => {
     expect(
       result.dealbreakers?.some((d) => d.code === 'VISIBILITY_NEED_MISMATCH'),
     ).toBe(true);
+  });
+
+  describe('Sprint 21: conflictStyle + interestAlignment', () => {
+    it('exposes interestAlignment on compare result', () => {
+      const signals = makeSignals({});
+      const a = makeProfile('a', 'A', signals, 60, undefined, ['hiking', 'books']);
+      const b = makeProfile('b', 'B', signals, 60, undefined, ['hiking', 'books']);
+      const result = compare(a, b);
+      expect(result.interestAlignment).toBe(100);
+      expect(result.explainability.sharedInterestNote).toBe(
+        'You both enjoy hiking, books.',
+      );
+    });
+
+    it('interestAlignment is 0 when either side has no interests', () => {
+      const signals = makeSignals({});
+      const a = makeProfile('a', 'A', signals, 60, undefined, ['hiking']);
+      const b = makeProfile('b', 'B', signals, 60, undefined, []);
+      const result = compare(a, b);
+      expect(result.interestAlignment).toBe(2); // one-sided floor k=1
+      expect(result.explainability.sharedInterestNote).toBeUndefined();
+    });
+
+    it('shared interests raise compatibility vs empty interests (same signals)', () => {
+      const signals = makeSignals({});
+      const withSharedA = makeProfile('a', 'A', signals, 70, undefined, [
+        'hiking',
+        'books',
+      ]);
+      const withSharedB = makeProfile('b', 'B', signals, 70, undefined, [
+        'hiking',
+        'books',
+      ]);
+      const emptyA = makeProfile('c', 'C', signals, 70, undefined, []);
+      const emptyB = makeProfile('d', 'D', signals, 70, undefined, []);
+      const withShared = compare(withSharedA, withSharedB);
+      const empty = compare(emptyA, emptyB);
+      expect(withShared.interestAlignment).toBe(100);
+      expect(empty.interestAlignment).toBe(0);
+      expect(withShared.compatibility).toBeGreaterThan(empty.compatibility);
+    });
+
+    it('aligned conflictStyle can surface Conflict approach chip', () => {
+      const signals = makeSignals({ conflictStyle: 9 });
+      const a = makeProfile('a', 'A', signals, 70);
+      const b = makeProfile('b', 'B', signals, 70);
+      const result = compare(a, b);
+      expect(result.explainability.positiveChips).toContain('Conflict approach');
+    });
+
+    it('coverage denominator is 15 keys (conflictStyle official)', () => {
+      expect(COMPATIBILITY_SIGNAL_KEYS).toContain('conflictStyle');
+      expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+      const signals = makeSignals({}); // includes conflictStyle=5
+      const a = makeProfile('a', 'A', signals, 50);
+      const b = makeProfile('b', 'B', signals, 50);
+      const result = compare(a, b);
+      expect(result.coveragePercent).toBe(100);
+    });
   });
 });

@@ -44,7 +44,7 @@ This is the same "promote a shadow signal into live scoring" move the codebase a
 |---|-------|----------|------------|--------|
 | 1 | [Promote conflictStyle to an active compatibility signal](./STORY_01_promote_conflictstyle.md) | **P0** | — | Done |
 | 2 | [Add interestAlignment blend component](./STORY_02_interest_alignment.md) | **P0** | — | Done |
-| 3 | [Recalibrate scores + update golden/calibration tests](./STORY_03_recalibrate.md) | **P0** | Stories 1, 2 | Planned |
+| 3 | [Recalibrate scores + update golden/calibration tests](./STORY_03_recalibrate.md) | **P0** | Stories 1, 2 | Done |
 | 4 | [UI display of sharedInterestNote](./STORY_04_ui_shared_interest_note.md) | **P0** | Story 2 | Planned |
 | 5 | [Delete HG five-signal ranker](./STORY_05_delete_hg_five_signal_ranker.md) | **P1** | Stories 1–3 verified | Planned |
 
@@ -64,9 +64,9 @@ This is the same "promote a shadow signal into live scoring" move the codebase a
 
 - [x] `conflictStyle` is an active numeric compatibility signal (extraction → scoring → explainability), not a shadow key.
 - [x] `interestAlignment` contributes a bounded, named term to the blended score; blend weights sum to 1.
-- [ ] HG eligibility gate behavior is byte-for-byte unchanged (verified by its integration suite).
-- [ ] Match scores recalibrated; golden-pair expectations updated deliberately with documented before/after deltas.
+- [x] HG eligibility gate behavior is byte-for-byte unchanged (verified by its integration suite).
+- [x] Match scores recalibrated; golden-pair expectations updated deliberately with documented before/after deltas.
 - [ ] `sharedInterestNote` rendered in dating-ui when present.
 - [ ] HG five-signal *ranker* removed; eligibility path unchanged.
 - [ ] Full `dating-api` (+ relevant UI) test suite green.
-- [ ] Backfill re-analysis captured as a separate follow-up ticket (still out of sprint).
+- [x] Backfill re-analysis captured as a separate follow-up ticket (still out of sprint).

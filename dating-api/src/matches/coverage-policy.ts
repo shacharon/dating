@@ -13,7 +13,7 @@ export type MatchInfoFlag = 'LOW_COVERAGE' | 'LOW_CONFIDENCE';
 /** Pair coverage % below which we flag LOW_COVERAGE and may apply sparse final cap. */
 export const LOW_COVERAGE_PERCENT_THRESHOLD = 50;
 
-/** Min numeric self-signals on the sparser profile (of 14 keys) for sparse final cap. */
+/** Min numeric self-signals on the sparser profile (of compatibility keys) for sparse final cap. */
 export const SPARSE_MIN_PRESENT_SIGNALS = 5;
 
 /** Max finalScore when sparse cap applies (after dealbreakers and hard 90 cap). */
