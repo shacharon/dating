@@ -8,11 +8,14 @@ import {
 
 describe('extracted-signals shape', () => {
   describe('SHADOW_SIGNAL_KEYS', () => {
-    it('includes all original shadow keys', () => {
+    it('includes the remaining original shadow keys', () => {
       expect(SHADOW_SIGNAL_KEYS).toContain('intellectualCuriosity');
-      expect(SHADOW_SIGNAL_KEYS).toContain('conflictStyle');
       expect(SHADOW_SIGNAL_KEYS).toContain('noveltyVsRoutine');
       expect(SHADOW_SIGNAL_KEYS).toContain('structureChaosTolerance');
+    });
+
+    it('does not include conflictStyle (promoted to official in sprint 21)', () => {
+      expect(SHADOW_SIGNAL_KEYS).not.toContain('conflictStyle');
     });
 
     it('includes the four Phase A expansion keys', () => {
@@ -22,8 +25,8 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS).toContain('practicalLifeReadiness');
     });
 
-    it('contains exactly 8 keys', () => {
-      expect(SHADOW_SIGNAL_KEYS.length).toBe(8);
+    it('contains exactly 7 keys', () => {
+      expect(SHADOW_SIGNAL_KEYS.length).toBe(7);
     });
   });
 
@@ -52,7 +55,7 @@ describe('extracted-signals shape', () => {
       }
     });
 
-    it('total count equals 14 official + 8 shadow', () => {
+    it('total count equals 15 official + 7 shadow', () => {
       expect(EXTRACTION_SIGNAL_KEYS.length).toBe(
         OFFICIAL_EXTRACTION_SIGNAL_KEYS.length + SHADOW_SIGNAL_KEYS.length,
       );
@@ -67,7 +70,7 @@ describe('extracted-signals shape', () => {
       );
     });
 
-    it('equals 26 (14 official + 8 shadow + 4 buffer)', () => {
+    it('equals 26 (15 official + 7 shadow + 4 buffer)', () => {
       expect(MAX_EVIDENCE_ITEMS).toBe(26);
     });
   });

@@ -18,7 +18,8 @@ export type SignalKey =
   | 'spirituality'
   | 'lifestylePace'
   | 'physicalPriority'
-  | 'statusOrientation';
+  | 'statusOrientation'
+  | 'conflictStyle';
 
 export type SignalsMap = Record<SignalKey, SignalValue>;
 
@@ -37,6 +38,7 @@ export const COMPATIBILITY_SIGNAL_KEYS: readonly SignalKey[] = [
   'lifestylePace',
   'physicalPriority',
   'statusOrientation',
+  'conflictStyle',
 ] as const;
 
 /* ── Signal Tiers ────────────────────────────────────────────────────── */
@@ -57,6 +59,7 @@ export const TIER2_KEYS: readonly SignalKey[] = [
   'independence',
   'directness',
   'socialBattery',
+  'conflictStyle',
 ] as const;
 
 /** Tier 3 – lifestyle / preferences. */
@@ -84,6 +87,7 @@ export const COMPATIBILITY_WEIGHTS: Record<SignalKey, number> = {
   lifestylePace: 1.5,
   physicalPriority: 1.2,
   statusOrientation: 1.2,
+  conflictStyle: 1.3,
 };
 
 /** Fixed penalty (0–100 scale) per hard mismatch. */
@@ -268,7 +272,7 @@ export function computeValuesAlignment(
  *   emotionalDepth: 7, attachmentSecurity: 5, directness: 8,
  *   independence: 6, traditionalism: 4, financialMindset: 5,
  *   relationshipClarity: 7, spirituality: 3, lifestylePace: 6,
- *   physicalPriority: 5, statusOrientation: 4,
+ *   physicalPriority: 5, statusOrientation: 4, conflictStyle: 6,
  * };
  * const partner: SignalsMap = { ...self };
  * const result = computeCompatibility(self, partner);

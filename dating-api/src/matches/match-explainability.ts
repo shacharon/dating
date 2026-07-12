@@ -39,6 +39,7 @@ export const POSITIVE_CHIP_BY_SIGNAL: Record<SignalKey, string> = {
   lifestylePace: 'Lifestyle pace',
   physicalPriority: 'Physical chemistry',
   statusOrientation: 'Lifestyle & status',
+  conflictStyle: 'Conflict approach',
 };
 
 /**
@@ -49,6 +50,7 @@ export const SIGNAL_DOMAIN: Record<SignalKey, string> = {
   emotionalDepth: 'emotional',
   attachmentSecurity: 'emotional',
   directness: 'communication',
+  conflictStyle: 'communication',
   socialBattery: 'social',
   ambition: 'ambition_money',
   financialMindset: 'ambition_money',

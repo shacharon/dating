@@ -80,7 +80,7 @@ export function computeProductScores(
     Math.max(0, Math.min(100, selfVsRelationship.overallScore)),
   );
 
-  const totalKeys = 14 * 3;
+  const totalKeys = OFFICIAL_EXTRACTION_SIGNAL_KEYS.length * 3;
   const matchedSignals =
     countMatchedOfficialSignals(self.signals) +
     countMatchedOfficialSignals(partner.signals) +

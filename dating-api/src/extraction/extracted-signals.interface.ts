@@ -27,12 +27,12 @@ export const OFFICIAL_EXTRACTION_SIGNAL_KEYS = [
   'lifestylePace',
   'physicalPriority',
   'statusOrientation',
+  'conflictStyle',
 ] as const;
 
 /** Shadow signals: extracted and stored but NOT wired into compatibility, friction, or finalScore. */
 export const SHADOW_SIGNAL_KEYS = [
   'intellectualCuriosity',
-  'conflictStyle',
   'noveltyVsRoutine',
   'structureChaosTolerance',
   /** Phase A expansion — not yet wired to chips, traits, or scoring. */
@@ -57,7 +57,7 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 14 official + 8 shadow. */
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 7 shadow. */
 export const MAX_EVIDENCE_ITEMS = 26;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */

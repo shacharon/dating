@@ -27,7 +27,7 @@ describe('computeCompatibility', () => {
     const result = computeCompatibility(self, partner);
 
     expect(result.coverage).toBe(1);
-    expect(result.matchedSignals).toBe(14);
+    expect(result.matchedSignals).toBe(15);
     expect(result.hardMismatches).toHaveLength(0);
     expect(result.breakdown.every((e) => e.pairScore === 10)).toBe(true);
     expect(result.overallScore).toBe(100);
@@ -55,6 +55,7 @@ describe('computeCompatibility', () => {
       lifestylePace: null,
       physicalPriority: null,
       statusOrientation: null,
+      conflictStyle: null,
     };
     const result = computeCompatibility(self, partner);
 
