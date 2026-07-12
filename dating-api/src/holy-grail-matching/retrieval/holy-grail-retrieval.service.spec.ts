@@ -114,7 +114,8 @@ describe('HolyGrailRetrievalService', () => {
       evaluatedAt: AT,
     });
     expect(r.rankedCandidates.map((x) => x.candidate.profileId)).toEqual(['f']);
-    expect(r.rankedCandidates[0].rankScore).toBeGreaterThan(0);
+    expect(r.rankedCandidates[0].rankScore).toBe(0);
+    expect(r.rankedCandidates[0].rankReasons[0]).toContain('hg_rank_retired');
     expect(r.debug.passedHardFilter).toBe(1);
     expect(r.debug.canonicalMapFailed).toBe(0);
   });

@@ -14,7 +14,7 @@ import type {
   MatchingRankingSignalsSnapshot,
   MatchingSearchOverrides,
 } from '../../canonical/matching-canonical.types';
-import type { HolyGrailRankSignalBreakdown } from '../holy-grail-five-signal-ranking';
+import type { HolyGrailRankSignalBreakdown } from '../holy-grail-candidate-ranking';
 import type { RankedHolyGrailCandidate } from '../holy-grail-candidate-ranking';
 import type { HolyGrailRetrievalDebugCounts } from './holy-grail-retrieval.service';
 

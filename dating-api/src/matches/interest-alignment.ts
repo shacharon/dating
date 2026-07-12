@@ -2,7 +2,7 @@
  * Normalized Jaccard interest-overlap score for the match engine.
  * 0–100 (integer); deterministic; no framework deps.
  *
- * Mirrors the interestsPairScore logic in holy-grail-five-signal-ranking.ts
+ * Mirrors the former HG interests Jaccard overlap (retired five-signal ranker).
  * but returns a bounded 0–100 integer instead of weighted points.
  */
 

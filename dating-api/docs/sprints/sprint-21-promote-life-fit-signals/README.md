@@ -3,7 +3,7 @@
 **Epic:** The live match ranker (`compareWithStatus`, the "14-signal" engine) scores personality and values but is blind to two things that strongly predict real relationship fit: how a couple handles conflict, and whether they share interests. Both already exist in the system but are switched off — `conflictStyle` is an extracted-but-unscored "shadow" signal, and interests are extracted for tags but never scored. This sprint promotes both into the live blended score as first-class inputs, with full recalibration so existing match scores stay sane.
 **Duration:** ~1–2 weeks (5 stories)
 **Goal:** `conflictStyle` becomes an active 15th compatibility signal, and a new bounded `interestAlignment` term joins the score blend. Match scores are recalibrated so the change is intentional and measured, not accidental drift. UI surfaces shared-interest explainability. The redundant HG five-signal *ranker* is deleted after verification. The Holy Grail *eligibility* gate stays untouched.
-**Status:** In progress (Stories 1–2 done)
+**Status:** Done (Stories 1–5; backfill follow-up remains)
 **Depends on:** existing extraction pipeline (conflictStyle already extracted), `compareWithStatus` live path
 
 ---
@@ -46,7 +46,7 @@ This is the same "promote a shadow signal into live scoring" move the codebase a
 | 2 | [Add interestAlignment blend component](./STORY_02_interest_alignment.md) | **P0** | — | Done |
 | 3 | [Recalibrate scores + update golden/calibration tests](./STORY_03_recalibrate.md) | **P0** | Stories 1, 2 | Done |
 | 4 | [UI display of sharedInterestNote](./STORY_04_ui_shared_interest_note.md) | **P0** | Story 2 | Done |
-| 5 | [Delete HG five-signal ranker](./STORY_05_delete_hg_five_signal_ranker.md) | **P1** | Stories 1–3 verified | Planned |
+| 5 | [Delete HG five-signal ranker](./STORY_05_delete_hg_five_signal_ranker.md) | **P1** | Stories 1–3 verified | Done |
 
 **Execution order (locked):**
 
@@ -67,6 +67,8 @@ This is the same "promote a shadow signal into live scoring" move the codebase a
 - [x] HG eligibility gate behavior is byte-for-byte unchanged (verified by its integration suite).
 - [x] Match scores recalibrated; golden-pair expectations updated deliberately with documented before/after deltas.
 - [x] `sharedInterestNote` rendered in dating-ui when present.
-- [ ] HG five-signal *ranker* removed; eligibility path unchanged.
-- [ ] Full `dating-api` (+ relevant UI) test suite green.
+- [x] HG five-signal *ranker* removed; eligibility path unchanged.
+- [x] Full `dating-api` (+ relevant UI) test suite green.
 - [x] Backfill re-analysis captured as a separate follow-up ticket (still out of sprint).
+
+**Sprint status:** Stories 1–5 Done (backfill still follow-up).

@@ -9,9 +9,8 @@
  * Empirically confirmed by reading `me-matches.service.ts::list` (not assumed): candidates are
  * sorted by hard-blocked last, then `matchScore` **descending**, then **id ASC** (Sprint 19
  * cursor-stable tiebreak; architect-locked). Null scores sort as -1.
- * `holy-grail-five-signal-ranking.ts` (Layer-4 "five-signal" ranking) is a separate,
- * currently-unused-by-this-endpoint ranking model — it is not imported by `MeMatchesService`
- * and does not influence `/api/v1/me/matches` order today.
+ * The former `holy-grail-five-signal-ranking.ts` Layer-4 ranker was deleted in Sprint 21 Story 5;
+ * it never drove `/api/v1/me/matches` order.
  *
  * Harness: same in-memory-Prisma / real-HTTP pattern as `me-new-model-e2e-eligibility.integration.spec.ts`,
  * via the shared `EligibilityTestHarness` (`me-matches-eligibility-harness.ts`).

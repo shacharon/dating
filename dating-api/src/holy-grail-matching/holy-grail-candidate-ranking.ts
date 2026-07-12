@@ -1,9 +1,22 @@
+/**
+ * Post-eligibility HG candidate ordering.
+ *
+ * Sprint 21 Story 5: the five-signal *ranker* is retired. Live product ranking is
+ * `compareWithStatus` / matchScore. This function still hard-filters (eligibility),
+ * then returns survivors in stable profileId order with a stub rankScore (0).
+ * It does **not** score pairs with the old HG five-signal composite.
+ */
+
 import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
-import {
-  computeHolyGrailRankingPurityRank,
-  type HolyGrailRankSignalBreakdown,
-} from './holy-grail-five-signal-ranking';
 import { filterCandidatesByHardEligibility } from './pairwise-hard-eligibility-filter';
+
+/** Kept for wire/DTO compatibility; unused after five-signal ranker deletion. */
+export interface HolyGrailRankSignalBreakdown {
+  readonly signal: string;
+  readonly weight: number;
+  readonly points: number;
+  readonly note: string;
+}
 
 export interface RankedHolyGrailCandidate {
   readonly candidate: MatchingCanonicalModel;
@@ -24,10 +37,12 @@ export interface HolyGrailCandidateRankingResult {
   readonly debug?: HolyGrailCandidateRankingDebug;
 }
 
+const RETIRED_REASON =
+  'hg_rank_retired:live_engine_is_compareWithStatus' as const;
+
 /**
- * Hard filter first (pairwise eligibility), then deterministic rank on survivors only.
- * Ordering uses **HG ranking purity** only: `rankingSignals` (five DB-backed sidecar fields) plus empty spread and tie micro.
- * For the full score including preference/tag overlays, use `computeHolyGrailFiveSignalRank` in analysis code; never affects eligibility.
+ * Hard filter first (pairwise eligibility), then stable id order on survivors.
+ * No five-signal / overlay composite score.
  */
 export function rankHolyGrailCandidatesAfterHardFilter(args: {
   readonly searcher: MatchingCanonicalModel;
@@ -43,22 +58,16 @@ export function rankHolyGrailCandidatesAfterHardFilter(args: {
     includeDebug: args.includeDebug === true,
   });
 
-  const passed = filterResult.filteredCandidates;
-  const rows: RankedHolyGrailCandidate[] = passed.map((candidate) => {
-    const { rankScore, rankReasons, rankBreakdown } =
-      computeHolyGrailRankingPurityRank({
-        searcher: args.searcher,
-        candidate,
-      });
-    return { candidate, rankScore, rankReasons, rankBreakdown };
-  });
+  const passed = [...filterResult.filteredCandidates].sort((a, b) =>
+    a.profileId.localeCompare(b.profileId),
+  );
 
-  rows.sort((a, b) => {
-    if (b.rankScore !== a.rankScore) {
-      return b.rankScore - a.rankScore;
-    }
-    return a.candidate.profileId.localeCompare(b.candidate.profileId);
-  });
+  const rows: RankedHolyGrailCandidate[] = passed.map((candidate) => ({
+    candidate,
+    rankScore: 0,
+    rankReasons: [RETIRED_REASON],
+    rankBreakdown: [],
+  }));
 
   return {
     rankedCandidates: rows,

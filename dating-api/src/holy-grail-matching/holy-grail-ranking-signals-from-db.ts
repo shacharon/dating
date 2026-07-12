@@ -2,8 +2,9 @@
  * HG post-eligibility ranking signals.
  *
  * - **Runtime reads:** `buildHolyGrailRankingSignalsFromDbSelfRow` — `ProfileSignalSnapshot` self row only (typed DB columns).
- *   These five fields are the **only** inputs to production HG ordering (`computeHolyGrailRankingPurityRank` /
- *   `rankHolyGrailCandidatesAfterHardFilter`); see `holy-grail-five-signal-ranking.ts` module doc.
+ *   These five fields are persisted HG sidecar signals. Post–Sprint 21 Story 5 they are **not**
+ *   used for product list ordering (`compareWithStatus` / matchScore is the live ranker).
+ *   `rankHolyGrailCandidatesAfterHardFilter` hard-filters then stable-sorts by profileId.
  * - **Persist:** `composeHolyGrailRankingSignalsForPersist` — in-memory `EvaluateBatchResult` enrichment + extraction + numerics (HG columns only).
  */
 
