@@ -1,10 +1,8 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
-  fetchMyMatches,
   submitMyProfileForAnalysis,
   type MeMatchesListDto,
 } from '@/lib/me-profile-api';
@@ -16,6 +14,7 @@ import {
   matchListSecondaryMeta,
 } from './match-display';
 import { formatHardBlockReason } from './hard-block-display';
+import { useInfiniteMatches } from './use-infinite-matches';
 
 function matchActionBadge(
   action: NonNullable<
@@ -34,55 +33,21 @@ function matchActionBadge(
 }
 
 export default function MeMatchesPage() {
-  const router = useRouter();
   const { locale, copy } = useAppLocale();
   const listCopy = copy.matches.list;
-  const [data, setData] = useState<MeMatchesListDto | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data,
+    matches,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    reload,
+    sentinelRef,
+  } = useInfiniteMatches(listCopy.loadFailed);
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshSuccess, setRefreshSuccess] = useState<string | null>(null);
-
-  const loadMatches = useCallback(async () => {
-    const dto = await fetchMyMatches();
-    if (dto.status === 'not_ready') {
-      if (dto.reason === 'no_profile') router.replace('/onboarding');
-      else if (dto.reason === 'no_photo') router.replace('/dating/profile');
-      else router.replace('/dating/analysis');
-      return;
-    }
-    setData(dto);
-  }, [router]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchMyMatches()
-      .then((dto) => {
-        if (cancelled) return;
-        if (dto.status === 'not_ready') {
-          if (dto.reason === 'no_profile') router.replace('/onboarding');
-          else if (dto.reason === 'no_photo') router.replace('/dating/profile');
-          else router.replace('/dating/analysis');
-          return;
-        }
-        setData(dto);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled)
-          setError(e instanceof Error ? e.message : listCopy.loadFailed);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [router, listCopy.loadFailed]);
-
-  const matches = data?.status === 'ready' ? (data.matches ?? []) : [];
 
   const handleRefreshAnalysis = async () => {
     setRefreshBusy(true);
@@ -91,7 +56,7 @@ export default function MeMatchesPage() {
     try {
       await submitMyProfileForAnalysis();
       setRefreshSuccess(listCopy.refreshStarted);
-      await loadMatches();
+      await reload();
     } catch (e: unknown) {
       setRefreshError(e instanceof Error ? e.message : listCopy.refreshFailed);
     } finally {
@@ -102,7 +67,6 @@ export default function MeMatchesPage() {
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
       <div className="mx-auto max-w-2xl space-y-8 px-6 py-10">
-
         <nav className="flex flex-wrap gap-4 text-sm">
           <Link
             href="/dating/analysis"
@@ -181,13 +145,11 @@ export default function MeMatchesPage() {
           </p>
         )}
 
-        {!loading && !error && matches.length === 0 && (
-          <MatchListEmptyState />
-        )}
+        {!loading && !error && matches.length === 0 && <MatchListEmptyState />}
 
         {!loading && !error && matches.length > 0 && (
           <ul className="flex flex-col gap-3">
-            {matches.map((m) => {
+            {matches.map((m, index) => {
               const hardBlocked = m.hardBlocked;
               return (
                 <li key={m.id}>
@@ -204,6 +166,7 @@ export default function MeMatchesPage() {
                         variant="list"
                         photoUrl={m.primaryPhotoUrl ?? null}
                         displayName={matchListPrimaryLabel(m)}
+                        priority={index < 3}
                       />
                       <div className="min-w-0 flex-1 space-y-1">
                         <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
@@ -275,26 +238,27 @@ export default function MeMatchesPage() {
                       </div>
                       {!hardBlocked && (
                         <div className="flex shrink-0 items-center gap-2 self-center">
-                          {m.yourAction != null && (() => {
-                            const badge = matchActionBadge(
-                              m.yourAction,
-                              listCopy.actionBadge,
-                            );
-                            return (
-                              <span
-                                className={
-                                  m.yourAction === 'LIKE'
-                                    ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                    : m.yourAction === 'PASS'
-                                      ? 'rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
-                                      : 'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400'
-                                }
-                                aria-label={badge.ariaLabel}
-                              >
-                                {badge.label}
-                              </span>
-                            );
-                          })()}
+                          {m.yourAction != null &&
+                            (() => {
+                              const badge = matchActionBadge(
+                                m.yourAction,
+                                listCopy.actionBadge,
+                              );
+                              return (
+                                <span
+                                  className={
+                                    m.yourAction === 'LIKE'
+                                      ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                      : m.yourAction === 'PASS'
+                                        ? 'rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+                                        : 'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                                  }
+                                  aria-label={badge.ariaLabel}
+                                >
+                                  {badge.label}
+                                </span>
+                              );
+                            })()}
                           {m.matchScore != null && (
                             <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                               {m.matchScore}
@@ -313,6 +277,18 @@ export default function MeMatchesPage() {
                 </li>
               );
             })}
+            <li
+              ref={sentinelRef}
+              className="h-4 list-none"
+              aria-hidden
+              data-testid="matches-infinite-sentinel"
+            />
+            {loadingMore && (
+              <li className="list-none py-2 text-center text-xs text-zinc-400">
+                {copy.common.loading}
+              </li>
+            )}
+            {!hasMore ? null : null}
           </ul>
         )}
       </div>

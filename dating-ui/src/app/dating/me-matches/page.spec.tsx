@@ -24,6 +24,14 @@ vi.mock('@/contexts/auth-context', () => ({
   }),
 }));
 
+class MockIntersectionObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  constructor(_cb: IntersectionObserverCallback, _opts?: IntersectionObserverInit) {}
+}
+vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+
 import MeMatchesPage from './page';
 
 vi.mock('next/navigation', () => ({

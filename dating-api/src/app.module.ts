@@ -25,6 +25,8 @@ import { ProfilesModule } from './profiles/profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PhotoStorageModule } from './photo-storage/photo-storage.module';
 import { SessionModule } from './session/session.module';
+import { RedisCacheModule } from './cache/redis-cache.module';
+import { WorkerModule } from './workers/worker.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { SessionModule } from './session/session.module';
     AuthSessionConfigModule,
     PhotoStorageModule,
     PrismaModule,
+    RedisCacheModule,
+    WorkerModule,
     SimpleLoggerModule,
     StructuredLoggingModule,
     HealthModule,

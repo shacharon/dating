@@ -57,6 +57,8 @@ describe('MeProfileService', () => {
       'trace' | 'error' | 'fatal' | 'httpServerError'
     >
   >;
+  let analysisQueue: { enqueueOrRunInline: jest.Mock };
+  let meMatches: { invalidateMatchListCache: jest.Mock };
   let analysis: jest.Mocked<Pick<MeProfileAnalysisService, 'runForUser'>>;
   let analytics: { track: jest.Mock };
 
@@ -90,12 +92,19 @@ describe('MeProfileService', () => {
     analysis = { runForUser: jest.fn().mockResolvedValue(undefined) };
     analytics = { track: jest.fn() };
     const photoStorage = {} as never;
+    analysisQueue = { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') };
+    meMatches = { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) };
+    const photoModerationQueue = {
+      enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1'),
+    };
     service = new MeProfileService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
-      analysis as unknown as MeProfileAnalysisService,
       photoStorage,
       analytics as unknown as AnalyticsService,
+      analysisQueue as never,
+      photoModerationQueue as never,
+      meMatches as never,
     );
   });
 
@@ -466,7 +475,7 @@ describe('MeProfileService', () => {
           response: expect.objectContaining({ error: 'gender_required' }),
         });
         expect(prisma.userProfile.update).not.toHaveBeenCalled();
-        expect(analysis.runForUser).not.toHaveBeenCalled();
+        expect(analysisQueue.enqueueOrRunInline).not.toHaveBeenCalled();
       },
     );
 
@@ -487,7 +496,7 @@ describe('MeProfileService', () => {
         { surface: 'submit' },
       );
       expect(prisma.userProfile.update).not.toHaveBeenCalled();
-      expect(analysis.runForUser).not.toHaveBeenCalled();
+      expect(analysisQueue.enqueueOrRunInline).not.toHaveBeenCalled();
     });
 
     it.each([S.SUBMITTED, S.ANALYZING])(
@@ -499,7 +508,7 @@ describe('MeProfileService', () => {
           UnprocessableEntityException,
         );
         expect(prisma.userProfile.update).not.toHaveBeenCalled();
-        expect(analysis.runForUser).not.toHaveBeenCalled();
+        expect(analysisQueue.enqueueOrRunInline).not.toHaveBeenCalled();
       },
     );
 
@@ -542,10 +551,14 @@ describe('MeProfileService', () => {
             lastAnalysisError: null,
           },
         });
-        expect(r.status).toBe(S.SUBMITTED);
-        expect(r.submittedAt).toEqual(now);
-        // Analysis should be triggered as fire-and-forget
-        expect(analysis.runForUser).toHaveBeenCalledWith(userId);
+        expect(r.analysisJobId).toBe('job_1');
+        expect(r.profile.status).toBe(S.SUBMITTED);
+        expect(r.profile.submittedAt).toEqual(now);
+        // Analysis should be enqueued (Bull or inline degraded)
+        expect(analysisQueue.enqueueOrRunInline).toHaveBeenCalledWith({
+          userId,
+          profileId: 'prof_1',
+        });
 
         jest.useRealTimers();
       },
@@ -596,7 +609,7 @@ describe('MeProfileService', () => {
 
       const r = await service.submitForUser(userId);
 
-      expect(r.lastAnalysisError).toBeNull();
+      expect(r.profile.lastAnalysisError).toBeNull();
       expect(prisma.userProfile.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ lastAnalysisError: null }),
@@ -752,9 +765,11 @@ describe('MeProfileService', () => {
       const svc = new MeProfileService(
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
-        newModelAnalysis as unknown as MeProfileAnalysisService,
         {} as never,
         { track: jest.fn() } as unknown as AnalyticsService,
+        { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') } as never,
+        { enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1') } as never,
+        { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) } as never,
       );
 
       await expect(svc.getForUser(userId)).resolves.toBeNull();
@@ -794,13 +809,16 @@ describe('MeProfileService', () => {
       const svc = new MeProfileService(
         newModelOnlyPrisma as unknown as PrismaService,
         obs as unknown as StructuredObservabilityService,
-        newModelAnalysis as unknown as MeProfileAnalysisService,
         {} as never,
         { track: jest.fn() } as unknown as AnalyticsService,
+        { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') } as never,
+        { enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1') } as never,
+        { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) } as never,
       );
 
       const result = await svc.submitForUser(userId);
-      expect(result.status).toBe('SUBMITTED');
+      expect(result.analysisJobId).toBe('job_1');
+      expect(result.profile.status).toBe('SUBMITTED');
       // Legacy tables absent from mock — if accessed they would throw TypeError.
       // Test passing proves UserProfile is the sole write target.
     });

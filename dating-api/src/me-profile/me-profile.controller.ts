@@ -42,6 +42,7 @@ import { MeMatchesService } from './me-matches.service';
 import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileService } from './me-profile.service';
 import { PatchNotificationPreferencesDto } from './dto/patch-notification-preferences.dto';
+import { parseMatchListLimit } from './dto/me-matches-list-query.dto';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 import { UsersService } from '../users/users.service';
 
@@ -168,8 +169,15 @@ export class MeProfileController {
    * to show an onboarding or profile prompt (`no_profile` | `not_analyzed` | `no_photo`).
    */
   @Get('matches')
-  getMatchesList(@CurrentUser() user: AuthMeResponseDto) {
-    return this.matches.list(user.id);
+  getMatchesList(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limitStr?: string,
+  ) {
+    return this.matches.list(user.id, {
+      cursor,
+      limit: parseMatchListLimit(limitStr),
+    });
   }
 
   /**
@@ -281,6 +289,14 @@ export class MeProfileController {
     return this.meProfile.getLatestAnalysisForUser(user.id);
   }
 
+  /**
+   * Sprint 19 — poll async analysis job status (maps UserProfile.status).
+   */
+  @Get('profile/analysis-status')
+  getAnalysisStatus(@CurrentUser() user: AuthMeResponseDto) {
+    return this.meProfile.getAnalysisStatusForUser(user.id);
+  }
+
   @Get('profile')
   async getProfile(@CurrentUser() user: AuthMeResponseDto) {
     const row = await this.meProfile.getForUser(user.id);
@@ -318,12 +334,11 @@ export class MeProfileController {
   }
 
   /**
-   * Transitions the current user's profile to SUBMITTED.
-   * Requires an existing profile in DRAFT, ANALYZED, or FAILED state.
-   * Returns the updated profile row.
+   * Transitions the current user's profile to SUBMITTED and enqueues analysis (Bull).
+   * Returns 202 + analysisJobId immediately.
    */
   @Post('profile/submit')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   submitProfile(@CurrentUser() user: AuthMeResponseDto) {
     return this.meProfile.submitForUser(user.id);
   }

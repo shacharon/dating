@@ -119,6 +119,7 @@ describe('MeMatchesService', () => {
   let service: MeMatchesService;
   let photoStorage: { read: jest.Mock };
   let mutualMatches: { findActiveByUserPair: jest.Mock };
+  let cache: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
   let analytics: { track: jest.Mock };
 
   beforeEach(() => {
@@ -152,12 +153,14 @@ describe('MeMatchesService', () => {
     obs = { trace: jest.fn(), error: jest.fn() };
     mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
     analytics = { track: jest.fn() };
+    cache = { get: jest.fn().mockResolvedValue(null), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
       photoStorage as never,
       mutualMatches as never,
       analytics as unknown as AnalyticsService,
+      cache as never,
     );
   });
 
@@ -409,6 +412,56 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(1);
       expect(result.matches![0].yourAction).toBe('LIKE');
+    });
+
+    it('paginates ranked list with nextCursor and hasMore', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.count.mockResolvedValue(3);
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeProfileRow({
+          id: 'cand_a',
+          userId: 'user_a',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+        }),
+        makeProfileRow({
+          id: 'cand_b',
+          userId: 'user_b',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+        }),
+        makeProfileRow({
+          id: 'cand_c',
+          userId: 'user_c',
+          gender: 'FEMALE',
+          desiredPartnerGenders: ['MALE'],
+        }),
+      ]);
+
+      const page1 = await service.list(viewerUserId, { limit: 2 });
+      expect(page1.status).toBe('ready');
+      expect(page1.matches).toHaveLength(2);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.nextCursor).toBeTruthy();
+
+      const page2 = await service.list(viewerUserId, {
+        limit: 2,
+        cursor: page1.nextCursor!,
+      });
+      expect(page2.status).toBe('ready');
+      expect(page2.matches!.length).toBeGreaterThanOrEqual(1);
+      const ids = [
+        ...(page1.matches ?? []).map((m) => m.id),
+        ...(page2.matches ?? []).map((m) => m.id),
+      ];
+      expect(new Set(ids).size).toBe(ids.length);
     });
 
     it('includes approved primary photo URL and approved photo count', async () => {
@@ -1996,6 +2049,7 @@ describe('MeMatchesService', () => {
         photoStorage as never,
         mutualMatches as never,
         { track: jest.fn() } as unknown as AnalyticsService,
+        { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -2026,6 +2080,7 @@ describe('MeMatchesService', () => {
         photoStorage as never,
         mutualMatches as never,
         { track: jest.fn() } as unknown as AnalyticsService,
+        { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -2066,6 +2121,7 @@ describe('MeMatchesService', () => {
         photoStorage as never,
         mutualMatches as never,
         { track: jest.fn() } as unknown as AnalyticsService,
+        { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
       );
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);

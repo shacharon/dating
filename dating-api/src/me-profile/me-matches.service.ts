@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -22,11 +23,27 @@ import {
 } from './user-profile-matching-bridge.contract';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
+import {
+  MATCH_LIST_CACHE_TTL_SECONDS,
+  MATCH_LIST_CACHE_VERSION,
+  decodeMatchListCursor,
+  matchListCacheKey,
+  paginateRankedMatches,
+  type MatchListCachePayload,
+} from '../cache/match-list-cache';
+import { RedisCacheService } from '../cache/redis-cache.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import {
+  recordCacheHit,
+  recordCacheMiss,
+  recordMatchListLoadTimeMs,
+} from '../observability/custom-metrics';
+import { resolveMatchPrimaryPhotoUrl } from '../photo-storage/cdn-url';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { PrismaService } from '../prisma/prisma.service';
+import type { MeMatchesListQuery } from './dto/me-matches-list-query.dto';
 import { MutualMatchesService } from './mutual-matches.service';
 import {
   candidateHasApprovedPhoto,
@@ -139,6 +156,10 @@ export interface MeMatchesListResponseDto {
    */
   filteredNoPhotoCandidates?: number;
   matches?: MeMatchItemDto[];
+  /** Opaque cursor for the next page (ranked list). Null when no more pages. */
+  nextCursor?: string | null;
+  /** True when more ranked matches exist after this page. */
+  hasMore?: boolean;
 }
 
 export interface MeMatchDetailDto {
@@ -198,7 +219,13 @@ export class MeMatchesService {
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly mutualMatches: MutualMatchesService,
     private readonly analytics: AnalyticsService,
+    private readonly cache: RedisCacheService,
   ) {}
+
+  /** Drop cached ranked match list for a viewer (LIKE/PASS/BLOCK, re-analysis, etc.). */
+  async invalidateMatchListCache(userId: string): Promise<void> {
+    await this.cache.del(matchListCacheKey(userId));
+  }
 
   // ─── Shared candidate select ───────────────────────────────────────────────
   // `UserProfile.interestsTop` and `sig*` are excluded — engine/HG inputs come only from
@@ -242,7 +269,7 @@ export class MeMatchesService {
     },
     photos: {
       where: { status: 'APPROVED' as const },
-      select: { id: true, isPrimary: true },
+      select: { id: true, isPrimary: true, storageKey: true },
     },
     _count: { select: { evaluations: true } },
     user: { select: { deletedAt: true } },
@@ -250,7 +277,95 @@ export class MeMatchesService {
 
   // ─── list ──────────────────────────────────────────────────────────────────
 
-  async list(userId: string): Promise<MeMatchesListResponseDto> {
+  async list(
+    userId: string,
+    query: MeMatchesListQuery = { limit: 20 },
+  ): Promise<MeMatchesListResponseDto> {
+    const started = Date.now();
+    const limit =
+      typeof query.limit === 'number' &&
+      Number.isFinite(query.limit) &&
+      query.limit >= 1
+        ? Math.min(query.limit, 50)
+        : 20;
+    const cursor =
+      query.cursor != null && query.cursor.trim() !== ''
+        ? decodeMatchListCursor(query.cursor.trim())
+        : null;
+    if (query.cursor != null && query.cursor.trim() !== '' && cursor == null) {
+      throw new BadRequestException({
+        error: 'invalid_cursor',
+        message: 'Invalid match list cursor.',
+      });
+    }
+    // Ranked list from cache or full build
+    const full = await this.getOrBuildRankedList(userId);
+    if (full.status !== 'ready' || !full.matches) {
+      recordMatchListLoadTimeMs(Date.now() - started);
+      return {
+        ...full,
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+    const { page, nextCursor, hasMore } = paginateRankedMatches(
+      full.matches,
+      cursor,
+      limit,
+    );
+    recordMatchListLoadTimeMs(Date.now() - started);
+    return {
+      ...full,
+      matches: page,
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  private async getOrBuildRankedList(
+    userId: string,
+  ): Promise<MeMatchesListResponseDto> {
+    const key = matchListCacheKey(userId);
+    const cached = await this.cache.get<MatchListCachePayload<MeMatchItemDto>>(key);
+    if (cached?.version === MATCH_LIST_CACHE_VERSION && Array.isArray(cached.matches)) {
+      recordCacheHit();
+      return {
+        status: 'ready',
+        ...(cached.statusMeta as Omit<
+          Extract<MeMatchesListResponseDto, { status: 'ready' }>,
+          'matches' | 'status' | 'nextCursor' | 'hasMore'
+        >),
+        matches: cached.matches,
+      };
+    }
+    recordCacheMiss();
+    const built = await this.buildFullRankedList(userId);
+    if (built.status === 'ready' && built.matches) {
+      const {
+        matches,
+        nextCursor: _n,
+        hasMore: _h,
+        status,
+        ...statusMeta
+      } = built;
+      await this.cache.set(
+        key,
+        {
+          version: MATCH_LIST_CACHE_VERSION,
+          builtAt: new Date().toISOString(),
+          statusMeta: { status, ...statusMeta },
+          matches,
+        } satisfies MatchListCachePayload<MeMatchItemDto>,
+        MATCH_LIST_CACHE_TTL_SECONDS,
+      );
+    }
+    return built;
+  }
+
+  /** Full ranked match list (cache miss path). */
+  private async buildFullRankedList(
+    userId: string,
+  ): Promise<MeMatchesListResponseDto> {
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
       include: {
@@ -516,6 +631,10 @@ export class MeMatchesService {
         recommendation = result.recommendation;
       }
 
+      const primaryPhotoId = pickApprovedPrimaryPhotoId(approvedPhotos);
+      const primaryStorageKey =
+        approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ?? null;
+
       matches.push({
         id: row.id,
         nickname: row.nickname?.trim() ? row.nickname.trim() : null,
@@ -526,10 +645,11 @@ export class MeMatchesService {
         hasEvaluation: row._count.evaluations > 0,
         matchScore,
         profileAnalysisStale: row.updatedAt > candidateEval.createdAt,
-        primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
-          row.id,
-          pickApprovedPrimaryPhotoId(approvedPhotos),
-        ),
+        primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
+          profileId: row.id,
+          photoId: primaryPhotoId,
+          storageKey: primaryStorageKey,
+        }),
         approvedPhotoCount: approvedPhotos.length,
         explainability,
         recommendation,
@@ -547,7 +667,8 @@ export class MeMatchesService {
       if (aBlocked !== bBlocked) return aBlocked - bBlocked;
       const aScore = a.matchScore ?? -1;
       const bScore = b.matchScore ?? -1;
-      return bScore - aScore;
+      if (bScore !== aScore) return bScore - aScore;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });
 
     this.obs.trace(
@@ -908,10 +1029,17 @@ export class MeMatchesService {
       ...(matchExplanationTraits !== undefined && {
         matchExplanationTraits,
       }),
-      primaryPhotoUrl: buildMatchPrimaryPhotoUrl(
-        candidate.id,
-        pickApprovedPrimaryPhotoId(candidate.photos ?? []),
-      ),
+      primaryPhotoUrl: (() => {
+        const photos = candidate.photos ?? [];
+        const photoId = pickApprovedPrimaryPhotoId(photos);
+        const storageKey =
+          photos.find((p) => p.id === photoId)?.storageKey ?? null;
+        return resolveMatchPrimaryPhotoUrl({
+          profileId: candidate.id,
+          photoId,
+          storageKey,
+        });
+      })(),
       approvedPhotoCount: (candidate.photos ?? []).length,
       explainability,
       recommendation,
@@ -1137,12 +1265,4 @@ function pickApprovedPrimaryPhotoId(
 ): string | null {
   const primary = photos.find((p) => p.isPrimary);
   return primary?.id ?? null;
-}
-
-function buildMatchPrimaryPhotoUrl(
-  profileId: string,
-  photoId: string | null,
-): string | null {
-  if (!photoId) return null;
-  return `/api/v1/me/matches/${profileId}/photos/${photoId}/file`;
 }

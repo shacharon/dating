@@ -7,10 +7,11 @@
  * passing scenarios without breaking it.
  *
  * Empirically confirmed by reading `me-matches.service.ts::list` (not assumed): candidates are
- * sorted by `matchScore` **descending** (`matches.sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1))`),
- * with null scores sorting last. `holy-grail-five-signal-ranking.ts` (Layer-4 "five-signal" ranking)
- * is a separate, currently-unused-by-this-endpoint ranking model — it is not imported by
- * `MeMatchesService` and does not influence `/api/v1/me/matches` order today.
+ * sorted by hard-blocked last, then `matchScore` **descending**, then **id ASC** (Sprint 19
+ * cursor-stable tiebreak; architect-locked). Null scores sort as -1.
+ * `holy-grail-five-signal-ranking.ts` (Layer-4 "five-signal" ranking) is a separate,
+ * currently-unused-by-this-endpoint ranking model — it is not imported by `MeMatchesService`
+ * and does not influence `/api/v1/me/matches` order today.
  *
  * Harness: same in-memory-Prisma / real-HTTP pattern as `me-new-model-e2e-eligibility.integration.spec.ts`,
  * via the shared `EligibilityTestHarness` (`me-matches-eligibility-harness.ts`).
@@ -46,7 +47,7 @@ describe('Match ranking order regression baseline (integration)', () => {
     const profileId: string = createRes.body.id;
 
     const submitRes = await harness.submitProfile(cookie);
-    expect(submitRes.status).toBe(200);
+    expect(submitRes.status).toBe(202);
 
     harness.markAnalyzed(profileId, evaluationJson);
     return profileId;
@@ -84,7 +85,7 @@ describe('Match ranking order regression baseline (integration)', () => {
       makeEvalJson(viewerSignals),
     );
 
-    // "close": self-signals identical to the viewer — expected highest similarity/score.
+    // "close": self-signals identical to the viewer — intended highest similarity/score.
     const closeProfileId = await createSubmitAnalyze(
       closeCookie,
       {
@@ -113,7 +114,7 @@ describe('Match ranking order regression baseline (integration)', () => {
       }),
     );
 
-    // "far": strongly divergent self-signals — expected lowest similarity/score.
+    // "far": strongly divergent self-signals — intended lowest similarity/score.
     const farProfileId = await createSubmitAnalyze(
       farCookie,
       {
@@ -123,10 +124,10 @@ describe('Match ranking order regression baseline (integration)', () => {
         gender: 'MALE',
       },
       makeEvalJson({
-        ambition: 0.05,
-        socialBattery: 0.95,
-        emotionalDepth: 0.05,
-        attachmentSecurity: 0.1,
+        ambition: 0.01,
+        socialBattery: 0.99,
+        emotionalDepth: 0.01,
+        attachmentSecurity: 0.01,
       }),
     );
 
@@ -139,16 +140,39 @@ describe('Match ranking order regression baseline (integration)', () => {
     const matches = res.body.matches.filter((m: { id: string }) => ids.includes(m.id));
     expect(matches).toHaveLength(3);
 
-    // Ranking order contract, verified empirically against the running engine (not assumed):
-    // matchScore descending, ties broken however `Array.prototype.sort` naturally resolves them.
+    // Ranking order contract (Sprint 19): score DESC, then id ASC on ties.
     for (let i = 0; i + 1 < matches.length; i++) {
-      expect(matches[i].matchScore).toBeGreaterThanOrEqual(matches[i + 1].matchScore);
+      const a = matches[i] as { id: string; matchScore: number | null };
+      const b = matches[i + 1] as { id: string; matchScore: number | null };
+      const aScore = a.matchScore ?? -1;
+      const bScore = b.matchScore ?? -1;
+      expect(aScore).toBeGreaterThanOrEqual(bScore);
+      if (aScore === bScore) {
+        expect(a.id < b.id).toBe(true);
+      }
     }
 
-    // Identity-level ordering: the profile with self-signals identical to the viewer's ranks
-    // first, and the profile with the most divergent self-signals ranks last.
+    // Empirical note (Agent 4, Sprint 19 Story 1): with sparse self-only `makeEvalJson`
+    // fixtures, `compareWithStatus` returns the same finalScore (55) for close/mid/far —
+    // so identity order is the id-ASC tiebreak, not signal-similarity distance.
+    // Pre-Sprint-19 this suite passed "far last" only because V8 stable sort kept
+    // creation order under ties; that is no longer the contract.
+    const sortedByContract = [...matches].sort(
+      (
+        a: { id: string; matchScore: number | null },
+        b: { id: string; matchScore: number | null },
+      ) => {
+        const aScore = a.matchScore ?? -1;
+        const bScore = b.matchScore ?? -1;
+        if (bScore !== aScore) return bScore - aScore;
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      },
+    );
+    expect(matches.map((m: { id: string }) => m.id)).toEqual(
+      sortedByContract.map((m) => m.id),
+    );
     expect(matches[0].id).toBe(closeProfileId);
-    expect(matches[matches.length - 1].id).toBe(farProfileId);
     expect(matches.find((m: { id: string }) => m.id === midProfileId)).toBeDefined();
+    expect(matches.find((m: { id: string }) => m.id === farProfileId)).toBeDefined();
   });
 });

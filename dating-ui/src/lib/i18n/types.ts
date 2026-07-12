@@ -395,7 +395,15 @@ export type AppCopySchema = {
     statusPending: string;
     statusApproved: string;
     statusRejected: string;
+    statusFlagged: string;
     rejectionPrefix: string;
+    rejectionReasons: {
+      no_face: string;
+      explicit_content: string;
+      low_quality: string;
+      not_real_person: string;
+      other: string;
+    };
   };
   profileCompleteness: {
     title: string;

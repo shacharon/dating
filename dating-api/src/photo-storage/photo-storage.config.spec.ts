@@ -1,14 +1,21 @@
-import { loadPhotoStorageConfig } from './photo-storage.config';
+import { loadPhotoStorageConfig, parseModerationDriver } from './photo-storage.config';
 
 describe('loadPhotoStorageConfig', () => {
-  it('uses safe defaults when env values are missing', () => {
+  it('defaults to mock AI path when AWS credentials are missing', () => {
     const cfg = loadPhotoStorageConfig({});
     expect(cfg).toEqual({
       storageDriver: 'local',
       uploadDir: 'uploads/profile-photos',
-      moderationDriver: 'stub',
+      moderationDriver: 'mock',
       faceDetectionEnabled: false,
     });
+  });
+
+  it('defaults to rekognition when AWS credentials exist', () => {
+    const cfg = loadPhotoStorageConfig({
+      AWS_ACCESS_KEY_ID: 'AKIATEST',
+    });
+    expect(cfg.moderationDriver).toBe('rekognition');
   });
 
   it('parses valid env values', () => {
@@ -24,6 +31,11 @@ describe('loadPhotoStorageConfig', () => {
       moderationDriver: 'rekognition',
       faceDetectionEnabled: true,
     });
+  });
+
+  it('honors explicit stub / mock', () => {
+    expect(parseModerationDriver('stub', {})).toBe('stub');
+    expect(parseModerationDriver('mock', {})).toBe('mock');
   });
 
   it('falls back for unknown values', () => {

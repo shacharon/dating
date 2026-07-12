@@ -12,6 +12,7 @@ import { MessageEmailDebounceService } from './message-email-debounce.service';
 import { MutualMatchEmailService } from './mutual-match-email.service';
 import { NewMessageEmailService } from './new-message-email.service';
 import { NoopEmailProvider } from './noop-email.provider';
+import { PhotoRejectionEmailService } from './photo-rejection-email.service';
 import { ReportOpsEmailService } from './report-ops-email.service';
 import { ResendEmailProvider } from './resend-email.provider';
 
@@ -34,7 +35,13 @@ import { ResendEmailProvider } from './resend-email.provider';
     MutualMatchEmailService,
     NewMessageEmailService,
     ReportOpsEmailService,
+    PhotoRejectionEmailService,
   ],
-  exports: [MutualMatchEmailService, NewMessageEmailService, ReportOpsEmailService],
+  exports: [
+    MutualMatchEmailService,
+    NewMessageEmailService,
+    ReportOpsEmailService,
+    PhotoRejectionEmailService,
+  ],
 })
 export class NotificationsModule {}

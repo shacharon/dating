@@ -10,8 +10,8 @@ import {
 
 describe('analysis-progress-poll', () => {
   it('nextPollDelayMs backs off and caps at max', () => {
-    expect(nextPollDelayMs(ANALYSIS_POLL_INITIAL_MS)).toBe(7500);
-    expect(nextPollDelayMs(7500)).toBe(ANALYSIS_POLL_MAX_MS);
+    expect(nextPollDelayMs(ANALYSIS_POLL_INITIAL_MS)).toBe(4500);
+    expect(nextPollDelayMs(4500)).toBe(6750);
     expect(nextPollDelayMs(ANALYSIS_POLL_MAX_MS)).toBe(ANALYSIS_POLL_MAX_MS);
   });
 

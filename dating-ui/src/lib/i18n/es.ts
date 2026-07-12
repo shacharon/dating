@@ -443,7 +443,18 @@ export const esCopy: AppCopySchema = {
     statusPending: "En revision",
     statusApproved: "Aprobada",
     statusRejected: "Rechazada",
+    statusFlagged: "Requiere revision",
     rejectionPrefix: "Motivo:",
+    rejectionReasons: {
+      no_face:
+        "No pudimos detectar un rostro claro en tu foto. Sube una foto donde se vea tu cara.",
+      explicit_content: "Tu foto no cumple nuestras normas de la comunidad.",
+      low_quality:
+        "La calidad de tu foto es demasiado baja. Sube una imagen de mayor resolucion.",
+      not_real_person:
+        "Sube una foto tuya (no una celebridad, meme o imagen de stock).",
+      other: "Tu foto no fue aprobada. Prueba con otra foto.",
+    },
   },
   profileCompleteness: {
     title: "Lista de perfil",

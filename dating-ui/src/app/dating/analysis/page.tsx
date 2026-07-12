@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  fetchAnalysisStatus,
   fetchMyLatestAnalysis,
   fetchMyProfile,
   submitMyProfileForAnalysis,
@@ -140,10 +141,27 @@ export default function DatingAnalysisPage() {
 
   const runPollTick = useCallback(async () => {
     try {
+      // Prefer dedicated status endpoint; fall back to profile GET.
+      let profileStatus: string | undefined;
+      try {
+        const status = await fetchAnalysisStatus();
+        profileStatus = status.profileStatus;
+        if (status.status === 'complete' || status.status === 'failed') {
+          const p = await fetchMyProfile();
+          if (p) {
+            setProfile(p);
+            await handleProfileTerminal(p);
+            return;
+          }
+        }
+      } catch {
+        /* fall through to profile poll */
+      }
       const p = await fetchMyProfile();
       if (!p) return;
       setProfile(p);
-      if (shouldStopPolling(p.status)) {
+      profileStatus = p.status;
+      if (shouldStopPolling(profileStatus)) {
         await handleProfileTerminal(p);
         return;
       }
@@ -232,7 +250,7 @@ export default function DatingAnalysisPage() {
     startPoll(true);
     try {
       const updated = await submitMyProfileForAnalysis();
-      setProfile(updated);
+      setProfile(updated.profile);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
       if (isAlreadyRunningSubmitError(msg)) {

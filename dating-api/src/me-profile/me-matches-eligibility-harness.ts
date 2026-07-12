@@ -146,6 +146,21 @@ function makeBaseProfileRow(id: string, userId: string): Record<string, unknown>
   };
 }
 
+export type HarnessPhotoStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FLAGGED_FOR_REVIEW';
+
+export type HarnessPhotoRow = {
+  id: string;
+  profileId: string;
+  status: HarnessPhotoStatus;
+  isPrimary: boolean;
+  storageKey: string;
+  mimeType: string;
+};
+
 /**
  * Generalized (N-profile) in-memory Prisma-backed test harness for real HTTP flows through
  * signup → profile create/patch → submit → simulate ANALYZED → GET /api/v1/me/matches.
@@ -156,6 +171,8 @@ export class EligibilityTestHarness {
   private readonly profiles = new Map<string, Record<string, unknown>>();
   private readonly evaluations = new Map<string, Record<string, unknown>>();
   private readonly preferences = new Map<string, Record<string, unknown>>();
+  /** Profile photos keyed by profile id (Sprint 19 Story 2 visibility). */
+  private readonly photosByProfileId = new Map<string, HarnessPhotoRow[]>();
   private readonly sessionMap = new Map<string, { userId: string; hash: string }>();
   private readonly identitiesByGoogleId = new Map<string, HarnessIdentity>();
   private readonly identitiesById = new Map<string, HarnessIdentity>();
@@ -208,13 +225,27 @@ export class EligibilityTestHarness {
       preference: this.preferences.get(row['id'] as string) ?? null,
     };
     if (withPref['status'] !== 'ANALYZED') return withPref;
+    const approvedPhotos = (this.photosByProfileId.get(row['id'] as string) ?? [])
+      .filter((p) => p.status === 'APPROVED')
+      .map((p) => ({
+        id: p.id,
+        isPrimary: p.isPrimary,
+        storageKey: p.storageKey,
+      }));
     return {
       ...withPref,
-      photos: withPref['photos'] ?? [
-        { id: `photo_${withPref['id'] as string}`, isPrimary: true },
-      ],
+      photos: approvedPhotos,
       user: { deletedAt: null },
     };
+  }
+
+  private profileHasPhotoStatus(
+    profileId: string,
+    status: string | undefined,
+  ): boolean {
+    const photos = this.photosByProfileId.get(profileId) ?? [];
+    if (!status) return photos.length > 0;
+    return photos.some((p) => p.status === status);
   }
 
   private profileIdForUserId(userId: string): string {
@@ -276,7 +307,14 @@ export class EligibilityTestHarness {
             .filter((p) => {
               if (where?.userId?.not && p['userId'] === where.userId.not) return false;
               if (where?.status && p['status'] !== where.status) return false;
-              if (where?.photos?.some && p['status'] !== 'ANALYZED') return false;
+              if (where?.photos?.some) {
+                const requiredStatus = where.photos.some.status;
+                if (
+                  !this.profileHasPhotoStatus(p['id'] as string, requiredStatus)
+                ) {
+                  return false;
+                }
+              }
               return true;
             })
             .map((p) => this.attachRelations(p)!);
@@ -310,6 +348,20 @@ export class EligibilityTestHarness {
             ...rest,
           };
           this.profiles.set(id, row);
+          // Baseline E2E never uploaded photos; production submit/matches require
+          // ≥1 APPROVED. Seed one so create→submit→markAnalyzed stays green.
+          if ((this.photosByProfileId.get(id) ?? []).length === 0) {
+            this.photosByProfileId.set(id, [
+              {
+                id: `photo_${id}_0`,
+                profileId: id,
+                status: 'APPROVED',
+                isPrimary: true,
+                storageKey: `uploads/${id}/0.jpg`,
+                mimeType: 'image/jpeg',
+              },
+            ]);
+          }
           return row;
         },
       ),
@@ -555,9 +607,66 @@ export class EligibilityTestHarness {
       ),
     },
     userProfilePhoto: {
-      count: jest.fn().mockResolvedValue(1),
-      findFirst: jest.fn().mockResolvedValue(null),
-      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: { profileId?: string; status?: string };
+        } = {}) => {
+          let rows = [...this.photosByProfileId.values()].flat();
+          if (where?.profileId) {
+            rows = rows.filter((p) => p.profileId === where.profileId);
+          }
+          if (where?.status) {
+            rows = rows.filter((p) => p.status === where.status);
+          }
+          return rows.length;
+        },
+      ),
+      findFirst: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: {
+            id?: string;
+            profileId?: string;
+            status?: string;
+            isPrimary?: boolean;
+          };
+        } = {}) => {
+          let rows = [...this.photosByProfileId.values()].flat();
+          if (where?.id) rows = rows.filter((p) => p.id === where.id);
+          if (where?.profileId) {
+            rows = rows.filter((p) => p.profileId === where.profileId);
+          }
+          if (where?.status) {
+            rows = rows.filter((p) => p.status === where.status);
+          }
+          if (where?.isPrimary !== undefined) {
+            rows = rows.filter((p) => p.isPrimary === where.isPrimary);
+          }
+          return rows[0] ?? null;
+        },
+      ),
+      findMany: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: { profileId?: string; status?: string | { in?: string[] } };
+        } = {}) => {
+          let rows = [...this.photosByProfileId.values()].flat();
+          if (where?.profileId) {
+            rows = rows.filter((p) => p.profileId === where.profileId);
+          }
+          if (typeof where?.status === 'string') {
+            rows = rows.filter((p) => p.status === where.status);
+          } else if (where?.status && typeof where.status === 'object' && where.status.in) {
+            const allowed = new Set(where.status.in);
+            rows = rows.filter((p) => allowed.has(p.status));
+          }
+          return rows;
+        },
+      ),
     },
   };
 
@@ -654,6 +763,9 @@ export class EligibilityTestHarness {
    * Simulates the async analysis worker completing: advances the profile to ANALYZED and
    * writes a fixture `UserProfileEvaluation` row — exactly the technique used by the reference
    * spec's Step 4/Step 6. Must be called after a successful `submitProfile`.
+   *
+   * Also seeds one **APPROVED** photo when the profile has none yet, so baseline E2E flows
+   * stay photo-gate eligible (production requires ≥1 APPROVED photo).
    */
   markAnalyzed(profileId: string, evaluationJson: unknown = VALID_EVAL_JSON): void {
     const row = this.profiles.get(profileId);
@@ -672,6 +784,34 @@ export class EligibilityTestHarness {
       evaluationJson,
       createdAt: new Date('2026-04-18T10:05:00.000Z'),
     });
+    const existing = this.photosByProfileId.get(profileId) ?? [];
+    if (existing.length === 0) {
+      this.setPhotos(profileId, [{ status: 'APPROVED', isPrimary: true }]);
+    }
+  }
+
+  /**
+   * Replace photos for a profile (Sprint 19 Story 2 — moderation visibility).
+   * Call after {@link markAnalyzed} to force PENDING / FLAGGED / REJECTED-only fixtures.
+   */
+  setPhotos(
+    profileId: string,
+    specs: Array<{ status: HarnessPhotoStatus; isPrimary?: boolean }>,
+  ): void {
+    if (!this.profiles.has(profileId)) {
+      throw new Error(`Harness: cannot set photos on unknown profile: ${profileId}`);
+    }
+    this.photosByProfileId.set(
+      profileId,
+      specs.map((spec, i) => ({
+        id: `photo_${profileId}_${i}`,
+        profileId,
+        status: spec.status,
+        isPrimary: spec.isPrimary ?? i === 0,
+        storageKey: `uploads/${profileId}/${i}.jpg`,
+        mimeType: 'image/jpeg',
+      })),
+    );
   }
 
   /** Real GET /api/v1/me/profile. */
@@ -681,10 +821,17 @@ export class EligibilityTestHarness {
       .set('Cookie', [this.cookieHeader(cookie)]);
   }
 
-  /** Real GET /api/v1/me/matches. */
-  async getMatches(cookie: string) {
+  /** Real GET /api/v1/me/matches (optional cursor pagination). */
+  async getMatches(
+    cookie: string,
+    query?: { cursor?: string | null; limit?: number },
+  ) {
+    const params = new URLSearchParams();
+    if (query?.cursor) params.set('cursor', query.cursor);
+    if (query?.limit != null) params.set('limit', String(query.limit));
+    const qs = params.toString();
     return request(this.app.getHttpServer())
-      .get('/api/v1/me/matches')
+      .get(`/api/v1/me/matches${qs ? `?${qs}` : ''}`)
       .set('Cookie', [this.cookieHeader(cookie)]);
   }
 

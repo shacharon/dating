@@ -33,10 +33,21 @@ import type {
 } from './me-profile.dto';
 import {
   latestEvaluationForProfile,
-  MeProfileAnalysisService,
 } from './me-profile-analysis.service';
 import { viewerHasApprovedPhoto } from './me-profile-photo-gate';
+import {
+  mapProfileStatusToAnalysisApi,
+  type AnalysisStatusResponseDto,
+} from './dto/analysis-status-response.dto';
+import { MeMatchesService } from './me-matches.service';
+import { loadPhotoStorageConfig } from '../photo-storage/photo-storage.config';
+import { ProfileAnalysisQueueService } from '../workers/profile-analysis.worker';
+import { PhotoModerationQueueService } from '../workers/photo-moderation.worker';
 
+export type MeProfileSubmitResponseDto = {
+  analysisJobId: string;
+  profile: MeProfileResponseDto;
+};
 const PROFILE_GENDER_VALUES = new Set<string>(
   Object.values(ProfileGender) as string[],
 );
@@ -355,9 +366,11 @@ export class MeProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
-    private readonly analysis: MeProfileAnalysisService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly analytics: AnalyticsService,
+    private readonly analysisQueue: ProfileAnalysisQueueService,
+    private readonly photoModerationQueue: PhotoModerationQueueService,
+    private readonly meMatches: MeMatchesService,
   ) {}
 
   private async assertNicknameAvailable(
@@ -463,14 +476,25 @@ export class MeProfileService {
       : 0;
 
     const autoApprove = process.env.PHOTO_MODERATION_AUTO_APPROVE === '1';
+    const moderationDriver = loadPhotoStorageConfig().moderationDriver;
     const status = autoApprove
       ? UserProfilePhotoStatus.APPROVED
       : UserProfilePhotoStatus.PENDING;
-    const moderationProvider = autoApprove ? 'stub' : 'manual_queue';
+    const moderationProvider = autoApprove
+      ? 'stub'
+      : moderationDriver === 'stub'
+        ? 'manual_queue'
+        : moderationDriver === 'mock'
+          ? 'mock'
+          : 'rekognition';
     const moderationResultJson = autoApprove
-      ? { decision: 'approved', reason: 'stub_auto_approve' }
+      ? { source: 'stub', decision: 'approved', reason: 'stub_auto_approve' }
       : Prisma.DbNull;
     const isPrimary = autoApprove && !approvedExists;
+    const enqueueMl =
+      !autoApprove &&
+      (moderationDriver === 'rekognition' || moderationDriver === 'mock') &&
+      status === UserProfilePhotoStatus.PENDING;
 
     const created = await this.prisma.userProfilePhoto.create({
       data: {
@@ -507,6 +531,11 @@ export class MeProfileService {
       }
       if (status === UserProfilePhotoStatus.PENDING) {
         this.analytics.track(userId, ProductAnalyticsEvents.PHOTO_MODERATION_PENDING, {});
+      }
+      if (enqueueMl) {
+        void this.photoModerationQueue
+          .enqueueOrRunInline(updated.id)
+          .catch(() => undefined);
       }
       return this.toPhotoDto(updated);
     } catch (e) {
@@ -879,15 +908,12 @@ export class MeProfileService {
   }
 
   /**
-   * Transitions the profile to SUBMITTED.
+   * Transitions the profile to SUBMITTED and enqueues Bull analysis (or inline fallback).
    *
    * Allowed prior states: DRAFT, ANALYZED, FAILED.
    * Rejected prior states: SUBMITTED (already pending), ANALYZING (in flight).
-   *
-   * The transition to ANALYZING happens when the analysis worker picks up the
-   * job — not here. This method only sets the gate state.
    */
-  async submitForUser(userId: string): Promise<MeProfileResponseDto> {
+  async submitForUser(userId: string): Promise<MeProfileSubmitResponseDto> {
     const existing = await this.prisma.userProfile.findUnique({
       where: { userId },
     });
@@ -967,14 +993,11 @@ export class MeProfileService {
         priorStatus: existing.status as string,
       });
 
-      // Fire-and-forget: analysis manages its own ANALYZING → ANALYZED | FAILED
-      // transitions. The submit response returns immediately with SUBMITTED.
-      void this.analysis.runForUser(userId).catch((e: unknown) => {
-        this.obs.error(
-          `me profile analysis fire-and-forget threw profileId=${row.id}`,
-          ErrorCodes.ME_PROFILE_ANALYSIS_FAILED,
-          e,
-        );
+      await this.meMatches.invalidateMatchListCache(userId);
+
+      const analysisJobId = await this.analysisQueue.enqueueOrRunInline({
+        userId,
+        profileId: row.id,
       });
 
       const full = await this.prisma.userProfile.findUnique({
@@ -988,8 +1011,18 @@ export class MeProfileService {
         markHttpExceptionObservabilityLogged(ex);
         throw ex;
       }
-      return toResponse(full, full.preference);
+      return {
+        analysisJobId,
+        profile: toResponse(full, full.preference),
+      };
     } catch (e: unknown) {
+      if (
+        e instanceof NotFoundException ||
+        e instanceof UnprocessableEntityException ||
+        e instanceof InternalServerErrorException
+      ) {
+        throw e;
+      }
       this.obs.error(
         'me profile submit persistence failed',
         ErrorCodes.ME_PROFILE_SUBMIT_FAILED,
@@ -1001,5 +1034,39 @@ export class MeProfileService {
       markHttpExceptionObservabilityLogged(ex);
       throw ex;
     }
+  }
+
+  async getAnalysisStatusForUser(
+    userId: string,
+  ): Promise<AnalysisStatusResponseDto> {
+    const row = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: {
+        status: true,
+        submittedAt: true,
+        analyzedAt: true,
+        lastAnalysisError: true,
+      },
+    });
+    if (!row) {
+      throw new NotFoundException({
+        error: 'profile_not_found',
+        message: 'No profile exists for this account.',
+      });
+    }
+    const status = mapProfileStatusToAnalysisApi(row.status);
+    return {
+      status,
+      submittedAt: row.submittedAt?.toISOString() ?? null,
+      completedAt:
+        row.status === UserProfileStatus.ANALYZED
+          ? (row.analyzedAt?.toISOString() ?? null)
+          : null,
+      error:
+        row.status === UserProfileStatus.FAILED
+          ? (row.lastAnalysisError ?? null)
+          : null,
+      profileStatus: row.status,
+    };
   }
 }

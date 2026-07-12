@@ -13,6 +13,7 @@ const mocked = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   fetchMyLatestAnalysisMock: vi.fn(),
   fetchMyProfileMock: vi.fn(),
+  fetchAnalysisStatusMock: vi.fn(),
   submitMyProfileForAnalysisMock: vi.fn(),
 }));
 
@@ -34,6 +35,7 @@ vi.mock('next/link', () => ({
 vi.mock('@/lib/me-profile-api', () => ({
   fetchMyLatestAnalysis: mocked.fetchMyLatestAnalysisMock,
   fetchMyProfile: mocked.fetchMyProfileMock,
+  fetchAnalysisStatus: mocked.fetchAnalysisStatusMock,
   submitMyProfileForAnalysis: mocked.submitMyProfileForAnalysisMock,
 }));
 
@@ -101,6 +103,7 @@ describe('DatingAnalysisPage', () => {
     mocked.replaceMock.mockReset();
     mocked.fetchMyLatestAnalysisMock.mockReset();
     mocked.fetchMyProfileMock.mockReset();
+    mocked.fetchAnalysisStatusMock.mockReset();
     mocked.submitMyProfileForAnalysisMock.mockReset();
   });
 
@@ -227,8 +230,11 @@ describe('DatingAnalysisPage', () => {
   it('disables re-run immediately on click and submits once', async () => {
     mockAnalyzedPageLoad();
     mocked.submitMyProfileForAnalysisMock.mockResolvedValue({
-      ...analyzedProfile,
-      status: 'SUBMITTED',
+      analysisJobId: 'job_test',
+      profile: {
+        ...analyzedProfile,
+        status: 'SUBMITTED',
+      },
     });
 
     const div = document.createElement('div');

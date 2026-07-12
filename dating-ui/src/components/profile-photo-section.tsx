@@ -40,6 +40,7 @@ function statusText(
 ): string {
   if (status === 'APPROVED') return copy.statusApproved;
   if (status === 'REJECTED') return copy.statusRejected;
+  if (status === 'FLAGGED_FOR_REVIEW') return copy.statusFlagged;
   return copy.statusPending;
 }
 

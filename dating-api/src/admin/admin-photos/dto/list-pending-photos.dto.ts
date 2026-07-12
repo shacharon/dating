@@ -22,6 +22,10 @@ export type PendingPhotoListItemDto = {
   mimeType: string;
   originalFileName: string | null;
   fileUrl: string;
+  status: 'PENDING' | 'FLAGGED_FOR_REVIEW';
+  mlConfidence: number | null;
+  mlLabels: string[];
+  moderationProvider: string | null;
 };
 
 export type ListPendingPhotosResponseDto = {

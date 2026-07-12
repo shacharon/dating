@@ -1,4 +1,6 @@
 import './instrument';
+import { initApm } from './observability/apm';
+initApm();
 import { NestFactory } from '@nestjs/core';
 import { RedisIoAdapter } from './messaging-realtime/redis-io.adapter';
 import { ConfigService } from '@nestjs/config';

@@ -543,13 +543,15 @@ describe('Two-user new-model E2E flow (integration)', () => {
   // STEP 4 — User A: submit → analysis (simulate ANALYZED)
   // ═══════════════════════════════════════════════════════════════════
 
-  it('Step 4 PASS — User A: POST /api/v1/me/profile/submit → 200; analysis simulated ANALYZED', async () => {
+  it('Step 4 PASS — User A: POST /api/v1/me/profile/submit → 202; analysis simulated ANALYZED', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile/submit')
       .set('Cookie', [cookieHeader(rawCookieA)]);
 
-    expect(res.status).toBe(200);
-    expect(['SUBMITTED', 'ANALYZING', 'ANALYZED']).toContain(res.body.status);
+    expect(res.status).toBe(202);
+    expect(['SUBMITTED', 'ANALYZING', 'ANALYZED']).toContain(
+      res.body.profile?.status ?? res.body.status,
+    );
 
     // Simulate the async analysis worker completing: set ANALYZED + create evaluation row.
     // In production the client polls GET /api/v1/me/profile until status=ANALYZED.
@@ -612,7 +614,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
       .post('/api/v1/me/profile/submit')
       .set('Cookie', [cookieHeader(rawCookieB)]);
 
-    expect(submitRes.status).toBe(200);
+    expect(submitRes.status).toBe(202);
 
     profileB = {
       ...profileB,

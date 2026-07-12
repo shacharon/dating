@@ -180,7 +180,26 @@ describe('admin photos HTTP (integration)', () => {
         createdAt: new Date('2026-06-01T00:00:00.000Z'),
         mimeType: 'image/jpeg',
         originalFileName: 'pic.jpg',
+        status: UserProfilePhotoStatus.PENDING,
+        moderationProvider: 'manual_queue',
+        moderationResultJson: null,
         profile: { userId: 'user_owner' },
+      },
+      {
+        id: 'photo_flagged_1',
+        profileId: 'prof_2',
+        createdAt: new Date('2026-06-01T01:00:00.000Z'),
+        mimeType: 'image/jpeg',
+        originalFileName: 'flag.jpg',
+        status: UserProfilePhotoStatus.FLAGGED_FOR_REVIEW,
+        moderationProvider: 'rekognition',
+        moderationResultJson: {
+          source: 'ml',
+          decision: 'flagged',
+          mlConfidence: 62,
+          mlLabels: ['Suggestive'],
+        },
+        profile: { userId: 'user_owner_2' },
       },
     ]);
 
@@ -189,8 +208,13 @@ describe('admin photos HTTP (integration)', () => {
       .set('Cookie', cookieHeader(ADMIN_USER_ID))
       .expect(200);
 
-    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items).toHaveLength(2);
     expect(res.body.items[0].id).toBe('photo_pending_1');
+    expect(res.body.items[0].status).toBe('PENDING');
+    expect(res.body.items[1].id).toBe('photo_flagged_1');
+    expect(res.body.items[1].status).toBe('FLAGGED_FOR_REVIEW');
+    expect(res.body.items[1].mlConfidence).toBe(62);
+    expect(res.body.items[1].mlLabels).toEqual(['Suggestive']);
   });
 
   it('approves pending photo', async () => {

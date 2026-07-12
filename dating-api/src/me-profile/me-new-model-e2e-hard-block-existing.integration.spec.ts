@@ -36,7 +36,7 @@ describe('Existing hard-block visibility (Sprint 18 Story 1 integration)', () =>
     const profileId: string = createRes.body.id;
 
     const submitRes = await harness.submitProfile(cookie);
-    expect(submitRes.status).toBe(200);
+    expect(submitRes.status).toBe(202);
 
     harness.markAnalyzed(
       profileId,

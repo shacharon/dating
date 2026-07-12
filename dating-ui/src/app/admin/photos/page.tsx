@@ -7,16 +7,31 @@ import {
   listPendingPhotos,
   moderatePhoto,
   type PendingPhotoListItem,
+  type RejectionReasonCode,
 } from '@/lib/admin-photos-api';
 
 type RowState = PendingPhotoListItem & { previewUrl?: string };
+
+const REASON_CODES: RejectionReasonCode[] = [
+  'no_face',
+  'explicit_content',
+  'low_quality',
+  'not_real_person',
+  'other',
+];
 
 export default function AdminPhotosPage() {
   const [rows, setRows] = useState<RowState[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
+  const [rejectCodeById, setRejectCodeById] = useState<
+    Record<string, RejectionReasonCode>
+  >({});
+  const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>(
+    {},
+  );
+  const [skipUntilId, setSkipUntilId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,11 +72,20 @@ export default function AdminPhotosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup previews on unmount only
   }, [load]);
 
+  const visibleRows =
+    skipUntilId == null
+      ? rows
+      : (() => {
+          const idx = rows.findIndex((r) => r.id === skipUntilId);
+          return idx >= 0 ? rows.slice(idx + 1) : rows;
+        })();
+
   async function onApprove(photoId: string) {
     setBusyId(photoId);
     setError(null);
     try {
       await moderatePhoto(photoId, 'approve');
+      setSkipUntilId(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Approve failed');
@@ -74,13 +98,21 @@ export default function AdminPhotosPage() {
     setBusyId(photoId);
     setError(null);
     try {
-      await moderatePhoto(photoId, 'reject', rejectReasonById[photoId]);
+      await moderatePhoto(photoId, 'reject', {
+        rejectionReasonCode: rejectCodeById[photoId] ?? 'other',
+        rejectionReason: rejectReasonById[photoId],
+      });
+      setSkipUntilId(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Reject failed');
     } finally {
       setBusyId(null);
     }
+  }
+
+  function onSkip(photoId: string) {
+    setSkipUntilId(photoId);
   }
 
   return (
@@ -97,7 +129,8 @@ export default function AdminPhotosPage() {
         Photo moderation
       </h1>
       <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-        Pending uploads awaiting review (FIFO).
+        Pending + flagged uploads awaiting review (FIFO). Skip advances to the next
+        item without a decision.
       </p>
 
       {loading ? (
@@ -108,12 +141,12 @@ export default function AdminPhotosPage() {
           {error}
         </p>
       ) : null}
-      {!loading && !error && rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">No pending photos.</p>
+      {!loading && !error && visibleRows.length === 0 ? (
+        <p className="text-sm text-zinc-500">No photos in the review queue.</p>
       ) : null}
 
       <ul className="space-y-6">
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <li
             key={row.id}
             className="flex flex-col gap-3 rounded border border-zinc-200 p-4 dark:border-zinc-700 sm:flex-row"
@@ -136,9 +169,18 @@ export default function AdminPhotosPage() {
                 {row.originalFileName ?? 'Photo'}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                Uploaded {new Date(row.createdAt).toLocaleString()}
+                {row.status} · Uploaded {new Date(row.createdAt).toLocaleString()}
               </p>
               <p className="mt-1 text-xs text-zinc-500">User {row.userId}</p>
+              {row.mlConfidence != null || row.mlLabels.length > 0 ? (
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  ML confidence{' '}
+                  {row.mlConfidence != null ? row.mlConfidence.toFixed(1) : '—'}
+                  {row.mlLabels.length > 0
+                    ? ` · ${row.mlLabels.join(', ')}`
+                    : ''}
+                </p>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -148,10 +190,26 @@ export default function AdminPhotosPage() {
                 >
                   Approve
                 </button>
+                <select
+                  className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-900"
+                  value={rejectCodeById[row.id] ?? 'other'}
+                  onChange={(e) =>
+                    setRejectCodeById((prev) => ({
+                      ...prev,
+                      [row.id]: e.target.value as RejectionReasonCode,
+                    }))
+                  }
+                >
+                  {REASON_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
                 <input
                   type="text"
                   maxLength={200}
-                  placeholder="Rejection reason (optional)"
+                  placeholder="Optional note"
                   className="min-w-[12rem] flex-1 rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-900"
                   value={rejectReasonById[row.id] ?? ''}
                   onChange={(e) =>
@@ -168,6 +226,14 @@ export default function AdminPhotosPage() {
                   onClick={() => void onReject(row.id)}
                 >
                   Reject
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200"
+                  disabled={busyId === row.id}
+                  onClick={() => onSkip(row.id)}
+                >
+                  Skip
                 </button>
               </div>
             </div>

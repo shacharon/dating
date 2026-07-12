@@ -167,6 +167,11 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         photoStorage as never,
         mutualMatches as never,
         analytics,
+        {
+          get: jest.fn().mockResolvedValue(null),
+          set: jest.fn(),
+          del: jest.fn(),
+        } as never,
       );
     });
 

@@ -16,6 +16,7 @@ describe('MeMatchActionsService', () => {
 
   const meMatches = {
     assertMatchCandidateVisible: jest.fn(),
+    invalidateMatchListCache: jest.fn().mockResolvedValue(undefined),
   } as unknown as MeMatchesService;
 
   const mutualMatches = {

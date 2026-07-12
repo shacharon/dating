@@ -7,6 +7,8 @@ import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
+import { RedisCacheModule } from '../cache/redis-cache.module';
+import { WorkerModule } from '../workers/worker.module';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { MeConversationsService } from './me-conversations.service';
@@ -25,11 +27,13 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     PrismaModule,
     SessionModule,
     UsersModule,
+    RedisCacheModule,
     forwardRef(() => AuthModule),
     EvaluateServiceModule,
     PhotoStorageModule,
     forwardRef(() => MessagingRealtimeModule),
     NotificationsModule,
+    forwardRef(() => WorkerModule),
   ],
   controllers: [MeProfileController],
   providers: [
@@ -45,6 +49,10 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     MutualMatchesService,
     MeProfileValidationPipe,
   ],
-  exports: [MeMatchesService, MeConversationsService],
+  exports: [
+    MeMatchesService,
+    MeConversationsService,
+    MeProfileAnalysisService,
+  ],
 })
 export class MeProfileModule {}

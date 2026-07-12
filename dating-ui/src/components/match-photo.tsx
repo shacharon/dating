@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import {
   matchPhotoPlaceholderInitial,
@@ -14,6 +15,8 @@ export interface MatchPhotoProps {
   variant: MatchPhotoVariant;
   className?: string;
   testId?: string;
+  /** Prioritize first viewport images (CDN / next/image only). */
+  priority?: boolean;
 }
 
 const variantClasses: Record<MatchPhotoVariant, string> = {
@@ -33,17 +36,32 @@ const placeholderClasses: Record<MatchPhotoVariant, string> = {
     'flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-lg font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
 };
 
+const skeletonClasses: Record<MatchPhotoVariant, string> = {
+  list: 'h-14 w-14 shrink-0 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700',
+  hero: 'aspect-[4/3] w-full animate-pulse bg-zinc-200 dark:bg-zinc-700',
+  celebration:
+    'h-28 w-28 animate-pulse rounded-full bg-zinc-200 ring-4 ring-emerald-100 dark:bg-zinc-700 dark:ring-emerald-900/50',
+  header: 'h-20 w-20 shrink-0 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700',
+};
+
+function isAbsoluteHttpUrl(src: string): boolean {
+  return /^https?:\/\//i.test(src);
+}
+
 export function MatchPhoto({
   photoUrl,
   displayName,
   variant,
   className,
   testId = 'match-list-photo',
+  priority = false,
 }: MatchPhotoProps) {
   const [loadFailed, setLoadFailed] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     setLoadFailed(false);
+    setImageLoaded(false);
   }, [photoUrl]);
 
   const src = matchPhotoSrc(photoUrl);
@@ -63,14 +81,44 @@ export function MatchPhoto({
     );
   }
 
+  const imgClass = [variantClasses[variant], className].filter(Boolean).join(' ');
+  const useNextImage = isAbsoluteHttpUrl(src!);
+
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- session-authenticated dynamic URLs
-    <img
-      src={src!}
-      alt={variant === 'hero' ? displayName : ''}
-      className={[variantClasses[variant], className].filter(Boolean).join(' ')}
-      data-testid={testId}
-      onError={() => setLoadFailed(true)}
-    />
+    <div className="relative inline-block">
+      {!imageLoaded && (
+        <div
+          className={skeletonClasses[variant]}
+          data-testid={`${testId}-skeleton`}
+          aria-hidden
+        />
+      )}
+      {useNextImage ? (
+        <Image
+          src={src!}
+          alt={variant === 'hero' ? displayName : ''}
+          width={variant === 'hero' ? 800 : 112}
+          height={variant === 'hero' ? 600 : 112}
+          className={[imgClass, imageLoaded ? '' : 'absolute opacity-0'].join(' ')}
+          data-testid={testId}
+          priority={priority}
+          loading={priority ? undefined : 'lazy'}
+          unoptimized
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setLoadFailed(true)}
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- session-authenticated relative URLs
+        <img
+          src={src!}
+          alt={variant === 'hero' ? displayName : ''}
+          className={[imgClass, imageLoaded ? '' : 'absolute opacity-0'].join(' ')}
+          data-testid={testId}
+          loading={priority ? 'eager' : 'lazy'}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setLoadFailed(true)}
+        />
+      )}
+    </div>
   );
 }

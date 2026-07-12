@@ -136,6 +136,8 @@ export class MeMatchActionsService {
       candidateProfileId: profileId,
     });
 
+    await this.meMatches.invalidateMatchListCache(actorUserId);
+
     return {
       id: row.id,
       actorUserId: row.actorUserId,
@@ -197,5 +199,7 @@ export class MeMatchActionsService {
       action: 'undo',
       candidateProfileId,
     });
+
+    await this.meMatches.invalidateMatchListCache(actorUserId);
   }
 }

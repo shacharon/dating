@@ -5,6 +5,13 @@ const JSON_HEADERS = {
   Accept: 'application/json',
 };
 
+export type RejectionReasonCode =
+  | 'no_face'
+  | 'explicit_content'
+  | 'low_quality'
+  | 'not_real_person'
+  | 'other';
+
 export type PendingPhotoListItem = {
   id: string;
   profileId: string;
@@ -13,6 +20,10 @@ export type PendingPhotoListItem = {
   mimeType: string;
   originalFileName: string | null;
   fileUrl: string;
+  status: 'PENDING' | 'FLAGGED_FOR_REVIEW';
+  mlConfidence: number | null;
+  mlLabels: string[];
+  moderationProvider: string | null;
 };
 
 export type ListPendingPhotosResponse = {
@@ -25,6 +36,7 @@ export type ModeratePhotoResponse = {
   profileId: string;
   status: string;
   rejectionReason: string | null;
+  rejectionReasonCode?: RejectionReasonCode | null;
   isPrimary: boolean;
   updatedAt: string;
 };
@@ -52,7 +64,10 @@ export async function listPendingPhotos(
 export async function moderatePhoto(
   photoId: string,
   decision: 'approve' | 'reject',
-  rejectionReason?: string,
+  options?: {
+    rejectionReason?: string;
+    rejectionReasonCode?: RejectionReasonCode;
+  },
 ): Promise<ModeratePhotoResponse> {
   const base = getApiBase();
   const res = await fetch(`${base}/api/v1/admin/photos/${encodeURIComponent(photoId)}`, {
@@ -61,7 +76,12 @@ export async function moderatePhoto(
     headers: JSON_HEADERS,
     body: JSON.stringify({
       decision,
-      ...(rejectionReason?.trim() ? { rejectionReason: rejectionReason.trim() } : {}),
+      ...(options?.rejectionReasonCode
+        ? { rejectionReasonCode: options.rejectionReasonCode }
+        : {}),
+      ...(options?.rejectionReason?.trim()
+        ? { rejectionReason: options.rejectionReason.trim() }
+        : {}),
     }),
   });
   if (res.status === 403) {

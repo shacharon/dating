@@ -38,6 +38,7 @@ enum UserProfilePhotoStatus {
   PENDING
   APPROVED
   REJECTED
+  FLAGGED_FOR_REVIEW
 }
 
 enum MatchActionType {
@@ -142,6 +143,8 @@ model UserProfile {
 
   @@index([status, gender, birthDate])
   @@index([status, gender, city])
+  @@index([status, analyzedAt(sort: Desc)])
+  @@index([status, userId])
 }
 
 model UserProfileSignal {

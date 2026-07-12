@@ -419,7 +419,15 @@ export const heCopy: AppCopySchema = {
     statusPending: "בבדיקה",
     statusApproved: "אושרה",
     statusRejected: "נדחתה",
+    statusFlagged: "דורשת בדיקה",
     rejectionPrefix: "סיבה:",
+    rejectionReasons: {
+      no_face: "לא זיהינו פנים ברורות בתמונה. העלו תמונה שבה הפנים נראות בבירור.",
+      explicit_content: "התמונה אינה עומדת בכללי הקהילה שלנו.",
+      low_quality: "איכות התמונה נמוכה מדי. העלו תמונה ברזולוציה גבוהה יותר.",
+      not_real_person: "העלו תמונה שלכם (לא סלבריטי, מם או תמונת סטוק).",
+      other: "התמונה לא אושרה. נסו תמונה אחרת.",
+    },
   },
   profileCompleteness: {
     title: "רשימת השלמת פרופיל",

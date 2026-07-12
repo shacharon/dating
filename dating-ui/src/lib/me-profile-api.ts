@@ -129,7 +129,11 @@ export interface MeLatestAnalysisDto {
   evaluationJson: unknown | null;
 }
 
-export type MeProfilePhotoStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type MeProfilePhotoStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FLAGGED_FOR_REVIEW';
 
 export interface MeProfilePhotoDto {
   id: string;
@@ -314,11 +318,15 @@ export async function patchMyProfile(body: PatchMeProfileBody): Promise<MeProfil
 
 /**
  * Submits the current user's profile for analysis (Phase 3 product flow).
- * Calls `POST /api/v1/me/profile/submit` — transitions to SUBMITTED and triggers
- * server-side analysis; `UserProfileEvaluation` is written when analysis completes.
+ * Calls `POST /api/v1/me/profile/submit` — returns 202 + analysisJobId; analysis runs async.
  * Uses session cookies (`credentials: 'include'`).
  */
-export async function submitMyProfileForAnalysis(): Promise<MeProfileDto> {
+export type MeProfileSubmitResult = {
+  analysisJobId: string;
+  profile: MeProfileDto;
+};
+
+export async function submitMyProfileForAnalysis(): Promise<MeProfileSubmitResult> {
   const base = getApiBase();
   const path = '/api/v1/me/profile/submit';
   const route = getObservabilityRoute();
@@ -363,15 +371,58 @@ export async function submitMyProfileForAnalysis(): Promise<MeProfileDto> {
       `POST /api/v1/me/profile/submit failed: ${res.status} ${detail || res.statusText}`,
     );
   }
-  const dto = await readJson<MeProfileDto>(res);
+  const body = await readJson<
+    MeProfileSubmitResult | MeProfileDto
+  >(res);
+  // Back-compat: older servers returned the profile DTO alone.
+  const result: MeProfileSubmitResult =
+    body && typeof body === 'object' && 'profile' in body && 'analysisJobId' in body
+      ? (body as MeProfileSubmitResult)
+      : {
+          analysisJobId: 'legacy',
+          profile: body as MeProfileDto,
+        };
   emitProductLog({
     level: 'trace',
     route,
     message: 'POST /api/v1/me/profile/submit success',
     errorCode: UiErrorCodes.UI_PROFILE_SUBMIT_OK,
-    meta: { profileId: dto.id, status: dto.status },
+    meta: {
+      profileId: result.profile.id,
+      status: result.profile.status,
+      analysisJobId: result.analysisJobId,
+    },
   });
-  return dto;
+  return result;
+}
+
+export type AnalysisStatusDto = {
+  status: 'pending' | 'processing' | 'complete' | 'failed';
+  submittedAt: string | null;
+  completedAt?: string | null;
+  error?: string | null;
+  profileStatus: string;
+};
+
+export async function fetchAnalysisStatus(): Promise<AnalysisStatusDto> {
+  const base = getApiBase();
+  const path = '/api/v1/me/profile/analysis-status';
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<AnalysisStatusDto>(res);
 }
 
 // ─── Matches (Phase 3 Step 5 / Step 6) ───────────────────────────────────────
@@ -455,6 +506,41 @@ export interface MeMatchesListDto {
   viewerProfileAnalysisStale?: boolean;
   totalCandidatesBeforeFilter?: number;
   matches?: MeMatchItemDto[];
+  nextCursor?: string | null;
+  hasMore?: boolean;
+}
+
+/**
+ * Returns the authenticated user's gender-filtered match list (cursor pagination).
+ * When the user has no analyzed profile the API returns `{ status: 'not_ready' }` (200),
+ * which this function passes through — it does NOT throw.
+ */
+export async function fetchMyMatches(opts?: {
+  cursor?: string | null;
+  limit?: number;
+}): Promise<MeMatchesListDto> {
+  const base = getApiBase();
+  const params = new URLSearchParams();
+  if (opts?.cursor) params.set('cursor', opts.cursor);
+  if (opts?.limit != null) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+  const path = `/api/v1/me/matches${qs ? `?${qs}` : ''}`;
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  return readJson<MeMatchesListDto>(res);
 }
 
 /** Response shape of `GET /api/v1/me/matches/:id`. */
@@ -481,32 +567,6 @@ export interface MeMatchDetailDto {
   primaryPhotoUrl?: string | null;
   /** Present when hard-ineligible but already Liked / mutual with the viewer. */
   hardBlocked?: HardBlockedDto;
-}
-
-/**
- * Returns the authenticated user's gender-filtered match list.
- * When the user has no analyzed profile the API returns `{ status: 'not_ready' }` (200),
- * which this function passes through — it does NOT throw.
- */
-export async function fetchMyMatches(): Promise<MeMatchesListDto> {
-  const base = getApiBase();
-  const path = '/api/v1/me/matches';
-  let res: Response;
-  try {
-    res = await fetch(`${base}${path}`, {
-      method: 'GET',
-      ...credFetch,
-      cache: 'no-store',
-      headers: { Accept: 'application/json' },
-    });
-  } catch {
-    throw new Error(apiUnreachableMessage(base, path));
-  }
-  captureRequestIdFromResponse(res);
-  if (!res.ok) {
-    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return readJson<MeMatchesListDto>(res);
 }
 
 /**

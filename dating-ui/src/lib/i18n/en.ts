@@ -430,7 +430,18 @@ export const enCopy: AppCopySchema = {
     statusPending: "Under review",
     statusApproved: "Approved",
     statusRejected: "Rejected",
+    statusFlagged: "Needs review",
     rejectionPrefix: "Reason:",
+    rejectionReasons: {
+      no_face:
+        "We couldn't detect a clear face in your photo. Please upload a photo where your face is visible.",
+      explicit_content: "Your photo doesn't meet our community guidelines.",
+      low_quality:
+        "Your photo quality is too low. Please upload a higher resolution image.",
+      not_real_person:
+        "Please upload a photo of yourself (not a celebrity, meme, or stock image).",
+      other: "Your photo was not approved. Please try a different photo.",
+    },
   },
   profileCompleteness: {
     title: "Profile checklist",

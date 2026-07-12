@@ -1468,7 +1468,7 @@ describe('me profile HTTP (integration)', () => {
     expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 
-  it('POST /api/v1/me/profile/submit returns 200 and sets status SUBMITTED from DRAFT', async () => {
+  it('POST /api/v1/me/profile/submit returns 202 and sets status SUBMITTED from DRAFT', async () => {
     const raw = await loginAndCookie();
     const draftRow = {
       id: 'prof_submit_1',
@@ -1510,10 +1510,11 @@ describe('me profile HTTP (integration)', () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/me/profile/submit')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-      .expect(200);
+      .expect(202);
 
-    expect(res.body.status).toBe('SUBMITTED');
-    expect(res.body.submittedAt).toBeTruthy();
+    expect(res.body.analysisJobId).toBeTruthy();
+    expect(res.body.profile.status).toBe('SUBMITTED');
+    expect(res.body.profile.submittedAt).toBeTruthy();
     expect(prismaMock.userProfile.update).toHaveBeenCalledWith({
       where: { userId: USER_ID },
       data: expect.objectContaining({

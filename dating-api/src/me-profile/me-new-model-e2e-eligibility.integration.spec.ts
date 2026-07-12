@@ -71,7 +71,7 @@ describe('Holy Grail eligibility regression baseline (integration)', () => {
     const profileId: string = createRes.body.id;
 
     const submitRes = await harness.submitProfile(cookie);
-    expect(submitRes.status).toBe(200);
+    expect(submitRes.status).toBe(202);
 
     harness.markAnalyzed(profileId, evalJson);
     return profileId;
@@ -148,7 +148,7 @@ describe('Holy Grail eligibility regression baseline (integration)', () => {
       expect(patchRes.body.partnerAgeMax).toBe(40);
 
       const submitRes = await harness.submitProfile(searcherCookie);
-      expect(submitRes.status).toBe(200);
+      expect(submitRes.status).toBe(202);
       harness.markAnalyzed(searcherProfileId);
 
       // No age (or gender) preference set on the counterparty's side — isolates the
@@ -199,7 +199,7 @@ describe('Holy Grail eligibility regression baseline (integration)', () => {
       expect(patchRes.status).toBe(200);
 
       const submitRes = await harness.submitProfile(searcherCookie);
-      expect(submitRes.status).toBe(200);
+      expect(submitRes.status).toBe(202);
       harness.markAnalyzed(searcherProfileId);
 
       // Counterparty never supplies a birthDate at all — the exact gap the existing
