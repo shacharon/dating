@@ -14,6 +14,7 @@ import type {
   AttractionTraitsResult,
 } from './evaluate.service';
 import type { LifestyleConflictsResult } from '../compatibility/lifestyle-conflicts';
+import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { EvaluateService } from './evaluate.service';
 
 export interface EvaluateBatchBodyDto {
@@ -50,9 +51,13 @@ function getErrorMessage(err: unknown): string {
 @Controller('api/evaluate')
 export class EvaluateController {
   constructor(
-    private readonly evaluateService: EvaluateService,
+    private readonly legacy: LegacyBackendAdapter,
     private readonly logger: SimpleLogger,
   ) {}
+
+  private get evaluateService(): EvaluateService {
+    return this.legacy.evaluate;
+  }
 
   @Post('batch')
   async evaluateBatch(
@@ -112,7 +117,8 @@ export class EvaluateController {
         aboutRelationship,
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Motivation inference failed';
+      const message =
+        err instanceof Error ? err.message : 'Motivation inference failed';
       if (message.startsWith('Unknown LLM modelKey:')) {
         throw new BadRequestException(message);
       }
@@ -143,7 +149,8 @@ export class EvaluateController {
         aboutPartner,
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Attraction inference failed';
+      const message =
+        err instanceof Error ? err.message : 'Attraction inference failed';
       if (message.startsWith('Unknown LLM modelKey:')) {
         throw new BadRequestException(message);
       }
@@ -162,7 +169,9 @@ export class EvaluateController {
   ): Promise<{ ok: true; result: AttractionTraitsResult }> {
     const aboutPartner = body?.aboutPartner?.trim();
     if (!aboutPartner) {
-      throw new BadRequestException('aboutPartner is required and must be non-empty');
+      throw new BadRequestException(
+        'aboutPartner is required and must be non-empty',
+      );
     }
     const aboutMe = body?.aboutMe?.trim();
     const aboutRelationship = body?.aboutRelationship?.trim();
@@ -174,7 +183,10 @@ export class EvaluateController {
         aboutRelationship || undefined,
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Attraction traits inference failed';
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Attraction traits inference failed';
       if (message.startsWith('Unknown LLM modelKey:')) {
         throw new BadRequestException(message);
       }
@@ -193,12 +205,20 @@ export class EvaluateController {
   ): Promise<{ ok: true; result: LifestyleConflictsResult }> {
     const signalsA = body?.signalsA;
     const signalsB = body?.signalsB;
-    if (!signalsA || !signalsB || typeof signalsA !== 'object' || typeof signalsB !== 'object') {
+    if (
+      !signalsA ||
+      !signalsB ||
+      typeof signalsA !== 'object' ||
+      typeof signalsB !== 'object'
+    ) {
       throw new BadRequestException(
         'signalsA and signalsB are required and must be objects',
       );
     }
-    const result = this.evaluateService.detectLifestyleConflicts(signalsA, signalsB);
+    const result = this.evaluateService.detectLifestyleConflicts(
+      signalsA,
+      signalsB,
+    );
     return { ok: true, result };
   }
 }

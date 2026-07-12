@@ -24,7 +24,10 @@ export interface EnrichedSignals {
   boundariesNeed?: number | null;
 }
 
-export function getSignal(s: EnrichedSignals, key: keyof EnrichedSignals): number | null {
+export function getSignal(
+  s: EnrichedSignals,
+  key: keyof EnrichedSignals,
+): number | null {
   const v = s[key];
   if (v == null || typeof v !== 'number' || !Number.isFinite(v)) return null;
   return v;
@@ -52,10 +55,13 @@ export const tensionRules: TensionRule[] = [
       const aNomad = num(getSignal(a, 'lifestylePace'));
       const bStability = num(getSignal(b, 'traditionalism'));
       const bNomad = num(getSignal(b, 'lifestylePace'));
-      return (aStability >= 7 && bNomad >= 7) || (bStability >= 7 && aNomad >= 7);
+      return (
+        (aStability >= 7 && bNomad >= 7) || (bStability >= 7 && aNomad >= 7)
+      );
     },
     penalty: 4,
-    explain: 'One seeks stability (traditionalism >= 7), the other high mobility/nomadism (lifestylePace >= 7).',
+    explain:
+      'One seeks stability (traditionalism >= 7), the other high mobility/nomadism (lifestylePace >= 7).',
   },
   {
     id: 'emotional_depth_gap',
@@ -89,13 +95,11 @@ export const tensionRules: TensionRule[] = [
       const aBound = num(getSignal(a, 'boundariesNeed'));
       const bFusion = num(getSignal(b, 'fusionNeed'));
       const bBound = num(getSignal(b, 'boundariesNeed'));
-      return (
-        (aFusion >= 7 && bBound >= 6) ||
-        (bFusion >= 7 && aBound >= 6)
-      );
+      return (aFusion >= 7 && bBound >= 6) || (bFusion >= 7 && aBound >= 6);
     },
     penalty: 7,
-    explain: 'One seeks fusion (e.g. shared everything), the other strong boundaries (e.g. needs space).',
+    explain:
+      'One seeks fusion (e.g. shared everything), the other strong boundaries (e.g. needs space).',
   },
   {
     id: 'independence_mismatch',
@@ -118,12 +122,12 @@ export const tensionRules: TensionRule[] = [
       const bSec = getSignal(b, 'attachmentSecurity');
       const bDir = getSignal(b, 'directness');
       return (
-        (num(aSec) <= 2 && num(bDir) >= 8) ||
-        (num(bSec) <= 2 && num(aDir) >= 8)
+        (num(aSec) <= 2 && num(bDir) >= 8) || (num(bSec) <= 2 && num(aDir) >= 8)
       );
     },
     penalty: 4,
-    explain: 'Low attachment security paired with very high directness can feel harsh.',
+    explain:
+      'Low attachment security paired with very high directness can feel harsh.',
   },
   {
     id: 'traditional_vs_high_pace',
@@ -163,7 +167,8 @@ export const tensionRules: TensionRule[] = [
       return Math.abs(aClarity - bClarity) >= 5;
     },
     penalty: 2,
-    explain: 'One prefers free-flow, the other more intentional/structured relationship.',
+    explain:
+      'One prefers free-flow, the other more intentional/structured relationship.',
   },
   {
     id: 'social_battery_mismatch',

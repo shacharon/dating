@@ -1,0 +1,96 @@
+/*
+  Warnings:
+
+  - You are about to drop the column `evaluatedAt` on the `UserProfile` table. All the data in the column will be lost.
+  - You are about to drop the column `evaluation` on the `UserProfile` table. All the data in the column will be lost.
+  - You are about to drop the column `policyVersion` on the `UserProfile` table. All the data in the column will be lost.
+  - You are about to drop the column `promptVersion` on the `UserProfile` table. All the data in the column will be lost.
+  - You are about to drop the column `signals` on the `UserProfile` table. All the data in the column will be lost.
+  - You are about to drop the column `textHash` on the `UserProfile` table. All the data in the column will be lost.
+
+*/
+-- AlterTable
+ALTER TABLE "UserProfile" DROP COLUMN "evaluatedAt",
+DROP COLUMN "evaluation",
+DROP COLUMN "policyVersion",
+DROP COLUMN "promptVersion",
+DROP COLUMN "signals",
+DROP COLUMN "textHash";
+
+-- CreateTable
+CREATE TABLE "ProfileEvaluation" (
+    "id" TEXT NOT NULL,
+    "profileId" TEXT NOT NULL,
+    "evaluatedAt" TIMESTAMP(3),
+    "promptVersion" TEXT,
+    "policyVersion" TEXT,
+    "textHash" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProfileEvaluation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProfileEvaluationRaw" (
+    "id" TEXT NOT NULL,
+    "profileId" TEXT NOT NULL,
+    "evaluation" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProfileEvaluationRaw_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProfileSignalSnapshot" (
+    "id" TEXT NOT NULL,
+    "profileId" TEXT NOT NULL,
+    "domain" TEXT NOT NULL,
+    "ambition" DOUBLE PRECISION,
+    "socialBattery" DOUBLE PRECISION,
+    "healthBodyConsciousness" DOUBLE PRECISION,
+    "emotionalDepth" DOUBLE PRECISION,
+    "attachmentSecurity" DOUBLE PRECISION,
+    "directness" DOUBLE PRECISION,
+    "independence" DOUBLE PRECISION,
+    "traditionalism" DOUBLE PRECISION,
+    "financialMindset" DOUBLE PRECISION,
+    "relationshipClarity" DOUBLE PRECISION,
+    "spirituality" DOUBLE PRECISION,
+    "lifestylePace" DOUBLE PRECISION,
+    "physicalPriority" DOUBLE PRECISION,
+    "statusOrientation" DOUBLE PRECISION,
+    "intellectualCuriosity" DOUBLE PRECISION,
+    "conflictStyle" DOUBLE PRECISION,
+    "noveltyVsRoutine" DOUBLE PRECISION,
+    "structureChaosTolerance" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProfileSignalSnapshot_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProfileEvaluation_profileId_key" ON "ProfileEvaluation"("profileId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProfileEvaluationRaw_profileId_key" ON "ProfileEvaluationRaw"("profileId");
+
+-- CreateIndex
+CREATE INDEX "ProfileSignalSnapshot_profileId_idx" ON "ProfileSignalSnapshot"("profileId");
+
+-- CreateIndex
+CREATE INDEX "ProfileSignalSnapshot_domain_idx" ON "ProfileSignalSnapshot"("domain");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProfileSignalSnapshot_profileId_domain_key" ON "ProfileSignalSnapshot"("profileId", "domain");
+
+-- AddForeignKey
+ALTER TABLE "ProfileEvaluation" ADD CONSTRAINT "ProfileEvaluation_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "UserProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProfileEvaluationRaw" ADD CONSTRAINT "ProfileEvaluationRaw_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "UserProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProfileSignalSnapshot" ADD CONSTRAINT "ProfileSignalSnapshot_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "UserProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;

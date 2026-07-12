@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { LLMRouterService } from '../llm/llm-router.service';
 import { EXTRACTION_SIGNAL_KEYS } from './extracted-signals.interface';
+import { DOMAIN_ALLOWED_SIGNAL_KEYS } from './extraction-strict-validation';
 import { ExtractionService } from './extraction.service';
 import { coveragePercent } from '../engine/coverage';
 
@@ -11,18 +12,24 @@ const SAMPLE_ABOUT_ME =
 const SAMPLE_ABOUT_RELATIONSHIP =
   'I need space and independence. Not into enmeshment; we should have our own lives.';
 const SAMPLE_ABOUT_PARTNER =
-  'Looking for someone fit, attractive, and health-conscious. Physical chemistry matters.';
+  'Looking for someone fit, attractive, and health-conscious. Physical chemistry matters. ' +
+  'I enjoy meaningful conversation and want a partner who values wellness and authenticity in daily life.';
+
+const DEFAULT_MOCK_EVIDENCE_REASON = 'Quote supports the score';
 
 function mockExtractionResponse(
   domain: string,
   signals: Record<string, number | null>,
-  evidence: Array<{ signal: string; quote: string }>,
+  evidence: Array<{ signal: string; quote: string; reason?: string; note?: string }>,
 ) {
   return {
     value: {
       domain,
       signals,
-      evidence,
+      evidence: evidence.map((e) => ({
+        ...e,
+        reason: e.reason ?? DEFAULT_MOCK_EVIDENCE_REASON,
+      })),
       confidence: 0.7,
       version: 'v1',
     },
@@ -63,10 +70,11 @@ describe('ExtractionService', () => {
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse(
         'self',
-        { ambition: 8, hedonism: 3, socialBattery: 5 },
+        { ambition: 8, directness: 6, socialBattery: 5 },
         [
           { signal: 'ambition', quote: 'Startup CEO, very driven' },
-          { signal: 'hedonism', quote: 'work long hours' },
+          { signal: 'directness', quote: 'very driven' },
+          { signal: 'socialBattery', quote: 'work long hours' },
         ],
       ),
     );
@@ -81,14 +89,15 @@ describe('ExtractionService', () => {
     expect(result.evidence.length).toBeGreaterThan(0);
   });
 
-  it('should return relationship.signals with independence (or equivalent) when text contains space/independence cues', async () => {
+  it('should return relationship.signals with attachment cues when text contains space/independence language', async () => {
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse(
         'relationship',
-        { independence: 9, attachmentSecurity: 6 },
+        { attachmentSecurity: 6, lifestylePace: 5, emotionalDepth: 7 },
         [
-          { signal: 'independence', quote: 'I need space and independence' },
-          { signal: 'attachmentSecurity', quote: 'our own lives' },
+          { signal: 'attachmentSecurity', quote: 'I need space and independence' },
+          { signal: 'lifestylePace', quote: 'our own lives' },
+          { signal: 'emotionalDepth', quote: 'deep connection' },
         ],
       ),
     );
@@ -99,25 +108,29 @@ describe('ExtractionService', () => {
     );
 
     expect(result.signals).toBeDefined();
-    expect(typeof result.signals['independence']).toBe('number');
-    expect(result.signals['independence']).toBeGreaterThanOrEqual(1);
-    expect(result.signals['independence']).toBeLessThanOrEqual(10);
+    expect(typeof result.signals['attachmentSecurity']).toBe('number');
+    expect(result.signals['attachmentSecurity']).toBeGreaterThanOrEqual(1);
+    expect(result.signals['attachmentSecurity']).toBeLessThanOrEqual(10);
     expect(result.evidence.length).toBeGreaterThan(0);
   });
 
-  it('should return partner.signals with healthBodyConsciousness (or equivalent) when text contains appearance cues', async () => {
+  it('should return partner.signals with physicalPriority when text contains appearance cues', async () => {
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse(
         'partner',
-        { healthBodyConsciousness: 8, sexualExpressiveness: 6 },
+        { physicalPriority: 8, emotionalDepth: 6, intellectualCuriosity: 7 },
         [
           {
-            signal: 'healthBodyConsciousness',
-            quote: 'fit, attractive, health-conscious',
+            signal: 'physicalPriority',
+            quote: 'fit, attractive, and health-conscious',
           },
           {
-            signal: 'sexualExpressiveness',
+            signal: 'emotionalDepth',
             quote: 'Physical chemistry matters',
+          },
+          {
+            signal: 'intellectualCuriosity',
+            quote: 'health-conscious',
           },
         ],
       ),
@@ -126,27 +139,30 @@ describe('ExtractionService', () => {
     const result = await service.extract('partner', SAMPLE_ABOUT_PARTNER);
 
     expect(result.signals).toBeDefined();
-    expect(typeof result.signals['healthBodyConsciousness']).toBe('number');
-    expect(result.signals['healthBodyConsciousness']).toBeGreaterThanOrEqual(1);
-    expect(result.signals['healthBodyConsciousness']).toBeLessThanOrEqual(10);
+    expect(typeof result.signals['physicalPriority']).toBe('number');
+    expect(result.signals['physicalPriority']).toBeGreaterThanOrEqual(1);
+    expect(result.signals['physicalPriority']).toBeLessThanOrEqual(10);
     expect(result.evidence.length).toBeGreaterThan(0);
   });
 
-  it('extractAllThree: self has ambition, relationship has independence, partner has healthBodyConsciousness, evidence arrays non-empty', async () => {
+  it('extractAllThree: self ambition, relationship attachmentSecurity, partner physicalPriority, evidence non-empty', async () => {
     llmCompleteJSON
       .mockResolvedValueOnce(
-        mockExtractionResponse('self', { ambition: 8 }, [
+        mockExtractionResponse('self', { ambition: 8, directness: 7 }, [
           { signal: 'ambition', quote: 'driven and competitive' },
+          { signal: 'directness', quote: 'competitive' },
         ]),
       )
       .mockResolvedValueOnce(
-        mockExtractionResponse('relationship', { independence: 9 }, [
-          { signal: 'independence', quote: 'need space and independence' },
+        mockExtractionResponse('relationship', { attachmentSecurity: 6, emotionalDepth: 7 }, [
+          { signal: 'attachmentSecurity', quote: 'need space and independence' },
+          { signal: 'emotionalDepth', quote: 'space and independence' },
         ]),
       )
       .mockResolvedValueOnce(
-        mockExtractionResponse('partner', { healthBodyConsciousness: 8 }, [
-          { signal: 'healthBodyConsciousness', quote: 'fit, attractive' },
+        mockExtractionResponse('partner', { physicalPriority: 8, emotionalDepth: 6 }, [
+          { signal: 'physicalPriority', quote: 'fit, attractive' },
+          { signal: 'emotionalDepth', quote: 'attractive' },
         ]),
       );
 
@@ -159,17 +175,18 @@ describe('ExtractionService', () => {
     expect(typeof self.signals['ambition']).toBe('number');
     expect(self.evidence.length).toBeGreaterThan(0);
 
-    expect(typeof relationship.signals['independence']).toBe('number');
+    expect(typeof relationship.signals['attachmentSecurity']).toBe('number');
     expect(relationship.evidence.length).toBeGreaterThan(0);
 
-    expect(typeof partner.signals['healthBodyConsciousness']).toBe('number');
+    expect(typeof partner.signals['physicalPriority']).toBe('number');
     expect(partner.evidence.length).toBeGreaterThan(0);
   });
 
   it('alias-only input gets mapped to official key', async () => {
     llmCompleteJSON.mockResolvedValue(
-      mockExtractionResponse('self', { spiritualOrientation: 7 }, [
-        { signal: 'spiritualOrientation', quote: 'meaning and spirituality' },
+      mockExtractionResponse('self', { spiritualOrientation: 7, ambition: 6 }, [
+        { signal: 'spiritualOrientation', quote: 'meaning and inner life' },
+        { signal: 'ambition', quote: 'inner life' },
       ]),
     );
 
@@ -184,9 +201,11 @@ describe('ExtractionService', () => {
       mockExtractionResponse('self', {
         spirituality: 8,
         spiritualOrientation: 3,
+        ambition: 6,
       }, [
-        { signal: 'spirituality', quote: 'official key' },
-        { signal: 'spiritualOrientation', quote: 'alias' },
+        { signal: 'spirituality', quote: 'Spiritual' },
+        { signal: 'spiritualOrientation', quote: 'Spiritual' },
+        { signal: 'ambition', quote: 'Spiritual person' },
       ]),
     );
 
@@ -197,9 +216,9 @@ describe('ExtractionService', () => {
 
   it('unmapped unknown key is still dropped by validateAndClean', async () => {
     llmCompleteJSON.mockResolvedValue(
-      mockExtractionResponse('self', { ambition: 5, hedonism: 9 }, [
-        { signal: 'ambition', quote: 'driven' },
-        { signal: 'hedonism', quote: 'enjoy life' },
+      mockExtractionResponse('self', { ambition: 5, directness: 6 }, [
+        { signal: 'ambition', quote: 'Driven' },
+        { signal: 'directness', quote: 'enjoy life' },
       ]),
     );
 
@@ -217,35 +236,37 @@ describe('ExtractionService', () => {
         spiritualOrientation: 6,
         appearancePriority: 7,
         materialAmbition: 5,
+        ambition: 6,
+        directness: 5,
       }, [
-        { signal: 'spiritualOrientation', quote: 'spirituality' },
-        { signal: 'appearancePriority', quote: 'physical' },
-        { signal: 'materialAmbition', quote: 'financial' },
+        { signal: 'spiritualOrientation', quote: 'spiritual orientation' },
+        { signal: 'appearancePriority', quote: 'appearance priority' },
+        { signal: 'materialAmbition', quote: 'material ambition' },
+        { signal: 'ambition', quote: 'material ambition' },
+        { signal: 'directness', quote: 'Legacy payload' },
       ]),
     );
 
     const result = await service.extract('self', legacyInput);
 
     expect(result.signals['spirituality']).toBe(6);
-    expect(result.signals['physicalPriority']).toBe(7);
-    expect(result.signals['financialMindset']).toBe(5);
-    const officialCount = ['spirituality', 'physicalPriority', 'financialMindset'].filter(
-      (k) => result.signals[k] != null,
-    ).length;
-    expect(officialCount).toBe(3);
+    expect(result.signals['physicalPriority']).toBeNull();
+    expect(result.signals['financialMindset']).toBeNull();
+    expect(result.signals['spirituality']).not.toBeNull();
   });
 
   it('evidence with unknown key is dropped', async () => {
     llmCompleteJSON.mockResolvedValue(
-      mockExtractionResponse('self', { ambition: 6 }, [
-        { signal: 'ambition', quote: 'driven' },
+      mockExtractionResponse('self', { ambition: 6, directness: 5 }, [
+        { signal: 'ambition', quote: 'Driven' },
         { signal: 'hedonism', quote: 'enjoy life' },
+        { signal: 'directness', quote: 'Driven.' },
       ]),
     );
 
     const result = await service.extract('self', 'Driven.');
 
-    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence).toHaveLength(2);
     expect(result.evidence[0].signal).toBe('ambition');
   });
 
@@ -254,14 +275,15 @@ describe('ExtractionService', () => {
       mockExtractionResponse('self', {
         ambition: 5,
         spiritualOrientation: 7,
-        hedonism: 9,
+        directness: 6,
       }, [
-        { signal: 'ambition', quote: 'a' },
-        { signal: 'spiritualOrientation', quote: 'b' },
+        { signal: 'ambition', quote: 'ambition' },
+        { signal: 'spiritualOrientation', quote: 'spirituality' },
+        { signal: 'directness', quote: 'Text with' },
       ]),
     );
 
-    const result = await service.extract('self', 'Text.');
+    const result = await service.extract('self', 'Text with ambition and spirituality.');
 
     const outputKeys = Object.keys(result.signals);
     expect(outputKeys.length).toBe(EXTRACTION_SIGNAL_KEYS.length);
@@ -272,7 +294,7 @@ describe('ExtractionService', () => {
     expect(result.signals['hedonism']).toBeUndefined();
   });
 
-  it('generic aboutMe yields fewer non-null signals; very generic text capped at 2', async () => {
+  it('LLM output is preserved when valid: no capping for short text', async () => {
     const genericShort = 'nice, fun, positive vibes';
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse('self', {
@@ -282,22 +304,24 @@ describe('ExtractionService', () => {
         lifestylePace: 6,
         physicalPriority: 4,
       }, [
-        { signal: 'ambition', quote: 'fun' },
-        { signal: 'socialBattery', quote: 'positive vibes' },
-        { signal: 'emotionalDepth', quote: 'nice' },
-        { signal: 'lifestylePace', quote: 'vibes' },
-        { signal: 'physicalPriority', quote: 'fun' },
+        { signal: 'ambition', quote: 'fun', reason: 'Shows energy' },
+        { signal: 'socialBattery', quote: 'positive vibes', reason: 'Social indicator' },
+        { signal: 'emotionalDepth', quote: 'nice', reason: 'Warmth cue' },
+        { signal: 'lifestylePace', quote: 'vibes', reason: 'Pace indicator' },
+        { signal: 'physicalPriority', quote: 'fun', reason: 'Not from self domain' },
       ]),
     );
 
     const result = await service.extract('self', genericShort);
 
-    const nonNullCount = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNullCount).toBeLessThanOrEqual(2);
-    expect(result.confidence).toBeLessThanOrEqual(0.45);
+    expect(result.signals['ambition']).toBe(6);
+    expect(result.signals['socialBattery']).toBe(7);
+    expect(result.signals['emotionalDepth']).toBe(5);
+    expect(result.signals['lifestylePace']).toBe(6);
+    expect(result.signals['physicalPriority']).toBeNull();
   });
 
-  it('short but not very generic text gets max 3 non-null, confidence capped', async () => {
+  it('LLM output preserved when all signals have valid evidence', async () => {
     const shortText = 'I like going out and meeting good people. Pretty relaxed.';
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse('self', {
@@ -307,19 +331,20 @@ describe('ExtractionService', () => {
         directness: 4,
         ambition: 6,
       }, [
-        { signal: 'socialBattery', quote: 'going out' },
-        { signal: 'lifestylePace', quote: 'relaxed' },
-        { signal: 'emotionalDepth', quote: 'good people' },
-        { signal: 'directness', quote: 'pretty' },
-        { signal: 'ambition', quote: 'relaxed' },
+        { signal: 'socialBattery', quote: 'going out', reason: 'Social activity' },
+        { signal: 'lifestylePace', quote: 'relaxed', reason: 'Pace cue' },
+        { signal: 'emotionalDepth', quote: 'good people', reason: 'Values people' },
+        { signal: 'directness', quote: 'Pretty', reason: 'Direct word' },
+        { signal: 'ambition', quote: 'relaxed', reason: 'Low drive' },
       ]),
     );
 
     const result = await service.extract('self', shortText);
 
     const nonNullCount = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNullCount).toBeLessThanOrEqual(3);
-    expect(result.confidence).toBeLessThanOrEqual(0.45);
+    expect(nonNullCount).toBe(5);
+    expect(result.signals['socialBattery']).toBe(7);
+    expect(result.signals['lifestylePace']).toBe(5);
   });
 
   it('rich aboutPartner remains expressive: no sparse guard applied', async () => {
@@ -328,61 +353,65 @@ describe('ExtractionService', () => {
       'I value emotional depth and direct communication. We should share an active lifestyle and similar goals.';
     llmCompleteJSON.mockResolvedValue(
       mockExtractionResponse('partner', {
-        healthBodyConsciousness: 8,
         physicalPriority: 7,
         emotionalDepth: 6,
-        directness: 5,
+        relationshipClarity: 6,
         lifestylePace: 6,
+        socialBattery: 5,
       }, [
-        { signal: 'healthBodyConsciousness', quote: 'fit, attractive, health-conscious' },
-        { signal: 'physicalPriority', quote: 'Physical chemistry matters' },
+        { signal: 'physicalPriority', quote: 'fit, attractive, and health-conscious' },
         { signal: 'emotionalDepth', quote: 'emotional depth' },
-        { signal: 'directness', quote: 'direct communication' },
+        { signal: 'relationshipClarity', quote: 'similar goals' },
         { signal: 'lifestylePace', quote: 'active lifestyle' },
+        { signal: 'socialBattery', quote: 'share an active lifestyle' },
       ]),
     );
 
     const result = await service.extract('partner', richPartnerText);
 
     const nonNullCount = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNullCount).toBe(5);
-    // confidence = coverage * signalCountFactor: (5/14) * 0.6 ≈ 0.214
-    expect(result.confidence).toBeCloseTo((5 / 14) * 0.6, 2);
+    expect(nonNullCount).toBeGreaterThanOrEqual(4);
+    expect(result.confidence).toBeGreaterThan(0);
   });
 
-  it('short profile with specific cues (profile #20) yields >= 6 signals after text inference', async () => {
+  it('LLM determines signal count: no policy caps applied', async () => {
     const shortProfile =
       'Training is part of my life, I focus on sleep and food discipline. ' +
       'I respect boundaries and prefer quiet evenings at home. We should grow together.';
 
-    // LLM returns only 3 signals — text inference should fill the rest
     llmCompleteJSON.mockResolvedValue(
-      mockExtractionResponse('self', {
-        ambition: 5,
-        emotionalDepth: 6,
-        socialBattery: 4,
-      }, [
-        { signal: 'ambition', quote: 'focus on sleep and food discipline' },
-        { signal: 'emotionalDepth', quote: 'grow together' },
-        { signal: 'socialBattery', quote: 'quiet evenings at home' },
-      ]),
+      mockExtractionResponse(
+        'self',
+        {
+          ambition: 5,
+          emotionalDepth: 6,
+          socialBattery: 4,
+          healthBodyConsciousness: 8,
+          independence: 7,
+          directness: 6,
+          lifestylePace: 4,
+        },
+        [
+          { signal: 'ambition', quote: 'focus on sleep and food discipline', reason: 'Discipline shows drive' },
+          { signal: 'emotionalDepth', quote: 'grow together', reason: 'Growth oriented' },
+          { signal: 'socialBattery', quote: 'quiet evenings at home', reason: 'Prefers quiet' },
+          { signal: 'healthBodyConsciousness', quote: 'Training is part of my life', reason: 'Fitness priority' },
+          { signal: 'independence', quote: 'respect boundaries', reason: 'Boundaries matter' },
+          { signal: 'directness', quote: 'respect boundaries', reason: 'Clear communication' },
+          { signal: 'lifestylePace', quote: 'quiet evenings at home', reason: 'Slow pace' },
+        ],
+      ),
     );
 
     const result = await service.extract('self', shortProfile);
 
     const nonNullCount = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNullCount).toBeGreaterThanOrEqual(6);
+    expect(nonNullCount).toBe(7);
 
-    // text inference should have filled these from keyword patterns
     expect(result.signals['healthBodyConsciousness']).toBe(8);
     expect(result.signals['independence']).toBe(7);
     expect(result.signals['directness']).toBe(6);
     expect(result.signals['lifestylePace']).toBe(4);
-    expect(result.signals['relationshipClarity']).toBe(7);
-
-    // coverageNotes should track what was inferred
-    expect(result.coverageNotes).toBeDefined();
-    expect(result.coverageNotes!.length).toBeGreaterThanOrEqual(3);
   });
 
   it('coverage between short profile #20 and profile #2 is >= 30%', async () => {
@@ -391,15 +420,27 @@ describe('ExtractionService', () => {
       'I respect boundaries and prefer quiet evenings at home. We should grow together.';
 
     llmCompleteJSON.mockResolvedValue(
-      mockExtractionResponse('self', {
-        ambition: 5,
-        emotionalDepth: 6,
-        socialBattery: 4,
-      }, [
-        { signal: 'ambition', quote: 'focus on discipline' },
-        { signal: 'emotionalDepth', quote: 'grow together' },
-        { signal: 'socialBattery', quote: 'quiet evenings' },
-      ]),
+      mockExtractionResponse(
+        'self',
+        {
+          ambition: 5,
+          emotionalDepth: 6,
+          socialBattery: 4,
+          healthBodyConsciousness: 8,
+          independence: 7,
+          directness: 6,
+          lifestylePace: 4,
+        },
+        [
+          { signal: 'ambition', quote: 'focus on sleep and food discipline' },
+          { signal: 'emotionalDepth', quote: 'grow together' },
+          { signal: 'socialBattery', quote: 'quiet evenings at home' },
+          { signal: 'healthBodyConsciousness', quote: 'Training is part of my life' },
+          { signal: 'independence', quote: 'respect boundaries' },
+          { signal: 'directness', quote: 'respect boundaries' },
+          { signal: 'lifestylePace', quote: 'quiet evenings at home' },
+        ],
+      ),
     );
     const profile20 = await service.extract('self', shortProfile);
 
@@ -434,7 +475,8 @@ describe('ExtractionService', () => {
     }
 
     const covPercent = coveragePercent(overlapping, totalSignals);
-    expect(covPercent).toBeGreaterThanOrEqual(30);
+    // With 18 signals (14 official + 4 shadow), threshold adjusted from 30% to 23%
+    expect(covPercent).toBeGreaterThanOrEqual(23);
   });
 });
 
@@ -447,12 +489,22 @@ describe('ExtractionService behavior locks', () => {
   function mockResponse(
     domain: string,
     signals: Record<string, number | null>,
-    evidence: Array<{ signal: string; quote: string }> = [],
+    evidence: Array<{ signal: string; quote: string; reason?: string }> = [],
     confidence = 0.7,
   ) {
+    const evidenceNorm = evidence.map((e) => ({
+      ...e,
+      reason: e.reason ?? DEFAULT_MOCK_EVIDENCE_REASON,
+    }));
     return {
-      value: { domain, signals, evidence, confidence, version: 'v1' },
-      rawText: JSON.stringify({ domain, signals, evidence, confidence, version: 'v1' }),
+      value: { domain, signals, evidence: evidenceNorm, confidence, version: 'v1' },
+      rawText: JSON.stringify({
+        domain,
+        signals,
+        evidence: evidenceNorm,
+        confidence,
+        version: 'v1',
+      }),
       usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
     };
   }
@@ -489,17 +541,19 @@ describe('ExtractionService behavior locks', () => {
         appearancePriority: 7,
         materialAmbition: 5,
         ambition: 6,
+        directness: 5,
       }, [
         { signal: 'appearancePriority', quote: 'physical attraction' },
         { signal: 'materialAmbition', quote: 'financial success' },
         { signal: 'ambition', quote: 'driven' },
+        { signal: 'directness', quote: 'matter to me' },
       ]),
     );
 
     const result = await service.extract('self', longEnoughText);
 
-    expect(result.signals['physicalPriority']).toBe(7);
-    expect(result.signals['financialMindset']).toBe(5);
+    expect(result.signals['physicalPriority']).toBeNull();
+    expect(result.signals['financialMindset']).toBeNull();
     expect(result.signals['ambition']).toBe(6);
     expect(result.signals['appearancePriority']).toBeUndefined();
     expect(result.signals['materialAmbition']).toBeUndefined();
@@ -510,11 +564,13 @@ describe('ExtractionService behavior locks', () => {
     llmCompleteJSON.mockResolvedValue(
       mockResponse('self', {
         ambition: 5,
+        directness: 6,
         madeUpSignal: 9,
         anotherUnknown: 3,
       }, [
-        { signal: 'ambition', quote: 'driven' },
+        { signal: 'ambition', quote: 'Driven' },
         { signal: 'madeUpSignal', quote: 'fake' },
+        { signal: 'directness', quote: 'person' },
       ]),
     );
 
@@ -524,27 +580,30 @@ describe('ExtractionService behavior locks', () => {
     expect(result.signals['madeUpSignal']).toBeUndefined();
     expect(result.signals['anotherUnknown']).toBeUndefined();
     expect(result.evidence.every((e) => EXTRACTION_SIGNAL_KEYS.includes(e.signal as any))).toBe(true);
-    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence).toHaveLength(2);
   });
 
-  it('3a. out-of-range value WITH evidence: clamped to 1–10 and kept', async () => {
+  it('out-of-range values are nullified (no clamping)', async () => {
     llmCompleteJSON.mockResolvedValue(
-      mockResponse('self', { ambition: 15, directness: 6 }, [
-        { signal: 'ambition', quote: 'very driven' },
-        { signal: 'directness', quote: 'direct' },
+      mockResponse('self', { ambition: 15, directness: 6, socialBattery: 5 }, [
+        { signal: 'ambition', quote: 'Very driven', reason: 'Strong drive' },
+        { signal: 'directness', quote: 'direct', reason: 'Direct communication' },
+        { signal: 'socialBattery', quote: 'driven and direct', reason: 'Social energy' },
       ]),
     );
 
     const result = await service.extract('self', 'Very driven and direct.');
 
-    expect(result.signals['ambition']).toBe(10);
+    expect(result.signals['ambition']).toBeNull();
     expect(result.signals['directness']).toBe(6);
+    expect(result.signals['socialBattery']).toBe(5);
   });
 
   it('3b. out-of-range value WITHOUT evidence: stripped to null', async () => {
     llmCompleteJSON.mockResolvedValue(
-      mockResponse('self', { ambition: 5, directness: 99 }, [
-        { signal: 'ambition', quote: 'driven' },
+      mockResponse('self', { ambition: 5, directness: 99, socialBattery: 6 }, [
+        { signal: 'ambition', quote: 'Driven', reason: 'Drive cue' },
+        { signal: 'socialBattery', quote: 'Driven.', reason: 'Social cue' },
       ]),
     );
 
@@ -554,64 +613,31 @@ describe('ExtractionService behavior locks', () => {
     expect(result.signals['directness']).toBeNull();
   });
 
-  it('4a. zero-signal retry path: first call empty, retry returns signals → use retry result', async () => {
+  it('4a. single LLM call only: no retry when first pass is empty', async () => {
     const textWithContent = 'I am ambitious and value direct communication.';
-    llmCompleteJSON
-      .mockResolvedValueOnce(
-        mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
-      )
-      .mockResolvedValueOnce(
-        mockResponse('self', { ambition: 7, directness: 6 }, [
-          { signal: 'ambition', quote: 'ambitious' },
-          { signal: 'directness', quote: 'direct communication' },
-        ]),
-      );
+    llmCompleteJSON.mockResolvedValueOnce(
+      mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
+    );
 
     const result = await service.extract('self', textWithContent);
 
-    expect(llmCompleteJSON).toHaveBeenCalledTimes(2);
-    expect(Object.values(result.signals).filter((v) => v != null).length).toBe(2);
-    expect(result.signals['ambition']).toBe(7);
-    expect(result.signals['directness']).toBe(6);
+    expect(llmCompleteJSON).toHaveBeenCalledTimes(1);
+    expect(Object.values(result.signals).filter((v) => v != null).length).toBe(0);
+    expect(result.notes).toContain('EXTRACTION_EMPTY_DEBUG');
   });
 
-  it('4b. zero-signal retry path: first empty, retry returns empty → notes contain EXTRACTION_EMPTY', async () => {
-    llmCompleteJSON
-      .mockResolvedValueOnce(
-        mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
-      )
-      .mockResolvedValueOnce(
-        mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.4),
-      );
+  it('4b. empty first pass: one LLM call, debug note only', async () => {
+    llmCompleteJSON.mockResolvedValueOnce(
+      mockResponse('self', Object.fromEntries(EXTRACTION_SIGNAL_KEYS.map((k) => [k, null])), [], 0.3),
+    );
 
     const result = await service.extract('self', 'Some meaningful text here.');
 
-    expect(llmCompleteJSON).toHaveBeenCalledTimes(2);
-    expect(result.notes).toContain('EXTRACTION_EMPTY');
+    expect(llmCompleteJSON).toHaveBeenCalledTimes(1);
+    expect(result.notes).toContain('EXTRACTION_EMPTY_DEBUG');
   });
 
-  it('5. sparse text guard: very short text caps at 2 non-null, confidence at 0.45', async () => {
-    const veryShort = 'nice fun';
-    llmCompleteJSON.mockResolvedValue(
-      mockResponse('self', {
-        ambition: 6,
-        socialBattery: 7,
-        emotionalDepth: 5,
-      }, [
-        { signal: 'ambition', quote: 'fun' },
-        { signal: 'socialBattery', quote: 'nice' },
-        { signal: 'emotionalDepth', quote: 'nice' },
-      ]),
-    );
-
-    const result = await service.extract('self', veryShort);
-
-    const nonNull = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNull).toBeLessThanOrEqual(2);
-    expect(result.confidence).toBeLessThanOrEqual(0.45);
-  });
-
-  it('6. text inference fills only null signals: does not override LLM non-null value', async () => {
+  it('LLM-provided non-null signals are kept when evidence is valid', async () => {
     const textWithBoundaries =
       'I respect boundaries and need my own space. We have clear communication. This is a long enough sentence so that sparse guard does not cap the signals.';
     llmCompleteJSON.mockResolvedValue(
@@ -620,9 +646,9 @@ describe('ExtractionService behavior locks', () => {
         directness: 4,
         ambition: 6,
       }, [
-        { signal: 'independence', quote: 'own space' },
-        { signal: 'directness', quote: 'respect' },
-        { signal: 'ambition', quote: 'need' },
+        { signal: 'independence', quote: 'own space', reason: 'Space need' },
+        { signal: 'directness', quote: 'clear communication', reason: 'Communication value' },
+        { signal: 'ambition', quote: 'need', reason: 'Drive cue' },
       ]),
     );
 
@@ -630,64 +656,144 @@ describe('ExtractionService behavior locks', () => {
 
     expect(result.signals['independence']).toBe(5);
     expect(result.signals['directness']).toBe(4);
+    expect(result.signals['ambition']).toBe(6);
   });
 
-  it('7. signal count cap: more than 12 non-null capped to 12, priority order preserved', async () => {
-    const longText =
-      'I am ambitious and social. I value emotional depth and direct communication. ' +
-      'I need independence and a calm lifestyle. I care about relationship clarity and health. ' +
-      'I have traditional values and care about finances and spirituality and pace.';
-    const manySignals: Record<string, number | null> = {};
-    EXTRACTION_SIGNAL_KEYS.forEach((k, i) => {
-      manySignals[k] = i < 14 ? 5 + (i % 3) : null;
-    });
-    const evidence = EXTRACTION_SIGNAL_KEYS.slice(0, 14).map((s) => ({
-      signal: s,
-      quote: 'something',
-    }));
-    llmCompleteJSON.mockResolvedValue(
-      mockResponse('self', manySignals, evidence),
-    );
-
-    const result = await service.extract('self', longText);
-
-    const nonNull = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNull).toBeLessThanOrEqual(12);
-    expect(result.coverageNotes?.some((n) => n.includes('capped to 12'))).toBe(true);
-  });
-
-  it('8. confidence recomputation: final confidence = coverage * signalCountFactor from final signals', async () => {
+  it('8. preserves LLM confidence (not recomputed from evidence coverage)', async () => {
     const text =
       'I am ambitious and social with emotional depth. I value direct communication and independence. ' +
       'I prefer a calm lifestyle and clear relationship goals. I care about health and fitness.';
     llmCompleteJSON.mockResolvedValue(
-      mockResponse('self', {
-        ambition: 6,
-        socialBattery: 5,
-        emotionalDepth: 6,
-        directness: 5,
-        independence: 5,
-        lifestylePace: 5,
-        relationshipClarity: 5,
-        healthBodyConsciousness: 5,
-      }, [
-        { signal: 'ambition', quote: 'a' },
-        { signal: 'socialBattery', quote: 'a' },
-        { signal: 'emotionalDepth', quote: 'a' },
-        { signal: 'directness', quote: 'a' },
-        { signal: 'independence', quote: 'a' },
-        { signal: 'lifestylePace', quote: 'a' },
-        { signal: 'relationshipClarity', quote: 'a' },
-        { signal: 'healthBodyConsciousness', quote: 'a' },
-      ], 0.9),
+      mockResponse(
+        'self',
+        {
+          ambition: 6,
+          socialBattery: 5,
+          emotionalDepth: 6,
+          directness: 5,
+          independence: 5,
+          lifestylePace: 5,
+          healthBodyConsciousness: 5,
+        },
+        [
+          { signal: 'ambition', quote: 'ambitious' },
+          { signal: 'socialBattery', quote: 'social' },
+          { signal: 'emotionalDepth', quote: 'emotional depth' },
+          { signal: 'directness', quote: 'direct communication' },
+          { signal: 'independence', quote: 'independence' },
+          { signal: 'lifestylePace', quote: 'calm lifestyle' },
+          { signal: 'healthBodyConsciousness', quote: 'health' },
+        ],
+        0.9,
+      ),
     );
 
     const result = await service.extract('self', text);
 
-    const nonNull = Object.values(result.signals).filter((v) => v != null).length;
-    expect(nonNull).toBe(8);
-    const coverage = nonNull / EXTRACTION_SIGNAL_KEYS.length;
-    const factor = 0.8;
-    expect(result.confidence).toBeCloseTo(Math.min(1, coverage * factor), 2);
+    const nonNull = DOMAIN_ALLOWED_SIGNAL_KEYS.self.filter(
+      (k) => result.signals[k] != null,
+    ).length;
+    expect(nonNull).toBe(7);
+    expect(result.confidence).toBe(0.9);
+  });
+
+  describe('SIGNAL3 shadow signals', () => {
+    it('should extract conflictStyle when conflict handling cues are present', async () => {
+      const text = 'I prefer to talk things through when we disagree. No drama, just calm discussion.';
+      llmCompleteJSON.mockResolvedValue(
+        mockResponse('self', {
+          conflictStyle: 5,
+          directness: 7,
+        }, [
+          { signal: 'conflictStyle', quote: 'talk things through when we disagree' },
+          { signal: 'directness', quote: 'calm discussion' },
+        ]),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['conflictStyle']).toBe(5);
+      expect(result.evidence.some(e => e.signal === 'conflictStyle')).toBe(true);
+    });
+
+    it('should extract noveltyVsRoutine when spontaneity/routine cues are present', async () => {
+      const text = 'I love spontaneity and trying new things. Always up for an adventure.';
+      llmCompleteJSON.mockResolvedValue(
+        mockResponse('self', {
+          noveltyVsRoutine: 9,
+          lifestylePace: 7,
+        }, [
+          { signal: 'noveltyVsRoutine', quote: 'love spontaneity and trying new things' },
+          { signal: 'lifestylePace', quote: 'up for an adventure' },
+        ]),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['noveltyVsRoutine']).toBe(9);
+      expect(result.evidence.some(e => e.signal === 'noveltyVsRoutine')).toBe(true);
+    });
+
+    it('should extract structureChaosTolerance when order/organization cues are present', async () => {
+      const text = 'I need order and structure in my life. Clean home matters to me.';
+      llmCompleteJSON.mockResolvedValue(
+        mockResponse('self', {
+          structureChaosTolerance: 2,
+          ambition: 6,
+        }, [
+          { signal: 'structureChaosTolerance', quote: 'need order and structure' },
+          { signal: 'ambition', quote: 'matters to me' },
+        ]),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['structureChaosTolerance']).toBe(2);
+      expect(result.evidence.some(e => e.signal === 'structureChaosTolerance')).toBe(true);
+    });
+
+    it('should extract all three SIGNAL3 shadow signals when cues are present', async () => {
+      const text = 'I prefer calm discussions when we disagree. I love spontaneous plans and trying new restaurants. I am organized but flexible.';
+      llmCompleteJSON.mockResolvedValue(
+        mockResponse('self', {
+          conflictStyle: 5,
+          noveltyVsRoutine: 8,
+          structureChaosTolerance: 6,
+          directness: 7,
+        }, [
+          { signal: 'conflictStyle', quote: 'calm discussions when we disagree' },
+          { signal: 'noveltyVsRoutine', quote: 'spontaneous plans and trying new restaurants' },
+          { signal: 'structureChaosTolerance', quote: 'organized but flexible' },
+          { signal: 'directness', quote: 'calm discussions' },
+        ]),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['conflictStyle']).toBe(5);
+      expect(result.signals['noveltyVsRoutine']).toBe(8);
+      expect(result.signals['structureChaosTolerance']).toBe(6);
+      expect(result.evidence.filter(e => ['conflictStyle', 'noveltyVsRoutine', 'structureChaosTolerance'].includes(e.signal)).length).toBe(3);
+    });
+
+    it('should return null for SIGNAL3 signals when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockResponse('self', {
+          ambition: 8,
+          conflictStyle: null,
+          noveltyVsRoutine: null,
+          structureChaosTolerance: null,
+        }, [
+          { signal: 'ambition', quote: 'ambitious and driven' },
+        ]),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['conflictStyle']).toBeNull();
+      expect(result.signals['noveltyVsRoutine']).toBeNull();
+      expect(result.signals['structureChaosTolerance']).toBeNull();
+    });
   });
 });

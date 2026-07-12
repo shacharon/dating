@@ -10,7 +10,10 @@
  * Input coveragePercent is in 0..100 scale; normalized to 0..1 before applying.
  */
 export function coverageFactor(coveragePercent: number): number {
-  const coveragePercentNormalized = Math.max(0, Math.min(1, coveragePercent / 100));
+  const coveragePercentNormalized = Math.max(
+    0,
+    Math.min(1, coveragePercent / 100),
+  );
   const coverageFactorValue = 0.7 + 0.3 * coveragePercentNormalized;
   return coverageFactorValue;
 }
@@ -20,15 +23,19 @@ export function coverageFactor(coveragePercent: number): number {
  * Softer low-coverage penalty (floor 0.88 vs 0.85) for calibration; ceiling remains 1.0.
  */
 export function scoreCoverageFactor(coveragePercent: number): number {
-  const coveragePercentNormalized = Math.max(0, Math.min(1, coveragePercent / 100));
-  return 0.88 + 0.12 * coveragePercentNormalized;
+  const c = Math.max(0, Math.min(100, coveragePercent));
+  if (c <= 50) return 0.9 + (0.06 * c) / 50;
+  return 0.96 + (0.04 * (c - 50)) / 50;
 }
 
 /**
  * coveragePercent = round(100 * (numComparableSignals / totalSignals))
  * comparable = signals where BOTH profiles have numeric values
  */
-export function coveragePercent(numComparableSignals: number, totalSignals: number): number {
+export function coveragePercent(
+  numComparableSignals: number,
+  totalSignals: number,
+): number {
   if (totalSignals <= 0) return 0;
   return Math.round(100 * (numComparableSignals / totalSignals));
 }

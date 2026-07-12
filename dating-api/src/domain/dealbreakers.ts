@@ -1,9 +1,13 @@
 /**
  * Dealbreaker rules: which signals are treated as dealbreaker-sensitive when comparing profiles.
  * Uses only existing extraction signal keys; no new keys. No framework decorators.
+ *
+ * Family / kids: see `kids-family-ownership.ts` — legacy scoring here is separate from HG children admission
+ * (`PARTNER_*` dimensions) and from HG-driven list penalties (`children_unsure`).
  */
 
 import type { DerivedContext } from './deriveContext';
+import { RELATIONSHIP_CLARITY_MISMATCH_CODE } from './kids-family-ownership';
 
 /** Signal keys that are considered dealbreaker-sensitive (large gaps may be dealbreakers). */
 export const DEALBREAKER_SIGNAL_KEYS: readonly string[] = [
@@ -24,7 +28,7 @@ export const DEALBREAKER_GAP_THRESHOLD = 5;
  * Check if a signal key is dealbreaker-sensitive.
  */
 export function isDealbreakerKey(key: string): key is DealbreakerSignalKey {
-  return (DEALBREAKER_SIGNAL_KEYS as readonly string[]).includes(key);
+  return DEALBREAKER_SIGNAL_KEYS.includes(key);
 }
 
 /**
@@ -51,7 +55,13 @@ export function checkDealbreakers(
   for (const key of DEALBREAKER_SIGNAL_KEYS) {
     const a = signalsA[key];
     const b = signalsB[key];
-    if (a == null || b == null || typeof a !== 'number' || typeof b !== 'number') continue;
+    if (
+      a == null ||
+      b == null ||
+      typeof a !== 'number' ||
+      typeof b !== 'number'
+    )
+      continue;
     const gap = Math.abs(a - b);
     results.push({
       key,
@@ -67,7 +77,7 @@ export function checkDealbreakers(
 /* ── High-level dealbreaker codes (signals + derived context) ───────────────── */
 
 export type DealbreakerCode =
-  | 'KIDS_TIMELINE_MISMATCH'
+  | typeof RELATIONSHIP_CLARITY_MISMATCH_CODE
   | 'UNPREDICTABILITY_ROUTINE_MISMATCH'
   | 'VISIBILITY_NEED_MISMATCH'
   | 'EMOTIONAL_DEPTH_FLOOR'
@@ -111,15 +121,27 @@ export type CoreSignals = Partial<
 export type DealbreakersInput = {
   a: { signals: CoreSignals; ctx: DerivedContext };
   b: { signals: CoreSignals; ctx: DerivedContext };
-  motivationA?: 'family_builder' | 'emotional_connection' | 'status_power' | 'freedom_independence';
-  motivationB?: 'family_builder' | 'emotional_connection' | 'status_power' | 'freedom_independence';
+  motivationA?:
+    | 'family_builder'
+    | 'emotional_connection'
+    | 'status_power'
+    | 'freedom_independence';
+  motivationB?:
+    | 'family_builder'
+    | 'emotional_connection'
+    | 'status_power'
+    | 'freedom_independence';
 };
 
 function n(x: number | null | undefined, fallback = 5): number {
   return typeof x === 'number' ? x : fallback;
 }
 
-function diff(a: number | null | undefined, b: number | null | undefined, fallback = 5): number {
+function diff(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  fallback = 5,
+): number {
   return Math.abs(n(a, fallback) - n(b, fallback));
 }
 
@@ -135,8 +157,9 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
   const aLifeStage = a.ctx.lifeStage ?? 5;
   const bLifeStage = b.ctx.lifeStage ?? 5;
 
-  // 1) Kids timeline mismatch proxy (relationshipClarity: high = wants clarity/kids soon, low = unclear/not aligned)
-  // Business logic: Only treat as HARD when one side is clearly "wants kids soon" (9–10) and the other is clearly not (1–3).
+  // 1) Relationship-clarity stress (relationshipClarity only — not HG `PARTNER_WANTS_CHILDREN` / structured kids).
+  // High = stronger clarity / commitment-signal axis in V1 space; low = weaker. See `kids-family-ownership.ts`.
+  // HARD when one side is clearly high (9–10) and the other clearly low (1–3) with a large gap.
   // Moderate gaps get PENALTY; smaller gaps get WARNING so we don't over-suppress scores.
   // Examples (relationshipClarity 0–10): (9 vs 2) → HARD; (8 vs 3) → PENALTY; (7 vs 4) → WARNING; (6 vs 5) → no flag.
   const aClarity = n(a.signals.relationshipClarity, 5);
@@ -146,33 +169,36 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
   const clarityMax = Math.max(aClarity, bClarity);
   const oneHighClarity = aClarity >= 8 || bClarity >= 8;
   if (clarityGap >= 6 && clarityMin <= 3 && clarityMax >= 9) {
-    // HARD: One clearly wants kids/clarity soon (9–10), other clearly does not (1–3). True incompatibility.
     out.push({
-      code: 'KIDS_TIMELINE_MISMATCH',
+      code: RELATIONSHIP_CLARITY_MISMATCH_CODE,
       severity: 'HARD',
-      evidence: [`relationshipClarity gap: ${aClarity} vs ${bClarity} (extreme)`],
+      evidence: [
+        `relationshipClarity gap: ${aClarity} vs ${bClarity} (extreme)`,
+      ],
     });
   } else if (clarityGap >= 5 && oneHighClarity) {
-    // PENALTY: Strong mismatch (e.g. 8 vs 3) but not extreme; weighted deduction instead of cap.
     out.push({
-      code: 'KIDS_TIMELINE_MISMATCH',
+      code: RELATIONSHIP_CLARITY_MISMATCH_CODE,
       severity: 'PENALTY',
       evidence: [`relationshipClarity gap: ${aClarity} vs ${bClarity}`],
     });
   } else if (clarityGap >= 4 && (aClarity >= 7 || bClarity >= 7)) {
-    // WARNING: Mild mismatch; small deduction so score can stay in upper range.
     out.push({
-      code: 'KIDS_TIMELINE_MISMATCH',
+      code: RELATIONSHIP_CLARITY_MISMATCH_CODE,
       severity: 'WARNING',
       evidence: [`relationshipClarity gap: ${aClarity} vs ${bClarity}`],
     });
   }
 
   // 2) Unpredictability vs routine
-  const aUnpredictable = aOcc === 'SHIFT_UNPREDICTABLE' || aOcc === 'TRAVEL_HEAVY';
-  const bUnpredictable = bOcc === 'SHIFT_UNPREDICTABLE' || bOcc === 'TRAVEL_HEAVY';
-  const aRoutinePref = n(a.signals.lifestylePace, 5) <= 3 && n(a.signals.directness, 5) >= 7;
-  const bRoutinePref = n(b.signals.lifestylePace, 5) <= 3 && n(b.signals.directness, 5) >= 7;
+  const aUnpredictable =
+    aOcc === 'SHIFT_UNPREDICTABLE' || aOcc === 'TRAVEL_HEAVY';
+  const bUnpredictable =
+    bOcc === 'SHIFT_UNPREDICTABLE' || bOcc === 'TRAVEL_HEAVY';
+  const aRoutinePref =
+    n(a.signals.lifestylePace, 5) <= 3 && n(a.signals.directness, 5) >= 7;
+  const bRoutinePref =
+    n(b.signals.lifestylePace, 5) <= 3 && n(b.signals.directness, 5) >= 7;
   if ((aUnpredictable && bRoutinePref) || (bUnpredictable && aRoutinePref)) {
     out.push({
       code: 'UNPREDICTABILITY_ROUTINE_MISMATCH',
@@ -193,14 +219,16 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
     });
   }
 
-  // 4) Emotional depth floor (both very low)
+  // 4) Emotional depth directional mismatch (high vs low — not bilateral low)
   const aDepth = n(a.signals.emotionalDepth, 5);
   const bDepth = n(b.signals.emotionalDepth, 5);
-  if (aDepth <= 3 && bDepth <= 3) {
+  const emotionalDepthHighVsLow =
+    (aDepth >= 8 && bDepth <= 2) || (bDepth >= 8 && aDepth <= 2);
+  if (emotionalDepthHighVsLow) {
     out.push({
       code: 'EMOTIONAL_DEPTH_FLOOR',
-      severity: 'STRONG_FLAG',
-      evidence: [`emotionalDepth low on both: ${aDepth}, ${bDepth}`],
+      severity: 'PENALTY',
+      evidence: [`emotionalDepth mismatch: ${aDepth} vs ${bDepth}`],
     });
   }
 
@@ -211,13 +239,17 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
   const statusGap = diff(aStatus, bStatus, 5);
   const statusMin = Math.min(n(aStatus, 5), n(bStatus, 5));
   const statusMax = Math.max(n(aStatus, 5), n(bStatus, 5));
-  const oneStatusHigh = (typeof aStatus === 'number' && aStatus >= 8) || (typeof bStatus === 'number' && bStatus >= 8);
+  const oneStatusHigh =
+    (typeof aStatus === 'number' && aStatus >= 8) ||
+    (typeof bStatus === 'number' && bStatus >= 8);
   if (oneStatusHigh && statusGap >= 6 && statusMin <= 3 && statusMax >= 9) {
     // HARD: One very status-oriented (9–10), other low (1–3). True incompatibility.
     out.push({
       code: 'STATUS_GAP_SENSITIVE',
       severity: 'HARD',
-      evidence: [`statusOrientation gap: ${n(aStatus)} vs ${n(bStatus)} (extreme)`],
+      evidence: [
+        `statusOrientation gap: ${n(aStatus)} vs ${n(bStatus)} (extreme)`,
+      ],
     });
   } else if (oneStatusHigh && statusGap >= 4) {
     // PENALTY: One high (8+), gap >= 4; weighted deduction instead of cap.
@@ -227,7 +259,8 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
       evidence: [`statusOrientation gap: ${n(aStatus)} vs ${n(bStatus)}`],
     });
   } else if (
-    ((typeof aStatus === 'number' && aStatus >= 7) || (typeof bStatus === 'number' && bStatus >= 7)) &&
+    ((typeof aStatus === 'number' && aStatus >= 7) ||
+      (typeof bStatus === 'number' && bStatus >= 7)) &&
     statusGap >= 4
   ) {
     // WARNING: One >= 7, gap >= 4; mild deduction.
@@ -251,8 +284,10 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
   const mA = input.motivationA;
   const mB = input.motivationB;
   const isHardMotivationMismatch =
-    (mA === 'status_power' && (mB === 'family_builder' || mB === 'emotional_connection')) ||
-    (mB === 'status_power' && (mA === 'family_builder' || mA === 'emotional_connection'));
+    (mA === 'status_power' &&
+      (mB === 'family_builder' || mB === 'emotional_connection')) ||
+    (mB === 'status_power' &&
+      (mA === 'family_builder' || mA === 'emotional_connection'));
   if (isHardMotivationMismatch) {
     out.push({
       code: 'VISIBILITY_NEED_MISMATCH',
@@ -271,14 +306,21 @@ export function computeDealbreakers(input: DealbreakersInput): Dealbreaker[] {
  * - WARNING: deduct DEALBREAKER_WARNING_POINTS (5) each. Mild impact so scores can stay in upper range.
  * Deterministic: order of dealbreakers does not matter; we sum deductions then apply once.
  */
-export function applyDealbreakerCap(overall: number, dealbreakers: Dealbreaker[]): number {
+export function applyDealbreakerCap(
+  overall: number,
+  dealbreakers: Dealbreaker[],
+): number {
   const hasHard = dealbreakers.some((d) => d.severity === 'HARD');
   if (hasHard) return Math.min(overall, DEALBREAKER_HARD_CAP);
 
-  const penaltyCount =
-    dealbreakers.filter((d) => d.severity === 'STRONG_FLAG' || d.severity === 'PENALTY').length;
-  const warningCount = dealbreakers.filter((d) => d.severity === 'WARNING').length;
+  const penaltyCount = dealbreakers.filter(
+    (d) => d.severity === 'STRONG_FLAG' || d.severity === 'PENALTY',
+  ).length;
+  const warningCount = dealbreakers.filter(
+    (d) => d.severity === 'WARNING',
+  ).length;
   const deduction =
-    penaltyCount * DEALBREAKER_PENALTY_POINTS + warningCount * DEALBREAKER_WARNING_POINTS;
+    penaltyCount * DEALBREAKER_PENALTY_POINTS +
+    warningCount * DEALBREAKER_WARNING_POINTS;
   return Math.max(0, overall - deduction);
 }

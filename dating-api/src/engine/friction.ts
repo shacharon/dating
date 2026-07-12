@@ -8,5 +8,9 @@
  * frictionPenalty = Math.min(25, friction * 3)
  */
 export function frictionPenalty(friction: number): number {
-  return Math.min(25, friction * 3);
+  const basePenalty = Math.min(25, friction * 3);
+  // DATING_SCORING_FRICTION_SINGLE_EXPERIMENT
+  // Single reversible experiment: modestly soften high-friction penalties (especially friction=4).
+  if (friction >= 4) return basePenalty * 0.9;
+  return basePenalty;
 }

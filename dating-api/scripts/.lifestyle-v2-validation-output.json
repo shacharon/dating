@@ -1,0 +1,152 @@
+{
+  "profileCount": 40,
+  "coveragePct": 80,
+  "withLifestyleTagCount": 32,
+  "eligibilityInvariantPairsChecked": 78,
+  "rankStability": {
+    "searcherId": "synthetic-ls-v2-001",
+    "top20Before": [
+      "synthetic-ls-v2-038",
+      "synthetic-ls-v2-037",
+      "synthetic-ls-v2-014",
+      "synthetic-ls-v2-011",
+      "synthetic-ls-v2-022",
+      "synthetic-ls-v2-025",
+      "synthetic-ls-v2-036",
+      "synthetic-ls-v2-039",
+      "synthetic-ls-v2-010",
+      "synthetic-ls-v2-020",
+      "synthetic-ls-v2-019",
+      "synthetic-ls-v2-040",
+      "synthetic-ls-v2-023",
+      "synthetic-ls-v2-002",
+      "synthetic-ls-v2-003",
+      "synthetic-ls-v2-035",
+      "synthetic-ls-v2-005",
+      "synthetic-ls-v2-017",
+      "synthetic-ls-v2-030",
+      "synthetic-ls-v2-028"
+    ],
+    "top20After": [
+      "synthetic-ls-v2-038",
+      "synthetic-ls-v2-020",
+      "synthetic-ls-v2-037",
+      "synthetic-ls-v2-014",
+      "synthetic-ls-v2-011",
+      "synthetic-ls-v2-022",
+      "synthetic-ls-v2-025",
+      "synthetic-ls-v2-036",
+      "synthetic-ls-v2-039",
+      "synthetic-ls-v2-010",
+      "synthetic-ls-v2-019",
+      "synthetic-ls-v2-040",
+      "synthetic-ls-v2-023",
+      "synthetic-ls-v2-002",
+      "synthetic-ls-v2-003",
+      "synthetic-ls-v2-035",
+      "synthetic-ls-v2-005",
+      "synthetic-ls-v2-017",
+      "synthetic-ls-v2-030",
+      "synthetic-ls-v2-028"
+    ],
+    "kendallTauTop20": 0.9578947368421052,
+    "maxPositionMoveTop20Intersection": 8,
+    "top20Left": 0,
+    "top20Entered": 0
+  },
+  "sampleProfiles": [
+    {
+      "profileId": "synthetic-ls-v2-001",
+      "lifestyleSignalsSelf": [
+        "fitness"
+      ],
+      "lifestyleSignalsPartner": [
+        "outdoors_nature"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-002",
+      "lifestyleSignalsSelf": [
+        "travel"
+      ],
+      "lifestyleSignalsPartner": [
+        "athletic_swimming"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-003",
+      "lifestyleSignalsSelf": [
+        "food"
+      ],
+      "lifestyleSignalsPartner": [
+        "homebody"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-004",
+      "lifestyleSignalsSelf": [
+        "nightlife"
+      ],
+      "lifestyleSignalsPartner": [
+        "social_friends"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-005",
+      "lifestyleSignalsSelf": [
+        "pets"
+      ],
+      "lifestyleSignalsPartner": []
+    },
+    {
+      "profileId": "synthetic-ls-v2-006",
+      "lifestyleSignalsSelf": [
+        "reading"
+      ],
+      "lifestyleSignalsPartner": [
+        "outdoors_nature"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-007",
+      "lifestyleSignalsSelf": [
+        "gaming"
+      ],
+      "lifestyleSignalsPartner": [
+        "athletic_swimming"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-008",
+      "lifestyleSignalsSelf": [
+        "athletic_swimming"
+      ],
+      "lifestyleSignalsPartner": [
+        "homebody"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-009",
+      "lifestyleSignalsSelf": [
+        "outdoors_nature"
+      ],
+      "lifestyleSignalsPartner": [
+        "social_friends"
+      ]
+    },
+    {
+      "profileId": "synthetic-ls-v2-010",
+      "lifestyleSignalsSelf": [
+        "homebody"
+      ],
+      "lifestyleSignalsPartner": []
+    }
+  ],
+  "lifestyleGroundedSamples": [
+    {
+      "pair": "synthetic-ls-v2-001 vs synthetic-ls-v2-020",
+      "rankReasonLine": "lifestyleSignals:+2(lifestyleSignals:grounded(outdoors_nature,O=1.0000))",
+      "note": "lifestyleSignals:grounded(outdoors_nature,O=1.0000)"
+    }
+  ]
+}

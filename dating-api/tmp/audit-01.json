@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-03T12:37:15.750Z",
+  "env": {
+    "ENGINE_READ_NORMALIZED": "0"
+  },
+  "viewer": {
+    "userId": "cmoo8giaa0000t570f122z6z5",
+    "profileId": "cmooc2j3z0008t5d8ch5z20wm"
+  },
+  "candidate": {
+    "profileId": "cmo4rgmdx0005t54kiouzi4co"
+  },
+  "engineInputSource": {
+    "viewer": "evaluationJson",
+    "candidate": "evaluationJson"
+  },
+  "compare": {
+    "outcome": "scored"
+  },
+  "matchScore": 71,
+  "profileAnalysisStale": true,
+  "explainability": {
+    "positiveChips": [
+      "Ambition alignment",
+      "Emotional depth",
+      "Lifestyle pace"
+    ],
+    "reasonShort": "Ambition alignment, Emotional depth, and Lifestyle pace are where your profiles align most; the overall read is solid."
+  },
+  "recommendation": {
+    "explainability": {
+      "positiveChips": [
+        "Ambition alignment",
+        "Emotional depth",
+        "Lifestyle pace"
+      ],
+      "reasonShort": "Ambition alignment, Emotional depth, and Lifestyle pace are where your profiles align most; the overall read is solid."
+    },
+    "primaryTakeaway": "Promising fit on ambition alignment and emotional depth.",
+    "suggestedNextAction": "Review profile and message"
+  },
+  "evaluationSummary": "This person values serious relationships rooted in honesty and emotional maturity, seeking a balance between ambition and a pressure-free life. They emphasize emotional communication, clarity, and teamwork within the relationship, fostering a safe and supportive environment. Their partner also prioritizes open communication and conflict management, creating a calm atmosphere for relationship development.",
+  "listContext": {
+    "viewerProfileId": "cmooc2j3z0008t5d8ch5z20wm",
+    "candidateRank": 1,
+    "totalMatchesReturned": 2
+  },
+  "matchExplanationTraits": [
+    {
+      "group": "Shared values",
+      "label": "Ambition alignment",
+      "evidence": "Your drive and ambition are well-matched.",
+      "strength": "strong"
+    },
+    {
+      "group": "Emotional connection",
+      "label": "Emotional depth",
+      "evidence": "You both value depth and emotional presence in a relationship.",
+      "strength": "strong"
+    },
+    {
+      "group": "Lifestyle match",
+      "label": "Lifestyle pace",
+      "evidence": "You move at a similar pace — how you structure your days aligns.",
+      "strength": "strong"
+    }
+  ]
+}

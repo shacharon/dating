@@ -15,11 +15,17 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
+    /**
+     * Only load these @types as globals. Prevents TS from pulling every hoisted
+     * @types/* from the monorepo (e.g. react, babel__traverse) into this Nest app.
+     */
+    "types": ["node", "jest"],
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "exclude": ["node_modules", "dist", "**/*spec.ts", "test", "scripts/archive"]
 }

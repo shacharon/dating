@@ -5,12 +5,11 @@
  * Run: npm run debug:extraction-regression
  */
 
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { EvaluateService } from '../src/evaluate/evaluate.service';
-import { ProfilesJsonService } from '../src/profiles/profiles-json.service';
+import { LegacyBackendAdapter } from '../src/legacy/legacy-backend.adapter';
 import type { ExtractedSignals } from '../src/extraction/extracted-signals.interface';
 
 const ROOT = process.cwd();
@@ -21,11 +20,11 @@ if (!process.env.PROFILES_DATA_DIR) {
 
 /** Target profiles for debug (mix of good/bad/manual pairs). */
 const TARGET_PROFILE_IDS = [
-  '37',        // Tom (manual pair)
+  '37', // Tom (manual pair)
   'merged_14', // Natalie (manual pair)
-  '17',        // Zen Yoga Teacher (had EMPTY_MODEL_TEXT in relationship)
-  '7',         // Radical Activist (had EMPTY_MODEL_TEXT in partner)
-  '3',         // Traditional Nerd
+  '17', // Zen Yoga Teacher (had EMPTY_MODEL_TEXT in relationship)
+  '7', // Radical Activist (had EMPTY_MODEL_TEXT in partner)
+  '3', // Traditional Nerd
 ];
 
 interface DomainDebugInfo {
@@ -91,9 +90,11 @@ function buildDomainDebugInfo(
 }
 
 async function main(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
+  const app = await NestFactory.createApplicationContext(AppModule, {
+    logger: false,
+  });
   const evaluateService = app.get(EvaluateService);
-  const profilesJson = app.get(ProfilesJsonService);
+  const profilesJson = app.get(LegacyBackendAdapter).profilesJson;
 
   const results: ProfileDebugInfo[] = [];
 
@@ -112,12 +113,27 @@ async function main(): Promise<void> {
       aboutPartner: profile.texts.aboutPartner ?? '',
     });
 
-    const selfInfo = buildDomainDebugInfo('self', evaluation.self, profile.texts.aboutMe ?? '');
-    const partnerInfo = buildDomainDebugInfo('partner', evaluation.partner, profile.texts.aboutPartner ?? '');
-    const relationshipInfo = buildDomainDebugInfo('relationship', evaluation.relationship, profile.texts.aboutRelationship ?? '');
+    const selfInfo = buildDomainDebugInfo(
+      'self',
+      evaluation.self,
+      profile.texts.aboutMe ?? '',
+    );
+    const partnerInfo = buildDomainDebugInfo(
+      'partner',
+      evaluation.partner,
+      profile.texts.aboutPartner ?? '',
+    );
+    const relationshipInfo = buildDomainDebugInfo(
+      'relationship',
+      evaluation.relationship,
+      profile.texts.aboutRelationship ?? '',
+    );
 
     const avgCoverage =
-      (selfInfo.nonNullCount + partnerInfo.nonNullCount + relationshipInfo.nonNullCount) / (3 * 14);
+      (selfInfo.nonNullCount +
+        partnerInfo.nonNullCount +
+        relationshipInfo.nonNullCount) /
+      (3 * 14);
 
     results.push({
       profileId: id,
@@ -128,9 +144,15 @@ async function main(): Promise<void> {
       avgCoverage: avgCoverage * 100,
     });
 
-    console.log(`  Self: ${selfInfo.nonNullCount}/14 signals, confidence ${selfInfo.confidence.toFixed(2)}, emptyModel: ${selfInfo.emptyModelText}`);
-    console.log(`  Partner: ${partnerInfo.nonNullCount}/14 signals, confidence ${partnerInfo.confidence.toFixed(2)}, emptyModel: ${partnerInfo.emptyModelText}`);
-    console.log(`  Relationship: ${relationshipInfo.nonNullCount}/14 signals, confidence ${relationshipInfo.confidence.toFixed(2)}, emptyModel: ${relationshipInfo.emptyModelText}`);
+    console.log(
+      `  Self: ${selfInfo.nonNullCount}/14 signals, confidence ${selfInfo.confidence.toFixed(2)}, emptyModel: ${selfInfo.emptyModelText}`,
+    );
+    console.log(
+      `  Partner: ${partnerInfo.nonNullCount}/14 signals, confidence ${partnerInfo.confidence.toFixed(2)}, emptyModel: ${partnerInfo.emptyModelText}`,
+    );
+    console.log(
+      `  Relationship: ${relationshipInfo.nonNullCount}/14 signals, confidence ${relationshipInfo.confidence.toFixed(2)}, emptyModel: ${relationshipInfo.emptyModelText}`,
+    );
     console.log(`  Avg coverage: ${avgCoverage.toFixed(1)}%`);
   }
 
@@ -141,10 +163,18 @@ async function main(): Promise<void> {
   console.log('');
 
   for (const r of results) {
-    console.log(`${r.profileId} (${r.profileName}): avg coverage ${r.avgCoverage.toFixed(1)}%`);
-    console.log(`  Self: ${r.self.nonNullCount}/14, empty: ${r.self.emptyModelText}, retry: ${r.self.retryRan}`);
-    console.log(`  Partner: ${r.partner.nonNullCount}/14, empty: ${r.partner.emptyModelText}, retry: ${r.partner.retryRan}`);
-    console.log(`  Relationship: ${r.relationship.nonNullCount}/14, empty: ${r.relationship.emptyModelText}, retry: ${r.relationship.retryRan}`);
+    console.log(
+      `${r.profileId} (${r.profileName}): avg coverage ${r.avgCoverage.toFixed(1)}%`,
+    );
+    console.log(
+      `  Self: ${r.self.nonNullCount}/14, empty: ${r.self.emptyModelText}, retry: ${r.self.retryRan}`,
+    );
+    console.log(
+      `  Partner: ${r.partner.nonNullCount}/14, empty: ${r.partner.emptyModelText}, retry: ${r.partner.retryRan}`,
+    );
+    console.log(
+      `  Relationship: ${r.relationship.nonNullCount}/14, empty: ${r.relationship.emptyModelText}, retry: ${r.relationship.retryRan}`,
+    );
     console.log('');
   }
 
@@ -156,7 +186,9 @@ async function main(): Promise<void> {
       (r.relationship.emptyModelText ? 1 : 0),
     0,
   );
-  console.log(`Total EMPTY_MODEL_TEXT occurrences: ${emptyModelCount} / ${results.length * 3} domains`);
+  console.log(
+    `Total EMPTY_MODEL_TEXT occurrences: ${emptyModelCount} / ${results.length * 3} domains`,
+  );
 
   console.log('\n=== DETAILED INSPECTION ===\n');
   for (const r of results) {
@@ -170,11 +202,15 @@ async function main(): Promise<void> {
       console.log(`  Empty model text: ${d.emptyModelText}`);
       console.log(`  Retry ran: ${d.retryRan}`);
       console.log(`  Evidence count: ${d.evidenceCount}`);
-      console.log(`  Inference rules fired: ${d.inferenceRulesFired.length > 0 ? d.inferenceRulesFired.join(', ') : 'none'}`);
+      console.log(
+        `  Inference rules fired: ${d.inferenceRulesFired.length > 0 ? d.inferenceRulesFired.join(', ') : 'none'}`,
+      );
       if (d.evidence.length > 0) {
         console.log(`  Evidence samples (first 3):`);
         for (const ev of d.evidence.slice(0, 3)) {
-          console.log(`    - ${ev.signal}: "${ev.quote}" ${ev.note ? `(${ev.note})` : ''}`);
+          console.log(
+            `    - ${ev.signal}: "${ev.quote}" ${ev.note ? `(${ev.note})` : ''}`,
+          );
         }
       }
       console.log('');
@@ -185,16 +221,28 @@ async function main(): Promise<void> {
   console.log('Likely causes ranked by confidence:');
   console.log('');
   console.log('HIGH confidence:');
-  console.log('  1. Evidence quote requirement too strict: model returns empty when it cannot find verbatim 5-15 word snippets.');
-  console.log('  2. "Distinct from" wording causing confusion: model may be over-cautious about assigning signals.');
+  console.log(
+    '  1. Evidence quote requirement too strict: model returns empty when it cannot find verbatim 5-15 word snippets.',
+  );
+  console.log(
+    '  2. "Distinct from" wording causing confusion: model may be over-cautious about assigning signals.',
+  );
   console.log('');
   console.log('MEDIUM confidence:');
-  console.log('  3. Anti-double-count rule too strict: "A single phrase should support at most 1-2 signals" may block valid multi-signal inference.');
-  console.log('  4. Retry prompt not effective: retry still returns empty or low coverage.');
+  console.log(
+    '  3. Anti-double-count rule too strict: "A single phrase should support at most 1-2 signals" may block valid multi-signal inference.',
+  );
+  console.log(
+    '  4. Retry prompt not effective: retry still returns empty or low coverage.',
+  );
   console.log('');
   console.log('LOW confidence:');
-  console.log('  5. Model behavior change (unlikely with same model/temperature).');
-  console.log('  6. Inference rules too narrow (but they only fill nulls, so cannot cause regression).');
+  console.log(
+    '  5. Model behavior change (unlikely with same model/temperature).',
+  );
+  console.log(
+    '  6. Inference rules too narrow (but they only fill nulls, so cannot cause regression).',
+  );
   console.log('');
   console.log('See docs/extraction-regression-debug.md for full analysis.');
 }

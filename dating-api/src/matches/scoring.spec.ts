@@ -5,13 +5,6 @@ import {
   frictionPenalty,
   computeFinalScore,
 } from './scoring';
-import { coverageFactor as engineCoverageFactor } from '../engine/coverage';
-import {
-  compatibility as engineCompatibility,
-  finalScore as engineFinalScore,
-  rawScore as engineRawScore,
-} from '../engine/scoring';
-import { frictionPenalty as engineFrictionPenalty } from '../engine/friction';
 
 describe('scoring', () => {
   describe('clamp', () => {
@@ -36,18 +29,17 @@ describe('scoring', () => {
   });
 
   describe('coverageFactorFromPercent', () => {
-    it('matches engine coverageFactor at 40%', () => {
+    it('sigmoid center near 40%', () => {
       const at40 = coverageFactorFromPercent(40);
-      expect(at40).toBeCloseTo(engineCoverageFactor(40), 10);
-      expect(at40).toBeCloseTo(0.82, 10);
+      expect(at40).toBeCloseTo(0.5, 4);
     });
     it('approaches 1 for high coverage', () => {
-      expect(coverageFactorFromPercent(100)).toBeCloseTo(1, 10);
+      expect(coverageFactorFromPercent(100)).toBeGreaterThan(0.9);
       expect(coverageFactorFromPercent(100)).toBeLessThanOrEqual(1);
     });
-    it('has floor 0.7 for low coverage', () => {
-      expect(coverageFactorFromPercent(0)).toBeCloseTo(0.7, 10);
-      expect(coverageFactorFromPercent(0)).toBeGreaterThanOrEqual(0.7);
+    it('approaches 0 for low coverage', () => {
+      expect(coverageFactorFromPercent(0)).toBeLessThan(0.1);
+      expect(coverageFactorFromPercent(0)).toBeGreaterThanOrEqual(0);
     });
     it('is strictly increasing', () => {
       const v0 = coverageFactorFromPercent(0);
@@ -63,7 +55,7 @@ describe('scoring', () => {
   });
 
   describe('computeCompatibilityFromComponents', () => {
-    it('weighted sum: 0.35*A + 0.35*B + 0.25*R + 0.05*V', () => {
+    it('weighted sum: 0.35*A + 0.35*B + 0.20*R + 0.10*V', () => {
       const a = 100;
       const b = 100;
       const r = 100;
@@ -75,8 +67,8 @@ describe('scoring', () => {
     });
     it('mixed values', () => {
       const c = computeCompatibilityFromComponents(80, 60, 50, 40);
-      expect(c).toBeCloseTo(0.35 * 80 + 0.35 * 60 + 0.25 * 50 + 0.05 * 40, 10);
-      expect(c).toBeCloseTo(63.5, 10);
+      expect(c).toBeCloseTo(0.35 * 80 + 0.35 * 60 + 0.2 * 50 + 0.1 * 40, 10);
+      expect(c).toBe(63);
     });
   });
 
@@ -90,7 +82,7 @@ describe('scoring', () => {
   });
 
   describe('computeFinalScore', () => {
-    it('raw = compatibility * coverageFactor - frictionPenaltyScaled; finalScore clamped 0..100', () => {
+    it('raw = compatibility * coverageFactor - frictionPenalty; finalScore clamped 0..100', () => {
       const compat = 80;
       const covFactor = 1;
       const friction = 0;
@@ -103,10 +95,10 @@ describe('scoring', () => {
       expect(raw).toBe(50);
       expect(finalScore).toBe(50);
     });
-    it('subtracts scaled friction penalty (capped at 25 before scaling)', () => {
+    it('subtracts friction penalty (capped at 25)', () => {
       const { raw, finalScore } = computeFinalScore(100, 1, 5);
-      expect(raw).toBeCloseTo(100 - 15 * 0.7, 10); // penalty = min(25, 15) = 15
-      expect(finalScore).toBe(90);
+      expect(raw).toBe(100 - 15); // penalty = min(25, 15) = 15
+      expect(finalScore).toBe(85);
     });
     it('clamps to 0 when raw negative', () => {
       const { finalScore } = computeFinalScore(10, 0.1, 10);
@@ -119,40 +111,6 @@ describe('scoring', () => {
     it('rounds raw before clamping', () => {
       const { finalScore } = computeFinalScore(80, 0.5, 0);
       expect(finalScore).toBe(40);
-    });
-  });
-
-  describe('formula consistency with engine source-of-truth', () => {
-    it('delegates compatibility/coverage/friction/final math to engine formulas', () => {
-      const aToB = 78;
-      const bToA = 64;
-      const relationshipFit = 52;
-      const valuesAlignment = 37;
-      const coveragePercent = 43;
-      const friction = 6;
-
-      const compatA = computeCompatibilityFromComponents(
-        aToB,
-        bToA,
-        relationshipFit,
-        valuesAlignment,
-      );
-      const compatB = engineCompatibility(aToB, bToA, relationshipFit, valuesAlignment);
-      expect(compatA).toBeCloseTo(compatB, 10);
-
-      const covA = coverageFactorFromPercent(coveragePercent);
-      const covB = engineCoverageFactor(coveragePercent);
-      expect(covA).toBeCloseTo(covB, 10);
-
-      const penaltyA = frictionPenalty(friction);
-      const penaltyB = engineFrictionPenalty(friction);
-      expect(penaltyA).toBe(penaltyB);
-
-      const resultA = computeFinalScore(compatA, covA, friction);
-      const rawB = engineRawScore(compatB, covB, penaltyB);
-      const finalB = engineFinalScore(rawB);
-      expect(resultA.raw).toBeCloseTo(rawB, 10);
-      expect(resultA.finalScore).toBe(finalB);
     });
   });
 });

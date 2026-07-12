@@ -196,8 +196,7 @@ export function computeCompatibility(
   }
 
   const coverage = totalKeys > 0 ? comparedCount / totalKeys : 0;
-  const avgScore =
-    totalWeight > 0 ? weightedSum / totalWeight : 0;
+  const avgScore = totalWeight > 0 ? weightedSum / totalWeight : 0;
   // Coverage is applied once in the outer finalScore pipeline via coverageFactor.
   // Do not apply an additional coverage reduction here.
   const coveragePenaltyApplied = 0;

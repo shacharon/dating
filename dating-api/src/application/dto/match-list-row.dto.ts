@@ -6,6 +6,13 @@
 import type { MatchId } from '../../domain/matches/match.types';
 import type { UserId } from '../../domain/users/user.types';
 
+/** Explainability slice (display-only; mirrors engine DTO). */
+export interface MatchExplainabilityRowDto {
+  positiveChips: string[];
+  tensionChip?: string;
+  reasonShort: string;
+}
+
 /** One row in a match list response. */
 export interface MatchListRowDto {
   id: MatchId;
@@ -16,4 +23,5 @@ export interface MatchListRowDto {
   relationshipFitScore?: number;
   createdAt?: string;
   updatedAt?: string;
+  explainability?: MatchExplainabilityRowDto;
 }

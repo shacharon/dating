@@ -51,28 +51,40 @@ export function detectLifestyleConflicts(
   let severitySum = 0;
 
   // pace_mismatch: lifestylePace diff > 3
-  const paceGap = gap(getNum(signalsA, 'lifestylePace'), getNum(signalsB, 'lifestylePace'));
+  const paceGap = gap(
+    getNum(signalsA, 'lifestylePace'),
+    getNum(signalsB, 'lifestylePace'),
+  );
   if (paceGap != null && paceGap > 3) {
     conflicts.push('pace_mismatch');
     severitySum += 2 + (paceGap - 3) * 0.5;
   }
 
   // status_gap: statusOrientation diff > 4
-  const statusGap = gap(getNum(signalsA, 'statusOrientation'), getNum(signalsB, 'statusOrientation'));
+  const statusGap = gap(
+    getNum(signalsA, 'statusOrientation'),
+    getNum(signalsB, 'statusOrientation'),
+  );
   if (statusGap != null && statusGap > 4) {
     conflicts.push('status_gap');
     severitySum += 2 + (statusGap - 4) * 0.5;
   }
 
   // social_exposure_gap: socialBattery diff > 4
-  const socialGap = gap(getNum(signalsA, 'socialBattery'), getNum(signalsB, 'socialBattery'));
+  const socialGap = gap(
+    getNum(signalsA, 'socialBattery'),
+    getNum(signalsB, 'socialBattery'),
+  );
   if (socialGap != null && socialGap > 4) {
     conflicts.push('social_exposure_gap');
     severitySum += 2 + (socialGap - 4) * 0.5;
   }
 
   // schedule_conflict: independence diff > 4 (independence vs family/togetherness)
-  const independenceGap = gap(getNum(signalsA, 'independence'), getNum(signalsB, 'independence'));
+  const independenceGap = gap(
+    getNum(signalsA, 'independence'),
+    getNum(signalsB, 'independence'),
+  );
   if (independenceGap != null && independenceGap > 4) {
     conflicts.push('schedule_conflict');
     severitySum += 2 + (independenceGap - 4) * 0.5;
@@ -82,7 +94,7 @@ export function detectLifestyleConflicts(
   let tier1GapCount = 0;
   let tier1GapSum = 0;
   let tier1Compared = 0;
-  for (const key of TIER1_KEYS as readonly SignalKey[]) {
+  for (const key of TIER1_KEYS) {
     const g = gap(getNum(signalsA, key), getNum(signalsB, key));
     if (g != null) {
       tier1GapSum += g;

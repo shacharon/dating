@@ -5,8 +5,9 @@
 
 import { Injectable } from '@nestjs/common';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { MatchesJsonService } from './matches-json.service';
+import { MatchesService } from './matches.service';
 import type { MatchRecordDto } from './match.types';
+import { resolveEngineFinalScore } from './match-score.util';
 
 export interface ScoreDistribution {
   '0-20': number;
@@ -51,7 +52,7 @@ export interface MatchAnalyticsLog {
 }
 
 function scoreFromRecord(r: MatchRecordDto): number {
-  const s = r.finalScore ?? r.overall;
+  const s = resolveEngineFinalScore(r);
   return Number.isFinite(s) ? s : 0;
 }
 
@@ -111,7 +112,7 @@ function toPairEntry(r: MatchRecordDto): MatchPairEntry {
 @Injectable()
 export class MatchesAnalyticsService {
   constructor(
-    private readonly matchesJson: MatchesJsonService,
+    private readonly matchesService: MatchesService,
     private readonly logger: SimpleLogger,
   ) {}
 
@@ -119,7 +120,7 @@ export class MatchesAnalyticsService {
    * Load all matches, compute analytics, log as JSON, and return the payload.
    */
   async computeAndLog(): Promise<MatchAnalyticsLog> {
-    const records = await this.matchesJson.getAllRecords();
+    const records = await this.matchesService.listAllComputed();
     const log = this.compute(records);
 
     this.logger.log(
@@ -143,12 +144,15 @@ export class MatchesAnalyticsService {
     const totalMatches = records.length;
     const averageScore =
       totalMatches > 0
-        ? Math.round((scores.reduce((s, x) => s + x, 0) / totalMatches) * 100) / 100
+        ? Math.round((scores.reduce((s, x) => s + x, 0) / totalMatches) * 100) /
+          100
         : 0;
     const medianScore =
       totalMatches > 0 ? Math.round(median(sorted) * 100) / 100 : 0;
-    const p90 = totalMatches > 0 ? Math.round(percentile(sorted, 90) * 100) / 100 : 0;
-    const p10 = totalMatches > 0 ? Math.round(percentile(sorted, 10) * 100) / 100 : 0;
+    const p90 =
+      totalMatches > 0 ? Math.round(percentile(sorted, 90) * 100) / 100 : 0;
+    const p10 =
+      totalMatches > 0 ? Math.round(percentile(sorted, 10) * 100) / 100 : 0;
 
     const score_distribution = toDistribution(scores);
 

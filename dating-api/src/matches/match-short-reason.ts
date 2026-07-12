@@ -5,13 +5,12 @@
 
 export interface ShortReasonInput {
   finalScore: number;
-  tier: 'GREEN' | 'YELLOW' | 'RED' | string;
   dealbreakers: Array<{ code: string; severity?: string }>;
 }
 
 /** Human-readable label per dealbreaker code for shortReason. */
 const DEALBREAKER_LABELS: Record<string, string> = {
-  KIDS_TIMELINE_MISMATCH: 'timeline mismatch on children',
+  RELATIONSHIP_CLARITY_MISMATCH: 'relationship clarity gap',
   STATUS_GAP_SENSITIVE: 'status gap',
   LIFESTAGE_GAP: 'life stage gap',
   VISIBILITY_NEED_MISMATCH: 'visibility needs',
@@ -20,15 +19,18 @@ const DEALBREAKER_LABELS: Record<string, string> = {
 };
 
 function labelForCode(code: string): string {
+  if (code === 'KIDS_TIMELINE_MISMATCH') {
+    return 'relationship clarity gap';
+  }
   return DEALBREAKER_LABELS[code] ?? code;
 }
 
 /**
- * Build one short reason string from score, tier, and dealbreakers.
+ * Build one short reason string from score and dealbreakers.
  * Deterministic and explainable: score bands + presence of HARD + dealbreaker labels.
  */
 export function buildShortReason(input: ShortReasonInput): string {
-  const { finalScore, tier, dealbreakers } = input;
+  const { finalScore, dealbreakers } = input;
   const hasHard = dealbreakers.some((d) => d.severity === 'HARD');
   const codes = dealbreakers.map((d) => d.code);
   const labels = [...new Set(codes.map(labelForCode))];
@@ -43,9 +45,9 @@ export function buildShortReason(input: ShortReasonInput): string {
 
   // Good fit with one main concern (e.g. kids timeline)
   if (finalScore >= 50 && finalScore < 70 && labels.length === 1) {
-    const label = labels[0]!;
-    if (label === 'timeline mismatch on children') {
-      return 'Good fit, but timeline mismatch on children';
+    const label = labels[0];
+    if (label === 'relationship clarity gap') {
+      return 'Good fit, but relationship clarity gap';
     }
     return `Good fit, but ${label}`;
   }
@@ -63,7 +65,7 @@ export function buildShortReason(input: ShortReasonInput): string {
       return `Low fit due to ${labels.slice(0, 2).join(' and ').toLowerCase()}`;
     }
     if (labels.length === 1) {
-      return `Low fit: ${labels[0]!.toLowerCase()}`;
+      return `Low fit: ${labels[0].toLowerCase()}`;
     }
     return 'Low fit';
   }
@@ -74,7 +76,7 @@ export function buildShortReason(input: ShortReasonInput): string {
       return `Moderate fit; ${labels.slice(0, 2).join(' and ').toLowerCase()} mismatch`;
     }
     if (labels.length === 1) {
-      return `Moderate fit; ${labels[0]!.toLowerCase()} mismatch`;
+      return `Moderate fit; ${labels[0].toLowerCase()} mismatch`;
     }
     return 'Moderate fit';
   }

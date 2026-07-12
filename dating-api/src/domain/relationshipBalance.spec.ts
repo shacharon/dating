@@ -11,7 +11,7 @@ describe('computeRelationshipBalance', () => {
     emotionalDepth: 6,
   };
 
-  it('tier is GREEN when ratio >= 4', () => {
+  it('ratio >= 4 when signals align and dealbreaker load is minimal', () => {
     const result = computeRelationshipBalance({
       signalsA: { ...baseSignals },
       signalsB: { ...baseSignals },
@@ -21,12 +21,11 @@ describe('computeRelationshipBalance', () => {
     });
 
     expect(result.ratio).toBeGreaterThanOrEqual(4);
-    expect(result.tier).toBe('GREEN');
     expect(result.positiveScore).toBeGreaterThan(0);
     expect(result.negativeScore).toBe(0.5);
   });
 
-  it('tier is YELLOW when ratio >= 2 and < 4', () => {
+  it('ratio >= 2 and < 4 under moderate dealbreaker severity', () => {
     const result = computeRelationshipBalance({
       signalsA: { ...baseSignals },
       signalsB: { ...baseSignals },
@@ -37,21 +36,29 @@ describe('computeRelationshipBalance', () => {
 
     expect(result.ratio).toBeGreaterThanOrEqual(2);
     expect(result.ratio).toBeLessThan(4);
-    expect(result.tier).toBe('YELLOW');
   });
 
-  it('tier is RED when ratio < 2', () => {
+  it('bilateral low emotionalDepth without dealbreakers keeps baseline negativeScore', () => {
+    const result = computeRelationshipBalance({
+      signalsA: { emotionalDepth: 2, directness: 3 },
+      signalsB: { emotionalDepth: 2, directness: 3 },
+      dealbreakers: [],
+    });
+
+    expect(result.negativeScore).toBe(0.5);
+  });
+
+  it('ratio < 2 when negative score dominates', () => {
     const result = computeRelationshipBalance({
       signalsA: { emotionalDepth: 2, directness: 3 },
       signalsB: { emotionalDepth: 2, directness: 3 },
       dealbreakers: [
-        { code: 'EMOTIONAL_DEPTH_FLOOR', severity: 'STRONG_FLAG', evidence: [] },
+        { code: 'EMOTIONAL_DEPTH_FLOOR', severity: 'PENALTY', evidence: [] },
         { code: 'VISIBILITY_NEED_MISMATCH', severity: 'HARD', evidence: [] },
       ],
     });
 
     expect(result.ratio).toBeLessThan(2);
-    expect(result.tier).toBe('RED');
     expect(result.negativeScore).toBeGreaterThan(result.positiveScore);
   });
 

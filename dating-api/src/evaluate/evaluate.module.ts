@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ExtractionModule } from '../extraction/extraction.module';
-import { LlmModule } from '../llm/llm.module';
 import { EvaluateController } from './evaluate.controller';
-import { EvaluateService } from './evaluate.service';
+import { EvaluateServiceModule } from './evaluate-service.module';
 
 @Module({
-  imports: [LlmModule, ExtractionModule],
+  imports: [EvaluateServiceModule],
   controllers: [EvaluateController],
-  providers: [EvaluateService],
-  exports: [EvaluateService],
+  exports: [EvaluateServiceModule],
 })
 export class EvaluateModule {}

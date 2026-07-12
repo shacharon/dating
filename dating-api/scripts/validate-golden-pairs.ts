@@ -8,6 +8,7 @@
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { resolveEngineFinalScore } from '../src/matches/match-score.util';
 
 const ROOT = process.cwd();
 const GOLDEN_PAIRS_PATH = join(ROOT, 'data', 'golden-pairs.json');
@@ -39,7 +40,6 @@ interface MatchRecord {
   friction?: number;
   compatibility?: number;
   finalScore?: number;
-  overall?: number;
 }
 
 interface ValidationRow {
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const finalScore = match.finalScore ?? match.overall ?? 0;
+    const finalScore = resolveEngineFinalScore(match);
     const coverage = match.coveragePercent ?? match.coverage;
     const inRange = finalScore >= g.expectedFinalMin && finalScore <= g.expectedFinalMax;
     const status: ResultStatus = inRange ? 'PASS' : 'FAIL';

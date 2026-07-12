@@ -1,15 +1,9 @@
 /**
- * Legacy scoring shim for historical tests/helpers.
- * Source of truth is under ../engine/* and this file delegates to it.
+ * Deterministic scoring formulas for the match engine.
+ * Pure functions; no framework deps.
+ *
+ * @deprecated Divergent legacy helper — production uses `engine/scoring.compatibility()`.
  */
-
-import { coverageFactor as engineCoverageFactor } from '../engine/coverage';
-import { frictionPenalty as engineFrictionPenalty } from '../engine/friction';
-import {
-  compatibility as engineCompatibility,
-  finalScore as engineFinalScore,
-  rawScore as engineRawScore,
-} from '../engine/scoring';
 
 /** Clamp value to [lo, hi] (inclusive). */
 export function clamp(x: number, lo: number, hi: number): number {
@@ -18,15 +12,17 @@ export function clamp(x: number, lo: number, hi: number): number {
 }
 
 /**
- * Legacy name, engine semantics: coverage factor is linear in 0..100 coverage percent.
+ * Sigmoid on coverage percent: coverageFactor = 1 / (1 + exp(-(coveragePercent - 40)/10))
+ * Returns value in (0, 1).
  */
 export function coverageFactorFromPercent(coveragePercent: number): number {
-  return engineCoverageFactor(coveragePercent);
+  const x = (coveragePercent - 40) / 10;
+  return 1 / (1 + Math.exp(-x));
 }
 
 /**
  * Compatibility from components (all 0..100):
- * 0.35*A_to_B + 0.35*B_to_A + 0.25*relationshipFit + 0.05*valuesAlignment
+ * 0.35*A_to_B + 0.35*B_to_A + 0.20*relationshipFit + 0.10*valuesAlignment
  */
 export function computeCompatibilityFromComponents(
   aToB: number,
@@ -34,19 +30,20 @@ export function computeCompatibilityFromComponents(
   relationshipFit: number,
   valuesAlignment: number,
 ): number {
-  return engineCompatibility(aToB, bToA, relationshipFit, valuesAlignment);
+  return (
+    0.35 * aToB + 0.35 * bToA + 0.2 * relationshipFit + 0.1 * valuesAlignment
+  );
 }
 
 /**
  * Friction penalty: capped linear Math.min(25, friction * 3).
  */
 export function frictionPenalty(friction: number): number {
-  return engineFrictionPenalty(friction);
+  return Math.min(25, friction * 3);
 }
 
 /**
- * Final score delegates to engine semantics:
- * raw = compatibility * coverageFactor - (frictionPenalty * FRICTION_SCALE)
+ * Final score: raw = compatibility * coverageFactor - frictionPenalty;
  * finalScore = clamp(round(raw), 0, 100).
  */
 export function computeFinalScore(
@@ -55,7 +52,7 @@ export function computeFinalScore(
   friction: number,
 ): { raw: number; finalScore: number } {
   const penalty = frictionPenalty(friction);
-  const raw = engineRawScore(compatibility, coverageFactor, penalty);
-  const finalScore = engineFinalScore(raw);
+  const raw = compatibility * coverageFactor - penalty;
+  const finalScore = clamp(Math.round(raw), 0, 100);
   return { raw, finalScore };
 }

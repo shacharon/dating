@@ -1,0 +1,1 @@
+export const MESSAGE_TOAST_AUTO_DISMISS_MS = 5000;

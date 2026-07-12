@@ -1,5 +1,8 @@
 export type ExtractionDomain = 'self' | 'partner' | 'relationship';
 
+/** Per-domain extraction quality for API/UI; orthogonal to numeric confidence after quality gate. */
+export type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
+
 export interface LLMUsageStats {
   promptTokens: number;
   completionTokens: number;
@@ -26,8 +29,18 @@ export const OFFICIAL_EXTRACTION_SIGNAL_KEYS = [
   'statusOrientation',
 ] as const;
 
-/** Week 2 shadow signal: extracted and stored but NOT wired into compatibility, friction, or finalScore. Only intellectualCuriosity is active. */
-export const SHADOW_SIGNAL_KEYS = ['intellectualCuriosity'] as const;
+/** Shadow signals: extracted and stored but NOT wired into compatibility, friction, or finalScore. */
+export const SHADOW_SIGNAL_KEYS = [
+  'intellectualCuriosity',
+  'conflictStyle',
+  'noveltyVsRoutine',
+  'structureChaosTolerance',
+  /** Phase A expansion — not yet wired to chips, traits, or scoring. */
+  'emotionalAvailability',
+  'emotionalSafety',
+  'commitmentIntentDepth',
+  'practicalLifeReadiness',
+] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
 export const SHADOW_SIGNAL_KEYS_SET = new Set<string>(SHADOW_SIGNAL_KEYS);
@@ -44,8 +57,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 14 official + 1 shadow. */
-export const MAX_EVIDENCE_ITEMS = 18;
+/** Max number of evidence items kept in extraction output. Allows room for 14 official + 8 shadow. */
+export const MAX_EVIDENCE_ITEMS = 26;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(
@@ -57,16 +70,59 @@ export function countNonNullSignals(
 export interface ExtractionEvidenceItem {
   signal: string;
   quote: string;
+  /** Max 8 words; required for a signal to be considered grounded. */
+  reason: string;
   note?: string;
+}
+
+/** Snapshot for pipeline diffing (observability). */
+export interface ExtractionSnapshot {
+  domain: ExtractionDomain;
+  signals: Record<string, number | null>;
+  evidence: ExtractionEvidenceItem[];
+  confidence: number;
+}
+
+export interface ExtractionStageDiff {
+  fromStage: string;
+  toStage: string;
+  signalKeysWithChangedValues: string[];
+  nonNullSignalsBefore: number;
+  nonNullSignalsAfter: number;
+  evidenceCountBefore: number;
+  evidenceCountAfter: number;
+  confidenceBefore: number;
+  confidenceAfter: number;
+}
+
+export interface ExtractionPipelineTrace {
+  pipeline: 'extraction_v1' | 'extraction_v2_base';
+  domain: ExtractionDomain;
+  requestId: string;
+  profileId?: string;
+  rawLlmOutput: {
+    parsedJson: unknown;
+    rawTextPreview: string;
+    rawTextCharLength: number;
+  };
+  stageDiffs: ExtractionStageDiff[];
 }
 
 export interface ExtractedSignals {
   domain: ExtractionDomain;
   /** Scores 1–10 or null; keys are EXTRACTION_SIGNAL_KEYS. */
   signals: Record<string, number | null>;
+  /** JSON-first topic extraction for UI/debug only (no scoring impact). */
+  rawInterests?: string[];
+  /** JSON-first negatives extraction for UI/debug only (no scoring impact). */
+  negativePreferences?: string[];
+  softNo?: string[];
+  dealbreakers?: string[];
   evidence: ExtractionEvidenceItem[];
   version: 'v1';
   confidence: number;
+  /** Optional domain quality hint from callers or legacy payloads (not set by strict validation). */
+  domainStatus?: ExtractionDomainQualityStatus;
   notes?: string;
   /** Tracks which signals were filled by post-LLM text-inference rules. */
   coverageNotes?: string[];
@@ -76,4 +132,17 @@ export interface ExtractedSignals {
   _usage?: LLMUsageStats;
   /** Internal: which pipeline stages contributed (debugging only). */
   _provenance?: { stages: string[] };
+  /** Raw LLM payload + per-stage signal/evidence diffs (observability; does not affect scores). */
+  _pipelineTrace?: ExtractionPipelineTrace;
+}
+
+/**
+ * Effective status for display when reading legacy payloads without `domainStatus`.
+ * Does not infer UNRELIABLE (requires explicit marker from pipeline).
+ */
+export function effectiveDomainQualityStatus(
+  s: ExtractedSignals,
+): ExtractionDomainQualityStatus {
+  if (s.domainStatus) return s.domainStatus;
+  return countNonNullSignals(s.signals) >= 2 ? 'OK' : 'LOW_DATA';
 }

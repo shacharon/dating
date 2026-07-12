@@ -3,7 +3,10 @@
  * No formula changes.
  */
 
-import { EXTRACTION_SIGNAL_KEYS, countNonNullSignals } from './extracted-signals.interface';
+import {
+  EXTRACTION_SIGNAL_KEYS,
+  countNonNullSignals,
+} from './extracted-signals.interface';
 
 /**
  * signalCountFactor: >=12 → 1, 8-11 → 0.8, 5-7 → 0.6, <5 → 0.4.

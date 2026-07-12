@@ -1,25 +1,30 @@
 /**
- * Relationship balance ratio: positive/negative score and tier for match evaluation.
+ * Relationship balance ratio: positive/negative score for match evaluation.
  * Uses only existing signal keys; no new extraction keys. No framework decorators.
  */
 
 import type { CoreSignals, Dealbreaker } from './dealbreakers';
 
-export type BalanceTier = 'GREEN' | 'YELLOW' | 'RED';
-
 export interface RelationshipBalanceResult {
   positiveScore: number;
   negativeScore: number;
   ratio: number;
-  tier: BalanceTier;
   reasons: string[];
 }
 
 export interface RelationshipBalanceInput {
   signalsA: CoreSignals;
   signalsB: CoreSignals;
-  motivationA?: 'family_builder' | 'emotional_connection' | 'status_power' | 'freedom_independence';
-  motivationB?: 'family_builder' | 'emotional_connection' | 'status_power' | 'freedom_independence';
+  motivationA?:
+    | 'family_builder'
+    | 'emotional_connection'
+    | 'status_power'
+    | 'freedom_independence';
+  motivationB?:
+    | 'family_builder'
+    | 'emotional_connection'
+    | 'status_power'
+    | 'freedom_independence';
   dealbreakers: Dealbreaker[];
 }
 
@@ -27,19 +32,29 @@ function n(x: number | null | undefined, fallback = 5): number {
   return typeof x === 'number' ? x : fallback;
 }
 
-function diff(a: number | null | undefined, b: number | null | undefined, fallback = 5): number {
+function diff(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  fallback = 5,
+): number {
   return Math.abs(n(a, fallback) - n(b, fallback));
 }
 
 /**
- * Compute relationship balance: positive score (0..10), negative score (0.5..10), ratio, tier, reasons.
+ * Compute relationship balance: positive score (0..10), negative score (0.5..10), ratio, reasons.
  */
-export function computeRelationshipBalance(input: RelationshipBalanceInput): RelationshipBalanceResult {
+export function computeRelationshipBalance(
+  input: RelationshipBalanceInput,
+): RelationshipBalanceResult {
   const { signalsA, signalsB, motivationA, motivationB, dealbreakers } = input;
   let positiveScore = 0;
   const reasons: string[] = [];
 
-  if (motivationA != null && motivationB != null && motivationA === motivationB) {
+  if (
+    motivationA != null &&
+    motivationB != null &&
+    motivationA === motivationB
+  ) {
     positiveScore += 2;
     reasons.push('motivation match');
   }
@@ -48,7 +63,10 @@ export function computeRelationshipBalance(input: RelationshipBalanceInput): Rel
     positiveScore += 1;
     reasons.push('both directness>=6');
   }
-  if (n(signalsA.attachmentSecurity, 5) >= 6 && n(signalsB.attachmentSecurity, 5) >= 6) {
+  if (
+    n(signalsA.attachmentSecurity, 5) >= 6 &&
+    n(signalsB.attachmentSecurity, 5) >= 6
+  ) {
     positiveScore += 1;
     reasons.push('both attachmentSecurity>=6');
   }
@@ -66,7 +84,13 @@ export function computeRelationshipBalance(input: RelationshipBalanceInput): Rel
   }
   const fa = signalsA.financialMindset;
   const fb = signalsB.financialMindset;
-  if (fa != null && fb != null && typeof fa === 'number' && typeof fb === 'number' && Math.abs(fa - fb) <= 2) {
+  if (
+    fa != null &&
+    fb != null &&
+    typeof fa === 'number' &&
+    typeof fb === 'number' &&
+    Math.abs(fa - fb) <= 2
+  ) {
     positiveScore += 1;
     reasons.push('financialMindset diff<=2');
   }
@@ -75,23 +99,20 @@ export function computeRelationshipBalance(input: RelationshipBalanceInput): Rel
 
   let maxDealbreakerSeverityScore = 0;
   for (const d of dealbreakers) {
-    if (d.severity === 'HARD') maxDealbreakerSeverityScore = Math.max(maxDealbreakerSeverityScore, 6);
+    if (d.severity === 'HARD')
+      maxDealbreakerSeverityScore = Math.max(maxDealbreakerSeverityScore, 6);
     else if (d.severity === 'STRONG_FLAG' || d.severity === 'PENALTY')
       maxDealbreakerSeverityScore = Math.max(maxDealbreakerSeverityScore, 3);
-    else if (d.severity === 'WARNING') maxDealbreakerSeverityScore = Math.max(maxDealbreakerSeverityScore, 1);
+    else if (d.severity === 'WARNING')
+      maxDealbreakerSeverityScore = Math.max(maxDealbreakerSeverityScore, 1);
   }
-  let negativeScore = 0.5 + maxDealbreakerSeverityScore;
-  if (n(signalsA.emotionalDepth, 5) <= 3 && n(signalsB.emotionalDepth, 5) <= 3) {
-    negativeScore += 1;
-  }
-  negativeScore = Math.max(0.5, Math.min(10, negativeScore));
+  const negativeScore = Math.max(
+    0.5,
+    Math.min(10, 0.5 + maxDealbreakerSeverityScore),
+  );
 
-  const ratio = negativeScore > 0 ? positiveScore / negativeScore : positiveScore;
-
-  let tier: BalanceTier;
-  if (ratio >= 4) tier = 'GREEN';
-  else if (ratio >= 2) tier = 'YELLOW';
-  else tier = 'RED';
+  const ratio =
+    negativeScore > 0 ? positiveScore / negativeScore : positiveScore;
 
   const topReasons = reasons.slice(0, 3);
 
@@ -99,7 +120,6 @@ export function computeRelationshipBalance(input: RelationshipBalanceInput): Rel
     positiveScore,
     negativeScore,
     ratio,
-    tier,
     reasons: topReasons,
   };
 }

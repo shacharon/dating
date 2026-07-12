@@ -4,6 +4,7 @@ import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join, isAbsolute, normalize } from 'node:path';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import type { RawInterests } from '../extraction/extracted-interests.interface';
 
 /** Resolve data/profiles relative to project root (works when run from dist/profiles). */
 function defaultProfilesDir(): string {
@@ -26,6 +27,7 @@ export interface ProfileJsonPayload {
     aboutPartner: string;
     aboutRelationship: string;
   };
+  /** Full evaluation result including optional extendedSignals (v1: motivation + attraction traits). */
   evaluation: EvaluateBatchResult;
   savedAt: string;
   /** Set after successful analyze-all; enables resume. */
@@ -39,6 +41,8 @@ export interface ProfileJsonPayload {
   textHash?: string;
   /** Flattened signals for cache hit detection (evaluation.self.signals). */
   signals?: Record<string, number | null>;
+  /** Phase 1: Raw interests extraction (optional, additive, not used in scoring). */
+  rawInterests?: RawInterests;
 }
 
 export interface ProfileListItem {

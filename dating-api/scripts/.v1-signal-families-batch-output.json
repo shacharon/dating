@@ -1,0 +1,548 @@
+{
+  "generatedAt": "2026-04-10T19:00:57.383Z",
+  "rankingSignalMode": "full_hg_columns",
+  "poolSize": 100,
+  "searcherCount": 20,
+  "coverageTable": {
+    "totalProfiles": 676,
+    "profilesWithAnyBioText": 676,
+    "pctAtLeastOneTag_personalityTraits": 32.25,
+    "pctAtLeastOneTag_lifestyleSignals": 2.22,
+    "pctAtLeastOneTag_interestTags": 4.14,
+    "pctAtLeastOneTag_anyFamily": 37.72
+  },
+  "tagDistribution": {
+    "personalityTraits": {
+      "self": {
+        "honesty_integrity": 5,
+        "humor_playful": 74
+      },
+      "partner": {
+        "honesty_integrity": 147,
+        "humor_playful": 1
+      }
+    },
+    "lifestyleSignals": {
+      "self": {
+        "athletic_swimming": 1,
+        "homebody": 3,
+        "outdoors_nature": 7,
+        "social_friends": 3
+      },
+      "partner": {
+        "outdoors_nature": 3
+      }
+    },
+    "interestTags": {
+      "self": {
+        "film": 2,
+        "music": 25
+      },
+      "partner": {
+        "music": 1
+      }
+    }
+  },
+  "unmapped": {
+    "profileLevel_pctNoPersonalityAmongBio": 67.75,
+    "profileLevel_pctNoLifestyleAmongBio": 97.78,
+    "profileLevel_pctNoInterestAmongBio": 95.86,
+    "selfScope_pctUnmapped_personality": 88.31,
+    "selfScope_pctUnmapped_lifestyle": 97.93,
+    "selfScope_pctUnmapped_interest": 96.01,
+    "partnerScope_pctUnmapped_personality": 78.01,
+    "partnerScope_pctUnmapped_lifestyle": 99.55,
+    "partnerScope_pctUnmapped_interest": 99.85
+  },
+  "selfVsPartnerNote": "Tag counts are occurrences per scope (one profile can contribute to both self and partner columns).",
+  "ranking": {
+    "orderedTop5Changed_count": 4,
+    "orderedTop5Changed_pctOfSearchers": 20,
+    "top5SetChanged_count": 3,
+    "top5SetChanged_pctOfSearchers": 15,
+    "rank1CandidateChanged_count": 1,
+    "rank1CandidateChanged_pctOfSearchers": 5,
+    "comparisons": [
+      {
+        "searcherId": "1",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "3",
+          "gen_20260306_0008"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "3",
+          "gen_20260306_0008"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720809,
+        "rank1ScoreAfter": 5.720809,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "10",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "46",
+          "60"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "46",
+          "60"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 22.088614,
+        "rank1ScoreAfter": 22.088614,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      },
+      {
+        "searcherId": "100",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0010",
+          "32"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0010",
+          "32"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720633,
+        "rank1ScoreAfter": 5.720633,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "11",
+        "top5Before": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "37",
+          "gen_20260306_0008"
+        ],
+        "top5After": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "37",
+          "gen_20260306_0008"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720988,
+        "rank1ScoreAfter": 5.720988,
+        "rank1IdBefore": "gen_20260306_0006",
+        "rank1IdAfter": "gen_20260306_0006"
+      },
+      {
+        "searcherId": "111111111",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0009",
+          "32",
+          "4"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0009",
+          "32",
+          "4"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720961,
+        "rank1ScoreAfter": 5.720961,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "12",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "84",
+          "46"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "84",
+          "46"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 22.08856,
+        "rank1ScoreAfter": 22.08856,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      },
+      {
+        "searcherId": "12345",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "46",
+          "60"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "46",
+          "60"
+        ],
+        "identicalOrdered": false,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 22.088522,
+        "rank1ScoreAfter": 24.088261,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "13",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0009",
+          "60",
+          "84"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0009",
+          "60",
+          "84"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 22.08896,
+        "rank1ScoreAfter": 22.08896,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "14",
+        "top5Before": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0008",
+          "gen_20260306_0001"
+        ],
+        "top5After": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0008",
+          "gen_20260306_0001"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720763,
+        "rank1ScoreAfter": 5.720763,
+        "rank1IdBefore": "gen_20260306_0006",
+        "rank1IdAfter": "gen_20260306_0006"
+      },
+      {
+        "searcherId": "15",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "49",
+          "47"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "49",
+          "47"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 19.888917,
+        "rank1ScoreAfter": 19.888917,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      },
+      {
+        "searcherId": "16",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0001",
+          "gen_20260306_0002"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0001",
+          "gen_20260306_0002"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720548,
+        "rank1ScoreAfter": 5.720548,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      },
+      {
+        "searcherId": "17",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "3",
+          "37"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "3",
+          "37"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 24.288407,
+        "rank1ScoreAfter": 24.288407,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      },
+      {
+        "searcherId": "18",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0009",
+          "36",
+          "37"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0009",
+          "84",
+          "36"
+        ],
+        "identicalOrdered": false,
+        "sameSet": false,
+        "jaccardTop5": 0.6667,
+        "rank1ScoreBefore": 5.720825,
+        "rank1ScoreAfter": 5.720825,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "19",
+        "top5Before": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "49",
+          "47"
+        ],
+        "top5After": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "49",
+          "47"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720452,
+        "rank1ScoreAfter": 5.720452,
+        "rank1IdBefore": "gen_20260306_0006",
+        "rank1IdAfter": "gen_20260306_0006"
+      },
+      {
+        "searcherId": "2",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "37",
+          "gen_20260306_0001"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "37",
+          "gen_20260306_0001"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 22.0886,
+        "rank1ScoreAfter": 22.0886,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "20",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0008",
+          "4"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0004",
+          "gen_20260306_0006",
+          "gen_20260306_0008",
+          "4"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720905,
+        "rank1ScoreAfter": 5.720905,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      },
+      {
+        "searcherId": "21",
+        "top5Before": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "36",
+          "3"
+        ],
+        "top5After": [
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "36",
+          "3"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 5.720745,
+        "rank1ScoreAfter": 5.720745,
+        "rank1IdBefore": "gen_20260306_0004",
+        "rank1IdAfter": "gen_20260306_0004"
+      },
+      {
+        "searcherId": "22",
+        "top5Before": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "47",
+          "gen_20260306_0001"
+        ],
+        "top5After": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "84",
+          "47"
+        ],
+        "identicalOrdered": false,
+        "sameSet": false,
+        "jaccardTop5": 0.6667,
+        "rank1ScoreBefore": 5.720482,
+        "rank1ScoreAfter": 5.720482,
+        "rank1IdBefore": "gen_20260306_0006",
+        "rank1IdAfter": "gen_20260306_0006"
+      },
+      {
+        "searcherId": "23",
+        "top5Before": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "3",
+          "37"
+        ],
+        "top5After": [
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0009",
+          "3",
+          "37"
+        ],
+        "identicalOrdered": true,
+        "sameSet": true,
+        "jaccardTop5": 1,
+        "rank1ScoreBefore": 24.288717,
+        "rank1ScoreAfter": 24.288717,
+        "rank1IdBefore": "gen_20260306_0006",
+        "rank1IdAfter": "gen_20260306_0006"
+      },
+      {
+        "searcherId": "24",
+        "top5Before": [
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "gen_20260306_0010",
+          "gen_20260306_0008"
+        ],
+        "top5After": [
+          "gen_20260306_0009",
+          "gen_20260306_0006",
+          "gen_20260306_0004",
+          "37",
+          "gen_20260306_0010"
+        ],
+        "identicalOrdered": false,
+        "sameSet": false,
+        "jaccardTop5": 0.6667,
+        "rank1ScoreBefore": 5.720853,
+        "rank1ScoreAfter": 5.720853,
+        "rank1IdBefore": "gen_20260306_0009",
+        "rank1IdAfter": "gen_20260306_0009"
+      }
+    ]
+  }
+}

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_AUTO = 'http://localhost:3001/api/v1/matches/auto';
-const API_REBUILD = 'http://localhost:3001/api/v1/matches/rebuild';
+import { apiUrl } from '@/lib/api-base';
+
+const API_AUTO = apiUrl('/api/v1/matches/auto');
+const API_REBUILD = apiUrl('/api/v1/matches/rebuild');
 
 interface WhyTopEntry {
   key: string;
@@ -23,8 +25,7 @@ interface MatchIndexItem {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   coverage: number;
   frictionRisk: number;
   whyTop: WhyTopEntry[];
@@ -200,7 +201,7 @@ export default function AutoMatchesPage() {
                         <span className="font-medium">{item.b.name}</span>
                       </td>
                       <td className="p-3 font-medium tabular-nums">
-                        {item.finalScore ?? item.overall}
+                        {item.finalScore}
                       </td>
                       <td className="max-w-[240px] p-3 text-zinc-600 dark:text-zinc-400">
                         {formatWhy(item)}

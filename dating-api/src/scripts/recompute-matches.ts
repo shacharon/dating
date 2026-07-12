@@ -11,8 +11,9 @@
 
 import { readdir, readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ProfileJsonPayload } from '../profiles/profiles-json.service';
+import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type { MatchRecordDto } from '../matches/match.types';
+import { resolveEngineFinalScore } from '../matches/match-score.util';
 import { recomputeAllMatches, RECOMPUTE_POLICY_VERSION } from '../engine/recompute';
 
 const PROFILES_DIR = process.env.PROFILES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'profiles');
@@ -88,9 +89,12 @@ async function loadExistingMatchesAverage(): Promise<{ count: number; avgScore: 
     try {
       const raw = await readFile(join(MATCHES_DIR, file), 'utf8');
       const parsed = JSON.parse(raw) as unknown;
-      if (parsed && typeof parsed === 'object' && 'overall' in parsed) {
-        const r = parsed as MatchRecordDto;
-        const score = r.finalScore ?? r.overall;
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        ('finalScore' in parsed || 'overall' in parsed)
+      ) {
+        const score = resolveEngineFinalScore(parsed as MatchRecordDto);
         sum += score;
         count++;
       }
@@ -169,7 +173,6 @@ async function main(): Promise<void> {
       bId: r.userB,
       a: { id: profileA.id, name: profileA.name },
       b: { id: profileB.id, name: profileB.name },
-      overall: r.finalScore,
       createdAt: now,
       updatedAt: now,
       aToB: r.aToB,
@@ -194,6 +197,7 @@ async function main(): Promise<void> {
       dealbreakers: r.dealbreakers,
       balance: r.balance,
       debug: r.debug,
+      explainability: r.explainability,
     };
 
     await saveMatch(record);
@@ -241,7 +245,7 @@ async function main(): Promise<void> {
         rawScore: r.rawScore,
         coverageFactor: r.coverageFactor,
         friction: r.friction,
-        tier: r.balance?.tier ?? null,
+        tier: null,
         dealbreakers: r.dealbreakers?.length ? r.dealbreakers.map((d) => d.code ?? d) : [],
       }),
     );

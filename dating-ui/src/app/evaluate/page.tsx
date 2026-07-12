@@ -1,9 +1,16 @@
 'use client';
 
+import {
+  emitProductLog,
+  getObservabilityRoute,
+} from '@/lib/observability/product-logger';
 import { useState } from 'react';
+import { ChipsSection, type ChipsViewModel } from '../components/chips-section';
+import { getApiBase } from '@/lib/api-base';
 
-const API_PROFILES_EVALUATE_URL =
-  'http://localhost:3001/api/v1/profiles/evaluate';
+const API_BASE = getApiBase();
+const API_PROFILES_EVALUATE_URL = `${API_BASE}/api/v1/profiles/evaluate`;
+const API_PROFILES_ANALYZE_V2_BASE = `${API_BASE}/api/profiles`;
 
 const SECTIONS = [
   { id: 'aboutMe' as const, label: 'About me', placeholder: 'Describe yourself…' },
@@ -22,7 +29,10 @@ const SECTIONS = [
 interface ExtractionEvidenceItem {
   signal: string;
   quote: string;
+  reason?: string;
 }
+
+type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
 
 interface ExtractedSignals {
   domain: string;
@@ -31,6 +41,7 @@ interface ExtractedSignals {
   version: string;
   confidence: number;
   notes?: string;
+  domainStatus?: ExtractionDomainQualityStatus;
 }
 
 interface EvaluateBatchResult {
@@ -40,10 +51,29 @@ interface EvaluateBatchResult {
   display: { summary: string; insight: string };
 }
 
+interface AnalyzeV2Response {
+  chips?: ChipsViewModel;
+}
+
+const EMPTY_CHIPS: ChipsViewModel = {
+  attractionChips: [],
+  warningChips: [],
+  lifestyleChips: [],
+};
+
 type SectionId = (typeof SECTIONS)[number]['id'];
 
 function formatSignalKey(key: string): string {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
+}
+
+function formatDomainConfidence(s: ExtractedSignals): string {
+  if (s.domainStatus === 'LOW_DATA' || s.domainStatus === 'UNRELIABLE') {
+    return 'Insufficient data';
+  }
+  const nonNull = Object.values(s.signals).filter((v) => v != null).length;
+  if (!s.domainStatus && nonNull < 2) return 'Insufficient data';
+  return `${(s.confidence * 100).toFixed(0)}%`;
 }
 
 export default function EvaluatePage() {
@@ -56,6 +86,7 @@ export default function EvaluatePage() {
   const [error, setError] = useState<string | null>(null);
   const [savedProfileId, setSavedProfileId] = useState<string | null>(null);
   const [result, setResult] = useState<EvaluateBatchResult | null>(null);
+  const [chips, setChips] = useState<ChipsViewModel>(EMPTY_CHIPS);
 
   const texts: Record<SectionId, string> = {
     aboutMe,
@@ -67,6 +98,7 @@ export default function EvaluatePage() {
     e.preventDefault();
     setError(null);
     setResult(null);
+    setChips(EMPTY_CHIPS);
 
     const trimmedName = name.trim();
     const trimmed: Record<SectionId, string> = {
@@ -135,6 +167,28 @@ export default function EvaluatePage() {
       setSavedProfileId(data.profileId);
       setProfileId(data.profileId);
       setResult(data.evaluation);
+
+      // Derived UI-facing layer only; read-only and non-persistent.
+      try {
+        const chipsRes = await fetch(
+          `${API_PROFILES_ANALYZE_V2_BASE}/${encodeURIComponent(data.profileId)}/analyze-v2`,
+          { method: 'POST' },
+        );
+        if (chipsRes.ok) {
+          const chipsData = (await chipsRes.json()) as AnalyzeV2Response;
+          emitProductLog({
+            level: 'trace',
+            route: getObservabilityRoute(),
+            message: 'evaluate: analyze-v2 chips loaded',
+            meta: { profileId: data.profileId },
+          });
+          setChips(chipsData?.chips ?? EMPTY_CHIPS);
+        } else {
+          setChips(EMPTY_CHIPS);
+        }
+      } catch {
+        setChips(EMPTY_CHIPS);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed.');
     } finally {
@@ -150,14 +204,17 @@ export default function EvaluatePage() {
     data: ExtractedSignals;
   }) {
     const entries = Object.entries(data.signals ?? {}).filter(
-      ([_, v]) => v != null,
+      ([, v]) => v != null,
     ) as [string, number][];
     return (
       <div className="space-y-3 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
           {title}
           <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-            confidence {(data.confidence * 100).toFixed(0)}%
+            {(() => {
+              const c = formatDomainConfidence(data);
+              return c.includes('%') ? `confidence ${c}` : c;
+            })()}
           </span>
         </h2>
         <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
@@ -178,13 +235,24 @@ export default function EvaluatePage() {
             <h3 className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Evidence
             </h3>
-            <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {data.evidence.map((e, i) => (
-                <li key={i}>
-                  <span className="font-medium">{formatSignalKey(e.signal)}:</span>{' '}
-                  &ldquo;{e.quote}&rdquo;
-                </li>
-              ))}
+            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {data.evidence.map((e, i) => {
+                const score = data.signals[e.signal];
+                return (
+                  <li key={i}>
+                    <span className="font-medium">{formatSignalKey(e.signal)}</span>
+                    {score != null && (
+                      <span className="text-zinc-500 dark:text-zinc-500"> / {score}</span>
+                    )}
+                    <span className="block">&ldquo;{e.quote}&rdquo;</span>
+                    {e.reason ? (
+                      <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                        {e.reason}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -298,6 +366,7 @@ export default function EvaluatePage() {
                 {result.display.insight}
               </p>
             </div>
+            <ChipsSection chips={chips} title="What stands out" />
             <SignalsCard title="Self" data={result.self} />
             <SignalsCard title="Partner" data={result.partner} />
             <SignalsCard title="Relationship" data={result.relationship} />

@@ -10,6 +10,10 @@ export interface CompleteJSONArgs<T> {
   maxTokens?: number;
   requestId: string;
   purpose: string;
+  /** Optional latency stage tag for focused diagnostics. */
+  latencyStage?: 'extraction_partner' | 'eval_traits';
+  /** Optional raw-input length for diagnostics (different from prompt wrapper length). */
+  inputTextLength?: number;
   /** If set, on truncation/empty output the client retries once with this system prompt and maxTokens. */
   secondAttemptOnTruncation?: { system: string; maxTokens: number };
 }

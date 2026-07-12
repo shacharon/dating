@@ -9,7 +9,6 @@ import { randomUUID } from 'node:crypto';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
-import { ProfilesJsonService } from './profiles-json.service';
 
 export interface ProfilesEvaluateBodyDto {
   id?: string;
@@ -33,7 +32,6 @@ function getErrorMessage(err: unknown): string {
 export class ProfilesController {
   constructor(
     private readonly evaluateService: EvaluateService,
-    private readonly profilesJson: ProfilesJsonService,
     private readonly logger: SimpleLogger,
   ) {}
 
@@ -74,28 +72,10 @@ export class ProfilesController {
       throw new ServiceUnavailableException(message);
     }
 
-    const evaluation = result.result;
-
-    try {
-      await this.profilesJson.save(id, {
-        id,
-        name,
-        texts: {
-          aboutMe,
-          aboutPartner,
-          aboutRelationship,
-        },
-        evaluation,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile to disk';
-      throw new ServiceUnavailableException(message);
-    }
-
     return {
       ok: true,
       profileId: id,
-      evaluation,
+      evaluation: result.result,
     };
   }
 }

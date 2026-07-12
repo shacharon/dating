@@ -1,0 +1,351 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum UserProfileStatus {
+  DRAFT
+  SUBMITTED
+  ANALYZING
+  ANALYZED
+  FAILED
+}
+
+enum UserProfileOnboardingStep {
+  BASIC
+  TEXTS
+  COMPLETED
+}
+
+enum ProfileGender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum UserProfilePhotoStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED_FOR_REVIEW
+}
+
+enum MatchActionType {
+  LIKE
+  PASS
+  BLOCK
+}
+
+enum MutualMatchStatus {
+  ACTIVE
+  UNMATCHED
+}
+
+enum MessageStatus {
+  SENT
+  DELETED
+}
+
+model User {
+  id          String     @id @default(cuid())
+  email       String     @unique
+  googleId    String     @unique
+  displayName String?
+  avatarUrl   String?
+  status                      UserStatus @default(ACTIVE)
+  emailNotificationsEnabled   Boolean    @default(true)
+  inAppNotificationsEnabled   Boolean    @default(true)
+  lastLoginAt                 DateTime?
+  deletedAt                   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  referredByUserId String?
+  referredBy       User?  @relation("UserReferrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referrals        User[] @relation("UserReferrals")
+
+  profile  UserProfile?
+  sessions UserSession[]
+  matchActionsAsActor  MatchAction[] @relation("MatchActionsByActor")
+  matchActionsAsTarget MatchAction[] @relation("MatchActionsByTarget")
+  mutualMatchesAsUser1 MutualMatch[] @relation("MutualMatchUser1")
+  mutualMatchesAsUser2 MutualMatch[] @relation("MutualMatchUser2")
+  messages              Message[]
+  reportsAsReporter     UserReport[] @relation("ReportsByReporter")
+  reportsAsReported     UserReport[] @relation("ReportsByReported")
+  matchFeedbacks        MatchFeedback[]
+
+  @@index([deletedAt])
+  @@index([referredByUserId])
+}
+
+model UserProfile {
+  id                    String                    @id @default(cuid())
+  userId                String                    @unique
+  user                  User                      @relation(fields: [userId], references: [id])
+  name                  String                    @default("")
+  nickname              String?                   @unique
+  status                UserProfileStatus         @default(DRAFT)
+  onboardingStep        UserProfileOnboardingStep @default(BASIC)
+  onboardingCompletedAt DateTime?
+  aboutMe               String?
+  aboutPartner          String?
+  aboutRelationship     String?
+  birthDate             DateTime?
+  gender                ProfileGender
+  desiredPartnerGenders Json?
+  city                  String?
+  country               String?
+  locationLabel         String?
+  submittedAt           DateTime?
+  analyzedAt            DateTime?
+  lastAnalysisError     String?
+
+  // ── Holy Grail structured facts (self) ─────────────────────────────────────
+  childrenStatus   String?
+  wantsChildren    String?
+  smokingFrequency String?
+  alcoholUse       String?
+  education        String?
+  religion         String?
+
+  // Partner preference scalars/arrays live on UserProfilePreference (Phase F).
+
+  // DB-first searchable fields (populated via dual-write in MeProfileAnalysisService; write-only cache).
+  // Semantic source of truth: UserProfileEvaluation.evaluationJson. Engine/HG reads use evaluationJson only.
+  interestsTop      String[] @default([])
+  sigEmotionalDepth Int?
+  sigLifestylePace  Int?
+  sigConflictStyle  Int?
+  sigIndependence   Int?
+  sigSocialBattery  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  evaluations UserProfileEvaluation[]
+  signals     UserProfileSignal[]
+  interests   UserProfileInterest[]
+  photos                 UserProfilePhoto[]
+  preference             UserProfilePreference?
+  matchFeedbacksReceived MatchFeedback[]
+
+  @@index([status, gender, birthDate])
+  @@index([status, gender, city])
+  @@index([status, analyzedAt(sort: Desc)])
+  @@index([status, userId])
+}
+
+model UserProfileSignal {
+  id          String      @id @default(cuid())
+  profileId   String
+  profile     UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  signalKey   String
+  signalValue Int
+  evalVersion String
+  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime    @default(now())
+
+  @@unique([profileId, signalKey])
+  @@index([profileId])
+  @@index([signalKey, signalValue])
+}
+
+model UserProfileInterest {
+  id          String      @id @default(cuid())
+  profileId   String
+  profile     UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  tag         String
+  rank        Int         @default(0)
+  source      String
+  evalVersion String
+  createdAt   DateTime    @default(now())
+
+  @@unique([profileId, tag])
+  @@index([profileId, rank])
+  @@index([tag])
+}
+
+model UserProfilePreference {
+  id                     String      @id @default(cuid())
+  profileId              String      @unique
+  profile                UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  partnerAgeMin          Int?
+  partnerAgeMax          Int?
+  maxDistanceKm          Int?
+  acceptedPartnerGenders String[]    @default([])
+  updatedAt              DateTime    @updatedAt
+}
+
+/**
+ * Append-safe analysis output for a UserProfile.
+ * One row is created per successful analysis run; multiple rows per profile are allowed.
+ * Latest-evaluation rule: ORDER BY createdAt DESC LIMIT 1.
+ */
+model UserProfileEvaluation {
+  id             String      @id @default(cuid())
+  profileId      String
+  profile        UserProfile @relation(fields: [profileId], references: [id])
+  version        String
+  evaluationJson Json
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId, createdAt(sort: Desc)])
+}
+
+model UserProfilePhoto {
+  id                   String                 @id @default(cuid())
+  profileId            String
+  profile              UserProfile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  storageKey           String
+  originalFileName     String?
+  mimeType             String
+  sizeBytes            Int
+  position             Int
+  isPrimary            Boolean                @default(false)
+  status               UserProfilePhotoStatus @default(PENDING)
+  moderationProvider   String?
+  moderationResultJson Json?
+  rejectionReason      String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@unique([profileId, position])
+  @@index([profileId])
+  @@index([status, createdAt])
+}
+
+model MatchAction {
+  id                      String          @id @default(cuid())
+  actorUserId             String
+  actor                   User            @relation("MatchActionsByActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  targetUserId            String
+  target                  User            @relation("MatchActionsByTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetProfileIdSnapshot String
+  action                  MatchActionType
+  createdAt               DateTime        @default(now())
+
+  @@unique([actorUserId, targetUserId])
+  @@index([actorUserId, action])
+  @@index([targetUserId, action])
+}
+
+model MutualMatch {
+  id                String            @id @default(cuid())
+  userId1           String
+  user1             User              @relation("MutualMatchUser1", fields: [userId1], references: [id], onDelete: Cascade)
+  userId2           String
+  user2             User              @relation("MutualMatchUser2", fields: [userId2], references: [id], onDelete: Cascade)
+  createdAt         DateTime          @default(now())
+  status            MutualMatchStatus @default(ACTIVE)
+  unmatchedAt       DateTime?
+  unmatchedByUserId String?
+  user1LastReadAt   DateTime?
+  user2LastReadAt   DateTime?
+  messages          Message[]
+
+  @@unique([userId1, userId2])
+  @@index([userId1, status])
+  @@index([userId2, status])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   MutualMatch   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text           String        @db.Text
+  createdAt      DateTime      @default(now())
+  status         MessageStatus @default(SENT)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+enum UserReportReason {
+  HARASSMENT
+  SPAM
+  FAKE_PROFILE
+  INAPPROPRIATE_CONTENT
+  OTHER
+}
+
+enum UserReportStatus {
+  OPEN
+  DISMISSED
+  ACTION_TAKEN
+}
+
+enum UserReportContextType {
+  MATCH_PROFILE
+  CONVERSATION
+}
+
+model UserReport {
+  id             String                @id @default(cuid())
+  reporterUserId String
+  reporter       User                  @relation("ReportsByReporter", fields: [reporterUserId], references: [id])
+  reportedUserId String
+  reported       User                  @relation("ReportsByReported", fields: [reportedUserId], references: [id])
+  reason         UserReportReason
+  details        String?               @db.VarChar(1000)
+  contextType    UserReportContextType
+  contextId      String
+  status         UserReportStatus      @default(OPEN)
+  opsNote        String?               @db.VarChar(500)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reportedUserId, status])
+  @@index([reporterUserId, reportedUserId, reason, createdAt])
+}
+
+enum MatchFeedbackSentiment {
+  POSITIVE
+  NEGATIVE
+}
+
+model MatchFeedback {
+  id             String                 @id @default(cuid())
+  userId         String
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchProfileId String
+  matchProfile   UserProfile            @relation(fields: [matchProfileId], references: [id], onDelete: Cascade)
+  sentiment      MatchFeedbackSentiment
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@unique([userId, matchProfileId])
+  @@index([userId, createdAt])
+  @@index([matchProfileId])
+}
+
+model UserSession {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  sessionTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastSeenAt       DateTime?
+  ip               String?
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}

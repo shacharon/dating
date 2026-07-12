@@ -4,10 +4,7 @@
  */
 
 import type { UserId } from '../../../domain/users/user.types';
-import type {
-  MatchId,
-  MatchRecord,
-} from '../../../domain/matches/match.types';
+import type { MatchId, MatchRecord } from '../../../domain/matches/match.types';
 import type { MatchesRepository } from '../../../domain/repositories/matches.repository';
 import { nextMatchId, now } from './repo.utils';
 
@@ -27,9 +24,7 @@ export class InMemoryMatchesRepository implements MatchesRepository {
     offset?: number,
   ): Promise<MatchRecord[]> {
     const all = Array.from(this.matchesById.values()).filter(
-      (m) =>
-        m.pair.selfId === userId ||
-        m.pair.partnerId === userId,
+      (m) => m.pair.selfId === userId || m.pair.partnerId === userId,
     );
 
     // Stable deterministic order by createdAt then id.
@@ -51,15 +46,15 @@ export class InMemoryMatchesRepository implements MatchesRepository {
     const id: MatchId = record.id ?? nextMatchId();
 
     const createdAt = isInsert
-      ? record.createdAt ?? now()
-      : existing?.createdAt ?? record.createdAt ?? now();
+      ? (record.createdAt ?? now())
+      : (existing?.createdAt ?? record.createdAt ?? now());
 
     const updatedAt =
       isInsert && record.updatedAt
         ? record.updatedAt
         : !isInsert
-        ? record.updatedAt ?? now()
-        : undefined;
+          ? (record.updatedAt ?? now())
+          : undefined;
 
     const stored: StoredMatch = {
       ...record,
@@ -77,4 +72,3 @@ export class InMemoryMatchesRepository implements MatchesRepository {
     return existed;
   }
 }
-

@@ -13,7 +13,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import type { EvaluateBatchResult } from '../src/evaluate/evaluate.service';
 import { EvaluateService } from '../src/evaluate/evaluate.service';
-import { ProfilesJsonService } from '../src/profiles/profiles-json.service';
+import { LegacyBackendAdapter } from '../src/legacy/legacy-backend.adapter';
 import { SHADOW_SIGNAL_KEYS } from '../src/extraction/extracted-signals.interface';
 import type { ExtractedSignals } from '../src/extraction/extracted-signals.interface';
 import type { ProfileJsonPayload } from '../src/profiles/profiles-json.service';
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
   const evaluateService = app.get(EvaluateService);
-  const profilesJson = app.get(ProfilesJsonService);
+  const profilesJson = app.get(LegacyBackendAdapter).profilesJson;
 
   let processed = 0;
   let failed = 0;

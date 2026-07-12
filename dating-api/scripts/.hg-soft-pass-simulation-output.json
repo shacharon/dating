@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "pool": "same as hg-validation-report",
+    "searchers": [
+      "synthetic-en-001",
+      "synthetic-en-002",
+      "synthetic-en-003",
+      "synthetic-en-004",
+      "synthetic-en-005"
+    ],
+    "evaluatedAtIso": "2026-04-10T14:50:57.685Z",
+    "totalDirectedPairEvaluations": 990
+  },
+  "policy": {
+    "scope": "Holy Grail Layer 3 hard eligibility only (not ranking).",
+    "age": "Hard PASS/FAIL/SKIPPED only — no SOFT_PASS.",
+    "religion": "Hard PASS/FAIL/SKIPPED only — no SOFT_PASS.",
+    "alcohol": {
+      "matrix": "Production PASS/FAIL matrix; WITHHELD and missing → FAIL.",
+      "softPass": "NONE_ONLY × partner RARE: SOFT_PASS only when holyGrailDeterministicHalfPass(ALCOHOL_NONE_ONLY_RARE, searcherProfileId, counterpartyProfileId) is true (~50% of ordered pairs); reason ALCOHOL_NONE_ONLY_RARE_SOFT. Otherwise FAIL.",
+      "excluded": "No SOFT_PASS for MODERATE_OK×FREQUENT, PREFER_NOT_TO_SAY, missing, or any cell other than NONE_ONLY×RARE."
+    },
+    "partnerWantsChildren": {
+      "softPass": "MUST_WANT × partner UNSURE → SOFT_PASS; reason WANTS_CHILDREN_MUST_WANT_UNSURE_SOFT; sets children_unsure.",
+      "hard": "All other combinations use hard PASS/FAIL/SKIPPED (including MUST_NOT_WANT × UNSURE → FAIL)."
+    }
+  },
+  "pairStats": {
+    "mutualPassPairs": 95,
+    "orderedPairEvaluationsConsidered": 495
+  },
+  "perDimension": {
+    "GENDER": {
+      "PASS": 526,
+      "FAIL": 464,
+      "SOFT_PASS": 0,
+      "SKIPPED": 0,
+      "totalDirected": 990,
+      "activeDirected": 990,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "AGE": {
+      "PASS": 198,
+      "FAIL": 275,
+      "SOFT_PASS": 0,
+      "SKIPPED": 517,
+      "totalDirected": 990,
+      "activeDirected": 473,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "RELIGION": {
+      "PASS": 325,
+      "FAIL": 98,
+      "SOFT_PASS": 0,
+      "SKIPPED": 567,
+      "totalDirected": 990,
+      "activeDirected": 423,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "EDUCATION": {
+      "PASS": 300,
+      "FAIL": 0,
+      "SOFT_PASS": 0,
+      "SKIPPED": 690,
+      "totalDirected": 990,
+      "activeDirected": 300,
+      "pctFailOrSoftThatAreSoftPass": null
+    },
+    "SMOKING": {
+      "PASS": 557,
+      "FAIL": 4,
+      "SOFT_PASS": 0,
+      "SKIPPED": 429,
+      "totalDirected": 990,
+      "activeDirected": 561,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "ALCOHOL": {
+      "PASS": 200,
+      "FAIL": 53,
+      "SOFT_PASS": 52,
+      "SKIPPED": 685,
+      "totalDirected": 990,
+      "activeDirected": 305,
+      "pctFailOrSoftThatAreSoftPass": 49.5
+    },
+    "PARTNER_HAS_CHILDREN": {
+      "PASS": 453,
+      "FAIL": 48,
+      "SOFT_PASS": 0,
+      "SKIPPED": 489,
+      "totalDirected": 990,
+      "activeDirected": 501,
+      "pctFailOrSoftThatAreSoftPass": 0
+    },
+    "PARTNER_WANTS_CHILDREN": {
+      "PASS": 0,
+      "FAIL": 100,
+      "SOFT_PASS": 135,
+      "SKIPPED": 755,
+      "totalDirected": 990,
+      "activeDirected": 235,
+      "pctFailOrSoftThatAreSoftPass": 57.4
+    },
+    "PROXIMITY": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SOFT_PASS": 0,
+      "SKIPPED": 990,
+      "totalDirected": 990,
+      "activeDirected": 0,
+      "pctFailOrSoftThatAreSoftPass": null
+    }
+  },
+  "versusPermissiveExperimentSummary": {
+    "note": "Earlier experiments used simulated AGE buffer, RELIGION SOFT_PASS, 100% ALCOHOL matrix softening, and/or MUST_NOT×UNSURE softening — all removed from production and from this script.",
+    "alcoholVersusUltraPermissive": "Ultra treated every NONE_ONLY×RARE matrix FAIL as SOFT_PASS (~100% of those fails). Locked policy uses deterministic partial softening (~50% of ordered searcher→counterparty pairs).",
+    "partnerWantsChildrenVersusUltraPermissive": "Ultra softened all hard fails on this dimension. Locked policy: only MUST_WANT×UNSURE is SOFT_PASS; MUST_NOT×UNSURE remains FAIL."
+  }
+}

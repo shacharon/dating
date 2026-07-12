@@ -3,6 +3,7 @@
  * Determines when to cap non-null signals and confidence based on input text length/word count.
  */
 
+import type { ExtractionEvidenceItem } from './extracted-signals.interface';
 import { getTextStats } from './extraction-text-stats';
 
 /** Input is treated as sparse if under this character count (trimmed). */
@@ -42,12 +43,23 @@ export function isVerySparseInput(text: string): boolean {
  * Deterministic; no extra LLM call.
  */
 export function applySparseTextGuard(
-  data: { signals: Record<string, number | null>; evidence?: Array<{ signal: string; quote: string; note?: string }>; confidence: number },
+  data: {
+    signals: Record<string, number | null>;
+    evidence?: ExtractionEvidenceItem[];
+    confidence: number;
+  },
   inputText: string,
   signalKeys: readonly string[],
-): { signals: Record<string, number | null>; evidence: Array<{ signal: string; quote: string; note?: string }>; confidence: number } {
-  if (!isSparseInput(inputText)) return { ...data, evidence: data.evidence ?? [] };
-  const maxNonNull = isVerySparseInput(inputText) ? VERY_SPARSE_MAX_NON_NULL : SPARSE_MAX_NON_NULL;
+): {
+  signals: Record<string, number | null>;
+  evidence: ExtractionEvidenceItem[];
+  confidence: number;
+} {
+  if (!isSparseInput(inputText))
+    return { ...data, evidence: data.evidence ?? [] };
+  const maxNonNull = isVerySparseInput(inputText)
+    ? VERY_SPARSE_MAX_NON_NULL
+    : SPARSE_MAX_NON_NULL;
   const nonNullKeys = signalKeys.filter((k) => data.signals[k] != null);
   if (
     nonNullKeys.length <= maxNonNull &&

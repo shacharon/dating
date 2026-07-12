@@ -3,9 +3,27 @@
  * Formulas: compatibility, coverageFactor, frictionPenalty, raw, finalScore.
  */
 
-import { clamp, compatibility, finalScore, rawScore, FRICTION_SCALE } from './scoring';
-import { coverageFactor, coveragePercent } from './coverage';
+import {
+  clamp,
+  compatibility,
+  COMPATIBILITY_BLEND_WEIGHTS,
+  finalScore,
+  rawScore,
+  FRICTION_SCALE,
+} from './scoring';
+import { computeValuesAlignment } from '../compatibility/compatibility-score';
+import type { SignalKey, SignalValue, SignalsMap } from '../compatibility/compatibility-score';
+import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
+import { coverageFactor, coveragePercent, scoreCoverageFactor } from './coverage';
 import { frictionPenalty } from './friction';
+
+function fullMap(overrides: Partial<Record<SignalKey, SignalValue>>): SignalsMap {
+  const out: Record<string, SignalValue> = {};
+  for (const k of COMPATIBILITY_SIGNAL_KEYS) {
+    out[k] = overrides[k] ?? 5;
+  }
+  return out as SignalsMap;
+}
 
 describe('engine scoring', () => {
   describe('clamp', () => {
@@ -21,10 +39,34 @@ describe('engine scoring', () => {
   });
 
   describe('compatibility', () => {
-    it('0.35*A_to_B + 0.35*B_to_A + 0.25*relationshipFit + 0.05*valuesAlignment', () => {
+    it('COMPATIBILITY_BLEND_WEIGHTS sum to 1', () => {
+      const sum = Object.values(COMPATIBILITY_BLEND_WEIGHTS).reduce((a, b) => a + b, 0);
+      expect(sum).toBeCloseTo(1, 10);
+    });
+
+    it('0.30*A_to_B + 0.30*B_to_A + 0.25*relationshipFit + 0.15*valuesAlignment', () => {
       const c = compatibility(80, 80, 60, 70);
-      expect(c).toBe(0.35 * 80 + 0.35 * 80 + 0.25 * 60 + 0.05 * 70);
-      expect(c).toBe(74.5);
+      expect(c).toBe(
+        0.3 * 80 + 0.3 * 80 + 0.25 * 60 + 0.15 * 70,
+      );
+      expect(c).toBe(73.5);
+    });
+
+    it('tier1 spirituality gap lowers compatibility more than tier3-only gap', () => {
+      const dir = 70;
+      const rel = 60;
+      const tier1GapValues = computeValuesAlignment(
+        fullMap({ spirituality: 2 }),
+        fullMap({ spirituality: 9 }),
+      );
+      const tier3GapValues = computeValuesAlignment(
+        fullMap({ physicalPriority: 5 }),
+        fullMap({ physicalPriority: 2 }),
+      );
+      expect(tier3GapValues).toBeGreaterThan(tier1GapValues);
+      const compatTier1 = compatibility(dir, dir, rel, tier1GapValues);
+      const compatTier3 = compatibility(dir, dir, rel, tier3GapValues);
+      expect(compatTier1).toBeLessThan(compatTier3);
     });
   });
 
@@ -51,11 +93,39 @@ describe('engine scoring', () => {
     });
   });
 
+  describe('scoreCoverageFactor', () => {
+    it('is monotonic and gentler than previous low-coverage line', () => {
+      const p29 = scoreCoverageFactor(29);
+      const p36 = scoreCoverageFactor(36);
+      const p43 = scoreCoverageFactor(43);
+      const p50 = scoreCoverageFactor(50);
+      const p57 = scoreCoverageFactor(57);
+
+      // monotonic: more coverage should not reduce match score
+      expect(p29).toBeLessThanOrEqual(p36);
+      expect(p36).toBeLessThanOrEqual(p43);
+      expect(p43).toBeLessThanOrEqual(p50);
+      expect(p50).toBeLessThanOrEqual(p57);
+
+      // low coverage still penalizes score
+      expect(p29).toBeLessThan(1);
+      expect(p36).toBeLessThan(1);
+      expect(p43).toBeLessThan(1);
+
+      // but less aggressively than previous formula (0.88 + 0.12 * c)
+      const old = (c: number) => 0.88 + 0.12 * (c / 100);
+      expect(p29).toBeGreaterThan(old(29));
+      expect(p36).toBeGreaterThan(old(36));
+      expect(p43).toBeGreaterThan(old(43));
+    });
+  });
+
   describe('frictionPenalty', () => {
-    it('capped linear: Math.min(25, friction * 3)', () => {
+    it('capped linear with high-friction softening (friction>=4 => *0.9)', () => {
       expect(frictionPenalty(0)).toBe(0);
-      expect(frictionPenalty(7)).toBe(21);
-      expect(frictionPenalty(10)).toBe(25);
+      expect(frictionPenalty(3)).toBe(9);
+      expect(frictionPenalty(7)).toBeCloseTo(18.9, 10);
+      expect(frictionPenalty(10)).toBe(22.5);
     });
   });
 
@@ -93,9 +163,9 @@ describe('engine scoring', () => {
     const coveragePercentValue = 55; // coverageFactor = 0.7 + 0.3*0.55 = 0.865
     const frictionValue = 0;
 
-    it('compatibility ≈ 73–75', () => {
+    it('compatibility ≈ 73–74', () => {
       const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
-      expect(c).toBe(75);
+      expect(c).toBe(73.5);
       expect(c).toBeGreaterThanOrEqual(73);
     });
     it('coverageFactor = 0.865 when coveragePercent = 55', () => {
@@ -121,11 +191,11 @@ describe('engine scoring', () => {
     const coveragePercentValue = 70;
     const frictionValue = 7;
 
-    it('finalScore reduced by capped penalty (max 25), not zeroed', () => {
+    it('finalScore reduced by softened high-friction penalty, not zeroed', () => {
       const c = compatibility(aToB, bToA, relationshipFit, valuesAlignment);
       const cf = coverageFactor(coveragePercentValue);
       const fp = frictionPenalty(frictionValue);
-      expect(fp).toBe(21);
+      expect(fp).toBeCloseTo(18.9, 10);
       const raw = rawScore(c, cf, fp);
       const score = finalScore(raw);
       expect(score).toBeGreaterThanOrEqual(45);
@@ -161,13 +231,14 @@ describe('engine scoring', () => {
       expect(scoreCf).toBeCloseTo(0.8605, 2);
 
       const compat = compatibility(100, 100, 0, 0);
-      expect(compat).toBe(70);
+      expect(compat).toBe(60);
 
       const fp = frictionPenalty(0);
       const raw = rawScore(compat, scoreCf, fp);
       const score = finalScore(raw);
-      expect(score).toBeGreaterThan(59);
-      expect(score).toBeLessThan(62);
+      expect(score).toBeGreaterThan(50);
+      expect(score).toBeLessThan(55);
     });
   });
 });
+

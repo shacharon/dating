@@ -13,7 +13,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import type { EvaluateBatchResult } from '../src/evaluate/evaluate.service';
 import { EvaluateService } from '../src/evaluate/evaluate.service';
-import { ProfilesJsonService } from '../src/profiles/profiles-json.service';
+import { LegacyBackendAdapter } from '../src/legacy/legacy-backend.adapter';
 
 const ROOT = process.cwd();
 const COHORT_PATH = join(ROOT, 'data', 'pilot-cohort.json');
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
   const evaluateService = app.get(EvaluateService);
-  const profilesJson = app.get(ProfilesJsonService);
+  const profilesJson = app.get(LegacyBackendAdapter).profilesJson;
 
   let beforeSum = 0;
   let beforeCount = 0;

@@ -10,6 +10,23 @@ import type { LLMConfig } from '../llm.config';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_TOKENS = 4096;
 const OPENAI_DEBUG_RAW = process.env.OPENAI_DEBUG_RAW === '1';
+type LatencyStage = 'extraction_partner' | 'eval_traits';
+
+interface FetchTiming {
+  tOpenaiRequestSent: number;
+  tFirstByte: number;
+}
+
+interface StageLatencySnapshot {
+  stage: LatencyStage;
+  totalMs: number;
+  ttfbMs: number;
+  generationMs: number;
+  promptTokens: number;
+  completionTokens: number;
+  tokens: number;
+  inputSize: number;
+}
 
 /** Safe shape dump for raw SDK response: top-level keys + candidate field previews (no secrets, no full payload). */
 function summarizeOpenAIResponse(res: unknown): Record<string, unknown> {
@@ -44,14 +61,14 @@ function summarizeOpenAIResponse(res: unknown): Record<string, unknown> {
         ? o0.content
         : Array.isArray(o0.content)
           ? (o0.content as unknown[])
-            .map((p) =>
-              p &&
+              .map((p) =>
+                p &&
                 typeof p === 'object' &&
                 typeof (p as { text?: unknown }).text === 'string'
-                ? (p as { text: string }).text
-                : '',
-            )
-            .join('')
+                  ? (p as { text: string }).text
+                  : '',
+              )
+              .join('')
           : '';
     if (output0Text !== '') {
       shape.output0_content_text_preview = output0Text.slice(0, 120);
@@ -79,14 +96,14 @@ function summarizeOpenAIResponse(res: unknown): Record<string, unknown> {
             ? content
             : Array.isArray(content)
               ? (content as unknown[])
-                .map((p) =>
-                  p &&
+                  .map((p) =>
+                    p &&
                     typeof p === 'object' &&
                     typeof (p as { text?: unknown }).text === 'string'
-                    ? (p as { text: string }).text
-                    : '',
-                )
-                .join('')
+                      ? (p as { text: string }).text
+                      : '',
+                  )
+                  .join('')
               : '';
         shape.choices0_message_content_preview =
           typeof msgText === 'string' ? msgText.slice(0, 120) : msgText;
@@ -104,8 +121,8 @@ function contentToString(c: unknown): string {
     return c
       .map((p) =>
         p &&
-          typeof p === 'object' &&
-          typeof (p as { text?: unknown }).text === 'string'
+        typeof p === 'object' &&
+        typeof (p as { text?: unknown }).text === 'string'
           ? (p as { text: string }).text
           : '',
       )
@@ -157,14 +174,14 @@ export function extractTextFromOpenAIResponse(response: unknown): string {
       : {};
   const output0 =
     Array.isArray(obj.output) &&
-      obj.output.length > 0 &&
-      typeof obj.output[0] === 'object'
+    obj.output.length > 0 &&
+    typeof obj.output[0] === 'object'
       ? (obj.output[0] as Record<string, unknown>).content
       : undefined;
   const choice0 =
     Array.isArray(obj.choices) &&
-      obj.choices.length > 0 &&
-      typeof obj.choices[0] === 'object'
+    obj.choices.length > 0 &&
+    typeof obj.choices[0] === 'object'
       ? (obj.choices[0] as Record<string, unknown>)
       : undefined;
   const msg =
@@ -181,8 +198,8 @@ export function extractTextFromOpenAIResponse(response: unknown): string {
     | undefined;
   const dataChoices0 =
     Array.isArray(dataChoices) &&
-      dataChoices.length > 0 &&
-      typeof dataChoices[0] === 'object'
+    dataChoices.length > 0 &&
+    typeof dataChoices[0] === 'object'
       ? (dataChoices[0] as Record<string, unknown>)
       : undefined;
   const dataMsg =
@@ -203,6 +220,36 @@ export function extractTextFromOpenAIResponse(response: unknown): string {
     if (t.length > 0) return t;
   }
   return '';
+}
+
+/**
+ * Remove leading/trailing Markdown code fences so JSON.parse succeeds when models wrap output in ```json ... ```.
+ */
+function stripMarkdownCodeFences(text: string): string {
+  let s = text.trim();
+  if (!s) return s;
+  if (s.startsWith('```')) {
+    s = s.replace(/^```[a-zA-Z0-9_+-]*\s*\r?\n?/, '');
+    s = s.replace(/\r?\n?```\s*$/, '');
+  }
+  return s.trim();
+}
+
+/** Parse JSON from model text: strip fences, then parse; on failure, try substring between outermost { }. */
+function parseModelJsonText(rawText: string): unknown {
+  const s = stripMarkdownCodeFences(rawText || '');
+  if (!s) return {};
+  try {
+    return JSON.parse(s);
+  } catch (e) {
+    if (!(e instanceof SyntaxError)) throw e;
+    const i = s.indexOf('{');
+    const j = s.lastIndexOf('}');
+    if (i !== -1 && j > i) {
+      return JSON.parse(s.slice(i, j + 1));
+    }
+    throw e;
+  }
 }
 
 /** Debug log response shape and text preview (no keys, headers, or full payload). */
@@ -276,11 +323,41 @@ function debugLogResponse(
 export class OpenAIClient implements LLMClient {
   private readonly logger = new Logger(OpenAIClient.name);
   private readonly client: OpenAI;
+  private readonly fetchTimingByRequestId = new Map<string, FetchTiming>();
+  private readonly stageSnapshots = new Map<
+    LatencyStage,
+    StageLatencySnapshot
+  >();
 
   constructor(private readonly config: LLMConfig) {
+    const baseFetch: typeof fetch = (input, init) => fetch(input, init);
+    const instrumentedFetch = async (input: unknown, init?: unknown) => {
+      const requestHeaders = new Headers(
+        (init && typeof init === 'object' && 'headers' in init
+          ? (init as { headers?: HeadersInit }).headers
+          : undefined) ?? {},
+      );
+      const requestId =
+        requestHeaders.get('x-request-id') ??
+        requestHeaders.get('x-codex-request-id');
+      const sentAt = Date.now();
+      const response = await baseFetch(
+        input as Parameters<typeof fetch>[0],
+        init as Parameters<typeof fetch>[1],
+      );
+      const firstByteAt = Date.now();
+      if (requestId) {
+        this.fetchTimingByRequestId.set(requestId, {
+          tOpenaiRequestSent: sentAt,
+          tFirstByte: firstByteAt,
+        });
+      }
+      return response;
+    };
     this.client = new OpenAI({
       apiKey: config.openai.apiKey,
       baseURL: config.openai.baseURL,
+      fetch: instrumentedFetch as typeof fetch,
     });
   }
 
@@ -297,6 +374,8 @@ export class OpenAIClient implements LLMClient {
       maxTokens = DEFAULT_MAX_TOKENS,
       requestId,
       purpose,
+      latencyStage,
+      inputTextLength,
     } = args;
 
     const run = async (): Promise<CompleteJSONResult<T>> => {
@@ -316,7 +395,13 @@ export class OpenAIClient implements LLMClient {
             max_completion_tokens: maxTokens,
             // temperature omitted: this model only supports default (1).
           },
-          { signal: controller.signal },
+          {
+            signal: controller.signal,
+            headers: {
+              'x-request-id': requestId,
+              'x-codex-request-id': requestId,
+            },
+          },
         );
 
         clearTimeout(timeout);
@@ -327,19 +412,29 @@ export class OpenAIClient implements LLMClient {
           res && typeof res === 'object'
             ? (res as Record<string, unknown>)
             : undefined;
-        const choice0 = ro?.choices?.[0] as
-          | Record<string, unknown>
-          | undefined;
-        const co =
-          choice0 && typeof choice0 === 'object'
-            ? choice0
+        const choice0 = ro?.choices?.[0] as Record<string, unknown> | undefined;
+        const co = choice0 && typeof choice0 === 'object' ? choice0 : undefined;
+        const msg0 =
+          co?.message && typeof co.message === 'object'
+            ? (co.message as Record<string, unknown>)
             : undefined;
-        const msg0 = co?.message && typeof co.message === 'object' ? (co.message as Record<string, unknown>) : undefined;
         const toolCalls = msg0?.tool_calls;
-        const tool0 = Array.isArray(toolCalls) && toolCalls.length > 0 ? toolCalls[0] : undefined;
-        const to = tool0 && typeof tool0 === 'object' ? (tool0 as Record<string, unknown>) : undefined;
-        const func0 = to?.function && typeof to.function === 'object' ? (to.function as Record<string, unknown>) : undefined;
-        const fc = msg0?.function_call && typeof msg0.function_call === 'object' ? (msg0.function_call as Record<string, unknown>) : undefined;
+        const tool0 =
+          Array.isArray(toolCalls) && toolCalls.length > 0
+            ? toolCalls[0]
+            : undefined;
+        const to =
+          tool0 && typeof tool0 === 'object'
+            ? (tool0 as Record<string, unknown>)
+            : undefined;
+        const func0 =
+          to?.function && typeof to.function === 'object'
+            ? (to.function as Record<string, unknown>)
+            : undefined;
+        const fc =
+          msg0?.function_call && typeof msg0.function_call === 'object'
+            ? (msg0.function_call as Record<string, unknown>)
+            : undefined;
         const msgContent = msg0?.content;
         const shape = {
           topKeys: ro ? Object.keys(ro) : [],
@@ -359,7 +454,9 @@ export class OpenAIClient implements LLMClient {
               : undefined,
           function_call_keys: fc ? Object.keys(fc) : [],
           function_call_args_preview:
-            typeof fc?.arguments === 'string' ? fc.arguments.slice(0, 300) : undefined,
+            typeof fc?.arguments === 'string'
+              ? fc.arguments.slice(0, 300)
+              : undefined,
         };
         this.logger.log(
           JSON.stringify({
@@ -373,7 +470,7 @@ export class OpenAIClient implements LLMClient {
         //   }
         debugLogResponse(completion, requestId, purpose, this.logger);
         const rawText = extractTextFromOpenAIResponse(completion);
-        const value = schema.parse(JSON.parse(rawText || '{}'));
+        const value = schema.parse(parseModelJsonText(rawText));
         const usage = (completion as { usage?: unknown }).usage;
 
         return { value, rawText, usage };
@@ -396,7 +493,127 @@ export class OpenAIClient implements LLMClient {
           throw err;
         }
       }
-      const latencyMs = Date.now() - start;
+      const end = Date.now();
+      const latencyMs = end - start;
+      const usageObj = (result.usage as
+        | {
+            prompt_tokens?: unknown;
+            completion_tokens?: unknown;
+            total_tokens?: unknown;
+          }
+        | undefined) ?? {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+      };
+      const promptTokens =
+        typeof usageObj.prompt_tokens === 'number' ? usageObj.prompt_tokens : 0;
+      const completionTokens =
+        typeof usageObj.completion_tokens === 'number'
+          ? usageObj.completion_tokens
+          : 0;
+      const totalTokens =
+        typeof usageObj.total_tokens === 'number'
+          ? usageObj.total_tokens
+          : promptTokens + completionTokens;
+      const fetchTiming = this.fetchTimingByRequestId.get(requestId);
+      const tOpenaiRequestSent = fetchTiming?.tOpenaiRequestSent ?? start;
+      const tFirstByte = fetchTiming?.tFirstByte ?? end;
+      const ttfbMs = Math.max(0, tFirstByte - tOpenaiRequestSent);
+      const generationMs = Math.max(0, end - tFirstByte);
+      const stage = latencyStage;
+      const isTargetStage =
+        stage === 'extraction_partner' || stage === 'eval_traits';
+
+      if (isTargetStage) {
+        this.logger.log(
+          JSON.stringify({
+            event: 'llm_timing_breakdown',
+            stage,
+            requestId,
+            purpose,
+            model,
+            t_request_start: new Date(start).toISOString(),
+            t_openai_request_sent: new Date(tOpenaiRequestSent).toISOString(),
+            t_first_byte: new Date(tFirstByte).toISOString(),
+            t_response_end: new Date(end).toISOString(),
+            total_duration_ms: latencyMs,
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            input_text_length: inputTextLength ?? user.length,
+            system_prompt_length: system.length,
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        );
+        this.logger.log(
+          JSON.stringify({
+            event: 'llm_latency_breakdown',
+            stage,
+            totalMs: latencyMs,
+            ttfbMs,
+            generationMs,
+            tokens: totalTokens,
+            inputSize: inputTextLength ?? user.length,
+          }),
+        );
+
+        this.stageSnapshots.set(stage, {
+          stage,
+          totalMs: latencyMs,
+          ttfbMs,
+          generationMs,
+          promptTokens,
+          completionTokens,
+          tokens: totalTokens,
+          inputSize: inputTextLength ?? user.length,
+        });
+
+        const extraction = this.stageSnapshots.get('extraction_partner');
+        const traits = this.stageSnapshots.get('eval_traits');
+        if (extraction && traits) {
+          const largerPromptStage =
+            extraction.promptTokens >= traits.promptTokens
+              ? 'extraction_partner'
+              : 'eval_traits';
+          const longerGenerationStage =
+            extraction.generationMs >= traits.generationMs
+              ? 'extraction_partner'
+              : 'eval_traits';
+          const networkDelta = Math.abs(extraction.ttfbMs - traits.ttfbMs);
+          const generationDelta = Math.abs(
+            extraction.generationMs - traits.generationMs,
+          );
+          const promptDelta = Math.abs(
+            extraction.promptTokens - traits.promptTokens,
+          );
+          let bottleneck = 'mixed';
+          if (networkDelta > generationDelta && networkDelta > 250) {
+            bottleneck = 'network_or_upstream_queue';
+          } else if (
+            longerGenerationStage === largerPromptStage &&
+            promptDelta > 80
+          ) {
+            bottleneck = 'payload_size_or_model_compute';
+          } else if (generationDelta > 250) {
+            bottleneck = 'model_generation';
+          }
+
+          this.logger.log(
+            JSON.stringify({
+              event: 'llm_latency_comparison',
+              extraction_partner: extraction,
+              eval_traits: traits,
+              largerPromptStage,
+              longerServerProcessingStage: longerGenerationStage,
+              detectedDelaySource: bottleneck,
+            }),
+          );
+          this.stageSnapshots.clear();
+        }
+      }
+
+      this.fetchTimingByRequestId.delete(requestId);
       this.logger.log(
         `requestId=${requestId} purpose=${purpose} model=${model} provider=openai latencyMs=${latencyMs} ok=true`,
       );
@@ -406,6 +623,7 @@ export class OpenAIClient implements LLMClient {
       this.logger.log(
         `requestId=${requestId} purpose=${purpose} model=${model} provider=openai latencyMs=${latencyMs} ok=false`,
       );
+      this.fetchTimingByRequestId.delete(requestId);
       throw err;
     }
   }

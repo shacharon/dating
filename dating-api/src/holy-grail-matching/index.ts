@@ -1,0 +1,209 @@
+/**
+ * HOLY_GRAIL_MATCHING — deterministic stack above the LLM: map → evaluate → decision/audit (+ optional post-filter rank).
+ * LLM stays in extraction services. `HolyGrailMatchingModule` is wired from `app.module.ts`; legacy `MatchesModule` / `match-engine` remains separate until cutover.
+ * Eligibility SOFT_PASS rules: see `docs/HOLY_GRAIL_MATCHING.md` § “Locked Layer 3 policy” and `eligibility.evaluator.ts` docblock.
+ */
+
+export {
+  MatchingDimensionResults,
+  type MatchingDimensionResult,
+} from './matching-dimension-result';
+export {
+  HOLY_GRAIL_DIMENSION_KEYS,
+  type HolyGrailDimensionKey,
+} from './holy-grail-dimensions';
+export type {
+  HolyGrailExtractionArraysInput,
+  HolyGrailProfileMappingInput,
+  HolyGrailProfileSourceStub,
+  HolyGrailStructuredFactsInput,
+  HolyGrailStructuredFactsMapperOnly,
+  HolyGrailStructuredFactsMapperOnlyKey,
+  HolyGrailStructuredFactsPersisted,
+  HolyGrailStructuredFactsPersistedKey,
+  HolyGrailStructuredPreferencesInput,
+  HolyGrailStructuredPreferencesPersisted,
+  HolyGrailStructuredPreferencesPersistedKey,
+} from './profile-sources.types';
+export { mapProfileSourceToMatchingCanonical } from './profile-to-canonical.mapper';
+export {
+  evaluateHolyGrailDirectional,
+  mergeEffectiveMatchingPreferences,
+  resolveDimensionOutcome,
+  HOLY_GRAIL_DIMENSION_BLOCKING_POLICY,
+  emptyHolyGrailDimensionOutcomeCounts,
+  accumulateHolyGrailDimensionOutcomeCounts,
+  formatHolyGrailDimensionOutcomeCountsForLog,
+  type HolyGrailDirectionalEvaluationResult,
+  type HolyGrailDimensionEvaluation,
+  type HolyGrailEligibilityFlags,
+  type HolyGrailHardEligibilityStatus,
+  type HolyGrailDimensionBlockingPolicy,
+  type HolyGrailDimensionOutcomeCounts,
+} from './eligibility.evaluator';
+export {
+  evaluateDealbreakerDimensions,
+  foldDealbreakerIntoOverall,
+  resolveCounterpartyTraitPolarity,
+  selfFactHintsToPolarityMap,
+  type DealbreakerSelfFactPolarity,
+} from './dealbreaker-eligibility';
+export { adaptHolyGrailEvaluationToLegacyDimensionMap } from './evaluation-to-legacy-dimension-map';
+export { buildHolyGrailEligibilityAuditV1 } from './build-eligibility-audit';
+export {
+  applyDealbreakerGuardrails,
+  DEALBREAKER_HARD_MIN_CONFIDENCE,
+  DEALBREAKER_HARD_DISABLED_TAGS_ENV,
+  getCachedDealbreakerHardDisabledTags,
+  readDealbreakerHardDisabledTagsFromEnv,
+  resetDealbreakerHardDisabledTagsCacheForTests,
+  wouldDemoteHardDealbreaker,
+} from './dealbreaker-guardrails';
+export {
+  accumulateDealbreakerOutcomeCounts,
+  countDealbreakerClassificationVolume,
+  emptyDealbreakerTagOutcomeCounts,
+  formatDealbreakerClassificationVolumeForLog,
+  formatDealbreakerConfidenceForLog,
+  formatDealbreakerOutcomeCountsForLog,
+  formatKillSwitchTagsForLog,
+  hardConfidencePercentiles,
+} from './dealbreaker-telemetry';
+export type {
+  HolyGrailEligibilityAuditV1,
+  HolyGrailDimensionAuditRow,
+  HolyGrailDealbreakerAuditRow,
+} from './eligibility-audit.types';
+export {
+  HolyGrailPairDecisions,
+  type HolyGrailPairDecision,
+  type HolyGrailPairDecisionV1,
+} from './decision/holy-grail-decision.types';
+export { buildHolyGrailPairDecisionV1 } from './decision/build-holy-grail-pair-decision';
+export {
+  filterCandidatesByHardEligibility,
+  type PairwiseHardEligibilityFilterDebug,
+  type PairwiseHardEligibilityFilterResult,
+} from './pairwise-hard-eligibility-filter';
+export {
+  rankHolyGrailCandidatesAfterHardFilter,
+  type HolyGrailCandidateRankingDebug,
+  type HolyGrailCandidateRankingResult,
+  type RankedHolyGrailCandidate,
+} from './holy-grail-candidate-ranking';
+export {
+  computeHolyGrailFiveSignalRank,
+  computeHolyGrailRankingPurityRank,
+  deterministicRankingSpread,
+  type HolyGrailFiveSignalKey,
+  type HolyGrailRankBreakdownKey,
+  type HolyGrailRankSignalBreakdown,
+} from './holy-grail-five-signal-ranking';
+export { HolyGrailMatchingModule } from './holy-grail-matching.module';
+export {
+  HolyGrailRetrievalService,
+  type HolyGrailRetrievalDebugCounts,
+  type HolyGrailRetrievalResponse,
+} from './retrieval/holy-grail-retrieval.service';
+export {
+  HOLY_GRAIL_PROFILE_SOURCE_REPOSITORY,
+  type HolyGrailProfileSourceRepository,
+} from './retrieval/holy-grail-profile-source.repository';
+export { PrismaHolyGrailProfileSourceRepository } from './retrieval/prisma-holy-grail-profile-source.repository';
+export {
+  buildHolyGrailProfileMappingInputFromDbRow,
+  parseHolyGrailStructuredFactsFromJson,
+  parseHolyGrailStructuredPreferencesFromJson,
+} from './retrieval/holy-grail-structured-db-json';
+export {
+  holyGrailStructuredPreferencesPatchBodySchema,
+  parseHolyGrailStructuredPreferencesPatchBody,
+  type HolyGrailStructuredPreferencesPatchBody,
+} from './retrieval/holy-grail-preferences-patch.schema';
+export {
+  mapHolyGrailRetrievalResponseToWireDto,
+  mapMatchingCanonicalToRetrievalCandidateWireDto,
+  mapMatchingPreferencesToWireDto,
+  mapMatchingSearchOverridesToWireDto,
+  mapRankedHolyGrailCandidateToWireDto,
+  type HolyGrailMatchingPreferencesWireDto,
+  type HolyGrailMatchingSearchOverridesWireDto,
+  type HolyGrailStructuredPreferencesPersistedWireDto,
+  type HolyGrailRankedCandidateWireDto,
+  type HolyGrailRetrievalCandidateWireDto,
+  type HolyGrailRetrievalWireResponse,
+} from './retrieval/holy-grail-retrieval-wire.dto';
+export {
+  HolyGrailStructuredWriteError,
+  mergeHolyGrailStructuredFactsPatch,
+  mergeHolyGrailStructuredPreferencesPatch,
+} from './holy-grail-structured-write.merge';
+export {
+  HolyGrailStructuredWriteService,
+  type HolyGrailStructuredWriteRequest,
+} from './holy-grail-structured-write.service';
+export {
+  extractPersonalityTraitsFromFreeText,
+  PERSONALITY_TRAIT_TAGS,
+  PERSONALITY_TRAIT_TAG_SET,
+  PERSONALITY_TRAIT_V1_TAG_SET,
+  PERSONALITY_TRAIT_V2_TAG_SET,
+  type PersonalityTraitEvidenceHit,
+  type PersonalityTraitTag,
+  type PersonalityTraitsScopeExtraction,
+  type PersonalityTraitsTextExtraction,
+} from './personality-traits-text.extract';
+export {
+  extractLifestyleSignalsFromFreeText,
+  LIFESTYLE_SIGNAL_TAGS,
+  LIFESTYLE_SIGNAL_TAG_SET,
+  LIFESTYLE_SIGNAL_V1_TAG_SET,
+  LIFESTYLE_SIGNAL_V2_TAG_SET,
+  type LifestyleSignalEvidenceHit,
+  type LifestyleSignalTag,
+  type LifestyleSignalsScopeExtraction,
+  type LifestyleSignalsTextExtraction,
+} from './lifestyle-signals-text.extract';
+export {
+  extractInterestTagsV1FromFreeText,
+  INTEREST_TAGS,
+  INTEREST_TAGS_V1,
+  INTEREST_TAGS_V2_TAG_SET,
+  INTEREST_TAG_SET,
+  INTEREST_TAG_V1_SET,
+  type InterestTagEvidenceHit,
+  type InterestTag,
+  type InterestTagV1,
+  type InterestTagsScopeExtraction,
+  type InterestTagsTextExtraction,
+} from './interest-tags-text.extract';
+export {
+  ALL_DEALBREAKER_TAGS,
+  DEALBREAKER_ALIAS_TO_BASE,
+  DEALBREAKER_TAGS,
+  DEALBREAKER_TAG_SET,
+  DEALBREAKER_TAXONOMY_VERSION,
+  dealbreakerCategoryForTag,
+  isDealbreakerTag,
+  type DealbreakerCategory,
+  type DealbreakerClassification,
+  type DealbreakerTag,
+} from './dealbreaker-taxonomy';
+export {
+  extractDealbreakerSignalsFromFreeText,
+  extractSelfFactHintsFromFreeText,
+  isNegatedBefore,
+  type DealbreakerSignal,
+  type DealbreakerSignalsTextExtraction,
+  type EmittedDealbreakerClassification,
+  type SelfFactHint,
+  type SelfFactHintField,
+} from './dealbreaker-signals-text.extract';
+export {
+  buildHardBlockReasons,
+  isExistingHardBlockCandidate,
+  toHardBlockedDto,
+  type HardBlockDirection,
+  type HardBlockedDto,
+  type HardBlockReasonDto,
+} from './hard-block-reasons';

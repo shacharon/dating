@@ -1,8 +1,14 @@
-/**
- * Stored match record in data/matches/<matchId>.json
- */
+/** Match record used by API responses and in-memory indexing. */
 
 import type { CompareResultDto, MatchDebugDto } from './match-engine';
+
+export type { HolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
+
+/** Holy Grail children soft-pass flags (both directions on the stored pair a|b). */
+export interface ChildrenUnsureDirectionsDto {
+  readonly profile_a_to_profile_b: boolean;
+  readonly profile_b_to_profile_a: boolean;
+}
 
 export interface MatchRecordDto {
   matchId: string;
@@ -10,8 +16,6 @@ export interface MatchRecordDto {
   bId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** @deprecated Use finalScore instead. Kept for backward compatibility. */
-  overall: number;
   createdAt: string;
   updatedAt: string;
   aToB: number;
@@ -20,7 +24,8 @@ export interface MatchRecordDto {
   coverage: number;
   frictionRisk: number;
   compatibility?: number;
-  finalScore?: number;
+  valuesAlignment?: number;
+  finalScore: number;
   /** Raw score before clamp (from engine). */
   rawScore?: number;
   friction?: number;
@@ -41,22 +46,26 @@ export interface MatchRecordDto {
   balance?: CompareResultDto['balance'];
   /** Debug audit: baseScore, coverage, penalties, bonuses, finalScore breakdown. */
   debug?: MatchDebugDto;
+  /** Deterministic chips + short reason (omitted on older stored records). */
+  explainability?: CompareResultDto['explainability'];
+  /** User-facing recommendation layer (omitted on older stored records). */
+  recommendation?: CompareResultDto['recommendation'];
 }
 
 export interface MatchListItemDto {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** @deprecated Use finalScore instead. */
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   updatedAt: string;
-  /** Balance tier (GREEN / YELLOW / RED) for observability. */
-  tier: string | null;
   /** Dealbreakers applied to this match. */
   dealbreakers: Array<{ code: string; severity?: string }>;
   /** Deterministic one-line reason from score/dealbreakers. */
   shortReason: string;
+  /** Engine explainability (omitted on older records). */
+  explainability?: CompareResultDto['explainability'];
+  /** User-facing recommendation layer (omitted on older records). */
+  recommendation?: CompareResultDto['recommendation'];
   /** Optional score breakdown for observability. */
   scoreMetadata?: {
     coveragePercent?: number;
@@ -64,9 +73,25 @@ export interface MatchListItemDto {
     friction?: number;
     rawScore?: number;
   };
+  /** Present when list() enriches from HG structured JSON. */
+  children_unsure?: ChildrenUnsureDirectionsDto;
+  /** Engine score (unchanged). Same as finalScore when not enriched. */
+  engineFinalScore?: number;
+  /**
+   * Sort/display key for list surfaces; under `MATCH_RANKING_CONTRACT === HG_GATE_LEGACY_RANK_V1` this always
+   * equals `engineFinalScore` (legacy only — no HG penalty). See `match-ranking-contract.ts`.
+   */
+  rankingScore?: number;
+  /**
+   * Read-only HG diagnostics: all three omitted unless `tryPickHolyGrailMatchDiagnosticsDto` accepts the triple.
+   * Does not affect ordering or legacy scores.
+   */
+  readonly hgMutualPass?: boolean;
+  readonly hgOverallStatus?: string;
+  readonly hgRankScore?: number;
 }
 
-/** Index entry for data/matches/index.json (auto-generated). */
+/** In-memory index entry (auto-generated on rebuild). */
 export interface MatchIndexWhyTopEntry {
   key: string;
   text: string;
@@ -84,9 +109,7 @@ export interface MatchIndexItemDto {
   matchId: string;
   a: { id: string; name: string };
   b: { id: string; name: string };
-  /** @deprecated Use finalScore instead. */
-  overall: number;
-  finalScore?: number;
+  finalScore: number;
   coverage: number;
   frictionRisk: number;
   coveragePercent?: number;
@@ -99,8 +122,17 @@ export interface MatchIndexItemDto {
   rawScore?: number;
   whyTop: MatchIndexWhyTopEntry[];
   tensionsTop: MatchIndexTensionsTopEntry[];
-  tensionMatrix?: Array<{ id: string; name: string; penalty: number; explain: string }>;
+  tensionMatrix?: Array<{
+    id: string;
+    name: string;
+    penalty: number;
+    explain: string;
+  }>;
   updatedAt: string;
+  /** Same slice as list/detail when index is rebuilt from records. */
+  explainability?: CompareResultDto['explainability'];
+  /** User-facing recommendation layer (omitted on older records). */
+  recommendation?: CompareResultDto['recommendation'];
 }
 
 export interface MatchIndexDto {

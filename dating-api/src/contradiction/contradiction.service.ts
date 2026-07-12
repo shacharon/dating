@@ -54,7 +54,10 @@ export class ContradictionService {
     const userContent = `Profile A:\n"""\n${textA || '(empty)'}\n"""\n\nProfile B:\n"""\n${textB || '(empty)'}\n"""`;
 
     const requestId = randomUUID();
-    const { value } = await this.llm.completeJSON<{ flags: string[]; reasoning: string }>({
+    const { value } = await this.llm.completeJSON<{
+      flags: string[];
+      reasoning: string;
+    }>({
       modelKey: 'fast',
       system: SYSTEM_PROMPT,
       user: userContent,
