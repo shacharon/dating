@@ -245,19 +245,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Story 05 smoke if present
+      - name: Run Story 05 smoke (fail closed)
         env:
           BASE_URL: ${{ vars.DEV_BASE_URL }}
           SESSION_COOKIE: ${{ secrets.SMOKE_SESSION_COOKIE }}
           REQUIRE_REDIS_ADAPTER: ${{ vars.REQUIRE_REDIS_ADAPTER || '1' }}
         run: |
           set -euo pipefail
-          SCRIPT="dating-api/scripts/smoke-cloud-dev.sh"
-          if [ -f "$SCRIPT" ]; then
-            chmod +x "$SCRIPT"
-            "$SCRIPT" "${BASE_URL}"
-          else
-            echo "::notice::Story 05 smoke script missing at ${SCRIPT}."
-            echo "Hook for Story 05: add smoke-cloud-dev.sh and keep this job failing on non-zero exit."
-            echo "See dating-api/docs/sprints/sprint-20-aws-dev-deployment/CI_CD.md § Post-deploy smoke."
+          if [ -z "${BASE_URL:-}" ]; then
+            echo "::error::DEV_BASE_URL is not set — cannot gate deploy on cloud smoke"
+            exit 1
           fi
+          SCRIPT="dating-api/scripts/smoke-cloud-dev.sh"
+          if [ ! -f "$SCRIPT" ]; then
+            echo "::error::Story 05 smoke script missing at ${SCRIPT}"
+            exit 1
+          fi
+          chmod +x "$SCRIPT"
+          "$SCRIPT" "${BASE_URL}"
