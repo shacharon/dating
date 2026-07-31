@@ -12,7 +12,7 @@ The repo has **no Dockerfile** today and local compose runs Postgres only. ECS n
 1. **`dating-api/Dockerfile`** — multi-stage:
    - Base Node 20–22 (match `@types/node ^22`).
    - `npm ci` → `npx prisma generate` → `npm run build`.
-   - Runtime stage copies `dist/`, `node_modules` (prod), `prisma/`. Runs `node dist/src/main.js`.
+   - Runtime stage copies `dist/`, `node_modules` (prod), `prisma/`. Runs `node dist/main.js` (Nest flattens `src/` → `dist/main.js`).
    - Non-root user; `EXPOSE 3001`; `HEALTHCHECK` hitting `/health`.
    - Include Prisma engine binaries for the container's libc (Debian slim vs Alpine — pick slim to avoid OpenSSL/musl issues).
 2. **`dating-ui/Dockerfile`** — multi-stage Next.js 16:

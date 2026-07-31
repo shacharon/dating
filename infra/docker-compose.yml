@@ -81,6 +81,8 @@ services:
       PHOTO_STORAGE_DRIVER: local
       PHOTO_UPLOAD_DIR: uploads/profile-photos
       PHOTO_MODERATION_DRIVER: mock
+      # Boot blocker (L5) — pass from host: set OPENAI_API_KEY in the shell or a root .env next to compose.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Dev-only placeholders so the process can boot; override for real auth.
       SESSION_SECRET_PEPPER: local-compose-dev-pepper-change-me
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
