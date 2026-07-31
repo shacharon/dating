@@ -1,6 +1,8 @@
 # Story 05 — Cloud verification
 
-**Sprint 20 · Status: TOOLING_READY · live gate PENDING_INFRA**
+**Sprint 20 · Status: ✅ Done (PENDING_INFRA)** — tooling + 4-agent CR complete; live 9-check + k6 sign-off still open
+
+**Handoffs:** [architect](./handoffs/STORY_05_verification/agent-0-architect.md) · [dev](./handoffs/STORY_05_verification/agent-1-dev.md) · [CR](./handoffs/STORY_05_verification/agent-2-cr.md) · [PM](./handoffs/STORY_05_verification/agent-3-pm.md)
 
 ## Objective
 Prove the `dev` environment actually works end-to-end and meets the Sprint 19 performance bar — this is the sprint's exit gate.
@@ -35,13 +37,14 @@ Live acceptance criteria remain open until `DEV_BASE_URL` exists and results are
 9. **Observability check** — logs land in CloudWatch (stdout, `STRUCTURED_LOG_FILE=0`, fixes L7); Sentry receives events if configured.
 
 ## Acceptance criteria
-- [ ] All 9 checks above pass against the live `dev` URL.
-- [ ] k6 match-list **p95 < 2s** under the target VUs.
-- [ ] Photos persist across task restarts (S3, not ephemeral disk).
-- [ ] Analysis + chat work across a multi-task / restart scenario (queue + adapter proven).
-- [ ] Login persists (cookie/CORS correct over HTTPS).
-- [ ] Smoke test is automated and gates deploys in CI.
-- [ ] A short "verified `dev`" note is captured (URL, date, results) for handoff.
+- [x] Smoke script + checklist + VERIFIED_DEV template + CI fail-closed gate *(tooling; CR PASS)*
+- [ ] All 9 checks above pass against the live `dev` URL. *(PENDING_INFRA)*
+- [ ] k6 match-list **p95 < 2s** under the target VUs. *(PENDING_INFRA)*
+- [ ] Photos persist across task restarts (S3, not ephemeral disk). *(PENDING_INFRA)*
+- [ ] Analysis + chat work across a multi-task / restart scenario (queue + adapter proven). *(PENDING_INFRA)*
+- [ ] Login persists (cookie/CORS correct over HTTPS). *(PENDING_INFRA)*
+- [x] Smoke test is automated and gates deploys in CI. *(Story 04 fail-closed)*
+- [ ] A short "verified `dev`" note is captured (URL, date, results) for handoff. *(fill VERIFIED_DEV.md when live)*
 
 ## Notes / gotchas
 - Run the multi-instance checks with API desired count ≥ 2 at least once, even if steady-state is 1.

@@ -1,6 +1,6 @@
 # Sprint 20 — Deploy to AWS `dev` (ECS Fargate)
 
-> **Status:** 🟡 **IN PROGRESS.** Stories 01–04 may still be landing. Story 05 verification **tooling** is ready (`smoke-cloud-dev.sh`, checklist, CI snippet, `VERIFIED_DEV.md`); live sign-off is **PENDING_INFRA** until a `dev` URL exists.
+> **Status:** 🟡 **CODE + 4-AGENT CR COMPLETE** for Stories 01–05. Live AWS apply / first deploy / `VERIFIED_DEV.md` still **PENDING_INFRA** — Sprint 20 is **not** fully signed off until Status = VERIFIED.
 >
 > **Depends on:** Sprint 19 (performance + real photo moderation) merged, since this sprint deploys that work.
 >
@@ -42,7 +42,7 @@ Route53 → ACM/HTTPS → ALB ──┬── target group: dating-ui  (Fargate,
 | 02 | [Provision AWS infra as code](./STORY_02_infra_as_code.md) | Terraform for RDS, ElastiCache, S3, IAM, CloudFront, ALB, ECS cluster/services. | ✅ **Done (PENDING_APPLY)** |
 | 03 | [Secrets & runtime config](./STORY_03_secrets_and_config.md) | Every env var from the runbook wired via SSM/Secrets Manager; prod-safe defaults. | ✅ **Done (PENDING_LIVE_VERIFY)** |
 | 04 | [CI/CD pipeline](./STORY_04_cicd_pipeline.md) | build → test → image push → migrate (one-shot) → rolling deploy → `/health` gate. | ✅ **Done (PENDING_LIVE_DEPLOY)** |
-| 05 | [Cloud verification](./STORY_05_verification.md) | Smoke + checklist + CI gate tooling ready; live e2e/k6 sign-off pending infra ([`VERIFIED_DEV.md`](./VERIFIED_DEV.md)). | Tooling ready — 4-agent / live gate pending |
+| 05 | [Cloud verification](./STORY_05_verification.md) | Smoke + checklist + CI gate tooling ready; live e2e/k6 sign-off pending infra ([`VERIFIED_DEV.md`](./VERIFIED_DEV.md)). | ✅ **Done (PENDING_INFRA)** |
 Recommended execution order is 01 → 02 → 03 → 04 → 05. Stories 01 and 02 can run in parallel.
 
 ---
