@@ -1,10 +1,12 @@
 # Story 04 — Cap candidate pool (stopgap)
 
-**Sprint 27 · Status: PLANNED**  
+**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
 **Priority:** P0 (stopgap)  
 **Estimated effort:** 0.5 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** Story 02 preferred (prefilter then cap)
+
+**Handoffs:** [architect](./handoffs/STORY_04_cap_candidate_pool/agent-0-architect.md)
 
 ---
 
