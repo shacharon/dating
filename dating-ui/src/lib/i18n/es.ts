@@ -505,4 +505,15 @@ export const esCopy: AppCopySchema = {
       },
     },
   },
+  error: {
+    dating: {
+      title: "Algo salio mal",
+      message: "No pudimos cargar esta pagina. Intenta de nuevo.",
+    },
+    authenticated: {
+      title: "Algo salio mal",
+      message: "No pudimos cargar esta pagina. Intenta de nuevo.",
+    },
+    retry: "Intentar de nuevo",
+  },
 };

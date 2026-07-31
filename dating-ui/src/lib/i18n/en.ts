@@ -491,4 +491,15 @@ export const enCopy: AppCopySchema = {
       },
     },
   },
+  error: {
+    dating: {
+      title: "Something went wrong",
+      message: "We couldn't load this page. Please try again.",
+    },
+    authenticated: {
+      title: "Something went wrong",
+      message: "We couldn't load this page. Please try again.",
+    },
+    retry: "Try again",
+  },
 };

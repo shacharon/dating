@@ -477,4 +477,15 @@ export const heCopy: AppCopySchema = {
       },
     },
   },
+  error: {
+    dating: {
+      title: "משהו השתבש",
+      message: "לא הצלחנו לטעון את הדף. נסה שוב.",
+    },
+    authenticated: {
+      title: "משהו השתבש",
+      message: "לא הצלחנו לטעון את הדף. נסה שוב.",
+    },
+    retry: "נסה שוב",
+  },
 };

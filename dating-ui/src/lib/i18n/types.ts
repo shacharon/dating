@@ -451,4 +451,15 @@ export type AppCopySchema = {
       };
     };
   };
+  error: {
+    dating: {
+      title: string;
+      message: string;
+    };
+    authenticated: {
+      title: string;
+      message: string;
+    };
+    retry: string;
+  };
 };
