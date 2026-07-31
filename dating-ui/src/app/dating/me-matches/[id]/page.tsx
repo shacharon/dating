@@ -8,10 +8,6 @@ import {
   fetchMatchAction,
   fetchMatchFeedback,
   fetchMyMatchById,
-  likeMatch,
-  passMatch,
-  undoMatchAction,
-  upsertMatchFeedback,
   type MeMatchDetailDto,
 } from '@/lib/me-matches-api';
 import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
@@ -25,9 +21,11 @@ import {
   resolveDetailProse,
   splitNarrativeParagraphs,
 } from './match-detail-prose';
+import { useMatchActions } from '@/hooks/use-match-actions';
+import { useMatchFeedback } from '@/hooks/use-match-feedback';
+import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
-type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
 
 export default function MeMatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,22 +36,45 @@ export default function MeMatchDetailPage() {
   const [data, setData] = useState<MeMatchDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [yourAction, setYourAction] = useState<YourAction>(null);
-  const [actionSaving, setActionSaving] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
   const [blockError, setBlockError] = useState<string | null>(null);
+  const [blockSaving, setBlockSaving] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [celebration, setCelebration] = useState<{ conversationId: string } | null>(
-    null,
-  );
   const [mutualMatch, setMutualMatch] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [feedbackSentiment, setFeedbackSentiment] =
-    useState<FeedbackSentiment>(null);
-  const [feedbackThanksVisible, setFeedbackThanksVisible] = useState(false);
-  const [feedbackSaving, setFeedbackSaving] = useState(false);
-  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+
+  const {
+    like,
+    pass,
+    undo,
+    actionLoading,
+    currentAction,
+    setCurrentAction,
+    canUndo,
+    error: actionError,
+  } = useMatchActions({
+    matchId: id,
+    onMutualMatch: (convId) => {
+      setMutualMatch(true);
+      setConversationId(convId);
+      triggerCelebration(convId);
+    },
+  });
+
+  const {
+    submitFeedback,
+    submitting: feedbackSaving,
+    sentiment: feedbackSentiment,
+    setSentiment: setFeedbackSentiment,
+    submitted: feedbackThanksVisible,
+    error: feedbackError,
+  } = useMatchFeedback({ matchId: id });
+
+  const {
+    dismissCelebration,
+    celebrationData,
+    triggerCelebration,
+  } = useCelebrationFlow();
 
   function actionStatusMessage(action: YourAction): string | null {
     switch (action) {
@@ -83,7 +104,7 @@ export default function MeMatchDetailPage() {
       .then(([dto, actionState, feedbackState]) => {
         if (cancelled) return;
         setData(dto);
-        setYourAction(actionState.action);
+        setCurrentAction(actionState.action);
         setMutualMatch(actionState.mutualMatch);
         setConversationId(actionState.conversationId);
         setFeedbackSentiment(feedbackState.sentiment);
@@ -98,88 +119,12 @@ export default function MeMatchDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
-
-  async function recordAction(action: 'LIKE' | 'PASS') {
-    if (!id || actionSaving || yourAction != null) return;
-    setActionError(null);
-    setActionSaving(true);
-    try {
-      if (action === 'LIKE') {
-        const result = await likeMatch(id);
-        setYourAction('LIKE');
-        if (result.mutualMatch && result.conversationId) {
-          setCelebration({ conversationId: result.conversationId });
-          setMutualMatch(true);
-          setConversationId(result.conversationId);
-        }
-      } else {
-        await passMatch(id);
-        const actionState = await fetchMatchAction(id);
-        setYourAction(actionState.action);
-        setMutualMatch(actionState.mutualMatch);
-        setConversationId(actionState.conversationId);
-      }
-    } catch (e: unknown) {
-      setActionError(
-        e instanceof Error
-          ? e.message
-          : action === 'LIKE'
-            ? detailCopy.likeFailed
-            : detailCopy.passFailed,
-      );
-    } finally {
-      setActionSaving(false);
-    }
-  }
-
-  async function handleUndo() {
-    if (
-      !id ||
-      actionSaving ||
-      yourAction == null ||
-      yourAction === 'BLOCK'
-    ) {
-      return;
-    }
-    setActionError(null);
-    setActionSaving(true);
-    try {
-      await undoMatchAction(id);
-      const actionState = await fetchMatchAction(id);
-      setYourAction(actionState.action);
-      setMutualMatch(actionState.mutualMatch);
-      setConversationId(actionState.conversationId);
-    } catch (e: unknown) {
-      setActionError(
-        e instanceof Error ? e.message : detailCopy.undoFailed,
-      );
-    } finally {
-      setActionSaving(false);
-    }
-  }
-
-  async function handleFeedback(sentiment: 'positive' | 'negative') {
-    if (!id || feedbackSaving) return;
-    setFeedbackError(null);
-    setFeedbackSaving(true);
-    try {
-      const result = await upsertMatchFeedback(id, sentiment);
-      setFeedbackSentiment(result.sentiment);
-      setFeedbackThanksVisible(true);
-    } catch (e: unknown) {
-      setFeedbackError(
-        e instanceof Error ? e.message : detailCopy.feedbackFailed,
-      );
-    } finally {
-      setFeedbackSaving(false);
-    }
-  }
+  }, [id, setCurrentAction, setFeedbackSentiment]);
 
   async function handleBlockConfirm() {
-    if (!id || actionSaving) return;
+    if (!id || blockSaving) return;
     setBlockError(null);
-    setActionSaving(true);
+    setBlockSaving(true);
     try {
       await blockMatch(id);
       router.push('/dating/me-matches');
@@ -189,11 +134,11 @@ export default function MeMatchDetailPage() {
         e instanceof Error ? e.message : detailCopy.blockFailed,
       );
     } finally {
-      setActionSaving(false);
+      setBlockSaving(false);
     }
   }
 
-  const statusMessage = actionStatusMessage(yourAction);
+  const statusMessage = actionStatusMessage(currentAction);
   const isHardBlocked = data?.hardBlocked != null;
 
   return (
@@ -260,7 +205,7 @@ export default function MeMatchDetailPage() {
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
                   {detailCopy.hardBlocked.banner}
                 </p>
-                {yourAction === 'LIKE' && (
+                {currentAction === 'LIKE' && (
                   <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">
                     {detailCopy.hardBlocked.youLikedThisProfile}
                   </p>
@@ -356,7 +301,7 @@ export default function MeMatchDetailPage() {
                     aria-label={feedbackCopy.positiveLabel}
                     aria-pressed={feedbackSentiment === 'POSITIVE'}
                     disabled={feedbackSaving}
-                    onClick={() => void handleFeedback('positive')}
+                    onClick={() => void submitFeedback('positive')}
                     className={`rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       feedbackSentiment === 'POSITIVE'
                         ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
@@ -371,7 +316,7 @@ export default function MeMatchDetailPage() {
                     aria-label={feedbackCopy.negativeLabel}
                     aria-pressed={feedbackSentiment === 'NEGATIVE'}
                     disabled={feedbackSaving}
-                    onClick={() => void handleFeedback('negative')}
+                    onClick={() => void submitFeedback('negative')}
                     className={`rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       feedbackSentiment === 'NEGATIVE'
                         ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
@@ -444,18 +389,18 @@ export default function MeMatchDetailPage() {
                   >
                     {statusMessage}
                   </p>
-                  {(yourAction === 'LIKE' || yourAction === 'PASS') && (
+                  {(currentAction === 'LIKE' || currentAction === 'PASS') && (
                     <>
                       <button
                         type="button"
-                        onClick={() => void handleUndo()}
-                        disabled={actionSaving || isHardBlocked}
-                        aria-label={undoAriaLabel(yourAction)}
+                        onClick={() => void undo()}
+                        disabled={!canUndo || isHardBlocked}
+                        aria-label={undoAriaLabel(currentAction)}
                         className="text-sm font-medium text-zinc-500 underline-offset-4 hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
                       >
-                        {actionSaving ? detailCopy.saving : detailCopy.undo}
+                        {actionLoading ? detailCopy.saving : detailCopy.undo}
                       </button>
-                      {actionSaving && (
+                      {actionLoading && (
                         <p
                           className="text-xs text-zinc-400 dark:text-zinc-500"
                           role="status"
@@ -486,11 +431,11 @@ export default function MeMatchDetailPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => void recordAction('LIKE')}
-                      disabled={actionSaving}
+                      onClick={() => void like()}
+                      disabled={actionLoading}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                     >
-                      {actionSaving ? (
+                      {actionLoading ? (
                         detailCopy.saving
                       ) : (
                         <>
@@ -501,14 +446,14 @@ export default function MeMatchDetailPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void recordAction('PASS')}
-                      disabled={actionSaving}
+                      onClick={() => void pass()}
+                      disabled={actionLoading}
                       className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
                       {detailCopy.pass}
                     </button>
                   </div>
-                  {actionSaving && (
+                  {actionLoading && (
                     <p className="text-xs text-zinc-400 dark:text-zinc-500" role="status">
                       {detailCopy.saving}
                     </p>
@@ -533,7 +478,7 @@ export default function MeMatchDetailPage() {
                       <button
                         type="button"
                         onClick={() => setBlockConfirmOpen(false)}
-                        disabled={actionSaving}
+                        disabled={blockSaving}
                         className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                       >
                         {copy.common.cancel}
@@ -541,10 +486,10 @@ export default function MeMatchDetailPage() {
                       <button
                         type="button"
                         onClick={() => void handleBlockConfirm()}
-                        disabled={actionSaving}
+                        disabled={blockSaving}
                         className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/40"
                       >
-                        {actionSaving ? detailCopy.saving : detailCopy.blockPermanently}
+                        {blockSaving ? detailCopy.saving : detailCopy.blockPermanently}
                       </button>
                     </div>
                   </div>
@@ -555,7 +500,7 @@ export default function MeMatchDetailPage() {
                       setBlockError(null);
                       setBlockConfirmOpen(true);
                     }}
-                    disabled={actionSaving}
+                    disabled={blockSaving}
                     className="text-sm font-medium text-red-600 underline-offset-4 hover:text-red-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
                   >
                     {detailCopy.block}
@@ -565,7 +510,7 @@ export default function MeMatchDetailPage() {
                   type="button"
                   data-testid="match-detail-report"
                   onClick={() => setReportOpen(true)}
-                  disabled={actionSaving}
+                  disabled={blockSaving}
                   className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
                 >
                   {copy.reportUser.linkLabel}
@@ -590,14 +535,14 @@ export default function MeMatchDetailPage() {
         )}
       </div>
 
-      {data && celebration && (
+      {data && celebrationData && (
         <MatchCelebrationModal
           open
-          onClose={() => setCelebration(null)}
+          onClose={dismissCelebration}
           candidateName={matchDetailTitle(data)}
           photoUrl={data.primaryPhotoUrl ?? null}
           onSendMessage={() => {
-            router.push(`/dating/conversations/${celebration.conversationId}`);
+            router.push(`/dating/conversations/${celebrationData.conversationId}`);
           }}
         />
       )}
