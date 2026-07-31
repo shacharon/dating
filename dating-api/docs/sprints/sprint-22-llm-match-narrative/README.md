@@ -72,6 +72,6 @@ This reuses the existing LLM infra (`src/llm/`) under a new purpose (e.g. `match
 - [x] Scores / HG eligibility / blend weights unchanged.
 - [x] Unit + integration coverage for generator, cache key, fallback, UI render.
 - [x] Narrative voice is human (no chip-label echo / brochure fluff) — **Story 4** (`promptVersion` v2; lean facts; bans + evidence grounding; fallback scrub).
-- [x] Phase 3 (raw-text freeform) captured as a follow-up, not started.
+- [x] Phase 3 (raw-text freeform) captured as a follow-up, not started → **moved to Sprint 23 Story 3**.
 
-**Sprint status:** Done — Stories 1–4 complete. Optional: local smoke of live LLM voice after API restart (v2 cache miss → regenerate). Phase 3 remains follow-up only (`FOLLOWUP_phase3_raw_text_narrative.md`).
+**Sprint status:** Done — Stories 1–4 complete. Optional: local smoke of live LLM voice after API restart (v2 cache miss → regenerate). Phase 3: see `../sprint-23-human-match-copy/STORY_03_profile_full_why_phase3.md`.

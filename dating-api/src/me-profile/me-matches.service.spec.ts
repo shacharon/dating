@@ -1898,6 +1898,18 @@ describe('MeMatchesService', () => {
         ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_STORE_FAIL,
       );
     });
+
+    it('fallback source returns narrative without cache upsert', async () => {
+      narrativeGenerate.mockResolvedValue({
+        narrative: 'Structured fallback without chip soup.',
+        source: 'fallback',
+        promptVersion: 'v4',
+      });
+      narrativeCacheUpsert.mockClear();
+      const text = await (service as any).resolveMatchNarrative(baseArgs);
+      expect(text).toBe('Structured fallback without chip soup.');
+      expect(narrativeCacheUpsert).not.toHaveBeenCalled();
+    });
   });
 
   // ─── assertMatchCandidateVisible() ────────────────────────────────────────

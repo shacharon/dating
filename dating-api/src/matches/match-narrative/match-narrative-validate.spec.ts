@@ -52,6 +52,18 @@ describe('validateLlmNarrative', () => {
     if (!r.ok) expect(r.reason).toMatch(/banned_phrase:ambition alignment/);
   });
 
+  it('rejects v3 brochure CTA paragraph', () => {
+    const text = [
+      'You both go hard on your goals and share a similar drive that can push each other forward.',
+      "There's a mutual appreciation for depth and emotional presence in relationships, which can lead to more meaningful conversations and connections.",
+      'You also tend to move at a similar pace, meaning how you both structure your days aligns nicely.',
+      'It could be worth a closer look to see how these commonalities play out in a one-on-one setting.',
+    ].join(' ');
+    const r = validateLlmNarrative(text, pack);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/banned_phrase/);
+  });
+
   it('accepts evidence-grounded multi-sentence text without banned phrases', () => {
     const text = [
       'You both want real emotional closeness.',
@@ -87,7 +99,7 @@ describe('validateLlmNarrative', () => {
     });
   });
 
-  it('skips grounding when no traits or interests', () => {
+  it('skips grounding when no traits, interests, or excerpts', () => {
     const emptyPack = buildMatchNarrativeFactPack({
       finalScore: 40,
       explainability: { positiveChips: [], reasonShort: 'thin' },
@@ -96,5 +108,46 @@ describe('validateLlmNarrative', () => {
     const text =
       'Overall the picture is quiet. Little stands out yet. Still worth a careful read.';
     expect(validateLlmNarrative(text, emptyPack)).toEqual({ ok: true });
+  });
+
+  it('accepts prose grounded via profile excerpt tokens', () => {
+    const packWithExcerpt = buildMatchNarrativeFactPack({
+      finalScore: 55,
+      explainability: { positiveChips: [], reasonShort: 'thin' },
+      traits: [],
+      viewerAbout: {
+        aboutMe:
+          'Solitude and backpacking keep me honest about what I need from life.',
+      },
+    });
+    const text = [
+      'You both protect solitude like it matters.',
+      'Backpacking shows up as a shared way to reset.',
+      'That specific overlap makes the fit feel personal.',
+      'Ask about a recent trail and see how the energy lands.',
+    ].join(' ');
+    expect(validateLlmNarrative(text, packWithExcerpt)).toEqual({ ok: true });
+  });
+
+  it('rejects invented biography when only excerpts provide grounding', () => {
+    const packWithExcerpt = buildMatchNarrativeFactPack({
+      finalScore: 55,
+      explainability: { positiveChips: [], reasonShort: 'thin' },
+      traits: [],
+      viewerAbout: {
+        aboutMe:
+          'Solitude and backpacking keep me honest about what I need from life.',
+      },
+    });
+    const text = [
+      'You both secretly trained as concert pianists in Vienna.',
+      'Your childhood yachts somehow overlap in surprising ways.',
+      'None of this came from the listed facts or excerpts at all.',
+      'Still four sentences of invented filler biography text.',
+    ].join(' ');
+    expect(validateLlmNarrative(text, packWithExcerpt)).toEqual({
+      ok: false,
+      reason: 'ungrounded',
+    });
   });
 });

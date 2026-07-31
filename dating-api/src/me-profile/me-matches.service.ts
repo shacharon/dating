@@ -1033,6 +1033,16 @@ export class MeMatchesService {
         explainability: result.explainability,
         recommendation: result.recommendation,
         traits: matchExplanationTraits,
+        viewerAbout: {
+          aboutMe: viewerCoreDetail.aboutMe,
+          aboutPartner: viewerCoreDetail.aboutPartner,
+          aboutRelationship: viewerCoreDetail.aboutRelationship,
+        },
+        candidateAbout: {
+          aboutMe: candidateCoreDetail.aboutMe,
+          aboutPartner: candidateCoreDetail.aboutPartner,
+          aboutRelationship: candidateCoreDetail.aboutRelationship,
+        },
       });
     }
 
@@ -1087,6 +1097,16 @@ export class MeMatchesService {
     explainability: MatchExplainabilityDto;
     recommendation: MatchRecommendationDto;
     traits?: MatchExplanationTrait[];
+    viewerAbout?: {
+      aboutMe?: string | null;
+      aboutPartner?: string | null;
+      aboutRelationship?: string | null;
+    };
+    candidateAbout?: {
+      aboutMe?: string | null;
+      aboutPartner?: string | null;
+      aboutRelationship?: string | null;
+    };
   }): Promise<string> {
     const promptVersion = MATCH_NARRATIVE_PROMPT_VERSION;
     const cacheKey = {
@@ -1124,6 +1144,8 @@ export class MeMatchesService {
         suggestedNextAction: args.recommendation.suggestedNextAction,
       },
       traits: args.traits,
+      viewerAbout: args.viewerAbout,
+      candidateAbout: args.candidateAbout,
     });
 
     const generated = await this.matchNarrativeGenerator.generate(factPack, {

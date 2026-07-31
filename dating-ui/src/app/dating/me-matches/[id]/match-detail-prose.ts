@@ -4,7 +4,7 @@ export type MatchDetailProse =
   | { kind: 'narrative'; text: string }
   | { kind: 'short'; text: string };
 
-/** Prefer long-form narrative; fall back to short takeaway / reasonShort. */
+/** Prefer long-form narrative; fall back to primaryTakeaway only (never reasonShort). */
 export function resolveDetailProse(
   data: Pick<
     MeMatchDetailDto,
@@ -15,10 +15,7 @@ export function resolveDetailProse(
   if (narrative) {
     return { kind: 'narrative', text: narrative };
   }
-  const short =
-    data.recommendation?.primaryTakeaway?.trim() ||
-    data.explainability?.reasonShort?.trim() ||
-    '';
+  const short = data.recommendation?.primaryTakeaway?.trim() || '';
   if (short) {
     return { kind: 'short', text: short };
   }

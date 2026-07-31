@@ -62,11 +62,18 @@ function collectGroundingTokens(factPack: MatchNarrativeFactPack): string[] {
       tokens.add(t);
     }
   }
+  if (factPack.profileExcerpts) {
+    for (const ex of factPack.profileExcerpts) {
+      for (const t of groundingTokens(ex.text)) {
+        tokens.add(t);
+      }
+    }
+  }
   return [...tokens];
 }
 
 /**
- * Soft validation for LLM narrative output (Story 4: bans + evidence/interest grounding).
+ * Soft validation for LLM narrative (bans + evidence/interest/excerpt grounding).
  */
 export function validateLlmNarrative(
   narrative: string,

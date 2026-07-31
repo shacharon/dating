@@ -2,6 +2,7 @@ import { MatchNarrativeGenerator } from './match-narrative.generator';
 import { buildMatchNarrativeFactPack } from './match-narrative-fact-pack';
 import { buildFallbackMatchNarrative } from './match-narrative-fallback';
 import type { LLMRouterService } from '../../llm/llm-router.service';
+import { textContainsChipLabel } from '../match-explanation-traits';
 
 describe('MatchNarrativeGenerator', () => {
   const pack = buildMatchNarrativeFactPack({
@@ -33,7 +34,7 @@ describe('MatchNarrativeGenerator', () => {
     const result = await gen.generate(pack, { requestId: 'test-req-1' });
     expect(result.source).toBe('llm');
     expect(result.narrative).toBe(narrative);
-    expect(result.promptVersion).toBe('v2');
+    expect(result.promptVersion).toBe('v4');
     expect(completeJSON).toHaveBeenCalledWith(
       expect.objectContaining({
         purpose: 'match_narrative',
@@ -99,5 +100,25 @@ describe('MatchNarrativeGenerator', () => {
     const result = await gen.generate(pack, { requestId: 'test-req-5' });
     expect(result.source).toBe('fallback');
     expect(result.narrative).toBe(buildFallbackMatchNarrative(pack));
+    expect(result.narrative).not.toContain('Ambition alignment');
+    expect(textContainsChipLabel(result.narrative)).toBeNull();
+  });
+
+  it('falls back on v3 brochure CTA narrative', async () => {
+    const narrative = [
+      'You both go hard on your goals and share a similar drive that can push each other forward.',
+      "There's a mutual appreciation for depth and emotional presence in relationships, which can lead to more meaningful conversations and connections.",
+      'You also tend to move at a similar pace, meaning how you both structure your days aligns nicely.',
+      'It could be worth a closer look to see how these commonalities play out in a one-on-one setting.',
+      'Daily presence and drive show up as clear shared threads between you.',
+    ].join(' ');
+    const completeJSON = jest.fn().mockResolvedValue({
+      value: { narrative },
+      rawText: JSON.stringify({ narrative }),
+    });
+    const gen = makeGen(completeJSON);
+    const result = await gen.generate(pack, { requestId: 'test-req-6' });
+    expect(result.source).toBe('fallback');
+    expect(result.promptVersion).toBe('v4');
   });
 });

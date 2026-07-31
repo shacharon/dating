@@ -232,11 +232,12 @@ export default function MeMatchesPage() {
                             })()}
                           </div>
                         )}
-                        {!hardBlocked && m.explainability?.reasonShort && (
-                          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                            {m.explainability.reasonShort}
-                          </p>
-                        )}
+                        {!hardBlocked &&
+                          m.recommendation?.primaryTakeaway?.trim() && (
+                            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                              {m.recommendation.primaryTakeaway.trim()}
+                            </p>
+                          )}
                         {(() => {
                           if (hardBlocked) return null;
                           const sharedNote = formatSharedInterestNote(

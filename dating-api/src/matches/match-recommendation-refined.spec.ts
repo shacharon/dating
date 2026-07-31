@@ -16,8 +16,11 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'test-1',
       });
 
-      expect(result.primaryTakeaway).toContain('emotional depth and direct communication');
-      expect(result.primaryTakeaway).not.toContain('social rhythm');
+      expect(result.primaryTakeaway).toContain(
+        'real depth and presence and being straight with each other',
+      );
+      expect(result.primaryTakeaway.toLowerCase()).not.toContain('social rhythm');
+      expect(result.primaryTakeaway.toLowerCase()).not.toContain('emotional depth');
     });
 
     it('uses single chip when exactly 1 chip', () => {
@@ -33,7 +36,10 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'test-2',
       });
 
-      expect(result.primaryTakeaway).toContain('ambition alignment');
+      expect(result.primaryTakeaway).toContain('a drive for goals');
+      expect(result.primaryTakeaway.toLowerCase()).not.toContain(
+        'ambition alignment',
+      );
       expect(result.primaryTakeaway).not.toContain(' and ');
     });
 
@@ -50,11 +56,12 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'test-3',
       });
 
-      expect(result.primaryTakeaway).not.toBe('Partial overlap in a few areas.');
-      expect(result.primaryTakeaway.length).toBeGreaterThan(20);
+      expect(result.primaryTakeaway).toBe(
+        'A few touchpoints — open to see why.',
+      );
     });
 
-    it('extracts emotional keyword from reasonShort', () => {
+    it('uses band line when 0 chips (ignores reasonShort keywords)', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: [],
         reasonShort: 'Main tension: emotional depth gap.',
@@ -67,7 +74,9 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'test-4',
       });
 
-      expect(result.primaryTakeaway).toContain('emotional');
+      expect(result.primaryTakeaway).toBe(
+        'A few touchpoints — open to see why.',
+      );
     });
   });
 
@@ -237,7 +246,9 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'existing-1',
       });
 
-      expect(result.primaryTakeaway).toContain('social rhythm and ambition');
+      expect(result.primaryTakeaway).toContain(
+        'matching social energy and a drive for goals',
+      );
       expect(result.caution).toBe('Watch for closeness vs space.');
       expect(result.suggestedNextAction).toBe('Start a conversation');
     });
@@ -255,7 +266,9 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'existing-2',
       });
 
-      expect(result.primaryTakeaway).toContain('independence fit and lifestyle pace');
+      expect(result.primaryTakeaway).toContain(
+        'space and togetherness balance and a similar daily pace',
+      );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Review profile and message');
     });
@@ -274,7 +287,7 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'existing-3',
       });
 
-      expect(result.primaryTakeaway).toContain('physical chemistry');
+      expect(result.primaryTakeaway).toContain('strong mutual attraction');
       expect(result.caution).toBe('Watch for emotional depth gap.');
       expect(result.suggestedNextAction).toBe('Worth a closer look');
     });

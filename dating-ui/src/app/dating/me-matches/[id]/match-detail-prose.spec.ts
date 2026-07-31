@@ -28,7 +28,7 @@ describe('resolveDetailProse', () => {
     });
   });
 
-  it('falls back to primaryTakeaway then reasonShort', () => {
+  it('falls back to primaryTakeaway only (never reasonShort)', () => {
     expect(
       resolveDetailProse({
         recommendation: {
@@ -51,10 +51,10 @@ describe('resolveDetailProse', () => {
         recommendation: null,
         explainability: {
           positiveChips: [],
-          reasonShort: 'Reason only',
+          reasonShort: 'You share real overlap on Ambition alignment',
         },
       }),
-    ).toEqual({ kind: 'short', text: 'Reason only' });
+    ).toBeNull();
   });
 
   it('returns null when nothing usable', () => {

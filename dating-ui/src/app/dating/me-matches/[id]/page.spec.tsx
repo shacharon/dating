@@ -659,6 +659,15 @@ describe('MeMatchDetailPage (human-first layout)', () => {
         positiveChips: ['Shared values'],
         reasonShort: 'Aligned',
       },
+      recommendation: {
+        primaryTakeaway: 'Clear overlap: common ground on daily life.',
+        caution: null,
+        suggestedNextAction: 'Next',
+        explainability: {
+          positiveChips: ['Shared values'],
+          reasonShort: 'Aligned',
+        },
+      },
     });
 
     render(<MeMatchDetailPage />);
@@ -666,7 +675,11 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
     });
+    expect(screen.getByTestId('match-detail-takeaway').textContent).toBe(
+      'Clear overlap: common ground on daily life.',
+    );
     expect(screen.queryByTestId('match-detail-shared-interests')).toBeNull();
+    expect(screen.queryByText(/^Aligned$/)).toBeNull();
   });
 
   it('renders matchNarrative and hides short takeaway when both present', async () => {
@@ -739,7 +752,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       matchNarrative: '   ',
       explainability: {
         positiveChips: ['Shared values'],
-        reasonShort: '',
+        reasonShort: 'You share real overlap on Ambition alignment',
       },
       recommendation: null,
     });
@@ -751,6 +764,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     });
     expect(screen.queryByTestId('match-detail-narrative')).toBeNull();
     expect(screen.queryByTestId('match-detail-takeaway')).toBeNull();
+    expect(screen.queryByText(/Ambition alignment/)).toBeNull();
   });
 
   it('shows feedback section before de-emphasized score label', async () => {
@@ -881,7 +895,15 @@ describe('MeMatchDetailPage (i18n)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    fetchMyMatchById.mockResolvedValue(baseMatch);
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      recommendation: {
+        primaryTakeaway: 'You both prioritize honest, calm connection.',
+        caution: null,
+        suggestedNextAction: 'Next',
+        explainability: baseMatch.explainability,
+      },
+    });
     fetchMatchAction.mockResolvedValue(noActionState);
     fetchMatchFeedback.mockResolvedValue(noFeedbackState);
   });
@@ -918,8 +940,11 @@ describe('MeMatchDetailPage (i18n)', () => {
     render(<MeMatchDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aligned values')).toBeTruthy();
+      expect(
+        screen.getByText('You both prioritize honest, calm connection.'),
+      ).toBeTruthy();
       expect(screen.getByText('Emotional depth')).toBeTruthy();
+      expect(screen.queryByText('Aligned values')).toBeNull();
     });
   });
 

@@ -3,6 +3,10 @@ import {
   buildMatchExplanationTraits,
   type MatchExplanationTrait,
 } from '../match-explanation-traits';
+import {
+  buildProfileExcerpts,
+  type ProfileAboutFields,
+} from './match-narrative-redact';
 import type {
   MatchNarrativeFactPack,
   MatchNarrativeScoreBand,
@@ -24,6 +28,8 @@ export function buildMatchNarrativeFactPack(input: {
   recommendation?: { caution?: string; suggestedNextAction?: string };
   traits?: MatchExplanationTrait[];
   sharedInterests?: string[];
+  viewerAbout?: ProfileAboutFields;
+  candidateAbout?: ProfileAboutFields;
 }): MatchNarrativeFactPack {
   const { finalScore, explainability, recommendation } = input;
   const traits =
@@ -56,6 +62,16 @@ export function buildMatchNarrativeFactPack(input: {
   }
   if (recommendation?.suggestedNextAction) {
     pack.suggestedNextAction = recommendation.suggestedNextAction;
+  }
+
+  if (input.viewerAbout || input.candidateAbout) {
+    const excerpts = buildProfileExcerpts({
+      viewer: input.viewerAbout ?? {},
+      candidate: input.candidateAbout ?? {},
+    });
+    if (excerpts.length > 0) {
+      pack.profileExcerpts = excerpts;
+    }
   }
 
   return pack;

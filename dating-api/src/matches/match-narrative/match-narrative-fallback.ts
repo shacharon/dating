@@ -1,5 +1,9 @@
 import type { MatchNarrativeFactPack } from './match-narrative.types';
-import { tensionNoteFromChip } from './match-narrative-voice';
+import {
+  containsBannedPhrase,
+  nextActionForLlm,
+  tensionNoteFromChip,
+} from './match-narrative-voice';
 
 const OPENER_BY_BAND: Record<MatchNarrativeFactPack['scoreBand'], string> = {
   strong: 'Overall this looks like a strong match with clear shared ground.',
@@ -21,7 +25,7 @@ const CLOSER_BY_BAND: Record<MatchNarrativeFactPack['scoreBand'], string> = {
 
 /**
  * Deterministic multi-sentence fallback when the LLM fails or is ungrounded.
- * Same fact pack → same string. No chip-label lists (Story 4).
+ * Same fact pack → same string. No chip-label lists; ignores profileExcerpts (Phase 3).
  */
 export function buildFallbackMatchNarrative(
   factPack: MatchNarrativeFactPack,
@@ -32,6 +36,12 @@ export function buildFallbackMatchNarrative(
   const traits = factPack.traits.slice(0, 5);
   for (const t of traits) {
     sentences.push(t.evidence.endsWith('.') ? t.evidence : `${t.evidence}.`);
+  }
+
+  if (traits.length === 0) {
+    sentences.push(
+      "There isn't enough shared detail yet for a longer read.",
+    );
   }
 
   if (factPack.sharedInterestNote) {
@@ -47,14 +57,14 @@ export function buildFallbackMatchNarrative(
     sentences.push(note.endsWith('.') ? note : `${note}.`);
   }
 
-  if (factPack.caution) {
+  if (factPack.caution?.trim() && !containsBannedPhrase(factPack.caution)) {
     const c = factPack.caution.trim();
     sentences.push(c.endsWith('.') ? c : `${c}.`);
   }
 
-  if (factPack.suggestedNextAction) {
-    const a = factPack.suggestedNextAction.trim();
-    sentences.push(a.endsWith('.') ? a : `${a}.`);
+  const next = nextActionForLlm(factPack.suggestedNextAction);
+  if (next) {
+    sentences.push(next.endsWith('.') ? next : `${next}.`);
   } else {
     sentences.push(CLOSER_BY_BAND[factPack.scoreBand]);
   }

@@ -401,7 +401,15 @@ describe('MeMatchesPage (yourAction badges)', () => {
           matchNarrative: longNarrative.repeat(8),
           explainability: {
             positiveChips: ['Emotional depth'],
-            reasonShort: 'Aligned',
+            reasonShort: 'You share real overlap on Ambition alignment, Emotional depth',
+          },
+          recommendation: {
+            explainability: {
+              positiveChips: ['Emotional depth'],
+              reasonShort: 'You share real overlap on Ambition alignment, Emotional depth',
+            },
+            primaryTakeaway: 'Clear overlap: real depth and presence.',
+            suggestedNextAction: 'Worth a closer look',
           },
         } as typeof baseMatch & { matchNarrative: string },
       ],
@@ -410,10 +418,85 @@ describe('MeMatchesPage (yourAction badges)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aligned')).toBeTruthy();
+      expect(screen.getByText('Clear overlap: real depth and presence.')).toBeTruthy();
     });
+    expect(screen.queryByText(/Ambition alignment/)).toBeNull();
     expect(screen.queryByText(/calm emotional pace across many sentences/)).toBeNull();
     expect(document.body.textContent).not.toContain(longNarrative.repeat(2));
+    unmount();
+  });
+
+  it('prefers primaryTakeaway over chip-jargon reasonShort on list', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          explainability: {
+            positiveChips: ['Ambition alignment', 'Emotional depth'],
+            reasonShort:
+              'You share real overlap on Ambition alignment, Emotional depth, and …',
+          },
+          recommendation: {
+            explainability: {
+              positiveChips: ['Ambition alignment', 'Emotional depth'],
+              reasonShort:
+                'You share real overlap on Ambition alignment, Emotional depth, and …',
+            },
+            primaryTakeaway:
+              'You both share a drive for goals and real depth and presence.',
+            suggestedNextAction: 'Worth a closer look',
+          },
+        },
+      ],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'You both share a drive for goals and real depth and presence.',
+        ),
+      ).toBeTruthy();
+    });
+    expect(screen.queryByText(/Ambition alignment/)).toBeNull();
+    unmount();
+  });
+
+  it('omits list subtitle when primaryTakeaway missing (never reasonShort)', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          explainability: {
+            positiveChips: ['Ambition alignment'],
+            reasonShort:
+              'You share real overlap on Ambition alignment and more jargon',
+          },
+          recommendation: {
+            explainability: {
+              positiveChips: ['Ambition alignment'],
+              reasonShort:
+                'You share real overlap on Ambition alignment and more jargon',
+            },
+            primaryTakeaway: '   ',
+            suggestedNextAction: 'Worth a closer look',
+          },
+        },
+      ],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tel Aviv/)).toBeTruthy();
+    });
+    expect(screen.queryByText(/Ambition alignment/)).toBeNull();
+    expect(
+      screen.queryByText(/You share real overlap on Ambition/),
+    ).toBeNull();
     unmount();
   });
 });
@@ -501,7 +584,17 @@ describe('MeMatchesPage (i18n)', () => {
     localStorage.clear();
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
-      matches: [{ ...baseMatch, yourAction: 'LIKE' as const }],
+      matches: [
+        {
+          ...baseMatch,
+          yourAction: 'LIKE' as const,
+          recommendation: {
+            explainability: baseMatch.explainability,
+            primaryTakeaway: 'Clear overlap: real depth and presence.',
+            suggestedNextAction: 'Next',
+          },
+        },
+      ],
     });
   });
 
@@ -527,13 +620,15 @@ describe('MeMatchesPage (i18n)', () => {
     });
   });
 
-  it('still renders API reasonShort in English when locale is he', async () => {
+  it('still renders API list takeaway in English when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
     render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aligned')).toBeTruthy();
+      expect(
+        screen.getByText('Clear overlap: real depth and presence.'),
+      ).toBeTruthy();
     });
   });
 });

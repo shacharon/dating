@@ -25,7 +25,7 @@ describe('scoreBandFromFinalScore', () => {
 });
 
 describe('buildMatchNarrativeFactPack', () => {
-  it('builds pack without about* keys', () => {
+  it('builds pack without raw about* keys', () => {
     const pack = buildMatchNarrativeFactPack({
       finalScore: 55,
       explainability: explainability({
@@ -37,6 +37,14 @@ describe('buildMatchNarrativeFactPack', () => {
         suggestedNextAction: 'Send a thoughtful first message.',
       },
       sharedInterests: ['hiking'],
+      viewerAbout: {
+        aboutMe:
+          'I recharge in solitude and need quiet mornings with books and coffee.',
+      },
+      candidateAbout: {
+        aboutMe:
+          'Solitude and creative focus matter to how I structure my weeks.',
+      },
     });
 
     expect(pack.scoreBand).toBe('moderate');
@@ -48,12 +56,21 @@ describe('buildMatchNarrativeFactPack', () => {
     expect(pack.tensionChip).toBe('Emotional depth gap');
     expect(pack.sharedInterests).toEqual(['hiking']);
     expect(pack.sharedInterestNote).toBe('You both enjoy hiking.');
-    expect(Object.keys(pack)).not.toEqual(
-      expect.arrayContaining(['aboutMe', 'aboutPartner', 'aboutRelationship']),
-    );
+    expect(pack.profileExcerpts?.length).toBeGreaterThan(0);
+    expect(pack.profileExcerpts?.[0].text.toLowerCase()).toContain('solitude');
     expect('aboutMe' in pack).toBe(false);
     expect('aboutPartner' in pack).toBe(false);
     expect('aboutRelationship' in pack).toBe(false);
+  });
+
+  it('omits profileExcerpts when about* empty', () => {
+    const pack = buildMatchNarrativeFactPack({
+      finalScore: 55,
+      explainability: explainability(),
+      viewerAbout: {},
+      candidateAbout: {},
+    });
+    expect(pack.profileExcerpts).toBeUndefined();
   });
 
   it('includes Conflict approach when chip present', () => {
