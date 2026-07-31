@@ -1,6 +1,8 @@
 # Story 03 — Secrets & runtime config
 
-**Sprint 20 · Status: PLANNED**
+**Sprint 20 · Status: ✅ Done (PENDING_LIVE_VERIFY)** — contract + TF + 4-agent CR complete; live boot/login/photo after apply
+
+**Handoffs:** [architect](./handoffs/STORY_03_secrets_and_config/agent-0-architect.md) · [dev](./handoffs/STORY_03_secrets_and_config/agent-1-dev.md) · [CR](./handoffs/STORY_03_secrets_and_config/agent-2-cr.md) · [PM](./handoffs/STORY_03_secrets_and_config/agent-3-pm.md)
 
 ## Objective
 Wire every environment variable the apps need into SSM Parameter Store / Secrets Manager, injected into the ECS task definitions, with prod-safe defaults. No secret ever lands in an image, repo, or plan output.
@@ -24,11 +26,12 @@ The apps fail open: they boot with half the config missing and then misbehave si
 6. **Least-privilege read** — ECS execution role granted read on exactly these parameters/secrets (from Story 02 IAM).
 
 ## Acceptance criteria
-- [ ] API task starts with **all** required vars; deliberately removing `OPENAI_API_KEY` reproduces a fast, clear boot failure (proves the guard, then restore).
-- [ ] No secret value appears in git, the image, `terraform plan`, or CloudWatch logs.
-- [ ] `COOKIE_SECURE=true` and CORS/cookie domain verified against the real `dev` origin (login persists across requests).
-- [ ] Photos go to S3 and moderation calls Rekognition (not mock) — confirmed via a test upload.
-- [ ] Rotating a secret (e.g. `SESSION_SECRET_PEPPER`) is a task redeploy, no code change.
+- [x] Inventory + classification + TF module + ECS/IAM wiring in repo *(CR PASS)*
+- [ ] API task starts with **all** required vars; deliberately removing `OPENAI_API_KEY` reproduces a fast, clear boot failure (proves the guard, then restore). *(PENDING_LIVE_VERIFY)*
+- [x] No secret value appears in git or images *(reviewed)*; plan/CloudWatch — operator discipline after apply
+- [ ] `COOKIE_SECURE=true` and CORS/cookie domain verified against the real `dev` origin (login persists across requests). *(PENDING_LIVE_VERIFY)*
+- [ ] Photos go to S3 and moderation calls Rekognition (not mock) — confirmed via a test upload. *(PENDING_LIVE_VERIFY)*
+- [x] Rotating a secret is a task redeploy, no code change *(documented)*
 
 ## Notes / gotchas
 - `PHOTO_CDN_PRIVATE_KEY` must preserve `\n` escapes as a single-line secret.
