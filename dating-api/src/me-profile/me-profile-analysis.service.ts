@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma, UserProfile, UserProfileStatus } from '@prisma/client';
+import { Prisma, type UserProfile, type UserProfileStatus } from '@prisma/client';
 import type {
   EvaluateBatchInput,
   EvaluateBatchResult,
@@ -8,6 +8,9 @@ import { EvaluateService } from '../evaluate/evaluate.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+/** Max profile ids per DISTINCT ON query (keeps IN-lists bounded). */
+export const LATEST_EVAL_BATCH_SIZE = 500;
 
 const STATUS_SUBMITTED = 'SUBMITTED' as UserProfileStatus;
 const STATUS_ANALYZING = 'ANALYZING' as UserProfileStatus;
@@ -208,9 +211,17 @@ export type LatestEvaluationForMatchPick = {
   version: string;
 };
 
+type LatestEvalRawRow = {
+  profileId: string;
+  evaluationJson: Prisma.JsonValue;
+  createdAt: Date | string;
+  version: string;
+};
+
 /**
- * Latest `UserProfileEvaluation` per profile id: one `ORDER BY createdAt DESC LIMIT 1`
- * query per distinct id via {@link latestEvaluationForProfile} (no multi-row reads, no fallback).
+ * Latest `UserProfileEvaluation` per profile id via chunked Postgres
+ * `DISTINCT ON ("profileId") ... ORDER BY "profileId", "createdAt" DESC`.
+ * Missing profiles are omitted. Does not call {@link latestEvaluationForProfile}.
  */
 export async function latestEvaluationsForProfileIds(
   prisma: PrismaService,
@@ -218,17 +229,33 @@ export async function latestEvaluationsForProfileIds(
 ): Promise<Map<string, LatestEvaluationForMatchPick>> {
   const out = new Map<string, LatestEvaluationForMatchPick>();
   const unique = [...new Set(profileIds)];
-  for (const profileId of unique) {
-    const row = await latestEvaluationForProfile(prisma, profileId);
-    if (row === null) {
-      continue;
+  if (unique.length === 0) {
+    return out;
+  }
+
+  for (let i = 0; i < unique.length; i += LATEST_EVAL_BATCH_SIZE) {
+    const chunk = unique.slice(i, i + LATEST_EVAL_BATCH_SIZE);
+    const rows = await prisma.$queryRaw<LatestEvalRawRow[]>(Prisma.sql`
+      SELECT DISTINCT ON ("profileId")
+        "profileId",
+        "evaluationJson",
+        "createdAt",
+        "version"
+      FROM "UserProfileEvaluation"
+      WHERE "profileId" IN (${Prisma.join(chunk)})
+      ORDER BY "profileId", "createdAt" DESC
+    `);
+    for (const row of rows) {
+      out.set(row.profileId, {
+        profileId: row.profileId,
+        evaluationJson: row.evaluationJson,
+        createdAt:
+          row.createdAt instanceof Date
+            ? row.createdAt
+            : new Date(row.createdAt),
+        version: row.version,
+      });
     }
-    out.set(profileId, {
-      profileId,
-      evaluationJson: row.evaluationJson,
-      createdAt: row.createdAt,
-      version: row.version,
-    });
   }
   return out;
 }

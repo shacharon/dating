@@ -262,6 +262,26 @@ export class EligibilityTestHarness {
 
   readonly prismaMock = {
     $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(this.prismaMock)),
+    $queryRaw: jest.fn(async (sql: { values: unknown[] }) => {
+      const rows: Array<{
+        profileId: string;
+        evaluationJson: unknown;
+        createdAt: unknown;
+        version: unknown;
+      }> = [];
+      for (const profileId of sql.values as string[]) {
+        const row = this.evaluations.get(profileId);
+        if (row !== undefined) {
+          rows.push({
+            profileId: row['profileId'] as string,
+            evaluationJson: row['evaluationJson'],
+            createdAt: row['createdAt'],
+            version: row['version'],
+          });
+        }
+      }
+      return rows;
+    }),
     matchNarrativeCache: this.narrativeCachePrisma.matchNarrativeCache,
     userSession: {
       create: jest.fn(async ({ data }: { data: { expiresAt: Date } }) => ({

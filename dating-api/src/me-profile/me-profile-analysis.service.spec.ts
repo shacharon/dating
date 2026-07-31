@@ -5,6 +5,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import {
   buildAnalysisContext,
   EVALUATION_VERSION,
+  LATEST_EVAL_BATCH_SIZE,
   latestEvaluationForProfile,
   latestEvaluationsForProfileIds,
   mapDbFirstColumnsFromEvaluation,
@@ -611,29 +612,26 @@ describe('MeProfileAnalysisService', () => {
 // ---------------------------------------------------------------------------
 
 describe('latestEvaluationsForProfileIds', () => {
-  it('loads each distinct profileId via latestEvaluationForProfile only (no findMany)', async () => {
+  it('loads distinct latest rows via one $queryRaw (no findFirst loop)', async () => {
     const t1 = new Date('2026-01-01T00:00:00.000Z');
     const t3 = new Date('2026-01-03T00:00:00.000Z');
-    const findFirst = jest.fn().mockImplementation(({ where: { profileId } }) => {
-      if (profileId === 'p1') {
-        return Promise.resolve({
-          profileId: 'p1',
-          evaluationJson: { v: 'latest_p1' },
-          createdAt: t3,
-          version: 'v1',
-        });
-      }
-      if (profileId === 'p2') {
-        return Promise.resolve({
-          profileId: 'p2',
-          evaluationJson: { v: 'only_p2' },
-          createdAt: t1,
-          version: 'v1',
-        });
-      }
-      return Promise.resolve(null);
-    });
+    const $queryRaw = jest.fn().mockResolvedValue([
+      {
+        profileId: 'p1',
+        evaluationJson: { v: 'latest_p1' },
+        createdAt: t3,
+        version: 'v1',
+      },
+      {
+        profileId: 'p2',
+        evaluationJson: { v: 'only_p2' },
+        createdAt: t1,
+        version: 'v1',
+      },
+    ]);
+    const findFirst = jest.fn();
     const mockPrisma = {
+      $queryRaw,
       userProfileEvaluation: { findFirst },
     };
 
@@ -642,17 +640,8 @@ describe('latestEvaluationsForProfileIds', () => {
       ['p1', 'p2'],
     );
 
-    expect(findFirst).toHaveBeenCalledTimes(2);
-    expect(findFirst).toHaveBeenCalledWith({
-      where: { profileId: 'p1' },
-      orderBy: { createdAt: 'desc' },
-      take: 1,
-    });
-    expect(findFirst).toHaveBeenCalledWith({
-      where: { profileId: 'p2' },
-      orderBy: { createdAt: 'desc' },
-      take: 1,
-    });
+    expect($queryRaw).toHaveBeenCalledTimes(1);
+    expect(findFirst).not.toHaveBeenCalled();
     expect(map.get('p1')).toEqual({
       profileId: 'p1',
       evaluationJson: { v: 'latest_p1' },
@@ -667,25 +656,31 @@ describe('latestEvaluationsForProfileIds', () => {
     });
   });
 
-  it('deduplicates profileIds so each id is queried once', async () => {
-    const findFirst = jest.fn().mockResolvedValue({
-      profileId: 'p1',
-      evaluationJson: {},
-      createdAt: new Date(),
-      version: 'v1',
-    });
-    const mockPrisma = { userProfileEvaluation: { findFirst } };
+  it('deduplicates profileIds so each id appears once in the raw query values', async () => {
+    const $queryRaw = jest.fn().mockImplementation(async (sql: { values: unknown[] }) => [
+      {
+        profileId: 'p1',
+        evaluationJson: {},
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        version: 'v1',
+      },
+    ]);
+    const mockPrisma = { $queryRaw, userProfileEvaluation: { findFirst: jest.fn() } };
 
     await latestEvaluationsForProfileIds(
       mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
       ['p1', 'p1', 'p1'],
     );
 
-    expect(findFirst).toHaveBeenCalledTimes(1);
+    expect($queryRaw).toHaveBeenCalledTimes(1);
+    const sql = $queryRaw.mock.calls[0][0] as { values: unknown[] };
+    expect(sql.values).toEqual(['p1']);
   });
 
-  it('returns an empty map when profileIds is empty', async () => {
+  it('returns an empty map when profileIds is empty (no query)', async () => {
+    const $queryRaw = jest.fn();
     const mockPrisma = {
+      $queryRaw,
       userProfileEvaluation: { findFirst: jest.fn() },
     };
 
@@ -695,7 +690,76 @@ describe('latestEvaluationsForProfileIds', () => {
     );
 
     expect(map.size).toBe(0);
+    expect($queryRaw).not.toHaveBeenCalled();
     expect(mockPrisma.userProfileEvaluation.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('omits profiles with no evaluation row', async () => {
+    const $queryRaw = jest.fn().mockResolvedValue([
+      {
+        profileId: 'p1',
+        evaluationJson: { ok: true },
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        version: 'v1',
+      },
+    ]);
+    const mockPrisma = { $queryRaw };
+
+    const map = await latestEvaluationsForProfileIds(
+      mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
+      ['p1', 'p_missing'],
+    );
+
+    expect(map.size).toBe(1);
+    expect(map.has('p1')).toBe(true);
+    expect(map.has('p_missing')).toBe(false);
+  });
+
+  it('chunks ids above LATEST_EVAL_BATCH_SIZE into multiple $queryRaw calls', async () => {
+    const ids = Array.from(
+      { length: LATEST_EVAL_BATCH_SIZE + 1 },
+      (_, i) => `p${i}`,
+    );
+    const $queryRaw = jest.fn().mockImplementation(async (sql: { values: unknown[] }) =>
+      (sql.values as string[]).map((profileId) => ({
+        profileId,
+        evaluationJson: {},
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        version: 'v1',
+      })),
+    );
+    const mockPrisma = { $queryRaw };
+
+    const map = await latestEvaluationsForProfileIds(
+      mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
+      ids,
+    );
+
+    expect($queryRaw).toHaveBeenCalledTimes(2);
+    expect(map.size).toBe(ids.length);
+    const firstChunk = ($queryRaw.mock.calls[0][0] as { values: unknown[] }).values;
+    const secondChunk = ($queryRaw.mock.calls[1][0] as { values: unknown[] }).values;
+    expect(firstChunk).toHaveLength(LATEST_EVAL_BATCH_SIZE);
+    expect(secondChunk).toHaveLength(1);
+  });
+
+  it('coerces string createdAt from the driver to Date', async () => {
+    const $queryRaw = jest.fn().mockResolvedValue([
+      {
+        profileId: 'p1',
+        evaluationJson: {},
+        createdAt: '2026-01-02T03:04:05.000Z',
+        version: 'v1',
+      },
+    ]);
+    const mockPrisma = { $queryRaw };
+
+    const map = await latestEvaluationsForProfileIds(
+      mockPrisma as unknown as import('../prisma/prisma.service').PrismaService,
+      ['p1'],
+    );
+
+    expect(map.get('p1')!.createdAt).toEqual(new Date('2026-01-02T03:04:05.000Z'));
   });
 });
 

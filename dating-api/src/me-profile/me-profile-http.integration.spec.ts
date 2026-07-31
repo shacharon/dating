@@ -77,6 +77,30 @@ describe('me profile HTTP (integration)', () => {
   });
   const prismaMock = {
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(async (sql: { values: unknown[] }) => {
+      const rows: Array<{
+        profileId: string;
+        evaluationJson: unknown;
+        createdAt: unknown;
+        version: unknown;
+      }> = [];
+      for (const profileId of sql.values as string[]) {
+        const row = await prismaMock.userProfileEvaluation.findFirst({
+          where: { profileId },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        });
+        if (row != null) {
+          rows.push({
+            profileId: (row.profileId as string | undefined) ?? profileId,
+            evaluationJson: row.evaluationJson,
+            createdAt: row.createdAt,
+            version: row.version,
+          });
+        }
+      }
+      return rows;
+    }),
     matchNarrativeCache: narrativeCachePrisma.matchNarrativeCache,
     userSession: {
       create: jest.fn(),

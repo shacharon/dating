@@ -119,6 +119,7 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
 
   describe('V1 list vs detail DTO fields', () => {
     let prisma: {
+      $queryRaw: jest.Mock;
       userProfile: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
       userProfileEvaluation: { findFirst: jest.Mock };
       userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
@@ -129,6 +130,7 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
 
     beforeEach(() => {
       prisma = {
+        $queryRaw: jest.fn(),
         userProfile: {
           findUnique: jest.fn(),
           findMany: jest.fn().mockResolvedValue([]),
@@ -154,6 +156,30 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
           findMany: jest.fn().mockResolvedValue([]),
         },
       };
+      prisma.$queryRaw.mockImplementation(async (sql: { values: unknown[] }) => {
+        const rows: Array<{
+          profileId: string;
+          evaluationJson: unknown;
+          createdAt: Date;
+          version: string;
+        }> = [];
+        for (const profileId of sql.values as string[]) {
+          const row = await prisma.userProfileEvaluation.findFirst({
+            where: { profileId },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          });
+          if (row != null) {
+            rows.push({
+              profileId,
+              evaluationJson: row.evaluationJson,
+              createdAt: row.createdAt,
+              version: row.version,
+            });
+          }
+        }
+        return rows;
+      });
       const obs: jest.Mocked<Pick<StructuredObservabilityService, 'trace' | 'error'>> = {
         trace: jest.fn(),
         error: jest.fn(),

@@ -95,6 +95,7 @@ describe('MeMatchesService', () => {
   const candidateProfileId = 'prof_cand_1';
 
   let prisma: {
+    $queryRaw: jest.Mock;
     userProfile: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
     userProfileEvaluation: { findFirst: jest.Mock };
     userProfilePhoto: { findFirst: jest.Mock; count: jest.Mock };
@@ -128,6 +129,7 @@ describe('MeMatchesService', () => {
 
   beforeEach(() => {
     prisma = {
+      $queryRaw: jest.fn(),
       userProfile: {
         findUnique: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
@@ -153,6 +155,32 @@ describe('MeMatchesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
     };
+    // Batch path uses $queryRaw; bridge to findFirst so existing per-id mocks still apply.
+    prisma.$queryRaw.mockImplementation(async (sql: { values: unknown[] }) => {
+      const rows: Array<{
+        profileId: string;
+        evaluationJson: unknown;
+        createdAt: Date;
+        version: string;
+      }> = [];
+      for (const profileId of sql.values as string[]) {
+        const row = await prisma.userProfileEvaluation.findFirst({
+          where: { profileId },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        });
+        if (row != null) {
+          rows.push({
+            // Always key by requested id — findFirst mocks may omit/wrong profileId.
+            profileId,
+            evaluationJson: row.evaluationJson,
+            createdAt: row.createdAt,
+            version: row.version,
+          });
+        }
+      }
+      return rows;
+    });
     photoStorage = { read: jest.fn() };
     obs = { trace: jest.fn(), error: jest.fn() };
     mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
@@ -1084,7 +1112,7 @@ describe('MeMatchesService', () => {
       makeProfileRow({ id: candidateProfileId, userId: 'user_cand', gender: 'FEMALE', desiredPartnerGenders: ['MALE'] }),
     ]);
 
-    // Mock findFirst to enforce query validation and return newest evaluation only
+    // Mock findFirst for viewer; candidates load via $queryRaw (bridged to findFirst in beforeEach)
     prisma.userProfileEvaluation.findFirst.mockImplementation(({ where, orderBy, take }) => {
       if (orderBy?.createdAt === 'desc' && take === 1) {
         // Return newest evaluation only
@@ -1098,13 +1126,14 @@ describe('MeMatchesService', () => {
 
     expect(result.status).toBe('ready');
     expect(result.matches).toHaveLength(1);
-    // Verify mock was called with correct query params
+    // Viewer still uses findFirst; candidates use $queryRaw
     expect(prisma.userProfileEvaluation.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         orderBy: { createdAt: 'desc' },
         take: 1,
       }),
     );
+    expect(prisma.$queryRaw).toHaveBeenCalled();
   });
 
   it('list() sets profileAnalysisStale=true when profile.updatedAt > evaluation.createdAt', async () => {
@@ -2257,6 +2286,7 @@ describe('MeMatchesService', () => {
     it('list() returns status=ready with matches when Prisma mock has no legacy table delegates', async () => {
       const newModelOnlyPrisma = {
         // Intentionally no matchmakingProfile, profileExtractionV2, etc.
+        $queryRaw: jest.fn(),
         userProfile: {
           findUnique: jest.fn().mockResolvedValue(
             makeProfileRow({ id: viewerProfileId, userId: viewerUserId, gender: 'MALE', desiredPartnerGenders: ['FEMALE'] }),
@@ -2283,6 +2313,30 @@ describe('MeMatchesService', () => {
           findMany: jest.fn().mockResolvedValue([]),
         },
       };
+      newModelOnlyPrisma.$queryRaw.mockImplementation(async (sql: { values: unknown[] }) => {
+        const rows: Array<{
+          profileId: string;
+          evaluationJson: unknown;
+          createdAt: Date;
+          version: string;
+        }> = [];
+        for (const profileId of sql.values as string[]) {
+          const row = await newModelOnlyPrisma.userProfileEvaluation.findFirst({
+            where: { profileId },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          });
+          if (row != null) {
+            rows.push({
+              profileId,
+              evaluationJson: row.evaluationJson,
+              createdAt: row.createdAt,
+              version: row.version,
+            });
+          }
+        }
+        return rows;
+      });
 
       const isolatedSvc = new MeMatchesService(
         newModelOnlyPrisma as unknown as PrismaService,
@@ -2757,6 +2811,7 @@ describe('MeMatchesService', () => {
           take: 1,
         }),
       );
+      expect(prisma.$queryRaw).toHaveBeenCalled();
 
       // No legacy table reads should occur (implicitly proven by not mocking them)
       // If service tried to access unmocked methods, test would fail

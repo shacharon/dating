@@ -194,6 +194,31 @@ describe('Two-user new-model E2E flow (integration)', () => {
   const matchNarrativeGeneratorStub = createMatchNarrativeGeneratorStub();
   const prismaMock = {
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(async (sql: { values: unknown[] }) => {
+      const rows: Array<{
+        profileId: string;
+        evaluationJson: unknown;
+        createdAt: unknown;
+        version: unknown;
+      }> = [];
+      for (const profileId of sql.values as string[]) {
+        const row =
+          profileId === PROF_A_ID
+            ? evalA
+            : profileId === PROF_B_ID
+              ? evalB
+              : null;
+        if (row != null) {
+          rows.push({
+            profileId: (row['profileId'] as string | undefined) ?? profileId,
+            evaluationJson: row['evaluationJson'],
+            createdAt: row['createdAt'],
+            version: row['version'],
+          });
+        }
+      }
+      return rows;
+    }),
     // ── New-model tables ──────────────────────────────────────────────
     matchNarrativeCache: narrativeCachePrisma.matchNarrativeCache,
     userSession: {
