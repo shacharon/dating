@@ -10,6 +10,9 @@ import {
 } from '@/lib/observability/product-logger';
 import { captureRequestIdFromResponse } from '@/lib/observability/request-id';
 import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
+import type { Evaluation, ProfileTexts } from '@/lib/profile-types';
+
+export type { Evaluation } from '@/lib/profile-types';
 
 const API_BASE = getApiBase();
 
@@ -19,78 +22,10 @@ export interface ProfileListItem {
   savedAt: string;
 }
 
-interface ExtractionEvidenceItem {
-  signal: string;
-  quote: string;
-  reason?: string;
-}
-
-type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
-
-interface ExtractedSignals {
-  domain: string;
-  signals: Record<string, number | null>;
-  evidence: ExtractionEvidenceItem[];
-  confidence: number;
-  domainStatus?: ExtractionDomainQualityStatus;
-}
-
-interface ProductScores {
-  partnerFitScore: number;
-  relationshipFitScore: number;
-  coverageScore: number;
-  frictionRiskScore: number;
-  overallDecisionScore: number;
-}
-
-interface EvaluationChip {
-  label: string;
-  source: 'interest' | 'motivation' | 'trait' | 'signal' | 'enrichment';
-}
-
-interface ChipsBundle {
-  self: EvaluationChip[];
-  partner: EvaluationChip[];
-  relationship: EvaluationChip[];
-}
-
-interface EnrichmentSignalsV1 {
-  dailyRhythm: string | null;
-  autonomyTogethernessDepth: string | null;
-  kidsTimeline: string | null;
-  conflictStyleDetail: string | null;
-  interestsTop3: string[];
-}
-
-interface EnrichmentV1 {
-  version: 'v1';
-  signals: EnrichmentSignalsV1;
-}
-
-interface ProductScoresPresentation {
-  partnerFitScore: { kind: 'numeric'; value: number } | { kind: 'insufficient_data' };
-  relationshipFitScore: { kind: 'numeric'; value: number } | { kind: 'insufficient_data' };
-  coverageScore: { kind: 'numeric'; value: number } | { kind: 'insufficient_data' };
-  frictionRiskScore: { kind: 'numeric'; value: number } | { kind: 'insufficient_data' };
-  overallDecisionScore: { kind: 'numeric'; value: number } | { kind: 'insufficient_data' };
-}
-
-interface Evaluation {
-  self: ExtractedSignals;
-  partner: ExtractedSignals;
-  relationship: ExtractedSignals;
-  display: { summary: string; insight: string; note?: string };
-  productScores: ProductScores;
-  productScoresPresentation?: ProductScoresPresentation;
-  flags: string[];
-  chips?: ChipsBundle;
-  enrichment?: EnrichmentV1;
-}
-
 export interface ProfilePayload {
   id: string;
   name: string;
-  texts: { aboutMe: string; aboutPartner: string; aboutRelationship: string };
+  texts: ProfileTexts;
   evaluation?: Evaluation;
   savedAt: string;
 }
