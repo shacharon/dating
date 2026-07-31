@@ -4,7 +4,7 @@ import {
   matchListSecondaryMeta,
   matchDetailSubtitle,
 } from './match-display';
-import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-profile-api';
+import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
 
 const baseItem = {
   id: 'p1',

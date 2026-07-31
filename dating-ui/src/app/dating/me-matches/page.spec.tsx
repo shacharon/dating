@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
-import type { MatchRecommendationDto } from '@/lib/me-profile-api';
+import type { MatchRecommendationDto } from '@/lib/me-matches-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 
@@ -13,10 +13,16 @@ const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfil
   replaceMock: vi.fn(),
 }));
 
-vi.mock('@/lib/me-profile-api', () => ({
+vi.mock('@/lib/me-matches-api', () => ({
   fetchMyMatches,
+}));
+
+vi.mock('@/lib/me-profile-api', () => ({
   submitMyProfileForAnalysis,
   fetchMyProfile,
+}));
+
+vi.mock('@/lib/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
 

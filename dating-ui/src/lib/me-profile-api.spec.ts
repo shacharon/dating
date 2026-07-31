@@ -2,19 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetRequestIdContextForTests } from '@/lib/observability/request-id';
 import {
   createMyProfile,
+  fetchMyProfile,
+  patchMyProfile,
+  submitMyProfileForAnalysis,
+} from '@/lib/me-profile-api';
+import {
   deleteMyProfilePhoto,
   fetchMyProfilePhotoBlob,
-  fetchMyLatestAnalysis,
   listMyProfilePhotos,
-  fetchMyMatches,
-  fetchMyProfile,
-  fetchMatchFeedback,
-  patchMyProfile,
   setPrimaryMyProfilePhoto,
-  submitMyProfileForAnalysis,
   uploadMyProfilePhoto,
+} from '@/lib/me-photos-api';
+import {
+  fetchMyLatestAnalysis,
+} from '@/lib/me-analysis-api';
+import {
+  fetchMyMatches,
+  fetchMatchFeedback,
   upsertMatchFeedback,
-} from '@/lib/me-profile-api';
+} from '@/lib/me-matches-api';
 
 function mockResponse(init: {
   ok: boolean;

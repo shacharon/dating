@@ -13,7 +13,7 @@ import {
   undoMatchAction,
   upsertMatchFeedback,
   type MeMatchDetailDto,
-} from '@/lib/me-profile-api';
+} from '@/lib/me-matches-api';
 import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
 import { MatchCelebrationModal } from '@/components/match-celebration-modal';
 import { MatchPhoto } from '@/components/match-photo';

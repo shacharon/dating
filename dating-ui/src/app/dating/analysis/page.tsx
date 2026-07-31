@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import {
   fetchAnalysisStatus,
   fetchMyLatestAnalysis,
+  type MeLatestAnalysisDto,
+} from '@/lib/me-analysis-api';
+import {
   fetchMyProfile,
   submitMyProfileForAnalysis,
   type MeProfileDto,
-  type MeLatestAnalysisDto,
 } from '@/lib/me-profile-api';
 import { mapEvaluationToViewModel } from '@/lib/analysis-presentation';
 import { AnalysisProgressPanel } from '@/components/analysis-progress-panel';

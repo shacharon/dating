@@ -24,7 +24,7 @@ const {
   mockPush: vi.fn(),
 }));
 
-vi.mock('@/lib/me-profile-api', () => ({
+vi.mock('@/lib/me-matches-api', () => ({
   fetchMyMatchById,
   fetchMatchAction,
   fetchMatchFeedback,

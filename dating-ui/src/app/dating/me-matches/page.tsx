@@ -2,10 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import {
-  submitMyProfileForAnalysis,
-  type MeMatchesListDto,
-} from '@/lib/me-profile-api';
+import { submitMyProfileForAnalysis } from '@/lib/me-profile-api';
+import { type MeMatchesListDto } from '@/lib/me-matches-api';
 import { MatchPhoto } from '@/components/match-photo';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';

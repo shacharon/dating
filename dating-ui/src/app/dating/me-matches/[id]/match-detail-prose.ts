@@ -1,4 +1,4 @@
-import type { MeMatchDetailDto } from '@/lib/me-profile-api';
+import type { MeMatchDetailDto } from '@/lib/me-matches-api';
 
 export type MatchDetailProse =
   | { kind: 'narrative'; text: string }

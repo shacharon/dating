@@ -6,7 +6,7 @@ import {
   fetchMyMatches,
   type MeMatchItemDto,
   type MeMatchesListDto,
-} from '@/lib/me-profile-api';
+} from '@/lib/me-matches-api';
 
 const PAGE_LIMIT = 20;
 

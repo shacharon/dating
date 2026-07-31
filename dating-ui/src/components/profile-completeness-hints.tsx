@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ProfileDraft } from '@/app/dating/_lib/types';
-import { listMyProfilePhotos } from '@/lib/me-profile-api';
+import { listMyProfilePhotos } from '@/lib/me-photos-api';
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,

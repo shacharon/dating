@@ -1,4 +1,4 @@
-import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-profile-api';
+import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
 
 function usableLocationLabel(locationLabel: string | null): string | null {
   const trimmed = locationLabel?.trim() ?? '';

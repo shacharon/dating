@@ -32,10 +32,13 @@ vi.mock('next/link', () => ({
   }) => createElement('a', { href, ...props }, children),
 }));
 
-vi.mock('@/lib/me-profile-api', () => ({
+vi.mock('@/lib/me-analysis-api', () => ({
   fetchMyLatestAnalysis: mocked.fetchMyLatestAnalysisMock,
-  fetchMyProfile: mocked.fetchMyProfileMock,
   fetchAnalysisStatus: mocked.fetchAnalysisStatusMock,
+}));
+
+vi.mock('@/lib/me-profile-api', () => ({
+  fetchMyProfile: mocked.fetchMyProfileMock,
   submitMyProfileForAnalysis: mocked.submitMyProfileForAnalysisMock,
 }));
 

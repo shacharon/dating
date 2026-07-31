@@ -19,8 +19,8 @@ vi.mock('@/lib/profile-form', async (importOriginal) => {
   };
 });
 
-vi.mock('@/lib/me-profile-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/me-profile-api')>();
+vi.mock('@/lib/me-photos-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/me-photos-api')>();
   return {
     ...actual,
     listMyProfilePhotos,

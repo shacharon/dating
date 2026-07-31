@@ -8,7 +8,7 @@ import {
   setPrimaryMyProfilePhoto,
   uploadMyProfilePhoto,
   type MeProfilePhotoDto,
-} from '@/lib/me-profile-api';
+} from '@/lib/me-photos-api';
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
