@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/auth-context';
 import {
   createMyProfile,
   fetchMyProfile,
-  ME_PARTNER_GENDER_CHOICES,
   ME_PROFILE_GENDERS,
   patchMyProfile,
   type MeProfileGender,
@@ -15,17 +14,12 @@ import {
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
-
-function ageFromBirthInput(iso: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
-  const b = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(b.getTime())) return null;
-  const t = new Date();
-  let age = t.getFullYear() - b.getFullYear();
-  const m = t.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && t.getDate() < b.getDate())) age--;
-  return age >= 0 && age < 130 ? age : null;
-}
+import { OnboardingBasicFields } from '@/components/onboarding-basic-fields';
+import {
+  ageFromBirthInput,
+  normalizeNicknameValue,
+  togglePartnerGender,
+} from '@/components/onboarding-basic-helpers';
 
 export function OnboardingBasicForm() {
   const router = useRouter();
@@ -115,12 +109,7 @@ export function OnboardingBasicForm() {
   }, [router, resumeOptions, ob.loadFailed]);
 
   function setPartnerGender(g: MeProfileGender, checked: boolean) {
-    setDesiredPartnerGenders((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(g);
-      else next.delete(g);
-      return Array.from(next) as MeProfileGender[];
-    });
+    setDesiredPartnerGenders((prev) => togglePartnerGender(prev, g, checked));
   }
 
   function basicBody(advanceToTexts: boolean) {
@@ -145,12 +134,6 @@ export function OnboardingBasicForm() {
     }
 
     return body;
-  }
-
-  function normalizeNicknameValue(value: string | null): string | null {
-    if (!value) return null;
-    const trimmed = value.trim();
-    return trimmed === '' ? null : trimmed;
   }
 
   async function persist(advanceToTexts: boolean): Promise<boolean> {
@@ -215,11 +198,6 @@ export function OnboardingBasicForm() {
     }
   }
 
-  const inputClass =
-    'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
-  const labelClass =
-    'mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
-
   return (
     <div className="space-y-6">
       {loadError ? (
@@ -238,183 +216,60 @@ export function OnboardingBasicForm() {
         className={`space-y-6 ${profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={profileSyncing}
       >
-      <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-        <h2 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          {bf.sectionTitle}
-        </h2>
+        <OnboardingBasicFields
+          bf={bf}
+          genderCopy={genderCopy}
+          googleName={googleName}
+          nickname={nickname}
+          onNicknameChange={setNickname}
+          birthDate={birthDate}
+          birthDateMax={birthDateMax}
+          derivedAge={derivedAge}
+          onBirthDateChange={setBirthDate}
+          gender={gender}
+          genderStepError={genderStepError}
+          onGenderChange={(value) => {
+            setGenderStepError(null);
+            setGender(value);
+          }}
+          desiredPartnerGenders={desiredPartnerGenders}
+          partnerError={partnerError}
+          onPartnerGenderChange={setPartnerGender}
+          city={city}
+          onCityChange={setCity}
+          country={country}
+          onCountryChange={setCountry}
+          locationLabel={locationLabel}
+          onLocationLabelChange={setLocationLabel}
+        />
 
-        <div className="mb-4 rounded border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
-          <span className="font-medium text-zinc-600 dark:text-zinc-400">
-            {bf.googleNameLabel}
-          </span>
-          <p className="text-zinc-900 dark:text-zinc-100">{googleName}</p>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            {bf.googleNameHelp}
-          </p>
+        <ProfilePhotoSection requiredForMatching />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSaveProgress()}
+            disabled={profileSyncing}
+            className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {ob.saveProgress}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleContinueToTexts()}
+            disabled={profileSyncing}
+            className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            {bf.continueToStory}
+          </button>
+          <Link
+            href="/dating"
+            className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
+            aria-disabled={profileSyncing}
+          >
+            {ob.continueLater}
+          </Link>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label htmlFor="onb-nickname" className={labelClass}>
-              {bf.nicknameLabel}
-            </label>
-            <input
-              id="onb-nickname"
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className={inputClass}
-              placeholder={bf.nicknamePlaceholder}
-              autoComplete="off"
-              maxLength={80}
-            />
-          </div>
-          <div>
-            <label htmlFor="onb-birth" className={labelClass}>
-              {bf.birthDateLabel}
-            </label>
-            <input
-              id="onb-birth"
-              type="date"
-              max={birthDateMax}
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className={inputClass}
-            />
-            {derivedAge !== null ? (
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                {bf.ageDisplay(derivedAge)}
-              </p>
-            ) : null}
-          </div>
-          <div>
-            <label htmlFor="onb-gender" className={labelClass}>
-              {bf.genderLabel}
-            </label>
-            <select
-              id="onb-gender"
-              value={gender}
-              onChange={(e) => {
-                setGenderStepError(null);
-                setGender(e.target.value);
-              }}
-              className={inputClass}
-            >
-              <option value="">{bf.genderSelectPlaceholder}</option>
-              {ME_PROFILE_GENDERS.map((g) => (
-                <option key={g} value={g}>
-                  {genderCopy[g]}
-                </option>
-              ))}
-            </select>
-            {genderStepError ? (
-              <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
-                {genderStepError}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <fieldset className="mt-4">
-          <legend className={`${labelClass} mb-2`}>
-            {bf.partnerGendersLegend}{' '}
-            <span className="font-normal text-zinc-500">{bf.partnerGendersRequiredHint}</span>
-          </legend>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {ME_PARTNER_GENDER_CHOICES.map((g) => (
-              <label
-                key={g}
-                className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200"
-              >
-                <input
-                  type="checkbox"
-                  checked={desiredPartnerGenders.includes(g)}
-                  onChange={(e) => setPartnerGender(g, e.target.checked)}
-                  className="rounded border-zinc-400 text-zinc-900 dark:border-zinc-500"
-                />
-                {genderCopy[g]}
-              </label>
-            ))}
-          </div>
-          {partnerError ? (
-            <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
-              {partnerError}
-            </p>
-          ) : null}
-        </fieldset>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="onb-city" className={labelClass}>
-              {bf.cityLabel}
-            </label>
-            <input
-              id="onb-city"
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className={inputClass}
-              placeholder={bf.cityPlaceholder}
-              autoComplete="address-level2"
-            />
-          </div>
-          <div>
-            <label htmlFor="onb-country" className={labelClass}>
-              {bf.countryLabel}
-            </label>
-            <input
-              id="onb-country"
-              type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className={inputClass}
-              placeholder={bf.countryPlaceholder}
-              autoComplete="country-name"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="onb-loc-label" className={labelClass}>
-              {bf.locationLabelLabel}
-            </label>
-            <input
-              id="onb-loc-label"
-              type="text"
-              value={locationLabel}
-              onChange={(e) => setLocationLabel(e.target.value)}
-              className={inputClass}
-              placeholder={bf.locationLabelPlaceholder}
-            />
-          </div>
-        </div>
-      </section>
-
-      <ProfilePhotoSection requiredForMatching />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void handleSaveProgress()}
-          disabled={profileSyncing}
-          className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          {ob.saveProgress}
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleContinueToTexts()}
-          disabled={profileSyncing}
-          className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          {bf.continueToStory}
-        </button>
-        <Link
-          href="/dating"
-          className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
-          aria-disabled={profileSyncing}
-        >
-          {ob.continueLater}
-        </Link>
-      </div>
       </div>
 
       {savedFlash ? (

@@ -9,13 +9,11 @@ import {
   uploadMyProfilePhoto,
   type MeProfilePhotoDto,
 } from '@/lib/me-photos-api';
+import { useAppLocale } from '@/lib/i18n';
 import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+  ProfilePhotoEmptySlot,
+  ProfilePhotoFilledSlot,
+} from '@/components/profile-photo-slot';
 
 const MAX_PHOTOS = 3;
 
@@ -24,31 +22,15 @@ type UploadingPreview = {
   url: string;
 };
 
-function statusBadgeClass(status: MeProfilePhotoDto['status']): string {
-  if (status === 'APPROVED') {
-    return 'bg-emerald-800/90 text-white';
-  }
-  if (status === 'REJECTED') {
-    return 'bg-red-800/90 text-white';
-  }
-  return 'bg-amber-600/90 text-white';
-}
-
-function statusText(
-  status: MeProfilePhotoDto['status'],
-  copy: ReturnType<typeof getCopy>['photoModeration'],
-): string {
-  if (status === 'APPROVED') return copy.statusApproved;
-  if (status === 'REJECTED') return copy.statusRejected;
-  if (status === 'FLAGGED_FOR_REVIEW') return copy.statusFlagged;
-  return copy.statusPending;
-}
-
 export function ProfilePhotoSection({
   requiredForMatching = false,
 }: {
   requiredForMatching?: boolean;
 }) {
+  const { copy } = useAppLocale();
+  const photoGateCopy = copy.photoGate;
+  const moderationCopy = copy.photoModeration;
+
   const [photos, setPhotos] = useState<MeProfilePhotoDto[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -56,33 +38,6 @@ export function ProfilePhotoSection({
   const [uploading, setUploading] = useState<UploadingPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
-
-  const photoGateCopy = getCopy(locale).photoGate;
-  const moderationCopy = getCopy(locale).photoModeration;
 
   async function refreshPhotos() {
     const rows = await listMyProfilePhotos();
@@ -240,83 +195,22 @@ export function ProfilePhotoSection({
           if (!photo) {
             const isUploading = uploading && idx === photos.length;
             return (
-              <div
+              <ProfilePhotoEmptySlot
                 key={`slot-empty-${idx}`}
-                className="aspect-square rounded border border-dashed border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950/40"
-              >
-                {isUploading ? (
-                  <div className="relative h-full w-full">
-                    <img
-                      src={uploading.url}
-                      alt="Uploading preview"
-                      className="h-full w-full rounded object-cover opacity-70"
-                    />
-                    <div className="absolute inset-x-1 bottom-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-                      uploading
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-zinc-400">
-                    Empty
-                  </div>
-                )}
-              </div>
+                uploadingUrl={isUploading ? uploading.url : undefined}
+              />
             );
           }
-          const preview = previewUrls[photo.id];
-          const isBusy = busyPhotoId === photo.id;
           return (
-            <div
+            <ProfilePhotoFilledSlot
               key={photo.id}
-              className={`relative aspect-square overflow-hidden rounded border ${photo.isPrimary ? 'border-zinc-900 dark:border-zinc-200' : 'border-zinc-300 dark:border-zinc-700'}`}
-            >
-              {preview ? (
-                <img
-                  src={preview}
-                  alt={photo.originalFileName ?? `Photo ${photo.position + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-zinc-400">
-                  No preview
-                </div>
-              )}
-              <div
-                className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] ${statusBadgeClass(photo.status)}`}
-              >
-                {statusText(photo.status, moderationCopy)}
-              </div>
-              {photo.status === 'REJECTED' && photo.rejectionReason ? (
-                <div className="absolute inset-x-1 bottom-10 rounded bg-red-950/80 px-1.5 py-1 text-[10px] text-red-50">
-                  {moderationCopy.rejectionPrefix} {photo.rejectionReason}
-                </div>
-              ) : null}
-              {photo.isPrimary ? (
-                <div className="absolute right-1 top-1 rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white dark:bg-zinc-100 dark:text-zinc-900">
-                  primary
-                </div>
-              ) : null}
-              <div className="absolute inset-x-1 bottom-1 flex gap-1">
-                <button
-                  type="button"
-                  className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white disabled:opacity-50"
-                  onClick={() => void onDelete(photo.id)}
-                  disabled={isBusy}
-                >
-                  delete
-                </button>
-                <button
-                  type="button"
-                  className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white disabled:opacity-50"
-                  onClick={() => void onSetPrimary(photo.id)}
-                  disabled={
-                    isBusy || photo.isPrimary || photo.status !== 'APPROVED'
-                  }
-                >
-                  set primary
-                </button>
-              </div>
-            </div>
+              photo={photo}
+              previewUrl={previewUrls[photo.id]}
+              isBusy={busyPhotoId === photo.id}
+              moderationCopy={moderationCopy}
+              onDelete={onDelete}
+              onSetPrimary={onSetPrimary}
+            />
           );
         })}
       </div>
