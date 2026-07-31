@@ -1,12 +1,12 @@
 # Story 05 — Miss-path observability
 
-**Sprint 27 · Status: IN REVIEW** (Agent 1 implemented → Agent 2 CR)  
+**Sprint 27 · Status: IN REVIEW** (Agent 2 CR **PASS** → Agent 3 PM)  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** None (best after Stories 01–04 so metrics reflect the new path)
 
-**Handoffs:** [architect](./handoffs/STORY_05_miss_path_observability/agent-0-architect.md) · [dev](./handoffs/STORY_05_miss_path_observability/agent-1-dev.md)
+**Handoffs:** [architect](./handoffs/STORY_05_miss_path_observability/agent-0-architect.md) · [dev](./handoffs/STORY_05_miss_path_observability/agent-1-dev.md) · [cr](./handoffs/STORY_05_miss_path_observability/agent-2-cr.md)
 
 ---
 
