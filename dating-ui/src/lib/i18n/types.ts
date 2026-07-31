@@ -53,6 +53,12 @@ export type AppCopySchema = {
       refreshStarted: string;
       refreshFailed: string;
       loadFailed: string;
+      photoGate: {
+        title: string;
+        body: string;
+        bodyPending: string;
+        cta: string;
+      };
       actionBadge: {
         liked: { label: string; ariaLabel: string };
         passed: { label: string; ariaLabel: string };

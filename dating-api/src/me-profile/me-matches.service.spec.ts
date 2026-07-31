@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
 import type { AnalyticsService } from '../analytics/analytics.service';
+import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
@@ -121,6 +122,9 @@ describe('MeMatchesService', () => {
   let mutualMatches: { findActiveByUserPair: jest.Mock };
   let cache: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
   let analytics: { track: jest.Mock };
+  let narrativeGenerate: jest.Mock;
+  let narrativeCacheFind: jest.Mock;
+  let narrativeCacheUpsert: jest.Mock;
 
   beforeEach(() => {
     prisma = {
@@ -154,6 +158,13 @@ describe('MeMatchesService', () => {
     mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
     analytics = { track: jest.fn() };
     cache = { get: jest.fn().mockResolvedValue(null), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
+    narrativeGenerate = jest.fn().mockResolvedValue({
+      narrative: 'Generated narrative prose.',
+      source: 'fallback',
+      promptVersion: 'v1',
+    });
+    narrativeCacheFind = jest.fn().mockResolvedValue(null);
+    narrativeCacheUpsert = jest.fn().mockResolvedValue(undefined);
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
@@ -161,6 +172,8 @@ describe('MeMatchesService', () => {
       mutualMatches as never,
       analytics as unknown as AnalyticsService,
       cache as never,
+      { generate: narrativeGenerate } as never,
+      { find: narrativeCacheFind, upsert: narrativeCacheUpsert } as never,
     );
   });
 
@@ -174,6 +187,7 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('not_ready');
       expect(result.reason).toBe('no_profile');
+      expect(narrativeGenerate).not.toHaveBeenCalled();
     });
 
     it('returns not_ready(not_analyzed) when viewer profile is DRAFT', async () => {
@@ -1665,9 +1679,224 @@ describe('MeMatchesService', () => {
         const detail = await service.getById(viewerUserId, candidateProfileId);
         expect(detail.matchExplanationTraits).toBeUndefined();
         expect(detail.matchScore).toBeNull();
+        expect(detail.matchNarrative).toBeUndefined();
+        expect(narrativeGenerate).not.toHaveBeenCalled();
       } finally {
         spy.mockRestore();
       }
+    });
+
+    it('getById() includes matchNarrative on scored detail (cache miss)', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+        );
+      const exp = {
+        positiveChips: ['Emotional depth'],
+        reasonShort: 'Test reason',
+      };
+      const spy = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
+        finalScore: 72,
+        explainability: exp,
+        recommendation: {
+          explainability: exp,
+          primaryTakeaway: 'Take',
+          suggestedNextAction: 'Next',
+          caution: null,
+        },
+      } as never);
+      try {
+        const detail = await service.getById(viewerUserId, candidateProfileId);
+        expect(detail.matchNarrative).toBe('Generated narrative prose.');
+        expect(narrativeCacheFind).toHaveBeenCalled();
+        expect(narrativeGenerate).toHaveBeenCalledTimes(1);
+        expect(narrativeCacheUpsert).not.toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('getById() returns cached matchNarrative without calling generator', async () => {
+      narrativeCacheFind.mockResolvedValue('Cached narrative from DB.');
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+        );
+      const exp = {
+        positiveChips: ['Emotional depth'],
+        reasonShort: 'Test reason',
+      };
+      const spy = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
+        finalScore: 72,
+        explainability: exp,
+        recommendation: {
+          explainability: exp,
+          primaryTakeaway: 'Take',
+          suggestedNextAction: 'Next',
+          caution: null,
+        },
+      } as never);
+      try {
+        const detail = await service.getById(viewerUserId, candidateProfileId);
+        expect(detail.matchNarrative).toBe('Cached narrative from DB.');
+        expect(narrativeGenerate).not.toHaveBeenCalled();
+        expect(narrativeCacheUpsert).not.toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('getById() caches LLM narrative but not fallback', async () => {
+      narrativeGenerate.mockResolvedValue({
+        narrative: 'LLM prose about shared depth.',
+        source: 'llm',
+        promptVersion: 'v1',
+      });
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+        );
+      const exp = {
+        positiveChips: ['Emotional depth'],
+        reasonShort: 'Test reason',
+      };
+      const spy = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
+        finalScore: 72,
+        explainability: exp,
+        recommendation: {
+          explainability: exp,
+          primaryTakeaway: 'Take',
+          suggestedNextAction: 'Next',
+          caution: null,
+        },
+      } as never);
+      try {
+        const detail = await service.getById(viewerUserId, candidateProfileId);
+        expect(detail.matchNarrative).toBe('LLM prose about shared depth.');
+        expect(narrativeCacheUpsert).toHaveBeenCalledTimes(1);
+        expect(narrativeCacheUpsert.mock.calls[0][0]).toMatchObject({
+          viewerProfileId,
+          candidateProfileId,
+          viewerEvaluationId: `eval_${viewerProfileId}`,
+          candidateEvaluationId: `eval_${candidateProfileId}`,
+          narrative: 'LLM prose about shared depth.',
+        });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe('resolveMatchNarrative()', () => {
+    const baseArgs = {
+      viewerProfileId,
+      candidateProfileId,
+      viewerEvaluationId: 'eval_v1',
+      candidateEvaluationId: 'eval_c1',
+      finalScore: 70,
+      explainability: {
+        positiveChips: ['Emotional depth'],
+        reasonShort: 'Short',
+      },
+      recommendation: {
+        primaryTakeaway: 'Take',
+        suggestedNextAction: 'Next',
+        caution: null as string | null,
+      },
+    };
+
+    it('cache hit skips generator', async () => {
+      narrativeCacheFind.mockResolvedValue('hit text');
+      const text = await (service as any).resolveMatchNarrative(baseArgs);
+      expect(text).toBe('hit text');
+      expect(narrativeGenerate).not.toHaveBeenCalled();
+    });
+
+    it('evaluation id change uses new cache key (miss → generate)', async () => {
+      narrativeCacheFind.mockResolvedValue(null);
+      await (service as any).resolveMatchNarrative({
+        ...baseArgs,
+        candidateEvaluationId: 'eval_c2',
+      });
+      expect(narrativeCacheFind).toHaveBeenCalledWith(
+        expect.objectContaining({ candidateEvaluationId: 'eval_c2' }),
+      );
+      expect(narrativeGenerate).toHaveBeenCalledTimes(1);
+    });
+
+    it('cache read throw is treated as miss', async () => {
+      narrativeCacheFind.mockRejectedValue(new Error('db down'));
+      const text = await (service as any).resolveMatchNarrative(baseArgs);
+      expect(text).toBe('Generated narrative prose.');
+      expect(narrativeGenerate).toHaveBeenCalledTimes(1);
+    });
+
+    it('cache upsert throw still returns narrative (store fail)', async () => {
+      narrativeGenerate.mockResolvedValue({
+        narrative: 'LLM prose survives store fail.',
+        source: 'llm',
+        promptVersion: 'v1',
+      });
+      narrativeCacheUpsert.mockRejectedValue(new Error('upsert boom'));
+      const text = await (service as any).resolveMatchNarrative({
+        viewerProfileId,
+        candidateProfileId,
+        viewerEvaluationId: 'eval_v1',
+        candidateEvaluationId: 'eval_c1',
+        finalScore: 70,
+        explainability: {
+          positiveChips: ['Emotional depth'],
+          reasonShort: 'Short',
+        },
+        recommendation: {
+          primaryTakeaway: 'Take',
+          suggestedNextAction: 'Next',
+        },
+      });
+      expect(text).toBe('LLM prose survives store fail.');
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('cache store fail'),
+        ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_STORE_FAIL,
+      );
     });
   });
 
@@ -2050,6 +2279,8 @@ describe('MeMatchesService', () => {
         mutualMatches as never,
         { track: jest.fn() } as unknown as AnalyticsService,
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
+        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -2081,6 +2312,8 @@ describe('MeMatchesService', () => {
         mutualMatches as never,
         { track: jest.fn() } as unknown as AnalyticsService,
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
+        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -2122,6 +2355,8 @@ describe('MeMatchesService', () => {
         mutualMatches as never,
         { track: jest.fn() } as unknown as AnalyticsService,
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
+        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       );
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);

@@ -74,6 +74,11 @@ export const CHIP_TO_TRAIT: Record<
     group: 'Lifestyle match',
     evidence: "You're aligned on lifestyle and social positioning.",
   },
+  'Conflict approach': {
+    group: 'How you communicate',
+    evidence:
+      'You handle disagreement in compatible ways — conflict is less likely to derail you.',
+  },
 };
 
 /**

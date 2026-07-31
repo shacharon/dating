@@ -172,6 +172,8 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
           set: jest.fn(),
           del: jest.fn(),
         } as never,
+        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       );
     });
 
@@ -216,6 +218,7 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         const row = result.matches![0];
         expect(row).not.toHaveProperty('evaluationSummary');
         expect(row).not.toHaveProperty('matchExplanationTraits');
+        expect(row).not.toHaveProperty('matchNarrative');
       } finally {
         cmpSpy.mockRestore();
         hgSpy.mockRestore();
@@ -318,6 +321,8 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         expect(detail.matchExplanationTraits).toBeDefined();
         expect(detail.matchExplanationTraits!.length).toBeGreaterThan(0);
         expect(detail.evaluationSummary).toBe('Summary line.');
+        expect(typeof detail.matchNarrative).toBe('string');
+        expect(detail.matchNarrative!.length).toBeGreaterThan(0);
       } finally {
         cmpSpy.mockRestore();
         hgSpy.mockRestore();

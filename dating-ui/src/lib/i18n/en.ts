@@ -47,6 +47,13 @@ export const enCopy: AppCopySchema = {
         "Refresh started — scores will update once analysis completes.",
       refreshFailed: "Refresh failed",
       loadFailed: "Failed to load matches",
+      photoGate: {
+        title: "Add a photo to see matches",
+        body: "You need at least one approved photo before we can show people here.",
+        bodyPending:
+          "Your photo is still under review. Once it's approved, matches will appear here.",
+        cta: "Go to photos",
+      },
       actionBadge: {
         liked: { label: "Liked", ariaLabel: "You liked this match" },
         passed: { label: "Passed", ariaLabel: "You passed on this match" },

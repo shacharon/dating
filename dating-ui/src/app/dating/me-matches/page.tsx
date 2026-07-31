@@ -8,6 +8,7 @@ import {
 } from '@/lib/me-profile-api';
 import { MatchPhoto } from '@/components/match-photo';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
+import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { useAppLocale } from '@/lib/i18n';
 import {
   matchListPrimaryLabel,
@@ -146,9 +147,17 @@ export default function MeMatchesPage() {
           </p>
         )}
 
-        {!loading && !error && matches.length === 0 && <MatchListEmptyState />}
+        {!loading &&
+          !error &&
+          data?.status === 'not_ready' &&
+          data.reason === 'no_photo' && <MatchListPhotoGate />}
 
-        {!loading && !error && matches.length > 0 && (
+        {!loading &&
+          !error &&
+          data?.status === 'ready' &&
+          matches.length === 0 && <MatchListEmptyState />}
+
+        {!loading && !error && data?.status === 'ready' && matches.length > 0 && (
           <ul className="flex flex-col gap-3">
             {matches.map((m, index) => {
               const hardBlocked = m.hardBlocked;

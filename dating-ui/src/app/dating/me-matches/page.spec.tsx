@@ -5,10 +5,11 @@ import type { MatchRecommendationDto } from '@/lib/me-profile-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 
-const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, replaceMock } = vi.hoisted(() => ({
+const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock } = vi.hoisted(() => ({
   fetchMyMatches: vi.fn(),
   submitMyProfileForAnalysis: vi.fn(),
   fetchMyProfile: vi.fn(),
+  listMyProfilePhotos: vi.fn(),
   replaceMock: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock('@/lib/me-profile-api', () => ({
   fetchMyMatches,
   submitMyProfileForAnalysis,
   fetchMyProfile,
+  listMyProfilePhotos,
 }));
 
 vi.mock('@/contexts/auth-context', () => ({
@@ -102,12 +104,13 @@ describe('MeMatchesPage (empty list)', () => {
   });
 });
 
-describe('MeMatchesPage (not_ready redirects)', () => {
+describe('MeMatchesPage (not_ready photo gate)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listMyProfilePhotos.mockResolvedValue([]);
   });
 
-  it('redirects to profile when reason is no_photo', async () => {
+  it('stays on Matches and shows photo gate when reason is no_photo', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'not_ready',
       reason: 'no_photo',
@@ -116,8 +119,35 @@ describe('MeMatchesPage (not_ready redirects)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/dating/profile');
+      expect(screen.getByTestId('match-list-photo-gate')).toBeTruthy();
     });
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('match-photo-gate-cta').getAttribute('href')).toBe(
+      '/dating/profile#profile-photos',
+    );
+    expect(screen.getByText('Add a photo to see matches')).toBeTruthy();
+    unmount();
+  });
+
+  it('shows pending-review copy when photos are PENDING', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'not_ready',
+      reason: 'no_photo',
+    });
+    listMyProfilePhotos.mockResolvedValue([
+      { id: 'ph1', status: 'PENDING' },
+    ]);
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Your photo is still under review. Once it's approved, matches will appear here.",
+        ),
+      ).toBeTruthy();
+    });
+    expect(replaceMock).not.toHaveBeenCalled();
     unmount();
   });
 });
@@ -356,6 +386,34 @@ describe('MeMatchesPage (yourAction badges)', () => {
       expect(screen.getByText('River')).toBeTruthy();
     });
     expect(screen.getByText(/FEMALE · 29y · Tel Aviv/)).toBeTruthy();
+    unmount();
+  });
+
+  it('does not dump matchNarrative on list cards even if present on payload', async () => {
+    const longNarrative =
+      'You share a calm emotional pace across many sentences that must not appear on a list card. ';
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          // Runtime extra field (API should omit; UI must still ignore).
+          matchNarrative: longNarrative.repeat(8),
+          explainability: {
+            positiveChips: ['Emotional depth'],
+            reasonShort: 'Aligned',
+          },
+        } as typeof baseMatch & { matchNarrative: string },
+      ],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Aligned')).toBeTruthy();
+    });
+    expect(screen.queryByText(/calm emotional pace across many sentences/)).toBeNull();
+    expect(document.body.textContent).not.toContain(longNarrative.repeat(2));
     unmount();
   });
 });

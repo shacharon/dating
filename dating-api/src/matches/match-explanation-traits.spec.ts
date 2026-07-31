@@ -72,4 +72,12 @@ describe('buildMatchExplanationTraits', () => {
       'Money mindset',
     ]);
   });
+
+  it('maps Conflict approach chip (Sprint 22)', () => {
+    const traits = buildMatchExplanationTraits(['Conflict approach'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('How you communicate');
+    expect(traits[0].label).toBe('Conflict approach');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Conflict approach'].evidence);
+  });
 });

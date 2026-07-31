@@ -58,6 +58,18 @@ export const ErrorCodes = {
   ME_MATCHES_LIST_NOT_READY: 'ME_MATCHES_LIST_NOT_READY',
   /** Me matches: GET /me/matches/:id — match detail returned */
   ME_MATCHES_DETAIL_OK: 'ME_MATCHES_DETAIL_OK',
+  /** Sprint 22 — match narrative cache hit (no LLM) */
+  ME_MATCHES_NARRATIVE_CACHE_HIT: 'ME_MATCHES_NARRATIVE_CACHE_HIT',
+  /** Sprint 22 — match narrative cache miss before LLM */
+  ME_MATCHES_NARRATIVE_CACHE_MISS: 'ME_MATCHES_NARRATIVE_CACHE_MISS',
+  /** Sprint 22 — match narrative produced by LLM */
+  ME_MATCHES_NARRATIVE_LLM_OK: 'ME_MATCHES_NARRATIVE_LLM_OK',
+  /** Sprint 22 — match narrative used deterministic fallback (not cached) */
+  ME_MATCHES_NARRATIVE_FALLBACK: 'ME_MATCHES_NARRATIVE_FALLBACK',
+  /** Sprint 22 — LLM narrative persisted to cache */
+  ME_MATCHES_NARRATIVE_CACHE_STORE_OK: 'ME_MATCHES_NARRATIVE_CACHE_STORE_OK',
+  /** Sprint 22 — cache upsert failed after LLM success (narrative still returned) */
+  ME_MATCHES_NARRATIVE_CACHE_STORE_FAIL: 'ME_MATCHES_NARRATIVE_CACHE_STORE_FAIL',
   /** Me matches: HG preference sourced from UserProfile legacy columns (UserProfilePreference row absent or hollow) */
   ME_MATCHES_HG_PREF_FALLBACK: 'ME_MATCHES_HG_PREF_FALLBACK',
   /**

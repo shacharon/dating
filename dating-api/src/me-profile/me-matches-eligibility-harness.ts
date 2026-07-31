@@ -43,8 +43,13 @@ import { hashSessionToken } from '../session/session-token.crypto';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
+import { MatchNarrativeGenerator } from '../matches/match-narrative';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import {
+  createMatchNarrativeCachePrismaMock,
+  createMatchNarrativeGeneratorStub,
+} from './match-narrative-test-stubs';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
@@ -252,8 +257,12 @@ export class EligibilityTestHarness {
     return `prof_${userId}`;
   }
 
+  readonly narrativeCachePrisma = createMatchNarrativeCachePrismaMock();
+  readonly matchNarrativeGeneratorStub = createMatchNarrativeGeneratorStub();
+
   readonly prismaMock = {
     $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(this.prismaMock)),
+    matchNarrativeCache: this.narrativeCachePrisma.matchNarrativeCache,
     userSession: {
       create: jest.fn(async ({ data }: { data: { expiresAt: Date } }) => ({
         id: `sess_${Date.now()}_${Math.random()}`,
@@ -692,6 +701,9 @@ export class EligibilityTestHarness {
       .overrideProvider(LLM_CONFIG).useValue({ openai: { apiKey: 'test-key-not-used' }, models: new Map() })
       .overrideProvider(MeProfileAnalysisService).useValue({ runForUser: jest.fn().mockResolvedValue(undefined) })
       .overrideProvider(MeProfileValidationPipe).useValue({ transform: (v: unknown) => v })
+      // Sprint 22 — keep detail path off live OpenAI; exercise cache DI with in-memory mock.
+      .overrideProvider(MatchNarrativeGenerator)
+      .useValue(this.matchNarrativeGeneratorStub)
       .compile();
 
     this.app = moduleFixture.createNestApplication();
@@ -757,6 +769,32 @@ export class EligibilityTestHarness {
     return request(this.app.getHttpServer())
       .post('/api/v1/me/profile/submit')
       .set('Cookie', [this.cookieHeader(cookie)]);
+  }
+
+  /**
+   * Replace evaluation id (and optional json) after {@link markAnalyzed}.
+   * Used to prove evaluation-keyed narrative cache miss on re-analysis.
+   */
+  remountEvaluation(
+    profileId: string,
+    opts: { evaluationId: string; evaluationJson?: unknown },
+  ): void {
+    const existing = this.evaluations.get(profileId);
+    if (!existing) {
+      throw new Error(`Harness: cannot remount unknown evaluation: ${profileId}`);
+    }
+    this.evaluations.set(profileId, {
+      ...existing,
+      id: opts.evaluationId,
+      ...(opts.evaluationJson !== undefined
+        ? { evaluationJson: opts.evaluationJson }
+        : {}),
+    });
+  }
+
+  /** Clear Sprint 22 narrative cache store between scenarios. */
+  clearNarrativeCache(): void {
+    this.narrativeCachePrisma.store.clear();
   }
 
   /**

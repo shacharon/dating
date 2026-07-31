@@ -669,6 +669,90 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     expect(screen.queryByTestId('match-detail-shared-interests')).toBeNull();
   });
 
+  it('renders matchNarrative and hides short takeaway when both present', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      matchNarrative:
+        'You share a calm emotional pace.\n\nAmbition shows up in how you both plan.',
+      explainability: {
+        positiveChips: ['Emotional depth'],
+        reasonShort: 'Aligned values',
+        sharedInterestNote: 'You both enjoy hiking.',
+      },
+      recommendation: {
+        primaryTakeaway: 'Short takeaway should not show.',
+        caution: null,
+        suggestedNextAction: 'Say hello',
+        explainability: {
+          positiveChips: ['Emotional depth'],
+          reasonShort: 'Aligned values',
+        },
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-narrative')).toBeTruthy();
+    });
+    const narrative = screen.getByTestId('match-detail-narrative');
+    expect(narrative.textContent).toContain('calm emotional pace');
+    expect(narrative.textContent).toContain('Ambition shows up');
+    expect(narrative.querySelectorAll('p').length).toBe(2);
+    expect(screen.queryByTestId('match-detail-takeaway')).toBeNull();
+    expect(screen.getByTestId('match-detail-shared-interests')).toBeTruthy();
+    expect(screen.getByTestId('match-detail-chips')).toBeTruthy();
+  });
+
+  it('falls back to short takeaway when matchNarrative is absent', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      explainability: {
+        positiveChips: ['Shared values'],
+        reasonShort: 'Fallback reason short',
+      },
+      recommendation: {
+        primaryTakeaway: 'Fallback primary takeaway',
+        caution: null,
+        suggestedNextAction: 'Next',
+        explainability: {
+          positiveChips: ['Shared values'],
+          reasonShort: 'Fallback reason short',
+        },
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
+    });
+    expect(screen.getByTestId('match-detail-takeaway').textContent).toBe(
+      'Fallback primary takeaway',
+    );
+    expect(screen.queryByTestId('match-detail-narrative')).toBeNull();
+  });
+
+  it('omits prose block when narrative and short takeaway are both empty', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      matchNarrative: '   ',
+      explainability: {
+        positiveChips: ['Shared values'],
+        reasonShort: '',
+      },
+      recommendation: null,
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-chips')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('match-detail-narrative')).toBeNull();
+    expect(screen.queryByTestId('match-detail-takeaway')).toBeNull();
+  });
+
   it('shows feedback section before de-emphasized score label', async () => {
     fetchMyMatchById.mockResolvedValue({
       ...baseMatch,

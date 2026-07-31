@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import {
   MatchActionType,
   MutualMatchStatus,
@@ -33,6 +34,7 @@ import {
 } from '../cache/match-list-cache';
 import { RedisCacheService } from '../cache/redis-cache.service';
 import { ErrorCodes } from '../logging/error-codes';
+import { getRequestLogFields } from '../logging/request-log-context';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import {
   recordCacheHit,
@@ -86,6 +88,12 @@ import {
   type MatchExplainabilityDto,
   type MatchRecommendationDto,
 } from '../matches/match-engine';
+import {
+  MATCH_NARRATIVE_PROMPT_VERSION,
+  MatchNarrativeCacheService,
+  MatchNarrativeGenerator,
+  buildMatchNarrativeFactPack,
+} from '../matches/match-narrative';
 
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
@@ -189,6 +197,11 @@ export interface MeMatchDetailDto {
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
   /**
+   * Sprint 22 — grounded long-form "why you match" narrative (detail only).
+   * Omitted on compare guards / unscored pairs. List DTO never includes this.
+   */
+  matchNarrative?: string;
+  /**
    * Present when this candidate is hard-ineligible but “existing” for the viewer
    * (LIKE and/or ACTIVE MutualMatch). Absent for eligible matches.
    */
@@ -220,6 +233,8 @@ export class MeMatchesService {
     private readonly mutualMatches: MutualMatchesService,
     private readonly analytics: AnalyticsService,
     private readonly cache: RedisCacheService,
+    private readonly matchNarrativeGenerator: MatchNarrativeGenerator,
+    private readonly matchNarrativeCache: MatchNarrativeCacheService,
   ) {}
 
   /** Drop cached ranked match list for a viewer (LIKE/PASS/BLOCK, re-analysis, etc.). */
@@ -999,6 +1014,7 @@ export class MeMatchesService {
       candidateRead.enginePayload,
     );
     let matchExplanationTraits: MatchExplanationTrait[] | undefined;
+    let matchNarrative: string | undefined;
     if (!('status' in result)) {
       matchScore = result.finalScore;
       explainability = result.explainability;
@@ -1008,6 +1024,16 @@ export class MeMatchesService {
         result.finalScore,
       );
       matchExplanationTraits = built.length > 0 ? built : undefined;
+      matchNarrative = await this.resolveMatchNarrative({
+        viewerProfileId: viewer.id,
+        candidateProfileId: candidate.id,
+        viewerEvaluationId: viewerEval.id,
+        candidateEvaluationId: candidateEval.id,
+        finalScore: result.finalScore,
+        explainability: result.explainability,
+        recommendation: result.recommendation,
+        traits: matchExplanationTraits,
+      });
     }
 
     this.obs.trace(
@@ -1043,8 +1069,95 @@ export class MeMatchesService {
       approvedPhotoCount: (candidate.photos ?? []).length,
       explainability,
       recommendation,
+      ...(matchNarrative !== undefined ? { matchNarrative } : {}),
       ...(hardBlocked !== undefined ? { hardBlocked } : {}),
     };
+  }
+
+  /**
+   * Lazy evaluation-keyed narrative: cache hit → return; miss → LLM (cache only llm source).
+   * Fallback narratives are never persisted.
+   */
+  private async resolveMatchNarrative(args: {
+    viewerProfileId: string;
+    candidateProfileId: string;
+    viewerEvaluationId: string;
+    candidateEvaluationId: string;
+    finalScore: number;
+    explainability: MatchExplainabilityDto;
+    recommendation: MatchRecommendationDto;
+    traits?: MatchExplanationTrait[];
+  }): Promise<string> {
+    const promptVersion = MATCH_NARRATIVE_PROMPT_VERSION;
+    const cacheKey = {
+      viewerProfileId: args.viewerProfileId,
+      candidateProfileId: args.candidateProfileId,
+      viewerEvaluationId: args.viewerEvaluationId,
+      candidateEvaluationId: args.candidateEvaluationId,
+      promptVersion,
+    };
+
+    try {
+      const cached = await this.matchNarrativeCache.find(cacheKey);
+      if (cached != null && cached.length > 0) {
+        this.obs.trace(
+          `me matches narrative cache hit viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion}`,
+          ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_HIT,
+        );
+        return cached;
+      }
+    } catch {
+      // treat as miss
+    }
+
+    this.obs.trace(
+      `me matches narrative cache miss viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion}`,
+      ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_MISS,
+    );
+
+    const requestId = getRequestLogFields()?.requestId ?? randomUUID();
+    const factPack = buildMatchNarrativeFactPack({
+      finalScore: args.finalScore,
+      explainability: args.explainability,
+      recommendation: {
+        caution: args.recommendation.caution,
+        suggestedNextAction: args.recommendation.suggestedNextAction,
+      },
+      traits: args.traits,
+    });
+
+    const generated = await this.matchNarrativeGenerator.generate(factPack, {
+      requestId,
+    });
+
+    if (generated.source === 'llm') {
+      this.obs.trace(
+        `me matches narrative llm ok viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion} source=llm`,
+        ErrorCodes.ME_MATCHES_NARRATIVE_LLM_OK,
+      );
+      try {
+        await this.matchNarrativeCache.upsert({
+          ...cacheKey,
+          narrative: generated.narrative,
+        });
+        this.obs.trace(
+          `me matches narrative cache store ok viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion}`,
+          ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_STORE_OK,
+        );
+      } catch {
+        this.obs.trace(
+          `me matches narrative cache store fail viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion}`,
+          ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_STORE_FAIL,
+        );
+      }
+    } else {
+      this.obs.trace(
+        `me matches narrative fallback viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion} source=fallback`,
+        ErrorCodes.ME_MATCHES_NARRATIVE_FALLBACK,
+      );
+    }
+
+    return generated.narrative;
   }
 
   async getPrimaryPhotoFileById(

@@ -334,6 +334,25 @@ model MatchFeedback {
   @@index([matchProfileId])
 }
 
+/// Sprint 22 — lazy LLM match narrative cache (keyed by evaluation pair + prompt version).
+model MatchNarrativeCache {
+  id                    String   @id @default(cuid())
+  viewerProfileId       String
+  candidateProfileId    String
+  viewerEvaluationId    String
+  candidateEvaluationId String
+  promptVersion         String
+  narrative             String   @db.Text
+  /// Optional model id string from LLM config (diagnostics only).
+  model                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([viewerProfileId, candidateProfileId, viewerEvaluationId, candidateEvaluationId, promptVersion])
+  @@index([viewerProfileId, candidateProfileId])
+  @@index([createdAt])
+}
+
 model UserSession {
   id               String    @id @default(cuid())
   userId           String

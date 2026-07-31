@@ -3,12 +3,17 @@ import { AuthModule } from '../auth/auth.module';
 import { MessagingRealtimeModule } from '../messaging-realtime/messaging-realtime.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EvaluateServiceModule } from '../evaluate/evaluate-service.module';
+import { LlmModule } from '../llm/llm.module';
 import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { RedisCacheModule } from '../cache/redis-cache.module';
 import { WorkerModule } from '../workers/worker.module';
+import {
+  MatchNarrativeCacheService,
+  MatchNarrativeGenerator,
+} from '../matches/match-narrative';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { MeConversationsService } from './me-conversations.service';
@@ -30,6 +35,7 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     RedisCacheModule,
     forwardRef(() => AuthModule),
     EvaluateServiceModule,
+    LlmModule,
     PhotoStorageModule,
     forwardRef(() => MessagingRealtimeModule),
     NotificationsModule,
@@ -48,6 +54,8 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     MeConversationMessagesService,
     MutualMatchesService,
     MeProfileValidationPipe,
+    MatchNarrativeGenerator,
+    MatchNarrativeCacheService,
   ],
   exports: [
     MeMatchesService,

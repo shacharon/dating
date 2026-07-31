@@ -36,10 +36,9 @@ export function useInfiniteMatches(
   const loadingMoreRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const handleNotReady = useCallback(
+  const handleNotReadyRedirect = useCallback(
     (dto: MeMatchesListDto) => {
       if (dto.reason === 'no_profile') router.replace('/onboarding');
-      else if (dto.reason === 'no_photo') router.replace('/dating/profile');
       else router.replace('/dating/analysis');
     },
     [router],
@@ -51,7 +50,15 @@ export function useInfiniteMatches(
     try {
       const dto = await fetchMyMatches({ limit: PAGE_LIMIT });
       if (dto.status === 'not_ready') {
-        handleNotReady(dto);
+        // Stay on Matches for photo gate — show an in-page empty state instead of a silent redirect.
+        if (dto.reason === 'no_photo') {
+          setData(dto);
+          setMatches([]);
+          setNextCursor(null);
+          setHasMore(false);
+          return;
+        }
+        handleNotReadyRedirect(dto);
         return;
       }
       setData(dto);
@@ -63,7 +70,7 @@ export function useInfiniteMatches(
     } finally {
       setLoading(false);
     }
-  }, [handleNotReady, loadFailedMessage]);
+  }, [handleNotReadyRedirect, loadFailedMessage]);
 
   useEffect(() => {
     void reload();

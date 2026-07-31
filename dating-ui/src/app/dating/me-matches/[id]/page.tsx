@@ -21,6 +21,10 @@ import { ReportUserDialog } from '@/components/report-user-dialog';
 import { useAppLocale } from '@/lib/i18n';
 import { formatHardBlockReason } from '../hard-block-display';
 import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
+import {
+  resolveDetailProse,
+  splitNarrativeParagraphs,
+} from './match-detail-prose';
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
@@ -296,18 +300,29 @@ export default function MeMatchDetailPage() {
 
             <div className="space-y-5 px-6 py-5 text-sm">
               {(() => {
-                const oneLineTakeaway =
-                  data.recommendation?.primaryTakeaway ??
-                  data.explainability?.reasonShort ??
-                  null;
-                return oneLineTakeaway ? (
+                const prose = resolveDetailProse(data);
+                if (!prose) return null;
+                if (prose.kind === 'narrative') {
+                  const paragraphs = splitNarrativeParagraphs(prose.text);
+                  return (
+                    <div
+                      data-testid="match-detail-narrative"
+                      className="space-y-3 text-base leading-7 text-zinc-800 dark:text-zinc-200"
+                    >
+                      {paragraphs.map((paragraph, i) => (
+                        <p key={i}>{paragraph}</p>
+                      ))}
+                    </div>
+                  );
+                }
+                return (
                   <p
                     data-testid="match-detail-takeaway"
                     className="text-base leading-relaxed text-zinc-800 dark:text-zinc-200"
                   >
-                    {oneLineTakeaway}
+                    {prose.text}
                   </p>
-                ) : null;
+                );
               })()}
 
               {(() => {

@@ -43,8 +43,13 @@ import { hashSessionToken } from '../session/session-token.crypto';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
+import { MatchNarrativeGenerator } from '../matches/match-narrative';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import {
+  createMatchNarrativeCachePrismaMock,
+  createMatchNarrativeGeneratorStub,
+} from './match-narrative-test-stubs';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 
@@ -185,9 +190,12 @@ describe('Two-user new-model E2E flow (integration)', () => {
   const sessionMap = new Map<string, { userId: string; hash: string }>();
 
   // ── Prisma mock: new-model tables functional, legacy tables locked ──
+  const narrativeCachePrisma = createMatchNarrativeCachePrismaMock();
+  const matchNarrativeGeneratorStub = createMatchNarrativeGeneratorStub();
   const prismaMock = {
     $transaction: jest.fn(),
     // ── New-model tables ──────────────────────────────────────────────
+    matchNarrativeCache: narrativeCachePrisma.matchNarrativeCache,
     userSession: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -431,6 +439,8 @@ describe('Two-user new-model E2E flow (integration)', () => {
       // Analysis is stubbed — DB state is advanced manually after submit
       .overrideProvider(MeProfileAnalysisService).useValue({ runForUser: jest.fn().mockResolvedValue(undefined) })
       .overrideProvider(MeProfileValidationPipe).useValue({ transform: (v: unknown) => v })
+      .overrideProvider(MatchNarrativeGenerator)
+      .useValue(matchNarrativeGeneratorStub)
       .compile();
 
     app = moduleFixture.createNestApplication();

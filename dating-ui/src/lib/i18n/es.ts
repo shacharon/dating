@@ -49,6 +49,13 @@ export const esCopy: AppCopySchema = {
         "Actualizacion iniciada — las puntuaciones se actualizaran al completar el analisis.",
       refreshFailed: "Error al actualizar",
       loadFailed: "No se pudieron cargar las coincidencias",
+      photoGate: {
+        title: "Agrega una foto para ver coincidencias",
+        body: "Necesitas al menos una foto aprobada antes de poder ver personas aqui.",
+        bodyPending:
+          "Tu foto sigue en revision. Cuando se apruebe, las coincidencias apareceran aqui.",
+        cta: "Ir a fotos",
+      },
       actionBadge: {
         liked: { label: "Me gusta", ariaLabel: "Te gusto esta coincidencia" },
         passed: { label: "Paso", ariaLabel: "Pasaste esta coincidencia" },

@@ -47,6 +47,13 @@ export const heCopy: AppCopySchema = {
       refreshStarted: "הרענון התחיל — הציונים יתעדכנו עם סיום הניתוח.",
       refreshFailed: "הרענון נכשל",
       loadFailed: "לא ניתן לטעון התאמות",
+      photoGate: {
+        title: "הוסיפו תמונה כדי לראות התאמות",
+        body: "נדרשת לפחות תמונה מאושרת אחת לפני שנוכל להציג אנשים כאן.",
+        bodyPending:
+          "התמונה שלכם עדיין בבדיקה. אחרי שתאושר, ההתאמות יופיעו כאן.",
+        cta: "לתמונות",
+      },
       actionBadge: {
         liked: { label: "אהבתי", ariaLabel: "אהבת את ההתאמה הזו" },
         passed: { label: "דילגתי", ariaLabel: "דילגת על ההתאמה הזו" },

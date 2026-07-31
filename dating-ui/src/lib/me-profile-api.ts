@@ -563,6 +563,11 @@ export interface MeMatchDetailDto {
   profileAnalysisStale?: boolean;
   /** Present when engine returned scored explainability with mapped positive chips. */
   matchExplanationTraits?: MatchExplanationTrait[];
+  /**
+   * Sprint 22 — long-form grounded "why you match" narrative (detail only).
+   * Omitted when unscored / absent; list responses never include this field.
+   */
+  matchNarrative?: string;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
   /** Relative path to primary photo file endpoint; null when absent. */
