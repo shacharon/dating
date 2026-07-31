@@ -1,10 +1,12 @@
-﻿import type { Metadata } from 'next';
-import MeMatchesPageClient from './me-matches-page-client';
+﻿import MeMatchesPageClient from './me-matches-page-client';
+import { buildPageMetadata } from '@/lib/page-metadata';
 
-export const metadata: Metadata = {
-  title: 'Matches',
-  description: 'Your recommended matches.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    title: (copy) => copy.nav.matches,
+    description: (copy) => copy.matches.list.subtitle,
+  });
+}
 
 /**
  * Server Component shell. Infinite scroll + refresh live in

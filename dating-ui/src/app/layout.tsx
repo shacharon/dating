@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { cookies } from "next/headers";
 import { Providers } from "./providers";
 import "./globals.css";
-import { DEFAULT_LOCALE, type AppLocale } from "@/lib/i18n/types";
+import { getLocaleDirection } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/i18n/server-locale";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,23 +16,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dating App",
+  title: {
+    default: "Dating App",
+    template: "%s | Dating App",
+  },
   description: "Find your match",
 };
-
-async function getServerLocale(): Promise<AppLocale> {
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale");
-  const locale = localeCookie?.value as AppLocale | undefined;
-
-  if (locale === "he") return "he";
-  if (locale === "es") return "es";
-  return DEFAULT_LOCALE;
-}
-
-function getDir(locale: AppLocale): "ltr" | "rtl" {
-  return locale === "he" ? "rtl" : "ltr";
-}
 
 export default async function RootLayout({
   children,
@@ -40,7 +29,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getServerLocale();
-  const dir = getDir(locale);
+  const dir = getLocaleDirection(locale);
 
   return (
     <html lang={locale} dir={dir}>

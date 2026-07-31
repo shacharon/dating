@@ -62,7 +62,7 @@ vi.mock('next/link', () => ({
   }) => createElement('a', { href, ...props }, children),
 }));
 
-import ProfilePage from '@/app/dating/profile/page';
+import ProfilePage from '@/app/dating/profile/profile-page-client';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';

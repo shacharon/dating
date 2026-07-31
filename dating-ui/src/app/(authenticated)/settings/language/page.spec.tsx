@@ -6,7 +6,7 @@ import {
 } from '@/lib/i18n';
 import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
-import SettingsLanguagePage from './page';
+import SettingsLanguagePage from './language-page-client';
 
 describe('SettingsLanguagePage', () => {
   beforeEach(() => {

@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
 }));
 
-import SettingsAccountPage from '@/app/(authenticated)/settings/account/page';
+import SettingsAccountPage from '@/app/(authenticated)/settings/account/account-page-client';
 
 describe('SettingsAccountPage', () => {
   it('links to privacy, terms, and notification preferences', () => {

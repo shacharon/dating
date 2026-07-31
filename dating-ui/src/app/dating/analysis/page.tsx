@@ -1,10 +1,12 @@
-import type { Metadata } from 'next';
 import DatingAnalysisPageClient from './analysis-page-client';
+import { buildPageMetadata } from '@/lib/page-metadata';
 
-export const metadata: Metadata = {
-  title: 'Analysis',
-  description: 'Your profile analysis results and progress.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    title: (copy) => copy.nav.analysis,
+    description: () => 'Your profile analysis results and progress.',
+  });
+}
 
 /**
  * Server Component shell. Interactive polling / re-analyze lives in

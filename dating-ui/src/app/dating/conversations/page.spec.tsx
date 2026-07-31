@@ -86,7 +86,7 @@ vi.mock('@/contexts/conversation-unread-context', () => ({
 
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
-import ConversationsPage from './page';
+import ConversationsPage from './conversations-page-client';
 
 vi.mock('next/link', () => ({
   default ({
