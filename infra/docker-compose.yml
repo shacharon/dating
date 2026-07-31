@@ -1,6 +1,6 @@
 # Local stack: Postgres + Redis (+ optional API/UI containers).
 #
-# Defaults (no profile): postgres on host :5433 + redis on host :6379
+# Defaults (no profile): postgres on host :5433 + redis on host :6380
 #   docker compose -f infra/docker-compose.yml up -d
 #
 # Full stack (build + run API + UI):
