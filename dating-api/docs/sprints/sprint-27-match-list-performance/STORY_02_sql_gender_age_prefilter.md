@@ -1,12 +1,12 @@
 # Story 02 — SQL gender / age prefilter
 
-**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
+**Sprint 27 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** Story 01 preferred first (independent otherwise)
 
-**Handoffs:** [architect](./handoffs/STORY_02_sql_gender_age_prefilter/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_02_sql_gender_age_prefilter/agent-0-architect.md) · [dev](./handoffs/STORY_02_sql_gender_age_prefilter/agent-1-dev.md) · [CR](./handoffs/STORY_02_sql_gender_age_prefilter/agent-2-cr.md) · [PM](./handoffs/STORY_02_sql_gender_age_prefilter/agent-3-pm.md)
 
 ---
 
@@ -32,10 +32,10 @@ Indexes `(status, gender, birthDate)` exist but gender/age are applied **in memo
 
 ## Acceptance criteria
 
-- [ ] List rebuild SQL filters gender (and age when configured) before hydrate
-- [ ] Existing match-list tests / me-matches specs still pass; add coverage for filter helper
-- [ ] Users with empty/missing prefs still see the same broad pool as before
-- [ ] No API DTO change
+- [x] List rebuild SQL filters gender (and age when configured) before hydrate
+- [x] Existing match-list tests / me-matches specs still pass; add coverage for filter helper
+- [x] Users with empty/missing prefs still see the same broad pool as before
+- [x] No API DTO change
 
 ## Notes / gotchas
 
