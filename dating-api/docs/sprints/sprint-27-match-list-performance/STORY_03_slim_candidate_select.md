@@ -1,12 +1,12 @@
 # Story 03 — Slim candidate select for list
 
-**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
+**Sprint 27 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 0.5–1 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** Story 01 helpful; can run after or parallel with Story 02
 
-**Handoffs:** [architect](./handoffs/STORY_03_slim_candidate_select/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_03_slim_candidate_select/agent-0-architect.md) · [dev](./handoffs/STORY_03_slim_candidate_select/agent-1-dev.md) · [CR](./handoffs/STORY_03_slim_candidate_select/agent-2-cr.md) · [PM](./handoffs/STORY_03_slim_candidate_select/agent-3-pm.md)
 
 ---
 
@@ -30,9 +30,9 @@ Introduce a **slim** select for `buildFullRankedList` that excludes free-text an
 
 ## Acceptance criteria
 
-- [ ] List rebuild no longer selects about\* free-text columns
-- [ ] Match detail and hard-block UX still have text where product requires it
-- [ ] Tests green; no list API contract break (same DTO fields for list items)
+- [x] List rebuild no longer selects about\* free-text columns
+- [x] Match detail and hard-block UX still have text where product requires it
+- [x] Tests green; no list API contract break (same DTO fields for list items)
 
 ## Notes / gotchas
 
