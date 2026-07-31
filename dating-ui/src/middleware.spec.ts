@@ -138,22 +138,6 @@ describe('middleware (internal routes prod gate)', () => {
     delete process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES;
   });
 
-  it('returns 404 for /evaluate in production', () => {
-    process.env.NODE_ENV = 'production';
-    const req = new NextRequest(new URL('http://localhost:3000/evaluate'));
-    req.cookies.set('dating_session', 'opaque-token');
-    const res = middleware(req);
-    expect(res.status).toBe(404);
-    expect(res.headers.get('location')).toBeNull();
-  });
-
-  it('returns 404 for /profiles in production', () => {
-    process.env.NODE_ENV = 'production';
-    const req = new NextRequest(new URL('http://localhost:3000/profiles'));
-    const res = middleware(req);
-    expect(res.status).toBe(404);
-  });
-
   it('returns 404 for /dev in production', () => {
     process.env.NODE_ENV = 'production';
     const req = new NextRequest(new URL('http://localhost:3000/dev/tools'));
@@ -162,39 +146,20 @@ describe('middleware (internal routes prod gate)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('allows /profiles in non-production', () => {
+  it('allows /dev in non-production', () => {
     process.env.NODE_ENV = 'test';
-    const req = new NextRequest(new URL('http://localhost:3000/profiles'));
+    const req = new NextRequest(new URL('http://localhost:3000/dev/auth-test'));
     const res = middleware(req);
     expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
   });
 
-  it('returns 404 for /matches in production', () => {
+  it('allows /dev in production when escape hatch is set', () => {
     process.env.NODE_ENV = 'production';
-    const req = new NextRequest(new URL('http://localhost:3000/matches'));
+    process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES = '1';
+    const req = new NextRequest(new URL('http://localhost:3000/dev/auth-test'));
     const res = middleware(req);
-    expect(res.status).toBe(404);
-    expect(res.headers.get('location')).toBeNull();
-  });
-
-  it('returns 404 for /dating/matches in production', () => {
-    process.env.NODE_ENV = 'production';
-    const req = new NextRequest(new URL('http://localhost:3000/dating/matches'));
-    req.cookies.set('dating_session', 'opaque-token');
-    const res = middleware(req);
-    expect(res.status).toBe(404);
-    expect(res.headers.get('location')).toBeNull();
-  });
-
-  it('returns 404 for /dating/matches/:id in production', () => {
-    process.env.NODE_ENV = 'production';
-    const req = new NextRequest(
-      new URL('http://localhost:3000/dating/matches/prof-1'),
-    );
-    req.cookies.set('dating_session', 'opaque-token');
-    const res = middleware(req);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
   });
 
@@ -207,26 +172,8 @@ describe('middleware (internal routes prod gate)', () => {
     expect(res.headers.get('location')).toBeNull();
   });
 
-  it('allows /matches in non-production', () => {
-    process.env.NODE_ENV = 'test';
-    const req = new NextRequest(new URL('http://localhost:3000/matches'));
-    const res = middleware(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('location')).toBeNull();
-  });
-
-  it('allows /matches in production when escape hatch is set', () => {
+  it('allows /dating/matches redirect path in production when authenticated', () => {
     process.env.NODE_ENV = 'production';
-    process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES = '1';
-    const req = new NextRequest(new URL('http://localhost:3000/matches'));
-    const res = middleware(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('location')).toBeNull();
-  });
-
-  it('allows /dating/matches in production when escape hatch is set', () => {
-    process.env.NODE_ENV = 'production';
-    process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES = '1';
     const req = new NextRequest(new URL('http://localhost:3000/dating/matches'));
     req.cookies.set('dating_session', 'opaque-token');
     const res = middleware(req);

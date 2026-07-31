@@ -14,14 +14,11 @@ describe('isInternalRouteBlocked', () => {
     }
   });
 
-  it('blocks internal routes in production', () => {
+  it('blocks /dev routes in production', () => {
     process.env.NODE_ENV = 'production';
     delete process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES;
-    expect(isInternalRouteBlocked('/evaluate')).toBe(true);
-    expect(isInternalRouteBlocked('/profiles/compare')).toBe(true);
-    expect(isInternalRouteBlocked('/matches')).toBe(true);
-    expect(isInternalRouteBlocked('/dating/matches')).toBe(true);
-    expect(isInternalRouteBlocked('/dating/matches/abc')).toBe(true);
+    expect(isInternalRouteBlocked('/dev')).toBe(true);
+    expect(isInternalRouteBlocked('/dev/auth-test')).toBe(true);
   });
 
   it('does not block product match browse path', () => {
@@ -29,16 +26,17 @@ describe('isInternalRouteBlocked', () => {
     delete process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES;
     expect(isInternalRouteBlocked('/dating/me-matches')).toBe(false);
     expect(isInternalRouteBlocked('/dating/me-matches/abc')).toBe(false);
+    expect(isInternalRouteBlocked('/dating/matches')).toBe(false);
   });
 
-  it('allows internal routes in development', () => {
+  it('allows /dev in development', () => {
     process.env.NODE_ENV = 'development';
-    expect(isInternalRouteBlocked('/evaluate')).toBe(false);
+    expect(isInternalRouteBlocked('/dev')).toBe(false);
   });
 
   it('allows when escape hatch env is set', () => {
     process.env.NODE_ENV = 'production';
     process.env.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES = '1';
-    expect(isInternalRouteBlocked('/evaluate')).toBe(false);
+    expect(isInternalRouteBlocked('/dev')).toBe(false);
   });
 });

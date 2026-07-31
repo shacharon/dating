@@ -16,7 +16,8 @@ export async function generateMetadata() {
  * Remaining client-only /dating routes (intentionally not converted):
  * - conversations/[id] — realtime messaging
  * - me-matches/[id] — interactive detail actions
- * - matches, matches/[id], feedback, onboarding — lower priority / interactive / redirects
+ * - matches, matches/[id] — thin redirects to me-matches
+ * - onboarding — interactive flow
  */
 export default function DatingLandingPage() {
   return <DatingLandingPageClient />;

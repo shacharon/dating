@@ -1,5 +1,8 @@
 # Match Recommendation UI Implementation Summary
 
+> Historical note (Sprint 26): mock matches / legacy `/dating/matches` UI were removed;
+> product path is `/dating/me-matches`. Thin redirects remain under `/dating/matches`.
+
 ## Overview
 
 Implemented UI rendering for `MatchRecommendationDto` as a decision-oriented card in the dating webapp. The recommendation appears above the explainability section, providing clear user guidance without duplicating content.
