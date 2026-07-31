@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-import { apiUrl } from '@/lib/api-base';
-
-const API_AUTO = apiUrl('/api/v1/matches/auto');
-const API_REBUILD = apiUrl('/api/v1/matches/rebuild');
+import { getAutoMatches, rebuildMatches, type MatchIndex } from '@/lib/matches-api';
 
 interface WhyTopEntry {
   key: string;
@@ -21,31 +17,12 @@ interface TensionsTopEntry {
   direction: string;
 }
 
-interface MatchIndexItem {
-  matchId: string;
-  a: { id: string; name: string };
-  b: { id: string; name: string };
-  finalScore: number;
-  coverage: number;
-  frictionRisk: number;
-  whyTop: WhyTopEntry[];
-  tensionsTop: TensionsTopEntry[];
-  updatedAt: string;
-}
-
-interface MatchIndex {
-  generatedAt: string;
-  profileCount: number;
-  matchCount: number;
-  items: MatchIndexItem[];
-}
-
-function formatWhy(item: MatchIndexItem): string {
+function formatWhy(item: { whyTop?: WhyTopEntry[] }): string {
   if (!item.whyTop?.length) return '—';
   return item.whyTop.map((w) => w.text).join(' · ');
 }
 
-function formatTensions(item: MatchIndexItem): string {
+function formatTensions(item: { tensionsTop?: TensionsTopEntry[] }): string {
   if (!item.tensionsTop?.length) return '—';
   return item.tensionsTop.map((t) => `${t.text} (Gap ${t.gap})`).join(' · ');
 }
@@ -62,24 +39,8 @@ export default function AutoMatchesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(API_AUTO);
-      const data = await res.json();
-      if (!res.ok) {
-        setError(
-          typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`,
-        );
-        setIndex(null);
-        return;
-      }
-      if (data?.ok && data?.index) {
-        setIndex(data.index);
-      } else if (data?.ok === false && data?.message) {
-        setError(data.message);
-        setIndex(null);
-      } else {
-        setError('Invalid response from server.');
-        setIndex(null);
-      }
+      const data = await getAutoMatches();
+      setIndex(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed.');
       setIndex(null);
@@ -96,19 +57,8 @@ export default function AutoMatchesPage() {
     setRebuildError(null);
     setRebuilding(true);
     try {
-      const res = await fetch(API_REBUILD, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) {
-        setRebuildError(
-          typeof data?.message === 'string' ? data.message : `Rebuild failed (${res.status})`,
-        );
-        return;
-      }
-      if (data?.ok && data?.stats) {
-        await fetchAuto();
-      } else {
-        setRebuildError('Invalid response from server.');
-      }
+      await rebuildMatches();
+      await fetchAuto();
     } catch (err) {
       setRebuildError(err instanceof Error ? err.message : 'Rebuild failed.');
     } finally {

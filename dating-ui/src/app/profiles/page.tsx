@@ -11,9 +11,15 @@ import {
   labelInterest,
   labelKids,
 } from '@/lib/enrichment-display-v1';
+import {
+  listProfiles,
+  getProfileById,
+  analyzeProfile,
+  type ProfileListItem,
+  type ProfilePayload,
+} from '@/lib/profiles-api';
 
 const API_ORIGIN = getApiBase();
-const API_BASE = `${API_ORIGIN}/api/v1/profiles`;
 
 const SIGNAL_KEYS = [
   'ambition',
@@ -31,12 +37,6 @@ const SIGNAL_KEYS = [
   'physicalPriority',
   'statusOrientation',
 ] as const;
-
-interface ProfileListItem {
-  id: string;
-  name: string;
-  savedAt: string;
-}
 
 interface ExtractionEvidenceItem {
   signal: string;
@@ -114,14 +114,6 @@ interface ChipsBundle {
   self: EvaluationChip[];
   partner: EvaluationChip[];
   relationship: EvaluationChip[];
-}
-
-interface ProfilePayload {
-  id: string;
-  name: string;
-  texts: { aboutMe: string; aboutPartner: string; aboutRelationship: string };
-  evaluation?: Evaluation;
-  savedAt: string;
 }
 
 function formatSignalKey(key: string): string {
@@ -408,24 +400,14 @@ export default function ProfilesPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await fetch(API_BASE);
-      const data = await res.json();
-      if (!res.ok) {
-        setListError(typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`);
-        setItems([]);
-        return;
-      }
-      if (data?.ok && Array.isArray(data?.items)) {
-        setItems(data.items);
-        const preferredExists = preferredProfileId
-          ? data.items.some((item: ProfileListItem) => item.id === preferredProfileId)
-          : false;
-        setSelectedId((prev) =>
-          prev ? prev : preferredExists ? preferredProfileId : data.items[0]?.id ?? '',
-        );
-      } else {
-        setItems([]);
-      }
+      const data = await listProfiles();
+      setItems(data);
+      const preferredExists = preferredProfileId
+        ? data.some((item: ProfileListItem) => item.id === preferredProfileId)
+        : false;
+      setSelectedId((prev) =>
+        prev ? prev : preferredExists ? preferredProfileId : data[0]?.id ?? '',
+      );
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Request failed.');
       setItems([]);
@@ -478,16 +460,10 @@ export default function ProfilesPage() {
     setProfileLoading(true);
     setProfileError(null);
     setProfile(null);
-    fetch(`${API_BASE}/${encodeURIComponent(selectedId)}`)
-      .then((res) => res.json())
+    getProfileById(selectedId)
       .then((data) => {
         if (cancelled) return;
-        if (!data?.ok || !data?.profile) {
-          setProfileError('Profile not found.');
-          setProfile(null);
-          return;
-        }
-        setProfile(data.profile);
+        setProfile(data);
         setProfileError(null);
         setSignalTab('self');
       })
@@ -510,26 +486,11 @@ export default function ProfilesPage() {
     setAnalyzeMessage(null);
     setAnalyzing(true);
     try {
-      const res = await fetch(
-        `${API_ORIGIN}/api/profiles/${encodeURIComponent(selectedId)}/analyze`,
-        { method: 'POST' },
-      );
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg =
-          typeof data?.message === 'string'
-            ? data.message
-            : `Analyze failed (${res.status})`;
-        setAnalyzeMessage(msg);
-        return;
-      }
+      await analyzeProfile(selectedId);
 
       // Refresh the selected profile after analysis so UI shows latest result.
-      const profileRes = await fetch(`${API_BASE}/${encodeURIComponent(selectedId)}`);
-      const profileData = await profileRes.json().catch(() => null);
-      if (profileRes.ok && profileData?.ok && profileData?.profile) {
-        setProfile(profileData.profile as ProfilePayload);
-      }
+      const profileData = await getProfileById(selectedId);
+      setProfile(profileData);
       setAnalyzeMessage('Analysis complete.');
     } catch (err) {
       setAnalyzeMessage(err instanceof Error ? err.message : 'Analyze failed.');
@@ -674,7 +635,7 @@ export default function ProfilesPage() {
                 Open profile route
               </Link>
               <a
-                href={`${API_BASE}/${encodeURIComponent(selectedId)}`}
+                href={`${API_ORIGIN}/api/v1/profiles/${encodeURIComponent(selectedId)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -685,7 +646,7 @@ export default function ProfilesPage() {
           )}
           {selectedId && (
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              URL: {`${API_BASE}/${selectedId}`}
+              URL: {`${API_ORIGIN}/api/v1/profiles/${selectedId}`}
             </p>
           )}
           {analyzeMessage && (

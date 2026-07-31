@@ -3,10 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getApiBase } from '@/lib/api-base';
+import { getProfileById, type ProfilePayload } from '@/lib/profiles-api';
 import { buildEnrichmentDisplayChipsV1 } from '@/lib/enrichment-display-v1';
-
-const API_BASE = `${getApiBase()}/api/v1/profiles`;
 
 /** When URL has no `ids`, load this sample set so /profiles/compare works without query params. */
 const DEFAULT_COMPARE_IDS =
@@ -22,13 +20,6 @@ interface EnrichmentSignalsV1 {
 
 interface Evaluation {
   enrichment?: { version: 'v1'; signals: EnrichmentSignalsV1 };
-}
-
-interface ProfilePayload {
-  id: string;
-  name: string;
-  texts: { aboutMe: string; aboutPartner: string; aboutRelationship: string };
-  evaluation?: Evaluation;
 }
 
 function parseIdsParam(param: string): string[] {
@@ -69,18 +60,8 @@ export function ProfilesCompareClient() {
     const results = await Promise.all(
       idList.map(async (id) => {
         try {
-          const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
-          const data = (await res.json().catch(() => null)) as {
-            ok?: boolean;
-            profile?: ProfilePayload;
-            message?: string;
-          } | null;
-          if (!res.ok || !data?.ok || !data?.profile) {
-            const msg =
-              typeof data?.message === 'string' ? data.message : `HTTP ${res.status} or invalid JSON`;
-            return { id, profile: null, error: msg };
-          }
-          return { id, profile: data.profile, error: null };
+          const profile = await getProfileById(id);
+          return { id, profile, error: null };
         } catch (e) {
           return {
             id,

@@ -6,11 +6,12 @@ import {
 } from '@/lib/observability/product-logger';
 import { useState } from 'react';
 import { ChipsSection, type ChipsViewModel } from '../components/chips-section';
-import { getApiBase } from '@/lib/api-base';
-
-const API_BASE = getApiBase();
-const API_PROFILES_EVALUATE_URL = `${API_BASE}/api/v1/profiles/evaluate`;
-const API_PROFILES_ANALYZE_V2_BASE = `${API_BASE}/api/profiles`;
+import {
+  triggerEvaluation,
+  fetchAnalyzeV2Chips,
+  type EvaluateBatchResult,
+  type ExtractedSignals,
+} from '@/lib/evaluate-api';
 
 const SECTIONS = [
   { id: 'aboutMe' as const, label: 'About me', placeholder: 'Describe yourself…' },
@@ -25,35 +26,6 @@ const SECTIONS = [
     placeholder: 'What you look for in a partner…',
   },
 ] as const;
-
-interface ExtractionEvidenceItem {
-  signal: string;
-  quote: string;
-  reason?: string;
-}
-
-type ExtractionDomainQualityStatus = 'OK' | 'LOW_DATA' | 'UNRELIABLE';
-
-interface ExtractedSignals {
-  domain: string;
-  signals: Record<string, number | null>;
-  evidence: ExtractionEvidenceItem[];
-  version: string;
-  confidence: number;
-  notes?: string;
-  domainStatus?: ExtractionDomainQualityStatus;
-}
-
-interface EvaluateBatchResult {
-  self: ExtractedSignals;
-  partner: ExtractedSignals;
-  relationship: ExtractedSignals;
-  display: { summary: string; insight: string };
-}
-
-interface AnalyzeV2Response {
-  chips?: ChipsViewModel;
-}
 
 const EMPTY_CHIPS: ChipsViewModel = {
   attractionChips: [],
@@ -120,72 +92,29 @@ export default function EvaluatePage() {
 
     setLoading(true);
     try {
-      const payload: {
-        name: string;
-        aboutMe: string;
-        aboutPartner: string;
-        aboutRelationship: string;
-        id?: string;
-      } = {
+      const payload = {
         name: trimmedName,
         aboutMe: trimmed.aboutMe,
         aboutPartner: trimmed.aboutPartner,
         aboutRelationship: trimmed.aboutRelationship,
+        ...(profileId.trim() ? { id: profileId.trim() } : {}),
       };
-      if (profileId.trim()) {
-        payload.id = profileId.trim();
-      }
 
-      const res = await fetch(API_PROFILES_EVALUATE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      let data: {
-        profileId?: string;
-        evaluation?: EvaluateBatchResult;
-        message?: string;
-      };
-      try {
-        data = await res.json();
-      } catch {
-        setError(res.ok ? 'Invalid response.' : `Request failed (${res.status}).`);
-        return;
-      }
-      if (!res.ok) {
-        setError(
-          typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`,
-        );
-        return;
-      }
-      if (!data.profileId || !data.evaluation) {
-        setError('Invalid response from server.');
-        return;
-      }
-
+      const data = await triggerEvaluation(payload);
       setSavedProfileId(data.profileId);
       setProfileId(data.profileId);
       setResult(data.evaluation);
 
       // Derived UI-facing layer only; read-only and non-persistent.
       try {
-        const chipsRes = await fetch(
-          `${API_PROFILES_ANALYZE_V2_BASE}/${encodeURIComponent(data.profileId)}/analyze-v2`,
-          { method: 'POST' },
-        );
-        if (chipsRes.ok) {
-          const chipsData = (await chipsRes.json()) as AnalyzeV2Response;
-          emitProductLog({
-            level: 'trace',
-            route: getObservabilityRoute(),
-            message: 'evaluate: analyze-v2 chips loaded',
-            meta: { profileId: data.profileId },
-          });
-          setChips(chipsData?.chips ?? EMPTY_CHIPS);
-        } else {
-          setChips(EMPTY_CHIPS);
-        }
+        const chipsData = await fetchAnalyzeV2Chips(data.profileId);
+        emitProductLog({
+          level: 'trace',
+          route: getObservabilityRoute(),
+          message: 'evaluate: analyze-v2 chips loaded',
+          meta: { profileId: data.profileId },
+        });
+        setChips(chipsData?.chips ?? EMPTY_CHIPS);
       } catch {
         setChips(EMPTY_CHIPS);
       }

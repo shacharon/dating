@@ -12,7 +12,18 @@ import {
   type MatchDecisionV1,
 } from '@/lib/decision-engine-v1';
 import type { EnrichmentSignalsLike } from '@/lib/enrichment-display-v1';
-import { apiUrl } from '@/lib/api-base';
+import {
+  listProfiles,
+  getProfileById,
+  type ProfileListItem,
+} from '@/lib/profiles-api';
+import {
+  listMatches,
+  getMatchById,
+  compareProfiles as compareProfilesApi,
+  type MatchListItem,
+  type CompareResult,
+} from '@/lib/matches-api';
 
 type DecisionCueV1 = 'TALK' | 'THINK' | 'SKIP';
 
@@ -146,57 +157,6 @@ function MatchDecisionBlock({ engine }: { engine: DecisionEngineV1Result }) {
   );
 }
 
-const API_PROFILES = apiUrl('/api/v1/profiles');
-const API_MATCHES = apiUrl('/api/v1/matches');
-const API_COMPARE = apiUrl('/api/v1/matches/compare');
-
-interface ProfileListItem {
-  id: string;
-  name: string;
-  savedAt: string;
-}
-
-interface CompareAlignment {
-  key: string;
-  pairScore: number;
-}
-
-interface CompareTension {
-  key: string;
-  gap: number;
-  text: string;
-}
-
-interface CompareResult {
-  matchId?: string;
-  aId?: string;
-  bId?: string;
-  a?: { id: string; name: string };
-  b?: { id: string; name: string };
-  status?: 'READY' | 'NOT_ANALYZED';
-  message?: string;
-  finalScore: number | null;
-  aToB?: number | null;
-  bToA?: number | null;
-  relationshipStyle?: number | null;
-  coverage?: number | null;
-  frictionRisk?: number | null;
-  compatibility?: number | null;
-  friction?: number | null;
-  coveragePercent?: number | null;
-  coverageFactor?: number | null;
-  alignments?: CompareAlignment[];
-  tensions?: CompareTension[];
-}
-
-interface MatchListItem {
-  matchId: string;
-  a: { id: string; name: string };
-  b: { id: string; name: string };
-  finalScore: number;
-  updatedAt: string;
-}
-
 export default function MatchesPageClient() {
   const searchParams = useSearchParams();
   const [listLoading, setListLoading] = useState(true);
@@ -224,20 +184,8 @@ export default function MatchesPageClient() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await fetch(API_PROFILES);
-      const data = await res.json();
-      if (!res.ok) {
-        setListError(
-          typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`,
-        );
-        setItems([]);
-        return;
-      }
-      if (data?.ok && Array.isArray(data?.items)) {
-        setItems(data.items);
-      } else {
-        setItems([]);
-      }
+      const data = await listProfiles();
+      setItems(data);
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Request failed.');
       setItems([]);
@@ -263,20 +211,8 @@ export default function MatchesPageClient() {
     setMatchesLoading(true);
     setMatchesError(null);
     try {
-      const res = await fetch(API_MATCHES);
-      const data = await res.json();
-      if (!res.ok) {
-        setMatchesError(
-          typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`,
-        );
-        setMatchesList([]);
-        return;
-      }
-      if (data?.ok && Array.isArray(data?.items)) {
-        setMatchesList(data.items);
-      } else {
-        setMatchesList([]);
-      }
+      const data = await listMatches();
+      setMatchesList(data);
     } catch (err) {
       setMatchesError(err instanceof Error ? err.message : 'Request failed.');
       setMatchesList([]);
@@ -309,19 +245,18 @@ export default function MatchesPageClient() {
     setEngineV1(null);
     const load = async () => {
       try {
-        const [ra, rb] = await Promise.all([
-          fetch(`${API_PROFILES}/${encodeURIComponent(aId)}`),
-          fetch(`${API_PROFILES}/${encodeURIComponent(bId)}`),
+        const [pa, pb] = await Promise.all([
+          getProfileById(aId),
+          getProfileById(bId),
         ]);
-        const [da, db] = await Promise.all([ra.json(), rb.json()]);
         if (cancelled) return;
         const sa =
-          da?.ok && da?.profile?.evaluation?.enrichment?.signals
-            ? (da.profile.evaluation.enrichment.signals as EnrichmentSignalsLike)
+          pa?.evaluation?.enrichment?.signals
+            ? (pa.evaluation.enrichment.signals as EnrichmentSignalsLike)
             : null;
         const sb =
-          db?.ok && db?.profile?.evaluation?.enrichment?.signals
-            ? (db.profile.evaluation.enrichment.signals as EnrichmentSignalsLike)
+          pb?.evaluation?.enrichment?.signals
+            ? (pb.evaluation.enrichment.signals as EnrichmentSignalsLike)
             : null;
         setDecisionLayer(buildMatchDecisionInsights(sa, sb));
 
@@ -366,24 +301,8 @@ export default function MatchesPageClient() {
     setMatchDetailLoading(true);
     setCompareError(null);
     try {
-      const res = await fetch(`${API_MATCHES}/${encodeURIComponent(matchId)}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setCompareError(
-          typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`,
-        );
-        setResult(null);
-        return;
-      }
-      if (data?.ok && data?.match) {
-        setResult({
-          ...data.match,
-          status: data.status ?? 'READY',
-          message: typeof data?.message === 'string' ? data.message : undefined,
-        });
-      } else {
-        setResult(null);
-      }
+      const data = await getMatchById(matchId);
+      setResult(data);
     } catch (err) {
       setCompareError(err instanceof Error ? err.message : 'Request failed.');
       setResult(null);
@@ -412,32 +331,13 @@ export default function MatchesPageClient() {
     setResult(null);
     setCompareLoading(true);
     try {
-      const res = await fetch(API_COMPARE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aId: aId.trim(), bId: bId.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setCompareError(
-          typeof data?.message === 'string' ? data.message : `Request failed (${res.status})`,
-        );
-        return;
-      }
-      if (data?.ok && data?.match) {
-        setResult({
-          ...data.match,
-          status: data.status ?? 'READY',
-          message: typeof data?.message === 'string' ? data.message : undefined,
-        });
-        if (data.status === 'READY') {
-          setSelectedMatchId(data.match.matchId);
-          fetchMatchesList();
-        } else {
-          setSelectedMatchId(null);
-        }
+      const data = await compareProfilesApi(aId.trim(), bId.trim());
+      setResult(data);
+      if (data.status === 'READY') {
+        setSelectedMatchId(data.matchId ?? null);
+        fetchMatchesList();
       } else {
-        setCompareError('Invalid response from server.');
+        setSelectedMatchId(null);
       }
     } catch (err) {
       setCompareError(err instanceof Error ? err.message : 'Request failed.');
