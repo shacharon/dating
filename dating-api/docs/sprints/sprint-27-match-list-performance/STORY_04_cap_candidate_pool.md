@@ -1,12 +1,12 @@
 # Story 04 — Cap candidate pool (stopgap)
 
-**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
+**Sprint 27 · Status: Done**  
 **Priority:** P0 (stopgap)  
 **Estimated effort:** 0.5 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** Story 02 preferred (prefilter then cap)
 
-**Handoffs:** [architect](./handoffs/STORY_04_cap_candidate_pool/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_04_cap_candidate_pool/agent-0-architect.md) · [dev](./handoffs/STORY_04_cap_candidate_pool/agent-1-dev.md) · [CR](./handoffs/STORY_04_cap_candidate_pool/agent-2-cr.md) · [PM](./handoffs/STORY_04_cap_candidate_pool/agent-3-pm.md)
 
 ---
 
@@ -29,11 +29,11 @@ Even with batch evals + prefilter, an unbounded pool is unsafe at 50k+ users. Ca
 
 ## Acceptance criteria
 
-- [ ] Miss path never hydrates more than `MATCH_LIST_CANDIDATE_CAP` rows
-- [ ] Default cap = 1000
-- [ ] Order is deterministic (`analyzedAt DESC`, tie-break `id` if needed)
-- [ ] Documented as temporary until materialized rankings
-- [ ] Tests cover cap behavior
+- [x] Miss path never hydrates more than `MATCH_LIST_CANDIDATE_CAP` rows
+- [x] Default cap = 1000
+- [x] Order is deterministic (`analyzedAt DESC`, tie-break `id` if needed)
+- [x] Documented as temporary until materialized rankings
+- [x] Tests cover cap behavior
 
 ## Notes / gotchas
 
