@@ -1,8 +1,9 @@
-# Exact post-deploy smoke gate for `.github/workflows/deploy-dev.yml` (Story 04).
+# HISTORICAL — Story 05 post-deploy smoke gate (already applied)
 #
-# Story 04 already drafts a `smoke` job that soft-skips if the script is missing.
-# After Story 05 lands `dating-api/scripts/smoke-cloud-dev.sh`, replace that job
-# with the block below so missing script / BASE_URL / non-zero exit fails the deploy.
+# As of Sprint 20 Story 4 Agent 1, `.github/workflows/deploy-dev.yml` already
+# fail-closes on missing DEV_BASE_URL / smoke-cloud-dev.sh / non-zero exit.
+# Keep this file as a reference copy of the intended job shape; do not re-introduce
+# soft-skip behavior.
 #
 # GitHub Environment `dev`:
 #   vars.DEV_BASE_URL              — public HTTPS origin (required)
