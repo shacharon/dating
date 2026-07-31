@@ -139,12 +139,13 @@ Trust is `AssumeRoleWithWebIdentity` against `token.actions.githubusercontent.co
 
 ## Post-deploy smoke (Story 05 hook)
 
-Deploy job `smoke`:
+Deploy job `smoke` (**fail-closed**):
 
-- **If present:** `dating-api/scripts/smoke-cloud-dev.sh` with `BASE_URL=$DEV_BASE_URL` — non-zero exit fails the deploy.
-- **If missing:** job succeeds with a notice; Story 05 should add the script and keep this job as the gate.
+- Requires `vars.DEV_BASE_URL` and `dating-api/scripts/smoke-cloud-dev.sh`.
+- Runs the script with `BASE_URL=$DEV_BASE_URL` — non-zero exit fails the deploy.
+- Missing URL or script → job fails (do not soft-skip).
 
-Optional later: replace the step with `workflow_call` into a dedicated Story 05 workflow.
+Optional: `secrets.SMOKE_SESSION_COOKIE` for authenticated probes inside the smoke script.
 
 ---
 
