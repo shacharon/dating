@@ -608,7 +608,7 @@ describe('MeProfileAnalysisService', () => {
 });
 
 // ---------------------------------------------------------------------------
-// latestEvaluationForProfile unit tests
+// latestEvaluationsForProfileIds / latestEvaluationForProfile unit tests
 // ---------------------------------------------------------------------------
 
 describe('latestEvaluationsForProfileIds', () => {
