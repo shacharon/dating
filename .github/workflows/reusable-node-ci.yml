@@ -1,0 +1,67 @@
+# Reusable Node CI for dating-api / dating-ui packages.
+# Called from ci.yml and deploy-dev.yml so deploy always re-validates before push.
+
+name: Reusable Node CI
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Package directory (dating-api or dating-ui)
+        required: true
+        type: string
+      run_lint:
+        description: Run npm run lint when the script exists
+        required: false
+        type: boolean
+        default: true
+      run_typecheck:
+        description: Run npm run typecheck when the script exists
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  package:
+    name: ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.package }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ inputs.package }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        if: inputs.run_typecheck
+        run: |
+          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.typecheck ? 0 : 1)"; then
+            npm run typecheck
+          else
+            echo "No typecheck script — skip"
+          fi
+
+      - name: Lint
+        if: inputs.run_lint
+        run: |
+          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.lint ? 0 : 1)"; then
+            npm run lint
+          else
+            echo "No lint script — skip"
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test

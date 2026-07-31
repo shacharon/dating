@@ -1,0 +1,263 @@
+# Sprint 20 Story 4 — zero-touch `dev` deploy.
+#
+# Trigger: push to `main` (default deploy branch) or workflow_dispatch.
+# Auth: GitHub OIDC → AWS IAM role only (no static AWS keys).
+#
+# Order: CI → build/push ECR → one-shot migrate → API roll → UI roll → health → smoke.
+
+name: Deploy dev
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  ci-api:
+    uses: ./.github/workflows/reusable-node-ci.yml
+    with:
+      package: dating-api
+
+  ci-ui:
+    uses: ./.github/workflows/reusable-node-ci.yml
+    with:
+      package: dating-ui
+
+  build-push:
+    name: Build & push images
+    needs: [ci-api, ci-ui]
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      image_tag: ${{ steps.meta.outputs.sha }}
+      api_image: ${{ steps.meta.outputs.api_image }}
+      ui_image: ${{ steps.meta.outputs.ui_image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image metadata
+        id: meta
+        env:
+          ECR_API_REPOSITORY: ${{ vars.ECR_API_REPOSITORY }}
+          ECR_UI_REPOSITORY: ${{ vars.ECR_UI_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          : "${ECR_API_REPOSITORY:?Set GitHub Environment var ECR_API_REPOSITORY}"
+          : "${ECR_UI_REPOSITORY:?Set GitHub Environment var ECR_UI_REPOSITORY}"
+          SHA="$(echo "${GITHUB_SHA}" | cut -c1-12)"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "api_image=${ECR_API_REPOSITORY}:${SHA}" >> "$GITHUB_OUTPUT"
+          echo "ui_image=${ECR_UI_REPOSITORY}:${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION != '' && vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push dating-api
+        uses: docker/build-push-action@v6
+        with:
+          context: dating-api
+          file: dating-api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.api_image }}
+            ${{ vars.ECR_API_REPOSITORY }}:latest
+          cache-from: type=gha,scope=dating-api
+          cache-to: type=gha,mode=max,scope=dating-api
+
+      - name: Build & push dating-ui (NEXT_PUBLIC_* build-args)
+        uses: docker/build-push-action@v6
+        with:
+          context: dating-ui
+          file: dating-ui/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.ui_image }}
+            ${{ vars.ECR_UI_REPOSITORY }}:latest
+          cache-from: type=gha,scope=dating-ui
+          cache-to: type=gha,mode=max,scope=dating-ui
+          build-args: |
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SESSION_COOKIE_NAME=${{ vars.NEXT_PUBLIC_SESSION_COOKIE_NAME }}
+            NEXT_PUBLIC_REALTIME=${{ vars.NEXT_PUBLIC_REALTIME }}
+            NEXT_PUBLIC_API_PORT=${{ vars.NEXT_PUBLIC_API_PORT }}
+            NEXT_PUBLIC_AUTH_TEST=${{ vars.NEXT_PUBLIC_AUTH_TEST }}
+            NEXT_PUBLIC_ADMIN_ENABLED=${{ vars.NEXT_PUBLIC_ADMIN_ENABLED }}
+            NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES=${{ vars.NEXT_PUBLIC_ALLOW_INTERNAL_ROUTES }}
+            NEXT_PUBLIC_MATCH_QUALITY_RUNBOOK_URL=${{ vars.NEXT_PUBLIC_MATCH_QUALITY_RUNBOOK_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=${{ vars.NEXT_PUBLIC_SENTRY_ENVIRONMENT }}
+            API_PROXY_TARGET=${{ vars.API_PROXY_TARGET }}
+
+  migrate:
+    name: One-shot prisma migrate
+    needs: [build-push]
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      api_task_definition_arn: ${{ steps.register.outputs.arn }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION != '' && vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Register API task definition (new image)
+        id: register
+        env:
+          ECS_API_TASK_FAMILY: ${{ vars.ECS_API_TASK_FAMILY }}
+          API_IMAGE: ${{ needs.build-push.outputs.api_image }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/ecs-register-image.sh
+          ARN="$(.github/scripts/ecs-register-image.sh \
+            "${ECS_API_TASK_FAMILY}" \
+            "dating-api" \
+            "${API_IMAGE}")"
+          echo "arn=${ARN}" >> "$GITHUB_OUTPUT"
+
+      - name: Run migrate task (block on failure)
+        env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_MIGRATE_TASK_DEFINITION: ${{ steps.register.outputs.arn }}
+          ECS_SUBNET_IDS: ${{ vars.ECS_SUBNET_IDS }}
+          ECS_SECURITY_GROUP_IDS: ${{ vars.ECS_SECURITY_GROUP_IDS }}
+          ECS_MIGRATE_CONTAINER: dating-api
+          ECS_ASSIGN_PUBLIC_IP: ${{ vars.ECS_ASSIGN_PUBLIC_IP || 'DISABLED' }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/ecs-run-migrate.sh
+          .github/scripts/ecs-run-migrate.sh
+
+  deploy-api:
+    name: Rolling deploy API
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION != '' && vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Update API service + wait steady
+        env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_API_SERVICE }}
+          TASK_DEFINITION_ARN: ${{ needs.migrate.outputs.api_task_definition_arn }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/ecs-update-service.sh
+          .github/scripts/ecs-update-service.sh
+
+  deploy-ui:
+    name: Rolling deploy UI
+    needs: [build-push, deploy-api]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION != '' && vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Register UI task definition (new image)
+        id: register
+        env:
+          ECS_UI_TASK_FAMILY: ${{ vars.ECS_UI_TASK_FAMILY }}
+          UI_IMAGE: ${{ needs.build-push.outputs.ui_image }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/ecs-register-image.sh
+          ARN="$(.github/scripts/ecs-register-image.sh \
+            "${ECS_UI_TASK_FAMILY}" \
+            "dating-ui" \
+            "${UI_IMAGE}")"
+          echo "arn=${ARN}" >> "$GITHUB_OUTPUT"
+
+      - name: Update UI service + wait steady
+        env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_UI_SERVICE }}
+          TASK_DEFINITION_ARN: ${{ steps.register.outputs.arn }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/ecs-update-service.sh
+          .github/scripts/ecs-update-service.sh
+
+  health:
+    name: Health gate
+    needs: [deploy-api, deploy-ui]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Poll /health and /health/realtime
+        env:
+          DEV_BASE_URL: ${{ vars.DEV_BASE_URL }}
+          HEALTH_TIMEOUT_SECONDS: ${{ vars.HEALTH_TIMEOUT_SECONDS || '300' }}
+          REQUIRE_REDIS_ADAPTER: ${{ vars.REQUIRE_REDIS_ADAPTER || '1' }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/health-gate.sh
+          .github/scripts/health-gate.sh
+
+  smoke:
+    name: Post-deploy smoke (Story 05)
+    needs: [health]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Story 05 smoke if present
+        env:
+          BASE_URL: ${{ vars.DEV_BASE_URL }}
+          SESSION_COOKIE: ${{ secrets.SMOKE_SESSION_COOKIE }}
+          REQUIRE_REDIS_ADAPTER: ${{ vars.REQUIRE_REDIS_ADAPTER || '1' }}
+        run: |
+          set -euo pipefail
+          SCRIPT="dating-api/scripts/smoke-cloud-dev.sh"
+          if [ -f "$SCRIPT" ]; then
+            chmod +x "$SCRIPT"
+            "$SCRIPT" "${BASE_URL}"
+          else
+            echo "::notice::Story 05 smoke script missing at ${SCRIPT}."
+            echo "Hook for Story 05: add smoke-cloud-dev.sh and keep this job failing on non-zero exit."
+            echo "See dating-api/docs/sprints/sprint-20-aws-dev-deployment/CI_CD.md § Post-deploy smoke."
+          fi
