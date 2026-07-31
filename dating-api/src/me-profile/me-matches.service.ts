@@ -235,13 +235,47 @@ export class MeMatchesService {
     await this.cache.del(matchListCacheKey(userId));
   }
 
-  // ─── Shared candidate select ───────────────────────────────────────────────
+  // ─── Candidate selects ─────────────────────────────────────────────────────
   // `UserProfile.interestsTop` and `sig*` are excluded — engine/HG inputs come only from
   // `buildMeMatchesParticipantReadModel` (latest evaluation + optional normalized rows).
-  // `signals` and `interests` are always selected; the assembler uses them only when
-  // ENGINE_READ_NORMALIZED=1 (zero-cost when flag is off).
+  // List omits about* free-text (and unused city/country/status/user); detail keeps them.
+  // Hard-block list UX batch-loads about* only for the existing hard-fail subset.
 
-  private candidateSelect = {
+  /** Slim select for match-list rebuild (`buildFullRankedList`). */
+  private candidateSelectList = {
+    id: true,
+    userId: true,
+    name: true,
+    nickname: true,
+    birthDate: true,
+    gender: true,
+    desiredPartnerGenders: true,
+    locationLabel: true,
+    analyzedAt: true,
+    updatedAt: true,
+    childrenStatus: true,
+    wantsChildren: true,
+    smokingFrequency: true,
+    alcoholUse: true,
+    education: true,
+    religion: true,
+    preference: true,
+    signals: {
+      select: { signalKey: true, signalValue: true, evalVersion: true },
+    },
+    interests: {
+      select: { tag: true, rank: true, evalVersion: true },
+      orderBy: { rank: 'asc' as const },
+    },
+    photos: {
+      where: { status: 'APPROVED' as const },
+      select: { id: true, isPrimary: true, storageKey: true },
+    },
+    _count: { select: { evaluations: true } },
+  } as const;
+
+  /** Full select for getById / assertMatchCandidateVisible (includes about*). */
+  private candidateSelectDetail = {
     id: true,
     userId: true,
     name: true,
@@ -258,16 +292,13 @@ export class MeMatchesService {
     aboutRelationship: true,
     analyzedAt: true,
     updatedAt: true,
-    // HG structured facts
     childrenStatus: true,
     wantsChildren: true,
     smokingFrequency: true,
     alcoholUse: true,
     education: true,
     religion: true,
-    // HG structured preferences live on UserProfilePreference (Phase F).
     preference: true,
-    // Normalized signal / interest rows for ENGINE_READ_NORMALIZED assembly.
     signals: {
       select: { signalKey: true, signalValue: true, evalVersion: true },
     },
@@ -473,7 +504,7 @@ export class MeMatchesService {
           preference: viewer.preference ?? null,
           asOf,
         }),
-        select: this.candidateSelect,
+        select: this.candidateSelectList,
       }),
     ]);
 
@@ -521,9 +552,31 @@ export class MeMatchesService {
     const viewerSelfHints =
       extractSelfFactHintsFromFreeText(viewerTextFields);
 
+    type PendingHardBlockMatch = {
+      row: (typeof candidateRows)[number];
+      candidateEval: NonNullable<
+        ReturnType<typeof latestEvalByProfile.get>
+      >;
+      candidateBridge: ReturnType<typeof buildProductProfileMatchingBridge>;
+      hgDirections: NonNullable<
+        ReturnType<typeof evaluateHolyGrailPairDirections>
+      >;
+      matchScore: number | null;
+      explainability: MatchExplainabilityDto | null;
+      recommendation: MatchRecommendationDto | null;
+    };
+    const pendingHardBlocks: PendingHardBlockMatch[] = [];
+
     for (const row of candidateRows) {
       const candidateBridge = buildProductProfileMatchingBridge(
-        row,
+        {
+          ...row,
+          aboutMe: null,
+          aboutPartner: null,
+          aboutRelationship: null,
+          city: null,
+          country: null,
+        },
         asOf,
         partnerGenderSourceForMeMatchesRow(row, this.obs),
       );
@@ -551,7 +604,12 @@ export class MeMatchesService {
         ...candidateProfileCore
       } = row;
       const candidateRead = buildMeMatchesParticipantReadModel(
-        candidateProfileCore,
+        {
+          ...candidateProfileCore,
+          aboutMe: null,
+          aboutPartner: null,
+          aboutRelationship: null,
+        },
         candidatePreference ?? null,
         candidateEval,
         {
@@ -596,7 +654,6 @@ export class MeMatchesService {
         (hgDirections.aToB.overallHardEligibility === 'FAIL' ||
           hgDirections.bToA.overallHardEligibility === 'FAIL');
 
-      let hardBlocked: HardBlockedDto | undefined;
       if (isHgHardFail) {
         const yourAction = matchActionToYourAction(
           actionByTargetUserId.get(row.userId) ?? null,
@@ -609,19 +666,32 @@ export class MeMatchesService {
         ) {
           continue;
         }
-        hardBlocked = this.buildHardBlockedDto(
-          hgDirections!,
-          viewerDealbreakerSignals,
-          viewerSelfHints,
-          {
-            aboutMe: candidateProfileCore.aboutMe,
-            aboutPartner: candidateProfileCore.aboutPartner,
-            aboutRelationship: candidateProfileCore.aboutRelationship,
-          },
-        );
-        if (hardBlocked === undefined) {
+        // Defer hardBlocked DTO until about* batch fetch (list select omits free-text).
+        if (actionByTargetUserId.get(row.userId) === MatchActionType.BLOCK) {
           continue;
         }
+        let matchScore: number | null = null;
+        let explainability: MatchExplainabilityDto | null = null;
+        let recommendation: MatchRecommendationDto | null = null;
+        const result = compareWithStatus(
+          viewerRead.enginePayload,
+          candidateRead.enginePayload,
+        );
+        if (!('status' in result)) {
+          matchScore = result.finalScore;
+          explainability = result.explainability;
+          recommendation = result.recommendation;
+        }
+        pendingHardBlocks.push({
+          row,
+          candidateEval,
+          candidateBridge,
+          hgDirections: hgDirections!,
+          matchScore,
+          explainability,
+          recommendation,
+        });
+        continue;
       }
 
       if (actionByTargetUserId.get(row.userId) === MatchActionType.BLOCK) {
@@ -668,8 +738,67 @@ export class MeMatchesService {
         yourAction: matchActionToYourAction(
           actionByTargetUserId.get(row.userId) ?? null,
         ),
-        ...(hardBlocked !== undefined ? { hardBlocked } : {}),
       });
+    }
+
+    if (pendingHardBlocks.length > 0) {
+      const aboutRows = await this.prisma.userProfile.findMany({
+        where: { id: { in: pendingHardBlocks.map((p) => p.row.id) } },
+        select: {
+          id: true,
+          aboutMe: true,
+          aboutPartner: true,
+          aboutRelationship: true,
+        },
+      });
+      const aboutById = new Map(aboutRows.map((r) => [r.id, r]));
+      for (const pending of pendingHardBlocks) {
+        const about = aboutById.get(pending.row.id);
+        const hardBlocked = this.buildHardBlockedDto(
+          pending.hgDirections,
+          viewerDealbreakerSignals,
+          viewerSelfHints,
+          {
+            aboutMe: about?.aboutMe ?? null,
+            aboutPartner: about?.aboutPartner ?? null,
+            aboutRelationship: about?.aboutRelationship ?? null,
+          },
+        );
+        if (hardBlocked === undefined) {
+          continue;
+        }
+        const approvedPhotos = pending.row.photos ?? [];
+        const primaryPhotoId = pickApprovedPrimaryPhotoId(approvedPhotos);
+        const primaryStorageKey =
+          approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ??
+          null;
+        matches.push({
+          id: pending.row.id,
+          nickname: pending.row.nickname?.trim()
+            ? pending.row.nickname.trim()
+            : null,
+          gender: pending.candidateBridge.selfGender,
+          ageYears: pending.candidateBridge.derivedSelfAgeYears,
+          locationLabel: pending.candidateBridge.location.locationLabel,
+          analyzedAt: pending.row.analyzedAt?.toISOString() ?? null,
+          hasEvaluation: pending.row._count.evaluations > 0,
+          matchScore: pending.matchScore,
+          profileAnalysisStale:
+            pending.row.updatedAt > pending.candidateEval.createdAt,
+          primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
+            profileId: pending.row.id,
+            photoId: primaryPhotoId,
+            storageKey: primaryStorageKey,
+          }),
+          approvedPhotoCount: approvedPhotos.length,
+          explainability: pending.explainability,
+          recommendation: pending.recommendation,
+          yourAction: matchActionToYourAction(
+            actionByTargetUserId.get(pending.row.userId) ?? null,
+          ),
+          hardBlocked,
+        });
+      }
     }
 
     // Eligible first (score DESC); hard-blocked existing append at bottom (score DESC within).
@@ -765,7 +894,7 @@ export class MeMatchesService {
 
     const candidate = await this.prisma.userProfile.findUnique({
       where: { id: candidateProfileId },
-      select: this.candidateSelect,
+      select: this.candidateSelectDetail,
     });
 
     if (
@@ -857,7 +986,7 @@ export class MeMatchesService {
     // Load candidate by UserProfile.id — never by userId (no foreign-key exposure).
     const candidate = await this.prisma.userProfile.findUnique({
       where: { id: candidateProfileId },
-      select: this.candidateSelect,
+      select: this.candidateSelectDetail,
     });
 
     if (

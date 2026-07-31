@@ -575,9 +575,21 @@ describe('MeMatchesService', () => {
             photos: expect.objectContaining({
               where: { status: 'APPROVED' },
             }),
+            locationLabel: true,
+            signals: expect.any(Object),
+            interests: expect.any(Object),
           }),
         }),
       );
+      const listSelect = prisma.userProfile.findMany.mock.calls[0][0]
+        .select as Record<string, unknown>;
+      expect(listSelect.aboutMe).toBeUndefined();
+      expect(listSelect.aboutPartner).toBeUndefined();
+      expect(listSelect.aboutRelationship).toBeUndefined();
+      expect(listSelect.city).toBeUndefined();
+      expect(listSelect.country).toBeUndefined();
+      expect(listSelect.status).toBeUndefined();
+      expect(listSelect.user).toBeUndefined();
     });
 
     it('excludes candidates with zero approved photos from list', async () => {
@@ -962,18 +974,43 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
           aboutPartner: "I don't want smokers",
         });
+      /** List slim select omits about*; structured smoking + batch about* drive hard-block. */
       const smokingCandidate = (id: string, userId: string) =>
         makeProfileRow({
           id,
           userId,
           gender: 'FEMALE',
           desiredPartnerGenders: ['MALE'],
-          aboutMe: 'I smoke',
+          smokingFrequency: 'REGULAR',
+          aboutMe: null,
         });
+
+      function mockListThenAboutBatch(
+        candidates: ReturnType<typeof makeProfileRow>[],
+        aboutMe = 'I smoke',
+      ) {
+        prisma.userProfile.findMany.mockImplementation(
+          async (args: {
+            select?: { aboutMe?: boolean };
+            where?: { id?: { in?: string[] } };
+          }) => {
+            if (args.select?.aboutMe === true) {
+              const ids = args.where?.id?.in ?? [];
+              return ids.map((id) => ({
+                id,
+                aboutMe,
+                aboutPartner: null,
+                aboutRelationship: null,
+              }));
+            }
+            return candidates;
+          },
+        );
+      }
 
       it('omits new hard-FAIL candidate (no LIKE / mutual)', async () => {
         prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
-        prisma.userProfile.findMany.mockResolvedValue([
+        mockListThenAboutBatch([
           smokingCandidate(candidateProfileId, 'user_cand'),
         ]);
         prisma.matchAction.findMany.mockResolvedValue([]);
@@ -987,7 +1024,7 @@ describe('MeMatchesService', () => {
 
       it('omits PASS-only hard-FAIL candidate', async () => {
         prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
-        prisma.userProfile.findMany.mockResolvedValue([
+        mockListThenAboutBatch([
           smokingCandidate(candidateProfileId, 'user_cand'),
         ]);
         prisma.matchAction.findMany.mockResolvedValue([
@@ -1001,7 +1038,7 @@ describe('MeMatchesService', () => {
 
       it('keeps Liked hard-FAIL candidate with hardBlocked + smoking reasons', async () => {
         prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
-        prisma.userProfile.findMany.mockResolvedValue([
+        mockListThenAboutBatch([
           smokingCandidate(candidateProfileId, 'user_cand'),
         ]);
         prisma.matchAction.findMany.mockResolvedValue([
@@ -1026,11 +1063,23 @@ describe('MeMatchesService', () => {
               r.evidence?.counterpartyQuote != null,
           ),
         ).toBe(true);
+        // About* batch fetch for hard-block evidence (not full-pool hydrate)
+        expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: { in: [candidateProfileId] } },
+            select: {
+              id: true,
+              aboutMe: true,
+              aboutPartner: true,
+              aboutRelationship: true,
+            },
+          }),
+        );
       });
 
       it('keeps hard-FAIL candidate with ACTIVE mutual and no LIKE', async () => {
         prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
-        prisma.userProfile.findMany.mockResolvedValue([
+        mockListThenAboutBatch([
           smokingCandidate(candidateProfileId, 'user_cand'),
         ]);
         prisma.matchAction.findMany.mockResolvedValue([]);
@@ -1046,14 +1095,14 @@ describe('MeMatchesService', () => {
 
       it('sorts hard-blocked existing after eligible matches', async () => {
         prisma.userProfile.findUnique.mockResolvedValue(smokingViewer());
-        prisma.userProfile.findMany.mockResolvedValue([
+        mockListThenAboutBatch([
           smokingCandidate('prof_blocked', 'user_blocked'),
           makeProfileRow({
             id: 'prof_ok',
             userId: 'user_ok',
             gender: 'FEMALE',
             desiredPartnerGenders: ['MALE'],
-            aboutMe: 'I love hiking',
+            aboutMe: null,
           }),
         ]);
         prisma.matchAction.findMany.mockResolvedValue([
@@ -2709,8 +2758,18 @@ describe('MeMatchesService', () => {
 
       const { preference: vp, ...vCore } = viewerFixture;
       const { preference: cp, ...cCore } = candFixture;
+      // List path forces empty about* into the read model (slim select).
       const expectedViewer = buildMeMatchesParticipantReadModel(vCore, vp ?? null, vEval);
-      const expectedCandidate = buildMeMatchesParticipantReadModel(cCore, cp ?? null, cEval);
+      const expectedCandidate = buildMeMatchesParticipantReadModel(
+        {
+          ...cCore,
+          aboutMe: null,
+          aboutPartner: null,
+          aboutRelationship: null,
+        },
+        cp ?? null,
+        cEval,
+      );
 
       const cmp = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
         finalScore: 55,
@@ -2919,10 +2978,19 @@ describe('MeMatchesService', () => {
           }),
         );
       prisma.userProfileEvaluation.findFirst.mockResolvedValue({
+        id: 'eval_row',
         evaluationJson: { self: { signals: {} }, partner: { signals: {} }, relationship: { signals: {} } },
         createdAt: new Date('2026-04-01T10:00:00.000Z'),
         version: 'v1',
       });
+      const cmp = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
+        finalScore: 50,
+        explainability: {
+          positiveChips: [],
+          reasonShort: 'ok',
+        },
+        recommendation: { primaryTakeaway: 'ok' },
+      } as never);
 
       await service.getById(viewerUserId, candidateProfileId);
 
@@ -2938,10 +3006,17 @@ describe('MeMatchesService', () => {
         }),
       );
 
-      // Assert candidate read by profile id (not userId)
+      // Detail select includes about* (list slim select omits them)
       expect(prisma.userProfile.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: candidateProfileId },
+          select: expect.objectContaining({
+            aboutMe: true,
+            aboutPartner: true,
+            aboutRelationship: true,
+            status: true,
+            user: expect.any(Object),
+          }),
         }),
       );
 
@@ -2952,6 +3027,7 @@ describe('MeMatchesService', () => {
           take: 1,
         }),
       );
+      cmp.mockRestore();
     });
   });
 });
