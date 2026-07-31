@@ -1,10 +1,12 @@
 # Story 02 — SQL gender / age prefilter
 
-**Sprint 27 · Status: PLANNED**  
+**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** Story 01 preferred first (independent otherwise)
+
+**Handoffs:** [architect](./handoffs/STORY_02_sql_gender_age_prefilter/agent-0-architect.md)
 
 ---
 
