@@ -43,3 +43,36 @@ export function recordCacheHit(): void {
 export function recordCacheMiss(): void {
   emit('cache.hit_rate', 0, ['result:miss']);
 }
+
+/** Hydrated candidate rows on match-list cache-miss rebuild (ready only). */
+export function recordMatchListCandidatesLoaded(count: number): void {
+  emit('match.list.candidates_loaded', count);
+}
+
+/** Uncapped photo+prefilter eligible count on miss rebuild (ready only). */
+export function recordMatchListCandidatesEligible(count: number): void {
+  emit('match.list.candidates_eligible', count);
+}
+
+/** Parallel counts + capped findMany duration on miss rebuild. */
+export function recordMatchListCandidateLoadMs(ms: number): void {
+  emit('match.list.candidate_load_ms', ms);
+}
+
+/** `latestEvaluationsForProfileIds` duration on miss rebuild. */
+export function recordMatchListEvalQueryMs(ms: number): void {
+  emit('match.list.eval_query_ms', ms);
+}
+
+/**
+ * Score/eligibility loop + product sort on miss rebuild.
+ * May include await for hard-block about* batch — not pure CPU.
+ */
+export function recordMatchListScoreCpuMs(ms: number): void {
+  emit('match.list.score_cpu_ms', ms);
+}
+
+/** Redis `cache.set` duration after a ready miss rebuild. */
+export function recordMatchListCacheSetMs(ms: number): void {
+  emit('match.list.cache_set_ms', ms);
+}

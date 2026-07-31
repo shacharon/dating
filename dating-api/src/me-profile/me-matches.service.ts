@@ -44,7 +44,13 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import {
   recordCacheHit,
   recordCacheMiss,
+  recordMatchListCacheSetMs,
+  recordMatchListCandidateLoadMs,
+  recordMatchListCandidatesEligible,
+  recordMatchListCandidatesLoaded,
+  recordMatchListEvalQueryMs,
   recordMatchListLoadTimeMs,
+  recordMatchListScoreCpuMs,
 } from '../observability/custom-metrics';
 import { resolveMatchPrimaryPhotoUrl } from '../photo-storage/cdn-url';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
@@ -391,6 +397,7 @@ export class MeMatchesService {
         status,
         ...statusMeta
       } = built;
+      const cacheSetStarted = Date.now();
       await this.cache.set(
         key,
         {
@@ -401,6 +408,7 @@ export class MeMatchesService {
         } satisfies MatchListCachePayload<MeMatchItemDto>,
         MATCH_LIST_CACHE_TTL_SECONDS,
       );
+      recordMatchListCacheSetMs(Date.now() - cacheSetStarted);
     }
     return built;
   }
@@ -503,6 +511,7 @@ export class MeMatchesService {
       preference: viewer.preference ?? null,
       asOf,
     });
+    const candidateLoadStarted = Date.now();
     const [totalAnalyzedCandidates, candidatesEligible, candidateRows] =
       await Promise.all([
         this.prisma.userProfile.count({
@@ -520,16 +529,19 @@ export class MeMatchesService {
           select: this.candidateSelectList,
         }),
       ]);
+    const candidateLoadMs = Date.now() - candidateLoadStarted;
 
     const totalBeforeFilter = candidateRows.length;
     // Cap must not inflate this: use uncapped eligible count, not hydrated length.
     const filteredNoPhotoCandidates =
       totalAnalyzedCandidates - candidatesEligible;
 
+    const evalQueryStarted = Date.now();
     const latestEvalByProfile = await latestEvaluationsForProfileIds(
       this.prisma,
       candidateRows.map((r) => r.id),
     );
+    const evalQueryMs = Date.now() - evalQueryStarted;
 
     const actionByTargetUserId = new Map(
       (
@@ -553,6 +565,7 @@ export class MeMatchesService {
       );
     }
 
+    const scoreCpuStarted = Date.now();
     const matches: MeMatchItemDto[] = [];
     const hgDimensionOutcomeCounts = emptyHolyGrailDimensionOutcomeCounts();
     const dealbreakerOutcomeCounts = emptyDealbreakerTagOutcomeCounts();
@@ -825,9 +838,16 @@ export class MeMatchesService {
       if (bScore !== aScore) return bScore - aScore;
       return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });
+    const scoreCpuMs = Date.now() - scoreCpuStarted;
+
+    recordMatchListCandidatesLoaded(candidateRows.length);
+    recordMatchListCandidatesEligible(candidatesEligible);
+    recordMatchListCandidateLoadMs(candidateLoadMs);
+    recordMatchListEvalQueryMs(evalQueryMs);
+    recordMatchListScoreCpuMs(scoreCpuMs);
 
     this.obs.trace(
-      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates} candidatesHydrated=${candidateRows.length} candidatesEligible=${candidatesEligible} cap=${candidateCap}`,
+      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates} candidatesHydrated=${candidateRows.length} candidatesEligible=${candidatesEligible} cap=${candidateCap} candidateLoadMs=${candidateLoadMs} evalQueryMs=${evalQueryMs} scoreCpuMs=${scoreCpuMs}`,
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
 

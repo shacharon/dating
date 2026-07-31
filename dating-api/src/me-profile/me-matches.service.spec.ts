@@ -4,11 +4,13 @@ import {
 } from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
 import type { AnalyticsService } from '../analytics/analytics.service';
+import { MATCH_LIST_CACHE_VERSION } from '../cache/match-list-cache';
 import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
 import * as matchEngine from '../matches/match-engine';
+import * as customMetrics from '../observability/custom-metrics';
 import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import * as MeProfileEngineMapper from './me-profile-engine.mapper';
 import { MeMatchesService } from './me-matches.service';
@@ -273,6 +275,120 @@ describe('MeMatchesService', () => {
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(0);
       expect(result.totalCandidatesBeforeFilter).toBe(0);
+    });
+
+    describe('Story 5 — miss-path observability', () => {
+      afterEach(() => {
+        jest.restoreAllMocks();
+      });
+
+      it('emits rebuild phase metrics on cache miss → ready', async () => {
+        const loaded = jest.spyOn(customMetrics, 'recordMatchListCandidatesLoaded');
+        const eligible = jest.spyOn(
+          customMetrics,
+          'recordMatchListCandidatesEligible',
+        );
+        const loadMs = jest.spyOn(customMetrics, 'recordMatchListCandidateLoadMs');
+        const evalMs = jest.spyOn(customMetrics, 'recordMatchListEvalQueryMs');
+        const scoreMs = jest.spyOn(customMetrics, 'recordMatchListScoreCpuMs');
+        const cacheSetMs = jest.spyOn(customMetrics, 'recordMatchListCacheSetMs');
+        const miss = jest.spyOn(customMetrics, 'recordCacheMiss');
+        const hit = jest.spyOn(customMetrics, 'recordCacheHit');
+
+        prisma.userProfile.findUnique.mockResolvedValue(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        );
+        prisma.userProfile.count
+          .mockResolvedValueOnce(3)
+          .mockResolvedValueOnce(1);
+        prisma.userProfile.findMany.mockResolvedValue([]);
+        cache.get.mockResolvedValue(null);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.status).toBe('ready');
+        expect(miss).toHaveBeenCalled();
+        expect(hit).not.toHaveBeenCalled();
+        expect(loaded).toHaveBeenCalledWith(0);
+        expect(eligible).toHaveBeenCalledWith(1);
+        expect(loadMs).toHaveBeenCalledWith(expect.any(Number));
+        expect(evalMs).toHaveBeenCalledWith(expect.any(Number));
+        expect(scoreMs).toHaveBeenCalledWith(expect.any(Number));
+        expect(cacheSetMs).toHaveBeenCalledWith(expect.any(Number));
+        expect(cache.set).toHaveBeenCalled();
+        expect(obs.trace).toHaveBeenCalledWith(
+          expect.stringMatching(
+            /candidateLoadMs=\d+ evalQueryMs=\d+ scoreCpuMs=\d+/,
+          ),
+          ErrorCodes.ME_MATCHES_LIST_OK,
+        );
+      });
+
+      it('does not emit rebuild phase metrics on cache hit', async () => {
+        const loaded = jest.spyOn(customMetrics, 'recordMatchListCandidatesLoaded');
+        const eligible = jest.spyOn(
+          customMetrics,
+          'recordMatchListCandidatesEligible',
+        );
+        const loadMs = jest.spyOn(customMetrics, 'recordMatchListCandidateLoadMs');
+        const evalMs = jest.spyOn(customMetrics, 'recordMatchListEvalQueryMs');
+        const scoreMs = jest.spyOn(customMetrics, 'recordMatchListScoreCpuMs');
+        const cacheSetMs = jest.spyOn(customMetrics, 'recordMatchListCacheSetMs');
+        const hit = jest.spyOn(customMetrics, 'recordCacheHit');
+        const miss = jest.spyOn(customMetrics, 'recordCacheMiss');
+
+        cache.get.mockResolvedValue({
+          version: MATCH_LIST_CACHE_VERSION,
+          builtAt: new Date().toISOString(),
+          statusMeta: {
+            status: 'ready',
+            viewerProfileId,
+            viewerGender: 'MALE',
+            viewerAcceptedPartnerGenders: ['FEMALE'],
+            viewerProfileAnalysisStale: false,
+            totalCandidatesBeforeFilter: 0,
+            filteredNoPhotoCandidates: 0,
+          },
+          matches: [],
+        });
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.status).toBe('ready');
+        expect(hit).toHaveBeenCalled();
+        expect(miss).not.toHaveBeenCalled();
+        expect(loaded).not.toHaveBeenCalled();
+        expect(eligible).not.toHaveBeenCalled();
+        expect(loadMs).not.toHaveBeenCalled();
+        expect(evalMs).not.toHaveBeenCalled();
+        expect(scoreMs).not.toHaveBeenCalled();
+        expect(cacheSetMs).not.toHaveBeenCalled();
+        expect(prisma.userProfile.findUnique).not.toHaveBeenCalled();
+      });
+
+      it('does not emit rebuild phase metrics on cache miss → not_ready', async () => {
+        const loaded = jest.spyOn(customMetrics, 'recordMatchListCandidatesLoaded');
+        const evalMs = jest.spyOn(customMetrics, 'recordMatchListEvalQueryMs');
+        const scoreMs = jest.spyOn(customMetrics, 'recordMatchListScoreCpuMs');
+        const cacheSetMs = jest.spyOn(customMetrics, 'recordMatchListCacheSetMs');
+
+        prisma.userProfile.findUnique.mockResolvedValue(null);
+        cache.get.mockResolvedValue(null);
+
+        const result = await service.list(viewerUserId);
+
+        expect(result.status).toBe('not_ready');
+        expect(loaded).not.toHaveBeenCalled();
+        expect(evalMs).not.toHaveBeenCalled();
+        expect(scoreMs).not.toHaveBeenCalled();
+        expect(cacheSetMs).not.toHaveBeenCalled();
+        expect(cache.set).not.toHaveBeenCalled();
+      });
     });
 
     it('list() throws InternalServerErrorException when viewer has no UserProfileEvaluation row', async () => {
