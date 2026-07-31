@@ -1,0 +1,44 @@
+# Exact post-deploy smoke gate for `.github/workflows/deploy-dev.yml` (Story 04).
+#
+# Story 04 already drafts a `smoke` job that soft-skips if the script is missing.
+# After Story 05 lands `dating-api/scripts/smoke-cloud-dev.sh`, replace that job
+# with the block below so missing script / BASE_URL / non-zero exit fails the deploy.
+#
+# GitHub Environment `dev`:
+#   vars.DEV_BASE_URL              — public HTTPS origin (required)
+#   secrets.SMOKE_SESSION_COOKIE   — optional Cookie header for /api/v1/auth/me
+#   vars.REQUIRE_REDIS_ADAPTER     — default "1"
+
+  smoke:
+    name: Post-deploy smoke (Story 05)
+    needs: [health]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require DEV_BASE_URL
+        env:
+          DEV_BASE_URL: ${{ vars.DEV_BASE_URL }}
+        run: |
+          if [ -z "${DEV_BASE_URL}" ]; then
+            echo "::error::DEV_BASE_URL is not set — cannot gate deploy on cloud smoke"
+            exit 1
+          fi
+
+      - name: Run smoke-cloud-dev.sh
+        env:
+          BASE_URL: ${{ vars.DEV_BASE_URL }}
+          SESSION_COOKIE: ${{ secrets.SMOKE_SESSION_COOKIE }}
+          REQUIRE_REDIS_ADAPTER: ${{ vars.REQUIRE_REDIS_ADAPTER || '1' }}
+        run: |
+          set -euo pipefail
+          SCRIPT="dating-api/scripts/smoke-cloud-dev.sh"
+          if [ ! -f "$SCRIPT" ]; then
+            echo "::error::Missing ${SCRIPT} — Story 05 smoke gate required"
+            exit 1
+          fi
+          chmod +x "$SCRIPT"
+          "$SCRIPT"
+        # Non-zero exit fails the workflow → deploy is red. Do not continue-on-error.

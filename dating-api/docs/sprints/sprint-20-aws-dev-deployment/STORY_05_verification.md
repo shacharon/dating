@@ -1,9 +1,19 @@
 # Story 05 — Cloud verification
 
-**Sprint 20 · Status: PLANNED**
+**Sprint 20 · Status: TOOLING_READY · live gate PENDING_INFRA**
 
 ## Objective
 Prove the `dev` environment actually works end-to-end and meets the Sprint 19 performance bar — this is the sprint's exit gate.
+
+## Artifacts (landed)
+| Artifact | Path |
+|----------|------|
+| Cloud smoke script | [`dating-api/scripts/smoke-cloud-dev.sh`](../../../scripts/smoke-cloud-dev.sh) |
+| Verification checklist | [`VERIFICATION_CHECKLIST.md`](./VERIFICATION_CHECKLIST.md) |
+| Sign-off note | [`VERIFIED_DEV.md`](./VERIFIED_DEV.md) |
+| CI post-deploy snippet | [`ci-post-deploy-smoke.snippet.yml`](./ci-post-deploy-smoke.snippet.yml) |
+
+Live acceptance criteria remain open until `DEV_BASE_URL` exists and results are recorded in `VERIFIED_DEV.md`.
 
 ## Why
 "It deployed" ≠ "it works." Every food-project nuance surfaced only under real cloud conditions (HTTPS cookies, multi-instance sockets, S3 photos, queued analysis). This story verifies each explicitly against the live URL.

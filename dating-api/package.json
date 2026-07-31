@@ -28,6 +28,7 @@
     "smoke:auth": "jest --runInBand src/auth/auth-http.integration.spec.ts src/session/session-token.crypto.spec.ts src/session/session.service.spec.ts src/users/users.service.spec.ts src/auth/google-auth.service.spec.ts src/auth/optional-auth.guard.spec.ts src/auth/prisma-auth.errors.spec.ts",
     "smoke:ws": "jest src/messaging-realtime/messaging-realtime-ws.integration.spec.ts src/me-profile/me-conversation-messages-ws.integration.spec.ts --runInBand",
     "smoke:ws-preflight": "ts-node --project tsconfig.json scripts/smoke-ws-preflight.ts",
+    "smoke:cloud-dev": "bash scripts/smoke-cloud-dev.sh",
     "holy-grail:backfill": "ts-node src/holy-grail-matching/backfill-holy-grail-structured.ts",
     "phase-f:expand-analyzed": "ts-node --project tsconfig.json scripts/phase-f-expand-analyzed-profiles.ts",
     "verify:personality-traits": "ts-node scripts/personality-traits-e2e-verify.ts",
