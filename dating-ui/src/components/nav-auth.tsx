@@ -162,7 +162,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
         <div
           className="absolute right-0 z-50 mt-1 min-w-[13rem] rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
           role="menu"
-          aria-label="Account"
+          aria-label={copy.navAuth.accountMenuLabel}
           dir={menuDir}
         >
           <Link

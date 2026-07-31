@@ -1,5 +1,6 @@
 'use client';
 
+// Mock/preview-only surface — English-only until productized.
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';

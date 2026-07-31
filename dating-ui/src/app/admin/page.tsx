@@ -1,3 +1,4 @@
+// Internal English-only — admin tools are not product-localized.
 import Link from 'next/link';
 
 export default function AdminIndexPage() {

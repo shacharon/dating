@@ -29,6 +29,7 @@ export function ProfilePhotoSection({
 }) {
   const { copy } = useAppLocale();
   const photoGateCopy = copy.photoGate;
+  const photosCopy = copy.profilePhotos;
   const moderationCopy = copy.photoModeration;
 
   const [photos, setPhotos] = useState<MeProfilePhotoDto[]>([]);
@@ -52,7 +53,7 @@ export function ProfilePhotoSection({
         await refreshPhotos();
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load photos');
+          setError(e instanceof Error ? e.message : photosCopy.loadFailed);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -119,7 +120,7 @@ export function ProfilePhotoSection({
       await uploadMyProfilePhoto(file);
       await refreshPhotos();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : photosCopy.uploadFailed);
     } finally {
       URL.revokeObjectURL(localUrl);
       setUploading(null);
@@ -134,7 +135,7 @@ export function ProfilePhotoSection({
       await deleteMyProfilePhoto(photoId);
       await refreshPhotos();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Delete failed');
+      setError(e instanceof Error ? e.message : photosCopy.deleteFailed);
     } finally {
       setBusyPhotoId(null);
     }
@@ -147,7 +148,7 @@ export function ProfilePhotoSection({
       await setPrimaryMyProfilePhoto(photoId);
       await refreshPhotos();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not set primary');
+      setError(e instanceof Error ? e.message : photosCopy.setPrimaryFailed);
     } finally {
       setBusyPhotoId(null);
     }
@@ -161,7 +162,7 @@ export function ProfilePhotoSection({
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-            Photos
+            {photosCopy.title}
           </h2>
           {requiredForMatching ? (
             <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
@@ -173,7 +174,7 @@ export function ProfilePhotoSection({
           className={`rounded border px-3 py-1.5 text-xs font-medium ${canUpload ? 'cursor-pointer border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800' : 'cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'}`}
           aria-disabled={!canUpload}
         >
-          Upload
+          {photosCopy.upload}
           <input
             ref={inputRef}
             type="file"
@@ -185,10 +186,10 @@ export function ProfilePhotoSection({
         </label>
       </div>
       <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-        Up to 3 photos. One primary photo.
+        {photosCopy.hint}
       </p>
       {loading ? (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Loading photos…</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{photosCopy.loading}</p>
       ) : null}
       <div className="grid grid-cols-3 gap-3">
         {slots.map((photo, idx) => {
@@ -198,6 +199,7 @@ export function ProfilePhotoSection({
               <ProfilePhotoEmptySlot
                 key={`slot-empty-${idx}`}
                 uploadingUrl={isUploading ? uploading.url : undefined}
+                photosCopy={photosCopy}
               />
             );
           }
@@ -207,6 +209,7 @@ export function ProfilePhotoSection({
               photo={photo}
               previewUrl={previewUrls[photo.id]}
               isBusy={busyPhotoId === photo.id}
+              photosCopy={photosCopy}
               moderationCopy={moderationCopy}
               onDelete={onDelete}
               onSetPrimary={onSetPrimary}
@@ -221,7 +224,7 @@ export function ProfilePhotoSection({
       ) : null}
       {!canUpload ? (
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          Photo limit reached.
+          {photosCopy.limitReached}
         </p>
       ) : null}
     </section>

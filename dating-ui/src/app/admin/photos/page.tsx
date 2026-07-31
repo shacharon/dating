@@ -1,5 +1,6 @@
 'use client';
 
+// Internal English-only — admin tools are not product-localized.
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {

@@ -194,6 +194,7 @@ export type AppCopySchema = {
     dismiss: string;
     signIn: string;
     accountMenuAria: string;
+    accountMenuLabel: string;
   };
   datingHub: {
     title: string;
@@ -396,6 +397,25 @@ export type AppCopySchema = {
     bannerMessage: string;
     bannerLink: string;
     requiredForMatchingHint: string;
+  };
+  profilePhotos: {
+    title: string;
+    upload: string;
+    hint: string;
+    loading: string;
+    limitReached: string;
+    empty: string;
+    uploading: string;
+    uploadingPreviewAlt: string;
+    noPreview: string;
+    primary: string;
+    delete: string;
+    setPrimary: string;
+    photoAlt: (position: number) => string;
+    loadFailed: string;
+    uploadFailed: string;
+    deleteFailed: string;
+    setPrimaryFailed: string;
   };
   photoModeration: {
     statusPending: string;

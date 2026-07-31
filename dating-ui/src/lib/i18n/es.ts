@@ -213,6 +213,7 @@ export const esCopy: AppCopySchema = {
     dismiss: "Cerrar",
     signIn: "Iniciar sesión",
     accountMenuAria: "Menú de cuenta",
+    accountMenuLabel: "Cuenta",
   },
   datingHub: {
     title: "Encuentra tu pareja",
@@ -445,6 +446,25 @@ export const esCopy: AppCopySchema = {
     bannerLink: "Ir a fotos",
     requiredForMatchingHint:
       "Se requiere al menos una foto antes de poder ver coincidencias.",
+  },
+  profilePhotos: {
+    title: "Fotos",
+    upload: "Subir",
+    hint: "Hasta 3 fotos. Una foto principal.",
+    loading: "Cargando fotos…",
+    limitReached: "Límite de fotos alcanzado.",
+    empty: "Vacío",
+    uploading: "subiendo",
+    uploadingPreviewAlt: "Vista previa al subir",
+    noPreview: "Sin vista previa",
+    primary: "principal",
+    delete: "eliminar",
+    setPrimary: "hacer principal",
+    photoAlt: (position: number) => `Foto ${position}`,
+    loadFailed: "No se pudieron cargar las fotos",
+    uploadFailed: "Error al subir",
+    deleteFailed: "Error al eliminar",
+    setPrimaryFailed: "No se pudo establecer como principal",
   },
   photoModeration: {
     statusPending: "En revision",

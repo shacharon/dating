@@ -212,6 +212,7 @@ export const enCopy: AppCopySchema = {
     dismiss: "Dismiss",
     signIn: "Sign in",
     accountMenuAria: "Account menu",
+    accountMenuLabel: "Account",
   },
   datingHub: {
     title: "Find your match",
@@ -433,6 +434,25 @@ export const enCopy: AppCopySchema = {
     bannerLink: "Go to photos",
     requiredForMatchingHint:
       "At least one photo is required before you can see matches.",
+  },
+  profilePhotos: {
+    title: "Photos",
+    upload: "Upload",
+    hint: "Up to 3 photos. One primary photo.",
+    loading: "Loading photos…",
+    limitReached: "Photo limit reached.",
+    empty: "Empty",
+    uploading: "uploading",
+    uploadingPreviewAlt: "Uploading preview",
+    noPreview: "No preview",
+    primary: "primary",
+    delete: "delete",
+    setPrimary: "set primary",
+    photoAlt: (position: number) => `Photo ${position}`,
+    loadFailed: "Failed to load photos",
+    uploadFailed: "Upload failed",
+    deleteFailed: "Delete failed",
+    setPrimaryFailed: "Could not set primary",
   },
   photoModeration: {
     statusPending: "Under review",
