@@ -208,6 +208,8 @@ Serves photos fast with **signed URLs** (private bucket stays private).
 
 Put these in **SSM Parameter Store** or **Secrets Manager** and inject at runtime. Never bake secrets into images or commit `.env`.
 
+> **Terraform / reviewable manifest (Sprint 20 Story 03):** see [`infra/env/DEV_CONFIG_MANIFEST.md`](infra/env/DEV_CONFIG_MANIFEST.md) and [`infra/terraform/modules/secrets/`](infra/terraform/modules/secrets/). Non-secret placeholders: [`infra/env/dev.tfvars.example`](infra/env/dev.tfvars.example). Rotation = ECS redeploy; changing any `NEXT_PUBLIC_*` requires a **UI image rebuild**.
+
 ### 6.1 `dating-api` — required for a healthy cloud boot
 ```bash
 # --- boot blockers / core ---
@@ -430,6 +432,8 @@ This is the #1 source of "works locally, 401s in cloud" (fixes **L4, L8, L10**).
 ### Related in-repo docs
 - `DEV.md` — local dev bring-up.
 - `infra/docker-compose.yml` — local Postgres (host port 5433).
+- `infra/env/DEV_CONFIG_MANIFEST.md` — secret vs config inventory + cloud defaults (Story 03).
+- `infra/terraform/modules/secrets/` — SSM / Secrets Manager / ECS injection Terraform.
 - `dating-api/docs/EMAIL_RESEND_SETUP.md` — email domain verification.
 - `dating-api/docs/ops/ADMIN_ACCESS.md` — admin lockdown.
 - `dating-api/docs/sprints/sprint-19-performance-and-photo-moderation/` — perf + moderation design + `load-test-matches.js`.

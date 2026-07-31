@@ -1,0 +1,45 @@
+# Non-secret AWS `dev` config placeholders for Terraform / review.
+# Copy to a gitignored file (e.g. infra/terraform/dev/terraform.tfvars) and fill in.
+#
+# NEVER put real secrets here (no OPENAI_API_KEY, DATABASE_URL passwords,
+# SESSION_SECRET_PEPPER, RESEND_API_KEY, PHOTO_CDN_PRIVATE_KEY, SENTRY_DSN,
+# DD_API_KEY, EMAIL_UNSUBSCRIBE_SECRET).
+#
+# Set secrets via:
+#   aws secretsmanager put-secret-value …
+#   or TF_VAR_openai_api_key / CI secret store at apply time
+#
+# See DEV_CONFIG_MANIFEST.md for full classification.
+
+environment = "dev"
+
+# --- Origins / auth (replace placeholders) ---
+google_client_id = "REPLACE_WITH_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+cors_origin      = "https://dev.REPLACE_WITH_DOMAIN.tld"
+app_public_url   = "https://dev.REPLACE_WITH_DOMAIN.tld"
+# cookie_domain  = ".REPLACE_WITH_DOMAIN.tld"  # only if UI+API share parent domain
+cookie_domain    = ""
+
+admin_user_ids = "" # comma-separated User.id after first admin user exists
+
+# --- Cloud-correct API defaults (also hard-coded in module; listed for review) ---
+# PORT                           = "3001"
+# NODE_ENV                       = "production"
+# COOKIE_SECURE                  = "true"
+# PHOTO_STORAGE_DRIVER           = "s3"
+# PHOTO_MODERATION_DRIVER        = "rekognition"
+# STRUCTURED_LOG_FILE            = "0"
+# PHOTO_MODERATION_AUTO_APPROVE  → DO NOT SET
+
+# --- Story 02 will supply at apply time (do not invent fake hostnames in prod apply) ---
+# redis_url       = "redis://dating-dev.xxxxxx.cache.amazonaws.com:6379"
+# photo_s3_bucket = "dating-dev-photos-…"
+# photo_s3_region = "us-east-1"
+
+# --- UI build-args (Story 04) — NEXT_PUBLIC_* bake into the image ---
+ui_next_public_admin_enabled = "0"
+# ui_api_proxy_target / ui_internal_api_url — leave empty to use service discovery
+#   http://dating-api.dating.internal:3001
+# ui_next_public_realtime    = "ws"          # module default
+# ui_next_public_api_url     = ""            # empty = same-origin (recommended)
+# Changing any NEXT_PUBLIC_* requires UI image REBUILD, not just task restart.
