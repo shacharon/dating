@@ -4,7 +4,7 @@
 
 **Duration:** ~3–4 weeks (14 stories)  
 **Goal:** Thin client islands with Server Components, split mega-files into testable modules, establish route-level loading/error UI, move all fetch to service layer, extract business logic from UI, fix i18n/a11y gaps.  
-**Status:** Wave 1 Done — Wave 2 in progress  
+**Status:** Wave 1 Done — Wave 2 Done (Stories 7–12)  
 **Depends on:** Current UI architecture (Next.js App Router, React 19, established service patterns)
 
 ---
@@ -63,12 +63,12 @@ This creates:
 
 | # | Story | Priority | Estimated effort | Agent/Skill | Status |
 |---|-------|----------|------------------|-------------|--------|
-| 7 | [Refactor profiles page](./STORY_07_refactor_profiles_page.md) | **P1** | 2–3 days | `generalPurpose` + `explore` | In progress |
-| 8 | [Refactor matches page](./STORY_08_refactor_matches_page.md) | **P1** | 2 days | `generalPurpose` | Pending |
-| 9 | [Split large components](./STORY_09_split_large_components.md) | **P1** | 1–2 days | `generalPurpose` | Pending |
-| 10 | [Server Component shells](./STORY_10_server_component_shells.md) | **P1** | 2–3 days | `generalPurpose` | Pending |
-| 11 | [Complete product i18n](./STORY_11_complete_i18n.md) | **P1** | 1–2 days | `generalPurpose` | Pending |
-| 12 | [Route metadata](./STORY_12_route_metadata.md) | **P1** | 1 day | `generalPurpose` | Pending |
+| 7 | [Refactor profiles page](./STORY_07_refactor_profiles_page.md) | **P1** | 2–3 days | `generalPurpose` + `explore` | **Done** |
+| 8 | [Refactor matches page](./STORY_08_refactor_matches_page.md) | **P1** | 2 days | `generalPurpose` | **Done** |
+| 9 | [Split large components](./STORY_09_split_large_components.md) | **P1** | 1–2 days | `generalPurpose` | **Done** |
+| 10 | [Server Component shells](./STORY_10_server_component_shells.md) | **P1** | 2–3 days | `generalPurpose` | **Done** |
+| 11 | [Complete product i18n](./STORY_11_complete_i18n.md) | **P1** | 1–2 days | `generalPurpose` | **Done** |
+| 12 | [Route metadata](./STORY_12_route_metadata.md) | **P1** | 1 day | `generalPurpose` | **Done** |
 
 ### **Wave 3: Nice-to-have (P2) — Tech debt**
 
