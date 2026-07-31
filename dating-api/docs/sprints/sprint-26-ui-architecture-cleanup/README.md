@@ -4,7 +4,7 @@
 
 **Duration:** ~3–4 weeks (14 stories)  
 **Goal:** Thin client islands with Server Components, split mega-files into testable modules, establish route-level loading/error UI, move all fetch to service layer, extract business logic from UI, fix i18n/a11y gaps.  
-**Status:** Planning  
+**Status:** Wave 1 Done — Wave 2 in progress  
 **Depends on:** Current UI architecture (Next.js App Router, React 19, established service patterns)
 
 ---
@@ -52,23 +52,23 @@ This creates:
 
 | # | Story | Priority | Estimated effort | Agent/Skill | Status |
 |---|-------|----------|------------------|-------------|--------|
-| 1 | [Split `lib/me-profile-api.ts` into focused modules](#story-1) | **P0** | 1–2 days | `generalPurpose` | Pending |
-| 2 | [Extract conversation detail hooks from 604-line page](#story-2) | **P0** | 1–2 days | `generalPurpose` | Pending |
-| 3 | [Extract match detail hooks from 591-line page](#story-3) | **P0** | 1–2 days | `generalPurpose` | Pending |
-| 4 | [Add route-level loading/error UI to `/dating/*`](#story-4) | **P0** | 1 day | `generalPurpose` | Pending |
-| 5 | [Move internal-tool fetch to service layer](#story-5) | **P0** | 2–3 days | `generalPurpose` | Pending |
-| 6 | [Fix root `lang="en"` SSR mismatch for RTL](#story-6) | **P0** | 0.5 day | `generalPurpose` | Pending |
+| 1 | [Split `lib/me-profile-api.ts` into focused modules](./STORY_01_split_me_profile_api.md) | **P0** | 1–2 days | `generalPurpose` | **Done** |
+| 2 | [Extract conversation detail hooks](./STORY_02_extract_conversation_hooks.md) | **P0** | 1–2 days | `generalPurpose` | **Done** |
+| 3 | [Extract match detail hooks](./STORY_03_extract_match_hooks.md) | **P0** | 1–2 days | `generalPurpose` | **Done** |
+| 4 | [Route-level loading/error UI](./STORY_04_route_loading_error_ui.md) | **P0** | 1 day | `generalPurpose` | **Done** |
+| 5 | [Internal-tool service layer](./STORY_05_service_layer_internal_tools.md) | **P0** | 2–3 days | `generalPurpose` | **Done** |
+| 6 | [Fix RTL lang SSR](./STORY_06_fix_rtl_lang_ssr.md) | **P0** | 0.5 day | `generalPurpose` | **Done** |
 
 ### **Wave 2: Recommended (P1) — Should fix**
 
 | # | Story | Priority | Estimated effort | Agent/Skill | Status |
 |---|-------|----------|------------------|-------------|--------|
-| 7 | [Refactor 1006-line profiles page: extract chip/fetch logic](#story-7) | **P1** | 2–3 days | `generalPurpose` + `explore` | Pending |
-| 8 | [Refactor 706-line matches page: move decision engine to API](#story-8) | **P1** | 2 days | `generalPurpose` | Pending |
-| 9 | [Split large onboarding/settings components (<300 lines)](#story-9) | **P1** | 1–2 days | `generalPurpose` | Pending |
-| 10 | [Convert dating pages to Server Component shells + client islands](#story-10) | **P1** | 2–3 days | `generalPurpose` | Pending |
-| 11 | [Complete i18n for error boundaries and admin tools](#story-11) | **P1** | 1–2 days | `generalPurpose` | Pending |
-| 12 | [Add route-level metadata to `/dating/*` pages](#story-12) | **P1** | 1 day | `generalPurpose` | Pending |
+| 7 | [Refactor profiles page](./STORY_07_refactor_profiles_page.md) | **P1** | 2–3 days | `generalPurpose` + `explore` | In progress |
+| 8 | [Refactor matches page](./STORY_08_refactor_matches_page.md) | **P1** | 2 days | `generalPurpose` | Pending |
+| 9 | [Split large components](./STORY_09_split_large_components.md) | **P1** | 1–2 days | `generalPurpose` | Pending |
+| 10 | [Server Component shells](./STORY_10_server_component_shells.md) | **P1** | 2–3 days | `generalPurpose` | Pending |
+| 11 | [Complete product i18n](./STORY_11_complete_i18n.md) | **P1** | 1–2 days | `generalPurpose` | Pending |
+| 12 | [Route metadata](./STORY_12_route_metadata.md) | **P1** | 1 day | `generalPurpose` | Pending |
 
 ### **Wave 3: Nice-to-have (P2) — Tech debt**
 
