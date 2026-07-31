@@ -1,10 +1,12 @@
 # Story 03 — Slim candidate select for list
 
-**Sprint 27 · Status: PLANNED**  
+**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
 **Priority:** P1  
 **Estimated effort:** 0.5–1 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** Story 01 helpful; can run after or parallel with Story 02
+
+**Handoffs:** [architect](./handoffs/STORY_03_slim_candidate_select/agent-0-architect.md)
 
 ---
 
