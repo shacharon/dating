@@ -1,6 +1,6 @@
 # Sprint 27 — Match List Performance
 
-**Status:** 🟡 **IN PROGRESS** — Story 1 Agent 0 complete  
+**Status:** 🟡 **IN PROGRESS** — Story 1 Done; next Story 2 Agent 0  
 **Depends on:** Current match-list path (`MeMatchesService.buildFullRankedList`); Sprint 19 cache/pagination already shipped  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)
 
@@ -18,8 +18,8 @@ Make match-list **cache misses** safe at thousands of analyzed users: kill N+1 e
 
 | # | Story | Status |
 |---|-------|--------|
-| 01 | [Batch latest evaluations](./STORY_01_batch_latest_evaluations.md) | Agent 0 done → run Agent 1 |
-| 02 | [SQL gender/age prefilter](./STORY_02_sql_gender_age_prefilter.md) | PLANNED |
+| 01 | [Batch latest evaluations](./STORY_01_batch_latest_evaluations.md) | **Done** |
+| 02 | [SQL gender/age prefilter](./STORY_02_sql_gender_age_prefilter.md) | PLANNED — next: Agent 0 |
 | 03 | [Slim candidate select](./STORY_03_slim_candidate_select.md) | PLANNED |
 | 04 | [Cap candidate pool](./STORY_04_cap_candidate_pool.md) | PLANNED |
 | 05 | [Miss-path observability](./STORY_05_miss_path_observability.md) | PLANNED |

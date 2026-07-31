@@ -1,12 +1,12 @@
 # Story 01 — Batch latest evaluations
 
-**Sprint 27 · Status: PLANNED** (Agent 0 architect lock complete)  
+**Sprint 27 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Agent:** `generalPurpose` (4-agent pipeline: 0→1→2→3)  
 **Dependencies:** None (do first)
 
-**Handoffs:** [architect](./handoffs/STORY_01_batch_latest_evaluations/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_01_batch_latest_evaluations/agent-0-architect.md) · [dev](./handoffs/STORY_01_batch_latest_evaluations/agent-1-dev.md) · [CR](./handoffs/STORY_01_batch_latest_evaluations/agent-2-cr.md) · [PM](./handoffs/STORY_01_batch_latest_evaluations/agent-3-pm.md)
 
 ---
 
@@ -30,11 +30,11 @@ This is the dominant latency cost on match-list cache miss. At N candidates the 
 
 ## Acceptance criteria
 
-- [ ] No per-id sequential `await` loop for latest evals on the match-list path
-- [ ] Return type and semantics unchanged (latest by `createdAt` per profile)
-- [ ] Unit/integration specs updated and green
-- [ ] `npm run build` in `dating-api` succeeds
-- [ ] No product API contract change
+- [x] No per-id sequential `await` loop for latest evals on the match-list path
+- [x] Return type and semantics unchanged (latest by `createdAt` per profile)
+- [x] Unit/integration specs updated and green
+- [x] `npm run build` in `dating-api` succeeds
+- [x] No product API contract change
 
 ## Notes / gotchas
 
