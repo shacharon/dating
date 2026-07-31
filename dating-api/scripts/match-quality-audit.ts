@@ -51,7 +51,6 @@ async function main() {
     process.exit(1);
   }
 
-  const engineReadNormalized = process.env['ENGINE_READ_NORMALIZED'] === '1';
 
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['warn', 'error'],
@@ -66,7 +65,6 @@ async function main() {
       candidateProfileId,
       meMatches,
       prisma,
-      engineReadNormalized,
       includeListContext: !skipList,
     });
 

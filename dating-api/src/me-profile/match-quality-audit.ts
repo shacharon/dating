@@ -33,7 +33,7 @@ export interface MatchQualityAuditReport {
   schemaVersion: 1;
   generatedAt: string;
   env: {
-    ENGINE_READ_NORMALIZED: string;
+    engineInputSource: 'normalized' | 'evaluationJson';
   };
   viewer: {
     userId: string;
@@ -80,8 +80,6 @@ export interface BuildMatchQualityAuditOptions {
   candidateProfileId: string;
   meMatches: Pick<MeMatchesService, 'list' | 'getById'>;
   prisma: PrismaService;
-  /** Mirrors `MeMatchesService` / `ENGINE_READ_NORMALIZED === '1'`. */
-  engineReadNormalized: boolean;
   /** When false, skips `list()` (no rank / counts). */
   includeListContext: boolean;
 }
@@ -99,7 +97,6 @@ export async function buildMatchQualityAuditJson(
     candidateProfileId,
     meMatches,
     prisma,
-    engineReadNormalized,
     includeListContext,
   } = options;
 
@@ -176,11 +173,24 @@ export async function buildMatchQualityAuditJson(
     strength: t.strength,
   }));
 
+  const viewerSourceMode = resolveMeMatchesEngineInputSourceMode(
+    viewerSignals,
+    viewerInterests,
+    viewerVersion,
+  );
+  const candidateSourceMode = resolveMeMatchesEngineInputSourceMode(
+    candidateSignals,
+    candidateInterests,
+    candidateVersion,
+  );
+
   const report: MatchQualityAuditReport = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     env: {
-      ENGINE_READ_NORMALIZED: engineReadNormalized ? '1' : '0',
+      engineInputSource: viewerSourceMode === 'normalized' && candidateSourceMode === 'normalized'
+        ? 'normalized'
+        : 'evaluationJson',
     },
     viewer: {
       userId: viewerUserId,
@@ -190,18 +200,8 @@ export async function buildMatchQualityAuditJson(
       profileId: candidateProfileId,
     },
     engineInputSource: {
-      viewer: resolveMeMatchesEngineInputSourceMode(
-        viewerSignals,
-        viewerInterests,
-        engineReadNormalized,
-        viewerVersion,
-      ),
-      candidate: resolveMeMatchesEngineInputSourceMode(
-        candidateSignals,
-        candidateInterests,
-        engineReadNormalized,
-        candidateVersion,
-      ),
+      viewer: viewerSourceMode,
+      candidate: candidateSourceMode,
     },
     compare: {
       outcome:
@@ -238,7 +238,6 @@ export async function buildMatchQualityAuditJson(
         {
           signals: viewerSignals,
           interests: viewerInterests,
-          useNormalized: engineReadNormalized,
         },
       );
       const candidateRead = buildMeMatchesParticipantReadModel(
@@ -248,7 +247,6 @@ export async function buildMatchQualityAuditJson(
         {
           signals: candidateSignals,
           interests: candidateInterests,
-          useNormalized: engineReadNormalized,
         },
       );
       const hgDirections = evaluateHolyGrailPairDirections(

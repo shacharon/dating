@@ -182,7 +182,7 @@ describe('AdminMatchQualityService', () => {
     buildAuditMock.mockResolvedValue({
       schemaVersion: 1,
       generatedAt: '2026-06-01T00:00:00.000Z',
-      env: { ENGINE_READ_NORMALIZED: '0' },
+      env: { engineInputSource: 'evaluationJson' },
       viewer: { userId: 'viewer_1', profileId: 'vp1' },
       candidate: { profileId: 'cand_1' },
       engineInputSource: {
@@ -232,7 +232,7 @@ describe('AdminMatchQualityService', () => {
       .mockResolvedValueOnce({
         schemaVersion: 1,
         generatedAt: '2026-06-01T00:00:00.000Z',
-        env: { ENGINE_READ_NORMALIZED: '0' },
+        env: { engineInputSource: 'evaluationJson' },
         viewer: { userId: 'v2', profileId: 'vp2' },
         candidate: { profileId: 'cand_1' },
         engineInputSource: {
@@ -439,3 +439,4 @@ describe('serializeMatchQualityExportCsv', () => {
     );
   });
 });
+

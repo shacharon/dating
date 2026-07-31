@@ -97,14 +97,6 @@ import {
 
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
-/**
- * When `ENGINE_READ_NORMALIZED=1` the match engine reads signals + interests from the
- * normalized `UserProfileSignal` / `UserProfileInterest` tables instead of the stored
- * evaluation blob. The blob remains the fallback for profiles with no normalized rows.
- * Flag off (default) → pure evaluation-blob path, zero behaviour change.
- */
-const USE_NORMALIZED = process.env['ENGINE_READ_NORMALIZED'] === '1';
-
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 export interface MeMatchItemDto {
@@ -459,7 +451,6 @@ export class MeMatchesService {
       {
         signals: viewerSignals,
         interests: viewerInterests,
-        useNormalized: USE_NORMALIZED,
       },
     );
     if (viewerRead.hg.fallback) {
@@ -559,7 +550,6 @@ export class MeMatchesService {
         {
           signals: candidateSignals,
           interests: candidateInterests,
-          useNormalized: USE_NORMALIZED,
         },
       );
       if (candidateRead.hg.fallback) {
@@ -917,7 +907,6 @@ export class MeMatchesService {
       {
         signals: viewerSignalsDetail,
         interests: viewerInterestsDetail,
-        useNormalized: USE_NORMALIZED,
       },
     );
     const {
@@ -933,7 +922,6 @@ export class MeMatchesService {
       {
         signals: candidateSignalsDetail,
         interests: candidateInterestsDetail,
-        useNormalized: USE_NORMALIZED,
       },
     );
 

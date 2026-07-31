@@ -206,7 +206,7 @@ describe('me-profile-engine.mapper', () => {
     });
 
     it('returns evaluationJson unchanged when both arrays are empty (flag on)', () => {
-      const result = assembleEvaluationPayload(baseEvalJson, [], [], true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, [], [], evalVersion);
 
       expect(result).toBe(baseEval);
     });
@@ -217,7 +217,7 @@ describe('me-profile-engine.mapper', () => {
         { signalKey: 'lifestylePace', signalValue: 7, evalVersion },
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, [], evalVersion);
 
       expect((result.self as any).signals.emotionalDepth).toBe(9);
       expect((result.self as any).signals.lifestylePace).toBe(7);
@@ -228,7 +228,7 @@ describe('me-profile-engine.mapper', () => {
         { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, [], evalVersion);
 
       // lifestylePace was in base but not in normalized signals — must be preserved
       expect((result.self as any).signals.lifestylePace).toBe(3);
@@ -242,7 +242,7 @@ describe('me-profile-engine.mapper', () => {
         { tag: 'gaming', rank: 3, evalVersion }, // rank 4 — should be trimmed to top 3
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, [], interests, true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, [], interests, evalVersion);
 
       expect(result.enrichment?.signals.interestsTop3).toEqual(['yoga', 'cooking', 'climbing']);
     });
@@ -264,7 +264,7 @@ describe('me-profile-engine.mapper', () => {
 
       const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0, evalVersion }];
 
-      const result = assembleEvaluationPayload(evalWithEnrichment, [], interests, true, evalVersion);
+      const result = assembleEvaluationPayload(evalWithEnrichment, [], interests, evalVersion);
 
       expect(result.enrichment?.signals.dailyRhythm).toBe('morning_person');
       expect(result.enrichment?.signals.interestsTop3).toEqual(['yoga']);
@@ -279,7 +279,7 @@ describe('me-profile-engine.mapper', () => {
 
       const interests: NormalizedInterestRow[] = [{ tag: 'yoga', rank: 0, evalVersion }];
 
-      const result = assembleEvaluationPayload(evalNoEnrichment, [], interests, true, evalVersion);
+      const result = assembleEvaluationPayload(evalNoEnrichment, [], interests, evalVersion);
 
       expect(result.enrichment?.version).toBe('v1');
       expect(result.enrichment?.signals.interestsTop3).toEqual(['yoga']);
@@ -295,7 +295,7 @@ describe('me-profile-engine.mapper', () => {
         { tag: 'surfing', rank: 1, evalVersion },
       ];
 
-      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, evalVersion);
 
       expect((result.self as any).signals.emotionalDepth).toBe(10);
       expect(result.enrichment?.signals.interestsTop3).toEqual(['reading', 'surfing']);
@@ -312,7 +312,7 @@ describe('me-profile-engine.mapper', () => {
         { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
       ];
 
-      const result = assembleEvaluationPayload(evalWithAll, signals, [], true, evalVersion);
+      const result = assembleEvaluationPayload(evalWithAll, signals, [], evalVersion);
 
       expect((result.partner as any).signals.emotionalDepth).toBe(2);
       expect(result.display?.summary).toBe('Grounded.');
@@ -326,7 +326,7 @@ describe('me-profile-engine.mapper', () => {
         { tag: 'chess', rank: 0, evalVersion },
         { tag: 'swim', rank: 1, evalVersion },
       ];
-      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, evalVersion);
       expect((result.self as any).signals.emotionalDepth).toBe(8);
       expect(result.enrichment?.signals.interestsTop3).toEqual(['chess', 'swim']);
     });
@@ -336,7 +336,7 @@ describe('me-profile-engine.mapper', () => {
         { signalKey: 'emotionalDepth', signalValue: 9, evalVersion },
         { signalKey: 'lifestylePace', signalValue: 8, evalVersion: 'v2' },
       ];
-      const result = assembleEvaluationPayload(baseEvalJson, signals, [], true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, [], evalVersion);
       expect(result).toBe(baseEval);
       expect((result.self as any).signals.emotionalDepth).toBe(5);
     });
@@ -345,7 +345,7 @@ describe('me-profile-engine.mapper', () => {
       const interests: NormalizedInterestRow[] = [
         { tag: 'yoga', rank: 0, evalVersion: 'v2' },
       ];
-      const result = assembleEvaluationPayload(baseEvalJson, [], interests, true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, [], interests, evalVersion);
       expect(result).toBe(baseEval);
       expect(result.enrichment?.signals.interestsTop3).toEqual(['hiking', 'coffee', 'travel']);
     });
@@ -358,7 +358,7 @@ describe('me-profile-engine.mapper', () => {
         { tag: 'yoga', rank: 0, evalVersion },
         { tag: 'bad', rank: 1, evalVersion: 'v2' },
       ];
-      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, true, evalVersion);
+      const result = assembleEvaluationPayload(baseEvalJson, signals, interests, evalVersion);
       expect(result).toBe(baseEval);
       expect((result.self as any).signals.emotionalDepth).toBe(5);
       expect(result.enrichment?.signals.interestsTop3).toEqual(['hiking', 'coffee', 'travel']);
@@ -371,35 +371,35 @@ describe('me-profile-engine.mapper', () => {
       { signalKey: 'emotionalDepth', signalValue: 5, evalVersion: ev },
     ];
 
-    it('is false when useNormalized is false (same gate as assembleEvaluationPayload)', () => {
-      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], true, v)).toBe(true);
-      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], false, v)).toBe(false);
-      expect(resolveMeMatchesEngineInputSourceMode(sig(v), [], false, v)).toBe(
-        'evaluationJson',
+    it('is true when only signals present and versions align', () => {
+      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], v)).toBe(true);
+      expect(resolveMeMatchesEngineInputSourceMode(sig(v), [], v)).toBe(
+        'normalized',
       );
     });
 
     it('is false when both normalized arrays are empty', () => {
-      expect(meMatchesEngineNormalizedMergeActive([], [], true, v)).toBe(false);
-      expect(resolveMeMatchesEngineInputSourceMode([], [], true, v)).toBe(
+      expect(meMatchesEngineNormalizedMergeActive([], [], v)).toBe(false);
+      expect(resolveMeMatchesEngineInputSourceMode([], [], v)).toBe(
         'evaluationJson',
       );
     });
 
     it('is false when any evalVersion mismatches evaluationVersion', () => {
-      expect(meMatchesEngineNormalizedMergeActive(sig('v2'), [], true, v)).toBe(
+      expect(meMatchesEngineNormalizedMergeActive(sig('v2'), [], v)).toBe(
         false,
       );
-      expect(resolveMeMatchesEngineInputSourceMode(sig('v2'), [], true, v)).toBe(
+      expect(resolveMeMatchesEngineInputSourceMode(sig('v2'), [], v)).toBe(
         'evaluationJson',
       );
     });
 
-    it('is true when flag on, rows present, and all versions align', () => {
-      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], true, v)).toBe(true);
-      expect(resolveMeMatchesEngineInputSourceMode(sig(v), [], true, v)).toBe(
+    it('is true when rows present and all versions align', () => {
+      expect(meMatchesEngineNormalizedMergeActive(sig(v), [], v)).toBe(true);
+      expect(resolveMeMatchesEngineInputSourceMode(sig(v), [], v)).toBe(
         'normalized',
       );
     });
   });
 });
+

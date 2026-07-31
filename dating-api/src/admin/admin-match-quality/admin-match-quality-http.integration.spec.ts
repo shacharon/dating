@@ -467,7 +467,7 @@ describe('admin match quality HTTP (integration)', () => {
     buildAuditMock.mockResolvedValue({
       schemaVersion: 1,
       generatedAt: '2026-06-01T00:00:00.000Z',
-      env: { ENGINE_READ_NORMALIZED: '0' },
+      env: { engineInputSource: 'evaluationJson' },
       viewer: { userId: 'viewer_1', profileId: 'vp1' },
       candidate: { profileId: 'cand_1' },
       engineInputSource: {
@@ -501,3 +501,4 @@ describe('admin match quality HTTP (integration)', () => {
     expect(res.body.audit.matchScore).toBe(81);
   });
 });
+

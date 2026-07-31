@@ -239,7 +239,6 @@ export class AdminMatchQualityService {
       throw new UnprocessableEntityException({ error: 'viewer_required' });
     }
 
-    const engineReadNormalized = process.env.ENGINE_READ_NORMALIZED === '1';
     let audit: MatchQualityAuditReport | null = null;
     let usedViewerId = viewerIds[viewerIds.length - 1]!;
 
@@ -251,7 +250,6 @@ export class AdminMatchQualityService {
           candidateProfileId,
           meMatches: this.meMatches,
           prisma: this.prisma,
-          engineReadNormalized,
           includeListContext: true,
         });
         this.obs.trace(

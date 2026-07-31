@@ -88,6 +88,21 @@ describe('match-quality-audit (V1 path only)', () => {
             id: findUniqueCall === 1 ? 'viewer_prof' : 'cand_prof',
             signals: [] as { signalKey: string; signalValue: number; evalVersion: string }[],
             interests: [] as { tag: string; rank: number; evalVersion: string }[],
+            gender: null,
+            birthDate: null,
+            childrenStatus: null,
+            wantsChildren: null,
+            smokingFrequency: null,
+            alcoholUse: null,
+            education: null,
+            height: null,
+            locationCity: null,
+            locationRegion: null,
+            countryCode: null,
+            aboutMe: null,
+            aboutPartner: null,
+            aboutRelationship: null,
+            preference: null,
           };
         }),
       },
@@ -105,7 +120,6 @@ describe('match-quality-audit (V1 path only)', () => {
       candidateProfileId: 'cand_prof',
       meMatches: { getById, list },
       prisma,
-      engineReadNormalized: false,
       includeListContext: true,
     });
 
@@ -170,7 +184,6 @@ describe('match-quality-audit (V1 path only)', () => {
       candidateProfileId: 'cand_prof',
       meMatches: { getById, list },
       prisma,
-      engineReadNormalized: false,
       includeListContext: false,
     });
 
