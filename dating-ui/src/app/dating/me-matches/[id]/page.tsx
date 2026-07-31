@@ -301,28 +301,31 @@ export default function MeMatchDetailPage() {
             <div className="space-y-5 px-6 py-5 text-sm">
               {(() => {
                 const prose = resolveDetailProse(data);
-                if (!prose) return null;
-                if (prose.kind === 'narrative') {
-                  const paragraphs = splitNarrativeParagraphs(prose.text);
+                if (prose?.kind === 'narrative') {
                   return (
                     <div
                       data-testid="match-detail-narrative"
                       className="space-y-3 text-base leading-7 text-zinc-800 dark:text-zinc-200"
                     >
-                      {paragraphs.map((paragraph, i) => (
-                        <p key={i}>{paragraph}</p>
-                      ))}
+                      {splitNarrativeParagraphs(prose.text).map(
+                        (paragraph, i) => (
+                          <p key={i}>{paragraph}</p>
+                        ),
+                      )}
                     </div>
                   );
                 }
-                return (
-                  <p
-                    data-testid="match-detail-takeaway"
-                    className="text-base leading-relaxed text-zinc-800 dark:text-zinc-200"
-                  >
-                    {prose.text}
-                  </p>
-                );
+                if (prose?.kind === 'short') {
+                  return (
+                    <p
+                      data-testid="match-detail-takeaway"
+                      className="text-base leading-relaxed text-zinc-800 dark:text-zinc-200"
+                    >
+                      {prose.text}
+                    </p>
+                  );
+                }
+                return null;
               })()}
 
               {(() => {
@@ -338,28 +341,6 @@ export default function MeMatchDetailPage() {
                   </p>
                 ) : null;
               })()}
-
-              {data.explainability &&
-              (data.explainability.positiveChips.length > 0 ||
-                data.explainability.tensionChip) ? (
-                <section data-testid="match-detail-chips">
-                  <div className="flex flex-wrap gap-1.5">
-                    {data.explainability.positiveChips.map((chip) => (
-                      <span
-                        key={chip}
-                        className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                      >
-                        {chip}
-                      </span>
-                    ))}
-                    {data.explainability.tensionChip ? (
-                      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                        {data.explainability.tensionChip}
-                      </span>
-                    ) : null}
-                  </div>
-                </section>
-              ) : null}
 
               <section
                 data-testid="match-feedback"
@@ -419,50 +400,6 @@ export default function MeMatchDetailPage() {
                 )}
               </section>
 
-              {data.matchScore != null ? (
-                <p
-                  data-testid="match-detail-score"
-                  className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400"
-                >
-                  {copy.launch.matchDetail.matchScoreLabel(
-                    data.matchScore,
-                  )}
-                </p>
-              ) : null}
-
-              {data.matchExplanationTraits && data.matchExplanationTraits.length > 0 && (
-                <section className="rounded-lg border border-zinc-100 bg-zinc-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/40">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    {detailCopy.whyYouMatch}
-                  </p>
-                  <ul className="mt-3 space-y-3">
-                    {data.matchExplanationTraits.map((trait) => (
-                      <li key={`${trait.group}-${trait.label}`} className="text-sm">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                            {trait.group}
-                          </span>
-                          <span
-                            className={
-                              trait.strength === 'strong'
-                                ? 'text-xs font-medium text-emerald-600 dark:text-emerald-400'
-                                : 'text-xs font-medium text-zinc-500 dark:text-zinc-400'
-                            }
-                          >
-                            {trait.strength === 'strong'
-                              ? detailCopy.traitStrong
-                              : detailCopy.traitModerate}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                          {trait.evidence}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
               {data.recommendation?.caution ? (
                 <section className="rounded-lg border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
                   <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -470,22 +407,6 @@ export default function MeMatchDetailPage() {
                   </p>
                 </section>
               ) : null}
-
-              {/* Analysis summary */}
-              {data.evaluationSummary ? (
-                <section>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    {detailCopy.aboutThem}
-                  </p>
-                  <p className="mt-2 leading-relaxed text-zinc-700 dark:text-zinc-300">
-                    {data.evaluationSummary}
-                  </p>
-                </section>
-              ) : (
-                <p className="text-zinc-400 dark:text-zinc-500">
-                  {detailCopy.noSummary}
-                </p>
-              )}
 
               {data.analyzedAt && (
                 <p className="text-xs text-zinc-300 dark:text-zinc-600">
@@ -500,14 +421,15 @@ export default function MeMatchDetailPage() {
 
             <footer className="flex flex-col items-start gap-3 border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
               {mutualMatch && (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col items-start gap-2">
                   <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                     {detailCopy.youMatched}
                   </span>
                   {conversationId && (
                     <Link
                       href={`/dating/conversations/${conversationId}`}
-                      className="text-xs font-medium text-emerald-600 underline-offset-4 hover:underline dark:text-emerald-400"
+                      data-testid="match-detail-view-conversation"
+                      className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                     >
                       {detailCopy.viewConversation}
                     </Link>

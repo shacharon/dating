@@ -74,4 +74,20 @@ describe('splitNarrativeParagraphs', () => {
       splitNarrativeParagraphs('First.\n\nSecond.\nThird.'),
     ).toEqual(['First.', 'Second.', 'Third.']);
   });
+
+  it('groups a single dense block into 2–3 paragraphs', () => {
+    const text =
+      'One sentence here. Two sentence here. Three sentence here. Four sentence here. Five sentence here. Six sentence here.';
+    const paragraphs = splitNarrativeParagraphs(text);
+    expect(paragraphs.length).toBeGreaterThanOrEqual(2);
+    expect(paragraphs.length).toBeLessThanOrEqual(3);
+    expect(paragraphs.join(' ')).toContain('One sentence here.');
+    expect(paragraphs.join(' ')).toContain('Six sentence here.');
+  });
+
+  it('keeps very short blocks as one paragraph', () => {
+    expect(splitNarrativeParagraphs('Just one. And two.')).toEqual([
+      'Just one. And two.',
+    ]);
+  });
 });

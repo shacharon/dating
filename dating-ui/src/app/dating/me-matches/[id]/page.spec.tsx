@@ -44,11 +44,19 @@ vi.mock('next/link', () => ({
   default ({
     children,
     href,
+    className,
+    ...rest
   }: {
     children: React.ReactNode;
     href: string;
+    className?: string;
+    [key: string]: unknown;
   }) {
-    return <a href={href}>{children}</a>;
+    return (
+      <a href={href} className={className} {...rest}>
+        {children}
+      </a>
+    );
   },
 }));
 
@@ -527,8 +535,9 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('You matched!')).toBeTruthy();
-      const link = screen.getByRole('link', { name: /view conversation/i });
+      const link = screen.getByTestId('match-detail-view-conversation');
       expect(link.getAttribute('href')).toBe('/dating/conversations/mutual_row_1');
+      expect(link.className).toContain('bg-emerald-600');
     });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -601,7 +610,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     cleanup();
   });
 
-  it('shows takeaway before de-emphasized score label', async () => {
+  it('never shows match score on detail', async () => {
     fetchMyMatchById.mockResolvedValue({
       ...baseMatch,
       matchScore: 72,
@@ -619,17 +628,9 @@ describe('MeMatchDetailPage (human-first layout)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
-      expect(screen.getByTestId('match-detail-score')).toBeTruthy();
     });
-
-    const takeaway = screen.getByTestId('match-detail-takeaway');
-    const score = screen.getByTestId('match-detail-score');
-    expect(
-      takeaway.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(score.textContent).toBe('Match score · 72');
-    expect(score.className).toContain('text-sm');
-    expect(document.querySelector('.text-2xl')).toBeNull();
+    expect(screen.queryByTestId('match-detail-score')).toBeNull();
+    expect(screen.queryByText(/Match score/)).toBeNull();
   });
 
   it('renders sharedInterestNote when present', async () => {
@@ -688,16 +689,24 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       matchNarrative:
         'You share a calm emotional pace.\n\nAmbition shows up in how you both plan.',
       explainability: {
-        positiveChips: ['Emotional depth'],
+        positiveChips: ['Emotional depth', 'Ambition alignment'],
         reasonShort: 'Aligned values',
         sharedInterestNote: 'You both enjoy hiking.',
       },
+      matchExplanationTraits: [
+        {
+          group: 'Emotional connection',
+          label: 'Emotional depth',
+          evidence: 'You both value depth and emotional presence.',
+          strength: 'moderate',
+        },
+      ],
       recommendation: {
         primaryTakeaway: 'Short takeaway should not show.',
         caution: null,
         suggestedNextAction: 'Say hello',
         explainability: {
-          positiveChips: ['Emotional depth'],
+          positiveChips: ['Emotional depth', 'Ambition alignment'],
           reasonShort: 'Aligned values',
         },
       },
@@ -714,9 +723,52 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     expect(narrative.querySelectorAll('p').length).toBe(2);
     expect(screen.queryByTestId('match-detail-takeaway')).toBeNull();
     expect(screen.getByTestId('match-detail-shared-interests')).toBeTruthy();
-    expect(screen.getByTestId('match-detail-chips')).toBeTruthy();
+    expect(screen.queryByTestId('match-detail-chips')).toBeNull();
+    expect(screen.queryByTestId('match-detail-why-traits')).toBeNull();
+    expect(screen.queryByTestId('match-detail-about-them')).toBeNull();
+    expect(screen.queryByText('Ambition alignment')).toBeNull();
+    expect(screen.queryByText('Why you match')).toBeNull();
+    expect(screen.queryByText(/Warm and curious/)).toBeNull();
   });
 
+  it('never shows chips, why-traits, or about-them (even without narrative)', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      matchNarrative: undefined,
+      explainability: {
+        positiveChips: ['Emotional depth', 'Ambition alignment'],
+        reasonShort: 'Aligned',
+      },
+      matchExplanationTraits: [
+        {
+          group: 'Emotional connection',
+          label: 'Emotional depth',
+          evidence: 'You both value depth and emotional presence.',
+          strength: 'moderate',
+        },
+      ],
+      recommendation: {
+        primaryTakeaway: 'Clear overlap: real depth and presence.',
+        caution: null,
+        suggestedNextAction: 'Next',
+        explainability: {
+          positiveChips: ['Emotional depth'],
+          reasonShort: 'Aligned',
+        },
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('match-detail-chips')).toBeNull();
+    expect(screen.queryByTestId('match-detail-why-traits')).toBeNull();
+    expect(screen.queryByTestId('match-detail-about-them')).toBeNull();
+    expect(screen.queryByText('Ambition alignment')).toBeNull();
+    expect(screen.queryByText('Why you match')).toBeNull();
+  });
   it('falls back to short takeaway when matchNarrative is absent', async () => {
     fetchMyMatchById.mockResolvedValue({
       ...baseMatch,
@@ -760,14 +812,43 @@ describe('MeMatchDetailPage (human-first layout)', () => {
     render(<MeMatchDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('match-detail-chips')).toBeTruthy();
+      expect(screen.getByTestId('match-feedback')).toBeTruthy();
     });
     expect(screen.queryByTestId('match-detail-narrative')).toBeNull();
     expect(screen.queryByTestId('match-detail-takeaway')).toBeNull();
+    expect(screen.queryByTestId('match-detail-chips')).toBeNull();
     expect(screen.queryByText(/Ambition alignment/)).toBeNull();
   });
 
-  it('shows feedback section before de-emphasized score label', async () => {
+  it('splits a single-block narrative into multiple paragraphs', async () => {
+    fetchMyMatchById.mockResolvedValue({
+      ...baseMatch,
+      matchNarrative:
+        'You both approach relationships with focus. Your styles seem to harmonize well. Each of you is grounded and curious. The way one of you describes yourself complements the other. There is a shared commitment to serious relationships. You might find it interesting to discuss emotional presence.',
+      recommendation: {
+        primaryTakeaway: 'Short should not show.',
+        caution: null,
+        suggestedNextAction: 'Say hello',
+        explainability: {
+          positiveChips: [],
+          reasonShort: 'Aligned',
+        },
+      },
+    });
+
+    render(<MeMatchDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-detail-narrative')).toBeTruthy();
+    });
+    const paragraphs = screen
+      .getByTestId('match-detail-narrative')
+      .querySelectorAll('p');
+    expect(paragraphs.length).toBeGreaterThanOrEqual(2);
+    expect(paragraphs.length).toBeLessThanOrEqual(3);
+  });
+
+  it('shows feedback without a match score', async () => {
     fetchMyMatchById.mockResolvedValue({
       ...baseMatch,
       matchScore: 72,
@@ -785,14 +866,8 @@ describe('MeMatchDetailPage (human-first layout)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('match-feedback')).toBeTruthy();
-      expect(screen.getByTestId('match-detail-score')).toBeTruthy();
     });
-
-    const feedback = screen.getByTestId('match-feedback');
-    const score = screen.getByTestId('match-detail-score');
-    expect(
-      feedback.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(screen.queryByTestId('match-detail-score')).toBeNull();
   });
 });
 
@@ -929,7 +1004,6 @@ describe('MeMatchDetailPage (i18n)', () => {
         screen.getByRole('button', { name: heCopy.matches.detail.pass }),
       ).toBeTruthy();
       expect(screen.getByText(heCopy.matches.detail.matchLabel)).toBeTruthy();
-      expect(screen.getByText(heCopy.matches.detail.aboutThem)).toBeTruthy();
       expect(screen.getByText(heCopy.matches.detail.backToMatches)).toBeTruthy();
     });
   });
@@ -943,8 +1017,9 @@ describe('MeMatchDetailPage (i18n)', () => {
       expect(
         screen.getByText('You both prioritize honest, calm connection.'),
       ).toBeTruthy();
-      expect(screen.getByText('Emotional depth')).toBeTruthy();
+      expect(screen.queryByText('Emotional depth')).toBeNull();
       expect(screen.queryByText('Aligned values')).toBeNull();
+      expect(screen.queryByText(heCopy.matches.detail.aboutThem)).toBeNull();
     });
   });
 

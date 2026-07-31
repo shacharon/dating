@@ -22,10 +22,37 @@ export function resolveDetailProse(
   return null;
 }
 
-/** Split narrative on blank lines / newlines into non-empty paragraphs. */
+/** Split a single prose block into sentences (keeps trailing punctuation). */
+function splitIntoSentences(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  const matches = trimmed.match(/[^.!?]+[.!?]+(?:["'\u201d\u2019])?[^\S\n]*|[^.!?]+$/g);
+  if (!matches) return [trimmed];
+  return matches.map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+/**
+ * Split narrative into short paragraphs for readable detail UI.
+ * Respects existing newlines; otherwise groups sentences into ~2–3 paragraphs.
+ */
 export function splitNarrativeParagraphs(text: string): string[] {
-  return text
+  const byNewline = text
     .split(/\n+/)
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
+  if (byNewline.length > 1) return byNewline;
+
+  const block = byNewline[0] ?? text.trim();
+  if (!block) return [];
+
+  const sentences = splitIntoSentences(block);
+  if (sentences.length <= 2) return [sentences.join(' ') || block];
+
+  const paragraphCount = Math.min(3, Math.max(2, Math.ceil(sentences.length / 3)));
+  const perPara = Math.ceil(sentences.length / paragraphCount);
+  const paragraphs: string[] = [];
+  for (let i = 0; i < sentences.length; i += perPara) {
+    paragraphs.push(sentences.slice(i, i + perPara).join(' '));
+  }
+  return paragraphs;
 }
