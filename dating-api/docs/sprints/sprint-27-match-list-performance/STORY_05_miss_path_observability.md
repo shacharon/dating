@@ -1,12 +1,12 @@
 # Story 05 — Miss-path observability
 
-**Sprint 27 · Status: IN REVIEW** (Agent 2 CR **PASS** → Agent 3 PM)  
+**Sprint 27 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Agent:** `generalPurpose`  
 **Dependencies:** None (best after Stories 01–04 so metrics reflect the new path)
 
-**Handoffs:** [architect](./handoffs/STORY_05_miss_path_observability/agent-0-architect.md) · [dev](./handoffs/STORY_05_miss_path_observability/agent-1-dev.md) · [cr](./handoffs/STORY_05_miss_path_observability/agent-2-cr.md)
+**Handoffs:** [architect](./handoffs/STORY_05_miss_path_observability/agent-0-architect.md) · [dev](./handoffs/STORY_05_miss_path_observability/agent-1-dev.md) · [cr](./handoffs/STORY_05_miss_path_observability/agent-2-cr.md) · [pm](./handoffs/STORY_05_miss_path_observability/agent-3-pm.md)
 
 ---
 
@@ -32,10 +32,10 @@ Today we have `match.list.load_time` and cache hit/miss. We cannot see whether t
 
 ## Acceptance criteria
 
-- [ ] Miss path emits candidates_loaded + eval_query_ms + score_cpu_ms (or equivalent names)
-- [ ] Cache hit path does not spam rebuild metrics
-- [ ] Existing `match.list.load_time` still recorded
-- [ ] No PII in metric tags (user ids ok as low-cardinality? **prefer omit userId from metric labels** — use log line only)
+- [x] Miss path emits candidates_loaded + eval_query_ms + score_cpu_ms (or equivalent names)
+- [x] Cache hit path does not spam rebuild metrics
+- [x] Existing `match.list.load_time` still recorded
+- [x] No PII in metric tags (user ids ok as low-cardinality? **prefer omit userId from metric labels** — use log line only)
 
 ## Notes / gotchas
 
