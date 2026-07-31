@@ -601,7 +601,9 @@ describe('MeMatchesService', () => {
           desiredPartnerGenders: ['FEMALE'],
         }),
       );
-      prisma.userProfile.count.mockResolvedValue(2);
+      prisma.userProfile.count
+        .mockResolvedValueOnce(2) // base ANALYZED pool
+        .mockResolvedValueOnce(1); // photo+prefilter eligible (uncapped)
       prisma.userProfile.findMany.mockResolvedValue([
         makeProfileRow({
           id: candidateProfileId,
@@ -741,6 +743,57 @@ describe('MeMatchesService', () => {
       const findManyWhere = prisma.userProfile.findMany.mock.calls[0][0]
         .where as Record<string, unknown>;
       expect(findManyWhere.gender).toBeUndefined();
+    });
+
+    it('list() hydrates at most MATCH_LIST_CANDIDATE_CAP with analyzedAt order', async () => {
+      const prev = process.env['MATCH_LIST_CANDIDATE_CAP'];
+      process.env['MATCH_LIST_CANDIDATE_CAP'] = '2';
+      try {
+        prisma.userProfile.findUnique.mockResolvedValue(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+          }),
+        );
+        prisma.userProfile.count
+          .mockResolvedValueOnce(10)
+          .mockResolvedValueOnce(5);
+        prisma.userProfile.findMany.mockResolvedValue([
+          makeProfileRow({
+            id: 'cand_a',
+            userId: 'user_a',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+          makeProfileRow({
+            id: 'cand_b',
+            userId: 'user_b',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+          }),
+        ]);
+
+        const result = await service.list(viewerUserId);
+
+        expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            take: 2,
+            orderBy: [
+              { analyzedAt: { sort: 'desc', nulls: 'last' } },
+              { id: 'asc' },
+            ],
+          }),
+        );
+        expect(result.totalCandidatesBeforeFilter).toBe(2);
+        // Cap must not inflate filteredNoPhoto: base(10) - eligible(5) = 5
+        expect(result.filteredNoPhotoCandidates).toBe(5);
+        expect(result.matches?.length).toBeLessThanOrEqual(2);
+      } finally {
+        if (prev === undefined) delete process.env['MATCH_LIST_CANDIDATE_CAP'];
+        else process.env['MATCH_LIST_CANDIDATE_CAP'] = prev;
+      }
     });
 
     it('list() findMany where includes birthDate bounds when viewer has age prefs', async () => {

@@ -19,6 +19,10 @@ import {
 import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import { buildMatchCandidateSqlPrefilterWhere } from './me-matches-candidate-sql-prefilter';
 import {
+  MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
+  resolveMatchListCandidateCap,
+} from './match-list-candidate-cap';
+import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
   type ProductProfilePartnerGenderPreferenceSource,
@@ -492,25 +496,35 @@ export class MeMatchesService {
       );
     }
 
-    const [totalAnalyzedCandidates, candidateRows] = await Promise.all([
-      this.prisma.userProfile.count({
-        where: this.matchCandidateBaseWhere(userId),
-      }),
-      this.prisma.userProfile.findMany({
-        // Viewer→cand gender/age may be SQL-prefiltered; reciprocal gender still
-        // evaluated in memory via reciprocalProductGenderEligibility below.
-        where: this.matchCandidatePhotoEligibleWhere(userId, {
-          acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
-          preference: viewer.preference ?? null,
-          asOf,
+    // Temporary hydrate cap until async match materialization (MATCH_LIST_CANDIDATE_CAP).
+    const candidateCap = resolveMatchListCandidateCap();
+    const listCandidateWhere = this.matchCandidatePhotoEligibleWhere(userId, {
+      acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
+      preference: viewer.preference ?? null,
+      asOf,
+    });
+    const [totalAnalyzedCandidates, candidatesEligible, candidateRows] =
+      await Promise.all([
+        this.prisma.userProfile.count({
+          where: this.matchCandidateBaseWhere(userId),
         }),
-        select: this.candidateSelectList,
-      }),
-    ]);
+        this.prisma.userProfile.count({
+          where: listCandidateWhere,
+        }),
+        this.prisma.userProfile.findMany({
+          // Viewer→cand gender/age may be SQL-prefiltered; reciprocal gender still
+          // evaluated in memory via reciprocalProductGenderEligibility below.
+          where: listCandidateWhere,
+          orderBy: MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
+          take: candidateCap,
+          select: this.candidateSelectList,
+        }),
+      ]);
 
     const totalBeforeFilter = candidateRows.length;
+    // Cap must not inflate this: use uncapped eligible count, not hydrated length.
     const filteredNoPhotoCandidates =
-      totalAnalyzedCandidates - totalBeforeFilter;
+      totalAnalyzedCandidates - candidatesEligible;
 
     const latestEvalByProfile = await latestEvaluationsForProfileIds(
       this.prisma,
@@ -813,7 +827,7 @@ export class MeMatchesService {
     });
 
     this.obs.trace(
-      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates}`,
+      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates} candidatesHydrated=${candidateRows.length} candidatesEligible=${candidatesEligible} cap=${candidateCap}`,
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
 

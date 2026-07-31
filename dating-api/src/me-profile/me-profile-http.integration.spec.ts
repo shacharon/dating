@@ -2073,7 +2073,9 @@ describe('me profile HTTP (integration)', () => {
       const raw = await loginAndCookie();
       mockListEvaluations();
       prismaMock.userProfile.findUnique.mockResolvedValue(viewerProfile);
-      prismaMock.userProfile.count.mockResolvedValue(2);
+      prismaMock.userProfile.count
+        .mockResolvedValueOnce(2) // base ANALYZED
+        .mockResolvedValueOnce(1); // photo+prefilter eligible
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
           id: 'prof_s5_cand_photo',

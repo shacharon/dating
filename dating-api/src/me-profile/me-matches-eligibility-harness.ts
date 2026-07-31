@@ -376,12 +376,48 @@ export class EligibilityTestHarness {
         async ({
           where,
         }: {
-          where?: { userId?: { not?: string }; status?: string };
+          where?: {
+            userId?: { not?: string };
+            status?: string;
+            gender?: { in?: string[] };
+            birthDate?: {
+              not?: null;
+              gte?: Date;
+              lte?: Date;
+            };
+            photos?: { some?: { status?: string } };
+          };
         } = {}) => {
           const rows = [...this.profiles.values()];
           return rows.filter((p) => {
             if (where?.userId?.not && p['userId'] === where.userId.not) return false;
             if (where?.status && p['status'] !== where.status) return false;
+            if (where?.photos?.some) {
+              const requiredStatus = where.photos.some.status;
+              if (
+                !this.profileHasPhotoStatus(p['id'] as string, requiredStatus)
+              ) {
+                return false;
+              }
+            }
+            if (where?.gender?.in) {
+              const allowed = new Set(where.gender.in);
+              if (!allowed.has(p['gender'] as string)) return false;
+            }
+            if (where?.birthDate) {
+              const bd = p['birthDate'] as Date | null | undefined;
+              if (where.birthDate.not === null && bd == null) return false;
+              if (bd != null) {
+                const t =
+                  bd instanceof Date ? bd.getTime() : new Date(bd).getTime();
+                if (where.birthDate.gte && t < where.birthDate.gte.getTime()) {
+                  return false;
+                }
+                if (where.birthDate.lte && t > where.birthDate.lte.getTime()) {
+                  return false;
+                }
+              }
+            }
             return true;
           }).length;
         },
