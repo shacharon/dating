@@ -44,7 +44,7 @@ export interface UseConversationMessagesReturn {
   loadEarlier: () => Promise<void>;
   loadingEarlier: boolean;
   socketReconnecting: boolean;
-  listRef: React.RefObject<HTMLDivElement>;
+  listRef: React.RefObject<HTMLDivElement | null>;
   initialScrollDone: boolean;
 }
 

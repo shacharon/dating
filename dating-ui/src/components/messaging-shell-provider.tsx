@@ -107,7 +107,7 @@ function MessagingShellInner({
       if (document.visibilityState !== 'visible') {
         return;
       }
-      void refresh({ silent: true });
+      void refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);

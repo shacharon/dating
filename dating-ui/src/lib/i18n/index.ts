@@ -37,14 +37,39 @@ export function t<K extends keyof AppCopySchema>(
 
 export function readStoredLocale(): AppLocale {
   if (typeof window === "undefined") return DEFAULT_LOCALE;
+  
+  // First try localStorage
   const raw = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
-  if (!raw) return DEFAULT_LOCALE;
-  return isSupportedLocale(raw) ? raw : DEFAULT_LOCALE;
+  if (raw && isSupportedLocale(raw)) return raw;
+  
+  // Fallback to cookie if localStorage is empty
+  const cookieMatch = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("locale="));
+  
+  if (cookieMatch) {
+    const cookieValue = cookieMatch.split("=")[1];
+    if (isSupportedLocale(cookieValue)) {
+      // Sync to localStorage for consistency
+      window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, cookieValue);
+      return cookieValue;
+    }
+  }
+  
+  return DEFAULT_LOCALE;
 }
 
 export function writeStoredLocale(locale: AppLocale): void {
   if (typeof window === "undefined") return;
+  
+  // Persist to localStorage for client-side access
   window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, locale);
+  
+  // Set cookie for SSR access on next page load
+  // Max age: 1 year, path: root, SameSite: Lax for security
+  document.cookie = `locale=${locale}; max-age=31536000; path=/; SameSite=Lax`;
+  
+  // Notify listeners of the change
   window.dispatchEvent(
     new CustomEvent<AppLocale>(APP_LOCALE_CHANGE_EVENT, { detail: locale }),
   );

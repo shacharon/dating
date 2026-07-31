@@ -106,7 +106,7 @@ export async function triggerEvaluation(
       level: 'error',
       message: 'evaluation_trigger_failed',
       errorCode: UiErrorCodes.EVALUATION_TRIGGER_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         payload,
         error: error instanceof Error ? error.message : String(error),
@@ -142,7 +142,7 @@ export async function fetchAnalyzeV2Chips(profileId: string): Promise<AnalyzeV2R
       level: 'error',
       message: 'evaluation_chips_failed',
       errorCode: UiErrorCodes.EVALUATION_CHIPS_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         profileId,
         error: error instanceof Error ? error.message : String(error),

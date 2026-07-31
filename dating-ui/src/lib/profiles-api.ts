@@ -124,7 +124,7 @@ export async function listProfiles(): Promise<ProfileListItem[]> {
       level: 'error',
       message: 'profiles_list_failed',
       errorCode: UiErrorCodes.PROFILES_LIST_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -163,7 +163,7 @@ export async function getProfileById(id: string): Promise<ProfilePayload> {
       level: 'error',
       message: 'profile_detail_failed',
       errorCode: UiErrorCodes.PROFILE_DETAIL_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         profileId: id,
         error: error instanceof Error ? error.message : String(error),
@@ -204,7 +204,7 @@ export async function analyzeProfile(id: string): Promise<{ ok: boolean; message
       level: 'error',
       message: 'profile_analyze_failed',
       errorCode: UiErrorCodes.PROFILE_ANALYZE_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         profileId: id,
         error: error instanceof Error ? error.message : String(error),

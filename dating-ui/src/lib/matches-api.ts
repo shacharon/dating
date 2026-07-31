@@ -115,7 +115,7 @@ export async function listMatches(): Promise<MatchListItem[]> {
       level: 'error',
       message: 'matches_list_failed',
       errorCode: UiErrorCodes.MATCHES_LIST_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -158,7 +158,7 @@ export async function getMatchById(matchId: string): Promise<CompareResult> {
       level: 'error',
       message: 'match_detail_failed',
       errorCode: UiErrorCodes.MATCH_DETAIL_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         matchId,
         error: error instanceof Error ? error.message : String(error),
@@ -210,7 +210,7 @@ export async function compareProfiles(
       level: 'error',
       message: 'match_compare_failed',
       errorCode: UiErrorCodes.MATCH_COMPARE_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         aId,
         bId,
@@ -251,7 +251,7 @@ export async function getAutoMatches(): Promise<MatchIndex> {
       level: 'error',
       message: 'match_auto_failed',
       errorCode: UiErrorCodes.MATCH_AUTO_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -291,7 +291,7 @@ export async function rebuildMatches(): Promise<{ ok: boolean; stats?: unknown }
       level: 'error',
       message: 'match_rebuild_failed',
       errorCode: UiErrorCodes.MATCH_REBUILD_FAILED,
-      route: getObservabilityRoute(route),
+      route: getObservabilityRoute(),
       meta: {
         error: error instanceof Error ? error.message : String(error),
       },

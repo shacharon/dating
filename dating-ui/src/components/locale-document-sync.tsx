@@ -13,17 +13,26 @@ import { useEffect } from "react";
 
 function applyDocumentLocale(locale: AppLocale): void {
   const root = document.documentElement;
-  root.lang = getLocaleHtmlLang(locale);
-  root.dir = getLocaleDirection(locale);
+  const newLang = getLocaleHtmlLang(locale);
+  const newDir = getLocaleDirection(locale);
+
+  if (root.lang !== newLang) {
+    root.lang = newLang;
+  }
+  if (root.dir !== newDir) {
+    root.dir = newDir;
+  }
 }
 
 /**
- * Keeps `<html lang dir>` in sync with the user's locale choice (localStorage).
+ * Updates `<html lang dir>` when user switches locale client-side.
+ * 
+ * Server-rendered initial locale is correct from layout.tsx.
+ * This component only updates the attributes when the locale changes after hydration.
+ * It checks if the locale has actually changed before updating to avoid unnecessary DOM mutations.
  */
 export function LocaleDocumentSync() {
   useEffect(() => {
-    applyDocumentLocale(readStoredLocale());
-
     const onLocaleChanged = (event: Event) => {
       const detail = (event as CustomEvent<AppLocale>).detail;
       if (detail && isSupportedLocale(detail)) {

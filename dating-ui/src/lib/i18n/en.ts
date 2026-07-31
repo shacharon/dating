@@ -100,6 +100,7 @@ export const enCopy: AppCopySchema = {
       aboutThem: "About them",
       noSummary: "No analysis summary available yet.",
       analyzedPrefix: "Analyzed",
+      updatedPrefix: "Updated",
       youMatched: "You matched!",
       viewConversation: "View conversation",
       actionStatus: {
