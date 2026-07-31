@@ -17,6 +17,7 @@ import {
   latestEvaluationsForProfileIds,
 } from './me-profile-analysis.service';
 import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
+import { buildMatchCandidateSqlPrefilterWhere } from './me-matches-candidate-sql-prefilter';
 import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
@@ -465,7 +466,13 @@ export class MeMatchesService {
         where: this.matchCandidateBaseWhere(userId),
       }),
       this.prisma.userProfile.findMany({
-        where: this.matchCandidatePhotoEligibleWhere(userId),
+        // Viewer→cand gender/age may be SQL-prefiltered; reciprocal gender still
+        // evaluated in memory via reciprocalProductGenderEligibility below.
+        where: this.matchCandidatePhotoEligibleWhere(userId, {
+          acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
+          preference: viewer.preference ?? null,
+          asOf,
+        }),
         select: this.candidateSelect,
       }),
     ]);
@@ -1259,10 +1266,29 @@ export class MeMatchesService {
     };
   }
 
-  private matchCandidatePhotoEligibleWhere(viewerUserId: string) {
+  private matchCandidatePhotoEligibleWhere(
+    viewerUserId: string,
+    sqlPrefilter?: {
+      acceptedPartnerGenders: ReturnType<
+        typeof buildProductProfileMatchingBridge
+      >['acceptedPartnerGenders'];
+      preference: {
+        partnerAgeMin: number | null;
+        partnerAgeMax: number | null;
+        maxDistanceKm: number | null;
+        acceptedPartnerGenders: readonly string[];
+      } | null;
+      asOf: Date;
+    },
+  ) {
+    const prefilterWhere =
+      sqlPrefilter !== undefined
+        ? buildMatchCandidateSqlPrefilterWhere(sqlPrefilter)
+        : {};
     return {
       ...this.matchCandidateBaseWhere(viewerUserId),
       photos: { some: { status: UserProfilePhotoStatus.APPROVED } },
+      ...prefilterWhere,
     };
   }
 

@@ -682,6 +682,88 @@ describe('MeMatchesService', () => {
       expect(result.matches).toHaveLength(1);
     });
 
+    it('list() findMany where includes gender in-clause when viewer has partner gender prefs', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([]);
+
+      await service.list(viewerUserId);
+
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            gender: { in: ['FEMALE'] },
+          }),
+        }),
+      );
+      expect(prisma.userProfile.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: { not: viewerUserId },
+            status: 'ANALYZED',
+            user: { deletedAt: null },
+          },
+        }),
+      );
+    });
+
+    it('list() findMany where omits gender when viewer partner genders are open', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'FEMALE',
+          desiredPartnerGenders: null,
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([]);
+
+      await service.list(viewerUserId);
+
+      const findManyWhere = prisma.userProfile.findMany.mock.calls[0][0]
+        .where as Record<string, unknown>;
+      expect(findManyWhere.gender).toBeUndefined();
+    });
+
+    it('list() findMany where includes birthDate bounds when viewer has age prefs', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeProfileRow({
+          id: viewerProfileId,
+          userId: viewerUserId,
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          preference: makePrefRow({
+            profileId: viewerProfileId,
+            acceptedPartnerGenders: ['FEMALE'],
+            partnerAgeMin: 25,
+            partnerAgeMax: 40,
+          }),
+        }),
+      );
+      prisma.userProfile.findMany.mockResolvedValue([]);
+
+      await service.list(viewerUserId);
+
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            gender: { in: ['FEMALE'] },
+            birthDate: expect.objectContaining({
+              not: null,
+              gte: expect.any(Date),
+              lte: expect.any(Date),
+            }),
+          }),
+        }),
+      );
+    });
+
     // Requirement 3: OTHER gender is fully supported as both a filter value and a candidate identity
     it('includes gender=OTHER candidate when viewer desiredPartnerGenders includes OTHER', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
@@ -2801,6 +2883,7 @@ describe('MeMatchesService', () => {
             status: 'ANALYZED',
             user: { deletedAt: null },
             photos: { some: { status: 'APPROVED' } },
+            gender: { in: ['FEMALE'] },
           },
         }),
       );
