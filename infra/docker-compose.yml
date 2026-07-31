@@ -1,3 +1,18 @@
+# Local stack: Postgres + Redis (+ optional API/UI containers).
+#
+# Defaults (no profile): postgres on host :5433 + redis on host :6379
+#   docker compose -f infra/docker-compose.yml up -d
+#
+# Full stack (build + run API + UI):
+#   docker compose -f infra/docker-compose.yml --profile apps up -d --build
+#
+# One-shot migrations (Story 04 / local parity):
+#   docker compose -f infra/docker-compose.yml --profile migrate run --rm migrate
+#
+# Verify:
+#   curl http://localhost:3001/health
+#   curl http://localhost:3001/health/realtime
+
 services:
   postgres:
     image: postgres:16
@@ -11,6 +26,104 @@ services:
       - "5433:5432"
     volumes:
       - dating_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dating_user -d dating"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: dating-redis
+    restart: unless-stopped
+    # Host 6380 avoids clashing with a local Redis on 6379 (same idea as Postgres 5433).
+    # In-compose services use redis://redis:6379. Host npm API: REDIS_URL=redis://127.0.0.1:6380
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional — `docker compose --profile migrate run --rm migrate`
+  migrate:
+    profiles: ["migrate", "apps"]
+    build:
+      context: ../dating-api
+      dockerfile: Dockerfile
+    image: dating-api:local
+    container_name: dating-migrate
+    environment:
+      DATABASE_URL: postgresql://dating_user:dating_pass@postgres:5432/dating?schema=public
+    entrypoint: ["/bin/sh", "./scripts/docker-migrate.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Optional — `docker compose --profile apps up`
+  api:
+    profiles: ["apps"]
+    build:
+      context: ../dating-api
+      dockerfile: Dockerfile
+    image: dating-api:local
+    container_name: dating-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      STRUCTURED_LOG_FILE: "0"
+      DATABASE_URL: postgresql://dating_user:dating_pass@postgres:5432/dating?schema=public
+      REDIS_URL: redis://redis:6379
+      PHOTO_STORAGE_DRIVER: local
+      PHOTO_UPLOAD_DIR: uploads/profile-photos
+      PHOTO_MODERATION_DRIVER: mock
+      # Dev-only placeholders so the process can boot; override for real auth.
+      SESSION_SECRET_PEPPER: local-compose-dev-pepper-change-me
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CORS_ORIGIN: http://localhost:3000,http://127.0.0.1:3000
+      CORS_CREDENTIALS: "true"
+      COOKIE_SECURE: "false"
+    volumes:
+      - dating_api_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Optional — `docker compose --profile apps up`
+  ui:
+    profiles: ["apps"]
+    build:
+      context: ../dating-ui
+      dockerfile: Dockerfile
+      args:
+        # Baked at build time — rebuild when these change.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+        NEXT_PUBLIC_REALTIME: ${NEXT_PUBLIC_REALTIME:-ws}
+        # Server-side rewrites inside the container network.
+        API_PROXY_TARGET: http://api:3001
+    image: dating-ui:local
+    container_name: dating-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Runtime rewrite target (standalone server also reads process.env for rewrites
+      # only if next.config evaluated them at build — API_PROXY_TARGET is build-arg above).
+      API_PROXY_TARGET: http://api:3001
+    depends_on:
+      - api
 
 volumes:
   dating_pg_data:
+  dating_api_uploads:

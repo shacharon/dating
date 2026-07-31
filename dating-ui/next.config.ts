@@ -10,6 +10,8 @@ const apiProxyTarget =
   process.env.API_PROXY_TARGET?.replace(/\/$/, "") ?? "http://127.0.0.1:3001";
 
 const nextConfig: NextConfig = {
+  /** Required for the production Docker image (`node server.js` from `.next/standalone`). */
+  output: "standalone",
   /** socket.io handshake must not be 308-redirected between `/socket.io` and `/socket.io/`. */
   skipTrailingSlashRedirect: true,
   /** Avoid picking a parent folder when multiple lockfiles exist (Turbopack workspace root). */
