@@ -40,7 +40,7 @@ class MockIntersectionObserver {
 }
 vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
-import MeMatchesPage from './page';
+import MeMatchesPage from './me-matches-page-client';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: replaceMock }),

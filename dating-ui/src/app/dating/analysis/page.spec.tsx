@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 import { ANALYSIS_POLL_INITIAL_MS } from './analysis-progress-poll';
-import DatingAnalysisPage from './page';
+import DatingAnalysisPage from './analysis-page-client';
 
 const mocked = vi.hoisted(() => ({
   replaceMock: vi.fn(),

@@ -1,36 +1,22 @@
-"use client";
+import type { Metadata } from 'next';
+import DatingLandingPageClient from './dating-page-client';
 
-import Link from "next/link";
-import { useAppLocale } from "@/lib/i18n";
+export const metadata: Metadata = {
+  title: 'Dating',
+  description: 'Find your match.',
+};
 
+/**
+ * Server Component shell. Hub copy + links live in `dating-page-client.tsx`
+ * so locale reacts to client storage (same as other dating islands).
+ *
+ * Remaining client-only /dating routes (intentionally not converted):
+ * - conversations/[id] — realtime messaging
+ * - conversations — list tied to messaging session
+ * - me-matches/[id] — interactive detail actions
+ * - profile — client profile resolve + photos/prefs islands
+ * - matches, matches/[id], feedback, onboarding — lower priority / interactive
+ */
 export default function DatingLandingPage() {
-  const { copy } = useAppLocale();
-  const hub = copy.datingHub;
-
-  return (
-    <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
-      <div className="mx-auto max-w-xl pt-16 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          {hub.title}
-        </h1>
-        <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
-          {hub.subtitle}
-        </p>
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link
-            href="/onboarding"
-            className="inline-block rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white transition-opacity hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
-          >
-            {hub.getStarted}
-          </Link>
-          <Link
-            href="/dating/me-matches"
-            className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            {hub.viewMatches}
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+  return <DatingLandingPageClient />;
 }

@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
-import DatingAnalysisPage from './page';
+import DatingAnalysisPage from './analysis-page-client';
 
 const mocked = vi.hoisted(() => ({
   replaceMock: vi.fn(),
