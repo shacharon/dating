@@ -4,7 +4,7 @@
 
 **Duration:** ~3–4 weeks (14 stories)  
 **Goal:** Thin client islands with Server Components, split mega-files into testable modules, establish route-level loading/error UI, move all fetch to service layer, extract business logic from UI, fix i18n/a11y gaps.  
-**Status:** Wave 1 Done — Wave 2 Done (Stories 7–12)  
+**Status:** Done (Waves 1–3)  
 **Depends on:** Current UI architecture (Next.js App Router, React 19, established service patterns)
 
 ---
@@ -74,8 +74,8 @@ This creates:
 
 | # | Story | Priority | Estimated effort | Agent/Skill | Status |
 |---|-------|----------|------------------|-------------|--------|
-| 13 | [Delete deprecated `onboarding-draft-form` + mock feedback](#story-13) | **P2** | 0.5 day | `generalPurpose` | Pending |
-| 14 | [Organize internal routes under `app/(internal)/` group](#story-14) | **P2** | 0.5 day | `generalPurpose` | Pending |
+| 13 | [Delete deprecated draft + mock feedback](./STORY_13_delete_deprecated.md) | **P2** | 0.5 day | `generalPurpose` | **Done** |
+| 14 | [Delete internal POC tools](./STORY_14_delete_poc_tools.md) | **P2** | 0.5 day | `generalPurpose` | **Done** |
 
 **Recommended order:** Stories 1–6 (P0 wave) → 7–12 (P1 wave) → 13–14 (P2 cleanup)
 
