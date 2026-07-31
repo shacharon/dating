@@ -1,24 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import {
   conversationPhotoSrc,
-  fetchConversationMessages,
   fetchMyConversationById,
-  markConversationAsRead,
-  sendConversationMessage,
-  unmatchMyConversation,
   type ConversationDetailDto,
-  type MessageDto,
 } from '@/lib/conversations-api';
-import {
-  MAX_MESSAGE_TEXT_LENGTH,
-  SEND_COOLDOWN_MS,
-} from '@/lib/conversation-message-limits';
+import { MAX_MESSAGE_TEXT_LENGTH } from '@/lib/conversation-message-limits';
 import {
   conversationPrimaryLabel,
   conversationSecondaryMeta,
@@ -27,15 +19,10 @@ import {
 } from '../conversation-display';
 import { ReportUserDialog } from '@/components/report-user-dialog';
 import { useAppLocale } from '@/lib/i18n';
-import {
-  useMessagingSocket,
-  type MessagingConnectionStatus,
-} from '@/hooks/use-messaging-socket';
 import { setActiveConversationId } from '@/lib/conversation-focus';
+import { useConversationMessages } from '@/hooks/use-conversation-messages';
+import { useConversationActions } from '@/hooks/use-conversation-actions';
 import { getRealtimeMode } from '@/lib/realtime-mode';
-
-const POLL_INTERVAL_MS = 3000;
-const MARK_READ_DEBOUNCE_MS = 15_000;
 
 function scrollListToBottom(listEl: HTMLDivElement | null) {
   if (!listEl) return;
@@ -50,63 +37,48 @@ function isNearBottom(el: HTMLDivElement, thresholdPx = 80): boolean {
   return el.scrollHeight - el.scrollTop - el.clientHeight <= thresholdPx;
 }
 
-function appendUniqueMessages(
-  prev: MessageDto[],
-  incoming: MessageDto[],
-): MessageDto[] {
-  const ids = new Set(prev.map((m) => m.id));
-  const append = incoming.filter((m) => !ids.has(m.id));
-  if (append.length === 0) return prev;
-  return [...prev, ...append];
-}
-
 export default function ConversationDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { user } = useAuth();
   const { locale, copy } = useAppLocale();
   const detailCopy = copy.conversations.detail;
   const formatCopy = copy.conversations.format;
   const { refresh: refreshNavUnread } = useConversationUnread();
   const id = typeof params.id === 'string' ? params.id : '';
+  const realtimeMode = getRealtimeMode();
+
   const [data, setData] = useState<ConversationDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [unmatchConfirmOpen, setUnmatchConfirmOpen] = useState(false);
-  const [unmatchSaving, setUnmatchSaving] = useState(false);
-  const [unmatchError, setUnmatchError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
-  const [messages, setMessages] = useState<MessageDto[]>([]);
-  const [messagesLoading, setMessagesLoading] = useState(true);
-  const [messagesError, setMessagesError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [socketReconnecting, setSocketReconnecting] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
-  const messagesRef = useRef<MessageDto[]>([]);
-  const initialScrollDoneRef = useRef(false);
-  const lastMarkReadAtRef = useRef(0);
-  const realtimeMode = getRealtimeMode();
 
-  const tryMarkRead = useCallback(async () => {
-    if (!id) return;
-    try {
-      await markConversationAsRead(id);
-      lastMarkReadAtRef.current = Date.now();
-      void refreshNavUnread();
-    } catch {
-      // silent — read tracking must not block messaging
-    }
-  }, [id, refreshNavUnread]);
+  const {
+    messages,
+    loading: messagesLoading,
+    error: messagesError,
+    sendMessage,
+    sending,
+    sendError,
+    hasMore,
+    loadEarlier,
+    loadingEarlier,
+    socketReconnecting,
+    listRef,
+    initialScrollDone,
+  } = useConversationMessages({
+    conversationId: id,
+    enabled: true,
+    onRefreshUnread: refreshNavUnread,
+  });
 
-  useEffect(() => {
-    lastMarkReadAtRef.current = 0;
-    setSocketReconnecting(false);
-  }, [id]);
+  const {
+    unmatch,
+    unmatching,
+    unmatchError,
+    clearUnmatchError,
+  } = useConversationActions(id);
 
   useEffect(() => {
     if (!id) return;
@@ -136,141 +108,21 @@ export default function ConversationDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, detailCopy.loadFailed]);
 
   useEffect(() => {
-    if (!id || loading) return;
-    void tryMarkRead();
-  }, [id, loading, tryMarkRead]);
-
-  useEffect(() => {
-    if (!id) return;
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (Date.now() - lastMarkReadAtRef.current < MARK_READ_DEBOUNCE_MS) return;
-      void tryMarkRead();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [id, tryMarkRead]);
-
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    setMessagesLoading(true);
-    setMessagesError(null);
-    setMessages([]);
-    setHasMore(false);
-    setNextCursor(null);
-    initialScrollDoneRef.current = false;
-
-    fetchConversationMessages(id)
-      .then((result) => {
-        if (cancelled) return;
-        setMessages(result.messages);
-        setHasMore(result.pagination.hasMore);
-        setNextCursor(result.pagination.nextCursor);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setMessagesError(
-            e instanceof Error ? e.message : detailCopy.loadMessagesFailed,
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setMessagesLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  useEffect(() => {
-    if (messagesLoading || initialScrollDoneRef.current) return;
+    if (messagesLoading || initialScrollDone) return;
     if (messages.length === 0) return;
-    initialScrollDoneRef.current = true;
     scrollListToBottom(listRef.current);
-  }, [messagesLoading, messages.length]);
-
-  const mergeIncomingMessages = useCallback((incoming: MessageDto[]) => {
-    if (incoming.length === 0) return;
-    setMessages((prev) => {
-      const merged = appendUniqueMessages(prev, incoming);
-      if (merged === prev) return prev;
-
-      const listEl = listRef.current;
-      if (listEl && isNearBottom(listEl)) {
-        requestAnimationFrame(() => scrollListToBottom(listEl));
-      }
-      return merged;
-    });
-  }, []);
-
-  const handleMessageNew = useCallback(
-    (msg: MessageDto) => mergeIncomingMessages([msg]),
-    [mergeIncomingMessages],
-  );
-
-  const getLastMessageId = useCallback(
-    () => messagesRef.current[messagesRef.current.length - 1]?.id,
-    [],
-  );
-
-  const handleSocketConnectionChange = useCallback(
-    (status: MessagingConnectionStatus) => {
-      setSocketReconnecting(status === 'reconnecting');
-    },
-    [],
-  );
-
-  useMessagingSocket({
-    enabled: realtimeMode === 'ws' && !!id && !messagesLoading,
-    conversationId: id,
-    onMessageNew: handleMessageNew,
-    getLastMessageId,
-    onMessagesMerged: mergeIncomingMessages,
-    onConnectionChange: handleSocketConnectionChange,
-  });
+  }, [messagesLoading, messages.length, initialScrollDone]);
 
   useEffect(() => {
-    if (realtimeMode !== 'poll') return;
-    if (!id || messagesLoading) return;
-
-    const poll = async () => {
-      if (document.visibilityState !== 'visible') return;
-
-      const list = messagesRef.current;
-      const lastId = list[list.length - 1]?.id;
-      if (!lastId) return;
-
-      try {
-        const { messages: incoming } = await fetchConversationMessages(id, {
-          after: lastId,
-          limit: 100,
-        });
-        mergeIncomingMessages(incoming);
-      } catch {
-        // silent retry on next tick
-      }
-    };
-
-    const intervalId = window.setInterval(() => void poll(), POLL_INTERVAL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void poll();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-
-    return () => {
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [realtimeMode, id, messagesLoading, mergeIncomingMessages]);
+    if (messages.length === 0) return;
+    const listEl = listRef.current;
+    if (listEl && isNearBottom(listEl)) {
+      requestAnimationFrame(() => scrollListToBottom(listEl));
+    }
+  }, [messages]);
 
   const draftTrimmed = draft.trim();
   const overLimit = draft.length > MAX_MESSAGE_TEXT_LENGTH;
@@ -279,55 +131,14 @@ export default function ConversationDetailPage() {
     draft.length <= MAX_MESSAGE_TEXT_LENGTH &&
     !sending;
 
-  const handleLoadEarlier = useCallback(async () => {
-    if (!id || !hasMore || !nextCursor || loadingEarlier) return;
-    setLoadingEarlier(true);
-    setMessagesError(null);
-    const listEl = listRef.current;
-    const prevScrollHeight = listEl?.scrollHeight ?? 0;
-
-    try {
-      const result = await fetchConversationMessages(id, {
-        before: nextCursor,
-      });
-      setMessages((prev) => {
-        const ids = new Set(prev.map((m) => m.id));
-        const prepend = result.messages.filter((m) => !ids.has(m.id));
-        return [...prepend, ...prev];
-      });
-      setHasMore(result.pagination.hasMore);
-      setNextCursor(result.pagination.nextCursor);
-
-      requestAnimationFrame(() => {
-        if (!listEl) return;
-        const newScrollHeight = listEl.scrollHeight;
-        listEl.scrollTop += newScrollHeight - prevScrollHeight;
-      });
-    } catch (e: unknown) {
-      setMessagesError(
-        e instanceof Error ? e.message : detailCopy.loadEarlierFailed,
-      );
-    } finally {
-      setLoadingEarlier(false);
-    }
-  }, [hasMore, id, loadingEarlier, nextCursor]);
-
   async function handleSendMessage() {
     if (!id || !canSend) return;
-    setSendError(null);
-    setSending(true);
     try {
-      const sent = await sendConversationMessage(id, draft);
-      setMessages((prev) => appendUniqueMessages(prev, [sent]));
+      await sendMessage(draft);
       setDraft('');
       requestAnimationFrame(() => scrollListToBottom(listRef.current));
-      await new Promise((r) => setTimeout(r, SEND_COOLDOWN_MS));
-    } catch (e: unknown) {
-      setSendError(
-        e instanceof Error ? e.message : detailCopy.sendFailed,
-      );
-    } finally {
-      setSending(false);
+    } catch {
+      // Error is handled by the hook
     }
   }
 
@@ -339,19 +150,10 @@ export default function ConversationDetailPage() {
   }
 
   async function handleUnmatchConfirm() {
-    if (!id || unmatchSaving) return;
-    setUnmatchError(null);
-    setUnmatchSaving(true);
     try {
-      await unmatchMyConversation(id);
-      router.push('/dating/conversations');
-    } catch (e: unknown) {
+      await unmatch();
+    } catch {
       setUnmatchConfirmOpen(false);
-      setUnmatchError(
-        e instanceof Error ? e.message : detailCopy.unmatchFailed,
-      );
-    } finally {
-      setUnmatchSaving(false);
     }
   }
 
@@ -473,7 +275,7 @@ export default function ConversationDetailPage() {
                 {!messagesLoading && hasMore && (
                   <button
                     type="button"
-                    onClick={() => void handleLoadEarlier()}
+                    onClick={() => void loadEarlier()}
                     disabled={loadingEarlier}
                     className="mx-auto rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
                     data-testid="conversation-load-earlier"
@@ -597,7 +399,7 @@ export default function ConversationDetailPage() {
                     <button
                       type="button"
                       onClick={() => setUnmatchConfirmOpen(false)}
-                      disabled={unmatchSaving}
+                      disabled={unmatching}
                       className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
                       {copy.common.cancel}
@@ -605,10 +407,10 @@ export default function ConversationDetailPage() {
                     <button
                       type="button"
                       onClick={() => void handleUnmatchConfirm()}
-                      disabled={unmatchSaving}
+                      disabled={unmatching}
                       className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/40"
                     >
-                      {unmatchSaving ? detailCopy.sending : detailCopy.unmatch}
+                      {unmatching ? detailCopy.sending : detailCopy.unmatch}
                     </button>
                   </div>
                 </div>
@@ -616,10 +418,10 @@ export default function ConversationDetailPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setUnmatchError(null);
+                    clearUnmatchError();
                     setUnmatchConfirmOpen(true);
                   }}
-                  disabled={unmatchSaving}
+                  disabled={unmatching}
                   className="text-sm font-medium text-red-600 underline-offset-4 hover:text-red-800 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
                 >
                   {detailCopy.unmatch}

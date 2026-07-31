@@ -1,0 +1,352 @@
+import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useConversationMessages } from './use-conversation-messages';
+import * as conversationsApi from '@/lib/conversations-api';
+import * as messagingSocket from '@/hooks/use-messaging-socket';
+import * as realtimeMode from '@/lib/realtime-mode';
+
+vi.mock('@/lib/conversations-api');
+vi.mock('@/hooks/use-messaging-socket');
+vi.mock('@/lib/realtime-mode');
+
+const mockFetchConversationMessages = vi.mocked(conversationsApi.fetchConversationMessages);
+const mockMarkConversationAsRead = vi.mocked(conversationsApi.markConversationAsRead);
+const mockSendConversationMessage = vi.mocked(conversationsApi.sendConversationMessage);
+const mockUseMessagingSocket = vi.mocked(messagingSocket.useMessagingSocket);
+const mockGetRealtimeMode = vi.mocked(realtimeMode.getRealtimeMode);
+
+const mockMessages = [
+  {
+    id: 'msg-1',
+    conversationId: 'conv-1',
+    senderId: 'user-1',
+    text: 'Hello',
+    createdAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'msg-2',
+    conversationId: 'conv-1',
+    senderId: 'user-2',
+    text: 'Hi there',
+    createdAt: '2024-01-01T00:01:00Z',
+  },
+];
+
+describe('useConversationMessages', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetRealtimeMode.mockReturnValue('poll');
+    mockUseMessagingSocket.mockReturnValue(undefined);
+    mockMarkConversationAsRead.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should load messages on mount', async () => {
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: {
+        hasMore: false,
+        nextCursor: null,
+      },
+    });
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    expect(result.current.loading).toBe(true);
+    expect(result.current.messages).toEqual([]);
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.messages).toEqual(mockMessages);
+    expect(result.current.error).toBeNull();
+    expect(mockFetchConversationMessages).toHaveBeenCalledWith('conv-1');
+  });
+
+  it('should handle load error', async () => {
+    const errorMessage = 'Network error';
+    mockFetchConversationMessages.mockRejectedValue(new Error(errorMessage));
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe(errorMessage);
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it('should send message with optimistic UI', async () => {
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const sentMessage = {
+      id: 'msg-3',
+      conversationId: 'conv-1',
+      senderId: 'user-1',
+      text: 'New message',
+      createdAt: '2024-01-01T00:02:00Z',
+    };
+    mockSendConversationMessage.mockResolvedValue(sentMessage);
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.sending).toBe(false);
+
+    const sendPromise = result.current.sendMessage('New message');
+
+    await waitFor(() => {
+      expect(result.current.sending).toBe(true);
+    });
+
+    await sendPromise;
+
+    await waitFor(() => {
+      expect(result.current.sending).toBe(false);
+    });
+
+    expect(result.current.messages).toHaveLength(3);
+    expect(result.current.messages[2]).toEqual(sentMessage);
+    expect(mockSendConversationMessage).toHaveBeenCalledWith('conv-1', 'New message');
+  });
+
+  it('should handle send error', async () => {
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const errorMessage = 'Send failed';
+    mockSendConversationMessage.mockRejectedValue(new Error(errorMessage));
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await expect(result.current.sendMessage('Test')).rejects.toThrow();
+
+    await waitFor(() => {
+      expect(result.current.sendError).toBe(errorMessage);
+      expect(result.current.sending).toBe(false);
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+  });
+
+  it('should mark conversation as read', async () => {
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const onRefreshUnread = vi.fn();
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+        onRefreshUnread,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await result.current.markAsRead();
+
+    expect(mockMarkConversationAsRead).toHaveBeenCalledWith('conv-1');
+    expect(onRefreshUnread).toHaveBeenCalled();
+  });
+
+  it('should load earlier messages', async () => {
+    const earlierMessages = [
+      {
+        id: 'msg-0',
+        conversationId: 'conv-1',
+        senderId: 'user-1',
+        text: 'Earlier message',
+        createdAt: '2023-12-31T23:59:00Z',
+      },
+    ];
+
+    mockFetchConversationMessages.mockResolvedValueOnce({
+      messages: mockMessages,
+      pagination: { hasMore: true, nextCursor: 'cursor-1' },
+    });
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.hasMore).toBe(true);
+
+    mockFetchConversationMessages.mockResolvedValueOnce({
+      messages: earlierMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    await result.current.loadEarlier();
+
+    await waitFor(() => {
+      expect(result.current.loadingEarlier).toBe(false);
+    });
+
+    expect(result.current.messages).toHaveLength(3);
+    expect(result.current.messages[0]).toEqual(earlierMessages[0]);
+    expect(result.current.hasMore).toBe(false);
+    expect(mockFetchConversationMessages).toHaveBeenCalledWith('conv-1', {
+      before: 'cursor-1',
+    });
+  });
+
+  it('should refresh messages', async () => {
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    const newMessages = [...mockMessages, {
+      id: 'msg-3',
+      conversationId: 'conv-1',
+      senderId: 'user-1',
+      text: 'Refreshed',
+      createdAt: '2024-01-01T00:02:00Z',
+    }];
+
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: newMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    await result.current.refresh();
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(3);
+    });
+
+    expect(result.current.messages).toEqual(newMessages);
+  });
+
+  it('should integrate with websocket when realtime mode is ws', async () => {
+    mockGetRealtimeMode.mockReturnValue('ws');
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await waitFor(() => {
+      expect(mockUseMessagingSocket).toHaveBeenCalled();
+    });
+
+    const callArgs = mockUseMessagingSocket.mock.calls[mockUseMessagingSocket.mock.calls.length - 1][0];
+    expect(callArgs.enabled).toBe(true);
+    expect(callArgs.conversationId).toBe('conv-1');
+    expect(callArgs.onMessageNew).toBeDefined();
+    expect(callArgs.getLastMessageId).toBeDefined();
+  });
+
+  it('should not load when disabled', async () => {
+    renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: false,
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockFetchConversationMessages).not.toHaveBeenCalled();
+    });
+  });
+
+  it('should deduplicate incoming messages', async () => {
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const sentMessage = mockMessages[0];
+    mockSendConversationMessage.mockResolvedValue(sentMessage);
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await result.current.sendMessage('Hello');
+
+    await waitFor(() => {
+      expect(result.current.sending).toBe(false);
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+  });
+});
