@@ -39,7 +39,7 @@ Route53 → ACM/HTTPS → ALB ──┬── target group: dating-ui  (Fargate,
 | # | Story | Outcome | Status |
 |---|-------|---------|--------|
 | 01 | [Containerize the apps](./STORY_01_containerize.md) | Production Dockerfiles for API + UI; compose extended with Redis; local parity proven. | ✅ **Done** |
-| 02 | [Provision AWS infra as code](./STORY_02_infra_as_code.md) | Terraform for RDS, ElastiCache, S3, IAM, CloudFront, ALB, ECS cluster/services. | Code landed — 4-agent pipeline pending |
+| 02 | [Provision AWS infra as code](./STORY_02_infra_as_code.md) | Terraform for RDS, ElastiCache, S3, IAM, CloudFront, ALB, ECS cluster/services. | ✅ **Done (PENDING_APPLY)** |
 | 03 | [Secrets & runtime config](./STORY_03_secrets_and_config.md) | Every env var from the runbook wired via SSM/Secrets Manager; prod-safe defaults. | Code landed — 4-agent pipeline pending |
 | 04 | [CI/CD pipeline](./STORY_04_cicd_pipeline.md) | build → test → image push → migrate (one-shot) → rolling deploy → `/health` gate. | Code landed — 4-agent pipeline pending |
 | 05 | [Cloud verification](./STORY_05_verification.md) | Smoke + checklist + CI gate tooling ready; live e2e/k6 sign-off pending infra ([`VERIFIED_DEV.md`](./VERIFIED_DEV.md)). | Tooling ready — 4-agent / live gate pending |
