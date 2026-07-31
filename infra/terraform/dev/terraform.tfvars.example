@@ -1,0 +1,50 @@
+# Example tfvars for AWS `dev`. Copy to terraform.tfvars (gitignored locally) or
+# pass -var-file=terraform.tfvars.example after editing.
+
+aws_region  = "us-east-1"
+environment = "dev"
+project     = "dating"
+
+# Networking
+vpc_cidr           = "10.20.0.0/16"
+az_count           = 2
+single_nat_gateway = true
+enable_vpc_endpoints = true
+
+# Public origin — leave empty for ALB-DNS-only bootstrap
+domain_name         = "" # e.g. "dev.example.com"
+route53_zone_id     = "" # e.g. "ZXXXXXXXX"
+acm_certificate_arn = "" # e.g. "arn:aws:acm:us-east-1:123:certificate/..."
+
+# Optional photo CDN (toggle)
+enable_cloudfront = true
+
+# Data plane sizing (dev)
+rds_instance_class       = "db.t4g.small"
+redis_node_type          = "cache.t4g.micro"
+redis_transit_encryption = false
+
+# Images (Story 01 builds / Story 04 pushes)
+api_image_tag = "latest"
+ui_image_tag  = "latest"
+
+# ECS counts (API 1–2, UI 1)
+api_desired_count = 1
+api_min_count     = 1
+api_max_count     = 2
+ui_desired_count  = 1
+
+# Story 03 wires Secrets Manager ARNs via module.secrets (see secrets.tf).
+# Leave api_secrets empty here — main.tf passes module.secrets.ecs_secrets_from_secretsmanager_only.
+# ui_secrets remains for any UI runtime secrets (NEXT_PUBLIC_* are build-time, not task secrets).
+api_secrets = []
+ui_secrets  = []
+
+# Story 03 non-secret config (also see infra/env/dev.tfvars.example)
+# google_client_id = "xxxx.apps.googleusercontent.com"
+# cookie_domain    = ".example.com"
+# app_public_url   = "https://dev.example.com"
+# admin_user_ids   = ""
+# ui_next_public_admin_enabled = "0"
+
+# cors_origin = "https://dev.example.com"

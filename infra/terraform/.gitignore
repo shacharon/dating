@@ -1,0 +1,17 @@
+# Local Terraform artifacts — do not commit
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+terraform.tfvars
+*.auto.tfvars
+!*.tfvars.example
+.terraformrc
+terraform.rc
