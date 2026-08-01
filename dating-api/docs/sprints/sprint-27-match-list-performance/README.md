@@ -31,3 +31,9 @@ Make match-list **cache misses** safe at thousands of analyzed users: kill N+1 e
 ## Success metrics (Story 5)
 
 On cache-miss → ready rebuild (log + custom metrics): `candidates_loaded`, `candidates_eligible`, `candidate_load_ms`, `eval_query_ms`, `score_cpu_ms`, `cache_set_ms`, plus existing `match.list.load_time` / `cache.hit_rate`.
+
+---
+
+## Next
+
+→ [Sprint 28 — Backend scale hardening](../sprint-28-backend-scale-hardening/README.md) (AWS live apply remains deferred).

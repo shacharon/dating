@@ -1,10 +1,23 @@
 # Sprint 20 — Deploy to AWS `dev` (ECS Fargate)
 
-> **Status:** 🟡 **CODE + 4-AGENT CR COMPLETE** for Stories 01–05. Live AWS apply / first deploy / `VERIFIED_DEV.md` still **PENDING_INFRA** — Sprint 20 is **not** fully signed off until Status = VERIFIED.
+> **Status:** ✅ **PREP COMPLETE** (Stories 01–05 code + 4-agent CR).  
+> **LIVE_APPLY = DEFERRED** — `terraform apply` / first deploy / [`VERIFIED_DEV.md`](./VERIFIED_DEV.md) are **on hold** (not blocking product hardening). Sprint 20 is **not** VERIFIED until live smoke + load pass.
 >
 > **Depends on:** Sprint 19 (performance + real photo moderation) merged, since this sprint deploys that work.
 >
 > **Companion runbook:** [`DEPLOY_AWS_DEV.md`](../../../../DEPLOY_AWS_DEV.md) at the repo root is the operational reference. This sprint turns that runbook into reproducible, reviewed artifacts (containers, IaC, CI/CD) instead of manual click-ops.
+>
+> **Product next:** [Sprint 28 — Backend scale hardening](../sprint-28-backend-scale-hardening/README.md) (no cloud required).
+
+---
+
+## Resume live apply (when deploy hold lifts)
+
+1. Confirm AWS account / region / hostname / ACM / OAuth redirect / Terraform state backend (see prerequisites below).
+2. Story 02: `terraform apply` for `dev`.
+3. Story 03: seed Secrets Manager / SSM; verify task defs resolve `DATABASE_URL` etc.
+4. Story 04: run CI deploy path against `dev` (migrate one-shot → API/UI roll → `/health`).
+5. Story 05: fill [`VERIFIED_DEV.md`](./VERIFIED_DEV.md) (smoke + k6 + e2e). Only then set Status = **VERIFIED**.
 
 ---
 
