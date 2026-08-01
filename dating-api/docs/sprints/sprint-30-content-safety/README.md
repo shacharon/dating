@@ -1,6 +1,6 @@
 # Sprint 30 — Content Safety & Moderation
 
-**Status:** 🟡 **IN PROGRESS** — Story 00 Done; Story 01 Agent 1 complete → run Agent 2  
+**Status:** 🟡 **IN PROGRESS** — Story 00 Done; Story 01 Agent 2 CR PASS → run Agent 3  
 **Priority:** P0 (pre-launch blocker)  
 **Depends on:** None  
 **Blocks:** Production launch (Sprint 20 AWS deployment should not go live without this)
@@ -31,7 +31,7 @@ Risk: harassment, explicit spam, and inappropriate content can flow freely throu
 | # | Story | Priority | Est | Status |
 |---|-------|----------|-----|--------|
 | 00 | [User consent + privacy policy](./STORY_00_consent_and_privacy.md) | P0 | 1d | ✅ Done |
-| 01 | [OpenAI moderation client + violation storage](./STORY_01_moderation_client.md) | P0 | 0.5d | Agent 1 done → run Agent 2 |
+| 01 | [OpenAI moderation client + violation storage](./STORY_01_moderation_client.md) | P0 | 0.5d | Agent 2 CR PASS → run Agent 3 |
 | 02 | [Profile field moderation gate](./STORY_02_profile_field_gate.md) | P0 | 1d | PLANNED |
 | 03 | [Message moderation gate](./STORY_03_message_gate.md) | P0 | 1d | PLANNED |
 | 04 | [Violation counting + progressive blocks](./STORY_04_violation_enforcement.md) | P0 | 0.5d | PLANNED |

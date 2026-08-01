@@ -1,6 +1,6 @@
 # Story 01 — OpenAI moderation client + violation storage
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
 **Priority:** P0  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Story 00 Done (disclosure); code can proceed in parallel with ops DPA  
