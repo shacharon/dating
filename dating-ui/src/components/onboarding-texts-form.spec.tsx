@@ -118,4 +118,54 @@ describe('OnboardingTextsForm', () => {
       );
     });
   });
+
+  it('shows moderation alert (not only flat string) on save failure', async () => {
+    const { ContentModerationApiError } = await import(
+      '@/lib/content-moderation-error'
+    );
+    patchMyProfile.mockRejectedValue(
+      new ContentModerationApiError(
+        'content_moderation_failed',
+        {
+          field: 'aboutPartner',
+          category: 'sexual',
+          flaggedText: 'wanna fuck',
+          reason: 'Direct sexual solicitation',
+          suggestion: 'Describe connection or interests.',
+          exampleAlternative: 'Looking for someone adventurous',
+        },
+        'Your profile contains inappropriate content',
+      ),
+    );
+
+    render(<OnboardingTextsForm />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', {
+          name: enCopy.onboarding.saveProgress,
+        }),
+      ).toBeTruthy();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: enCopy.onboarding.saveProgress }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('content-moderation-error-alert'),
+      ).toBeTruthy();
+    });
+
+    const alert = screen.getByTestId('content-moderation-error-alert');
+    expect(alert.textContent).toContain(enCopy.contentModeration.profileTitle);
+    expect(alert.textContent).toContain(
+      enCopy.onboarding.textsForm.aboutPartnerLabel,
+    );
+    expect(alert.textContent).toContain('wanna fuck');
+    expect(alert.textContent).toContain('Direct sexual solicitation');
+    expect(alert.textContent).toContain('Describe connection or interests.');
+    expect(alert.textContent).toContain('Looking for someone adventurous');
+  });
 });

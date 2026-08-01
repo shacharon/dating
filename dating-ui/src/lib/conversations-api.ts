@@ -3,6 +3,10 @@
  */
 
 import { getApiBase } from '@/lib/api-base';
+import {
+  parseContentModerationErrorBody,
+  parseMessagingMutedErrorBody,
+} from '@/lib/content-moderation-error';
 import { captureRequestIdFromResponse } from '@/lib/observability/request-id';
 
 const credFetch = {
@@ -290,7 +294,9 @@ export async function fetchConversationMessages(
 /**
  * Send a text message in a conversation.
  * Throws with message `'Conversation not found.'` on 404.
- * Throws with message `'You do not have access to this conversation.'` on 403.
+ * Throws `MessagingMutedError` on 403 `messaging_muted`.
+ * Throws with message `'You do not have access to this conversation.'` on other 403.
+ * Throws `ContentModerationApiError` on moderation 400.
  */
 export async function sendConversationMessage(
   conversationId: string,
@@ -317,15 +323,26 @@ export async function sendConversationMessage(
     throw new Error('Conversation not found.');
   }
   if (res.status === 403) {
+    const errBody = await res.text();
+    const muted = parseMessagingMutedErrorBody(res.status, errBody);
+    if (muted) throw muted;
     throw new Error('You do not have access to this conversation.');
   }
   if (res.status === 429) {
     throw new Error('Too many messages. Please wait.');
   }
   if (!res.ok) {
-    const body = await readJson<{ message?: string }>(res);
+    const errBody = await res.text();
+    const moderationError = parseContentModerationErrorBody(res.status, errBody);
+    if (moderationError) throw moderationError;
+    let message: string | undefined;
+    try {
+      message = (JSON.parse(errBody) as { message?: string }).message;
+    } catch {
+      // fall through
+    }
     throw new Error(
-      body.message ?? `POST ${path} failed: ${res.status} ${res.statusText}`,
+      message ?? `POST ${path} failed: ${res.status} ${res.statusText}`,
     );
   }
   return readJson<MessageDto>(res);

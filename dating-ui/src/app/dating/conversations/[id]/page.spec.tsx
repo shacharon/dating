@@ -480,8 +480,10 @@ describe('ConversationDetailPage', () => {
 
     await waitFor(() => {
       expect(sendConversationMessage).toHaveBeenCalled();
+      expect(
+        screen.getAllByTestId('conversation-message-bubble'),
+      ).toHaveLength(1);
     });
-    expect(screen.getAllByText('Hello there')).toHaveLength(1);
     unmount();
   });
 
@@ -545,6 +547,47 @@ describe('ConversationDetailPage', () => {
         screen.getByText('Too many messages. Please wait.'),
       ).toBeTruthy();
     });
+    unmount();
+  });
+
+  it('shows moderation alert when send is rejected for content policy', async () => {
+    const { ContentModerationApiError } = await import(
+      '@/lib/content-moderation-error'
+    );
+    sendConversationMessage.mockRejectedValue(
+      new ContentModerationApiError(
+        'message_content_moderation_failed',
+        {
+          category: 'sexual',
+          flaggedText: 'bad phrase',
+          reason: 'Direct sexual solicitation',
+          suggestion: 'Keep messages respectful.',
+          muted: '1 hour',
+        },
+      ),
+    );
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Message')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'bad phrase' },
+    });
+    fireEvent.click(screen.getByTestId('conversation-send-button'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('content-moderation-error-alert'),
+      ).toBeTruthy();
+    });
+    const alert = screen.getByTestId('content-moderation-error-alert');
+    expect(alert.textContent).toContain('bad phrase');
+    expect(alert.textContent).toContain('Direct sexual solicitation');
+    expect(alert.textContent).toContain('Keep messages respectful.');
+    expect(alert.textContent).toContain('1 hour');
     unmount();
   });
 
@@ -926,8 +969,11 @@ describe('ConversationDetailPage', () => {
       expect(messageNewHandlerRef.current).toBeTruthy();
       messageNewHandlerRef.current!(sentMessage);
 
-      const bubbles = screen.getAllByText('Hello there');
-      expect(bubbles).toHaveLength(1);
+      await waitFor(() => {
+        expect(
+          screen.getAllByTestId('conversation-message-bubble'),
+        ).toHaveLength(1);
+      });
       unmount();
     });
   });

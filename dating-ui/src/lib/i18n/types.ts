@@ -532,4 +532,17 @@ export type AppCopySchema = {
     };
     retry: string;
   };
+  contentModeration: {
+    profileTitle: string;
+    messageTitle: string;
+    fieldLabel: string;
+    flaggedLabel: string;
+    whyLabel: string;
+    suggestionLabel: string;
+    exampleLabel: string;
+    mutedLabel: string;
+    dismiss: string;
+    messagingMuted: string;
+    categoryDatingPolicy: string;
+  };
 };

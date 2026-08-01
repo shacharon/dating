@@ -11,6 +11,11 @@ import {
 } from '@/hooks/use-messaging-socket';
 import { getRealtimeMode } from '@/lib/realtime-mode';
 import { SEND_COOLDOWN_MS } from '@/lib/conversation-message-limits';
+import {
+  ContentModerationApiError,
+  MessagingMutedError,
+  type ContentModerationDetails,
+} from '@/lib/content-moderation-error';
 
 const POLL_INTERVAL_MS = 3000;
 const MARK_READ_DEBOUNCE_MS = 15_000;
@@ -38,6 +43,8 @@ export interface UseConversationMessagesReturn {
   sendMessage: (content: string) => Promise<void>;
   sending: boolean;
   sendError: string | null;
+  sendModerationDetails: ContentModerationDetails | null;
+  clearSendError: () => void;
   markAsRead: () => Promise<void>;
   refresh: () => Promise<void>;
   hasMore: boolean;
@@ -57,6 +64,8 @@ export function useConversationMessages(
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [sendModerationDetails, setSendModerationDetails] =
+    useState<ContentModerationDetails | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
@@ -235,19 +244,34 @@ export function useConversationMessages(
     }
   }, [hasMore, conversationId, loadingEarlier, nextCursor]);
 
+  const clearSendError = useCallback(() => {
+    setSendError(null);
+    setSendModerationDetails(null);
+  }, []);
+
   const sendMessage = useCallback(
     async (content: string) => {
       if (!conversationId || !content.trim()) return;
       setSendError(null);
+      setSendModerationDetails(null);
       setSending(true);
       try {
         const sent = await sendConversationMessage(conversationId, content);
         setMessages((prev) => appendUniqueMessages(prev, [sent]));
         await new Promise((r) => setTimeout(r, SEND_COOLDOWN_MS));
       } catch (e: unknown) {
-        setSendError(
-          e instanceof Error ? e.message : 'Failed to send message',
-        );
+        if (e instanceof ContentModerationApiError) {
+          setSendModerationDetails(e.details);
+          setSendError(null);
+        } else if (e instanceof MessagingMutedError) {
+          setSendError(e.message);
+          setSendModerationDetails(null);
+        } else {
+          setSendError(
+            e instanceof Error ? e.message : 'Failed to send message',
+          );
+          setSendModerationDetails(null);
+        }
         throw e;
       } finally {
         setSending(false);
@@ -269,6 +293,8 @@ export function useConversationMessages(
     sendMessage,
     sending,
     sendError,
+    sendModerationDetails,
+    clearSendError,
     markAsRead: tryMarkRead,
     refresh,
     hasMore,

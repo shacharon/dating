@@ -10,6 +10,11 @@ import {
   patchMyProfile,
   type MeProfileGender,
 } from '@/lib/me-profile-api';
+import {
+  ContentModerationApiError,
+  type ContentModerationDetails,
+} from '@/lib/content-moderation-error';
+import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
@@ -27,6 +32,7 @@ export function OnboardingBasicForm() {
   const { copy } = useAppLocale();
   const ob = copy.onboarding;
   const bf = ob.basicForm;
+  const mod = copy.contentModeration;
   const genderCopy = copy.gender;
   const googleName = user?.displayName?.trim() || '—';
 
@@ -46,6 +52,8 @@ export function OnboardingBasicForm() {
   const [profileSyncing, setProfileSyncing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [moderationDetails, setModerationDetails] =
+    useState<ContentModerationDetails | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [partnerError, setPartnerError] = useState<string | null>(null);
   const [genderStepError, setGenderStepError] = useState<string | null>(null);
@@ -177,7 +185,13 @@ export function OnboardingBasicForm() {
       }
       return true;
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : ob.saveFailed);
+      if (e instanceof ContentModerationApiError) {
+        setModerationDetails(e.details);
+        setSaveError(null);
+      } else {
+        setModerationDetails(null);
+        setSaveError(e instanceof Error ? e.message : ob.saveFailed);
+      }
       return false;
     }
   }
@@ -268,6 +282,23 @@ export function OnboardingBasicForm() {
         <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
           {ob.savedFlash}
         </p>
+      ) : null}
+      {moderationDetails ? (
+        <ContentModerationErrorAlert
+          details={moderationDetails}
+          variant="profile"
+          title={mod.profileTitle}
+          labels={{
+            fieldLabel: mod.fieldLabel,
+            flaggedLabel: mod.flaggedLabel,
+            whyLabel: mod.whyLabel,
+            suggestionLabel: mod.suggestionLabel,
+            exampleLabel: mod.exampleLabel,
+            mutedLabel: mod.mutedLabel,
+            dismiss: mod.dismiss,
+          }}
+          onDismiss={() => setModerationDetails(null)}
+        />
       ) : null}
       {saveError ? (
         <p className="text-sm text-red-600 dark:text-red-400" role="alert">

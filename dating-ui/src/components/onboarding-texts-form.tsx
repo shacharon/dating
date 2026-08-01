@@ -2,14 +2,33 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchMyProfile,
   patchMyProfile,
   submitMyProfileForAnalysis,
 } from '@/lib/me-profile-api';
+import {
+  ContentModerationApiError,
+  type ContentModerationDetails,
+} from '@/lib/content-moderation-error';
+import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
+
+function fieldLabelFor(
+  field: string | undefined,
+  tf: {
+    aboutMeLabel: string;
+    aboutPartnerLabel: string;
+    aboutRelationshipLabel: string;
+  },
+): string | null {
+  if (field === 'aboutMe') return tf.aboutMeLabel;
+  if (field === 'aboutPartner') return tf.aboutPartnerLabel;
+  if (field === 'aboutRelationship') return tf.aboutRelationshipLabel;
+  return null;
+}
 
 export function OnboardingTextsForm() {
   const router = useRouter();
@@ -17,6 +36,7 @@ export function OnboardingTextsForm() {
   const { copy } = useAppLocale();
   const ob = copy.onboarding;
   const tf = ob.textsForm;
+  const mod = copy.contentModeration;
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
@@ -24,8 +44,14 @@ export function OnboardingTextsForm() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [moderationDetails, setModerationDetails] =
+    useState<ContentModerationDetails | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [finishing, setFinishing] = useState(false);
+
+  const aboutMeRef = useRef<HTMLTextAreaElement>(null);
+  const aboutPartnerRef = useRef<HTMLTextAreaElement>(null);
+  const aboutRelationshipRef = useRef<HTMLTextAreaElement>(null);
 
   const resumeOptions = useMemo(
     () =>
@@ -68,8 +94,44 @@ export function OnboardingTextsForm() {
     };
   }, [router, resumeOptions, ob.loadFailed]);
 
+  useEffect(() => {
+    if (!moderationDetails?.field) return;
+    const el =
+      moderationDetails.field === 'aboutMe'
+        ? aboutMeRef.current
+        : moderationDetails.field === 'aboutPartner'
+          ? aboutPartnerRef.current
+          : moderationDetails.field === 'aboutRelationship'
+            ? aboutRelationshipRef.current
+            : null;
+    el?.focus();
+    if (typeof el?.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [moderationDetails]);
+
+  function clearModeration() {
+    setModerationDetails(null);
+  }
+
+  function applyCaughtError(
+    e: unknown,
+    setFlat: (msg: string) => void,
+    flatFallback: string,
+  ) {
+    if (e instanceof ContentModerationApiError) {
+      setModerationDetails(e.details);
+      setSaveError(null);
+      setFinishError(null);
+      return;
+    }
+    clearModeration();
+    setFlat(e instanceof Error ? e.message : flatFallback);
+  }
+
   async function handleSaveProgress() {
     setSaveError(null);
+    clearModeration();
     try {
       await patchMyProfile({
         aboutMe: aboutMe.trim() ? aboutMe : null,
@@ -81,12 +143,13 @@ export function OnboardingTextsForm() {
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : ob.saveFailed);
+      applyCaughtError(e, setSaveError, ob.saveFailed);
     }
   }
 
   async function handleFinish() {
     setFinishError(null);
+    clearModeration();
     try {
       const latest = await fetchMyProfile();
       if (
@@ -115,9 +178,7 @@ export function OnboardingTextsForm() {
       router.replace('/dating/analysis');
     } catch (e) {
       setFinishing(false);
-      setFinishError(
-        e instanceof Error ? e.message : tf.finishFailedError,
-      );
+      applyCaughtError(e, setFinishError, tf.finishFailedError);
     }
   }
 
@@ -125,6 +186,16 @@ export function OnboardingTextsForm() {
     'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
   const labelClass =
     'mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
+
+  const moderationLabels = {
+    fieldLabel: mod.fieldLabel,
+    flaggedLabel: mod.flaggedLabel,
+    whyLabel: mod.whyLabel,
+    suggestionLabel: mod.suggestionLabel,
+    exampleLabel: mod.exampleLabel,
+    mutedLabel: mod.mutedLabel,
+    dismiss: mod.dismiss,
+  };
 
   return (
     <div className="space-y-6">
@@ -154,8 +225,12 @@ export function OnboardingTextsForm() {
         </label>
         <textarea
           id="ot-about-me"
+          ref={aboutMeRef}
           value={aboutMe}
-          onChange={(e) => setAboutMe(e.target.value)}
+          onChange={(e) => {
+            setAboutMe(e.target.value);
+            clearModeration();
+          }}
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
           placeholder={tf.aboutMePlaceholder}
@@ -168,8 +243,12 @@ export function OnboardingTextsForm() {
         </label>
         <textarea
           id="ot-about-partner"
+          ref={aboutPartnerRef}
           value={aboutPartner}
-          onChange={(e) => setAboutPartner(e.target.value)}
+          onChange={(e) => {
+            setAboutPartner(e.target.value);
+            clearModeration();
+          }}
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
           placeholder={tf.aboutPartnerPlaceholder}
@@ -182,8 +261,12 @@ export function OnboardingTextsForm() {
         </label>
         <textarea
           id="ot-about-rel"
+          ref={aboutRelationshipRef}
           value={aboutRelationship}
-          onChange={(e) => setAboutRelationship(e.target.value)}
+          onChange={(e) => {
+            setAboutRelationship(e.target.value);
+            clearModeration();
+          }}
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
           placeholder={tf.aboutRelationshipPlaceholder}
@@ -226,6 +309,16 @@ export function OnboardingTextsForm() {
         <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
           {ob.savedFlash}
         </p>
+      ) : null}
+      {moderationDetails ? (
+        <ContentModerationErrorAlert
+          details={moderationDetails}
+          variant="profile"
+          title={mod.profileTitle}
+          fieldLabel={fieldLabelFor(moderationDetails.field, tf)}
+          labels={moderationLabels}
+          onDismiss={clearModeration}
+        />
       ) : null}
       {saveError ? (
         <p className="text-sm text-red-600 dark:text-red-400" role="alert">

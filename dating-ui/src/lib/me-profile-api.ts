@@ -4,6 +4,7 @@
  */
 
 import { getApiBase } from '@/lib/api-base';
+import { parseContentModerationErrorBody } from '@/lib/content-moderation-error';
 import {
   emitProductLog,
   getObservabilityRoute,
@@ -274,6 +275,8 @@ export async function createMyProfile(body: CreateMeProfileBody): Promise<MeProf
       errorCode: UiErrorCodes.UI_PROFILE_CREATE_FAIL,
       meta: { status: res.status, bodyPreview: errBody.slice(0, 500) },
     });
+    const moderationError = parseContentModerationErrorBody(res.status, errBody);
+    if (moderationError) throw moderationError;
     throw new Error(profileWriteErrorMessage('POST', res.status, errBody));
   }
   const dto = await readJson<MeProfileDto>(res);
@@ -319,6 +322,8 @@ export async function patchMyProfile(body: PatchMeProfileBody): Promise<MeProfil
       errorCode: UiErrorCodes.UI_PROFILE_PATCH_FAIL,
       meta: { status: res.status, bodyPreview: errBody.slice(0, 500) },
     });
+    const moderationError = parseContentModerationErrorBody(res.status, errBody);
+    if (moderationError) throw moderationError;
     throw new Error(profileWriteErrorMessage('PATCH', res.status, errBody));
   }
   const dto = await readJson<MeProfileDto>(res);

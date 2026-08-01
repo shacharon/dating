@@ -186,6 +186,64 @@ describe('me-profile-api', () => {
     );
   });
 
+  it('patchMyProfile throws ContentModerationApiError for moderation 400', async () => {
+    const { ContentModerationApiError } = await import(
+      '@/lib/content-moderation-error'
+    );
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: false,
+        status: 400,
+        text: async () =>
+          JSON.stringify({
+            error: 'content_moderation_failed',
+            message: 'Your profile contains inappropriate content',
+            details: {
+              field: 'aboutMe',
+              category: 'sexual',
+              flaggedText: 'bad',
+              reason: 'Sexual content',
+              suggestion: 'Rewrite this section.',
+            },
+          }),
+      }),
+    );
+
+    await expect(patchMyProfile({ aboutMe: 'bad' })).rejects.toBeInstanceOf(
+      ContentModerationApiError,
+    );
+
+    // Soft-log expected failures (trace), not console.error overlay noise.
+    const errorStructured = errSpy.mock.calls
+      .map((c) => c[0] as string)
+      .filter((s) => {
+        try {
+          return JSON.parse(s).errorCode === 'UI_PROFILE_PATCH_FAIL';
+        } catch {
+          return false;
+        }
+      });
+    expect(errorStructured).toHaveLength(0);
+    const traceStructured = logSpy.mock.calls
+      .map((c) => c[0] as string)
+      .filter((s) => {
+        try {
+          const parsed = JSON.parse(s);
+          return (
+            parsed.errorCode === 'UI_PROFILE_PATCH_FAIL' &&
+            parsed.level === 'trace'
+          );
+        } catch {
+          return false;
+        }
+      });
+    expect(traceStructured).toHaveLength(1);
+    errSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
   it('submitMyProfileForAnalysis POSTs /api/v1/me/profile/submit with credentials', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       mockResponse({

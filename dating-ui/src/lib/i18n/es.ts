@@ -594,4 +594,17 @@ export const esCopy: AppCopySchema = {
     },
     retry: "Intentar de nuevo",
   },
+  contentModeration: {
+    profileTitle: 'Encontramos un problema con el texto de tu perfil',
+    messageTitle: 'Encontramos un problema con tu mensaje',
+    fieldLabel: 'Campo',
+    flaggedLabel: 'Marcado',
+    whyLabel: 'Por que',
+    suggestionLabel: 'Sugerencia',
+    exampleLabel: 'Ejemplo',
+    mutedLabel: 'Mensajeria restringida',
+    dismiss: 'Cerrar',
+    messagingMuted: 'La mensajeria esta temporalmente restringida',
+    categoryDatingPolicy: 'Politica de la comunidad de citas',
+  },
 };

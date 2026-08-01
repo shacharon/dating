@@ -160,10 +160,55 @@ describe('useConversationMessages', () => {
 
     await waitFor(() => {
       expect(result.current.sendError).toBe(errorMessage);
+      expect(result.current.sendModerationDetails).toBeNull();
       expect(result.current.sending).toBe(false);
     });
 
     expect(result.current.messages).toHaveLength(2);
+  });
+
+  it('should expose moderation details on send moderation failure', async () => {
+    const { ContentModerationApiError } = await import(
+      '@/lib/content-moderation-error'
+    );
+    mockFetchConversationMessages.mockResolvedValue({
+      messages: mockMessages,
+      pagination: { hasMore: false, nextCursor: null },
+    });
+    mockSendConversationMessage.mockRejectedValue(
+      new ContentModerationApiError(
+        'message_content_moderation_failed',
+        {
+          category: 'sexual',
+          flaggedText: 'x',
+          reason: 'Why',
+          suggestion: 'Suggestion',
+          muted: '1 hour',
+        },
+      ),
+    );
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await expect(result.current.sendMessage('bad')).rejects.toThrow();
+
+    await waitFor(() => {
+      expect(result.current.sendError).toBeNull();
+      expect(result.current.sendModerationDetails).toMatchObject({
+        flaggedText: 'x',
+        suggestion: 'Suggestion',
+        muted: '1 hour',
+      });
+    });
   });
 
   it('should mark conversation as read', async () => {
@@ -193,6 +238,7 @@ describe('useConversationMessages', () => {
   });
 
   it('should load earlier messages', async () => {
+    mockGetRealtimeMode.mockReturnValue('ws');
     const earlierMessages = [
       {
         id: 'msg-0',
@@ -230,9 +276,9 @@ describe('useConversationMessages', () => {
 
     await waitFor(() => {
       expect(result.current.loadingEarlier).toBe(false);
+      expect(result.current.messages).toHaveLength(3);
     });
 
-    expect(result.current.messages).toHaveLength(3);
     expect(result.current.messages[0]).toEqual(earlierMessages[0]);
     expect(result.current.hasMore).toBe(false);
     expect(mockFetchConversationMessages).toHaveBeenCalledWith('conv-1', {

@@ -580,4 +580,17 @@ export const enCopy: AppCopySchema = {
     },
     retry: "Try again",
   },
+  contentModeration: {
+    profileTitle: 'We found an issue with your profile text',
+    messageTitle: 'We found an issue with your message',
+    fieldLabel: 'Field',
+    flaggedLabel: 'Flagged',
+    whyLabel: 'Why',
+    suggestionLabel: 'Suggestion',
+    exampleLabel: 'Example',
+    mutedLabel: 'Messaging restricted',
+    dismiss: 'Dismiss',
+    messagingMuted: 'Messaging is temporarily restricted',
+    categoryDatingPolicy: 'Community dating policy',
+  },
 };

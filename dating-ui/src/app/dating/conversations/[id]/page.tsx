@@ -23,6 +23,7 @@ import { setActiveConversationId } from '@/lib/conversation-focus';
 import { useConversationMessages } from '@/hooks/use-conversation-messages';
 import { useConversationActions } from '@/hooks/use-conversation-actions';
 import { getRealtimeMode } from '@/lib/realtime-mode';
+import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 
 const ReportUserDialog = dynamic(
   () =>
@@ -51,6 +52,7 @@ export default function ConversationDetailPage() {
   const { locale, copy } = useAppLocale();
   const detailCopy = copy.conversations.detail;
   const formatCopy = copy.conversations.format;
+  const modCopy = copy.contentModeration;
   const { refresh: refreshNavUnread } = useConversationUnread();
   const id = typeof params.id === 'string' ? params.id : '';
   const realtimeMode = getRealtimeMode();
@@ -69,6 +71,8 @@ export default function ConversationDetailPage() {
     sendMessage,
     sending,
     sendError,
+    sendModerationDetails,
+    clearSendError,
     hasMore,
     loadEarlier,
     loadingEarlier,
@@ -276,7 +280,9 @@ export default function ConversationDetailPage() {
                     role="alert"
                     data-testid="conversation-messages-error"
                   >
-                    {messagesError}
+                    {messagesError === 'Failed to load messages'
+                      ? detailCopy.loadMessagesFailed
+                      : messagesError}
                   </div>
                 )}
 
@@ -332,6 +338,25 @@ export default function ConversationDetailPage() {
                 })}
               </div>
               <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
+                {sendModerationDetails ? (
+                  <div className="mb-2">
+                    <ContentModerationErrorAlert
+                      details={sendModerationDetails}
+                      variant="message"
+                      title={modCopy.messageTitle}
+                      labels={{
+                        fieldLabel: modCopy.fieldLabel,
+                        flaggedLabel: modCopy.flaggedLabel,
+                        whyLabel: modCopy.whyLabel,
+                        suggestionLabel: modCopy.suggestionLabel,
+                        exampleLabel: modCopy.exampleLabel,
+                        mutedLabel: modCopy.mutedLabel,
+                        dismiss: modCopy.dismiss,
+                      }}
+                      onDismiss={clearSendError}
+                    />
+                  </div>
+                ) : null}
                 {sendError && (
                   <div
                     className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
@@ -348,7 +373,10 @@ export default function ConversationDetailPage() {
                   id="conversation-message-input"
                   rows={3}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    if (sendError || sendModerationDetails) clearSendError();
+                  }}
                   onKeyDown={handleMessageKeyDown}
                   disabled={sending}
                   placeholder={detailCopy.messagePlaceholder}

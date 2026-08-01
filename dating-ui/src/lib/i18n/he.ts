@@ -558,4 +558,17 @@ export const heCopy: AppCopySchema = {
     },
     retry: "נסה שוב",
   },
+  contentModeration: {
+    profileTitle: 'מצאנו בעיה בטקסט הפרופיל שלך',
+    messageTitle: 'מצאנו בעיה בהודעה שלך',
+    fieldLabel: 'שדה',
+    flaggedLabel: 'מסומן',
+    whyLabel: 'למה',
+    suggestionLabel: 'הצעה',
+    exampleLabel: 'דוגמה',
+    mutedLabel: 'ההודעות מוגבלות',
+    dismiss: 'סגור',
+    messagingMuted: 'שליחת הודעות מוגבלת זמנית',
+    categoryDatingPolicy: 'מדיניות קהילת הדייטינג',
+  },
 };
