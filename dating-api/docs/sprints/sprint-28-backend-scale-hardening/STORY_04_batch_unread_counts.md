@@ -1,11 +1,11 @@
 # Story 04 — Batch unread counts
 
-**Sprint 28 · Status: IN REVIEW** (Agent 2 CR **PASS** → Agent 3 PM)  
+**Sprint 28 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 03 helps but is not a hard blocker
 
-**Handoffs:** [architect](./handoffs/STORY_04_batch_unread_counts/agent-0-architect.md) · [dev](./handoffs/STORY_04_batch_unread_counts/agent-1-dev.md) · [cr](./handoffs/STORY_04_batch_unread_counts/agent-2-cr.md)
+**Handoffs:** [architect](./handoffs/STORY_04_batch_unread_counts/agent-0-architect.md) · [dev](./handoffs/STORY_04_batch_unread_counts/agent-1-dev.md) · [cr](./handoffs/STORY_04_batch_unread_counts/agent-2-cr.md) · [pm](./handoffs/STORY_04_batch_unread_counts/agent-3-pm.md)
 
 ---
 
@@ -26,10 +26,10 @@ Scale CR: conversations list issues N COUNT queries — bad under many mutual ma
 
 ## Acceptance criteria
 
-- [ ] Inbox list does not N+1 `message.count` per conversation
-- [ ] Unread totals match prior semantics
-- [ ] Unit/integration coverage for multi-conversation unread
-- [ ] No FE contract break
+- [x] Inbox list does not N+1 `message.count` per conversation
+- [x] Unread totals match prior semantics
+- [x] Unit/integration coverage for multi-conversation unread
+- [x] No FE contract break
 
 ## Commit message
 
