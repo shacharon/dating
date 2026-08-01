@@ -10,6 +10,7 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { RedisCacheModule } from '../cache/redis-cache.module';
 import { WorkerModule } from '../workers/worker.module';
+import { ContentModerationModule } from '../content-moderation/content-moderation.module';
 import {
   MatchNarrativeCacheService,
   MatchNarrativeGenerator,
@@ -40,6 +41,7 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
     forwardRef(() => MessagingRealtimeModule),
     NotificationsModule,
     forwardRef(() => WorkerModule),
+    ContentModerationModule,
   ],
   controllers: [MeProfileController],
   providers: [

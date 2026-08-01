@@ -35,6 +35,9 @@ import {
 } from './match-narrative-test-stubs';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
+import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { ContentViolationService } from '../content-moderation/content-violation.service';
+import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 
 function parseStructuredJsonLogs(
   spy: jest.SpiedFunction<typeof console.log>,
@@ -75,6 +78,24 @@ describe('me profile HTTP (integration)', () => {
     source: 'llm',
     narrative: 'HTTP stub LLM narrative about shared emotional depth.',
   });
+  const moderationClientMock = {
+    checkContent: jest.fn().mockResolvedValue({
+      flagged: false,
+      categories: [],
+      primaryCategory: null,
+      score: 0,
+      failOpen: false,
+    }),
+  };
+  const contentViolationsMock = {
+    getUserViolationStatus: jest.fn().mockResolvedValue({
+      status: 'ok',
+      mutedUntil: null,
+      violationCount: 0,
+    }),
+    recordViolation: jest.fn().mockResolvedValue(undefined),
+    getViolationCount: jest.fn().mockResolvedValue(0),
+  };
   const prismaMock = {
     $transaction: jest.fn(),
     $queryRaw: jest.fn(async (sql: { values: unknown[]; strings?: readonly string[] }) => {
@@ -239,6 +260,10 @@ describe('me profile HTTP (integration)', () => {
       .useValue(photoStorageMock)
       .overrideProvider(MatchNarrativeGenerator)
       .useValue(matchNarrativeGeneratorStub)
+      .overrideProvider(OpenAIModerationClient)
+      .useValue(moderationClientMock)
+      .overrideProvider(ContentViolationService)
+      .useValue(contentViolationsMock)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -253,6 +278,23 @@ describe('me profile HTTP (integration)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    jest
+      .spyOn(contentModerationTypes, 'isContentModerationEnabled')
+      .mockReturnValue(true);
+    moderationClientMock.checkContent.mockResolvedValue({
+      flagged: false,
+      categories: [],
+      primaryCategory: null,
+      score: 0,
+      failOpen: false,
+    });
+    contentViolationsMock.getUserViolationStatus.mockResolvedValue({
+      status: 'ok',
+      mutedUntil: null,
+      violationCount: 0,
+    });
+    contentViolationsMock.recordViolation.mockResolvedValue(undefined);
+    contentViolationsMock.getViolationCount.mockResolvedValue(0);
     narrativeCachePrisma.store.clear();
     matchNarrativeGeneratorStub.generate.mockResolvedValue({
       narrative: 'HTTP stub LLM narrative about shared emotional depth.',
@@ -582,6 +624,65 @@ describe('me profile HTTP (integration)', () => {
         onboardingStep: 'TEXTS',
       }),
     });
+  });
+
+  it('POST /api/v1/me/profile returns 400 when aboutMe is flagged by moderation', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+    moderationClientMock.checkContent.mockResolvedValue({
+      flagged: true,
+      categories: ['sexual'],
+      primaryCategory: 'sexual',
+      score: 0.95,
+      failOpen: false,
+    });
+    contentViolationsMock.getViolationCount.mockResolvedValue(1);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/me/profile')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ aboutMe: 'explicit content here' })
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      error: 'content_moderation_failed',
+      details: { field: 'aboutMe', category: 'sexual' },
+    });
+    expect(contentViolationsMock.recordViolation).toHaveBeenCalled();
+    expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /api/v1/me/profile returns 403 when profile_edit_blocked', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_blocked',
+      userId: USER_ID,
+      status: UserProfileStatus.DRAFT,
+      onboardingStep: 'BASIC',
+      aboutMe: 'ok',
+      aboutPartner: null,
+      aboutRelationship: null,
+      gender: 'FEMALE',
+      desiredPartnerGenders: null,
+      preference: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    contentViolationsMock.getUserViolationStatus.mockResolvedValue({
+      status: 'profile_edit_blocked',
+      mutedUntil: null,
+      violationCount: 3,
+    });
+
+    const res = await request(app.getHttpServer())
+      .patch('/api/v1/me/profile')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ aboutMe: 'retry' })
+      .expect(403);
+
+    expect(res.body).toMatchObject({ error: 'profile_edit_blocked' });
+    expect(moderationClientMock.checkContent).not.toHaveBeenCalled();
+    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
   });
 
   it('POST /api/v1/me/profile returns 422 when onboardingStep TEXTS without desiredPartnerGenders', async () => {

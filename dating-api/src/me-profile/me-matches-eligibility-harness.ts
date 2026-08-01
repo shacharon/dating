@@ -44,6 +44,8 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { MatchNarrativeGenerator } from '../matches/match-narrative';
+import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { ContentViolationService } from '../content-moderation/content-violation.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import {
@@ -783,6 +785,26 @@ export class EligibilityTestHarness {
       // Sprint 22 — keep detail path off live OpenAI; exercise cache DI with in-memory mock.
       .overrideProvider(MatchNarrativeGenerator)
       .useValue(this.matchNarrativeGeneratorStub)
+      .overrideProvider(OpenAIModerationClient)
+      .useValue({
+        checkContent: jest.fn().mockResolvedValue({
+          flagged: false,
+          categories: [],
+          primaryCategory: null,
+          score: 0,
+          failOpen: false,
+        }),
+      })
+      .overrideProvider(ContentViolationService)
+      .useValue({
+        getUserViolationStatus: jest.fn().mockResolvedValue({
+          status: 'ok',
+          mutedUntil: null,
+          violationCount: 0,
+        }),
+        recordViolation: jest.fn().mockResolvedValue(undefined),
+        getViolationCount: jest.fn().mockResolvedValue(0),
+      })
       .compile();
 
     this.app = moduleFixture.createNestApplication();

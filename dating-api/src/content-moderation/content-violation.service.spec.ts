@@ -72,6 +72,34 @@ describe('ContentViolationService', () => {
     });
   });
 
+  it('getViolationCount filters by surfacePrefix', async () => {
+    (prisma.userContentViolation.count as jest.Mock).mockResolvedValue(3);
+    const n = await service.getViolationCount('user-1', {
+      surfacePrefix: 'profile_',
+    });
+    expect(n).toBe(3);
+    expect(prisma.userContentViolation.count).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        surface: { startsWith: 'profile_' },
+      },
+    });
+  });
+
+  it('getViolationCount prefers exact surface over surfacePrefix', async () => {
+    (prisma.userContentViolation.count as jest.Mock).mockResolvedValue(1);
+    await service.getViolationCount('user-1', {
+      surface: 'profile_aboutMe',
+      surfacePrefix: 'profile_',
+    });
+    expect(prisma.userContentViolation.count).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        surface: 'profile_aboutMe',
+      },
+    });
+  });
+
   it('getUserViolationStatus returns defaults when user missing', async () => {
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
     const status = await service.getUserViolationStatus('missing');

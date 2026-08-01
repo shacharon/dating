@@ -1,10 +1,10 @@
 # Story 02 — Profile field moderation gate
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 0 complete → run Agent 1**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** Story 01 (moderation client + violation service)  
-**Handoffs:** [architect](./handoffs/STORY_02_profile_field_gate/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_02_profile_field_gate/agent-0-architect.md) · [dev](./handoffs/STORY_02_profile_field_gate/agent-1-dev.md)
 
 ---
 
@@ -59,13 +59,13 @@ Gate `aboutMe`, `aboutPartner`, and `aboutRelationship` fields through OpenAI mo
 
 ## Acceptance criteria
 
-- [ ] POST/PATCH `/api/v1/me/profile` with flagged text → 400 with category in response
-- [ ] Clean text → saves normally (no behavior change)
-- [ ] 3rd profile violation → `User.contentViolationStatus = 'profile_edit_blocked'`
-- [ ] Blocked user attempts edit → 403 "Profile editing is currently restricted"
-- [ ] All three fields checked (`aboutMe`, `aboutPartner`, `aboutRelationship`)
-- [ ] Integration tests cover flagged/clean/blocked scenarios
-- [ ] Observability: violations logged with field + category (no raw text)
+- [x] POST/PATCH `/api/v1/me/profile` with flagged text → 400 with category in response
+- [x] Clean text → saves normally (no behavior change)
+- [x] 3rd profile violation → `User.contentViolationStatus = 'profile_edit_blocked'`
+- [x] Blocked user attempts edit → 403 "Profile editing is currently restricted"
+- [x] All three fields checked (`aboutMe`, `aboutPartner`, `aboutRelationship`)
+- [x] Integration tests cover flagged/clean/blocked scenarios
+- [x] Observability: violations logged with field + category (no raw text)
 
 ---
 

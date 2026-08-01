@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
   UnprocessableEntityException,
@@ -16,6 +18,9 @@ import type { AnalyticsService } from '../analytics/analytics.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileService } from './me-profile.service';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
+import * as contentModerationTypes from '../content-moderation/content-moderation.types';
+import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import type { ContentViolationService } from '../content-moderation/content-violation.service';
 
 describe('MeProfileService', () => {
   const userId = 'user_svc_1';
@@ -40,6 +45,7 @@ describe('MeProfileService', () => {
 
   let prisma: {
     $transaction: jest.Mock;
+    user: { update: jest.Mock };
     userProfile: {
       findUnique: jest.Mock;
       findFirst: jest.Mock;
@@ -61,12 +67,33 @@ describe('MeProfileService', () => {
   let meMatches: { invalidateMatchListCache: jest.Mock };
   let analysis: jest.Mocked<Pick<MeProfileAnalysisService, 'runForUser'>>;
   let analytics: { track: jest.Mock };
+  let moderation: { checkContent: jest.Mock };
+  let contentViolations: {
+    getUserViolationStatus: jest.Mock;
+    recordViolation: jest.Mock;
+    getViolationCount: jest.Mock;
+  };
+
+  function buildService(overrides?: { prisma?: unknown }) {
+    return new MeProfileService(
+      (overrides?.prisma ?? prisma) as unknown as PrismaService,
+      obs as unknown as StructuredObservabilityService,
+      {} as never,
+      analytics as unknown as AnalyticsService,
+      analysisQueue as never,
+      { enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1') } as never,
+      meMatches as never,
+      moderation as unknown as OpenAIModerationClient,
+      contentViolations as unknown as ContentViolationService,
+    );
+  }
 
   beforeEach(() => {
     prisma = {
       $transaction: jest.fn(
         async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma),
       ),
+      user: { update: jest.fn().mockResolvedValue({}) },
       userProfile: {
         findUnique: jest.fn(),
         findFirst: jest.fn().mockResolvedValue(null),
@@ -91,21 +118,34 @@ describe('MeProfileService', () => {
     };
     analysis = { runForUser: jest.fn().mockResolvedValue(undefined) };
     analytics = { track: jest.fn() };
-    const photoStorage = {} as never;
     analysisQueue = { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') };
     meMatches = { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) };
-    const photoModerationQueue = {
-      enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1'),
+    moderation = {
+      checkContent: jest.fn().mockResolvedValue({
+        flagged: false,
+        categories: [],
+        primaryCategory: null,
+        score: 0,
+        failOpen: false,
+      }),
     };
-    service = new MeProfileService(
-      prisma as unknown as PrismaService,
-      obs as unknown as StructuredObservabilityService,
-      photoStorage,
-      analytics as unknown as AnalyticsService,
-      analysisQueue as never,
-      photoModerationQueue as never,
-      meMatches as never,
-    );
+    contentViolations = {
+      getUserViolationStatus: jest.fn().mockResolvedValue({
+        status: 'ok',
+        mutedUntil: null,
+        violationCount: 0,
+      }),
+      recordViolation: jest.fn().mockResolvedValue(undefined),
+      getViolationCount: jest.fn().mockResolvedValue(0),
+    };
+    jest
+      .spyOn(contentModerationTypes, 'isContentModerationEnabled')
+      .mockReturnValue(true);
+    service = buildService();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('getForUser returns null when row missing', async () => {
@@ -762,15 +802,7 @@ describe('MeProfileService', () => {
         },
         userProfileEvaluation: { findFirst: jest.fn().mockResolvedValue(null) },
       };
-      const svc = new MeProfileService(
-        newModelOnlyPrisma as unknown as PrismaService,
-        obs as unknown as StructuredObservabilityService,
-        {} as never,
-        { track: jest.fn() } as unknown as AnalyticsService,
-        { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') } as never,
-        { enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1') } as never,
-        { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) } as never,
-      );
+      const svc = buildService({ prisma: newModelOnlyPrisma });
 
       await expect(svc.getForUser(userId)).resolves.toBeNull();
     });
@@ -806,15 +838,7 @@ describe('MeProfileService', () => {
         userProfileEvaluation: { findFirst: jest.fn().mockResolvedValue(null) },
         userProfilePhoto: { count: jest.fn().mockResolvedValue(1) },
       };
-      const svc = new MeProfileService(
-        newModelOnlyPrisma as unknown as PrismaService,
-        obs as unknown as StructuredObservabilityService,
-        {} as never,
-        { track: jest.fn() } as unknown as AnalyticsService,
-        { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') } as never,
-        { enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1') } as never,
-        { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) } as never,
-      );
+      const svc = buildService({ prisma: newModelOnlyPrisma });
 
       const result = await svc.submitForUser(userId);
       expect(result.analysisJobId).toBe('job_1');
@@ -1133,6 +1157,138 @@ describe('MeProfileService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('content moderation gate (Sprint 30 Story 2)', () => {
+    it('throws BadRequest when aboutMe is flagged and records violation', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(null);
+      moderation.checkContent.mockResolvedValue({
+        flagged: true,
+        categories: ['sexual'],
+        primaryCategory: 'sexual',
+        score: 0.9,
+        failOpen: false,
+      });
+      contentViolations.getViolationCount.mockResolvedValue(1);
+
+      await expect(
+        service.createForUser(userId, { aboutMe: 'explicit text' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(contentViolations.recordViolation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          surface: 'profile_aboutMe',
+          flaggedText: 'explicit text',
+          category: 'sexual',
+          action: 'blocked',
+        }),
+      );
+      expect(prisma.userProfile.create).not.toHaveBeenCalled();
+    });
+
+    it('sets profile_edit_blocked on 3rd profile violation', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(profileRow(baseRow));
+      moderation.checkContent.mockResolvedValue({
+        flagged: true,
+        categories: ['hate'],
+        primaryCategory: 'hate',
+        score: 0.8,
+        failOpen: false,
+      });
+      contentViolations.getViolationCount.mockResolvedValue(3);
+
+      await expect(
+        service.patchForUser(userId, { aboutPartner: 'bad' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: { contentViolationStatus: 'profile_edit_blocked' },
+      });
+      expect(prisma.userProfile.update).not.toHaveBeenCalled();
+    });
+
+    it('throws Forbidden when user is already profile_edit_blocked', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(profileRow(baseRow));
+      contentViolations.getUserViolationStatus.mockResolvedValue({
+        status: 'profile_edit_blocked',
+        mutedUntil: null,
+        violationCount: 3,
+      });
+
+      await expect(
+        service.patchForUser(userId, { aboutMe: 'anything' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(moderation.checkContent).not.toHaveBeenCalled();
+      expect(prisma.userProfile.update).not.toHaveBeenCalled();
+    });
+
+    it('allows save when moderation fail-opens', async () => {
+      const created = { ...baseRow, aboutMe: 'maybe false positive' };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          ...created,
+          desiredPartnerGenders: created.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(created));
+      prisma.userProfile.create.mockResolvedValue(created);
+      moderation.checkContent.mockResolvedValue({
+        flagged: false,
+        categories: [],
+        primaryCategory: null,
+        score: 0,
+        failOpen: true,
+      });
+
+      await expect(
+        service.createForUser(userId, { aboutMe: 'maybe false positive' }),
+      ).resolves.toMatchObject({ aboutMe: 'maybe false positive' });
+      expect(contentViolations.recordViolation).not.toHaveBeenCalled();
+      expect(prisma.userProfile.create).toHaveBeenCalled();
+    });
+
+    it('skips moderation when feature flag is off', async () => {
+      jest
+        .spyOn(contentModerationTypes, 'isContentModerationEnabled')
+        .mockReturnValue(false);
+      const created = { ...baseRow, aboutMe: 'unchecked' };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          ...created,
+          desiredPartnerGenders: created.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(created));
+      prisma.userProfile.create.mockResolvedValue(created);
+
+      await service.createForUser(userId, { aboutMe: 'unchecked' });
+
+      expect(contentViolations.getUserViolationStatus).not.toHaveBeenCalled();
+      expect(moderation.checkContent).not.toHaveBeenCalled();
+      expect(prisma.userProfile.create).toHaveBeenCalled();
+    });
+
+    it('skips empty/whitespace about fields without calling moderation', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          aboutMe: null,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow({ ...baseRow, aboutMe: null }));
+      prisma.userProfile.update.mockResolvedValue({
+        ...baseRow,
+        aboutMe: null,
+      });
+
+      await service.patchForUser(userId, { aboutMe: '   ' });
+
+      expect(moderation.checkContent).not.toHaveBeenCalled();
     });
   });
 });

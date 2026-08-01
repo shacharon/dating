@@ -45,14 +45,27 @@ export class ContentViolationService {
     );
   }
 
+  /**
+   * Count violations for a user.
+   * - `surface`: exact match.
+   * - `surfacePrefix`: `startsWith` match.
+   * - If both provided, exact `surface` wins (prefix ignored).
+   */
   async getViolationCount(
     userId: string,
-    options?: { surface?: string; since?: Date },
+    options?: { surface?: string; surfacePrefix?: string; since?: Date },
   ): Promise<number> {
+    const surfaceFilter =
+      options?.surface != null
+        ? { surface: options.surface }
+        : options?.surfacePrefix != null
+          ? { surface: { startsWith: options.surfacePrefix } }
+          : {};
+
     return this.prisma.userContentViolation.count({
       where: {
         userId,
-        ...(options?.surface != null ? { surface: options.surface } : {}),
+        ...surfaceFilter,
         ...(options?.since != null
           ? { createdAt: { gte: options.since } }
           : {}),

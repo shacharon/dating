@@ -1,6 +1,8 @@
 import {
   Inject,
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -24,6 +26,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import { extractDealbreakerSignalsFromFreeText } from '../holy-grail-matching/dealbreaker-signals-text.extract';
+import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { ContentViolationService } from '../content-moderation/content-violation.service';
+import {
+  isContentModerationEnabled,
+  type ContentViolationSurface,
+} from '../content-moderation/content-moderation.types';
 import type {
   CreateMeProfileDto,
   MeLatestAnalysisResponseDto,
@@ -371,7 +379,110 @@ export class MeProfileService {
     private readonly analysisQueue: ProfileAnalysisQueueService,
     private readonly photoModerationQueue: PhotoModerationQueueService,
     private readonly meMatches: MeMatchesService,
+    private readonly moderation: OpenAIModerationClient,
+    private readonly contentViolations: ContentViolationService,
   ) {}
+
+  private async assertProfileEditAllowed(userId: string): Promise<void> {
+    const status = await this.contentViolations.getUserViolationStatus(userId);
+    if (status.status === 'profile_edit_blocked') {
+      this.obs.trace(
+        `profile edit blocked userId=${userId}`,
+        ErrorCodes.CONTENT_PROFILE_EDIT_BLOCKED,
+      );
+      const ex = new ForbiddenException({
+        error: 'profile_edit_blocked',
+        message:
+          'Profile editing is currently restricted due to previous content violations',
+      });
+      markHttpExceptionObservabilityLogged(ex);
+      throw ex;
+    }
+  }
+
+  private async moderateProfileTextFields(
+    userId: string,
+    body: Pick<
+      CreateMeProfileDto | PatchMeProfileDto,
+      'aboutMe' | 'aboutPartner' | 'aboutRelationship'
+    >,
+  ): Promise<void> {
+    const fields: Array<{
+      field: 'aboutMe' | 'aboutPartner' | 'aboutRelationship';
+      surface: ContentViolationSurface;
+      value: string | null | undefined;
+    }> = [
+      {
+        field: 'aboutMe',
+        surface: 'profile_aboutMe',
+        value: body.aboutMe,
+      },
+      {
+        field: 'aboutPartner',
+        surface: 'profile_aboutPartner',
+        value: body.aboutPartner,
+      },
+      {
+        field: 'aboutRelationship',
+        surface: 'profile_aboutRelationship',
+        value: body.aboutRelationship,
+      },
+    ];
+
+    for (const { field, surface, value } of fields) {
+      if (value === undefined || value === null) continue;
+      const trimmed = value.trim();
+      if (!trimmed) continue;
+
+      const result = await this.moderation.checkContent(trimmed);
+      if (result.failOpen || !result.flagged) continue;
+
+      const category =
+        result.primaryCategory ?? result.categories[0] ?? 'unknown';
+
+      await this.contentViolations.recordViolation({
+        userId,
+        surface,
+        flaggedText: trimmed,
+        category,
+        score: result.score,
+        action: 'blocked',
+      });
+
+      this.obs.trace(
+        `content moderation flagged userId=${userId} field=${field} category=${category}`,
+        ErrorCodes.CONTENT_MODERATION_FLAGGED,
+      );
+
+      const profileViolations = await this.contentViolations.getViolationCount(
+        userId,
+        { surfacePrefix: 'profile_' },
+      );
+      if (profileViolations >= 3) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { contentViolationStatus: 'profile_edit_blocked' },
+        });
+        this.obs.trace(
+          `user content blocked userId=${userId} reason=profile_edit_blocked profileViolations=${profileViolations}`,
+          ErrorCodes.CONTENT_USER_BLOCKED,
+        );
+      }
+
+      const ex = new BadRequestException({
+        error: 'content_moderation_failed',
+        message: 'Your profile contains inappropriate content',
+        details: {
+          field,
+          category,
+          suggestion:
+            'Please rephrase without explicit or harmful content',
+        },
+      });
+      markHttpExceptionObservabilityLogged(ex);
+      throw ex;
+    }
+  }
 
   private async assertNicknameAvailable(
     nickname: string,
@@ -741,6 +852,11 @@ export class MeProfileService {
       });
     }
 
+    if (isContentModerationEnabled()) {
+      await this.assertProfileEditAllowed(userId);
+      await this.moderateProfileTextFields(userId, body);
+    }
+
     assertOnboardingStepCoherent(null, body);
 
     const createNickname =
@@ -824,6 +940,11 @@ export class MeProfileService {
         message:
           'No profile exists for this account. Use POST /api/v1/me/profile to create one.',
       });
+    }
+
+    if (isContentModerationEnabled()) {
+      await this.assertProfileEditAllowed(userId);
+      await this.moderateProfileTextFields(userId, body);
     }
 
     assertOnboardingStepCoherent(existing, body);
