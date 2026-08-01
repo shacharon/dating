@@ -1,9 +1,10 @@
 # Story 02 — Profile field moderation gate
 
-**Sprint 30 · Status: PLANNED**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 0 complete → run Agent 1**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
-**Dependencies:** Story 01 (moderation client + violation service)
+**Dependencies:** Story 01 (moderation client + violation service)  
+**Handoffs:** [architect](./handoffs/STORY_02_profile_field_gate/agent-0-architect.md)
 
 ---
 
