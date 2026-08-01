@@ -1,9 +1,11 @@
 # Story 03 — Missing indexes
 
-**Sprint 28 · Status: PLANNED**  
+**Sprint 28 · Status: IN REVIEW** (Agent 0 architect lock complete → run Agent 1)  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (can run after 02)
+
+**Handoffs:** [architect](./handoffs/STORY_03_missing_indexes/agent-0-architect.md)
 
 ---
 
