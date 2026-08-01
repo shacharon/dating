@@ -92,25 +92,32 @@ model User {
   contentViolationMutedUntil DateTime?
   contentViolationCount      Int       @default(0)
   contentViolations          UserContentViolation[]
+  contentViolationsAsRecipient UserContentViolation[] @relation("ContentViolationRecipient")
 
   @@index([deletedAt])
   @@index([referredByUserId])
 }
 
 model UserContentViolation {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  surface     String
-  flaggedText String   @db.Text
-  category    String
-  score       Float?
-  action      String
-  createdAt   DateTime @default(now())
+  id               String       @id @default(cuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  surface          String
+  flaggedText      String       @db.Text
+  category         String
+  score            Float?
+  action           String
+  createdAt        DateTime     @default(now())
+  conversationId   String?
+  conversation     MutualMatch? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  recipientUserId  String?
+  recipient        User?        @relation("ContentViolationRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([surface, createdAt(sort: Desc)])
   @@index([userId, surface, createdAt(sort: Desc)])
+  @@index([recipientUserId, createdAt(sort: Desc)])
+  @@index([conversationId, createdAt(sort: Desc)])
 }
 
 model UserProfile {
@@ -280,6 +287,7 @@ model MutualMatch {
   user1LastReadAt   DateTime?
   user2LastReadAt   DateTime?
   messages          Message[]
+  contentViolations UserContentViolation[]
 
   @@unique([userId1, userId2])
   @@index([userId1, status])

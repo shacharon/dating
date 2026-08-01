@@ -26,7 +26,13 @@ export class ContentViolationService {
     category: string;
     score: number;
     action: ContentViolationAction;
+    /** Message surface only — MutualMatch id */
+    conversationId?: string | null;
+    recipientUserId?: string | null;
   }): Promise<void> {
+    const conversationId = args.conversationId ?? null;
+    const recipientUserId = args.recipientUserId ?? null;
+
     await this.prisma.$transaction([
       this.prisma.userContentViolation.create({
         data: {
@@ -36,6 +42,8 @@ export class ContentViolationService {
           category: args.category,
           score: args.score,
           action: args.action,
+          conversationId,
+          recipientUserId,
         },
       }),
       this.prisma.user.update({
@@ -44,8 +52,12 @@ export class ContentViolationService {
       }),
     ]);
 
+    const contextSuffix =
+      conversationId != null || recipientUserId != null
+        ? ` conversationId=${conversationId ?? 'null'} recipientUserId=${recipientUserId ?? 'null'}`
+        : '';
     this.obs.trace(
-      `content violation recorded userId=${args.userId} surface=${args.surface} category=${args.category} action=${args.action} textLength=${args.flaggedText.length}`,
+      `content violation recorded userId=${args.userId} surface=${args.surface} category=${args.category} action=${args.action} textLength=${args.flaggedText.length}${contextSuffix}`,
       ErrorCodes.CONTENT_VIOLATION_RECORDED,
     );
   }

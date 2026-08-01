@@ -187,6 +187,8 @@ export default function AdminContentViolationsPageClient() {
               <tr>
                 <th className="px-3 py-2 font-medium">Time</th>
                 <th className="px-3 py-2 font-medium">User</th>
+                <th className="px-3 py-2 font-medium">To</th>
+                <th className="px-3 py-2 font-medium">Conversation</th>
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium">Surface</th>
                 <th className="px-3 py-2 font-medium">Category</th>
@@ -211,6 +213,32 @@ export default function AdminContentViolationsPageClient() {
                     <div className="font-mono text-[10px] text-zinc-400">
                       {row.userId}
                     </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    {row.recipientUserId ? (
+                      <>
+                        <div>{row.recipientEmail ?? '—'}</div>
+                        <div className="text-zinc-500">
+                          {row.recipientNickname ?? 'no nickname'}
+                        </div>
+                        <div className="font-mono text-[10px] text-zinc-400">
+                          {row.recipientUserId}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[10px]">
+                    {row.conversationId ? (
+                      <span title={row.conversationId}>
+                        {row.conversationId.length > 12
+                          ? `${row.conversationId.slice(0, 8)}…`
+                          : row.conversationId}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">{row.userStatus}</td>
                   <td className="px-3 py-2">{row.surface}</td>

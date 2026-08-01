@@ -41,11 +41,17 @@ describe('AdminContentViolationsService', () => {
         score: 0.9,
         action: 'blocked',
         createdAt: new Date('2026-08-01T10:00:00.000Z'),
+        conversationId: 'mutual_1',
+        recipientUserId: 'user_2',
         user: {
           email: 'a@example.com',
           contentViolationStatus: 'messaging_muted',
           contentViolationMutedUntil: new Date('2026-08-01T12:00:00.000Z'),
           profile: { nickname: 'Alice' },
+        },
+        recipient: {
+          email: 'b@example.com',
+          profile: { nickname: 'Bob' },
         },
       },
     ]);
@@ -78,6 +84,43 @@ describe('AdminContentViolationsService', () => {
     expect(res.violations[0].userMutedUntil).toBe(
       '2026-08-01T12:00:00.000Z',
     );
+    expect(res.violations[0].conversationId).toBe('mutual_1');
+    expect(res.violations[0].recipientUserId).toBe('user_2');
+    expect(res.violations[0].recipientEmail).toBe('b@example.com');
+    expect(res.violations[0].recipientNickname).toBe('Bob');
+  });
+
+  it('lists profile violations with null recipient context', async () => {
+    prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'vio_p',
+        userId: 'user_1',
+        surface: 'profile_aboutMe',
+        category: 'hate',
+        flaggedText: 'bad',
+        score: 0.7,
+        action: 'blocked',
+        createdAt: new Date('2026-08-01T10:00:00.000Z'),
+        conversationId: null,
+        recipientUserId: null,
+        user: {
+          email: 'a@example.com',
+          contentViolationStatus: 'ok',
+          contentViolationMutedUntil: null,
+          profile: { nickname: 'Alice' },
+        },
+        recipient: null,
+      },
+    ]);
+    prisma.userContentViolation.count = jest.fn().mockResolvedValue(1);
+
+    const res = await service.listViolations({});
+    expect(res.violations[0]).toMatchObject({
+      conversationId: null,
+      recipientUserId: null,
+      recipientEmail: null,
+      recipientNickname: null,
+    });
   });
 
   it('getStats delegates to ContentViolationService', async () => {

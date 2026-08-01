@@ -255,6 +255,8 @@ describe('MeConversationMessagesService', () => {
         flaggedText: 'bad stuff',
         category: 'harassment',
         action: 'blocked',
+        conversationId,
+        recipientUserId: otherUserId,
       }),
     );
     expect(contentViolations.enforceViolationThreshold).toHaveBeenCalledWith(

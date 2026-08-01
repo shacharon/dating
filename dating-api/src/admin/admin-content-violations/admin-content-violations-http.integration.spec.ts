@@ -196,11 +196,17 @@ describe('admin content violations HTTP (integration)', () => {
         score: 0.8,
         action: 'blocked',
         createdAt: new Date('2026-08-01T10:00:00.000Z'),
+        conversationId: 'mutual_abc',
+        recipientUserId: 'user_recipient',
         user: {
           email: 'muted@example.com',
           contentViolationStatus: 'messaging_muted',
           contentViolationMutedUntil: null,
           profile: { nickname: 'MutedUser' },
+        },
+        recipient: {
+          email: 'recipient@example.com',
+          profile: { nickname: 'Recipient' },
         },
       },
     ]);
@@ -217,6 +223,10 @@ describe('admin content violations HTTP (integration)', () => {
       userEmail: 'muted@example.com',
       userStatus: 'messaging_muted',
       flaggedTextPreview: 'bad words here',
+      conversationId: 'mutual_abc',
+      recipientUserId: 'user_recipient',
+      recipientEmail: 'recipient@example.com',
+      recipientNickname: 'Recipient',
     });
     expect(res.body.violations[0]).not.toHaveProperty('flaggedText');
   });

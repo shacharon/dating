@@ -54,6 +54,12 @@ export class AdminContentViolationsService {
               profile: { select: { nickname: true } },
             },
           },
+          recipient: {
+            select: {
+              email: true,
+              profile: { select: { nickname: true } },
+            },
+          },
         },
       }),
       this.prisma.userContentViolation.count({ where }),
@@ -74,6 +80,10 @@ export class AdminContentViolationsService {
       score: v.score,
       action: v.action,
       createdAt: v.createdAt.toISOString(),
+      conversationId: v.conversationId ?? null,
+      recipientUserId: v.recipientUserId ?? null,
+      recipientEmail: v.recipient?.email ?? null,
+      recipientNickname: v.recipient?.profile?.nickname ?? null,
     }));
 
     return { violations, total, limit, offset };

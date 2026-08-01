@@ -41,6 +41,10 @@ export type AdminContentViolationListItemDto = {
   score: number | null;
   action: string;
   createdAt: string;
+  conversationId: string | null;
+  recipientUserId: string | null;
+  recipientEmail: string | null;
+  recipientNickname: string | null;
 };
 
 export type ListAdminContentViolationsResponseDto = {

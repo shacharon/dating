@@ -77,6 +77,7 @@ export class MeConversationMessagesService {
   private async moderateMessageText(
     userId: string,
     text: string,
+    context: { conversationId: string; recipientUserId: string },
   ): Promise<void> {
     const result = await this.moderation.checkContent(text);
     if (result.failOpen || !result.flagged) {
@@ -93,10 +94,12 @@ export class MeConversationMessagesService {
       category,
       score: result.score,
       action: 'blocked',
+      conversationId: context.conversationId,
+      recipientUserId: context.recipientUserId,
     });
 
     this.obs.trace(
-      `content moderation flagged userId=${userId} surface=message category=${category}`,
+      `content moderation flagged userId=${userId} surface=message category=${category} conversationId=${context.conversationId} recipientUserId=${context.recipientUserId}`,
       ErrorCodes.CONTENT_MODERATION_FLAGGED,
     );
 
@@ -283,7 +286,12 @@ export class MeConversationMessagesService {
     await this.messageRateLimit.consumeSendSlot(sessionUserId);
 
     if (isContentModerationEnabled()) {
-      await this.moderateMessageText(sessionUserId, trimmed);
+      const recipientUserId =
+        sessionUserId === match.userId1 ? match.userId2 : match.userId1;
+      await this.moderateMessageText(sessionUserId, trimmed, {
+        conversationId,
+        recipientUserId,
+      });
     }
 
     const row = await this.prisma.message.create({

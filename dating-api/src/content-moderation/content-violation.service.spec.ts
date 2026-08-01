@@ -47,6 +47,8 @@ describe('ContentViolationService', () => {
         surface: 'message',
         category: 'sexual',
         action: 'blocked',
+        conversationId: null,
+        recipientUserId: null,
       }),
     });
     expect(prisma.user.update).toHaveBeenCalledWith({
@@ -55,6 +57,34 @@ describe('ContentViolationService', () => {
     });
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('content violation recorded'),
+      ErrorCodes.CONTENT_VIOLATION_RECORDED,
+    );
+  });
+
+  it('recordViolation persists conversationId and recipientUserId when provided', async () => {
+    await service.recordViolation({
+      userId: 'user-1',
+      surface: 'message',
+      flaggedText: 'bad text',
+      category: 'harassment',
+      score: 0.95,
+      action: 'blocked',
+      conversationId: 'mutual_1',
+      recipientUserId: 'user-2',
+    });
+
+    expect(prisma.userContentViolation.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        conversationId: 'mutual_1',
+        recipientUserId: 'user-2',
+      }),
+    });
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('conversationId=mutual_1'),
+      ErrorCodes.CONTENT_VIOLATION_RECORDED,
+    );
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('recipientUserId=user-2'),
       ErrorCodes.CONTENT_VIOLATION_RECORDED,
     );
   });
