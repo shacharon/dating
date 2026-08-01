@@ -1,0 +1,152 @@
+import { NotFoundException } from '@nestjs/common';
+import { ErrorCodes } from '../../logging/error-codes';
+import type { StructuredObservabilityService } from '../../logging/structured-observability.service';
+import type { ContentViolationService } from '../../content-moderation/content-violation.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+import { AdminContentViolationsService } from './admin-content-violations.service';
+
+describe('AdminContentViolationsService', () => {
+  const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
+  const violations = {
+    getViolationStats: jest.fn(),
+  } as unknown as ContentViolationService;
+
+  const prisma = {
+    userContentViolation: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+  } as unknown as PrismaService;
+
+  let service: AdminContentViolationsService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new AdminContentViolationsService(prisma, violations, obs);
+  });
+
+  it('lists violations with filters and truncates preview', async () => {
+    const longText = 'x'.repeat(150);
+    prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'vio_1',
+        userId: 'user_1',
+        surface: 'message',
+        category: 'sexual',
+        flaggedText: longText,
+        score: 0.9,
+        action: 'blocked',
+        createdAt: new Date('2026-08-01T10:00:00.000Z'),
+        user: {
+          email: 'a@example.com',
+          contentViolationStatus: 'messaging_muted',
+          contentViolationMutedUntil: new Date('2026-08-01T12:00:00.000Z'),
+          profile: { nickname: 'Alice' },
+        },
+      },
+    ]);
+    prisma.userContentViolation.count = jest.fn().mockResolvedValue(1);
+
+    const res = await service.listViolations({
+      surface: 'message',
+      category: 'sexual',
+      userId: 'user_1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(prisma.userContentViolation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          surface: 'message',
+          category: 'sexual',
+          userId: 'user_1',
+        },
+        take: 10,
+        skip: 0,
+      }),
+    );
+    expect(res.total).toBe(1);
+    expect(res.violations[0].flaggedTextPreview).toHaveLength(100);
+    expect(res.violations[0]).not.toHaveProperty('flaggedText');
+    expect(res.violations[0].userStatus).toBe('messaging_muted');
+    expect(res.violations[0].userNickname).toBe('Alice');
+    expect(res.violations[0].userMutedUntil).toBe(
+      '2026-08-01T12:00:00.000Z',
+    );
+  });
+
+  it('getStats delegates to ContentViolationService', async () => {
+    const stats = {
+      totalViolations: 3,
+      violationsByCategory: { sexual: 3 },
+      violationsBySurface: { message: 3 },
+      blockedProfileUsers: 0,
+      mutedMessageUsers: 1,
+      mutedMessageUsersTemporary: 1,
+      mutedMessageUsersIndefinite: 0,
+    };
+    (violations.getViolationStats as jest.Mock).mockResolvedValue(stats);
+
+    await expect(service.getStats()).resolves.toEqual(stats);
+    expect(violations.getViolationStats).toHaveBeenCalled();
+  });
+
+  it('unblockUser clears status and logs', async () => {
+    prisma.user.findUnique = jest.fn().mockResolvedValue({
+      contentViolationStatus: 'messaging_muted',
+    });
+    prisma.user.update = jest.fn().mockResolvedValue({});
+
+    const res = await service.unblockUser(
+      'admin_1',
+      'user_1',
+      'False positive',
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_1' },
+      data: {
+        contentViolationStatus: 'ok',
+        contentViolationMutedUntil: null,
+      },
+    });
+    expect(res).toMatchObject({
+      success: true,
+      userId: 'user_1',
+      previousStatus: 'messaging_muted',
+    });
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('admin content unblock userId=user_1'),
+      ErrorCodes.ADMIN_CONTENT_UNBLOCK,
+    );
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('reason=False positive'),
+      ErrorCodes.ADMIN_CONTENT_UNBLOCK,
+    );
+  });
+
+  it('unblockUser is idempotent when already ok', async () => {
+    prisma.user.findUnique = jest.fn().mockResolvedValue({
+      contentViolationStatus: 'ok',
+    });
+    prisma.user.update = jest.fn().mockResolvedValue({});
+
+    const res = await service.unblockUser('admin_1', 'user_1', 'cleanup');
+    expect(res.previousStatus).toBe('ok');
+    expect(prisma.user.update).toHaveBeenCalled();
+  });
+
+  it('unblockUser throws NotFound when user missing', async () => {
+    prisma.user.findUnique = jest.fn().mockResolvedValue(null);
+
+    await expect(
+      service.unblockUser('admin_1', 'missing', 'note'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+});

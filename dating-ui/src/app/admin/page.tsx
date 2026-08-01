@@ -32,6 +32,14 @@ export default function AdminIndexPage() {
             Match quality
           </Link>
         </li>
+        <li>
+          <Link
+            href="/admin/content-violations"
+            className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+          >
+            Content violations
+          </Link>
+        </li>
       </ul>
     </main>
   );
