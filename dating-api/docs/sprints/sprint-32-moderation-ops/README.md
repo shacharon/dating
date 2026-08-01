@@ -27,9 +27,10 @@ Make moderation **operable by humans**:
 
 | Have today | Missing |
 |------------|---------|
-| Violations list + preview + Unblock + **recipient/conversation** on message blocks | No first-class **blocked users** queue (Story 02) |
-| Stats cards for muted/blocked counts | No first-class **blocked users** queue |
-| Binary OpenAI `flagged` | No soft / dating-specific middle step (`wanna fuck` often passes) |
+| Violations list + preview + Unblock + **recipient/conversation** on message blocks | Soft / dating middle tier (Story 03) |
+| **Blocked/muted users** review queue with full phrase + recipient | Soft / dating middle tier |
+| Stats cards for muted/blocked counts | Soft / dating middle tier |
+| Binary OpenAI `flagged` | Soft / dating-specific middle step (`wanna fuck` often passes) |
 | `clearExpiredMutes()` API | No cron / scheduled clear |
 
 ---
