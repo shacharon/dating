@@ -43,6 +43,6 @@ Stories are mostly independent after 01; prefer sequential to keep review simple
 
 | Next | Focus |
 |------|--------|
-| **29** | Traffic / FE: WS default, conversations cursor + unread-total, TanStack Query start |
+| **29** | [Frontend realtime + cache](../sprint-29-frontend-realtime-cache/README.md) — WS default, conversations cursor, TanStack, images, lazy admin |
 | **30** | Match materialization (async precomputed ranks) |
 | **Infra** | Sprint 20 live apply when deploy hold lifts |
