@@ -1,10 +1,10 @@
 # Story 05 — Admin violations surface
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
+**Sprint 30 · Status: ✅ Done**  
 **Priority:** P1 (nice-to-have for launch; P0 for post-launch ops)  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Story 04 (violation service stats + helpers)  
-**Handoffs:** [architect](./handoffs/STORY_05_admin_violations/agent-0-architect.md) · [dev](./handoffs/STORY_05_admin_violations/agent-1-dev.md) · [CR](./handoffs/STORY_05_admin_violations/agent-2-cr.md)
+**Handoffs:** [architect](./handoffs/STORY_05_admin_violations/agent-0-architect.md) · [dev](./handoffs/STORY_05_admin_violations/agent-1-dev.md) · [CR](./handoffs/STORY_05_admin_violations/agent-2-cr.md) · [PM](./handoffs/STORY_05_admin_violations/agent-3-pm.md)
 
 ---
 
@@ -50,13 +50,13 @@ Add admin UI to view content violations, blocked/muted users, and manually unblo
 
 ## Acceptance criteria
 
-- [ ] Admin can view all violations at `/admin/content-violations`
-- [ ] Filters work (surface, category, userId)
-- [ ] Stats dashboard shows correct counts
-- [ ] Admin can unblock user (clears status + mute timestamp)
-- [ ] Unblock action logged with admin user ID + reason
-- [ ] UI protected by `AdminAuthGuard`
-- [ ] Integration tests cover list + unblock flows
+- [x] Admin can view all violations at `/admin/content-violations`
+- [x] Filters work (surface, category, userId)
+- [x] Stats dashboard shows correct counts
+- [x] Admin can unblock user (clears status + mute timestamp)
+- [x] Unblock action logged with admin user ID + reason
+- [x] UI protected by `AdminGuard` (with `AuthGuard`; `ADMIN_USER_IDS`)
+- [x] Integration tests cover list + unblock flows
 
 ---
 
