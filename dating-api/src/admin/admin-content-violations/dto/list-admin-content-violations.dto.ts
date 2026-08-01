@@ -26,6 +26,11 @@ export class ListAdminContentViolationsQueryDto {
   @IsInt()
   @Min(0)
   offset?: number = 0;
+
+  /** Truthy when `1` or `true` (query string; no ValidationPipe on GET). */
+  @IsOptional()
+  @IsString()
+  includeFullText?: string;
 }
 
 export type AdminContentViolationListItemDto = {
@@ -38,6 +43,8 @@ export type AdminContentViolationListItemDto = {
   surface: string;
   category: string;
   flaggedTextPreview: string;
+  /** Present only when includeFullText=true */
+  flaggedText?: string;
   score: number | null;
   action: string;
   createdAt: string;
@@ -53,3 +60,9 @@ export type ListAdminContentViolationsResponseDto = {
   limit: number;
   offset: number;
 };
+
+export function isIncludeFullTextQuery(raw: string | undefined): boolean {
+  if (raw == null || raw === '') return false;
+  const v = raw.trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes';
+}

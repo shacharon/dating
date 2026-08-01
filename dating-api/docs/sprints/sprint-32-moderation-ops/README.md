@@ -1,6 +1,6 @@
 # Sprint 32 — Content Moderation Ops
 
-**Status:** 🟡 **IN PROGRESS** — Story 01 Done; Story 02 Agent 0 complete → run Agent 1  
+**Status:** 🟡 **IN PROGRESS** — Story 01 Done; Story 02 Agent 1 complete → run Agent 2  
 **Priority:** P1 (post-launch ops; improves Sprint 30 admin + policy gaps)  
 **Depends on:** Sprint 30 Done (gates + `UserContentViolation` + `/admin/content-violations`)  
 **Does not block:** Sprint 31 match materialization (run in parallel / after as capacity allows)
@@ -39,7 +39,7 @@ Make moderation **operable by humans**:
 | # | Story | Priority | Est | Status |
 |---|-------|----------|-----|--------|
 | 01 | [Message violation context](./STORY_01_message_violation_context.md) | P0 | 0.5d | ✅ Done |
-| 02 | [Admin blocked-users + full review](./STORY_02_admin_blocked_users.md) | P0 | 1d | Agent 0 done → run Agent 1 |
+| 02 | [Admin blocked-users + full review](./STORY_02_admin_blocked_users.md) | P0 | 1d | Agent 1 done → run Agent 2 |
 | 03 | [Soft / dating policy layer](./STORY_03_soft_policy_layer.md) | P1 | 1d | PLANNED |
 | 04 | [Mute expiry cron + ops polish](./STORY_04_mute_cron_ops.md) | P1 | 0.5d | PLANNED |
 

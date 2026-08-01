@@ -1,10 +1,10 @@
 # Story 02 — Admin blocked-users + full review
 
-**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 0 architect complete → run Agent 1**  
+**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** Story 01 (recipient fields available)  
-**Handoffs:** [architect](./handoffs/STORY_02_admin_blocked_users/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_02_admin_blocked_users/agent-0-architect.md) · [dev](./handoffs/STORY_02_admin_blocked_users/agent-1-dev.md)
 ---
 
 ## Objective

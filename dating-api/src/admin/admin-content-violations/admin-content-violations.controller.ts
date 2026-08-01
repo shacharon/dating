@@ -16,13 +16,25 @@ import { CurrentUser } from '../../auth/current-user.decorator';
 import { MeProfileValidationPipe } from '../../me-profile/me-profile-validation.pipe';
 import { AdminGuard } from '../admin.guard';
 import { AdminContentViolationsService } from './admin-content-violations.service';
-import { ListAdminContentViolationsQueryDto } from './dto/list-admin-content-violations.dto';
+import { ListAdminBlockedUsersQueryDto } from './dto/list-admin-blocked-users.dto';
+import {
+  isIncludeFullTextQuery,
+  ListAdminContentViolationsQueryDto,
+} from './dto/list-admin-content-violations.dto';
 import { UnblockContentViolationDto } from './dto/unblock-content-violation.dto';
 
 @Controller('api/v1/admin')
 @UseGuards(AuthGuard, AdminGuard)
 export class AdminContentViolationsController {
   constructor(private readonly service: AdminContentViolationsService) {}
+
+  @Get('content-violations/blocked-users')
+  listBlockedUsers(@Query() query: ListAdminBlockedUsersQueryDto) {
+    return this.service.listBlockedUsers({
+      limit: query.limit ?? 50,
+      offset: query.offset ?? 0,
+    });
+  }
 
   @Get('content-violations')
   list(@Query() query: ListAdminContentViolationsQueryDto) {
@@ -32,6 +44,7 @@ export class AdminContentViolationsController {
       userId: query.userId,
       limit: query.limit ?? 50,
       offset: query.offset ?? 0,
+      includeFullText: isIncludeFullTextQuery(query.includeFullText),
     });
   }
 

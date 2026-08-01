@@ -15,6 +15,7 @@ export type AdminContentViolationListItem = {
   surface: string;
   category: string;
   flaggedTextPreview: string;
+  flaggedText?: string;
   score: number | null;
   action: string;
   createdAt: string;
@@ -26,6 +27,38 @@ export type AdminContentViolationListItem = {
 
 export type ListAdminContentViolationsResponse = {
   violations: AdminContentViolationListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type AdminBlockedUserLatestViolation = {
+  id: string;
+  surface: string;
+  category: string;
+  flaggedTextPreview: string;
+  flaggedText: string;
+  score: number | null;
+  action: string;
+  createdAt: string;
+  conversationId: string | null;
+  recipientUserId: string | null;
+  recipientEmail: string | null;
+  recipientNickname: string | null;
+};
+
+export type AdminBlockedUserItem = {
+  userId: string;
+  userEmail: string;
+  userNickname: string | null;
+  userStatus: string;
+  userMutedUntil: string | null;
+  violationCount: number;
+  latestViolation: AdminBlockedUserLatestViolation | null;
+};
+
+export type ListAdminBlockedUsersResponse = {
+  users: AdminBlockedUserItem[];
   total: number;
   limit: number;
   offset: number;
@@ -82,6 +115,31 @@ export async function listAdminContentViolations(
     throw new Error(`GET admin content-violations failed: ${res.status}`);
   }
   return (await res.json()) as ListAdminContentViolationsResponse;
+}
+
+export async function listAdminBlockedUsers(filters: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ListAdminBlockedUsersResponse> {
+  const base = getApiBase();
+  const params = new URLSearchParams();
+  if (filters.limit != null) params.set('limit', String(filters.limit));
+  if (filters.offset != null) params.set('offset', String(filters.offset));
+  const qs = params.toString();
+  const res = await fetch(
+    `${base}/api/v1/admin/content-violations/blocked-users${qs ? `?${qs}` : ''}`,
+    {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    },
+  );
+  if (res.status === 403) {
+    throw new Error('admin_forbidden');
+  }
+  if (!res.ok) {
+    throw new Error(`GET admin blocked-users failed: ${res.status}`);
+  }
+  return (await res.json()) as ListAdminBlockedUsersResponse;
 }
 
 export async function getAdminContentViolationStats(): Promise<AdminContentViolationStats> {

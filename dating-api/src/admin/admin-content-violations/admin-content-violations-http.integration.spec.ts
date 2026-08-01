@@ -231,6 +231,111 @@ describe('admin content violations HTTP (integration)', () => {
     expect(res.body.violations[0]).not.toHaveProperty('flaggedText');
   });
 
+  it('returns 403 for non-admin on blocked-users', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/content-violations/blocked-users')
+      .set('Cookie', cookieHeader(NON_ADMIN_USER_ID))
+      .expect(403);
+  });
+
+  it('lists blocked users with full latest flaggedText', async () => {
+    prismaMock.user.findMany.mockResolvedValue([
+      {
+        id: 'user_muted',
+        email: 'muted@example.com',
+        contentViolationStatus: 'messaging_muted',
+        contentViolationMutedUntil: null,
+        contentViolationCount: 5,
+        profile: { nickname: 'MutedUser' },
+        contentViolations: [
+          {
+            id: 'vio_1',
+            surface: 'message',
+            category: 'hate',
+            flaggedText: 'full blocked phrase',
+            score: 0.9,
+            action: 'blocked',
+            createdAt: new Date('2026-08-01T10:00:00.000Z'),
+            conversationId: 'mutual_abc',
+            recipientUserId: 'user_recipient',
+            recipient: {
+              email: 'recipient@example.com',
+              profile: { nickname: 'Recipient' },
+            },
+          },
+        ],
+      },
+    ]);
+    prismaMock.user.count.mockResolvedValue(1);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/admin/content-violations/blocked-users')
+      .set('Cookie', cookieHeader(ADMIN_USER_ID))
+      .expect(200);
+
+    expect(res.body.total).toBe(1);
+    expect(res.body.users[0]).toMatchObject({
+      userId: 'user_muted',
+      userStatus: 'messaging_muted',
+      latestViolation: expect.objectContaining({
+        flaggedText: 'full blocked phrase',
+        recipientEmail: 'recipient@example.com',
+      }),
+    });
+  });
+
+  it('includes flaggedText on violations list when includeFullText=1', async () => {
+    prismaMock.userContentViolation.findMany.mockResolvedValue([
+      {
+        id: 'vio_1',
+        userId: 'user_muted',
+        surface: 'message',
+        category: 'hate',
+        flaggedText: 'full text for review',
+        score: 0.8,
+        action: 'blocked',
+        createdAt: new Date('2026-08-01T10:00:00.000Z'),
+        conversationId: null,
+        recipientUserId: null,
+        user: {
+          email: 'muted@example.com',
+          contentViolationStatus: 'ok',
+          contentViolationMutedUntil: null,
+          profile: null,
+        },
+        recipient: null,
+      },
+    ]);
+    prismaMock.userContentViolation.count.mockResolvedValue(1);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/admin/content-violations?includeFullText=1')
+      .set('Cookie', cookieHeader(ADMIN_USER_ID))
+      .expect(200);
+
+    expect(res.body.violations[0].flaggedText).toBe('full text for review');
+  });
+
+  it('returns empty blocked-users after unblock mock clears status', async () => {
+    prismaMock.user.update.mockResolvedValue({});
+    prismaMock.user.findMany.mockResolvedValue([]);
+    prismaMock.user.count.mockResolvedValue(0);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/content-violations/unblock/user_muted')
+      .set('Cookie', cookieHeader(ADMIN_USER_ID))
+      .send({ reason: 'cleared' })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/admin/content-violations/blocked-users')
+      .set('Cookie', cookieHeader(ADMIN_USER_ID))
+      .expect(200);
+
+    expect(res.body.users).toEqual([]);
+    expect(res.body.total).toBe(0);
+  });
+
   it('returns stats for admin', async () => {
     contentViolationsMock.getViolationStats.mockResolvedValue({
       totalViolations: 10,

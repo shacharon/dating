@@ -18,6 +18,8 @@ describe('AdminContentViolationsService', () => {
     },
     user: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
       update: jest.fn(),
     },
   } as unknown as PrismaService;
@@ -121,6 +123,109 @@ describe('AdminContentViolationsService', () => {
       recipientEmail: null,
       recipientNickname: null,
     });
+  });
+
+  it('includes flaggedText on list when includeFullText is true', async () => {
+    prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'vio_1',
+        userId: 'user_1',
+        surface: 'message',
+        category: 'hate',
+        flaggedText: 'full phrase here',
+        score: 0.9,
+        action: 'blocked',
+        createdAt: new Date('2026-08-01T10:00:00.000Z'),
+        conversationId: null,
+        recipientUserId: null,
+        user: {
+          email: 'a@example.com',
+          contentViolationStatus: 'ok',
+          contentViolationMutedUntil: null,
+          profile: null,
+        },
+        recipient: null,
+      },
+    ]);
+    prisma.userContentViolation.count = jest.fn().mockResolvedValue(1);
+
+    const res = await service.listViolations({ includeFullText: true });
+    expect(res.violations[0].flaggedText).toBe('full phrase here');
+    expect(res.violations[0].flaggedTextPreview).toBe('full phrase here');
+  });
+
+  it('listBlockedUsers returns muted users with full latest phrase', async () => {
+    prisma.user.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'user_1',
+        email: 'a@example.com',
+        contentViolationStatus: 'messaging_muted',
+        contentViolationMutedUntil: new Date('2026-08-01T12:00:00.000Z'),
+        contentViolationCount: 4,
+        profile: { nickname: 'Alice' },
+        contentViolations: [
+          {
+            id: 'vio_1',
+            surface: 'message',
+            category: 'harassment',
+            flaggedText: 'I will hurt you badly',
+            score: 0.99,
+            action: 'blocked',
+            createdAt: new Date('2026-08-01T11:00:00.000Z'),
+            conversationId: 'mutual_1',
+            recipientUserId: 'user_2',
+            recipient: {
+              email: 'b@example.com',
+              profile: { nickname: 'Bob' },
+            },
+          },
+        ],
+      },
+    ]);
+    prisma.user.count = jest.fn().mockResolvedValue(1);
+
+    const res = await service.listBlockedUsers({ limit: 50, offset: 0 });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          contentViolationStatus: {
+            in: ['profile_edit_blocked', 'messaging_muted'],
+          },
+        },
+      }),
+    );
+    expect(res.total).toBe(1);
+    expect(res.users[0]).toMatchObject({
+      userId: 'user_1',
+      userStatus: 'messaging_muted',
+      violationCount: 4,
+      latestViolation: expect.objectContaining({
+        flaggedText: 'I will hurt you badly',
+        flaggedTextPreview: 'I will hurt you badly',
+        recipientEmail: 'b@example.com',
+        recipientNickname: 'Bob',
+        conversationId: 'mutual_1',
+      }),
+    });
+  });
+
+  it('listBlockedUsers allows null latestViolation', async () => {
+    prisma.user.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'user_1',
+        email: 'a@example.com',
+        contentViolationStatus: 'profile_edit_blocked',
+        contentViolationMutedUntil: null,
+        contentViolationCount: 3,
+        profile: null,
+        contentViolations: [],
+      },
+    ]);
+    prisma.user.count = jest.fn().mockResolvedValue(1);
+
+    const res = await service.listBlockedUsers({});
+    expect(res.users[0].latestViolation).toBeNull();
   });
 
   it('getStats delegates to ContentViolationService', async () => {

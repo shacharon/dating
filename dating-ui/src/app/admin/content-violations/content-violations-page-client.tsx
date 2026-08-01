@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
   getAdminContentViolationStats,
+  listAdminBlockedUsers,
   listAdminContentViolations,
   unblockAdminContentUser,
+  type AdminBlockedUserItem,
   type AdminContentViolationListItem,
   type AdminContentViolationStats,
 } from '@/lib/admin-content-violations-api';
@@ -22,7 +24,13 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
+function truncateId(id: string): string {
+  return id.length > 12 ? `${id.slice(0, 8)}…` : id;
+}
+
 export default function AdminContentViolationsPageClient() {
+  const [blockedUsers, setBlockedUsers] = useState<AdminBlockedUserItem[]>([]);
+  const [blockedTotal, setBlockedTotal] = useState(0);
   const [rows, setRows] = useState<AdminContentViolationListItem[]>([]);
   const [stats, setStats] = useState<AdminContentViolationStats | null>(null);
   const [total, setTotal] = useState(0);
@@ -37,7 +45,8 @@ export default function AdminContentViolationsPageClient() {
     setLoading(true);
     setError(null);
     try {
-      const [list, nextStats] = await Promise.all([
+      const [blocked, list, nextStats] = await Promise.all([
+        listAdminBlockedUsers({ limit: 50, offset: 0 }),
         listAdminContentViolations({
           surface: surface || undefined,
           category: category || undefined,
@@ -47,6 +56,8 @@ export default function AdminContentViolationsPageClient() {
         }),
         getAdminContentViolationStats(),
       ]);
+      setBlockedUsers(blocked.users);
+      setBlockedTotal(blocked.total);
       setRows(list.violations);
       setTotal(list.total);
       setStats(nextStats);
@@ -120,152 +131,257 @@ export default function AdminContentViolationsPageClient() {
         </div>
       ) : null}
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-          Surface
-          <select
-            value={surface}
-            onChange={(e) => setSurface(e.target.value)}
-            className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
-          >
-            <option value="">All</option>
-            <option value="message">message</option>
-            <option value="profile_aboutMe">profile_aboutMe</option>
-            <option value="profile_aboutPartner">profile_aboutPartner</option>
-            <option value="profile_aboutRelationship">
-              profile_aboutRelationship
-            </option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-          Category
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
-          >
-            <option value="">All</option>
-            <option value="sexual">sexual</option>
-            <option value="hate">hate</option>
-            <option value="harassment">harassment</option>
-            <option value="violence">violence</option>
-            <option value="self-harm">self-harm</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-          User ID
-          <input
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="Exact user id"
-            className="min-w-[14rem] rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
-          />
-        </label>
-      </div>
-
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading violations…</p>
+        <p className="text-sm text-zinc-500">Loading…</p>
       ) : null}
       {error ? (
         <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">
           {error}
         </p>
       ) : null}
-      {!loading && !error && rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">No violations match these filters.</p>
-      ) : null}
-      {!loading && rows.length > 0 ? (
-        <p className="mb-2 text-xs text-zinc-500">
-          Showing {rows.length} of {total}
-        </p>
-      ) : null}
 
-      {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-700">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
-              <tr>
-                <th className="px-3 py-2 font-medium">Time</th>
-                <th className="px-3 py-2 font-medium">User</th>
-                <th className="px-3 py-2 font-medium">To</th>
-                <th className="px-3 py-2 font-medium">Conversation</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Surface</th>
-                <th className="px-3 py-2 font-medium">Category</th>
-                <th className="px-3 py-2 font-medium">Preview</th>
-                <th className="px-3 py-2 font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-t border-zinc-200 dark:border-zinc-700"
-                >
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {new Date(row.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div>{row.userEmail}</div>
-                    <div className="text-zinc-500">
-                      {row.userNickname ?? 'no nickname'}
-                    </div>
-                    <div className="font-mono text-[10px] text-zinc-400">
-                      {row.userId}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    {row.recipientUserId ? (
-                      <>
-                        <div>{row.recipientEmail ?? '—'}</div>
+      <section className="mb-10">
+        <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          Blocked / muted users
+        </h2>
+        <p className="mb-3 text-xs text-zinc-500">
+          Currently restricted accounts ({blockedUsers.length}
+          {blockedTotal > blockedUsers.length ? ` of ${blockedTotal}` : ''}).
+        </p>
+        {!loading && blockedUsers.length === 0 ? (
+          <p className="text-sm text-zinc-500">No blocked or muted users.</p>
+        ) : null}
+        {blockedUsers.length > 0 ? (
+          <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-700">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+                <tr>
+                  <th className="px-3 py-2 font-medium">User</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Muted until</th>
+                  <th className="px-3 py-2 font-medium">Last phrase</th>
+                  <th className="px-3 py-2 font-medium">To</th>
+                  <th className="px-3 py-2 font-medium">Conversation</th>
+                  <th className="px-3 py-2 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {blockedUsers.map((row) => {
+                  const latest = row.latestViolation;
+                  return (
+                    <tr
+                      key={row.userId}
+                      className="border-t border-zinc-200 dark:border-zinc-700"
+                    >
+                      <td className="px-3 py-2">
+                        <div>{row.userEmail}</div>
                         <div className="text-zinc-500">
-                          {row.recipientNickname ?? 'no nickname'}
+                          {row.userNickname ?? 'no nickname'}
                         </div>
                         <div className="font-mono text-[10px] text-zinc-400">
-                          {row.recipientUserId}
+                          {row.userId}
                         </div>
-                      </>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-[10px]">
-                    {row.conversationId ? (
-                      <span title={row.conversationId}>
-                        {row.conversationId.length > 12
-                          ? `${row.conversationId.slice(0, 8)}…`
-                          : row.conversationId}
-                      </span>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">{row.userStatus}</td>
-                  <td className="px-3 py-2">{row.surface}</td>
-                  <td className="px-3 py-2">{row.category}</td>
-                  <td className="max-w-xs truncate px-3 py-2">
-                    {row.flaggedTextPreview}
-                  </td>
-                  <td className="px-3 py-2">
-                    {row.userStatus !== 'ok' ? (
-                      <button
-                        type="button"
-                        disabled={busyUserId === row.userId}
-                        onClick={() => void handleUnblock(row.userId)}
-                        className="text-emerald-700 hover:underline disabled:opacity-50 dark:text-emerald-400"
-                      >
-                        {busyUserId === row.userId ? 'Unblocking…' : 'Unblock'}
-                      </button>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        <div className="text-zinc-400">
+                          violations: {row.violationCount}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {row.userStatus}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {row.userMutedUntil
+                          ? new Date(row.userMutedUntil).toLocaleString()
+                          : row.userStatus === 'messaging_muted'
+                            ? 'indefinite'
+                            : '—'}
+                      </td>
+                      <td className="max-w-sm px-3 py-2 whitespace-pre-wrap break-words">
+                        {latest?.flaggedText ?? '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        {latest?.recipientUserId ? (
+                          <>
+                            <div>{latest.recipientEmail ?? '—'}</div>
+                            <div className="text-zinc-500">
+                              {latest.recipientNickname ?? 'no nickname'}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-zinc-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-[10px]">
+                        {latest?.conversationId ? (
+                          <span title={latest.conversationId}>
+                            {truncateId(latest.conversationId)}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          disabled={busyUserId === row.userId}
+                          onClick={() => void handleUnblock(row.userId)}
+                          className="text-emerald-700 hover:underline disabled:opacity-50 dark:text-emerald-400"
+                        >
+                          {busyUserId === row.userId
+                            ? 'Unblocking…'
+                            : 'Unblock'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          All violations
+        </h2>
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Surface
+            <select
+              value={surface}
+              onChange={(e) => setSurface(e.target.value)}
+              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              <option value="">All</option>
+              <option value="message">message</option>
+              <option value="profile_aboutMe">profile_aboutMe</option>
+              <option value="profile_aboutPartner">profile_aboutPartner</option>
+              <option value="profile_aboutRelationship">
+                profile_aboutRelationship
+              </option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Category
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              <option value="">All</option>
+              <option value="sexual">sexual</option>
+              <option value="hate">hate</option>
+              <option value="harassment">harassment</option>
+              <option value="violence">violence</option>
+              <option value="self-harm">self-harm</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            User ID
+            <input
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="Exact user id"
+              className="min-w-[14rem] rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+          </label>
         </div>
-      ) : null}
+
+        {!loading && !error && rows.length === 0 ? (
+          <p className="text-sm text-zinc-500">No violations match these filters.</p>
+        ) : null}
+        {!loading && rows.length > 0 ? (
+          <p className="mb-2 text-xs text-zinc-500">
+            Showing {rows.length} of {total}
+          </p>
+        ) : null}
+
+        {rows.length > 0 ? (
+          <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-700">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Time</th>
+                  <th className="px-3 py-2 font-medium">User</th>
+                  <th className="px-3 py-2 font-medium">To</th>
+                  <th className="px-3 py-2 font-medium">Conversation</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Surface</th>
+                  <th className="px-3 py-2 font-medium">Category</th>
+                  <th className="px-3 py-2 font-medium">Preview</th>
+                  <th className="px-3 py-2 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-t border-zinc-200 dark:border-zinc-700"
+                  >
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div>{row.userEmail}</div>
+                      <div className="text-zinc-500">
+                        {row.userNickname ?? 'no nickname'}
+                      </div>
+                      <div className="font-mono text-[10px] text-zinc-400">
+                        {row.userId}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      {row.recipientUserId ? (
+                        <>
+                          <div>{row.recipientEmail ?? '—'}</div>
+                          <div className="text-zinc-500">
+                            {row.recipientNickname ?? 'no nickname'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[10px]">
+                      {row.conversationId ? (
+                        <span title={row.conversationId}>
+                          {truncateId(row.conversationId)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {row.userStatus}
+                    </td>
+                    <td className="px-3 py-2">{row.surface}</td>
+                    <td className="px-3 py-2">{row.category}</td>
+                    <td className="max-w-xs truncate px-3 py-2">
+                      {row.flaggedTextPreview}
+                    </td>
+                    <td className="px-3 py-2">
+                      {row.userStatus !== 'ok' ? (
+                        <button
+                          type="button"
+                          disabled={busyUserId === row.userId}
+                          onClick={() => void handleUnblock(row.userId)}
+                          className="text-emerald-700 hover:underline disabled:opacity-50 dark:text-emerald-400"
+                        >
+                          {busyUserId === row.userId
+                            ? 'Unblocking…'
+                            : 'Unblock'}
+                        </button>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
     </main>
   );
 }
