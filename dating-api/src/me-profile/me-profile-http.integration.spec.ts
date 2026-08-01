@@ -1454,6 +1454,77 @@ describe('me profile HTTP (integration)', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/v1/me/profile/quality (Sprint 35 Story 3)
+  // ---------------------------------------------------------------------------
+
+  it('GET /api/v1/me/profile/quality returns 401 without session', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/me/profile/quality')
+      .expect(401);
+  });
+
+  it('GET /api/v1/me/profile/quality returns 404 when profile row missing', async () => {
+    const raw = await loginAndCookie();
+    prismaMock.userProfile.findUnique.mockResolvedValue(null);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/me/profile/quality')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(404);
+
+    expect(res.body).toMatchObject({ error: 'profile_not_found' });
+  });
+
+  it('GET /api/v1/me/profile/quality returns score and suggestions when profile exists', async () => {
+    const raw = await loginAndCookie();
+    const long = 'y'.repeat(50);
+    prismaMock.userProfile.findUnique.mockResolvedValue({
+      id: 'prof_quality_1',
+      userId: USER_ID,
+      status: UserProfileStatus.DRAFT,
+      onboardingStep: 'BASIC',
+      nickname: 'Noa',
+      aboutMe: long,
+      aboutPartner: null,
+      aboutRelationship: null,
+      birthDate: new Date('1990-01-01'),
+      gender: 'FEMALE',
+      desiredPartnerGenders: ['MALE'],
+      city: 'Tel Aviv',
+      country: null,
+      locationLabel: null,
+      submittedAt: null,
+      analyzedAt: null,
+      lastAnalysisError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      preference: null,
+    });
+    prismaMock.userProfilePhoto.count.mockResolvedValue(0);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/me/profile/quality')
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .expect(200);
+
+    expect(res.body.score).toBe(50); // nick 10 + location 10 + basics 10 + aboutMe 20
+    expect(res.body.completeness).toMatchObject({
+      hasNickname: true,
+      hasLocation: true,
+      hasBasics: true,
+      hasAboutMe: true,
+      hasAboutPartner: false,
+      hasAboutRelationship: false,
+      hasApprovedPhoto: false,
+    });
+    expect(res.body.suggestions.map((s: { id: string }) => s.id)).toEqual([
+      'photo',
+      'aboutPartner',
+      'aboutRelationship',
+    ]);
+  });
+
+  // ---------------------------------------------------------------------------
   // GET /api/v1/me/profile/analysis/latest
   // ---------------------------------------------------------------------------
 

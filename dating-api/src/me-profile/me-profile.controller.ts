@@ -45,6 +45,7 @@ import { PatchNotificationPreferencesDto } from './dto/patch-notification-prefer
 import { parseMatchListLimit } from './dto/me-matches-list-query.dto';
 import { parseConversationListLimit } from './dto/me-conversations-list-query.dto';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
+import { ProfileQualityService } from './profile-quality.service';
 import { UsersService } from '../users/users.service';
 
 /**
@@ -55,6 +56,7 @@ import { UsersService } from '../users/users.service';
 export class MeProfileController {
   constructor(
     private readonly meProfile: MeProfileService,
+    private readonly profileQuality: ProfileQualityService,
     private readonly meMatches: MeProfileMatchesService,
     private readonly matches: MeMatchesService,
     private readonly matchActions: MeMatchActionsService,
@@ -311,6 +313,12 @@ export class MeProfileController {
   @Get('profile/analysis-status')
   getAnalysisStatus(@CurrentUser() user: AuthMeResponseDto) {
     return this.meProfile.getAnalysisStatusForUser(user.id);
+  }
+
+  /** Sprint 35 Story 3 — weighted profile quality score + suggestion ids. */
+  @Get('profile/quality')
+  getProfileQuality(@CurrentUser() user: AuthMeResponseDto) {
+    return this.profileQuality.getForUser(user.id);
   }
 
   @Get('profile')

@@ -27,6 +27,7 @@ import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileController } from './me-profile.controller';
 import { MeProfileService } from './me-profile.service';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
+import { ProfileQualityService } from './profile-quality.service';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
   controllers: [MeProfileController],
   providers: [
     MeProfileService,
+    ProfileQualityService,
     MeProfileAnalysisService,
     MeProfileMatchesService,
     MeMatchesService,
