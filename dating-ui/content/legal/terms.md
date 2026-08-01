@@ -1,4 +1,4 @@
-_Last updated: June 2026 (draft)_
+_Last updated: August 2026 (draft)_
 
 By using this dating product you agree to these terms.
 
@@ -11,14 +11,19 @@ You must be able to form a binding contract in your jurisdiction and meet any mi
 You agree not to:
 
 - Harass, threaten, or impersonate others.
-- Post spam, scams, or illegal content.
+- Post sexually explicit or pornographic content.
+- Post hateful, discriminatory, or abusive content.
+- Post violent or threatening content.
+- Post spam, scams, commercial solicitation, or illegal content.
 - Attempt to access other users' accounts or private data.
 
-We may remove access and review reports submitted through the in-app **Report** flow.
+We may use **automated tools** to detect violations of these rules. Repeated violations may result in restrictions on your account, including temporary or permanent limits on **messaging** and/or **profile editing**, up to suspension.
+
+We may also remove access and review reports submitted through the in-app **Report** flow. Automated enforcement is **in addition to** community reports, not a replacement for them.
 
 ## Your content
 
-You retain ownership of content you submit. You grant us a license to host, display, and process it to operate matching and messaging.
+You retain ownership of content you submit. You grant us a license to host, display, and process it to operate matching, messaging, and content safety checks.
 
 ## Account termination
 
