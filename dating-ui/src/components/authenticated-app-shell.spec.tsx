@@ -29,7 +29,11 @@ vi.mock('@/components/nav-auth', () => ({
 }));
 
 const authState = vi.hoisted(() => ({
-  status: 'authenticated' as 'authenticated' | 'error' | 'loading' | 'unauthenticated',
+  status: 'authenticated' as
+    | 'authenticated'
+    | 'error'
+    | 'loading'
+    | 'unauthenticated',
   user: {
     id: 'user_me',
     email: 'a@test.com',
@@ -38,7 +42,15 @@ const authState = vi.hoisted(() => ({
     status: 'ACTIVE' as const,
     emailNotificationsEnabled: true,
     inAppNotificationsEnabled: true,
-  },
+  } as {
+    id: string;
+    email: string;
+    displayName: string;
+    avatarUrl: null;
+    status: 'ACTIVE';
+    emailNotificationsEnabled: boolean;
+    inAppNotificationsEnabled: boolean;
+  } | null,
   refresh: vi.fn(),
   signInWithGoogleIdToken: vi.fn(),
   logout: vi.fn(),
@@ -59,9 +71,7 @@ import { heCopy } from '@/lib/i18n/he';
 import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
 function renderShell(ui: React.ReactElement) {
-  return render(
-    <QueryClientTestProvider>{ui}</QueryClientTestProvider>,
-  );
+  return render(<QueryClientTestProvider>{ui}</QueryClientTestProvider>);
 }
 
 describe('AuthenticatedAppShell locale', () => {
@@ -96,10 +106,10 @@ describe('AuthenticatedAppShell locale', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'בית' })).toBeTruthy();
+      expect(screen.getAllByRole('link', { name: 'התאמות' }).length).toBeGreaterThan(0);
     });
 
-    const nav = screen.getByRole('navigation', { name: 'Main' });
+    const nav = screen.getByRole('navigation', { name: heCopy.nav.mainAria });
     expect(nav.closest('[dir="rtl"]')).toBeTruthy();
   });
 
@@ -111,14 +121,31 @@ describe('AuthenticatedAppShell locale', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+      expect(screen.getAllByRole('link', { name: 'Matches' }).length).toBeGreaterThan(0);
     });
 
     writeStoredLocale('he');
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'בית' })).toBeTruthy();
+      expect(screen.getAllByRole('link', { name: 'התאמות' }).length).toBeGreaterThan(0);
     });
+  });
+
+  it('does not show Home or Analysis as primary nav links', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'en');
+
+    renderShell(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('link', { name: 'Matches' }).length).toBeGreaterThan(0);
+    });
+
+    expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Analysis' })).toBeNull();
   });
 });
 
@@ -153,8 +180,9 @@ describe('AuthenticatedAppShell nav unread', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('nav-conversations-unread')).toBeTruthy();
-      expect(screen.getByTestId('nav-conversations-unread').textContent).toBe('2');
+      const pills = screen.getAllByTestId('nav-conversations-unread');
+      expect(pills.length).toBeGreaterThan(0);
+      expect(pills[0].textContent).toBe('2');
     });
   });
 
@@ -168,7 +196,7 @@ describe('AuthenticatedAppShell nav unread', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('nav-conversations-unread').textContent).toBe(
+      expect(screen.getAllByTestId('nav-conversations-unread')[0].textContent).toBe(
         '99+',
       );
     });
@@ -200,11 +228,11 @@ describe('AuthenticatedAppShell nav unread', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('nav-conversations-unread')).toBeTruthy();
+      expect(screen.getAllByTestId('nav-conversations-unread').length).toBeGreaterThan(0);
     });
 
     expect(
-      screen.getByTestId('nav-conversations-unread').getAttribute('aria-label'),
+      screen.getAllByTestId('nav-conversations-unread')[0].getAttribute('aria-label'),
     ).toBe(heCopy.nav.conversationsUnreadLabel(2));
   });
 });

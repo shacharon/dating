@@ -242,6 +242,7 @@ export const esCopy: AppCopySchema = {
     showLess: "Ver menos",
   },
   nav: {
+    brand: "Citas",
     home: "Inicio",
     matches: "Coincidencias",
     conversations: "Conversaciones",
@@ -252,8 +253,12 @@ export const esCopy: AppCopySchema = {
     editStoryProfile: "Editar perfil de historia",
     language: "Idioma",
     logout: "Cerrar sesion",
+    mainAria: "Principal",
+    primaryAria: "Primario",
     conversationsUnreadLabel: (count: number) =>
       `${count} mensaje${count === 1 ? "" : "s"} sin leer`,
+    matchesNewLabel: (count: number) =>
+      `${count} coincidencia${count === 1 ? "" : "s"} nueva${count === 1 ? "" : "s"}`,
   },
   gender: {
     MALE: "Hombre",
@@ -344,6 +349,7 @@ export const esCopy: AppCopySchema = {
       subtitle: "Revisa tus respuestas antes de buscar coincidencias.",
       matchingSectionTitle: "Emparejamiento",
       matchPreferencesLinkCta: (label: string) => `${label} →`,
+      analysisLinkCta: (label: string) => `${label} →`,
       backToOnboarding: "Volver al registro",
       noProfileBody:
         "Aun no tienes perfil. Completa el registro para revisarlo y encontrar coincidencias.",

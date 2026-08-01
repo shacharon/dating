@@ -122,6 +122,9 @@ describe('ProfilePage i18n', () => {
       expect(prefsLink.textContent).toContain(
         enCopy.profile.matchPreferencesLink,
       );
+      const analysisLink = screen.getByTestId('profile-analysis-link');
+      expect(analysisLink.getAttribute('href')).toBe('/dating/analysis');
+      expect(analysisLink.textContent).toContain(enCopy.nav.analysis);
     });
   });
 

@@ -231,6 +231,7 @@ export const heCopy: AppCopySchema = {
     showLess: "הצג פחות",
   },
   nav: {
+    brand: "דייטינג",
     home: "בית",
     matches: "התאמות",
     conversations: "שיחות",
@@ -241,8 +242,12 @@ export const heCopy: AppCopySchema = {
     editStoryProfile: "עריכת סיפור אישי",
     language: "שפה",
     logout: "התנתקות",
+    mainAria: "ראשי",
+    primaryAria: "ניווט ראשי",
     conversationsUnreadLabel: (count: number) =>
       count === 1 ? "הודעה אחת שלא נקראה" : `${count} הודעות שלא נקראו`,
+    matchesNewLabel: (count: number) =>
+      count === 1 ? "התאמה חדשה אחת" : `${count} התאמות חדשות`,
   },
   gender: {
     MALE: "גבר",
@@ -327,6 +332,7 @@ export const heCopy: AppCopySchema = {
       subtitle: "עברו על התשובות לפני חיפוש התאמות.",
       matchingSectionTitle: "התאמה",
       matchPreferencesLinkCta: (label: string) => `${label} →`,
+      analysisLinkCta: (label: string) => `${label} →`,
       backToOnboarding: "חזרה להרשמה",
       noProfileBody:
         "עדיין אין לך פרופיל. השלימ/י את ההרשמה כדי לעבור עליו ולמצוא התאמות.",

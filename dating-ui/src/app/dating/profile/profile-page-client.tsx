@@ -149,13 +149,22 @@ export default function ProfilePage() {
           <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
             {copy.profile.matchPreferencesLinkHelp}
           </p>
-          <Link
-            href="/settings/preferences"
-            data-testid="profile-match-preferences-link"
-            className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
-          >
-            {vp.matchPreferencesLinkCta(copy.profile.matchPreferencesLink)}
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/settings/preferences"
+              data-testid="profile-match-preferences-link"
+              className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              {vp.matchPreferencesLinkCta(copy.profile.matchPreferencesLink)}
+            </Link>
+            <Link
+              href="/dating/analysis"
+              data-testid="profile-analysis-link"
+              className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              {vp.analysisLinkCta(copy.nav.analysis)}
+            </Link>
+          </div>
         </section>
 
         <div className="space-y-4">

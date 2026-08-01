@@ -241,6 +241,7 @@ export const enCopy: AppCopySchema = {
     showLess: "Show less",
   },
   nav: {
+    brand: "Dating",
     home: "Home",
     matches: "Matches",
     conversations: "Conversations",
@@ -251,8 +252,12 @@ export const enCopy: AppCopySchema = {
     editStoryProfile: "Edit Story Profile",
     language: "Language",
     logout: "Logout",
+    mainAria: "Main",
+    primaryAria: "Primary",
     conversationsUnreadLabel: (count: number) =>
       `${count} unread message${count === 1 ? "" : "s"}`,
+    matchesNewLabel: (count: number) =>
+      `${count} new match${count === 1 ? "" : "es"}`,
   },
   gender: {
     MALE: "Male",
@@ -339,6 +344,7 @@ export const enCopy: AppCopySchema = {
       subtitle: "Review your answers before finding matches.",
       matchingSectionTitle: "Matching",
       matchPreferencesLinkCta: (label: string) => `${label} →`,
+      analysisLinkCta: (label: string) => `${label} →`,
       backToOnboarding: "Back to onboarding",
       noProfileBody:
         "You don't have a profile yet. Complete onboarding to review and find matches.",

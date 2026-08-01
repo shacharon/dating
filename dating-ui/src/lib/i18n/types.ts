@@ -222,6 +222,7 @@ export type AppCopySchema = {
     showLess: string;
   };
   nav: {
+    brand: string;
     home: string;
     matches: string;
     conversations: string;
@@ -232,7 +233,10 @@ export type AppCopySchema = {
     editStoryProfile: string;
     language: string;
     logout: string;
+    mainAria: string;
+    primaryAria: string;
     conversationsUnreadLabel: (count: number) => string;
+    matchesNewLabel: (count: number) => string;
   };
   gender: {
     MALE: string;
@@ -312,6 +316,7 @@ export type AppCopySchema = {
       subtitle: string;
       matchingSectionTitle: string;
       matchPreferencesLinkCta: (label: string) => string;
+      analysisLinkCta: (label: string) => string;
       backToOnboarding: string;
       noProfileBody: string;
       editLink: string;
