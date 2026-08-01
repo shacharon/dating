@@ -1,9 +1,11 @@
 # Story 05 — Lazy-load admin / heavy UI
 
-**Sprint 29 · Status: PLANNED**  
+**Sprint 29 · Status: Architect locked → Agent 1 Dev**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (FE-only)
+
+**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md)
 
 ---
 
@@ -17,10 +19,20 @@ SCALE CR: admin + heavy panels inflate initial JS for all users.
 
 ## Scope / tasks
 
-1. Identify admin entry routes and heaviest dating panels.
-2. Architect locks: which routes must dynamic-import; SSR vs `ssr: false` for admin.
+1. Identify admin entry routes and heaviest dating panels. ✅
+2. Architect locks: which routes must dynamic-import; SSR vs `ssr: false` for admin. ✅
 3. Apply dynamic imports; verify middleware/auth still gate correctly.
 4. Specs: smoke that admin page still mounts; optional bundle note in handoff.
+
+### Architect locks (do not reverse)
+
+| Decision | Lock |
+|----------|------|
+| Heavy admin pages | Thin `page.tsx` + `dynamic(…-page-client, { ssr: false })` |
+| Admin index `/admin` | Leave eager (tiny hub) |
+| Middleware / `admin-routes-gate` | Unchanged |
+| Product overlays | `MatchCelebrationModal`, `ReportUserDialog`, `AnalysisResultsView` via `dynamic`; modals mount only when open |
+| Out of scope | Legal markdown, virtualization, i18n locale split |
 
 ## Acceptance criteria
 
