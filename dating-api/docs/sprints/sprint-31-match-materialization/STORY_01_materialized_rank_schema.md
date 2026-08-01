@@ -1,11 +1,11 @@
 # Story 01 — Materialized rank schema
 
-**Sprint 31 · Status: Architect locked → Agent 1 Dev**  
+**Sprint 31 · Status: Dev complete → Agent 2 CR**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** None (opens the sprint)
 
-**Handoff:** [`handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md`](./handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md`](./handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_01_materialized_rank_schema/agent-1-dev.md)
 
 ---
 
@@ -20,9 +20,9 @@ Request-path rebuild + `MATCH_LIST_CANDIDATE_CAP` cannot scale fairly. Persisten
 ## Scope / tasks
 
 1. Architect locks: table/model name, PK/unique, columns (score, rank vs order-by-score, reason/snippet fields?, builtAt), indexes for `(viewerUserId, score DESC, id)`, retention/TTL policy if any. ✅
-2. Prisma model + migration.
-3. Document relationship to existing Redis match-list cache (cache remains optional accelerator; source of truth becomes table after Story 04/05).
-4. Unit/integration: model creates; unique constraint; index presence smoke if team pattern exists.
+2. Prisma model + migration. ✅
+3. Document relationship to existing Redis match-list cache (cache remains optional accelerator; source of truth becomes table after Story 04/05). ✅
+4. Unit/integration: model creates; unique constraint; index presence smoke if team pattern exists. ✅
 
 ### Architect locks (do not reverse)
 
@@ -38,10 +38,10 @@ Request-path rebuild + `MATCH_LIST_CANDIDATE_CAP` cannot scale fairly. Persisten
 
 ## Acceptance criteria
 
-- [ ] Schema + migration landed  
-- [ ] Indexes support list-by-viewer ordered reads  
-- [ ] Architect lock doc lists columns + uniqueness  
-- [ ] No production cutover yet (empty table OK)
+- [x] Schema + migration landed  
+- [x] Indexes support list-by-viewer ordered reads  
+- [x] Architect lock doc lists columns + uniqueness  
+- [x] No production cutover yet (empty table OK)
 
 ## Commit message
 

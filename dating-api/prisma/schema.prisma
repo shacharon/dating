@@ -87,6 +87,7 @@ model User {
   reportsAsReporter     UserReport[] @relation("ReportsByReporter")
   reportsAsReported     UserReport[] @relation("ReportsByReported")
   matchFeedbacks        MatchFeedback[]
+  matchListRanks        MatchListRank[]
   contentViolationStatus     String    @default("ok")
   contentViolationMutedUntil DateTime?
   contentViolationCount      Int       @default(0)
@@ -162,6 +163,7 @@ model UserProfile {
   photos                 UserProfilePhoto[]
   preference             UserProfilePreference?
   matchFeedbacksReceived MatchFeedback[]
+  matchListRanksAsCandidate MatchListRank[]
 
   @@index([status, gender, birthDate])
   @@index([status, gender, city])
@@ -357,6 +359,28 @@ model MatchFeedback {
   @@index([userId, createdAt])
   @@index([matchProfileId])
   @@index([sentiment, createdAt])
+}
+
+/// Sprint 31 — durable match-list order (viewer × candidate). Thin rank row only;
+/// hydrate DTO fields on read (Story 04). Redis `match:list:{userId}` remains list SoT until Story 04/05.
+/// Unscored engine pairs store matchScore = -1 (never SQL null). No row TTL — rebuild replaces/deletes.
+model MatchListRank {
+  id                  String   @id @default(cuid())
+  viewerUserId        String
+  viewer              User     @relation(fields: [viewerUserId], references: [id], onDelete: Cascade)
+  candidateProfileId  String
+  candidateProfile    UserProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
+  /// Engine final score 0–100, or -1 when unscored (cursor `s` encoding).
+  matchScore          Float
+  hardBlocked         Boolean  @default(false)
+  builtAt             DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([viewerUserId, candidateProfileId])
+  @@index([viewerUserId, hardBlocked, matchScore(sort: Desc), candidateProfileId])
+  @@index([candidateProfileId])
+  @@index([viewerUserId, builtAt])
 }
 
 /// Sprint 22 — lazy LLM match narrative cache (keyed by evaluation pair + prompt version).
