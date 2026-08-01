@@ -27,6 +27,7 @@ import { PhotoStorageModule } from './photo-storage/photo-storage.module';
 import { SessionModule } from './session/session.module';
 import { RedisCacheModule } from './cache/redis-cache.module';
 import { WorkerModule } from './workers/worker.module';
+import { ContentModerationModule } from './content-moderation/content-moderation.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { WorkerModule } from './workers/worker.module';
     StructuredLoggingModule,
     HealthModule,
     LlmModule,
+    ContentModerationModule,
     EvaluateModule,
     ContradictionModule,
     ProfilesModule,

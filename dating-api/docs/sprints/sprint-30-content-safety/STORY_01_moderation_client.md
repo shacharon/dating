@@ -1,9 +1,10 @@
 # Story 01 — OpenAI moderation client + violation storage
 
-**Sprint 30 · Status: PLANNED**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
 **Priority:** P0  
 **Estimated effort:** 0.5 day  
-**Dependencies:** None (do first)
+**Dependencies:** Story 00 Done (disclosure); code can proceed in parallel with ops DPA  
+**Handoffs:** [architect](./handoffs/STORY_01_moderation_client/agent-0-architect.md)
 
 ---
 
@@ -50,12 +51,12 @@ Create reusable OpenAI Moderation API client service + Prisma schema for trackin
 
 ## Acceptance criteria
 
-- [ ] Prisma migration runs cleanly (`npx prisma migrate dev`)
-- [ ] `OpenAIModerationClient.checkContent()` returns expected shape for sample text
-- [ ] `ContentViolationService.recordViolation()` creates row in DB
-- [ ] `ContentViolationService.getViolationCount()` returns correct count filtered by surface/date
-- [ ] Unit + integration tests green
-- [ ] Module exports services for injection
+- [x] Prisma migration runs cleanly (`npx prisma migrate dev`)
+- [x] `OpenAIModerationClient.checkContent()` returns expected shape for sample text
+- [x] `ContentViolationService.recordViolation()` creates row in DB
+- [x] `ContentViolationService.getViolationCount()` returns correct count filtered by surface/date
+- [x] Unit + integration tests green
+- [x] Module exports services for injection
 
 ---
 

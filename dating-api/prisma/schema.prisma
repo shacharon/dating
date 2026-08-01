@@ -87,9 +87,29 @@ model User {
   reportsAsReporter     UserReport[] @relation("ReportsByReporter")
   reportsAsReported     UserReport[] @relation("ReportsByReported")
   matchFeedbacks        MatchFeedback[]
+  contentViolationStatus     String    @default("ok")
+  contentViolationMutedUntil DateTime?
+  contentViolationCount      Int       @default(0)
+  contentViolations          UserContentViolation[]
 
   @@index([deletedAt])
   @@index([referredByUserId])
+}
+
+model UserContentViolation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  surface     String
+  flaggedText String   @db.Text
+  category    String
+  score       Float?
+  action      String
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([surface, createdAt(sort: Desc)])
+  @@index([userId, surface, createdAt(sort: Desc)])
 }
 
 model UserProfile {
