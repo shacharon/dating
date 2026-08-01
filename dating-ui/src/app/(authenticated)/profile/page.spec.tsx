@@ -2,10 +2,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
-const { resolveEditableProfile, listMyProfilePhotos } = vi.hoisted(() => ({
-  resolveEditableProfile: vi.fn(),
-  listMyProfilePhotos: vi.fn(),
-}));
+const { resolveEditableProfile, listMyProfilePhotos, fetchProfileQuality } =
+  vi.hoisted(() => ({
+    resolveEditableProfile: vi.fn(),
+    listMyProfilePhotos: vi.fn(),
+    fetchProfileQuality: vi.fn(),
+  }));
 
 vi.mock('@/lib/profile-form', () => ({
   resolveEditableProfile,
@@ -26,6 +28,16 @@ vi.mock('@/lib/profile-form', () => ({
 vi.mock('@/lib/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
+
+vi.mock('@/lib/profile-quality-api', async () => {
+  const actual = await vi.importActual<
+    typeof import('@/lib/profile-quality-api')
+  >('@/lib/profile-quality-api');
+  return {
+    ...actual,
+    fetchProfileQuality,
+  };
+});
 
 vi.mock('@/contexts/auth-context', () => ({
   useAuth: () => ({
@@ -88,6 +100,19 @@ describe('ProfileHubClient', () => {
     listMyProfilePhotos.mockResolvedValue([
       { id: 'p1', status: 'APPROVED' },
     ]);
+    fetchProfileQuality.mockResolvedValue({
+      score: 80,
+      completeness: {
+        hasNickname: true,
+        hasLocation: true,
+        hasBasics: true,
+        hasAboutMe: true,
+        hasAboutPartner: true,
+        hasAboutRelationship: false,
+        hasApprovedPhoto: true,
+      },
+      suggestions: [{ id: 'aboutRelationship', points: 15 }],
+    });
     resolveEditableProfile.mockResolvedValue({
       nickname: 'Noa',
       birthDate: '1990-01-01',

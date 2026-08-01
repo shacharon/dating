@@ -26,6 +26,7 @@ export default function ProfileHubClient() {
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [mounted, setMounted] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [qualityRefreshKey, setQualityRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +73,7 @@ export default function ProfileHubClient() {
           </h1>
         </header>
 
-        <ProfileQualityMeter draft={draft} copy={hub} />
+        <ProfileQualityMeter copy={hub} refreshKey={qualityRefreshKey} />
 
         <ProfileHubTabs activeTab={tab} copy={hub} />
 
@@ -116,7 +117,11 @@ export default function ProfileHubClient() {
           {mounted && !loadError && tab === 'overview' && draft && (
             <ProfileOverviewTab draft={draft} />
           )}
-          {mounted && !loadError && tab === 'edit' && <ProfileEditTab />}
+          {mounted && !loadError && tab === 'edit' && (
+            <ProfileEditTab
+              onProfileMutated={() => setQualityRefreshKey((k) => k + 1)}
+            />
+          )}
           {mounted && !loadError && tab === 'analysis' && (
             <ProfileAnalysisTab />
           )}

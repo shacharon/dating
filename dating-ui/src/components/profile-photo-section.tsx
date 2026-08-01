@@ -24,8 +24,11 @@ type UploadingPreview = {
 
 export function ProfilePhotoSection({
   requiredForMatching = false,
+  onMutated,
 }: {
   requiredForMatching?: boolean;
+  /** Called after successful upload/delete (hub quality meter refresh). */
+  onMutated?: () => void;
 }) {
   const { copy } = useAppLocale();
   const photoGateCopy = copy.photoGate;
@@ -119,6 +122,7 @@ export function ProfilePhotoSection({
     try {
       await uploadMyProfilePhoto(file);
       await refreshPhotos();
+      onMutated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : photosCopy.uploadFailed);
     } finally {
@@ -134,6 +138,7 @@ export function ProfilePhotoSection({
     try {
       await deleteMyProfilePhoto(photoId);
       await refreshPhotos();
+      onMutated?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : photosCopy.deleteFailed);
     } finally {

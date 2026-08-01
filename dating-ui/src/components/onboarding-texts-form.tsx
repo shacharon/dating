@@ -33,8 +33,11 @@ function fieldLabelFor(
 
 export function OnboardingTextsForm({
   variant = 'onboarding',
+  onSaved,
 }: {
   variant?: 'onboarding' | 'profileHub';
+  /** Called after a successful save (hub quality meter refresh). */
+  onSaved?: () => void;
 } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -154,6 +157,7 @@ export function OnboardingTextsForm({
           ? aboutRelationship
           : null,
       });
+      onSaved?.();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch (e) {
@@ -189,6 +193,7 @@ export function OnboardingTextsForm({
         onboardingStep: 'COMPLETED',
       });
       await submitMyProfileForAnalysis();
+      onSaved?.();
       if (isHub) {
         setFinishing(false);
         setSavedFlash(true);

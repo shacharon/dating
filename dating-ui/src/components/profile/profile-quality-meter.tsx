@@ -1,35 +1,41 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { ProfileDraft } from '@/app/dating/_lib/types';
-import { listMyProfilePhotos } from '@/lib/me-photos-api';
 import {
-  buildCompletenessFlags,
-  completenessScorePercent,
-  suggestionChips,
-} from '@/lib/profile-completeness';
+  fetchProfileQuality,
+  qualitySuggestionChips,
+  type ProfileQualityDto,
+} from '@/lib/profile-quality-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {
-  draft: ProfileDraft | null;
   copy: AppCopySchema['profile']['hub'];
+  /** Bump after profile/photo mutations so meter refetches */
+  refreshKey?: number | string;
 };
 
-export function ProfileQualityMeter({ draft, copy }: Props) {
-  const [hasApprovedPhoto, setHasApprovedPhoto] = useState(false);
+export function ProfileQualityMeter({ copy, refreshKey = 0 }: Props) {
+  const [quality, setQuality] = useState<ProfileQualityDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setFailed(false);
     (async () => {
       try {
-        const rows = await listMyProfilePhotos();
+        const dto = await fetchProfileQuality();
         if (!cancelled) {
-          setHasApprovedPhoto(rows.some((p) => p.status === 'APPROVED'));
+          setQuality(dto);
+          setFailed(false);
         }
       } catch {
-        if (!cancelled) setHasApprovedPhoto(false);
+        if (!cancelled) {
+          setQuality(null);
+          setFailed(true);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -37,26 +43,7 @@ export function ProfileQualityMeter({ draft, copy }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const flags = useMemo(
-    () => (draft ? buildCompletenessFlags(draft, hasApprovedPhoto) : null),
-    [draft, hasApprovedPhoto],
-  );
-
-  const percent = flags ? completenessScorePercent(flags) : 0;
-  const chips =
-    flags != null
-      ? suggestionChips(flags, {
-          photo: copy.suggestionPhoto,
-          basics: copy.suggestionBasics,
-          nickname: copy.suggestionNickname,
-          location: copy.suggestionLocation,
-          aboutMe: copy.suggestionAboutMe,
-          aboutPartner: copy.suggestionAboutPartner,
-          aboutRelationship: copy.suggestionAboutRelationship,
-        })
-      : [];
+  }, [refreshKey]);
 
   if (loading) {
     return (
@@ -70,7 +57,7 @@ export function ProfileQualityMeter({ draft, copy }: Props) {
     );
   }
 
-  if (!draft || !flags) {
+  if (failed || !quality) {
     return (
       <div
         className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
@@ -80,6 +67,17 @@ export function ProfileQualityMeter({ draft, copy }: Props) {
       </div>
     );
   }
+
+  const percent = quality.score;
+  const chips = qualitySuggestionChips(quality.suggestions, {
+    photo: copy.suggestionPhoto,
+    basics: copy.suggestionBasics,
+    nickname: copy.suggestionNickname,
+    location: copy.suggestionLocation,
+    aboutMe: copy.suggestionAboutMe,
+    aboutPartner: copy.suggestionAboutPartner,
+    aboutRelationship: copy.suggestionAboutRelationship,
+  });
 
   return (
     <div

@@ -27,8 +27,11 @@ import {
 
 export function OnboardingBasicForm({
   variant = 'onboarding',
+  onSaved,
 }: {
   variant?: 'onboarding' | 'profileHub';
+  /** Called after a successful persist (hub quality meter refresh). */
+  onSaved?: () => void;
 } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -206,6 +209,7 @@ export function OnboardingBasicForm({
   async function handleSaveProgress() {
     const ok = await persist(false);
     if (ok) {
+      onSaved?.();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     }
@@ -214,6 +218,7 @@ export function OnboardingBasicForm({
   async function handleContinueToTexts() {
     const ok = await persist(true);
     if (!ok) return;
+    onSaved?.();
     if (isHub) {
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
