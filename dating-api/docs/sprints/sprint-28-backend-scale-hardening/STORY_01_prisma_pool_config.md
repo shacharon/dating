@@ -1,9 +1,11 @@
 # Story 01 — Prisma pool + timeouts
 
-**Sprint 28 · Status: PLANNED**  
+**Sprint 28 · Status: IN REVIEW** (Agent 0 architect lock complete → run Agent 1)  
 **Priority:** P1  
 **Estimated effort:** 0.25 day  
 **Dependencies:** None
+
+**Handoffs:** [architect](./handoffs/STORY_01_prisma_pool_config/agent-0-architect.md)
 
 ---
 
