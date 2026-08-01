@@ -168,12 +168,12 @@ describe('me conversation messages WS (integration)', () => {
     await app.close();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     prismaMock.$transaction.mockImplementation(
       async (fn: (tx: typeof prismaMock) => Promise<unknown>) => fn(prismaMock),
     );
-    app.get(ConversationMessageRateLimitService).resetForTests();
+    await app.get(ConversationMessageRateLimitService).resetForTests();
   });
 
   async function loginSenderCookie(): Promise<string> {

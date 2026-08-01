@@ -251,7 +251,7 @@ describe('me profile HTTP (integration)', () => {
     await app.close();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     narrativeCachePrisma.store.clear();
     matchNarrativeGeneratorStub.generate.mockResolvedValue({
@@ -312,7 +312,7 @@ describe('me profile HTTP (integration)', () => {
       expiresAt: data.expiresAt,
     }));
     prismaMock.userSession.update.mockResolvedValue({});
-    app.get(ConversationMessageRateLimitService).resetForTests();
+    await app.get(ConversationMessageRateLimitService).resetForTests();
   });
 
   async function loginAndCookie(): Promise<string> {
@@ -4640,8 +4640,8 @@ describe('me profile HTTP (integration)', () => {
       createdAt: new Date('2026-05-31T10:00:00.000Z'),
     };
 
-    beforeEach(() => {
-      app.get(ConversationMessageRateLimitService).resetForTests();
+    beforeEach(async () => {
+      await app.get(ConversationMessageRateLimitService).resetForTests();
     });
 
     it('returns 429 on 11th POST within the rate-limit window', async () => {

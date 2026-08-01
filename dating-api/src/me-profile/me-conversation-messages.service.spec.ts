@@ -40,8 +40,7 @@ describe('MeConversationMessagesService', () => {
   } as unknown as StructuredObservabilityService;
 
   const messageRateLimit = {
-    assertCanSend: jest.fn(),
-    recordSend: jest.fn(),
+    consumeSendSlot: jest.fn().mockResolvedValue(undefined),
   } as unknown as ConversationMessageRateLimitService;
 
   const realtime = {
@@ -56,8 +55,10 @@ describe('MeConversationMessagesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (messageRateLimit.assertCanSend as jest.Mock).mockReset();
-    (messageRateLimit.recordSend as jest.Mock).mockReset();
+    (messageRateLimit.consumeSendSlot as jest.Mock).mockReset();
+    (messageRateLimit.consumeSendSlot as jest.Mock).mockResolvedValue(
+      undefined,
+    );
     (realtime.publishToUsers as jest.Mock).mockReset();
     const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationMessagesService(
@@ -114,8 +115,9 @@ describe('MeConversationMessagesService', () => {
         status: MessageStatus.SENT,
       },
     });
-    expect(messageRateLimit.assertCanSend).toHaveBeenCalledWith(sessionUserId);
-    expect(messageRateLimit.recordSend).toHaveBeenCalledWith(sessionUserId);
+    expect(messageRateLimit.consumeSendSlot).toHaveBeenCalledWith(
+      sessionUserId,
+    );
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining(conversationId),
       ErrorCodes.ME_CONVERSATIONS_MESSAGE_SEND_OK,
@@ -162,18 +164,14 @@ describe('MeConversationMessagesService', () => {
   });
 
   it('throws HttpException when rate limit exceeded and does not create message', async () => {
-    (messageRateLimit.assertCanSend as jest.Mock).mockImplementation(() => {
-      throw new HttpException(
-        { message: 'Too many messages. Please wait.' },
-        429,
-      );
-    });
+    (messageRateLimit.consumeSendSlot as jest.Mock).mockRejectedValue(
+      new HttpException({ message: 'Too many messages. Please wait.' }, 429),
+    );
 
     await expect(
       service.sendMessage(sessionUserId, conversationId, 'Hi'),
     ).rejects.toBeInstanceOf(HttpException);
     expect(prisma.message.create).not.toHaveBeenCalled();
-    expect(messageRateLimit.recordSend).not.toHaveBeenCalled();
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
@@ -194,7 +192,9 @@ describe('MeConversationMessagesService', () => {
     );
 
     expect(prisma.message.create).toHaveBeenCalled();
-    expect(messageRateLimit.recordSend).toHaveBeenCalledWith(sessionUserId);
+    expect(messageRateLimit.consumeSendSlot).toHaveBeenCalledWith(
+      sessionUserId,
+    );
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('profanity detected'),
       ErrorCodes.ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED,

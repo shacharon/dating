@@ -199,7 +199,7 @@ export class MeConversationMessagesService {
       throw new BadRequestException('Message text is required');
     }
 
-    this.messageRateLimit.assertCanSend(sessionUserId);
+    await this.messageRateLimit.consumeSendSlot(sessionUserId);
     logProfanityIfDetected(this.obs, sessionUserId, conversationId, trimmed);
 
     const row = await this.prisma.message.create({
@@ -210,8 +210,6 @@ export class MeConversationMessagesService {
         status: MessageStatus.SENT,
       },
     });
-
-    this.messageRateLimit.recordSend(sessionUserId);
 
     this.obs.trace(
       `me conversations message send conversationId=${conversationId} userId=${sessionUserId}`,

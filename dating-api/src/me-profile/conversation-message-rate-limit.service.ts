@@ -1,49 +1,105 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import {
-  MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
-  MESSAGE_RATE_LIMIT_WINDOW_MS,
-} from './conversation-message.constants';
+  HttpException,
+  HttpStatus,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { createClient, type RedisClientType } from 'redis';
+import { SimpleLogger } from '../logger/simple-logger.service';
+import { MessageRateLimitExceededError } from './conversation-message-rate-limit.error';
+import { MemoryMessageRateLimitStore } from './conversation-message-rate-limit-memory.store';
+import {
+  RedisMessageRateLimitStore,
+  type MessageRateLimitRedisDegradedHandler,
+} from './conversation-message-rate-limit-redis.store';
+import type { MessageRateLimitStore } from './conversation-message-rate-limit-store.interface';
+
+export { MessageRateLimitExceededError } from './conversation-message-rate-limit.error';
 
 @Injectable()
-export class ConversationMessageRateLimitService {
-  private readonly buckets = new Map<
-    string,
-    { count: number; resetAt: number }
-  >();
+export class ConversationMessageRateLimitService
+  implements OnModuleInit, OnModuleDestroy
+{
+  private store: MessageRateLimitStore = new MemoryMessageRateLimitStore();
+  private redisClient: RedisClientType | null = null;
+  private usingRedisStore = false;
 
-  assertCanSend(sessionUserId: string): void {
-    const now = Date.now();
-    const bucket = this.buckets.get(sessionUserId);
+  constructor(private readonly logger: SimpleLogger) {}
 
-    if (!bucket || bucket.resetAt <= now) {
+  isUsingRedisStore(): boolean {
+    return this.usingRedisStore;
+  }
+
+  async onModuleInit(): Promise<void> {
+    const url = process.env.REDIS_URL?.trim();
+    if (!url) {
+      this.store = new MemoryMessageRateLimitStore();
+      this.usingRedisStore = false;
       return;
     }
 
-    if (bucket.count >= MESSAGE_RATE_LIMIT_MAX_PER_WINDOW) {
-      throw new HttpException(
-        { message: 'Too many messages. Please wait.' },
-        HttpStatus.TOO_MANY_REQUESTS,
+    const client = createClient({ url });
+    try {
+      await client.connect();
+      this.redisClient = client;
+      this.store = new RedisMessageRateLimitStore(
+        client,
+        this.buildDegradedHandler(),
       );
+      this.usingRedisStore = true;
+    } catch (err) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'http_message_rate_limit_redis_connect_failed',
+          message: err instanceof Error ? err.message : String(err),
+        }),
+        ConversationMessageRateLimitService.name,
+      );
+      await client.quit().catch(() => undefined);
+      this.store = new MemoryMessageRateLimitStore();
+      this.usingRedisStore = false;
     }
   }
 
-  recordSend(sessionUserId: string): void {
-    const now = Date.now();
-    const bucket = this.buckets.get(sessionUserId);
-
-    if (!bucket || bucket.resetAt <= now) {
-      this.buckets.set(sessionUserId, {
-        count: 1,
-        resetAt: now + MESSAGE_RATE_LIMIT_WINDOW_MS,
-      });
-      return;
+  async onModuleDestroy(): Promise<void> {
+    if (this.redisClient) {
+      await this.redisClient.quit().catch(() => undefined);
+      this.redisClient = null;
     }
-
-    bucket.count += 1;
+    this.usingRedisStore = false;
+    this.store = new MemoryMessageRateLimitStore();
   }
 
-  /** Test-only: clear all buckets. */
-  resetForTests(): void {
-    this.buckets.clear();
+  async consumeSendSlot(sessionUserId: string): Promise<void> {
+    try {
+      await this.store.consumeSendSlot(sessionUserId);
+    } catch (e) {
+      if (e instanceof MessageRateLimitExceededError) {
+        throw new HttpException(
+          { message: 'Too many messages. Please wait.' },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw e;
+    }
+  }
+
+  /** Test-only: clear all buckets / Redis keys for rate limit state. */
+  async resetForTests(): Promise<void> {
+    await this.store.resetForTests();
+  }
+
+  private buildDegradedHandler(): MessageRateLimitRedisDegradedHandler {
+    return ({ userId, err }) => {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'http_message_rate_limit_redis_degraded',
+          userId,
+          message: err instanceof Error ? err.message : String(err),
+        }),
+        ConversationMessageRateLimitService.name,
+      );
+    };
   }
 }
