@@ -58,6 +58,36 @@ import {
   buildMatchRecommendation,
   type MatchRecommendationDto,
 } from './match-recommendation';
+import {
+  ALIGNMENT_CHIP_MIN_PAIR_SCORE,
+  ASYMMETRY_MAX_PRESENT,
+  ASYMMETRY_MIN_PRESENT,
+  ASYMMETRY_SCALE,
+  BALANCE_RATIO_LOW,
+  BALANCE_RATIO_MID,
+  COVERAGE_COMPAT_CEILING_BASE,
+  EDGE_BOOST_COMPAT_MAX,
+  EDGE_BOOST_COMPAT_MIN,
+  EDGE_BOOST_MAX_FRICTION,
+  EDGE_BOOST_RAW_DELTA,
+  EXPLAIN_CHIP_LIMIT,
+  FRICTION_MIN_WHEN_BALANCE_LOW,
+  FRICTION_MIN_WHEN_BALANCE_MID,
+  FRICTION_RISK_SCALE,
+  HARD_SCORE_CAP_90,
+  LOW_EVIDENCE_COVERAGE_PERCENT,
+  LOW_EVIDENCE_FRICTION_FLOOR,
+  LOW_EVIDENCE_MIN_PRESENT,
+  MATCH_DEBUG_LOG_LIMIT,
+  NUANCE_GAP_MAX,
+  NUANCE_GAP_MIN,
+  NUANCE_PENALTY,
+  RELATIONSHIP_FIT_GREEN_BOOST,
+  RELATIONSHIP_FIT_LOW_BALANCE_PENALTY,
+  VALUES_ALIGNMENT_FOR_COMPAT_CAP,
+  VERY_LOW_COVERAGE_CONFIDENCE_CAP,
+  VERY_LOW_COVERAGE_PERCENT,
+} from './matching-algorithm.constants';
 
 export type { MatchInfoFlag };
 export type { MatchExplainabilityDto } from './match-explainability';
@@ -253,7 +283,7 @@ let matchDebugLogCount = 0;
 
 function shouldLogMatchDebug(): boolean {
   if (process.env.MATCH_DEBUG !== '1') return false;
-  if (matchDebugLogCount >= 50) return false;
+  if (matchDebugLogCount >= MATCH_DEBUG_LOG_LIMIT) return false;
   matchDebugLogCount += 1;
   return true;
 }
@@ -396,23 +426,31 @@ function computeCoverageAsymmetryLowEvidenceAdjustments(
     enrichedB,
   );
   const frictionMinimum =
-    balance.ratio < 2 && baseFriction > 0
-      ? 4
-      : balance.ratio >= 2 && balance.ratio < 4
-        ? 2
+    balance.ratio < BALANCE_RATIO_LOW && baseFriction > 0
+      ? FRICTION_MIN_WHEN_BALANCE_LOW
+      : balance.ratio >= BALANCE_RATIO_LOW &&
+          balance.ratio < BALANCE_RATIO_MID
+        ? FRICTION_MIN_WHEN_BALANCE_MID
         : 0;
-  const isAsymmetric = minPresent <= 6 && maxPresent >= 9;
-  const asymmetryScale = isAsymmetric ? 0.92 : 1;
+  const isAsymmetric =
+    minPresent <= ASYMMETRY_MIN_PRESENT && maxPresent >= ASYMMETRY_MAX_PRESENT;
+  const asymmetryScale = isAsymmetric ? ASYMMETRY_SCALE : 1;
   let aToBForCompat = clampTo100(Math.round(aToB * asymmetryScale));
   let bToAForCompat = clampTo100(Math.round(bToA * asymmetryScale));
-  const directionalCap = 90;
-  aToBForCompat = Math.min(aToBForCompat, directionalCap);
-  bToAForCompat = Math.min(bToAForCompat, directionalCap);
+  aToBForCompat = Math.min(aToBForCompat, HARD_SCORE_CAP_90);
+  bToAForCompat = Math.min(bToAForCompat, HARD_SCORE_CAP_90);
   let friction = Math.max(baseFriction, frictionMinimum);
   const lowEvidence =
-    coveragePercentValue <= 55 || isAsymmetric || minPresent <= 5;
-  if (lowEvidence) friction = Math.max(friction, 1);
-  const frictionRisk = Math.min(100, Math.round(friction * 10));
+    coveragePercentValue <= LOW_EVIDENCE_COVERAGE_PERCENT ||
+    isAsymmetric ||
+    minPresent <= LOW_EVIDENCE_MIN_PRESENT;
+  if (lowEvidence) {
+    friction = Math.max(friction, LOW_EVIDENCE_FRICTION_FLOOR);
+  }
+  const frictionRisk = Math.min(
+    100,
+    Math.round(friction * FRICTION_RISK_SCALE),
+  );
   return {
     aToBForCompat,
     bToAForCompat,
@@ -441,16 +479,23 @@ function computeRelationshipFitAndValuesAlignment(
       (profileB.evaluation?.productScores?.relationshipFitScore ?? 0)) /
       2,
   );
-  if (balance.ratio >= 4) relationshipFit = Math.min(100, relationshipFit + 8);
-  else if (balance.ratio < 2)
-    relationshipFit = Math.max(0, relationshipFit - 10);
+  if (balance.ratio >= BALANCE_RATIO_MID) {
+    relationshipFit = Math.min(
+      100,
+      relationshipFit + RELATIONSHIP_FIT_GREEN_BOOST,
+    );
+  } else if (balance.ratio < BALANCE_RATIO_LOW) {
+    relationshipFit = Math.max(
+      0,
+      relationshipFit - RELATIONSHIP_FIT_LOW_BALANCE_PENALTY,
+    );
+  }
   relationshipFit = clampTo100(relationshipFit);
   const signalsA = profileA.evaluation?.self?.signals ?? {};
   const signalsB = profileB.evaluation?.self?.signals ?? {};
   const valuesAlignment = computeValuesAlignment(signalsA, signalsB);
-  const valuesAlignmentCap = 85;
   const valuesAlignmentForCompat = Math.min(
-    valuesAlignmentCap,
+    VALUES_ALIGNMENT_FOR_COMPAT_CAP,
     valuesAlignment,
   );
   return { relationshipFit, valuesAlignment, valuesAlignmentForCompat };
@@ -478,8 +523,8 @@ function computeCompatibilityAndNuancePenalties(
     ),
   );
   let compatibilityValue = compatibilityValueRaw;
-  if (coveragePercentValue <= 55) {
-    const coverageCeiling = 50 + coveragePercentValue;
+  if (coveragePercentValue <= LOW_EVIDENCE_COVERAGE_PERCENT) {
+    const coverageCeiling = COVERAGE_COMPAT_CEILING_BASE + coveragePercentValue;
     compatibilityValue = Math.min(compatibilityValue, coverageCeiling);
   }
   const getSignalGap = (key: string): number | null => {
@@ -494,9 +539,19 @@ function computeCompatibilityAndNuancePenalties(
   const clarityGap = getSignalGap('relationshipClarity');
   const paceGap = getSignalGap('lifestylePace');
   let nuancePenalty = 0;
-  if (clarityGap != null && clarityGap >= 3 && clarityGap <= 5)
-    nuancePenalty = 2;
-  else if (paceGap != null && paceGap >= 3 && paceGap <= 5) nuancePenalty = 2;
+  if (
+    clarityGap != null &&
+    clarityGap >= NUANCE_GAP_MIN &&
+    clarityGap <= NUANCE_GAP_MAX
+  ) {
+    nuancePenalty = NUANCE_PENALTY;
+  } else if (
+    paceGap != null &&
+    paceGap >= NUANCE_GAP_MIN &&
+    paceGap <= NUANCE_GAP_MAX
+  ) {
+    nuancePenalty = NUANCE_PENALTY;
+  }
   compatibilityValue = Math.max(0, compatibilityValue - nuancePenalty);
   return compatibilityValue;
 }
@@ -528,8 +583,11 @@ function buildDebugDto(
     penalties.push({ reason: 'dealbreaker_cap', amount: dealbreakerCapAmount });
   }
   const bonuses: MatchDebugPenaltyDto[] = [];
-  if (balance.ratio >= 4) {
-    bonuses.push({ reason: 'GREEN_TIER_RELATIONSHIP_BOOST', amount: 8 });
+  if (balance.ratio >= BALANCE_RATIO_MID) {
+    bonuses.push({
+      reason: 'GREEN_TIER_RELATIONSHIP_BOOST',
+      amount: RELATIONSHIP_FIT_GREEN_BOOST,
+    });
   }
   return {
     baseScore: raw,
@@ -576,8 +634,11 @@ function buildFinalResultDto(
   const { infoFlags } = coverageConfidence;
   let { scoreCoverageFactorValue, coverageFactorValue, confidenceValue } =
     coverageConfidence;
-  if (coveragePercentValue < 25) {
-    confidenceValue = Math.min(confidenceValue, 0.75);
+  if (coveragePercentValue < VERY_LOW_COVERAGE_PERCENT) {
+    confidenceValue = Math.min(
+      confidenceValue,
+      VERY_LOW_COVERAGE_CONFIDENCE_CAP,
+    );
   }
   const {
     frictionPenaltyValue,
@@ -631,16 +692,16 @@ function buildFinalResultDto(
   }
 
   const alignments: CompareAlignmentDto[] = (compatAB.breakdown ?? [])
-    .filter((e: BreakdownEntry) => e.pairScore >= 8)
+    .filter((e: BreakdownEntry) => e.pairScore >= ALIGNMENT_CHIP_MIN_PAIR_SCORE)
     .sort((a: BreakdownEntry, b: BreakdownEntry) => b.pairScore - a.pairScore)
-    .slice(0, 3)
+    .slice(0, EXPLAIN_CHIP_LIMIT)
     .map((e: BreakdownEntry) => ({
       key: formatSignalKey(e.key),
       pairScore: e.pairScore,
     }));
 
   const tensions: CompareTensionDto[] = (compatAB.hardMismatches ?? [])
-    .slice(0, 3)
+    .slice(0, EXPLAIN_CHIP_LIMIT)
     .map((h: HardMismatch) => ({
       key: formatSignalKey(h.key),
       gap: h.gap,
@@ -763,15 +824,22 @@ export function compare(
     step4.friction,
   );
   let rawScoreForPipeline = step5.raw;
-  if (step4.friction <= 1 && step7Compat >= 70 && step7Compat <= 75) {
-    rawScoreForPipeline += 2;
+  if (
+    step4.friction <= EDGE_BOOST_MAX_FRICTION &&
+    step7Compat >= EDGE_BOOST_COMPAT_MIN &&
+    step7Compat <= EDGE_BOOST_COMPAT_MAX
+  ) {
+    rawScoreForPipeline += EDGE_BOOST_RAW_DELTA;
   }
   const preCapFinalScore = clampTo100(rawScoreForPipeline);
   const finalScoreAfterDealbreakers = applyDealbreakerCap(
     preCapFinalScore,
     step2.dealbreakers,
   );
-  let finalScoreClamped = Math.min(90, clampTo100(finalScoreAfterDealbreakers));
+  let finalScoreClamped = Math.min(
+    HARD_SCORE_CAP_90,
+    clampTo100(finalScoreAfterDealbreakers),
+  );
   finalScoreClamped = applySparseFinalScoreCap(
     finalScoreClamped,
     step3.coveragePercentValue,
