@@ -208,6 +208,21 @@ export type AppCopySchema = {
       /** Include trailing space, e.g. "You: " */
       youPrefix: string;
       noMessagesYet: string;
+      searchPlaceholder: string;
+      searchClear: string;
+      searchAria: string;
+      filterLabel: string;
+      filterAria: string;
+      filterAll: string;
+      filterUnread: string;
+      filterRecent: string;
+      sortLabel: string;
+      sortAria: string;
+      sortRecent: string;
+      sortAlphabetical: string;
+      filteredEmptyTitle: string;
+      filteredEmptyBody: string;
+      loadMore: string;
     };
     detail: {
       backToList: string;

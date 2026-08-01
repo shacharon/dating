@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 
 const {
   fetchMyConversations,
@@ -773,5 +773,163 @@ describe('ConversationsPage (i18n)', () => {
         screen.getByTestId('conversation-preview').textContent,
       ).toBe(heCopy.conversations.list.noMessagesYet);
     });
+  });
+});
+
+describe('ConversationsPage (list controls)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    getRealtimeMode.mockReturnValue('poll');
+    messageNewHandlerRef.current = null;
+    setActiveConversationId(null);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    cleanup();
+    sessionStorage.clear();
+    vi.useRealTimers();
+  });
+
+  const twoRows = {
+    conversations: [
+      {
+        id: 'mutual_noa',
+        otherUser,
+        matchedAt: '2026-05-31T12:00:00.000Z',
+        unreadCount: 2,
+        lastMessage: {
+          text: 'hey',
+          senderId: 'user_cand_1',
+          sentAt: '2026-08-01T10:00:00.000Z',
+        },
+      },
+      {
+        id: 'mutual_dana',
+        otherUser: {
+          ...otherUser,
+          id: 'user_cand_2',
+          nickname: 'Dana',
+        },
+        matchedAt: '2026-05-30T12:00:00.000Z',
+        unreadCount: 0,
+        lastMessage: {
+          text: 'hi',
+          senderId: 'user_me',
+          sentAt: '2026-07-01T10:00:00.000Z',
+        },
+      },
+    ],
+    nextCursor: null,
+    hasMore: false,
+  };
+
+  it('filters by search after debounce and clears search', async () => {
+    fetchMyConversations.mockResolvedValue(twoRows);
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Noa')).toBeTruthy();
+      expect(screen.getByText('Dana')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByTestId('conversation-list-search'), {
+      target: { value: 'dan' },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Noa')).toBeNull();
+      expect(screen.getByText('Dana')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('conversation-list-search-clear'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Noa')).toBeTruthy();
+      expect(screen.getByText('Dana')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('filters unread and shows filtered-empty copy', async () => {
+    fetchMyConversations.mockResolvedValue(twoRows);
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-list-filter')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByTestId('conversation-list-filter'), {
+      target: { value: 'unread' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Noa')).toBeTruthy();
+      expect(screen.queryByText('Dana')).toBeNull();
+    });
+
+    fireEvent.change(screen.getByTestId('conversation-list-search'), {
+      target: { value: 'zzz' },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversations-filtered-empty')).toBeTruthy();
+      expect(screen.getByText(/No conversations match/)).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('sorts A–Z by primary label', async () => {
+    fetchMyConversations.mockResolvedValue(twoRows);
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversations-list')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByTestId('conversation-list-sort'), {
+      target: { value: 'alphabetical' },
+    });
+
+    await waitFor(() => {
+      const labels = screen
+        .getAllByTestId('conversation-primary-label')
+        .map((el) => el.textContent);
+      expect(labels).toEqual(['Dana', 'Noa']);
+    });
+    unmount();
+  });
+
+  it('restores controls from sessionStorage', async () => {
+    sessionStorage.setItem(
+      'dating.conversations.listControls.v1',
+      JSON.stringify({
+        searchQuery: 'Dana',
+        filterType: 'all',
+        sortBy: 'alphabetical',
+      }),
+    );
+    fetchMyConversations.mockResolvedValue(twoRows);
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('conversation-list-search') as HTMLInputElement)
+          .value,
+      ).toBe('Dana');
+      expect(screen.getByText('Dana')).toBeTruthy();
+      expect(screen.queryByText('Noa')).toBeNull();
+    });
+    unmount();
   });
 });
