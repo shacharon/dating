@@ -1,11 +1,11 @@
 # Story 05 — Lazy-load admin / heavy UI
 
-**Sprint 29 · Status: Dev complete → Agent 2 CR**  
+**Sprint 29 · Status: CR PASS → Agent 3 PM**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (FE-only)
 
-**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_05_lazy_admin_ui/agent-1-dev.md)
+**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_05_lazy_admin_ui/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_05_lazy_admin_ui/agent-2-cr.md)
 
 ---
 
@@ -36,10 +36,10 @@ SCALE CR: admin + heavy panels inflate initial JS for all users.
 
 ## Acceptance criteria
 
-- [ ] Locked admin (or heavy) routes lazy-loaded
-- [ ] Auth/middleware gates unchanged
-- [ ] Product dating routes do not eagerly import admin trees
-- [ ] Basic mount tests still pass
+- [x] Locked admin (or heavy) routes lazy-loaded
+- [x] Auth/middleware gates unchanged
+- [x] Product dating routes do not eagerly import admin trees
+- [x] Basic mount tests still pass
 
 ## Commit message
 
