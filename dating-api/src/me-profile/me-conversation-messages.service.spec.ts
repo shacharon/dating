@@ -75,6 +75,11 @@ describe('MeConversationMessagesService', () => {
     }),
     recordViolation: jest.fn().mockResolvedValue(undefined),
     getViolationCount: jest.fn().mockResolvedValue(0),
+    isUserBlocked: jest.fn().mockResolvedValue(false),
+    enforceViolationThreshold: jest.fn().mockResolvedValue({
+      shouldBlock: false,
+      reason: 'under_threshold',
+    }),
   };
 
   let service: MeConversationMessagesService;
@@ -100,6 +105,11 @@ describe('MeConversationMessagesService', () => {
     });
     contentViolations.recordViolation.mockResolvedValue(undefined);
     contentViolations.getViolationCount.mockResolvedValue(0);
+    contentViolations.isUserBlocked.mockResolvedValue(false);
+    contentViolations.enforceViolationThreshold.mockResolvedValue({
+      shouldBlock: false,
+      reason: 'under_threshold',
+    });
     (prisma.user.update as jest.Mock).mockResolvedValue({});
     jest
       .spyOn(contentModerationTypes, 'isContentModerationEnabled')
@@ -233,7 +243,6 @@ describe('MeConversationMessagesService', () => {
       score: 0.9,
       failOpen: false,
     });
-    contentViolations.getViolationCount.mockResolvedValue(1);
 
     await expect(
       service.sendMessage(sessionUserId, conversationId, 'bad stuff'),
@@ -248,11 +257,15 @@ describe('MeConversationMessagesService', () => {
         action: 'blocked',
       }),
     );
+    expect(contentViolations.enforceViolationThreshold).toHaveBeenCalledWith(
+      sessionUserId,
+      'message',
+    );
     expect(prisma.message.create).not.toHaveBeenCalled();
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
-  it('mutes for 1 hour on 3rd hourly message violation', async () => {
+  it('includes muteLabel from enforcement in BadRequest details', async () => {
     moderation.checkContent.mockResolvedValue({
       flagged: true,
       categories: ['sexual'],
@@ -260,80 +273,27 @@ describe('MeConversationMessagesService', () => {
       score: 0.8,
       failOpen: false,
     });
-    contentViolations.getViolationCount
-      .mockResolvedValueOnce(3) // hourly
-      .mockResolvedValueOnce(3) // daily
-      .mockResolvedValueOnce(3); // lifetime
-
-    await expect(
-      service.sendMessage(sessionUserId, conversationId, 'flagged'),
-    ).rejects.toBeInstanceOf(BadRequestException);
-
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: sessionUserId },
-      data: {
-        contentViolationStatus: 'messaging_muted',
-        contentViolationMutedUntil: expect.any(Date),
-      },
+    contentViolations.enforceViolationThreshold.mockResolvedValue({
+      shouldBlock: true,
+      reason: '3_hourly',
+      muteLabel: '1 hour',
+      mutedUntil: new Date(Date.now() + 60 * 60 * 1000),
     });
-    const mutedUntil = (prisma.user.update as jest.Mock).mock.calls[0][0].data
-      .contentViolationMutedUntil as Date;
-    const delta = mutedUntil.getTime() - Date.now();
-    expect(delta).toBeGreaterThan(55 * 60 * 1000);
-    expect(delta).toBeLessThan(65 * 60 * 1000);
-  });
 
-  it('mutes for 24 hours on 10th daily message violation', async () => {
-    moderation.checkContent.mockResolvedValue({
-      flagged: true,
-      categories: ['hate'],
-      primaryCategory: 'hate',
-      score: 0.7,
-      failOpen: false,
-    });
-    contentViolations.getViolationCount
-      .mockResolvedValueOnce(2) // hourly
-      .mockResolvedValueOnce(10) // daily
-      .mockResolvedValueOnce(10); // lifetime
-
-    await expect(
-      service.sendMessage(sessionUserId, conversationId, 'flagged'),
-    ).rejects.toBeInstanceOf(BadRequestException);
-
-    const mutedUntil = (prisma.user.update as jest.Mock).mock.calls[0][0].data
-      .contentViolationMutedUntil as Date;
-    const delta = mutedUntil.getTime() - Date.now();
-    expect(delta).toBeGreaterThan(23 * 60 * 60 * 1000);
-    expect(delta).toBeLessThan(25 * 60 * 60 * 1000);
-  });
-
-  it('mutes indefinitely on 20th lifetime message violation', async () => {
-    moderation.checkContent.mockResolvedValue({
-      flagged: true,
-      categories: ['violence'],
-      primaryCategory: 'violence',
-      score: 0.6,
-      failOpen: false,
-    });
-    contentViolations.getViolationCount
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(20);
-
-    await expect(
-      service.sendMessage(sessionUserId, conversationId, 'flagged'),
-    ).rejects.toBeInstanceOf(BadRequestException);
-
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: sessionUserId },
-      data: {
-        contentViolationStatus: 'messaging_muted',
-        contentViolationMutedUntil: null,
-      },
-    });
+    try {
+      await service.sendMessage(sessionUserId, conversationId, 'flagged');
+      fail('expected throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      expect((e as BadRequestException).getResponse()).toMatchObject({
+        error: 'message_content_moderation_failed',
+        details: expect.objectContaining({ muted: '1 hour' }),
+      });
+    }
   });
 
   it('throws Forbidden when messaging_muted and mute still active', async () => {
+    contentViolations.isUserBlocked.mockResolvedValue(true);
     contentViolations.getUserViolationStatus.mockResolvedValue({
       status: 'messaging_muted',
       mutedUntil: new Date(Date.now() + 60 * 60 * 1000),
@@ -349,12 +309,8 @@ describe('MeConversationMessagesService', () => {
     expect(prisma.message.create).not.toHaveBeenCalled();
   });
 
-  it('clears expired mute and allows send', async () => {
-    contentViolations.getUserViolationStatus.mockResolvedValue({
-      status: 'messaging_muted',
-      mutedUntil: new Date(Date.now() - 60_000),
-      violationCount: 3,
-    });
+  it('allows send when isUserBlocked clears expired mute', async () => {
+    contentViolations.isUserBlocked.mockResolvedValue(false);
     (prisma.message.create as jest.Mock).mockResolvedValue({
       id: 'msg_after_mute',
       conversationId,
@@ -366,13 +322,6 @@ describe('MeConversationMessagesService', () => {
 
     await service.sendMessage(sessionUserId, conversationId, 'Hi');
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: sessionUserId },
-      data: {
-        contentViolationStatus: 'ok',
-        contentViolationMutedUntil: null,
-      },
-    });
     expect(prisma.message.create).toHaveBeenCalled();
   });
 
@@ -414,7 +363,7 @@ describe('MeConversationMessagesService', () => {
 
     await service.sendMessage(sessionUserId, conversationId, 'Hi');
 
-    expect(contentViolations.getUserViolationStatus).not.toHaveBeenCalled();
+    expect(contentViolations.isUserBlocked).not.toHaveBeenCalled();
     expect(moderation.checkContent).not.toHaveBeenCalled();
     expect(prisma.message.create).toHaveBeenCalled();
   });

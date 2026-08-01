@@ -384,20 +384,20 @@ export class MeProfileService {
   ) {}
 
   private async assertProfileEditAllowed(userId: string): Promise<void> {
-    const status = await this.contentViolations.getUserViolationStatus(userId);
-    if (status.status === 'profile_edit_blocked') {
-      this.obs.trace(
-        `profile edit blocked userId=${userId}`,
-        ErrorCodes.CONTENT_PROFILE_EDIT_BLOCKED,
-      );
-      const ex = new ForbiddenException({
-        error: 'profile_edit_blocked',
-        message:
-          'Profile editing is currently restricted due to previous content violations',
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
+    if (!(await this.contentViolations.isUserBlocked(userId, 'profile'))) {
+      return;
     }
+    this.obs.trace(
+      `profile edit blocked userId=${userId}`,
+      ErrorCodes.CONTENT_PROFILE_EDIT_BLOCKED,
+    );
+    const ex = new ForbiddenException({
+      error: 'profile_edit_blocked',
+      message:
+        'Profile editing is currently restricted due to previous content violations',
+    });
+    markHttpExceptionObservabilityLogged(ex);
+    throw ex;
   }
 
   private async moderateProfileTextFields(
@@ -454,20 +454,7 @@ export class MeProfileService {
         ErrorCodes.CONTENT_MODERATION_FLAGGED,
       );
 
-      const profileViolations = await this.contentViolations.getViolationCount(
-        userId,
-        { surfacePrefix: 'profile_' },
-      );
-      if (profileViolations >= 3) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { contentViolationStatus: 'profile_edit_blocked' },
-        });
-        this.obs.trace(
-          `user content blocked userId=${userId} reason=profile_edit_blocked profileViolations=${profileViolations}`,
-          ErrorCodes.CONTENT_USER_BLOCKED,
-        );
-      }
+      await this.contentViolations.enforceViolationThreshold(userId, 'profile');
 
       const ex = new BadRequestException({
         error: 'content_moderation_failed',

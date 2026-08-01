@@ -487,6 +487,11 @@ describe('Two-user new-model E2E flow (integration)', () => {
         }),
         recordViolation: jest.fn().mockResolvedValue(undefined),
         getViolationCount: jest.fn().mockResolvedValue(0),
+        isUserBlocked: jest.fn().mockResolvedValue(false),
+        enforceViolationThreshold: jest.fn().mockResolvedValue({
+          shouldBlock: false,
+          reason: 'under_threshold',
+        }),
       })
       .compile();
 

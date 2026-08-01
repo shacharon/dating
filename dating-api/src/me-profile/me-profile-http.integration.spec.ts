@@ -95,6 +95,11 @@ describe('me profile HTTP (integration)', () => {
     }),
     recordViolation: jest.fn().mockResolvedValue(undefined),
     getViolationCount: jest.fn().mockResolvedValue(0),
+    isUserBlocked: jest.fn().mockResolvedValue(false),
+    enforceViolationThreshold: jest.fn().mockResolvedValue({
+      shouldBlock: false,
+      reason: 'under_threshold',
+    }),
   };
   const prismaMock = {
     $transaction: jest.fn(),
@@ -295,6 +300,11 @@ describe('me profile HTTP (integration)', () => {
     });
     contentViolationsMock.recordViolation.mockResolvedValue(undefined);
     contentViolationsMock.getViolationCount.mockResolvedValue(0);
+    contentViolationsMock.isUserBlocked.mockResolvedValue(false);
+    contentViolationsMock.enforceViolationThreshold.mockResolvedValue({
+      shouldBlock: false,
+      reason: 'under_threshold',
+    });
     narrativeCachePrisma.store.clear();
     matchNarrativeGeneratorStub.generate.mockResolvedValue({
       narrative: 'HTTP stub LLM narrative about shared emotional depth.',
@@ -673,6 +683,7 @@ describe('me profile HTTP (integration)', () => {
       mutedUntil: null,
       violationCount: 3,
     });
+    contentViolationsMock.isUserBlocked.mockResolvedValue(true);
 
     const res = await request(app.getHttpServer())
       .patch('/api/v1/me/profile')
@@ -4799,17 +4810,18 @@ describe('me profile HTTP (integration)', () => {
     it('returns 403 when user is messaging_muted', async () => {
       const raw = await loginAndCookie();
       prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
-      contentViolationsMock.getUserViolationStatus.mockResolvedValue({
-        status: 'messaging_muted',
-        mutedUntil: new Date(Date.now() + 60 * 60 * 1000),
-        violationCount: 3,
-      });
+    contentViolationsMock.getUserViolationStatus.mockResolvedValue({
+      status: 'messaging_muted',
+      mutedUntil: new Date(Date.now() + 60 * 60 * 1000),
+      violationCount: 3,
+    });
+    contentViolationsMock.isUserBlocked.mockResolvedValue(true);
 
-      const res = await request(app.getHttpServer())
-        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
-        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
-        .send({ text: 'Hello' })
-        .expect(403);
+    const res = await request(app.getHttpServer())
+      .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+      .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+      .send({ text: 'Hello' })
+      .expect(403);
 
       expect(res.body).toMatchObject({ error: 'messaging_muted' });
       expect(moderationClientMock.checkContent).not.toHaveBeenCalled();

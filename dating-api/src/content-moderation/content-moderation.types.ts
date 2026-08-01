@@ -17,6 +17,34 @@ export type ContentViolationStatusValue =
   | 'profile_edit_blocked'
   | 'messaging_muted';
 
+export type EnforcementSurface = 'profile' | 'message';
+
+export type EnforcementReason =
+  | 'under_threshold'
+  | '3_profile_violations'
+  | '3_hourly'
+  | '10_daily'
+  | '20_lifetime';
+
+export type EnforcementResult = {
+  shouldBlock: boolean;
+  /** Set when message mute applied: Date for temporary; `null` for indefinite. Omit when under threshold. */
+  mutedUntil?: Date | null;
+  reason: EnforcementReason;
+  /** Human label for message 400 `details.muted`. Omit if no mute. */
+  muteLabel?: string;
+};
+
+export type ViolationStats = {
+  totalViolations: number;
+  violationsByCategory: Record<string, number>;
+  violationsBySurface: Record<string, number>;
+  blockedProfileUsers: number;
+  mutedMessageUsers: number;
+  mutedMessageUsersTemporary: number;
+  mutedMessageUsersIndefinite: number;
+};
+
 export type ModerationResult = {
   flagged: boolean;
   categories: string[];
@@ -29,6 +57,9 @@ export type ModerationResult = {
 export const MODERATION_INPUT_MAX_CHARS = 12_000;
 
 export const MODERATION_TIMEOUT_MS = 5_000;
+
+export const ENFORCEMENT_HOUR_MS = 60 * 60 * 1000;
+export const ENFORCEMENT_DAY_MS = 24 * ENFORCEMENT_HOUR_MS;
 
 /**
  * Feature flag for Stories 02–03 gates.

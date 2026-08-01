@@ -1,10 +1,10 @@
 # Story 04 — Violation counting + progressive blocks
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 0 complete → run Agent 1**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
 **Priority:** P0  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Stories 01, 02, 03 (enforcement logic split from those stories)  
-**Handoffs:** [architect](./handoffs/STORY_04_violation_enforcement/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_04_violation_enforcement/agent-0-architect.md) · [dev](./handoffs/STORY_04_violation_enforcement/agent-1-dev.md)
 
 ---
 
@@ -49,13 +49,13 @@ Consolidate violation counting, threshold checking, and block enforcement into a
 
 ## Acceptance criteria
 
-- [ ] Threshold logic consolidated in `ContentViolationService`
-- [ ] Profile + message services use shared enforcement method
-- [ ] `isUserBlocked()` returns correct status for all surfaces
-- [ ] Expired mutes cleared by `clearExpiredMutes()`
-- [ ] Stats method returns correct counts
-- [ ] Unit + integration tests green
-- [ ] No code duplication between profile/message enforcement
+- [x] Threshold logic consolidated in `ContentViolationService`
+- [x] Profile + message services use shared enforcement method
+- [x] `isUserBlocked()` returns correct status for all surfaces
+- [x] Expired mutes cleared by `clearExpiredMutes()`
+- [x] Stats method returns correct counts
+- [x] Unit + integration tests green
+- [x] No code duplication between profile/message enforcement
 
 ---
 

@@ -35,8 +35,6 @@ const messageSelect = {
 } as const;
 
 const MAX_AFTER_POLL_LIMIT = 100;
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 
 @Injectable()
 export class MeConversationMessagesService {
@@ -53,23 +51,12 @@ export class MeConversationMessagesService {
   ) {}
 
   private async assertMessagingAllowed(userId: string): Promise<void> {
-    const status = await this.contentViolations.getUserViolationStatus(userId);
-    if (status.status !== 'messaging_muted') {
+    if (!(await this.contentViolations.isUserBlocked(userId, 'message'))) {
       return;
     }
 
+    const status = await this.contentViolations.getUserViolationStatus(userId);
     const mutedUntil = status.mutedUntil;
-    const now = new Date();
-    if (mutedUntil != null && mutedUntil <= now) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          contentViolationStatus: 'ok',
-          contentViolationMutedUntil: null,
-        },
-      });
-      return;
-    }
 
     this.obs.trace(
       `messaging muted userId=${userId} mutedUntil=${mutedUntil?.toISOString() ?? 'null'}`,
@@ -113,50 +100,10 @@ export class MeConversationMessagesService {
       ErrorCodes.CONTENT_MODERATION_FLAGGED,
     );
 
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - HOUR_MS);
-    const oneDayAgo = new Date(now.getTime() - DAY_MS);
-
-    const [hourly, daily, lifetime] = await Promise.all([
-      this.contentViolations.getViolationCount(userId, {
-        surface: 'message',
-        since: oneHourAgo,
-      }),
-      this.contentViolations.getViolationCount(userId, {
-        surface: 'message',
-        since: oneDayAgo,
-      }),
-      this.contentViolations.getViolationCount(userId, {
-        surface: 'message',
-      }),
-    ]);
-
-    let mutedUntil: Date | null | undefined;
-    let muteDuration: string | undefined;
-    if (lifetime >= 20) {
-      mutedUntil = null;
-      muteDuration = 'indefinitely';
-    } else if (daily >= 10) {
-      mutedUntil = new Date(now.getTime() + DAY_MS);
-      muteDuration = '24 hours';
-    } else if (hourly >= 3) {
-      mutedUntil = new Date(now.getTime() + HOUR_MS);
-      muteDuration = '1 hour';
-    }
-
-    if (muteDuration !== undefined) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          contentViolationStatus: 'messaging_muted',
-          contentViolationMutedUntil: mutedUntil ?? null,
-        },
-      });
-      this.obs.trace(
-        `content user muted userId=${userId} duration=${muteDuration} hourly=${hourly} daily=${daily} lifetime=${lifetime}`,
-        ErrorCodes.CONTENT_USER_MUTED,
-      );
-    }
+    const enforcement = await this.contentViolations.enforceViolationThreshold(
+      userId,
+      'message',
+    );
 
     const ex = new BadRequestException({
       error: 'message_content_moderation_failed',
@@ -164,7 +111,7 @@ export class MeConversationMessagesService {
       details: {
         category,
         suggestion: 'Please rephrase your message respectfully',
-        ...(muteDuration ? { muted: muteDuration } : {}),
+        ...(enforcement.muteLabel ? { muted: enforcement.muteLabel } : {}),
       },
     });
     markHttpExceptionObservabilityLogged(ex);

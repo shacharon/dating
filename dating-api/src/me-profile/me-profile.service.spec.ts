@@ -72,6 +72,8 @@ describe('MeProfileService', () => {
     getUserViolationStatus: jest.Mock;
     recordViolation: jest.Mock;
     getViolationCount: jest.Mock;
+    isUserBlocked: jest.Mock;
+    enforceViolationThreshold: jest.Mock;
   };
 
   function buildService(overrides?: { prisma?: unknown }) {
@@ -137,6 +139,11 @@ describe('MeProfileService', () => {
       }),
       recordViolation: jest.fn().mockResolvedValue(undefined),
       getViolationCount: jest.fn().mockResolvedValue(0),
+      isUserBlocked: jest.fn().mockResolvedValue(false),
+      enforceViolationThreshold: jest.fn().mockResolvedValue({
+        shouldBlock: false,
+        reason: 'under_threshold',
+      }),
     };
     jest
       .spyOn(contentModerationTypes, 'isContentModerationEnabled')
@@ -1170,7 +1177,6 @@ describe('MeProfileService', () => {
         score: 0.9,
         failOpen: false,
       });
-      contentViolations.getViolationCount.mockResolvedValue(1);
 
       await expect(
         service.createForUser(userId, { aboutMe: 'explicit text' }),
@@ -1185,6 +1191,10 @@ describe('MeProfileService', () => {
           action: 'blocked',
         }),
       );
+      expect(contentViolations.enforceViolationThreshold).toHaveBeenCalledWith(
+        userId,
+        'profile',
+      );
       expect(prisma.userProfile.create).not.toHaveBeenCalled();
     });
 
@@ -1197,26 +1207,25 @@ describe('MeProfileService', () => {
         score: 0.8,
         failOpen: false,
       });
-      contentViolations.getViolationCount.mockResolvedValue(3);
+      contentViolations.enforceViolationThreshold.mockResolvedValue({
+        shouldBlock: true,
+        reason: '3_profile_violations',
+      });
 
       await expect(
         service.patchForUser(userId, { aboutPartner: 'bad' }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: userId },
-        data: { contentViolationStatus: 'profile_edit_blocked' },
-      });
+      expect(contentViolations.enforceViolationThreshold).toHaveBeenCalledWith(
+        userId,
+        'profile',
+      );
       expect(prisma.userProfile.update).not.toHaveBeenCalled();
     });
 
     it('throws Forbidden when user is already profile_edit_blocked', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(profileRow(baseRow));
-      contentViolations.getUserViolationStatus.mockResolvedValue({
-        status: 'profile_edit_blocked',
-        mutedUntil: null,
-        violationCount: 3,
-      });
+      contentViolations.isUserBlocked.mockResolvedValue(true);
 
       await expect(
         service.patchForUser(userId, { aboutMe: 'anything' }),
@@ -1268,6 +1277,7 @@ describe('MeProfileService', () => {
       await service.createForUser(userId, { aboutMe: 'unchecked' });
 
       expect(contentViolations.getUserViolationStatus).not.toHaveBeenCalled();
+      expect(contentViolations.isUserBlocked).not.toHaveBeenCalled();
       expect(moderation.checkContent).not.toHaveBeenCalled();
       expect(prisma.userProfile.create).toHaveBeenCalled();
     });
