@@ -1,339 +1,162 @@
-# Story 37.3 — Settings Tab Cleanup
+# Story 37.3 — Settings Tab Cleanup (LOCKED)
 
 **Sprint:** 37 — Profile Polish  
 **Story:** 3 — Clean up settings tab (remove duplicates, upgrade match prefs)  
-**Priority:** MEDIUM (polish)  
-**Estimated effort:** 2-3 hours  
-**Process:** Waterfall `0 → 1 → 2 → 3`  
+**Agent 0:** Architect  
+**Date:** 2026-08-01  
+**Status:** ACCEPT  
+**Prerequisite:** Prefer **37.2** ACCEPT (independent enough to run after 37.1 if needed)  
+**Skip Agent 4:** yes  
+**Process:** Waterfall `0 → 1 → 2 → 3`.  
 **Repo:** `dating-ui` only  
-**Needs mockup:** Design approved in this story lock
-
----
-
-## Problem
-
-Settings tab has duplicate navigation (Account/Language already in top-right nav) and match preferences is a boring text link. Feels like an afterthought, not a hub section.
+**Needs mockup:** Design locked below
 
 ---
 
 ## Goal
 
-Clean up Settings tab: remove duplicate Account section, upgrade Match preferences to a preview card showing current settings.
+Settings tab becomes a clean 2-section hub: keep **Notifications**, upgrade **Match preferences** to a preview card (real profile prefs), **remove** duplicate Account/Language links (already in avatar menu).
 
 ---
 
-## Design Spec
+## Baseline (do not reverse)
 
-### Before (3 sections)
-```
-1. Notifications ✅ (inline toggles)
-2. Match preferences 🔧 (boring link)
-3. Account ❌ (duplicate nav)
-```
+| Fact | Detail |
+|------|--------|
+| Settings today | `profile-settings-tab.tsx`: Notifications + text link to `/settings/preferences` + Account/Language links |
+| Avatar menu | `nav-auth.tsx` already links Account, Match preferences, Language |
+| Prefs data | On **`MeProfileDto`**: `partnerAgeMin`, `partnerAgeMax`, `maxDistanceKm`, `desiredPartnerGenders` — loaded via `fetchMyProfile` / `resolveEditableProfile` |
+| Prefs form helpers | `lib/match-preferences-form.ts` → `profileToMatchPreferencesForm` |
+| Prefs editor page | `/settings/preferences` → `MatchPreferencesForm` (unchanged) |
+| Testid | `profile-settings-tab`, `profile-match-preferences-link` |
 
-### After (2 sections)
-```
-1. Notifications ✅ (unchanged)
-2. Match preferences ✨ (preview card)
-```
+### Draft corrections (outdated — ignore)
 
----
-
-## Section 1: Notifications (No Change)
-
-Keep existing `NotificationPreferencesSection` as-is:
-```tsx
-<section id="notifications">
-  <h2>Notifications</h2>
-  <NotificationPreferencesSection />
-</section>
-```
-
-Works great, embedded toggles, nothing to fix.
+- ❌ Show “Looking for: Long-term” / `relationshipGoal` — **does not exist** on profile. Use **open-to-matching** (`desiredPartnerGenders`) + age range + distance.  
+- ❌ Invent a separate preferences REST resource — use existing profile fetch.  
+- ❌ Emoji/target sticker in the card (🎯) — use plain typography; no decorative emoji.  
+- ❌ Inline edit of prefs on the Settings tab — CTA still goes to `/settings/preferences`.  
+- ❌ dating-api / Overview / Edit redesign.
 
 ---
 
-## Section 2: Match Preferences (Upgraded)
+## Locked UX
 
-### Current (boring)
+### Before → After
+
+| Before | After |
+|--------|--------|
+| Notifications | Unchanged |
+| Match prefs blurb + text link | Preview **card** + primary CTA button |
+| Account + Language links | **Removed** |
+
+### Match preferences preview card
+
 ```
 Match preferences
-
-Choose who you want to see and set your boundaries.
-
-Open match preferences →
+┌─────────────────────────────────────┐
+│  Who you want to see                │
+│                                     │
+│  • Age range: 25–35                 │  ← if min/max present
+│  • Distance: within 50 km           │  ← if maxDistanceKm present
+│  • Open to matching with: Men, …    │  ← partner genders i18n
+│                                     │
+│       [ Open match preferences ]    │  ← keep testid on CTA
+└─────────────────────────────────────┘
 ```
 
-### New (preview card)
-```
-━━━ Match preferences ━━━
+**Data mapping (from `MeProfileDto` / form state):**
 
-┌─────────────────────────────────────────┐
-│  🎯 Who you want to see                 │
-│                                          │
-│  Current settings:                      │
-│  • Age range: 25-35                     │
-│  • Distance: within 50 km               │
-│  • Looking for: Long-term               │
-│                                          │
-│         [Adjust preferences →]          │
-└─────────────────────────────────────────┘
-```
+| Line | Source |
+|------|--------|
+| Age range | `partnerAgeMin`–`partnerAgeMax` (show partial if only one set; omit line if both null) |
+| Distance | `maxDistanceKm` → “within N km” using existing prefs copy where possible |
+| Open to matching | `desiredPartnerGenders` via `copy.gender` labels |
 
-**Implementation:**
+**Empty / loading:**  
+- Loading: short status text (`copy.common.loading`) or skeleton — keep light.  
+- No profile / all prefs empty: body text (reuse `hub.settingsMatchPrefsBody` or minimal new `settingsMatchPrefsEmpty` in en/he/es + types) + CTA still shown.  
+- Fetch error: soft message + CTA still links to `/settings/preferences`.
 
-```tsx
-<section id="match-prefs" className="scroll-mt-24 space-y-3">
-  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-    {hub.settingsMatchPrefsHeading}
-  </h2>
-  
-  <MatchPreferencesPreviewCard 
-    preferences={preferences}
-    copy={copy}
-  />
-</section>
-```
+**CTA:**  
+- Href `/settings/preferences`  
+- Preserve `data-testid="profile-match-preferences-link"` (on the button/link)  
+- Prefer button styling (emerald/solid) over bare text link; label: reuse `hub.settingsMatchPrefsCta`
 
-**New Component: `MatchPreferencesPreviewCard`**
+### Account section
 
-```tsx
-// src/components/profile/match-preferences-preview-card.tsx
-
-type Props = {
-  preferences: MatchPreferences | null;
-  copy: AppCopySchema['profile']['hub'];
-};
-
-export function MatchPreferencesPreviewCard({ preferences, copy }: Props) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-4 flex items-start gap-3">
-        <span className="text-2xl" role="img" aria-label="target">🎯</span>
-        <div>
-          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            Who you want to see
-          </h3>
-        </div>
-      </div>
-      
-      {preferences ? (
-        <dl className="space-y-2 text-sm">
-          <div className="flex gap-2">
-            <dt className="text-zinc-500 dark:text-zinc-400">•</dt>
-            <dd className="text-zinc-700 dark:text-zinc-300">
-              Age range: {preferences.minAge}-{preferences.maxAge}
-            </dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-zinc-500 dark:text-zinc-400">•</dt>
-            <dd className="text-zinc-700 dark:text-zinc-300">
-              Distance: within {preferences.maxDistanceKm} km
-            </dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-zinc-500 dark:text-zinc-400">•</dt>
-            <dd className="text-zinc-700 dark:text-zinc-300">
-              Looking for: {formatRelationshipGoal(preferences.relationshipGoal, copy)}
-            </dd>
-          </div>
-        </dl>
-      ) : (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {copy.settingsMatchPrefsEmpty}
-        </p>
-      )}
-      
-      <Link
-        href="/settings/preferences"
-        className="mt-6 inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
-      >
-        Adjust preferences →
-      </Link>
-    </div>
-  );
-}
-```
-
-**Data source:**
-- Fetch from existing `/settings/preferences` API or profile preferences
-- If not available, show empty state with CTA
+Delete the Account heading + `/settings/account` + `/settings/language` links from Settings tab only. Do **not** remove those routes or avatar-menu entries.
 
 ---
 
-## Section 3: Account (REMOVED)
+## File plan
 
-Delete entirely:
-```tsx
-// ❌ DELETE THIS SECTION
-<section>
-  <h2>Account</h2>
-  <Link href="/settings/account">Account settings</Link>
-  <Link href="/settings/language">Language</Link>
-</section>
-```
+| Path | Action |
+|------|--------|
+| `components/profile/profile-settings-tab.tsx` | Remove Account; fetch profile; render preview card |
+| `components/profile/match-preferences-preview-card.tsx` | **new** presentational card |
+| Optional | tiny display helper for age/distance/partner lines |
+| `lib/i18n/*` | Optional empty-state string only |
+| `profile-settings-tab.spec.tsx` | **new** (or extend hub page.spec) — Account gone; CTA href; preview lines when mocked profile |
 
-**Why:** These links are already in top-right nav menu. No need to duplicate.
+Reuse: `resolveEditableProfile` / `fetchMyProfile`, `profileToMatchPreferencesForm`, gender copy.  
+Do **not** change `MatchPreferencesForm` or preferences page.
 
----
-
-## Updated Component Structure
-
-```tsx
-// src/components/profile/profile-settings-tab.tsx
-
-export function ProfileSettingsTab() {
-  const { copy } = useAppLocale();
-  const hub = copy.profile.hub;
-  // TODO: fetch user preferences (existing API)
-  const [preferences, setPreferences] = useState<MatchPreferences | null>(null);
-  
-  useEffect(() => {
-    // Fetch preferences from /settings/preferences or profile
-    fetchUserPreferences().then(setPreferences);
-  }, []);
-
-  return (
-    <div className="space-y-8" data-testid="profile-settings-tab">
-      {/* 1. Notifications (unchanged) */}
-      <section id="notifications" className="scroll-mt-24 space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          {hub.settingsNotificationsHeading}
-        </h2>
-        <NotificationPreferencesSection />
-      </section>
-
-      {/* 2. Match Preferences (upgraded) */}
-      <section id="match-prefs" className="scroll-mt-24 space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          {hub.settingsMatchPrefsHeading}
-        </h2>
-        <MatchPreferencesPreviewCard 
-          preferences={preferences}
-          copy={copy}
-        />
-      </section>
-      
-      {/* 3. Account section - REMOVED */}
-    </div>
-  );
-}
-```
+Line budgets: soft ≤150 per new file; hard fail >200.
 
 ---
 
-## Types
+## Behavior freeze
 
-```tsx
-// Likely already exists in profile/preferences types
-type MatchPreferences = {
-  minAge: number;
-  maxAge: number;
-  maxDistanceKm: number;
-  relationshipGoal: string;
-  // ... other prefs
-};
-```
+- No dating-api changes.  
+- No new routes.  
+- Notifications section unchanged.  
+- Prefs editing still only on `/settings/preferences`.  
+- Preserve `data-testid="profile-settings-tab"` and `profile-match-preferences-link`.
 
 ---
 
-## New i18n Keys (optional)
+## Tests / gates
 
-```tsx
-// en.ts
-settingsMatchPrefsEmpty: "Set your match preferences to start seeing compatible profiles."
-```
-
-If preferences null/empty, show this instead of bullet list.
+1. Spec: Account links absent from Settings tab.  
+2. Spec: CTA href `/settings/preferences` + testid.  
+3. Spec: with mocked profile, age/distance/genders appear (at least one assertion).  
+4. Hub `page.spec.tsx` still green if Settings is mocked there.
 
 ---
 
-## Responsive
+## Acceptance criteria
 
-### Mobile
-- Card full width
-- Button full width on small screens
-
-### Desktop
-- Card constrained in `max-w-2xl`
-- Button inline
-
----
-
-## Empty State (No Preferences)
-
-```
-┌─────────────────────────────────────────┐
-│  🎯 Who you want to see                 │
-│                                          │
-│  Set your match preferences to start    │
-│  seeing compatible profiles.            │
-│                                          │
-│         [Set preferences →]             │
-└─────────────────────────────────────────┘
-```
+- [x] Account/Language section removed from Settings tab  
+- [x] Match prefs preview card shows age / distance / partner genders from profile (when set)  
+- [x] No `relationshipGoal` / no emoji chrome  
+- [x] CTA to `/settings/preferences` with existing testid  
+- [x] Notifications unchanged  
+- [x] Specs green; dating-ui only  
 
 ---
 
-## Behavior Freeze
+## Out of scope
 
-- No API changes (use existing preferences endpoints)
-- No new routes
-- Notifications section unchanged
-- Removed Account links already exist elsewhere (nav menu)
-
----
-
-## Tests
-
-1. **Visual regression** (manual QA):
-   - Account section gone
-   - Match prefs card renders with data
-   - Empty state when no preferences
-   - Button links to `/settings/preferences`
-   - Responsive mobile/desktop
-
-2. **Existing specs:**
-   - `profile-settings-tab` update assertions
-   - Notification section specs unchanged
-
-3. **Edge cases:**
-   - No preferences data
-   - Partial preferences
-   - Long relationship goal text
+| Item | Notes |
+|------|--------|
+| Inline prefs editor | Out |
+| Embedding full `MatchPreferencesForm` | Out |
+| Avatar menu changes | Out |
+| 37.2 commit | Separate Agent 3 for story 2 |
 
 ---
 
-## Acceptance Criteria
+## Agent 1 implementation order
 
-- [ ] Account section removed (links exist in top-right nav)
-- [ ] Match preferences upgraded to preview card
-- [ ] Card shows current age range, distance, relationship goal
-- [ ] "Adjust preferences" button links to `/settings/preferences`
-- [ ] Empty state when no preferences set
-- [ ] Notifications section unchanged
-- [ ] Responsive mobile/desktop
-- [ ] Existing settings specs updated and green
+1. Add `MatchPreferencesPreviewCard`.  
+2. Wire fetch in `ProfileSettingsTab`; remove Account block.  
+3. Specs + handoff `agent-1-implement.md`.
 
 ---
 
-## Out of Scope
+## Done
 
-- Inline preference editing (still goes to `/settings/preferences`)
-- Additional preference fields (gender, etc.)
-- Account section redesign (just removing duplicate)
-- Language switcher redesign
+Accepted 2026-08-01. See [agent-3-pm.md](./handoffs/STORY_03_settings_cleanup/agent-3-pm.md).
 
----
-
-## Dependencies
-
-**After Story 37.1 + 37.2** (Overview + Edit) — completes the profile hub polish trifecta.
-
----
-
-## Agent 0 Next
-
-```
---agent 0 sprint 37 story 3
-```
+**Still owed (Sprint 37):** `--agent 3 sprint 37 story 2` if Edit tab is CR PASS.

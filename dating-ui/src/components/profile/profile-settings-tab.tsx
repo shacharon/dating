@@ -1,13 +1,60 @@
 'use client';
 
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { NotificationPreferencesSection } from '@/components/notification-preferences-section';
+import { MatchPreferencesPreviewCard } from '@/components/profile/match-preferences-preview-card';
+import {
+  matchPreferencesPreviewHasValues,
+  matchPreferencesPreviewLines,
+} from '@/components/profile/match-preferences-preview-display';
 import { useAppLocale } from '@/lib/i18n';
+import {
+  emptyMatchPreferencesFormState,
+  profileToMatchPreferencesForm,
+  type MatchPreferencesFormState,
+} from '@/lib/match-preferences-form';
+import { resolveEditableProfile } from '@/lib/profile-form';
 
-/** Profile hub Settings tab: notifications and preference deep links. */
+/** Profile hub Settings tab: notifications + match-prefs preview. */
 export function ProfileSettingsTab() {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
+  const [status, setStatus] = useState<'loading' | 'error' | 'ready'>(
+    'loading',
+  );
+  const [form, setForm] = useState<MatchPreferencesFormState>(
+    emptyMatchPreferencesFormState,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const profile = await resolveEditableProfile();
+        if (cancelled) return;
+        if (!profile) {
+          setForm(emptyMatchPreferencesFormState());
+          setStatus('ready');
+          return;
+        }
+        setForm(profileToMatchPreferencesForm(profile));
+        setStatus('ready');
+      } catch {
+        if (!cancelled) {
+          setForm(emptyMatchPreferencesFormState());
+          setStatus('error');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const lines =
+    status === 'ready' && matchPreferencesPreviewHasValues(form)
+      ? matchPreferencesPreviewLines(form, copy)
+      : [];
 
   return (
     <div className="space-y-8" data-testid="profile-settings-tab">
@@ -18,41 +65,21 @@ export function ProfileSettingsTab() {
         <NotificationPreferencesSection />
       </section>
 
-      <section id="match-prefs" className="scroll-mt-24 space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          {hub.settingsMatchPrefsHeading}
-        </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {hub.settingsMatchPrefsBody}
-        </p>
-        <Link
-          href="/settings/preferences"
-          data-testid="profile-match-preferences-link"
-          className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-        >
-          {hub.settingsMatchPrefsCta}
-        </Link>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          {hub.settingsAccountHeading}
-        </h2>
-        <div className="flex flex-col gap-2">
-          <Link
-            href="/settings/account"
-            className="text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-          >
-            {hub.settingsAccountLink}
-          </Link>
-          <Link
-            href="/settings/language"
-            className="text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-          >
-            {hub.settingsLanguageLink}
-          </Link>
-        </div>
-      </section>
+      <MatchPreferencesPreviewCard
+        heading={hub.settingsMatchPrefsHeading}
+        title={copy.matchPreferences.sections.partnerGenders}
+        lines={lines}
+        emptyBody={hub.settingsMatchPrefsBody}
+        ctaLabel={hub.settingsMatchPrefsCta}
+        status={status === 'ready' ? 'ready' : status}
+        statusText={
+          status === 'loading'
+            ? copy.common.loading
+            : status === 'error'
+              ? copy.matchPreferences.saveError
+              : undefined
+        }
+      />
     </div>
   );
 }
