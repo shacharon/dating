@@ -1,10 +1,10 @@
 # Story 03 — Soft / dating policy layer
 
-**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
+**Sprint 32 · Status: ✅ Done**  
 **Priority:** P1  
 **Estimated effort:** 1 day  
 **Dependencies:** Stories 01–02 preferred (ops can see soft actions); can start after 01  
-**Handoffs:** [architect](./handoffs/STORY_03_soft_policy_layer/agent-0-architect.md) · [dev](./handoffs/STORY_03_soft_policy_layer/agent-1-dev.md) · [CR](./handoffs/STORY_03_soft_policy_layer/agent-2-cr.md) 
+**Handoffs:** [architect](./handoffs/STORY_03_soft_policy_layer/agent-0-architect.md) · [dev](./handoffs/STORY_03_soft_policy_layer/agent-1-dev.md) · [CR](./handoffs/STORY_03_soft_policy_layer/agent-2-cr.md) · [PM](./handoffs/STORY_03_soft_policy_layer/agent-3-pm.md)
 
 ---
 
@@ -21,7 +21,7 @@ Architect must **pick one** primary approach (or a thin combo):
 | **C. Score threshold** | If `sexual` (or chosen cats) score ≥ X → block even if `flagged=false` |
 | **D. Defer** | Document “no soft tier”; ship only observability of near-miss scores |
 
-Default recommendation for MVP: **B or C** for clear spam; avoid complex warn UX unless product wants it.
+**Shipped:** **B + thin C** as hard blocks (`dating_policy`); no warn UX. Near-miss obs for elevated-but-under scores.
 
 ---
 
@@ -37,10 +37,10 @@ Default recommendation for MVP: **B or C** for clear spam; avoid complex warn UX
 
 ## Acceptance criteria
 
-- [ ] Architect decision written and implemented
-- [ ] At least one “middle” case that previously sent now warn/blocked **or** explicit Defer with near-miss logging
-- [ ] Mute ladder rules for soft actions documented
-- [ ] Tests cover the locked policy
+- [x] Architect decision written and implemented
+- [x] At least one “middle” case that previously sent now warn/blocked **or** explicit Defer with near-miss logging
+- [x] Mute ladder rules for soft actions documented
+- [x] Tests cover the locked policy
 
 ---
 
