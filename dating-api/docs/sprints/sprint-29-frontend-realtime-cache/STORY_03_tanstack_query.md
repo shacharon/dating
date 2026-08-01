@@ -1,11 +1,11 @@
 # Story 03 — TanStack Query cache
 
-**Sprint 29 · Status: CR PASS → Agent 3 PM**  
+**Sprint 29 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 1 day  
 **Dependencies:** Prefer Story 01 (realtime) locked; Story 02 DTOs if caching conversations
 
-**Handoff:** [`handoffs/STORY_03_tanstack_query/agent-0-architect.md`](./handoffs/STORY_03_tanstack_query/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_03_tanstack_query/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_03_tanstack_query/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_03_tanstack_query/agent-0-architect.md`](./handoffs/STORY_03_tanstack_query/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_03_tanstack_query/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_03_tanstack_query/agent-2-cr.md) · [`agent-3-pm.md`](./handoffs/STORY_03_tanstack_query/agent-3-pm.md)
 
 ---
 
@@ -38,10 +38,10 @@ SCALE CR: redundant refetches (conversations, profile, matches) with no shared c
 
 ## Acceptance criteria
 
-- [ ] QueryClient provider wired
-- [ ] Locked routes use Query (not ad-hoc duplicate fetch on remount within staleTime)
-- [ ] Invalidation strategy documented for realtime events (even if partial)
-- [ ] Tests for migrated path(s)
+- [x] QueryClient provider wired
+- [x] Locked routes use Query (not ad-hoc duplicate fetch on remount within staleTime)
+- [x] Invalidation strategy documented for realtime events (even if partial)
+- [x] Tests for migrated path(s)
 
 ## Commit message
 

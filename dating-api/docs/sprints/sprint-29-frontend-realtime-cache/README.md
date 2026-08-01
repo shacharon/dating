@@ -1,6 +1,6 @@
 # Sprint 29 — Frontend Realtime + Cache
 
-**Status:** 🟡 **IN PROGRESS** — Stories 1–2 Done; Story 3 CR PASS → Agent 3 PM  
+**Status:** 🟡 **IN PROGRESS** — Stories 1–3 Done; next Story 4 Agent 0  
 **Depends on:** Sprint 28 Done (backend hardening). **Does not** require live AWS.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`QUICKSTART.md`](./QUICKSTART.md) · prior: [Sprint 28](../sprint-28-backend-scale-hardening/README.md)
 
@@ -28,8 +28,8 @@ Cut FE chatter that still hurts after Sprint 28:
 |---|-------|--------|
 | 01 | [WS realtime default](./STORY_01_ws_realtime_default.md) | **Done** |
 | 02 | [Conversations cursor + unread-total](./STORY_02_conversations_pagination.md) | **Done** |
-| 03 | [TanStack Query cache](./STORY_03_tanstack_query.md) | CR PASS → Agent 3 |
-| 04 | [next/image optimization](./STORY_04_next_image.md) | Planned |
+| 03 | [TanStack Query cache](./STORY_03_tanstack_query.md) | **Done** |
+| 04 | [next/image optimization](./STORY_04_next_image.md) | Planned → next Agent 0 |
 | 05 | [Lazy-load admin / heavy UI](./STORY_05_lazy_admin_ui.md) | Planned |
 
 **Order:** 01 → 02 → 03 → 04 → 05 (4 agents each: `--agent 0..3 sprint 29 story N`).  
