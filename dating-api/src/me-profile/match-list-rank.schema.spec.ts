@@ -41,6 +41,23 @@ describe('MatchListRank schema contract', () => {
   it('exposes MatchListRank on Prisma client namespace', () => {
     expect(Prisma.ModelName.MatchListRank).toBe('MatchListRank');
   });
+
+  it('migration enforces unique pair and CASCADE FKs', () => {
+    const sql = readFileSync(
+      join(
+        __dirname,
+        '../../prisma/migrations/20260801140000_add_match_list_rank/migration.sql',
+      ),
+      'utf8',
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "MatchListRank_viewerUserId_candidateProfileId_key"',
+    );
+    expect(sql).toContain('"matchScore" DESC');
+    expect(sql).toContain('ON DELETE CASCADE');
+    expect(sql).toMatch(/MatchListRank_viewerUserId_fkey/);
+    expect(sql).toMatch(/MatchListRank_candidateProfileId_fkey/);
+  });
 });
 
 describe('MatchListRank create + unique (mocked Prisma)', () => {
