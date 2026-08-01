@@ -118,6 +118,17 @@ function isSameCalendarDay(a: Date, b: Date): boolean {
   );
 }
 
+/** Whole calendar days between `earlier` and `later` (local), ignoring clock time. */
+function calendarDayDiff(earlier: Date, later: Date): number {
+  const a = new Date(
+    earlier.getFullYear(),
+    earlier.getMonth(),
+    earlier.getDate(),
+  );
+  const b = new Date(later.getFullYear(), later.getMonth(), later.getDate());
+  return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export function formatMessageTime(
   createdAt: string,
   format: AppCopySchema['conversations']['format'],
@@ -136,9 +147,13 @@ export function formatMessageTime(
   const time = formatTimeOfDay(date, locale);
   if (isSameCalendarDay(date, now)) return time;
 
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (isSameCalendarDay(date, yesterday)) return format.yesterdayAt(time);
+  const dayDiff = calendarDayDiff(date, now);
+  if (dayDiff === 1) return format.yesterdayAt(time);
+
+  if (dayDiff >= 2 && dayDiff <= 6) {
+    const weekday = date.toLocaleDateString(locale, { weekday: 'short' });
+    return `${weekday}, ${time}`;
+  }
 
   return `${date.toLocaleDateString(locale, { dateStyle: 'medium' })} ${time}`;
 }

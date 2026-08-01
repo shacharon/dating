@@ -399,6 +399,55 @@ describe('ConversationDetailPage', () => {
     unmount();
   });
 
+  it('shows always-visible timestamps for sent and received bubbles', async () => {
+    const recent = new Date().toISOString();
+    fetchConversationMessages.mockResolvedValue({
+      messages: [
+        {
+          id: 'msg_mine',
+          conversationId: 'mutual_abc',
+          senderId: 'user_me',
+          text: 'Mine timed',
+          createdAt: recent,
+          status: 'SENT',
+        },
+        {
+          id: 'msg_other',
+          conversationId: 'mutual_abc',
+          senderId: 'user_cand_1',
+          text: 'Theirs timed',
+          createdAt: recent,
+          status: 'SENT',
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+
+    const { unmount } = render(<ConversationDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mine timed')).toBeTruthy();
+      expect(screen.getByText('Theirs timed')).toBeTruthy();
+    });
+
+    const times = screen.getAllByTestId('conversation-message-time');
+    expect(times).toHaveLength(2);
+    for (const el of times) {
+      expect(el.textContent?.trim().length).toBeGreaterThan(0);
+      expect(el.className).toMatch(/text-zinc-400/);
+      expect(el.className).not.toMatch(/group-hover|opacity-0|invisible/);
+    }
+    expect(
+      screen.getByText('Mine timed').closest('[data-sender="me"]')
+        ?.querySelector('[data-testid="conversation-message-time"]'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Theirs timed').closest('[data-sender="other"]')
+        ?.querySelector('[data-testid="conversation-message-time"]'),
+    ).toBeTruthy();
+    unmount();
+  });
+
   it('shows load earlier button and fetches with before cursor', async () => {
     const recent = new Date().toISOString();
     fetchConversationMessages
