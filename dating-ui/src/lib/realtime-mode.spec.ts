@@ -12,18 +12,33 @@ describe('getRealtimeMode', () => {
     }
   });
 
+  it('returns ws when env is unset', () => {
+    delete process.env.NEXT_PUBLIC_REALTIME;
+    expect(getRealtimeMode()).toBe('ws');
+  });
+
+  it('returns ws when env is empty string', () => {
+    process.env.NEXT_PUBLIC_REALTIME = '   ';
+    expect(getRealtimeMode()).toBe('ws');
+  });
+
   it('returns ws when env is ws', () => {
     process.env.NEXT_PUBLIC_REALTIME = 'ws';
     expect(getRealtimeMode()).toBe('ws');
   });
 
-  it('returns poll when env is unset', () => {
-    delete process.env.NEXT_PUBLIC_REALTIME;
+  it('returns ws when env is websocket', () => {
+    process.env.NEXT_PUBLIC_REALTIME = 'websocket';
+    expect(getRealtimeMode()).toBe('ws');
+  });
+
+  it('returns poll when env is poll', () => {
+    process.env.NEXT_PUBLIC_REALTIME = 'poll';
     expect(getRealtimeMode()).toBe('poll');
   });
 
   it('returns poll for invalid values', () => {
-    process.env.NEXT_PUBLIC_REALTIME = 'websocket';
+    process.env.NEXT_PUBLIC_REALTIME = 'foo';
     expect(getRealtimeMode()).toBe('poll');
   });
 });
