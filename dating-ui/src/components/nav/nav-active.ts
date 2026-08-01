@@ -22,3 +22,10 @@ export function isProfileActive(pathname: string): boolean {
 export function formatNavBadgeCount(count: number): string {
   return count > 99 ? '99+' : String(count);
 }
+
+/** True when a nav href targets the current path (same-route click must not set navPending). */
+export function isNavHrefCurrent(pathname: string, href: string): boolean {
+  const path = pathname.replace(/\/$/, '') || '/';
+  const target = href.split('?')[0]?.replace(/\/$/, '') || '/';
+  return path === target;
+}

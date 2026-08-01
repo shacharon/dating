@@ -10,7 +10,7 @@ export type AppNavProps = {
   locale: AppLocale;
   copy: AppCopySchema;
   navPending: boolean;
-  onNavClick: () => void;
+  onNavClick: (href: string) => void;
   /** Reserved; wire API later. Defaults to 0. */
   newMatchCount?: number;
 };

@@ -25,15 +25,49 @@ function profileWriteErrorMessage(
     const parsed = JSON.parse(errBody) as {
       error?: string;
       message?: string;
+      details?: { field?: string; suggestion?: string; category?: string };
     };
     if (parsed.error === 'nickname_taken') {
       return 'This nickname is already taken. Choose a different one or leave it blank.';
+    }
+    if (parsed.error === 'profile_edit_blocked') {
+      return (
+        parsed.message ??
+        'Profile editing is currently restricted due to previous content violations.'
+      );
+    }
+    if (parsed.error === 'content_moderation_failed') {
+      const field = parsed.details?.field;
+      const suggestion = parsed.details?.suggestion;
+      const base =
+        parsed.message ?? 'Your profile contains inappropriate content';
+      if (field && suggestion) {
+        return `${base} (${field}: ${suggestion})`;
+      }
+      if (suggestion) return `${base} ${suggestion}`;
+      return base;
     }
     if (parsed.message) return parsed.message;
   } catch {
     // fall through
   }
   return `${method} /api/v1/me/profile failed: ${status} ${errBody || ''}`.trim();
+}
+
+/** Expected product policy responses — log without console.error (avoids Next.js overlay). */
+function isExpectedProfileWriteFailure(status: number, errBody: string): boolean {
+  if (status !== 400 && status !== 403) return false;
+  try {
+    const parsed = JSON.parse(errBody) as { error?: string };
+    const code = parsed.error;
+    return (
+      code === 'content_moderation_failed' ||
+      code === 'profile_edit_blocked' ||
+      code === 'nickname_taken'
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ─── Profile Types ────────────────────────────────────────────────────────────
@@ -232,8 +266,9 @@ export async function createMyProfile(body: CreateMeProfileBody): Promise<MeProf
   captureRequestIdFromResponse(res);
   if (!res.ok) {
     const errBody = await res.text();
+    const expected = isExpectedProfileWriteFailure(res.status, errBody);
     emitProductLog({
-      level: 'error',
+      level: expected ? 'trace' : 'error',
       route,
       message: `POST /api/v1/me/profile failed ${res.status}`,
       errorCode: UiErrorCodes.UI_PROFILE_CREATE_FAIL,
@@ -276,8 +311,9 @@ export async function patchMyProfile(body: PatchMeProfileBody): Promise<MeProfil
   captureRequestIdFromResponse(res);
   if (!res.ok) {
     const errBody = await res.text();
+    const expected = isExpectedProfileWriteFailure(res.status, errBody);
     emitProductLog({
-      level: 'error',
+      level: expected ? 'trace' : 'error',
       route,
       message: `PATCH /api/v1/me/profile failed ${res.status}`,
       errorCode: UiErrorCodes.UI_PROFILE_PATCH_FAIL,

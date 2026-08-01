@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/nav/app-nav";
 import { MessagingShellProvider } from "@/components/messaging-shell-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { hasSessionCookie } from "@/lib/session-cookie";
+import { isNavHrefCurrent } from "@/components/nav/nav-active";
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
@@ -47,6 +48,13 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setNavPending(false);
   }, [pathname]);
+
+  // Failsafe: never leave nav in wait state if soft-nav doesn't change path
+  useEffect(() => {
+    if (!navPending) return;
+    const t = window.setTimeout(() => setNavPending(false), 2500);
+    return () => window.clearTimeout(t);
+  }, [navPending]);
 
   useEffect(() => {
     setLocale(readStoredLocale());
@@ -148,23 +156,66 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   return (
     <div dir={getLocaleDirection(locale)}>
       <MessagingShellProvider sessionUserId={user.id}>
-        {pathname.startsWith('/onboarding') ? null : (
-          <AppNav
+        <Suspense
+          fallback={<div className="pb-20 md:pb-0">{children}</div>}
+        >
+          <AuthenticatedProductChrome
             pathname={pathname}
             locale={locale}
             copy={copy}
             navPending={navPending}
-            onNavClick={() => setNavPending(true)}
-          />
-        )}
-        <div
-          className={
-            pathname.startsWith('/onboarding') ? undefined : 'pb-20 md:pb-0'
-          }
-        >
-          {children}
-        </div>
+            setNavPending={setNavPending}
+          >
+            {children}
+          </AuthenticatedProductChrome>
+        </Suspense>
       </MessagingShellProvider>
     </div>
+  );
+}
+
+function AuthenticatedProductChrome({
+  children,
+  pathname,
+  locale,
+  copy,
+  navPending,
+  setNavPending,
+}: {
+  children: ReactNode;
+  pathname: string;
+  locale: AppLocale;
+  copy: ReturnType<typeof getCopy>;
+  navPending: boolean;
+  setNavPending: (v: boolean) => void;
+}) {
+  const searchParams = useSearchParams();
+  const editOnboarding = searchParams.get('edit') === '1';
+  /** First-time onboarding only — edit profile keeps AppNav. */
+  const hideAppNav =
+    pathname.startsWith('/onboarding') && !editOnboarding;
+
+  return (
+    <>
+      {hideAppNav ? null : (
+        <AppNav
+          pathname={pathname}
+          locale={locale}
+          copy={copy}
+          navPending={navPending}
+          onNavClick={(href) => {
+            if (isNavHrefCurrent(pathname, href)) {
+              setNavPending(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+            }
+            setNavPending(true);
+          }}
+        />
+      )}
+      <div className={hideAppNav ? undefined : 'pb-20 md:pb-0'}>
+        {children}
+      </div>
+    </>
   );
 }

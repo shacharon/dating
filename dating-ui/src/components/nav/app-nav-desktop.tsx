@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n';
 import { NavAuth } from '@/components/nav-auth';
 import {
@@ -16,7 +15,7 @@ export type AppNavChromeProps = {
   locale: AppLocale;
   copy: AppCopySchema;
   navPending: boolean;
-  onNavClick: () => void;
+  onNavClick: (href: string) => void;
   totalUnread: number;
   newMatchCount?: number;
 };
@@ -37,14 +36,9 @@ export function AppNavDesktop({
   return (
     <header className="sticky top-0 z-40 hidden border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:block">
       <div className="mx-auto flex max-w-5xl items-center gap-x-6 px-4 py-2">
-        <Link
-          href="/dating/me-matches"
-          prefetch
-          onClick={onNavClick}
-          className="shrink-0 text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
-        >
+        <span className="shrink-0 text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
           {copy.nav.brand}
-        </Link>
+        </span>
         <nav
           className="flex min-w-0 flex-1 items-center gap-x-5"
           aria-label={copy.nav.mainAria}
@@ -62,7 +56,7 @@ export function AppNavDesktop({
                 : undefined
             }
             badgeTestId="nav-matches-new"
-            onClick={onNavClick}
+            onClick={() => onNavClick('/dating/me-matches')}
             pending={navPending}
           />
           <NavItem
@@ -78,7 +72,7 @@ export function AppNavDesktop({
                 : undefined
             }
             badgeTestId="nav-conversations-unread"
-            onClick={onNavClick}
+            onClick={() => onNavClick('/dating/conversations')}
             pending={navPending}
           />
           <NavItem
@@ -87,7 +81,7 @@ export function AppNavDesktop({
             label={copy.nav.profile}
             active={profileActive}
             icon={<ProfileIcon filled={profileActive} />}
-            onClick={onNavClick}
+            onClick={() => onNavClick('/dating/profile')}
             pending={navPending}
           />
         </nav>

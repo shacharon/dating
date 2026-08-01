@@ -3,6 +3,7 @@ import {
   formatNavBadgeCount,
   isConversationsActive,
   isMatchesActive,
+  isNavHrefCurrent,
   isProfileActive,
 } from './nav-active';
 
@@ -32,5 +33,20 @@ describe('nav-active', () => {
     expect(formatNavBadgeCount(3)).toBe('3');
     expect(formatNavBadgeCount(99)).toBe('99');
     expect(formatNavBadgeCount(100)).toBe('99+');
+  });
+
+  it('detects same-route nav href', () => {
+    expect(isNavHrefCurrent('/dating/me-matches', '/dating/me-matches')).toBe(
+      true,
+    );
+    expect(
+      isNavHrefCurrent('/dating/me-matches/', '/dating/me-matches'),
+    ).toBe(true);
+    expect(
+      isNavHrefCurrent('/dating/me-matches/abc', '/dating/me-matches'),
+    ).toBe(false);
+    expect(
+      isNavHrefCurrent('/dating/conversations', '/dating/me-matches'),
+    ).toBe(false);
   });
 });

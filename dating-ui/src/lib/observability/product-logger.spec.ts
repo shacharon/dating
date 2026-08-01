@@ -83,4 +83,43 @@ describe('product-logger', () => {
     vi.unstubAllGlobals();
     vi.resetModules();
   });
+
+  it('expected profile_edit_blocked does not console.error', async () => {
+    process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3001';
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    resetRequestIdContextForTests();
+    vi.resetModules();
+    const { patchMyProfile } = await import('@/lib/me-profile-api');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+        headers: new Headers({ 'x-request-id': 'req-blocked' }),
+        text: async () =>
+          JSON.stringify({
+            error: 'profile_edit_blocked',
+            message: 'Profile editing is currently restricted',
+          }),
+      } as Response),
+    );
+    await expect(patchMyProfile({ aboutMe: 'x' })).rejects.toThrow(
+      /restricted/i,
+    );
+    expect(errSpy).not.toHaveBeenCalled();
+    const traced = logSpy.mock.calls
+      .map((c) => c[0] as string)
+      .filter((s) => {
+        try {
+          return JSON.parse(s).errorCode === 'UI_PROFILE_PATCH_FAIL';
+        } catch {
+          return false;
+        }
+      });
+    expect(traced).toHaveLength(1);
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
 });

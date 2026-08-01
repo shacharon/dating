@@ -52,7 +52,7 @@ export function AppNavMobile({
                 : undefined
             }
             badgeTestId="nav-matches-new"
-            onClick={onNavClick}
+            onClick={() => onNavClick('/dating/me-matches')}
             pending={navPending}
           />
           <NavItem
@@ -73,7 +73,7 @@ export function AppNavMobile({
                 : undefined
             }
             badgeTestId="nav-conversations-unread"
-            onClick={onNavClick}
+            onClick={() => onNavClick('/dating/conversations')}
             pending={navPending}
           />
           <NavItem
@@ -82,7 +82,7 @@ export function AppNavMobile({
             label={copy.nav.profile}
             active={profileActive}
             icon={<ProfileIcon filled={profileActive} className="h-5 w-5" />}
-            onClick={onNavClick}
+            onClick={() => onNavClick('/dating/profile')}
             pending={navPending}
           />
         </div>
