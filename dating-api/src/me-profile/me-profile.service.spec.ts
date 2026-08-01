@@ -65,6 +65,7 @@ describe('MeProfileService', () => {
   >;
   let analysisQueue: { enqueueOrRunInline: jest.Mock };
   let meMatches: { invalidateMatchListCache: jest.Mock };
+  let matchListRankQueue: { enqueueRebuild: jest.Mock };
   let analysis: jest.Mocked<Pick<MeProfileAnalysisService, 'runForUser'>>;
   let analytics: { track: jest.Mock };
   let moderation: { checkContent: jest.Mock };
@@ -87,6 +88,7 @@ describe('MeProfileService', () => {
       meMatches as never,
       moderation as unknown as OpenAIModerationClient,
       contentViolations as unknown as ContentViolationService,
+      matchListRankQueue as never,
     );
   }
 
@@ -122,6 +124,9 @@ describe('MeProfileService', () => {
     analytics = { track: jest.fn() };
     analysisQueue = { enqueueOrRunInline: jest.fn().mockResolvedValue('job_1') };
     meMatches = { invalidateMatchListCache: jest.fn().mockResolvedValue(undefined) };
+    matchListRankQueue = {
+      enqueueRebuild: jest.fn().mockResolvedValue('inline:user'),
+    };
     moderation = {
       checkContent: jest.fn().mockResolvedValue({
         flagged: false,
@@ -1299,6 +1304,62 @@ describe('MeProfileService', () => {
       await service.patchForUser(userId, { aboutMe: '   ' });
 
       expect(moderation.checkContent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('match list rank rebuild enqueue', () => {
+    it('createForUser enqueues preferences_changed', async () => {
+      const created = { ...baseRow, gender: ProfileGender.FEMALE };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          ...created,
+          desiredPartnerGenders: created.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(created));
+      prisma.userProfile.create.mockResolvedValue(created);
+
+      await service.createForUser(userId, { gender: ProfileGender.FEMALE });
+
+      expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+        userId,
+        'preferences_changed',
+      );
+    });
+
+    it('patchForUser enqueues preferences_changed when preference fields change', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(baseRow));
+
+      await service.patchForUser(userId, { maxDistanceKm: 50 });
+
+      expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+        userId,
+        'preferences_changed',
+      );
+    });
+
+    it('patchForUser does not enqueue when only non-preference fields change', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow({ ...baseRow, aboutMe: 'updated' }));
+      prisma.userProfile.update.mockResolvedValue({
+        ...baseRow,
+        aboutMe: 'updated',
+      });
+
+      await service.patchForUser(userId, { aboutMe: 'updated' });
+
+      expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
     });
   });
 });

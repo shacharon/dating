@@ -32,6 +32,10 @@ describe('MeMatchActionsService', () => {
     track: jest.fn(),
   } as unknown as AnalyticsService;
 
+  const matchListRankQueue = {
+    enqueueRebuild: jest.fn().mockResolvedValue('inline:actor'),
+  };
+
   let service: MeMatchActionsService;
 
   beforeEach(() => {
@@ -45,6 +49,7 @@ describe('MeMatchActionsService', () => {
       mutualMatches,
       mutualMatchEmail,
       analytics,
+      matchListRankQueue as never,
     );
   });
 
@@ -421,6 +426,33 @@ describe('MeMatchActionsService', () => {
       'actor-1',
       ProductAnalyticsEvents.MATCH_ACTION,
       { action: 'undo', candidateProfileId: 'prof-cand' },
+    );
+    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+      'actor-1',
+      'match_action',
+    );
+  });
+
+  it('createAction enqueues match_action rebuild for actor', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    (prisma.matchAction.upsert as jest.Mock).mockResolvedValue({
+      id: 'action-like',
+      actorUserId: 'actor-1',
+      targetUserId: 'target-user',
+      targetProfileIdSnapshot: 'prof-cand',
+      action: MatchActionType.LIKE,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    });
+    mutualMatches.detectAndCreateMutualMatch.mockResolvedValue(null);
+
+    await service.createAction('actor-1', 'prof-cand', MatchActionType.LIKE);
+
+    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+      'actor-1',
+      'match_action',
     );
   });
 

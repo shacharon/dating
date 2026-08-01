@@ -31,12 +31,21 @@ describe('MeConversationsService', () => {
     error: jest.fn(),
   } as unknown as StructuredObservabilityService;
 
+  const matchListRankQueue = {
+    enqueueRebuild: jest.fn().mockResolvedValue('inline:u'),
+  };
+
   let service: MeConversationsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     const analytics = { track: jest.fn() } as unknown as AnalyticsService;
-    service = new MeConversationsService(prisma, obs, analytics);
+    service = new MeConversationsService(
+      prisma,
+      obs,
+      analytics,
+      matchListRankQueue as never,
+    );
     (prisma.message.count as jest.Mock).mockResolvedValue(0);
     (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
   });
@@ -787,6 +796,15 @@ describe('MeConversationsService', () => {
           unmatchedAt: expect.any(Date),
         }),
       });
+      expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+        otherUserIdA,
+        'unmatch',
+      );
+      expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+        sessionUserId,
+        'unmatch',
+      );
+      expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledTimes(2);
       expect(obs.trace).toHaveBeenCalled();
     });
 
@@ -797,6 +815,7 @@ describe('MeConversationsService', () => {
         service.unmatch(sessionUserId, conversationId),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.mutualMatch.update).not.toHaveBeenCalled();
+      expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException when conversation is already UNMATCHED', async () => {

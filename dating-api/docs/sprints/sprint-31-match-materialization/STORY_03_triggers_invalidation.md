@@ -1,11 +1,11 @@
 # Story 03 — Triggers + invalidation
 
-**Sprint 31 · Status: Architect locked → Agent 1 Dev**  
+**Sprint 31 · Status: Done (Agent 1 Dev complete → Agent 2 CR)**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 02 rebuild job
 
-**Handoff:** [`handoffs/STORY_03_triggers_invalidation/agent-0-architect.md`](./handoffs/STORY_03_triggers_invalidation/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_03_triggers_invalidation/agent-1-dev.md`](./handoffs/STORY_03_triggers_invalidation/agent-1-dev.md)
 
 ---
 
@@ -20,9 +20,9 @@ Without triggers, the table goes stale after analysis, preference edits, blocks,
 ## Scope / tasks
 
 1. Architect locks **minimum** trigger set. ✅
-2. Enqueue with debounce / coalesce (same viewer multiple events → one job) if locked.
-3. Invalidate Redis match-list cache for that viewer when rebuild completes (or on enqueue — Architect chooses).
-4. Specs: trigger sites call enqueue (mocked queue); debounce if locked.
+2. Enqueue with debounce / coalesce (same viewer multiple events → one job) if locked. ✅ (jobId only)
+3. Invalidate Redis match-list cache for that viewer when rebuild completes (or on enqueue — Architect chooses). ✅ (rebuild + keep write-path)
+4. Specs: trigger sites call enqueue (mocked queue); debounce if locked. ✅
 
 ### Architect locks (do not reverse)
 
@@ -36,10 +36,10 @@ Without triggers, the table goes stale after analysis, preference edits, blocks,
 
 ## Acceptance criteria
 
-- [ ] Locked events enqueue rebuild  
-- [ ] Coalesce/debounce behavior documented + tested if required  
-- [ ] Cache invalidation strategy locked and implemented  
-- [ ] No silent “never rebuild” path for analysis-complete
+- [x] Locked events enqueue rebuild  
+- [x] Coalesce/debounce behavior documented + tested if required  
+- [x] Cache invalidation strategy locked and implemented  
+- [x] No silent “never rebuild” path for analysis-complete
 
 ## Commit message
 

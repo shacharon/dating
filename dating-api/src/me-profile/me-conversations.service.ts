@@ -23,6 +23,7 @@ import {
   paginateConversationList,
 } from './me-conversations-list-cursor';
 import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
+import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
 
 function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
   if (!birthDate) return null;
@@ -121,6 +122,7 @@ export class MeConversationsService {
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
+    private readonly matchListRankQueue: MatchListRankQueueService,
   ) {}
 
   async list(
@@ -438,7 +440,7 @@ export class MeConversationsService {
     sessionUserId: string,
     conversationId: string,
   ): Promise<void> {
-    await this.assertActiveConversationParticipant(
+    const match = await this.assertActiveConversationParticipant(
       sessionUserId,
       conversationId,
     );
@@ -451,6 +453,9 @@ export class MeConversationsService {
         unmatchedByUserId: sessionUserId,
       },
     });
+
+    await this.matchListRankQueue.enqueueRebuild(match.userId1, 'unmatch');
+    await this.matchListRankQueue.enqueueRebuild(match.userId2, 'unmatch');
 
     this.obs.trace(
       `me conversations unmatch id=${conversationId} userId=${sessionUserId}`,

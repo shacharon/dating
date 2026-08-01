@@ -15,6 +15,7 @@ import {
   type MutualMatchDetectResult,
 } from './mutual-matches.service';
 import { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
+import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
 
 @Injectable()
 export class MeMatchActionsService {
@@ -24,6 +25,7 @@ export class MeMatchActionsService {
     private readonly mutualMatches: MutualMatchesService,
     private readonly mutualMatchEmail: MutualMatchEmailService,
     private readonly analytics: AnalyticsService,
+    private readonly matchListRankQueue: MatchListRankQueueService,
   ) {}
 
   async getActionState(
@@ -137,6 +139,7 @@ export class MeMatchActionsService {
     });
 
     await this.meMatches.invalidateMatchListCache(actorUserId);
+    await this.matchListRankQueue.enqueueRebuild(actorUserId, 'match_action');
 
     return {
       id: row.id,
@@ -201,5 +204,6 @@ export class MeMatchActionsService {
     });
 
     await this.meMatches.invalidateMatchListCache(actorUserId);
+    await this.matchListRankQueue.enqueueRebuild(actorUserId, 'match_action');
   }
 }

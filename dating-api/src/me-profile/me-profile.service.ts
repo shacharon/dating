@@ -51,6 +51,7 @@ import { MeMatchesService } from './me-matches.service';
 import { loadPhotoStorageConfig } from '../photo-storage/photo-storage.config';
 import { ProfileAnalysisQueueService } from '../workers/profile-analysis.worker';
 import { PhotoModerationQueueService } from '../workers/photo-moderation.worker';
+import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
 
 export type MeProfileSubmitResponseDto = {
   analysisJobId: string;
@@ -381,6 +382,7 @@ export class MeProfileService {
     private readonly meMatches: MeMatchesService,
     private readonly moderation: OpenAIModerationClient,
     private readonly contentViolations: ContentViolationService,
+    private readonly matchListRankQueue: MatchListRankQueueService,
   ) {}
 
   private async assertProfileEditAllowed(userId: string): Promise<void> {
@@ -875,6 +877,10 @@ export class MeProfileService {
         `me profile created profileId=${row.id}`,
         ErrorCodes.ME_PROFILE_CREATE_SUCCESS,
       );
+      await this.matchListRankQueue.enqueueRebuild(
+        userId,
+        'preferences_changed',
+      );
       const full = await this.prisma.userProfile.findUnique({
         where: { userId },
         include: { preference: true },
@@ -973,6 +979,12 @@ export class MeProfileService {
         }
         await this.upsertPreference(tx, existing.id, body);
       });
+      if (hasPrefChanges) {
+        await this.matchListRankQueue.enqueueRebuild(
+          userId,
+          'preferences_changed',
+        );
+      }
       const full = await this.prisma.userProfile.findUnique({
         where: { userId },
         include: { preference: true },

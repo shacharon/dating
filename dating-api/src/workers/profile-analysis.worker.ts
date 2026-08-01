@@ -7,6 +7,7 @@ import {
   PROFILE_ANALYSIS_QUEUE,
   type ProfileAnalysisJobData,
 } from './profile-analysis.queue';
+import { MatchListRankQueueService } from './match-list-rank.worker';
 
 /**
  * Bull-backed profile analysis queue. When REDIS_URL is unset or Bull fails to
@@ -23,6 +24,7 @@ export class ProfileAnalysisQueueService
   constructor(
     private readonly analysis: MeProfileAnalysisService,
     private readonly meMatches: MeMatchesService,
+    private readonly matchListRankQueue: MatchListRankQueueService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -91,6 +93,10 @@ export class ProfileAnalysisQueueService
     } finally {
       recordProfileAnalysisDurationMs(Date.now() - started);
       await this.meMatches.invalidateMatchListCache(data.userId);
+      await this.matchListRankQueue.enqueueRebuild(
+        data.userId,
+        'analysis_complete',
+      );
     }
   }
 
