@@ -1,10 +1,10 @@
 # Story 04 — Violation counting + progressive blocks
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
 **Priority:** P0  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Stories 01, 02, 03 (enforcement logic split from those stories)  
-**Handoffs:** [architect](./handoffs/STORY_04_violation_enforcement/agent-0-architect.md) · [dev](./handoffs/STORY_04_violation_enforcement/agent-1-dev.md)
+**Handoffs:** [architect](./handoffs/STORY_04_violation_enforcement/agent-0-architect.md) · [dev](./handoffs/STORY_04_violation_enforcement/agent-1-dev.md) · [CR](./handoffs/STORY_04_violation_enforcement/agent-2-cr.md)
 
 ---
 
