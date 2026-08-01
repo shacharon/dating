@@ -65,4 +65,24 @@ describe('me-conversations-list-cursor', () => {
     expect(isAfterConversationListCursor(items[1]!, cursor)).toBe(false);
     expect(isAfterConversationListCursor(items[2]!, cursor)).toBe(true);
   });
+
+  it('id ASC tiebreak when unread and matchedAt match', () => {
+    const cursor: ConversationListCursorPayload = {
+      unreadCount: 1,
+      matchedAt: '2026-06-01T00:00:00.000Z',
+      id: 'm1',
+    };
+    expect(
+      isAfterConversationListCursor(
+        { id: 'm0', matchedAt: cursor.matchedAt, unreadCount: 1 },
+        cursor,
+      ),
+    ).toBe(false);
+    expect(
+      isAfterConversationListCursor(
+        { id: 'm2', matchedAt: cursor.matchedAt, unreadCount: 1 },
+        cursor,
+      ),
+    ).toBe(true);
+  });
 });

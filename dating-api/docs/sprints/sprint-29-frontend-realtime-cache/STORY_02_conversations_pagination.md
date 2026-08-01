@@ -1,11 +1,11 @@
 # Story 02 — Conversations cursor + unread-total
 
-**Sprint 29 · Status: Dev complete → Agent 2 CR**  
+**Sprint 29 · Status: CR PASS → Agent 3 PM**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Sprint 28 Story 4 (batched unread on full list) — pagination replaces “return all”
 
-**Handoff:** [`handoffs/STORY_02_conversations_pagination/agent-0-architect.md`](./handoffs/STORY_02_conversations_pagination/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_02_conversations_pagination/agent-1-dev.md)
+**Handoff:** [`handoffs/STORY_02_conversations_pagination/agent-0-architect.md`](./handoffs/STORY_02_conversations_pagination/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_02_conversations_pagination/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_02_conversations_pagination/agent-2-cr.md)
 
 ---
 

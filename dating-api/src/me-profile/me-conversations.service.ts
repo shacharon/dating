@@ -206,7 +206,11 @@ export class MeConversationsService {
       if (b.unreadCount !== a.unreadCount) {
         return b.unreadCount - a.unreadCount;
       }
-      return b.matchedAt.localeCompare(a.matchedAt);
+      if (a.matchedAt !== b.matchedAt) {
+        return b.matchedAt.localeCompare(a.matchedAt);
+      }
+      // Lexicographic id ASC — must match isAfterConversationListCursor.
+      return a.id.localeCompare(b.id);
     });
 
     const { page, nextCursor, hasMore } = paginateConversationList(

@@ -7,7 +7,10 @@ export function sortConversationsUnreadFirst(
     if (b.unreadCount !== a.unreadCount) {
       return b.unreadCount - a.unreadCount;
     }
-    return b.matchedAt.localeCompare(a.matchedAt);
+    if (a.matchedAt !== b.matchedAt) {
+      return b.matchedAt.localeCompare(a.matchedAt);
+    }
+    return a.id.localeCompare(b.id);
   });
 }
 
