@@ -1,6 +1,6 @@
 # Sprint 30 — Content Safety & Moderation
 
-**Status:** 🟡 **IN PROGRESS** — Stories 00–01 Done; Story 02 Agent 2 CR PASS → run Agent 3  
+**Status:** 🟡 **IN PROGRESS** — Stories 00–02 Done; next Story 03  
 **Priority:** P0 (pre-launch blocker)  
 **Depends on:** None  
 **Blocks:** Production launch (Sprint 20 AWS deployment should not go live without this)
@@ -18,9 +18,9 @@ Gate user-generated text (profile fields + messages) through OpenAI Moderation A
 ## Context
 
 Current state:
-- Profile fields (`aboutMe`, `aboutPartner`, `aboutRelationship`) have no content filter — explicit text saves and appears in match results
+- Profile fields (`aboutMe`, `aboutPartner`, `aboutRelationship`) gated via OpenAI Moderation on create/patch (Story 02)
 - Messages have a placeholder profanity check (`badword1`/`badword2`) that only logs — message still sends
-- No violation tracking or progressive enforcement
+- Violation storage exists; message gate + progressive enforcement consolidation still open (Stories 03–04)
 
 Risk: harassment, explicit spam, and inappropriate content can flow freely through the product.
 
@@ -32,7 +32,7 @@ Risk: harassment, explicit spam, and inappropriate content can flow freely throu
 |---|-------|----------|-----|--------|
 | 00 | [User consent + privacy policy](./STORY_00_consent_and_privacy.md) | P0 | 1d | ✅ Done |
 | 01 | [OpenAI moderation client + violation storage](./STORY_01_moderation_client.md) | P0 | 0.5d | ✅ Done |
-| 02 | [Profile field moderation gate](./STORY_02_profile_field_gate.md) | P0 | 1d | Agent 2 CR PASS → run Agent 3 |
+| 02 | [Profile field moderation gate](./STORY_02_profile_field_gate.md) | P0 | 1d | ✅ Done |
 | 03 | [Message moderation gate](./STORY_03_message_gate.md) | P0 | 1d | PLANNED |
 | 04 | [Violation counting + progressive blocks](./STORY_04_violation_enforcement.md) | P0 | 0.5d | PLANNED |
 | 05 | [Admin violations surface](./STORY_05_admin_violations.md) | P1 | 0.5d | PLANNED |
