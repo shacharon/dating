@@ -1,9 +1,11 @@
 # Story 05 — Cutover + deprecate request rebuild
 
-**Sprint 31 · Status: PLANNED → Agent 0 Architect**  
+**Sprint 31 · Status: Architect locked → Agent 1 Dev**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 04 Done
+
+**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-0-architect.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-0-architect.md)
 
 ---
 
@@ -17,11 +19,22 @@ Leaving dual paths forever invites regressions and “cap still defines who exis
 
 ## Scope / tasks
 
-1. Architect locks: default flag on; whether `buildFullRankedList` remains for admin/debug/backfill only; remove or narrow `MATCH_LIST_CANDIDATE_CAP` docs (job-internal batch bound OK).  
-2. Backfill strategy: one-shot script or “rebuild all analyzable viewers” job (rate-limited) — document ops steps.  
-3. Metrics: list latency under materialization; rebuild lag; optional alert hooks.  
+1. Architect locks: default flag on; escape hatch; cap docs; backfill ops. ✅  
+2. Backfill strategy: rate-limited enqueue script + `OPS_CUTOVER.md`.  
+3. Metrics: keep existing list/rebuild metrics (no new alert wiring required).  
 4. Update Sprint 27 / SCALE notes cross-links; `.env.example`.  
-5. Specs: default path; escape hatch if any.
+5. Specs: default path; escape hatch.
+
+### Architect locks (do not reverse)
+
+| Decision | Lock |
+|----------|------|
+| Default | Unset → **materialized on** |
+| Escape hatch | `MATCH_LIST_MATERIALIZED=0`/`false`/`no` → legacy Redis+rebuild |
+| Code delete | **No** — keep `buildFullRankedList` for rebuild/page/legacy |
+| List cap | Legacy escape only; not browse fairness |
+| Rebuild cap | Still job membership bound; ops may raise |
+| Backfill | Doc + sequential enqueue script (`backfill` reason) |
 
 ## Acceptance criteria
 
