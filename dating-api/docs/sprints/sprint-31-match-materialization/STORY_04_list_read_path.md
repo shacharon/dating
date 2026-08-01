@@ -1,11 +1,11 @@
 # Story 04 — List reads from materialization
 
-**Sprint 31 · Status: CR PASS → Agent 3 PM**  
+**Sprint 31 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Stories 01–03 Done
 
-**Handoff:** [`handoffs/STORY_04_list_read_path/agent-2-cr.md`](./handoffs/STORY_04_list_read_path/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_04_list_read_path/agent-3-pm.md`](./handoffs/STORY_04_list_read_path/agent-3-pm.md)
 
 ---
 

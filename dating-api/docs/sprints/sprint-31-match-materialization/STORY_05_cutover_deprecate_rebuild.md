@@ -1,9 +1,9 @@
 # Story 05 — Cutover + deprecate request rebuild
 
-**Sprint 31 · Status: PLANNED**  
+**Sprint 31 · Status: PLANNED → Agent 0 Architect**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
-**Dependencies:** Story 04 read path
+**Dependencies:** Story 04 Done
 
 ---
 

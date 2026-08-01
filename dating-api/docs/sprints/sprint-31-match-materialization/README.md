@@ -1,6 +1,6 @@
 # Sprint 31 — Async Match Materialization
 
-**Status:** 🟡 **IN PROGRESS** — Stories 1–3 Done; Story 4 CR PASS → Agent 3 PM  
+**Status:** 🟡 **IN PROGRESS** — Stories 1–4 Done; next Story 5 Agent 0  
 **Priority:** P1 (scale + fairness; not a launch blocker like Sprint 30)  
 **Depends on:** Sprint 27 Done (batch evals, SQL prefilter, cap stopgap, miss metrics). Prefer after Sprint 30 content safety if sequencing product vs scale.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · prior: [Sprint 27](../sprint-27-match-list-performance/README.md)
@@ -46,8 +46,8 @@ SCALE CR historically labeled this “Sprint 32+ Async Match Rebuild”; **repo 
 | 01 | [Materialized rank schema](./STORY_01_materialized_rank_schema.md) | P0 | 0.5–1d | **Done** |
 | 02 | [Rebuild job (Bull)](./STORY_02_rebuild_job.md) | P0 | 1–1.5d | **Done** |
 | 03 | [Triggers + invalidation](./STORY_03_triggers_invalidation.md) | P0 | 0.5–1d | **Done** |
-| 04 | [List reads from materialization](./STORY_04_list_read_path.md) | P0 | 1–1.5d | **CR PASS** → Agent 3 PM |
-| 05 | [Cutover + deprecate request rebuild](./STORY_05_cutover_deprecate_rebuild.md) | P0 | 0.5–1d |
+| 04 | [List reads from materialization](./STORY_04_list_read_path.md) | P0 | 1–1.5d | **Done** |
+| 05 | [Cutover + deprecate request rebuild](./STORY_05_cutover_deprecate_rebuild.md) | P0 | 0.5–1d | → Agent 0 |
 
 **Order:** 01 → 02 → 03 → 04 → 05 (4 agents each: `--agent 0..3 sprint 31 story N`).  
 Story 03 can start architecting in parallel with 02 after 01 schema locks, but Dev should land 02 before 03 enqueues real jobs.
