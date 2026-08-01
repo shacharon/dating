@@ -25,6 +25,14 @@ import { ReferralAttributionService } from './referral-attribution.service';
     AuthGuard,
     OptionalAuthGuard,
   ],
-  exports: [AuthService, GoogleAuthService, AuthGuard, OptionalAuthGuard],
+  exports: [
+    AuthService,
+    GoogleAuthService,
+    AuthGuard,
+    OptionalAuthGuard,
+    // Re-export so @UseGuards(AuthGuard) in consumer modules can resolve SessionService / UsersService
+    SessionModule,
+    UsersModule,
+  ],
 })
 export class AuthModule {}
