@@ -1,11 +1,11 @@
 # Story 04 — List reads from materialization
 
-**Sprint 31 · Status: Architect locked → Agent 1 Dev**  
+**Sprint 31 · Status: Done (Agent 1 Dev complete → Agent 2 CR)**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Stories 01–03 Done
 
-**Handoff:** [`handoffs/STORY_04_list_read_path/agent-0-architect.md`](./handoffs/STORY_04_list_read_path/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_04_list_read_path/agent-1-dev.md`](./handoffs/STORY_04_list_read_path/agent-1-dev.md)
 
 ---
 
@@ -20,9 +20,9 @@ Serving from Redis-built full lists still implies expensive misses. Materialized
 ## Scope / tasks
 
 1. Architect locks: feature flag (`MATCH_LIST_MATERIALIZED`), fallback when no rows yet. ✅  
-2. Implement list query: filter by `viewerUserId`, order, cursor, limit; join/hydrate profiles/photos for page only.  
-3. Preserve client-facing DTO shape where possible (document breaks).  
-4. Specs: empty table, flagged on/off, pagination cursor, page hydrate count bounded.
+2. Implement list query: filter by `viewerUserId`, order, cursor, limit; join/hydrate profiles/photos for page only. ✅  
+3. Preserve client-facing DTO shape where possible (document breaks). ✅  
+4. Specs: empty table, flagged on/off, pagination cursor, page hydrate count bounded. ✅
 
 ### Architect locks (do not reverse)
 
@@ -36,10 +36,10 @@ Serving from Redis-built full lists still implies expensive misses. Materialized
 
 ## Acceptance criteria
 
-- [ ] Flagged/default path reads materialized ranks  
-- [ ] Page hydrate does not load full pool  
-- [ ] Cursor pagination stable  
-- [ ] Fallback behavior locked (no surprise sync O(N) GET)
+- [x] Flagged/default path reads materialized ranks  
+- [x] Page hydrate does not load full pool  
+- [x] Cursor pagination stable  
+- [x] Fallback behavior locked (no surprise sync O(N) GET)
 
 ## Commit message
 

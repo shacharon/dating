@@ -197,9 +197,11 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
           get: jest.fn().mockResolvedValue(null),
           set: jest.fn(),
           del: jest.fn(),
+          setNx: jest.fn().mockResolvedValue(true),
         } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
     });
 

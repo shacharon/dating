@@ -7,6 +7,13 @@ export function matchListCacheKey(userId: string): string {
   return `match:list:${userId}`;
 }
 
+/** Thrash guard for list_empty enqueue (Sprint 31 Story 4). */
+export function matchListListEmptyEnqueueKey(userId: string): string {
+  return `match:rank:list-empty-enq:${userId}`;
+}
+
+export const MATCH_LIST_LIST_EMPTY_ENQUEUE_TTL_SECONDS = 120;
+
 export function profileEvalCacheKey(profileId: string): string {
   return `profile:eval:${profileId}`;
 }

@@ -123,11 +123,17 @@ describe('MeMatchesService', () => {
   let service: MeMatchesService;
   let photoStorage: { read: jest.Mock };
   let mutualMatches: { findActiveByUserPair: jest.Mock };
-  let cache: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
+  let cache: {
+    get: jest.Mock;
+    set: jest.Mock;
+    del: jest.Mock;
+    setNx: jest.Mock;
+  };
   let analytics: { track: jest.Mock };
   let narrativeGenerate: jest.Mock;
   let narrativeCacheFind: jest.Mock;
   let narrativeCacheUpsert: jest.Mock;
+  let matchListRankQueue: { enqueueRebuild: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -187,7 +193,12 @@ describe('MeMatchesService', () => {
     obs = { trace: jest.fn(), error: jest.fn() };
     mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
     analytics = { track: jest.fn() };
-    cache = { get: jest.fn().mockResolvedValue(null), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
+    cache = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
+      setNx: jest.fn().mockResolvedValue(true),
+    };
     narrativeGenerate = jest.fn().mockResolvedValue({
       narrative: 'Generated narrative prose.',
       source: 'fallback',
@@ -195,6 +206,9 @@ describe('MeMatchesService', () => {
     });
     narrativeCacheFind = jest.fn().mockResolvedValue(null);
     narrativeCacheUpsert = jest.fn().mockResolvedValue(undefined);
+    matchListRankQueue = {
+      enqueueRebuild: jest.fn().mockResolvedValue('inline:u'),
+    };
     service = new MeMatchesService(
       prisma as unknown as PrismaService,
       obs as unknown as StructuredObservabilityService,
@@ -204,6 +218,7 @@ describe('MeMatchesService', () => {
       cache as never,
       { generate: narrativeGenerate } as never,
       { find: narrativeCacheFind, upsert: narrativeCacheUpsert } as never,
+      matchListRankQueue as never,
     );
   });
 
@@ -2647,6 +2662,7 @@ describe('MeMatchesService', () => {
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+      { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -2680,6 +2696,7 @@ describe('MeMatchesService', () => {
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+      { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 
       const result = await isolatedSvc.list(viewerUserId);
@@ -2723,6 +2740,7 @@ describe('MeMatchesService', () => {
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+      { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);

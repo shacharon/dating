@@ -137,4 +137,32 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
       );
     }
   }
+
+  /**
+   * SET key NX EX. Returns true if the key was set (caller may proceed).
+   * Fail-open: when Redis is down, returns true so callers can still enqueue.
+   */
+  async setNx(
+    key: string,
+    value: unknown,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    if (!this.client || !this.available) return true;
+    try {
+      const result = await this.client.set(key, JSON.stringify(value), {
+        NX: true,
+        EX: ttlSeconds,
+      });
+      return result === 'OK';
+    } catch (err) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'match_list_cache_degraded',
+          op: 'setNx',
+          err: err instanceof Error ? err.message : String(err),
+        }),
+      );
+      return true;
+    }
+  }
 }

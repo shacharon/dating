@@ -18,6 +18,7 @@ describe('MeMatchesService MatchListRank persist', () => {
       { del: jest.fn().mockResolvedValue(undefined) } as never,
       {} as never,
       {} as never,
+      { enqueueRebuild: jest.fn() } as never,
     );
   }
 

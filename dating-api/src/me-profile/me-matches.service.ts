@@ -4,11 +4,13 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   MatchActionType,
   MutualMatchStatus,
+  Prisma,
   UserProfilePhotoStatus,
   type UserProfileStatus,
 } from '@prisma/client';
@@ -24,6 +26,7 @@ import {
   resolveMatchListRebuildCandidateCap,
 } from './match-list-candidate-cap';
 import { toStoredMatchListScore } from './match-list-rank-score';
+import { isMatchListMaterializedEnabled } from './match-list-materialized-flag';
 import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
@@ -34,12 +37,17 @@ import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import {
   MATCH_LIST_CACHE_TTL_SECONDS,
   MATCH_LIST_CACHE_VERSION,
+  MATCH_LIST_LIST_EMPTY_ENQUEUE_TTL_SECONDS,
   decodeMatchListCursor,
+  encodeMatchListCursor,
   matchListCacheKey,
+  matchListListEmptyEnqueueKey,
   paginateRankedMatches,
   type MatchListCachePayload,
+  type MatchListCursorPayload,
 } from '../cache/match-list-cache';
 import { RedisCacheService } from '../cache/redis-cache.service';
+import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
 import { ErrorCodes } from '../logging/error-codes';
 import { getRequestLogFields } from '../logging/request-log-context';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
@@ -110,6 +118,40 @@ import {
 } from '../matches/match-narrative';
 
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
+
+/** Prisma where for MatchListRank rows strictly after a list cursor. */
+export function matchListRankAfterCursorWhere(
+  viewerUserId: string,
+  cursor: MatchListCursorPayload | null,
+): Prisma.MatchListRankWhereInput {
+  if (!cursor) {
+    return { viewerUserId };
+  }
+  const hardBlocked = cursor.b === 1;
+  const sameBucketLowerScore: Prisma.MatchListRankWhereInput = {
+    hardBlocked,
+    matchScore: { lt: cursor.s },
+  };
+  const sameBucketSameScore: Prisma.MatchListRankWhereInput = {
+    hardBlocked,
+    matchScore: cursor.s,
+    candidateProfileId: { gt: cursor.id },
+  };
+  if (cursor.b === 0) {
+    return {
+      viewerUserId,
+      OR: [
+        { hardBlocked: true },
+        sameBucketLowerScore,
+        sameBucketSameScore,
+      ],
+    };
+  }
+  return {
+    viewerUserId,
+    OR: [sameBucketLowerScore, sameBucketSameScore],
+  };
+}
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
@@ -252,11 +294,14 @@ export class MeMatchesService {
     private readonly cache: RedisCacheService,
     private readonly matchNarrativeGenerator: MatchNarrativeGenerator,
     private readonly matchNarrativeCache: MatchNarrativeCacheService,
+    @Inject(forwardRef(() => MatchListRankQueueService))
+    private readonly matchListRankQueue: MatchListRankQueueService,
   ) {}
 
   /** Drop cached ranked match list for a viewer (LIKE/PASS/BLOCK, re-analysis, etc.). */
   async invalidateMatchListCache(userId: string): Promise<void> {
     await this.cache.del(matchListCacheKey(userId));
+    await this.cache.del(matchListListEmptyEnqueueKey(userId));
   }
 
   /**
@@ -482,6 +527,11 @@ export class MeMatchesService {
         message: 'Invalid match list cursor.',
       });
     }
+
+    if (isMatchListMaterializedEnabled()) {
+      return this.listFromMaterializedRanks(userId, cursor, limit, started);
+    }
+
     // Ranked list from cache or full build
     const full = await this.getOrBuildRankedList(userId);
     if (full.status !== 'ready' || !full.matches) {
@@ -504,6 +554,216 @@ export class MeMatchesService {
       nextCursor,
       hasMore,
     };
+  }
+
+  /**
+   * Sprint 31 Story 4 — flagged path: DB cursor on MatchListRank + page hydrate.
+   * Never calls getOrBuildRankedList / buildFullRankedList for the full pool.
+   */
+  private async listFromMaterializedRanks(
+    userId: string,
+    cursor: MatchListCursorPayload | null,
+    limit: number,
+    started: number,
+  ): Promise<MeMatchesListResponseDto> {
+    const gate = await this.resolveViewerListGate(userId);
+    if (gate.status === 'not_ready') {
+      recordMatchListLoadTimeMs(Date.now() - started);
+      return {
+        status: 'not_ready',
+        reason: gate.reason,
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+
+    const rankRows = await this.fetchMatchListRankPage(userId, cursor, limit + 1);
+    if (rankRows.length === 0) {
+      if (cursor == null) {
+        await this.maybeEnqueueListEmpty(userId);
+      }
+      recordMatchListLoadTimeMs(Date.now() - started);
+      return {
+        status: 'ready',
+        viewerProfileId: gate.viewerProfileId,
+        viewerGender: gate.viewerGender,
+        viewerAcceptedPartnerGenders: gate.viewerAcceptedPartnerGenders,
+        viewerProfileAnalysisStale: gate.viewerProfileAnalysisStale,
+        matches: [],
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+
+    const hasMore = rankRows.length > limit;
+    const pageRanks = hasMore ? rankRows.slice(0, limit) : rankRows;
+    const pageIds = pageRanks.map((r) => r.candidateProfileId);
+
+    const hydrated = await this.buildFullRankedList(userId, {
+      candidateProfileIds: pageIds,
+      emitListAnalytics: false,
+    });
+
+    if (hydrated.status !== 'ready') {
+      recordMatchListLoadTimeMs(Date.now() - started);
+      return {
+        ...hydrated,
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+
+    const byId = new Map((hydrated.matches ?? []).map((m) => [m.id, m]));
+    const matches: MeMatchItemDto[] = [];
+    for (const id of pageIds) {
+      const item = byId.get(id);
+      if (item) matches.push(item);
+    }
+
+    const lastRank = pageRanks[pageRanks.length - 1]!;
+    const nextCursor = hasMore
+      ? encodeMatchListCursor({
+          b: lastRank.hardBlocked ? 1 : 0,
+          s: lastRank.matchScore,
+          id: lastRank.candidateProfileId,
+        })
+      : null;
+
+    if (cursor == null) {
+      const matchCount = await this.prisma.matchListRank.count({
+        where: { viewerUserId: userId },
+      });
+      this.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
+        matchCount,
+        viewerProfileId: gate.viewerProfileId,
+        source: 'materialized',
+      });
+    }
+
+    recordMatchListLoadTimeMs(Date.now() - started);
+    this.obs.trace(
+      `me matches list source=materialized profileId=${gate.viewerProfileId} pageSize=${matches.length} hasMore=${hasMore}`,
+      ErrorCodes.ME_MATCHES_LIST_OK,
+    );
+
+    return {
+      status: 'ready',
+      viewerProfileId: gate.viewerProfileId,
+      viewerGender: gate.viewerGender,
+      viewerAcceptedPartnerGenders: gate.viewerAcceptedPartnerGenders,
+      viewerProfileAnalysisStale: gate.viewerProfileAnalysisStale,
+      matches,
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  private async resolveViewerListGate(userId: string): Promise<
+    | { status: 'not_ready'; reason: 'no_profile' | 'not_analyzed' | 'no_photo' }
+    | {
+        status: 'ready';
+        viewerProfileId: string;
+        viewerGender: string | null;
+        viewerAcceptedPartnerGenders: string[] | null;
+        viewerProfileAnalysisStale: boolean;
+      }
+  > {
+    const viewer = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      include: { preference: true },
+    });
+    if (!viewer) {
+      this.obs.trace(
+        `me matches list: no profile for userId=${userId}`,
+        ErrorCodes.ME_MATCHES_LIST_NOT_READY,
+      );
+      return { status: 'not_ready', reason: 'no_profile' };
+    }
+    if (viewer.status !== STATUS_ANALYZED) {
+      this.obs.trace(
+        `me matches list: profile not analyzed status=${viewer.status} userId=${userId}`,
+        ErrorCodes.ME_MATCHES_LIST_NOT_READY,
+      );
+      return { status: 'not_ready', reason: 'not_analyzed' };
+    }
+    const approvedPhotoCount = await countApprovedPhotosForProfile(
+      this.prisma,
+      viewer.id,
+    );
+    if (approvedPhotoCount < 1) {
+      this.obs.trace(
+        `me matches list: no approved photo profileId=${viewer.id} userId=${userId}`,
+        ErrorCodes.ME_MATCHES_LIST_NOT_READY,
+      );
+      this.analytics.track(
+        userId,
+        ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
+        { surface: 'match_list' },
+      );
+      return { status: 'not_ready', reason: 'no_photo' };
+    }
+
+    const asOf = new Date();
+    const viewerBridge = buildProductProfileMatchingBridge(
+      viewer,
+      asOf,
+      partnerGenderSourceForMeMatchesRow(viewer, this.obs),
+    );
+    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
+    if (!viewerEval) {
+      throw new InternalServerErrorException({
+        error: 'viewer_evaluation_not_found',
+        message:
+          'Profile is marked analyzed but no UserProfileEvaluation row exists. Re-run analysis.',
+      });
+    }
+
+    return {
+      status: 'ready',
+      viewerProfileId: viewer.id,
+      viewerGender: viewerBridge.selfGender,
+      viewerAcceptedPartnerGenders: viewerBridge.acceptedPartnerGenders
+        ? [...viewerBridge.acceptedPartnerGenders]
+        : null,
+      viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
+    };
+  }
+
+  private async fetchMatchListRankPage(
+    viewerUserId: string,
+    cursor: MatchListCursorPayload | null,
+    take: number,
+  ): Promise<
+    Array<{
+      candidateProfileId: string;
+      matchScore: number;
+      hardBlocked: boolean;
+    }>
+  > {
+    return this.prisma.matchListRank.findMany({
+      where: matchListRankAfterCursorWhere(viewerUserId, cursor),
+      orderBy: [
+        { hardBlocked: 'asc' },
+        { matchScore: 'desc' },
+        { candidateProfileId: 'asc' },
+      ],
+      take,
+      select: {
+        candidateProfileId: true,
+        matchScore: true,
+        hardBlocked: true,
+      },
+    });
+  }
+
+  private async maybeEnqueueListEmpty(userId: string): Promise<void> {
+    const acquired = await this.cache.setNx(
+      matchListListEmptyEnqueueKey(userId),
+      { at: new Date().toISOString() },
+      MATCH_LIST_LIST_EMPTY_ENQUEUE_TTL_SECONDS,
+    );
+    if (!acquired) return;
+    await this.matchListRankQueue.enqueueRebuild(userId, 'list_empty');
   }
 
   private async getOrBuildRankedList(
@@ -555,9 +815,16 @@ export class MeMatchesService {
       candidateCap?: number;
       /** When false, skip MATCH_LIST_VIEWED / photo-gate analytics (materialization). Default true. */
       emitListAnalytics?: boolean;
+      /**
+       * When set, hydrate only these profile IDs (materialized page).
+       * Preserves input order; skips pool cap / pool meta counts.
+       */
+      candidateProfileIds?: string[];
     },
   ): Promise<MeMatchesListResponseDto> {
     const emitListAnalytics = options?.emitListAnalytics !== false;
+    const pageIds = options?.candidateProfileIds;
+    const isPageHydrate = pageIds != null;
     const candidateCap =
       options?.candidateCap ?? resolveMatchListCandidateCap();
     const viewer = await this.prisma.userProfile.findUnique({
@@ -649,16 +916,48 @@ export class MeMatchesService {
       );
     }
 
-    // Temporary hydrate cap until async match materialization (list: MATCH_LIST_CANDIDATE_CAP;
-    // rebuild snapshot may override via options.candidateCap).
-    const listCandidateWhere = this.matchCandidatePhotoEligibleWhere(userId, {
-      acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
-      preference: viewer.preference ?? null,
-      asOf,
-    });
     const candidateLoadStarted = Date.now();
-    const [totalAnalyzedCandidates, candidatesEligible, candidateRows] =
-      await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let candidateRows: any[];
+    let totalAnalyzedCandidates = 0;
+    let candidatesEligible = 0;
+    let totalBeforeFilter = 0;
+    let filteredNoPhotoCandidates = 0;
+
+    if (isPageHydrate) {
+      if (pageIds.length === 0) {
+        return {
+          status: 'ready',
+          viewerProfileId: viewer.id,
+          viewerGender: viewerBridge.selfGender,
+          viewerAcceptedPartnerGenders: viewerBridge.acceptedPartnerGenders
+            ? [...viewerBridge.acceptedPartnerGenders]
+            : null,
+          viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
+          matches: [],
+        };
+      }
+      const loaded = await this.prisma.userProfile.findMany({
+        where: {
+          id: { in: pageIds },
+          status: STATUS_ANALYZED,
+        },
+        select: this.candidateSelectList,
+      });
+      const byId = new Map(loaded.map((r) => [r.id, r]));
+      candidateRows = pageIds
+        .map((id) => byId.get(id))
+        .filter((r) => r != null);
+      totalBeforeFilter = candidateRows.length;
+    } else {
+      // Temporary hydrate cap until async match materialization (list: MATCH_LIST_CANDIDATE_CAP;
+      // rebuild snapshot may override via options.candidateCap).
+      const listCandidateWhere = this.matchCandidatePhotoEligibleWhere(userId, {
+        acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
+        preference: viewer.preference ?? null,
+        asOf,
+      });
+      const [totalAnalyzed, eligible, rows] = await Promise.all([
         this.prisma.userProfile.count({
           where: this.matchCandidateBaseWhere(userId),
         }),
@@ -674,12 +973,14 @@ export class MeMatchesService {
           select: this.candidateSelectList,
         }),
       ]);
+      totalAnalyzedCandidates = totalAnalyzed;
+      candidatesEligible = eligible;
+      candidateRows = rows;
+      totalBeforeFilter = candidateRows.length;
+      // Cap must not inflate this: use uncapped eligible count, not hydrated length.
+      filteredNoPhotoCandidates = totalAnalyzedCandidates - candidatesEligible;
+    }
     const candidateLoadMs = Date.now() - candidateLoadStarted;
-
-    const totalBeforeFilter = candidateRows.length;
-    // Cap must not inflate this: use uncapped eligible count, not hydrated length.
-    const filteredNoPhotoCandidates =
-      totalAnalyzedCandidates - candidatesEligible;
 
     const evalQueryStarted = Date.now();
     const latestEvalByProfile = await latestEvaluationsForProfileIds(
@@ -691,7 +992,14 @@ export class MeMatchesService {
     const actionByTargetUserId = new Map(
       (
         await this.prisma.matchAction.findMany({
-          where: { actorUserId: userId },
+          where: isPageHydrate
+            ? {
+                actorUserId: userId,
+                targetUserId: {
+                  in: candidateRows.map((r) => r.userId as string),
+                },
+              }
+            : { actorUserId: userId },
           select: { targetUserId: true, action: true },
         })
       ).map((row) => [row.targetUserId, row.action]),
@@ -974,25 +1282,32 @@ export class MeMatchesService {
     }
 
     // Eligible first (score DESC); hard-blocked existing append at bottom (score DESC within).
-    matches.sort((a, b) => {
-      const aBlocked = a.hardBlocked ? 1 : 0;
-      const bBlocked = b.hardBlocked ? 1 : 0;
-      if (aBlocked !== bBlocked) return aBlocked - bBlocked;
-      const aScore = a.matchScore ?? -1;
-      const bScore = b.matchScore ?? -1;
-      if (bScore !== aScore) return bScore - aScore;
-      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-    });
+    // Page hydrate keeps membership order from MatchListRank (caller reorders again if needed).
+    if (!isPageHydrate) {
+      matches.sort((a, b) => {
+        const aBlocked = a.hardBlocked ? 1 : 0;
+        const bBlocked = b.hardBlocked ? 1 : 0;
+        if (aBlocked !== bBlocked) return aBlocked - bBlocked;
+        const aScore = a.matchScore ?? -1;
+        const bScore = b.matchScore ?? -1;
+        if (bScore !== aScore) return bScore - aScore;
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      });
+    }
     const scoreCpuMs = Date.now() - scoreCpuStarted;
 
-    recordMatchListCandidatesLoaded(candidateRows.length);
-    recordMatchListCandidatesEligible(candidatesEligible);
+    if (!isPageHydrate) {
+      recordMatchListCandidatesLoaded(candidateRows.length);
+      recordMatchListCandidatesEligible(candidatesEligible);
+    }
     recordMatchListCandidateLoadMs(candidateLoadMs);
     recordMatchListEvalQueryMs(evalQueryMs);
     recordMatchListScoreCpuMs(scoreCpuMs);
 
     this.obs.trace(
-      `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates} candidatesHydrated=${candidateRows.length} candidatesEligible=${candidatesEligible} cap=${candidateCap} candidateLoadMs=${candidateLoadMs} evalQueryMs=${evalQueryMs} scoreCpuMs=${scoreCpuMs}`,
+      isPageHydrate
+        ? `me matches page hydrate profileId=${viewer.id} pageIds=${pageIds.length} after=${matches.length} candidateLoadMs=${candidateLoadMs} evalQueryMs=${evalQueryMs} scoreCpuMs=${scoreCpuMs}`
+        : `me matches list profileId=${viewer.id} before=${totalBeforeFilter} after=${matches.length} filteredNoPhoto=${filteredNoPhotoCandidates} candidatesHydrated=${candidateRows.length} candidatesEligible=${candidatesEligible} cap=${candidateCap} candidateLoadMs=${candidateLoadMs} evalQueryMs=${evalQueryMs} scoreCpuMs=${scoreCpuMs}`,
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
 
@@ -1024,8 +1339,12 @@ export class MeMatchesService {
         ? [...viewerBridge.acceptedPartnerGenders]
         : null,
       viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
-      totalCandidatesBeforeFilter: totalBeforeFilter,
-      filteredNoPhotoCandidates,
+      ...(isPageHydrate
+        ? {}
+        : {
+            totalCandidatesBeforeFilter: totalBeforeFilter,
+            filteredNoPhotoCandidates,
+          }),
       matches,
     };
   }

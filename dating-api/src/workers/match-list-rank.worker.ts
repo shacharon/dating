@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import Queue from 'bull';
 import { MeMatchesService } from '../me-profile/me-matches.service';
 import {
@@ -19,7 +19,10 @@ export class MatchListRankQueueService
   private queue: Queue.Queue<MatchListRankRebuildJobData> | null = null;
   private bullEnabled = false;
 
-  constructor(private readonly meMatches: MeMatchesService) {}
+  constructor(
+    @Inject(forwardRef(() => MeMatchesService))
+    private readonly meMatches: MeMatchesService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     const url = process.env.REDIS_URL?.trim();
