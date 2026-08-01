@@ -60,6 +60,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(landing);
   }
 
+  // Story 33.4 — static dating aliases (after auth gate so next= is preserved for guests)
+  if (pathname === '/dating') {
+    return NextResponse.redirect(new URL('/dating/me-matches', request.url));
+  }
+  if (pathname === '/dating/matches') {
+    return NextResponse.redirect(new URL('/dating/me-matches', request.url));
+  }
+  const legacyMatchDetail = pathname.match(/^\/dating\/matches\/([^/]+)$/);
+  if (legacyMatchDetail) {
+    return NextResponse.redirect(
+      new URL(
+        `/dating/me-matches/${encodeURIComponent(legacyMatchDetail[1])}`,
+        request.url,
+      ),
+    );
+  }
+
   return NextResponse.next();
 }
 

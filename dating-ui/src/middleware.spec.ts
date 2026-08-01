@@ -60,6 +60,38 @@ describe('middleware (Phase 2 profile routes)', () => {
     expect(res.headers.get('location')).toBeNull();
   });
 
+  it('redirects authenticated /dating to /dating/me-matches', () => {
+    const req = new NextRequest(new URL('http://localhost:3000/dating'));
+    req.cookies.set('dating_session', 'opaque-token');
+    const res = middleware(req);
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    const u = new URL(res.headers.get('location')!);
+    expect(u.pathname).toBe('/dating/me-matches');
+  });
+
+  it('redirects authenticated /dating/matches to /dating/me-matches', () => {
+    const req = new NextRequest(new URL('http://localhost:3000/dating/matches'));
+    req.cookies.set('dating_session', 'opaque-token');
+    const res = middleware(req);
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    const u = new URL(res.headers.get('location')!);
+    expect(u.pathname).toBe('/dating/me-matches');
+  });
+
+  it('redirects authenticated /dating/matches/:id to /dating/me-matches/:id', () => {
+    const req = new NextRequest(
+      new URL('http://localhost:3000/dating/matches/match-123'),
+    );
+    req.cookies.set('dating_session', 'opaque-token');
+    const res = middleware(req);
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    const u = new URL(res.headers.get('location')!);
+    expect(u.pathname).toBe('/dating/me-matches/match-123');
+  });
+
   it('redirects unauthenticated /onboarding/basic to / with next', () => {
     const req = new NextRequest(new URL('http://localhost:3000/onboarding/basic'));
     const res = middleware(req);
@@ -172,13 +204,15 @@ describe('middleware (internal routes prod gate)', () => {
     expect(res.headers.get('location')).toBeNull();
   });
 
-  it('allows /dating/matches redirect path in production when authenticated', () => {
+  it('redirects authenticated /dating/matches to me-matches in production', () => {
     process.env.NODE_ENV = 'production';
     const req = new NextRequest(new URL('http://localhost:3000/dating/matches'));
     req.cookies.set('dating_session', 'opaque-token');
     const res = middleware(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('location')).toBeNull();
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    const u = new URL(res.headers.get('location')!);
+    expect(u.pathname).toBe('/dating/me-matches');
   });
 });
 

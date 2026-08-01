@@ -45,7 +45,7 @@ export interface DatingMatchPreview {
 }
 
 /**
- * Detail view for `/dating/matches/[id]`. Same shape as preview for now;
+ * Detail view for `/dating/me-matches/[id]`. Same shape as preview for now;
  * widen when the backend returns richer profiles.
  */
 export type DatingMatchDetail = DatingMatchPreview;

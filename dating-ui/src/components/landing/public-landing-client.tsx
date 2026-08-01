@@ -29,7 +29,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 
-const DEFAULT_AFTER_LOGIN = "/dating";
+const DEFAULT_AFTER_LOGIN = "/dating/me-matches";
 
 function safeNextPath(raw: string | null): string {
   const n = raw?.trim();
