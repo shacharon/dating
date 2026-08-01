@@ -1,11 +1,11 @@
 # Story 05 — Lazy-load admin / heavy UI
 
-**Sprint 29 · Status: CR PASS → Agent 3 PM**  
+**Sprint 29 · Status: Done**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (FE-only)
 
-**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_05_lazy_admin_ui/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_05_lazy_admin_ui/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_05_lazy_admin_ui/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_05_lazy_admin_ui/agent-2-cr.md) · [`agent-3-pm.md`](./handoffs/STORY_05_lazy_admin_ui/agent-3-pm.md)
 
 ---
 
