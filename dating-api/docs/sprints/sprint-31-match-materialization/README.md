@@ -1,9 +1,9 @@
 # Sprint 31 — Async Match Materialization
 
-**Status:** 🟡 **IN PROGRESS** — Stories 1–4 Done; Story 5 CR PASS → Agent 3 PM  
+**Status:** ✅ **DONE** — Stories 01–05 accepted (materialized match list default-on)  
 **Priority:** P1 (scale + fairness; not a launch blocker like Sprint 30)  
 **Depends on:** Sprint 27 Done (batch evals, SQL prefilter, cap stopgap, miss metrics). Prefer after Sprint 30 content safety if sequencing product vs scale.  
-**Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · prior: [Sprint 27](../sprint-27-match-list-performance/README.md)
+**Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`OPS_CUTOVER.md`](./OPS_CUTOVER.md) · prior: [Sprint 27](../sprint-27-match-list-performance/README.md)
 
 **Parked elsewhere:** [Sprint 20 live apply](../sprint-20-aws-dev-deployment/README.md) (alert — later).
 
@@ -47,7 +47,7 @@ SCALE CR historically labeled this “Sprint 32+ Async Match Rebuild”; **repo 
 | 02 | [Rebuild job (Bull)](./STORY_02_rebuild_job.md) | P0 | 1–1.5d | **Done** |
 | 03 | [Triggers + invalidation](./STORY_03_triggers_invalidation.md) | P0 | 0.5–1d | **Done** |
 | 04 | [List reads from materialization](./STORY_04_list_read_path.md) | P0 | 1–1.5d | **Done** |
-| 05 | [Cutover + deprecate request rebuild](./STORY_05_cutover_deprecate_rebuild.md) | P0 | 0.5–1d | **CR PASS** → Agent 3 PM |
+| 05 | [Cutover + deprecate request rebuild](./STORY_05_cutover_deprecate_rebuild.md) | P0 | 0.5–1d | **Done** |
 
 **Order:** 01 → 02 → 03 → 04 → 05 (4 agents each: `--agent 0..3 sprint 31 story N`).  
 Story 03 can start architecting in parallel with 02 after 01 schema locks, but Dev should land 02 before 03 enqueues real jobs.
@@ -83,12 +83,12 @@ Suggested table (names free until Architect):
 
 ## Acceptance (sprint-level)
 
-- [ ] Match list **steady state** serves from materialized rows (feature flag or default on after cutover)
-- [ ] Rebuild runs async (Bull); analysis-complete (and locked preference/block events) enqueue rebuild
-- [ ] No O(full analyzed population) hydrate on list **request** path after cutover
-- [ ] Fairness: eligibility not limited to “most recently analyzed N” for browse membership (cap only bounds job work if still needed)
-- [ ] Specs: schema/job/list path; miss/rebuild metrics retained or replaced with materialization metrics
-- [ ] Cap stopgap documented as obsolete or relegated to job internals
+- [x] Match list **steady state** serves from materialized rows (feature flag or default on after cutover)
+- [x] Rebuild runs async (Bull); analysis-complete (and locked preference/block events) enqueue rebuild
+- [x] No O(full analyzed population) hydrate on list **request** path after cutover
+- [x] Fairness: eligibility not limited to “most recently analyzed N” for browse membership (cap only bounds job work if still needed)
+- [x] Specs: schema/job/list path; miss/rebuild metrics retained or replaced with materialization metrics
+- [x] Cap stopgap documented as obsolete or relegated to job internals
 
 ---
 

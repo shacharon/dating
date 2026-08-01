@@ -1,11 +1,11 @@
 # Story 05 — Cutover + deprecate request rebuild
 
-**Sprint 31 · Status: CR PASS → Agent 3 PM**  
+**Sprint 31 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 04 Done
 
-**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-2-cr.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-3-pm.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-3-pm.md)
 
 ---
 
@@ -41,7 +41,7 @@ Leaving dual paths forever invites regressions and “cap still defines who exis
 - [x] Default list path does not O(N)-rebuild on GET  
 - [x] Cap stopgap no longer defines browse membership  
 - [x] Backfill/ops steps documented  
-- [ ] Sprint-level acceptance checklist can be checked _(Agent 3)_
+- [x] Sprint-level acceptance checklist can be checked  
 
 ## Commit message
 
