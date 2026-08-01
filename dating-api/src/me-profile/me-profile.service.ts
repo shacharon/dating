@@ -37,6 +37,7 @@ import {
   evaluateContentPolicy,
   isDatingPolicyNearMiss,
 } from '../content-moderation/dating-policy';
+import { buildModerationUserFacingDetails } from '../content-moderation/moderation-user-facing';
 import type {
   CreateMeProfileDto,
   MeLatestAnalysisResponseDto,
@@ -477,14 +478,20 @@ export class MeProfileService {
 
       await this.contentViolations.enforceViolationThreshold(userId, 'profile');
 
+      const userFacing = buildModerationUserFacingDetails({
+        text: trimmed,
+        decision,
+        surface: 'profile',
+      });
+
       const ex = new BadRequestException({
         error: 'content_moderation_failed',
         message: 'Your profile contains inappropriate content',
         details: {
           field,
           category: decision.category,
-          suggestion:
-            'Please rephrase without explicit or harmful content',
+          source: decision.source,
+          ...userFacing,
         },
       });
       markHttpExceptionObservabilityLogged(ex);

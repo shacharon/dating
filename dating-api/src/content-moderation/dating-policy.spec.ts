@@ -7,6 +7,7 @@ import {
 } from './content-moderation.types';
 import {
   evaluateContentPolicy,
+  findDatingBlocklistHit,
   isDatingPolicyNearMiss,
   matchesDatingBlocklist,
 } from './dating-policy';
@@ -61,6 +62,14 @@ describe('matchesDatingBlocklist', () => {
 
   it('does not match clean text', () => {
     expect(matchesDatingBlocklist('hello how are you')).toBe(false);
+  });
+});
+
+describe('findDatingBlocklistHit', () => {
+  it('returns span for known solicit phrase', () => {
+    const hit = findDatingBlocklistHit('I want to fuck');
+    expect(hit?.matchedText.toLowerCase()).toContain('fuck');
+    expect(hit?.index).toBe(0);
   });
 });
 

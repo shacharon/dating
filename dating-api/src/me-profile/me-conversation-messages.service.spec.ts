@@ -247,9 +247,24 @@ describe('MeConversationMessagesService', () => {
       failOpen: false,
     });
 
-    await expect(
-      service.sendMessage(sessionUserId, conversationId, 'bad stuff'),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    try {
+      await service.sendMessage(sessionUserId, conversationId, 'bad stuff');
+      fail('expected throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      expect((e as BadRequestException).getResponse()).toMatchObject({
+        error: 'message_content_moderation_failed',
+        details: {
+          category: 'harassment',
+          source: 'openai',
+          flaggedText: 'bad stuff',
+          flaggedTextIndex: 0,
+          flaggedTextLength: 'bad stuff'.length,
+          reason: 'Contains harassing or bullying language',
+          suggestion: expect.stringContaining('respectfully'),
+        },
+      });
+    }
 
     expect(contentViolations.recordViolation).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -280,9 +295,21 @@ describe('MeConversationMessagesService', () => {
       failOpen: false,
     });
 
-    await expect(
-      service.sendMessage(sessionUserId, conversationId, 'i want to fuck'),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    try {
+      await service.sendMessage(sessionUserId, conversationId, 'i want to fuck');
+      fail('expected throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      expect((e as BadRequestException).getResponse()).toMatchObject({
+        error: 'message_content_moderation_failed',
+        details: expect.objectContaining({
+          source: 'dating_blocklist',
+          category: 'dating_policy',
+          flaggedText: expect.stringMatching(/want to fuck/i),
+          reason: 'Direct sexual solicitation',
+        }),
+      });
+    }
 
     expect(contentViolations.recordViolation).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -321,7 +348,12 @@ describe('MeConversationMessagesService', () => {
       expect(e).toBeInstanceOf(BadRequestException);
       expect((e as BadRequestException).getResponse()).toMatchObject({
         error: 'message_content_moderation_failed',
-        details: expect.objectContaining({ muted: '1 hour' }),
+        details: expect.objectContaining({
+          muted: '1 hour',
+          source: 'openai',
+          flaggedText: 'flagged',
+          reason: 'Contains explicit sexual content',
+        }),
       });
     }
   });

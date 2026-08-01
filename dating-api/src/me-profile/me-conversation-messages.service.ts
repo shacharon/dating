@@ -20,6 +20,7 @@ import {
   evaluateContentPolicy,
   isDatingPolicyNearMiss,
 } from '../content-moderation/dating-policy';
+import { buildModerationUserFacingDetails } from '../content-moderation/moderation-user-facing';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationsService } from './me-conversations.service';
 import { NewMessageEmailService } from '../notifications/new-message-email.service';
@@ -124,12 +125,19 @@ export class MeConversationMessagesService {
       'message',
     );
 
+    const userFacing = buildModerationUserFacingDetails({
+      text,
+      decision,
+      surface: 'message',
+    });
+
     const ex = new BadRequestException({
       error: 'message_content_moderation_failed',
       message: 'Your message contains inappropriate content',
       details: {
         category: decision.category,
-        suggestion: 'Please rephrase your message respectfully',
+        source: decision.source,
+        ...userFacing,
         ...(enforcement.muteLabel ? { muted: enforcement.muteLabel } : {}),
       },
     });

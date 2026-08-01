@@ -15,10 +15,34 @@ const DATING_BLOCKLIST: RegExp[] = [
   /\bsend\s+nudes?\b/i,
 ];
 
-export function matchesDatingBlocklist(text: string): boolean {
+export type DatingBlocklistHit = {
+  matchedText: string;
+  index: number;
+  length: number;
+  patternSource: string;
+};
+
+export function findDatingBlocklistHit(
+  text: string,
+): DatingBlocklistHit | null {
   const trimmed = text.trim();
-  if (!trimmed) return false;
-  return DATING_BLOCKLIST.some((re) => re.test(trimmed));
+  if (!trimmed) return null;
+  for (const re of DATING_BLOCKLIST) {
+    const match = re.exec(trimmed);
+    if (match && match[0] != null && match.index != null) {
+      return {
+        matchedText: match[0],
+        index: match.index,
+        length: match[0].length,
+        patternSource: re.source,
+      };
+    }
+  }
+  return null;
+}
+
+export function matchesDatingBlocklist(text: string): boolean {
+  return findDatingBlocklistHit(text) != null;
 }
 
 export function evaluateContentPolicy(

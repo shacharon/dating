@@ -1185,9 +1185,30 @@ describe('MeProfileService', () => {
         failOpen: false,
       });
 
-      await expect(
-        service.createForUser(userId, { aboutMe: 'explicit text' }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      try {
+        await service.createForUser(userId, { aboutMe: 'explicit text' });
+        fail('expected throw');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        expect((e as BadRequestException).getResponse()).toMatchObject({
+          error: 'content_moderation_failed',
+          details: {
+            field: 'aboutMe',
+            category: 'sexual',
+            source: 'openai',
+            flaggedText: 'explicit text',
+            flaggedTextIndex: 0,
+            flaggedTextLength: 'explicit text'.length,
+            reason: 'Contains explicit sexual content',
+            suggestion: expect.stringContaining('rephrase'),
+          },
+        });
+        expect(
+          (e as BadRequestException).getResponse() as Record<string, unknown>,
+        ).not.toMatchObject({
+          details: expect.objectContaining({ score: expect.anything() }),
+        });
+      }
 
       expect(contentViolations.recordViolation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1216,9 +1237,23 @@ describe('MeProfileService', () => {
         failOpen: false,
       });
 
-      await expect(
-        service.createForUser(userId, { aboutMe: 'wanna fuck' }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      try {
+        await service.createForUser(userId, { aboutMe: 'wanna fuck' });
+        fail('expected throw');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        expect((e as BadRequestException).getResponse()).toMatchObject({
+          error: 'content_moderation_failed',
+          details: expect.objectContaining({
+            field: 'aboutMe',
+            source: 'dating_blocklist',
+            category: 'dating_policy',
+            flaggedText: expect.stringMatching(/wanna fuck/i),
+            reason: 'Direct sexual solicitation',
+            exampleAlternative: expect.stringContaining('adventurous'),
+          }),
+        });
+      }
 
       expect(contentViolations.recordViolation).toHaveBeenCalledWith(
         expect.objectContaining({

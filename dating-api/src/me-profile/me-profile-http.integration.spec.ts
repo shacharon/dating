@@ -663,7 +663,14 @@ describe('me profile HTTP (integration)', () => {
 
     expect(res.body).toMatchObject({
       error: 'content_moderation_failed',
-      details: { field: 'aboutMe', category: 'sexual' },
+      details: expect.objectContaining({
+        field: 'aboutMe',
+        category: 'sexual',
+        source: 'openai',
+        flaggedText: expect.any(String),
+        reason: expect.any(String),
+        suggestion: expect.any(String),
+      }),
     });
     expect(contentViolationsMock.recordViolation).toHaveBeenCalled();
     expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
@@ -4945,7 +4952,13 @@ describe('me profile HTTP (integration)', () => {
 
       expect(res.body).toMatchObject({
         error: 'message_content_moderation_failed',
-        details: { category: 'harassment' },
+        details: expect.objectContaining({
+          category: 'harassment',
+          source: 'openai',
+          flaggedText: expect.any(String),
+          reason: expect.any(String),
+          suggestion: expect.any(String),
+        }),
       });
       expect(contentViolationsMock.recordViolation).toHaveBeenCalled();
       expect(prismaMock.message.create).not.toHaveBeenCalled();
