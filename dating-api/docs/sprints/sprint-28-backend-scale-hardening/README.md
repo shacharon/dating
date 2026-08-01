@@ -1,6 +1,6 @@
 # Sprint 28 — Backend Scale Hardening
 
-**Status:** 🟡 **IN PROGRESS** — Story 1 Agent 1 done → run Agent 2  
+**Status:** 🟡 **IN PROGRESS** — Story 1 Agent 2 PASS → run Agent 3  
 **Depends on:** Sprint 27 Done (match-list stopgap). **Does not** require live AWS.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`QUICKSTART.md`](./QUICKSTART.md) · [`PRISMA_CONNECTION_POOL.md`](../../ops/PRISMA_CONNECTION_POOL.md)
 
@@ -27,7 +27,7 @@ Cut abuse risk and DB chatter that still hurts after Sprint 27 — without waiti
 
 | # | Story | Status |
 |---|-------|--------|
-| 01 | [Prisma pool + timeouts](./STORY_01_prisma_pool_config.md) | Agent 1 done → run Agent 2 |
+| 01 | [Prisma pool + timeouts](./STORY_01_prisma_pool_config.md) | Agent 2 PASS → run Agent 3 |
 | 02 | [Lock expensive endpoints](./STORY_02_lock_expensive_endpoints.md) | Planned |
 | 03 | [Missing indexes](./STORY_03_missing_indexes.md) | Planned |
 | 04 | [Batch unread counts](./STORY_04_batch_unread_counts.md) | Planned |
