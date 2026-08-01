@@ -106,6 +106,10 @@ describe('me profile HTTP (integration)', () => {
     $transaction: jest.fn(),
     $queryRaw: jest.fn(async (sql: { values: unknown[]; strings?: readonly string[] }) => {
       const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+      // Sprint 34 Story 1 — last SENT message batch (DISTINCT ON Message). Default empty.
+      if (sqlText.includes('DISTINCT ON')) {
+        return [];
+      }
       // Sprint 28 Story 4 — inbox unread batch (UNNEST on Message). Default empty; tests override.
       if (sqlText.includes('UNNEST') || sqlText.includes('"Message"')) {
         return [];
@@ -4142,6 +4146,7 @@ describe('me profile HTTP (integration)', () => {
         id: 'mutual_row_list_1',
         matchedAt: matchedAt.toISOString(),
         unreadCount: 0,
+        lastMessage: null,
         otherUser: {
           id: CANDIDATE_USER_ID,
           profileId: 'prof_action_cand',
@@ -4243,9 +4248,18 @@ describe('me profile HTTP (integration)', () => {
         },
       ]);
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.$queryRaw.mockResolvedValue([
-        { conversationId: CONVERSATION_ID, cnt: 3 },
-      ]);
+      prismaMock.$queryRaw.mockImplementation(
+        async (sql: { strings?: readonly string[] }) => {
+          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+          if (sqlText.includes('DISTINCT ON')) {
+            return [];
+          }
+          if (sqlText.includes('UNNEST')) {
+            return [{ conversationId: CONVERSATION_ID, cnt: 3 }];
+          }
+          return [];
+        },
+      );
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -4253,6 +4267,7 @@ describe('me profile HTTP (integration)', () => {
         .expect(200);
 
       expect(res.body.conversations[0].unreadCount).toBe(3);
+      expect(res.body.conversations[0].lastMessage).toBeNull();
       expect(prismaMock.$queryRaw).toHaveBeenCalled();
       expect(prismaMock.message.count).not.toHaveBeenCalled();
     });
@@ -4288,9 +4303,20 @@ describe('me profile HTTP (integration)', () => {
         },
       );
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.$queryRaw
-        .mockResolvedValueOnce([{ conversationId: CONVERSATION_ID, cnt: 3 }])
-        .mockResolvedValueOnce([]);
+      prismaMock.$queryRaw.mockImplementation(
+        async (sql: { strings?: readonly string[] }) => {
+          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+          if (sqlText.includes('DISTINCT ON')) {
+            return [];
+          }
+          if (sqlText.includes('UNNEST')) {
+            return user2LastReadAt == null
+              ? [{ conversationId: CONVERSATION_ID, cnt: 3 }]
+              : [];
+          }
+          return [];
+        },
+      );
 
       const before = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -4331,9 +4357,18 @@ describe('me profile HTTP (integration)', () => {
         },
       ]);
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.$queryRaw.mockResolvedValue([
-        { conversationId: CONVERSATION_ID, cnt: 2 },
-      ]);
+      prismaMock.$queryRaw.mockImplementation(
+        async (sql: { strings?: readonly string[] }) => {
+          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+          if (sqlText.includes('DISTINCT ON')) {
+            return [];
+          }
+          if (sqlText.includes('UNNEST')) {
+            return [{ conversationId: CONVERSATION_ID, cnt: 2 }];
+          }
+          return [];
+        },
+      );
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -4360,9 +4395,15 @@ describe('me profile HTTP (integration)', () => {
           user2LastReadAt: null,
         },
       ]);
-      prismaMock.$queryRaw.mockResolvedValue([
-        { conversationId: CONVERSATION_ID, cnt: 4 },
-      ]);
+      prismaMock.$queryRaw.mockImplementation(
+        async (sql: { strings?: readonly string[] }) => {
+          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+          if (sqlText.includes('UNNEST')) {
+            return [{ conversationId: CONVERSATION_ID, cnt: 4 }];
+          }
+          return [];
+        },
+      );
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations/unread-total')
@@ -4370,6 +4411,105 @@ describe('me profile HTTP (integration)', () => {
         .expect(200);
 
       expect(res.body).toEqual({ totalUnread: 4 });
+    });
+  });
+
+  // ─── Sprint 34 Story 1: GET /api/v1/me/conversations lastMessage ───────
+
+  describe('Sprint 34 Story 1: GET /api/v1/me/conversations lastMessage', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_last_msg_1';
+    const matchedAt = new Date('2026-05-31T14:00:00.000Z');
+    const listProfile = {
+      id: 'prof_action_cand',
+      userId: CANDIDATE_USER_ID,
+      nickname: 'Yonatan',
+      gender: 'MALE' as const,
+      birthDate: new Date('1988-07-20T00:00:00.000Z'),
+      city: 'TLV',
+      country: 'IL',
+      locationLabel: 'Tel Aviv, IL',
+      desiredPartnerGenders: ['FEMALE'],
+      photos: [{ id: 'photo_conv_primary', isPrimary: true }],
+    };
+
+    it('returns lastMessage null when no SENT messages', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findMany.mockResolvedValue([
+        {
+          id: CONVERSATION_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAt,
+          user1LastReadAt: null,
+          user2LastReadAt: null,
+        },
+      ]);
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
+      prismaMock.$queryRaw.mockImplementation(
+        async (sql: { strings?: readonly string[] }) => {
+          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+          if (sqlText.includes('DISTINCT ON') || sqlText.includes('UNNEST')) {
+            return [];
+          }
+          return [];
+        },
+      );
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.conversations[0].lastMessage).toBeNull();
+      expect(res.body.conversations[0].unreadCount).toBe(0);
+    });
+
+    it('returns lastMessage for newest SENT row', async () => {
+      const raw = await loginAndCookie();
+      const sentAt = new Date('2026-08-01T16:00:00.000Z');
+      prismaMock.mutualMatch.findMany.mockResolvedValue([
+        {
+          id: CONVERSATION_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          createdAt: matchedAt,
+          user1LastReadAt: null,
+          user2LastReadAt: null,
+        },
+      ]);
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
+      prismaMock.$queryRaw.mockImplementation(
+        async (sql: { strings?: readonly string[] }) => {
+          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+          if (sqlText.includes('DISTINCT ON')) {
+            return [
+              {
+                conversationId: CONVERSATION_ID,
+                text: 'latest preview',
+                senderId: USER_ID,
+                createdAt: sentAt,
+              },
+            ];
+          }
+          if (sqlText.includes('UNNEST')) {
+            return [{ conversationId: CONVERSATION_ID, cnt: 1 }];
+          }
+          return [];
+        },
+      );
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body.conversations[0].lastMessage).toEqual({
+        text: 'latest preview',
+        senderId: USER_ID,
+        sentAt: sentAt.toISOString(),
+      });
+      expect(res.body.conversations[0].unreadCount).toBe(1);
     });
   });
 

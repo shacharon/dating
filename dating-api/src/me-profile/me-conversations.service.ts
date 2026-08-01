@@ -23,6 +23,7 @@ import {
   paginateConversationList,
 } from './me-conversations-list-cursor';
 import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
+import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
 import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
 
 function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
@@ -50,11 +51,19 @@ export interface ConversationOtherUserDto {
   photoUrl: string | null;
 }
 
+export interface ConversationLastMessageDto {
+  text: string;
+  senderId: string;
+  /** ISO-8601 from Message.createdAt */
+  sentAt: string;
+}
+
 export interface ConversationListItemDto {
   id: string;
   otherUser: ConversationOtherUserDto;
   matchedAt: string;
   unreadCount: number;
+  lastMessage: ConversationLastMessageDto | null;
 }
 
 export interface ConversationListResponseDto {
@@ -237,8 +246,14 @@ export class MeConversationsService {
     const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
     const asOf = new Date();
 
+    const lastByConversationId = await batchLastMessagesByConversationId(
+      this.prisma,
+      page.map((p) => p.id),
+    );
+
     const conversations: ConversationListItemDto[] = page.map((item) => {
       const profile = profileByUserId.get(item.otherUserId);
+      const last = lastByConversationId.get(item.id);
       return {
         id: item.id,
         otherUser: buildOtherUserDto(
@@ -248,6 +263,13 @@ export class MeConversationsService {
         ),
         matchedAt: item.matchedAt,
         unreadCount: item.unreadCount,
+        lastMessage: last
+          ? {
+              text: last.text,
+              senderId: last.senderId,
+              sentAt: last.createdAt.toISOString(),
+            }
+          : null,
       };
     });
 

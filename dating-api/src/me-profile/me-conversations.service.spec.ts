@@ -4,6 +4,16 @@ import { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
+import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
+
+jest.mock('./me-conversations-last-message-batch', () => ({
+  batchLastMessagesByConversationId: jest.fn(),
+}));
+
+const batchLastMessagesMock =
+  batchLastMessagesByConversationId as jest.MockedFunction<
+    typeof batchLastMessagesByConversationId
+  >;
 
 describe('MeConversationsService', () => {
   const sessionUserId = 'user_viewer_1';
@@ -48,6 +58,7 @@ describe('MeConversationsService', () => {
     );
     (prisma.message.count as jest.Mock).mockResolvedValue(0);
     (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
+    batchLastMessagesMock.mockResolvedValue(new Map());
   });
 
   it('returns empty list when user has no ACTIVE mutual matches', async () => {
@@ -62,6 +73,7 @@ describe('MeConversationsService', () => {
     });
     expect(prisma.userProfile.findMany).not.toHaveBeenCalled();
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(batchLastMessagesMock).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalled();
   });
 
@@ -143,10 +155,16 @@ describe('MeConversationsService', () => {
       '/api/v1/me/matches/prof_a/photos/photo_a/file',
     );
     expect(result.conversations[0].unreadCount).toBe(0);
+    expect(result.conversations[0].lastMessage).toBeNull();
     expect(result.conversations[1].id).toBe('mutual_old');
     expect(result.conversations[1].otherUser.id).toBe(otherUserIdB);
     expect(result.conversations[1].otherUser.photoUrl).toBeNull();
+    expect(result.conversations[1].lastMessage).toBeNull();
     expect(result.conversations[0].matchedAt).toBe(newer.toISOString());
+    expect(batchLastMessagesMock).toHaveBeenCalledWith(prisma, [
+      'mutual_new',
+      'mutual_old',
+    ]);
   });
 
   it('resolves other user when session user is userId2', async () => {
@@ -319,6 +337,101 @@ describe('MeConversationsService', () => {
       expect(result.conversations[0].unreadCount).toBe(3);
       expect(result.conversations[1].id).toBe('mutual_new');
       expect(result.conversations[1].unreadCount).toBe(0);
+    });
+  });
+
+  describe('list() lastMessage', () => {
+    it('returns null lastMessage when batch has no row for conversation', async () => {
+      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'mutual_1',
+          userId1: otherUserIdA,
+          userId2: sessionUserId,
+          createdAt: new Date('2026-05-31T10:00:00.000Z'),
+          ...listRowReadDefaults,
+        },
+      ]);
+      (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
+      batchLastMessagesMock.mockResolvedValue(new Map());
+
+      const result = await service.list(sessionUserId);
+
+      expect(result.conversations[0].lastMessage).toBeNull();
+      expect(batchLastMessagesMock).toHaveBeenCalledWith(prisma, ['mutual_1']);
+    });
+
+    it('maps newest SENT lastMessage onto list items', async () => {
+      const sentAt = new Date('2026-08-01T15:30:00.000Z');
+      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'mutual_1',
+          userId1: otherUserIdA,
+          userId2: sessionUserId,
+          createdAt: new Date('2026-05-31T10:00:00.000Z'),
+          ...listRowReadDefaults,
+        },
+      ]);
+      (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
+      batchLastMessagesMock.mockResolvedValue(
+        new Map([
+          [
+            'mutual_1',
+            {
+              conversationId: 'mutual_1',
+              text: 'hey there',
+              senderId: otherUserIdA,
+              createdAt: sentAt,
+            },
+          ],
+        ]),
+      );
+
+      const result = await service.list(sessionUserId);
+
+      expect(result.conversations[0].lastMessage).toEqual({
+        text: 'hey there',
+        senderId: otherUserIdA,
+        sentAt: sentAt.toISOString(),
+      });
+      expect(result.conversations[0].unreadCount).toBe(0);
+    });
+
+    it('fetches last messages only for paginated page ids', async () => {
+      const t1 = new Date('2026-06-03T00:00:00.000Z');
+      const t2 = new Date('2026-06-02T00:00:00.000Z');
+      const t3 = new Date('2026-06-01T00:00:00.000Z');
+      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'c1',
+          userId1: sessionUserId,
+          userId2: otherUserIdA,
+          createdAt: t1,
+          ...listRowReadDefaults,
+        },
+        {
+          id: 'c2',
+          userId1: sessionUserId,
+          userId2: otherUserIdB,
+          createdAt: t2,
+          ...listRowReadDefaults,
+        },
+        {
+          id: 'c3',
+          userId1: otherUserIdA,
+          userId2: sessionUserId,
+          createdAt: t3,
+          ...listRowReadDefaults,
+        },
+      ]);
+      (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
+
+      await service.list(sessionUserId, { limit: 2 });
+
+      expect(batchLastMessagesMock).toHaveBeenCalledWith(prisma, ['c1', 'c2']);
+      expect(batchLastMessagesMock).not.toHaveBeenCalledWith(
+        prisma,
+        expect.arrayContaining(['c3']),
+      );
     });
   });
 
