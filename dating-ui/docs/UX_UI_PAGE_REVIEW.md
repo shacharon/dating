@@ -3,6 +3,8 @@
 **Last updated:** 2026-08-01  
 **Reviewer perspective:** Product Design + UX Best Practices
 
+> **Sprint 35 route note:** Canonical profile hub is **`/profile?tab=overview|edit|analysis|settings`**. Legacy `/dating/profile`, `/dating/analysis`, and `/settings/profile*` are thin redirects to the hub (see Story 35.4). Historical sections below may still describe pre-consolidation URLs.
+
 ---
 
 ## Table of Contents
@@ -46,20 +48,20 @@
 | `/dating/matches/[id]` | Legacy redirect to `/dating/me-matches/[id]` |
 | `/dating/conversations` | List of active conversations |
 | `/dating/conversations/[id]` | Real-time messaging interface |
-| `/dating/profile` | View your own profile |
-| `/dating/analysis` | Profile analysis results and progress |
+| `/profile` | **Canonical** unified profile hub (`?tab=overview\|edit\|analysis\|settings`) |
+| `/dating/profile` | Redirect → `/profile` |
+| `/dating/analysis` | Redirect → `/profile?tab=analysis` |
 | `/dating/onboarding` | Alternate onboarding entry (redirects) |
 
 ### Settings Pages
 | Route | Purpose |
 |-------|---------|
-| `/settings/profile` | Redirect to `/dating/profile` |
-| `/settings/profile/basic` | Edit basic profile info |
-| `/settings/profile/story` | Edit story/text fields |
+| `/settings/profile` | Redirect → `/profile` |
+| `/settings/profile/basic` | Redirect → `/profile?tab=edit#basic` |
+| `/settings/profile/story` | Redirect → `/profile?tab=edit#story` |
 | `/settings/preferences` | Edit matching preferences |
 | `/settings/account` | Account settings |
 | `/settings/language` | Language selection |
-| `/profile` | Redirect to `/dating/profile` |
 | `/app` | Redirect (deprecated) |
 
 ### Admin Pages (Staff Only)

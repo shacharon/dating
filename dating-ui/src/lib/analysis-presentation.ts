@@ -1,5 +1,5 @@
 /**
- * Presentation mapper for /dating/analysis.
+ * Presentation mapper for profile analysis results (hub Analysis tab).
  *
  * Converts raw `evaluationJson` (UserProfileEvaluation) into a stable UI view
  * model. All internal/debug/trace fields are excluded here, so JSX never needs

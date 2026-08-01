@@ -6,15 +6,15 @@ vi.mock('next/navigation', () => ({
   redirect,
 }));
 
-import DatingProfileRedirectPage from './page';
+import SettingsProfileRedirectPage from './page';
 
-describe('/dating/profile page', () => {
+describe('/settings/profile page', () => {
   beforeEach(() => {
     redirect.mockClear();
   });
 
   it('redirects to /profile', () => {
-    DatingProfileRedirectPage();
+    SettingsProfileRedirectPage();
     expect(redirect).toHaveBeenCalledWith('/profile');
   });
 });

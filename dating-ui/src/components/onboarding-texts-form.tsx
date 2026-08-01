@@ -200,7 +200,7 @@ export function OnboardingTextsForm({
         setTimeout(() => setSavedFlash(false), 2000);
         return;
       }
-      router.replace('/dating/analysis');
+      router.replace('/profile?tab=analysis');
     } catch (e) {
       setFinishing(false);
       applyCaughtError(e, setFinishError, tf.finishFailedError);

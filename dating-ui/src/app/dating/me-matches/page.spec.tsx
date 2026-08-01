@@ -160,6 +160,26 @@ describe('MeMatchesPage (not_ready photo gate)', () => {
   });
 });
 
+describe('MeMatchesPage (not_ready analysis redirect)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('redirects to hub analysis when not_ready reason is not_analyzed', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'not_ready',
+      reason: 'not_analyzed',
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/profile?tab=analysis');
+    });
+    unmount();
+  });
+});
+
 describe('MeMatchesPage (viewer analysis stale)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

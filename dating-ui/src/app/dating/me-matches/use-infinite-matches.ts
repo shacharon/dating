@@ -39,7 +39,7 @@ export function useInfiniteMatches(
   const handleNotReadyRedirect = useCallback(
     (dto: MeMatchesListDto) => {
       if (dto.reason === 'no_profile') router.replace('/onboarding');
-      else router.replace('/dating/analysis');
+      else router.replace('/profile?tab=analysis');
     },
     [router],
   );
