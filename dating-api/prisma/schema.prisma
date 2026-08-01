@@ -227,6 +227,7 @@ model UserProfilePhoto {
   @@unique([profileId, position])
   @@index([profileId])
   @@index([status, createdAt])
+  @@index([profileId, status])
 }
 
 model MatchAction {
@@ -275,6 +276,7 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([conversationId, senderId, status, createdAt])
 }
 
 enum UserReportReason {
@@ -334,6 +336,7 @@ model MatchFeedback {
   @@unique([userId, matchProfileId])
   @@index([userId, createdAt])
   @@index([matchProfileId])
+  @@index([sentiment, createdAt])
 }
 
 /// Sprint 22 — lazy LLM match narrative cache (keyed by evaluation pair + prompt version).
