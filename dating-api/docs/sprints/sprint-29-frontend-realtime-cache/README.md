@@ -1,6 +1,6 @@
 # Sprint 29 — Frontend Realtime + Cache
 
-**Status:** 🟡 **PLANNED** — ready for Agent 0 Story 1  
+**Status:** 🟡 **IN PROGRESS** — Story 1 Architect locked → next Agent 1  
 **Depends on:** Sprint 28 Done (backend hardening). **Does not** require live AWS.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`QUICKSTART.md`](./QUICKSTART.md) · prior: [Sprint 28](../sprint-28-backend-scale-hardening/README.md)
 

@@ -1,9 +1,11 @@
 # Story 01 — WS realtime default
 
-**Sprint 29 · Status: PLANNED**  
+**Sprint 29 · Status: IN PROGRESS (Architect locked)**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Messaging WS already exists (Sprint 4+)
+
+**Handoff:** [`handoffs/STORY_01_ws_realtime_default/agent-0-architect.md`](./handoffs/STORY_01_ws_realtime_default/agent-0-architect.md)
 
 ---
 
@@ -17,10 +19,20 @@ Make WebSocket the **default** realtime mode for product messaging so open threa
 
 ## Scope / tasks
 
-1. Find `getRealtimeMode` / `NEXT_PUBLIC_REALTIME` usage in `dating-ui`.
-2. Architect locks: default `ws` vs env-only; poll fallback when WS fails; local/dev override.
+1. Find `getRealtimeMode` / `NEXT_PUBLIC_REALTIME` usage in `dating-ui`. ✅
+2. Architect locks: default `ws` vs env-only; poll fallback when WS fails; local/dev override. ✅
 3. Specs: default mode; explicit `poll` still works; no behavior break for reconnect catch-up.
 4. Document env in UI `.env.example` if present.
+
+### Architect locks (do not reverse)
+
+| Decision | Lock |
+|----------|------|
+| Unset / empty | **`ws`** |
+| `ws` / `websocket` | **`ws`** |
+| `poll` | **`poll`** (emergency / tests) |
+| Other non-empty | **`poll`** |
+| Auto-fallback poll on WS fail | **Out of scope** (rebuild with `poll`) |
 
 ## Acceptance criteria
 
