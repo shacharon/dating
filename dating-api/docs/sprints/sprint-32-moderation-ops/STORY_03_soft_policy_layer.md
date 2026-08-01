@@ -1,9 +1,10 @@
 # Story 03 — Soft / dating policy layer
 
-**Sprint 32 · Status: PLANNED**  
+**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 0 architect complete → run Agent 1**  
 **Priority:** P1  
 **Estimated effort:** 1 day  
 **Dependencies:** Stories 01–02 preferred (ops can see soft actions); can start after 01  
+**Handoffs:** [architect](./handoffs/STORY_03_soft_policy_layer/agent-0-architect.md) 
 
 ---
 
