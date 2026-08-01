@@ -1,11 +1,11 @@
 # Story 04 — next/image optimization
 
-**Sprint 29 · Status: CR PASS → Agent 3 PM**  
+**Sprint 29 · Status: Done**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Know CDN / photo URL hosts in use
 
-**Handoff:** [`handoffs/STORY_04_next_image/agent-0-architect.md`](./handoffs/STORY_04_next_image/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_04_next_image/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_04_next_image/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_04_next_image/agent-0-architect.md`](./handoffs/STORY_04_next_image/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_04_next_image/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_04_next_image/agent-2-cr.md) · [`agent-3-pm.md`](./handoffs/STORY_04_next_image/agent-3-pm.md)
 
 ---
 
