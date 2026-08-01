@@ -1,10 +1,10 @@
 # Story 01 — OpenAI moderation client + violation storage
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
+**Sprint 30 · Status: ✅ Done**  
 **Priority:** P0  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Story 00 Done (disclosure); code can proceed in parallel with ops DPA  
-**Handoffs:** [architect](./handoffs/STORY_01_moderation_client/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_01_moderation_client/agent-0-architect.md) · [dev](./handoffs/STORY_01_moderation_client/agent-1-dev.md) · [CR](./handoffs/STORY_01_moderation_client/agent-2-cr.md) · [PM](./handoffs/STORY_01_moderation_client/agent-3-pm.md)
 
 ---
 
