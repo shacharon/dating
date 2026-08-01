@@ -38,6 +38,12 @@ export interface ConversationListItemDto {
 
 export interface ConversationListResponseDto {
   conversations: ConversationListItemDto[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface ConversationsUnreadTotalDto {
+  totalUnread: number;
 }
 
 export interface ConversationDetailDto {
@@ -69,9 +75,16 @@ export interface MessageListDto {
   };
 }
 
-export async function fetchMyConversations(): Promise<ConversationListResponseDto> {
+export async function fetchMyConversations(opts?: {
+  cursor?: string | null;
+  limit?: number;
+}): Promise<ConversationListResponseDto> {
   const base = getApiBase();
-  const path = '/api/v1/me/conversations';
+  const params = new URLSearchParams();
+  if (opts?.cursor) params.set('cursor', opts.cursor);
+  if (opts?.limit != null) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+  const path = `/api/v1/me/conversations${qs ? `?${qs}` : ''}`;
   let res: Response;
   try {
     res = await fetch(`${base}${path}`, {
@@ -87,7 +100,34 @@ export async function fetchMyConversations(): Promise<ConversationListResponseDt
   if (!res.ok) {
     throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
   }
-  return readJson<ConversationListResponseDto>(res);
+  const dto = await readJson<ConversationListResponseDto>(res);
+  return {
+    conversations: dto.conversations ?? [],
+    nextCursor: dto.nextCursor ?? null,
+    hasMore: Boolean(dto.hasMore),
+  };
+}
+
+export async function fetchConversationsUnreadTotal(): Promise<ConversationsUnreadTotalDto> {
+  const base = getApiBase();
+  const path = '/api/v1/me/conversations/unread-total';
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: 'GET',
+      ...credFetch,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error(apiUnreachableMessage(base, path));
+  }
+  captureRequestIdFromResponse(res);
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
+  }
+  const dto = await readJson<ConversationsUnreadTotalDto>(res);
+  return { totalUnread: Number(dto.totalUnread) || 0 };
 }
 
 /**

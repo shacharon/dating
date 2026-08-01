@@ -71,16 +71,20 @@ vi.mock('@/contexts/auth-context', () => ({
   }),
 }));
 
-const { reconcileFromList } = vi.hoisted(() => ({
-  reconcileFromList: vi.fn(),
-}));
+const { reconcileFromList, refreshUnreadTotal, bumpFromMessage } = vi.hoisted(
+  () => ({
+    reconcileFromList: vi.fn(),
+    refreshUnreadTotal: vi.fn(),
+    bumpFromMessage: vi.fn(),
+  }),
+);
 
 vi.mock('@/contexts/conversation-unread-context', () => ({
   useConversationUnread: () => ({
     totalUnread: 0,
-    refresh: vi.fn(),
+    refresh: refreshUnreadTotal,
     reconcileFromList,
-    bumpFromMessage: vi.fn(),
+    bumpFromMessage,
   }),
 }));
 
@@ -125,7 +129,7 @@ describe('ConversationsPage', () => {
   });
 
   it('renders empty state when there are no conversations', async () => {
-    fetchMyConversations.mockResolvedValue({ conversations: [] });
+    fetchMyConversations.mockResolvedValue({ conversations: [], nextCursor: null, hasMore: false });
 
     const { unmount } = render(<ConversationsPage />);
 
@@ -133,6 +137,56 @@ describe('ConversationsPage', () => {
       expect(screen.getByTestId('conversations-empty')).toBeTruthy();
     });
     expect(screen.getByText(/No matches yet. Keep swiping!/)).toBeTruthy();
+    unmount();
+  });
+
+  it('appends the next page when Load more is clicked', async () => {
+    const otherB = { ...otherUser, id: 'user_cand_2', nickname: 'Dana' };
+    fetchMyConversations.mockImplementation(async (opts?: { cursor?: string }) => {
+      if (opts?.cursor === 'cursor_page1') {
+        return {
+          conversations: [
+            {
+              id: 'mutual_2',
+              otherUser: otherB,
+              matchedAt: '2026-05-30T12:00:00.000Z',
+              unreadCount: 0,
+            },
+          ],
+          nextCursor: null,
+          hasMore: false,
+        };
+      }
+      return {
+        conversations: [
+          {
+            id: 'mutual_1',
+            otherUser,
+            matchedAt: '2026-05-31T12:00:00.000Z',
+            unreadCount: 0,
+          },
+        ],
+        nextCursor: 'cursor_page1',
+        hasMore: true,
+      };
+    });
+
+    const { unmount } = render(<ConversationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Noa')).toBeTruthy();
+    });
+    expect(screen.getByTestId('conversations-load-more')).toBeTruthy();
+
+    screen.getByTestId('conversations-load-more').click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Dana')).toBeTruthy();
+    });
+    expect(fetchMyConversations).toHaveBeenCalledWith({
+      cursor: 'cursor_page1',
+    });
+    expect(screen.queryByTestId('conversations-load-more')).toBeNull();
     unmount();
   });
 
@@ -146,6 +200,8 @@ describe('ConversationsPage', () => {
           unreadCount: 0,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount } = render(<ConversationsPage />);
@@ -168,6 +224,8 @@ describe('ConversationsPage', () => {
           unreadCount: 0,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount, container } = render(<ConversationsPage />);
@@ -192,6 +250,8 @@ describe('ConversationsPage', () => {
           unreadCount: 3,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount } = render(<ConversationsPage />);
@@ -215,6 +275,8 @@ describe('ConversationsPage', () => {
           unreadCount: 0,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount } = render(<ConversationsPage />);
@@ -236,6 +298,8 @@ describe('ConversationsPage', () => {
           unreadCount: 1,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount } = render(<ConversationsPage />);
@@ -259,6 +323,8 @@ describe('ConversationsPage', () => {
           unreadCount: 0,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount } = render(<ConversationsPage />);
@@ -286,6 +352,8 @@ describe('ConversationsPage', () => {
           unreadCount: 0,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     const { unmount } = render(<ConversationsPage />);
@@ -326,7 +394,9 @@ describe('ConversationsPage', () => {
             unreadCount: 0,
           },
         ],
-      });
+      nextCursor: null,
+      hasMore: false,
+    });
 
       const { unmount } = render(<ConversationsPage />);
 
@@ -355,7 +425,9 @@ describe('ConversationsPage', () => {
             unreadCount: 0,
           },
         ],
-      });
+      nextCursor: null,
+      hasMore: false,
+    });
 
       const { unmount } = render(<ConversationsPage />);
 
@@ -393,7 +465,9 @@ describe('ConversationsPage', () => {
             unreadCount: 0,
           },
         ],
-      });
+      nextCursor: null,
+      hasMore: false,
+    });
 
       const { unmount, container } = render(<ConversationsPage />);
 
@@ -435,7 +509,9 @@ describe('ConversationsPage', () => {
             unreadCount: 0,
           },
         ],
-      });
+      nextCursor: null,
+      hasMore: false,
+    });
 
       const { unmount } = render(<ConversationsPage />);
 
@@ -463,6 +539,8 @@ describe('ConversationsPage', () => {
               unreadCount: 0,
             },
           ],
+          nextCursor: null,
+          hasMore: false,
         })
         .mockResolvedValueOnce({
           conversations: [
@@ -473,6 +551,8 @@ describe('ConversationsPage', () => {
               unreadCount: 0,
             },
           ],
+          nextCursor: null,
+          hasMore: false,
         });
 
       const { unmount } = render(<ConversationsPage />);
@@ -521,7 +601,7 @@ describe('ConversationsPage (i18n)', () => {
 
   it('renders Hebrew list copy when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    fetchMyConversations.mockResolvedValue({ conversations: [] });
+    fetchMyConversations.mockResolvedValue({ conversations: [], nextCursor: null, hasMore: false });
 
     render(<ConversationsPage />);
 
@@ -548,6 +628,8 @@ describe('ConversationsPage (i18n)', () => {
           unreadCount: 0,
         },
       ],
+      nextCursor: null,
+      hasMore: false,
     });
 
     render(<ConversationsPage />);

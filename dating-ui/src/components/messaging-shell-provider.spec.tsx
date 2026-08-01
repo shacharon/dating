@@ -2,23 +2,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
 
-const { fetchMyConversations, getRealtimeMode, getActiveConversationId, pushMock, onMessageNewRef } =
-  vi.hoisted(() => {
-    const onMessageNewRef: {
-      current: ((msg: unknown) => void) | null;
-    } = { current: null };
+const {
+  fetchConversationsUnreadTotal,
+  getRealtimeMode,
+  getActiveConversationId,
+  pushMock,
+  onMessageNewRef,
+} = vi.hoisted(() => {
+  const onMessageNewRef: {
+    current: ((msg: unknown) => void) | null;
+  } = { current: null };
 
-    return {
-      fetchMyConversations: vi.fn(),
-      getRealtimeMode: vi.fn(() => 'ws' as const),
-      getActiveConversationId: vi.fn(() => null as string | null),
-      pushMock: vi.fn(),
-      onMessageNewRef,
-    };
-  });
+  return {
+    fetchConversationsUnreadTotal: vi.fn(),
+    getRealtimeMode: vi.fn(() => 'ws' as const),
+    getActiveConversationId: vi.fn(() => null as string | null),
+    pushMock: vi.fn(),
+    onMessageNewRef,
+  };
+});
 
 vi.mock('@/lib/conversations-api', () => ({
-  fetchMyConversations,
+  fetchConversationsUnreadTotal,
 }));
 
 vi.mock('@/lib/realtime-mode', () => ({
@@ -70,24 +75,7 @@ describe('MessagingShellProvider', () => {
     getRealtimeMode.mockReturnValue('ws');
     getActiveConversationId.mockReturnValue(null);
     onMessageNewRef.current = null;
-    fetchMyConversations.mockResolvedValue({
-      conversations: [
-        {
-          id: 'conv_1',
-          matchedAt: '2026-06-01T10:00:00.000Z',
-          unreadCount: 1,
-          otherUser: {
-            id: 'user_peer',
-            profileId: 'prof_peer',
-            nickname: 'Noa',
-            gender: 'FEMALE',
-            ageYears: 30,
-            locationLabel: 'Tel Aviv',
-            photoUrl: null,
-          },
-        },
-      ],
-    });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 1 });
   });
 
   afterEach(() => {
@@ -111,7 +99,8 @@ describe('MessagingShellProvider', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('message-toast')).toBeTruthy();
-      expect(screen.getByText(/Noa sent you a message/)).toBeTruthy();
+      // Peer nicknames warm when conversations list reconciles; shell uses unread-total only.
+      expect(screen.getByText(/Someone sent you a message/)).toBeTruthy();
     });
   });
 
@@ -208,7 +197,7 @@ describe('MessagingShellProvider', () => {
       expect(screen.getByTestId('message-toast')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText(/Noa sent you a message/));
+    fireEvent.click(screen.getByText(/Someone sent you a message/));
 
     expect(pushMock).toHaveBeenCalledWith('/dating/conversations/conv_1');
   });
@@ -273,7 +262,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('shows Someone when sender is not in label cache', async () => {
-    fetchMyConversations.mockResolvedValue({ conversations: [] });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 0 });
 
     render(
       <MessagingShellProvider sessionUserId="user_me">

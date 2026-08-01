@@ -46,7 +46,11 @@ describe('MeConversationsService', () => {
 
     const result = await service.list(sessionUserId);
 
-    expect(result).toEqual({ conversations: [] });
+    expect(result).toEqual({
+      conversations: [],
+      nextCursor: null,
+      hasMore: false,
+    });
     expect(prisma.userProfile.findMany).not.toHaveBeenCalled();
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalled();
@@ -306,6 +310,106 @@ describe('MeConversationsService', () => {
       expect(result.conversations[0].unreadCount).toBe(3);
       expect(result.conversations[1].id).toBe('mutual_new');
       expect(result.conversations[1].unreadCount).toBe(0);
+    });
+  });
+
+  describe('list() pagination', () => {
+    it('returns nextCursor/hasMore and page2 continues sorted order', async () => {
+      const t1 = new Date('2026-06-03T00:00:00.000Z');
+      const t2 = new Date('2026-06-02T00:00:00.000Z');
+      const t3 = new Date('2026-06-01T00:00:00.000Z');
+      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'c1',
+          userId1: sessionUserId,
+          userId2: otherUserIdA,
+          createdAt: t1,
+          ...listRowReadDefaults,
+        },
+        {
+          id: 'c2',
+          userId1: sessionUserId,
+          userId2: otherUserIdB,
+          createdAt: t2,
+          ...listRowReadDefaults,
+        },
+        {
+          id: 'c3',
+          userId1: otherUserIdA,
+          userId2: sessionUserId,
+          createdAt: t3,
+          ...listRowReadDefaults,
+        },
+      ]);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { conversationId: 'c1', cnt: 1 },
+        { conversationId: 'c2', cnt: 0 },
+        { conversationId: 'c3', cnt: 0 },
+      ]);
+      (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
+
+      const page1 = await service.list(sessionUserId, { limit: 2 });
+      expect(page1.conversations.map((c) => c.id)).toEqual(['c1', 'c2']);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.nextCursor).toBeTruthy();
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: { in: [otherUserIdA, otherUserIdB] } },
+        }),
+      );
+
+      const page2 = await service.list(sessionUserId, {
+        limit: 2,
+        cursor: page1.nextCursor!,
+      });
+      expect(page2.conversations.map((c) => c.id)).toEqual(['c3']);
+      expect(page2.hasMore).toBe(false);
+      expect(page2.nextCursor).toBeNull();
+    });
+
+    it('throws BadRequestException for invalid cursor', async () => {
+      await expect(
+        service.list(sessionUserId, { limit: 20, cursor: '!!!' }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({ error: 'invalid_cursor' }),
+      });
+      expect(prisma.mutualMatch.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unreadTotal()', () => {
+    it('sums batched unread counts across conversations', async () => {
+      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'c1',
+          userId1: sessionUserId,
+          userId2: otherUserIdA,
+          ...listRowReadDefaults,
+        },
+        {
+          id: 'c2',
+          userId1: sessionUserId,
+          userId2: otherUserIdB,
+          ...listRowReadDefaults,
+        },
+      ]);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { conversationId: 'c1', cnt: 2 },
+        { conversationId: 'c2', cnt: 3 },
+      ]);
+
+      await expect(service.unreadTotal(sessionUserId)).resolves.toEqual({
+        totalUnread: 5,
+      });
+      expect(prisma.userProfile.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 0 when inbox empty', async () => {
+      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([]);
+      await expect(service.unreadTotal(sessionUserId)).resolves.toEqual({
+        totalUnread: 0,
+      });
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
     });
   });
 

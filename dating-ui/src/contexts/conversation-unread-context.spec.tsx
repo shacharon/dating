@@ -2,12 +2,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const { fetchMyConversations } = vi.hoisted(() => ({
-  fetchMyConversations: vi.fn(),
+const { fetchConversationsUnreadTotal } = vi.hoisted(() => ({
+  fetchConversationsUnreadTotal: vi.fn(),
 }));
 
 vi.mock('@/lib/conversations-api', () => ({
-  fetchMyConversations,
+  fetchConversationsUnreadTotal,
 }));
 
 import {
@@ -56,24 +56,7 @@ function Probe() {
 
 describe('ConversationUnreadProvider', () => {
   beforeEach(() => {
-    fetchMyConversations.mockResolvedValue({
-      conversations: [
-        {
-          id: 'conv_1',
-          matchedAt: '2026-06-01T10:00:00.000Z',
-          unreadCount: 3,
-          otherUser: {
-            id: 'user_peer',
-            profileId: 'prof_peer',
-            nickname: 'Noa',
-            gender: null,
-            ageYears: null,
-            locationLabel: null,
-            photoUrl: null,
-          },
-        },
-      ],
-    });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 3 });
   });
 
   afterEach(() => {
@@ -81,7 +64,7 @@ describe('ConversationUnreadProvider', () => {
     vi.clearAllMocks();
   });
 
-  it('loads total unread on mount', async () => {
+  it('loads total unread on mount via unread-total', async () => {
     render(
       <ConversationUnreadProvider>
         <Probe />
@@ -91,9 +74,10 @@ describe('ConversationUnreadProvider', () => {
     await waitFor(() => {
       expect(screen.getByTestId('total').textContent).toBe('3');
     });
+    expect(fetchConversationsUnreadTotal).toHaveBeenCalled();
   });
 
-  it('reconcileFromList replaces optimistic total', async () => {
+  it('reconcileFromList does not overwrite badge total from partial page', async () => {
     render(
       <ConversationUnreadProvider>
         <Probe />
@@ -103,14 +87,10 @@ describe('ConversationUnreadProvider', () => {
     await waitFor(() => {
       expect(screen.getByTestId('total').textContent).toBe('3');
     });
-
-    fetchMyConversations.mockImplementation(() => new Promise(() => {}));
 
     fireEvent.click(screen.getByText('reconcile'));
 
-    await waitFor(() => {
-      expect(screen.getByTestId('total').textContent).toBe('2');
-    });
+    expect(screen.getByTestId('total').textContent).toBe('3');
   });
 
   it('bumpFromMessage increments total', async () => {
@@ -123,8 +103,6 @@ describe('ConversationUnreadProvider', () => {
     await waitFor(() => {
       expect(screen.getByTestId('total').textContent).toBe('3');
     });
-
-    fetchMyConversations.mockImplementation(() => new Promise(() => {}));
 
     fireEvent.click(screen.getByText('bump'));
 

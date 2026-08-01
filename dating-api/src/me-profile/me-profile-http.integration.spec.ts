@@ -3973,7 +3973,11 @@ describe('me profile HTTP (integration)', () => {
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .expect(200);
 
-      expect(res.body).toEqual({ conversations: [] });
+      expect(res.body).toEqual({
+        conversations: [],
+        nextCursor: null,
+        hasMore: false,
+      });
       expect(prismaMock.mutualMatch.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -4034,6 +4038,8 @@ describe('me profile HTTP (integration)', () => {
         },
       });
       expect(typeof res.body.conversations[0].otherUser.ageYears).toBe('number');
+      expect(res.body.nextCursor).toBeNull();
+      expect(res.body.hasMore).toBe(false);
     });
 
     it('GET match photo returns 200 when ACTIVE mutual exists despite gender ineligibility', async () => {
@@ -4224,6 +4230,31 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.conversations[0].unreadCount).toBe(2);
       expect(res.body.conversations[1].id).toBe(CONVERSATION_READ_ID);
       expect(res.body.conversations[1].unreadCount).toBe(0);
+    });
+
+    it('GET /api/v1/me/conversations/unread-total returns sum of unread', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findMany.mockResolvedValue([
+        {
+          id: CONVERSATION_ID,
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          status: 'ACTIVE' as const,
+          createdAt: new Date('2026-05-31T10:00:00.000Z'),
+          user1LastReadAt: null,
+          user2LastReadAt: null,
+        },
+      ]);
+      prismaMock.$queryRaw.mockResolvedValue([
+        { conversationId: CONVERSATION_ID, cnt: 4 },
+      ]);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/conversations/unread-total')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(200);
+
+      expect(res.body).toEqual({ totalUnread: 4 });
     });
   });
 

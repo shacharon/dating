@@ -12,13 +12,10 @@ import {
   type ReactElement,
 } from 'react';
 import {
-  fetchMyConversations,
+  fetchConversationsUnreadTotal,
   type ConversationListItemDto,
 } from '@/lib/conversations-api';
-import {
-  bumpUnreadTotal,
-  sumUnreadCounts,
-} from '@/lib/conversation-unread-total';
+import { bumpUnreadTotal } from '@/lib/conversation-unread-total';
 
 export type ConversationUnreadContextValue = {
   totalUnread: number;
@@ -42,7 +39,7 @@ export function ConversationUnreadProvider({
 
   const reconcileFromList = useCallback(
     (conversations: ConversationListItemDto[]) => {
-      setTotalUnread(sumUnreadCounts(conversations));
+      // Partial list pages must not overwrite badge total (Sprint 29 Story 2).
       onConversationsFetched?.(conversations);
     },
     [onConversationsFetched],
@@ -54,9 +51,8 @@ export function ConversationUnreadProvider({
     }
     const run = (async () => {
       try {
-        const dto = await fetchMyConversations();
-        const conversations = dto.conversations ?? [];
-        reconcileFromList(conversations);
+        const dto = await fetchConversationsUnreadTotal();
+        setTotalUnread(dto.totalUnread);
       } catch {
         // silent — nav badge keeps last known total
       } finally {
@@ -65,7 +61,7 @@ export function ConversationUnreadProvider({
     })();
     refreshInFlightRef.current = run;
     return run;
-  }, [reconcileFromList]);
+  }, []);
 
   const bumpFromMessage = useCallback((conversationId: string) => {
     setTotalUnread((prev) => bumpUnreadTotal(prev, conversationId));

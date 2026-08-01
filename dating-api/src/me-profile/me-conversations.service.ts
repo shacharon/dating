@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -15,6 +16,12 @@ import { hashConversationId } from '../analytics/hash-conversation-id';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { MeConversationsListQuery } from './dto/me-conversations-list-query.dto';
+import { DEFAULT_CONVERSATION_LIST_LIMIT } from './dto/me-conversations-list-query.dto';
+import {
+  decodeConversationListCursor,
+  paginateConversationList,
+} from './me-conversations-list-cursor';
 import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
 
 function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
@@ -51,6 +58,12 @@ export interface ConversationListItemDto {
 
 export interface ConversationListResponseDto {
   conversations: ConversationListItemDto[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface ConversationsUnreadTotalDto {
+  totalUnread: number;
 }
 
 export interface ConversationDetailDto {
@@ -110,7 +123,29 @@ export class MeConversationsService {
     private readonly analytics: AnalyticsService,
   ) {}
 
-  async list(sessionUserId: string): Promise<ConversationListResponseDto> {
+  async list(
+    sessionUserId: string,
+    query: MeConversationsListQuery = {
+      limit: DEFAULT_CONVERSATION_LIST_LIMIT,
+    },
+  ): Promise<ConversationListResponseDto> {
+    const limit =
+      typeof query.limit === 'number' &&
+      Number.isFinite(query.limit) &&
+      query.limit >= 1
+        ? Math.min(query.limit, 50)
+        : DEFAULT_CONVERSATION_LIST_LIMIT;
+    const cursor =
+      query.cursor != null && query.cursor.trim() !== ''
+        ? decodeConversationListCursor(query.cursor.trim())
+        : null;
+    if (query.cursor != null && query.cursor.trim() !== '' && cursor == null) {
+      throw new BadRequestException({
+        error: 'invalid_cursor',
+        message: 'Invalid conversation list cursor.',
+      });
+    }
+
     const rows = await this.prisma.mutualMatch.findMany({
       where: {
         status: MutualMatchStatus.ACTIVE,
@@ -132,18 +167,8 @@ export class MeConversationsService {
         `me conversations list userId=${sessionUserId} count=0`,
         ErrorCodes.ME_CONVERSATIONS_LIST_OK,
       );
-      return { conversations: [] };
+      return { conversations: [], nextCursor: null, hasMore: false };
     }
-
-    const otherUserIds = rows.map((row) =>
-      row.userId1 === sessionUserId ? row.userId2 : row.userId1,
-    );
-
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { userId: { in: otherUserIds } },
-      select: profileSelect,
-    });
-    const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
 
     const unreadSpecs = rows.map((row) => {
       const otherUserId =
@@ -159,37 +184,115 @@ export class MeConversationsService {
       unreadSpecs,
     );
 
-    const asOf = new Date();
-    const conversations: ConversationListItemDto[] = rows.map((row) => {
+    type Ranked = {
+      id: string;
+      matchedAt: string;
+      unreadCount: number;
+      otherUserId: string;
+    };
+
+    const ranked: Ranked[] = rows.map((row) => {
       const otherUserId =
         row.userId1 === sessionUserId ? row.userId2 : row.userId1;
-      const profile = profileByUserId.get(otherUserId);
-
       return {
         id: row.id,
-        otherUser: buildOtherUserDto(
-          otherUserId,
-          profile ?? undefined,
-          asOf,
-        ),
         matchedAt: row.createdAt.toISOString(),
         unreadCount: unreadByConversationId.get(row.id) ?? 0,
+        otherUserId,
       };
     });
 
-    conversations.sort((a, b) => {
+    ranked.sort((a, b) => {
       if (b.unreadCount !== a.unreadCount) {
         return b.unreadCount - a.unreadCount;
       }
       return b.matchedAt.localeCompare(a.matchedAt);
     });
 
+    const { page, nextCursor, hasMore } = paginateConversationList(
+      ranked,
+      cursor,
+      limit,
+    );
+
+    if (page.length === 0) {
+      this.obs.trace(
+        `me conversations list userId=${sessionUserId} count=0 page`,
+        ErrorCodes.ME_CONVERSATIONS_LIST_OK,
+      );
+      return { conversations: [], nextCursor: null, hasMore: false };
+    }
+
+    const otherUserIds = page.map((p) => p.otherUserId);
+    const profiles = await this.prisma.userProfile.findMany({
+      where: { userId: { in: otherUserIds } },
+      select: profileSelect,
+    });
+    const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
+    const asOf = new Date();
+
+    const conversations: ConversationListItemDto[] = page.map((item) => {
+      const profile = profileByUserId.get(item.otherUserId);
+      return {
+        id: item.id,
+        otherUser: buildOtherUserDto(
+          item.otherUserId,
+          profile ?? undefined,
+          asOf,
+        ),
+        matchedAt: item.matchedAt,
+        unreadCount: item.unreadCount,
+      };
+    });
+
     this.obs.trace(
-      `me conversations list userId=${sessionUserId} count=${conversations.length}`,
+      `me conversations list userId=${sessionUserId} count=${conversations.length} hasMore=${hasMore}`,
       ErrorCodes.ME_CONVERSATIONS_LIST_OK,
     );
 
-    return { conversations };
+    return { conversations, nextCursor, hasMore };
+  }
+
+  async unreadTotal(
+    sessionUserId: string,
+  ): Promise<ConversationsUnreadTotalDto> {
+    const rows = await this.prisma.mutualMatch.findMany({
+      where: {
+        status: MutualMatchStatus.ACTIVE,
+        OR: [{ userId1: sessionUserId }, { userId2: sessionUserId }],
+      },
+      select: {
+        id: true,
+        userId1: true,
+        userId2: true,
+        user1LastReadAt: true,
+        user2LastReadAt: true,
+      },
+    });
+
+    if (rows.length === 0) {
+      return { totalUnread: 0 };
+    }
+
+    const unreadSpecs = rows.map((row) => {
+      const otherUserId =
+        row.userId1 === sessionUserId ? row.userId2 : row.userId1;
+      return {
+        conversationId: row.id,
+        otherUserId,
+        lastReadAt: lastReadAtForUser(row, sessionUserId),
+      };
+    });
+    const unreadByConversationId = await batchUnreadCountsByConversationId(
+      this.prisma,
+      unreadSpecs,
+    );
+
+    let totalUnread = 0;
+    for (const row of rows) {
+      totalUnread += unreadByConversationId.get(row.id) ?? 0;
+    }
+    return { totalUnread };
   }
 
   async assertActiveConversationParticipant(

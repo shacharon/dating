@@ -43,6 +43,7 @@ import { MeProfileMatchesService } from './me-profile-matches.service';
 import { MeProfileService } from './me-profile.service';
 import { PatchNotificationPreferencesDto } from './dto/patch-notification-preferences.dto';
 import { parseMatchListLimit } from './dto/me-matches-list-query.dto';
+import { parseConversationListLimit } from './dto/me-conversations-list-query.dto';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 import { UsersService } from '../users/users.service';
 
@@ -86,11 +87,26 @@ export class MeProfileController {
   }
 
   /**
-   * Sprint 2 Story 2 — active mutual matches for the session user (conversation list entry point).
+   * Sprint 2 Story 2 / Sprint 29 Story 2 — active mutual matches (paginated).
    */
   @Get('conversations')
-  listConversations(@CurrentUser() user: AuthMeResponseDto) {
-    return this.conversations.list(user.id);
+  listConversations(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limitStr?: string,
+  ) {
+    return this.conversations.list(user.id, {
+      cursor,
+      limit: parseConversationListLimit(limitStr),
+    });
+  }
+
+  /**
+   * Sprint 29 Story 2 — nav badge unread aggregate (no full inbox payload).
+   */
+  @Get('conversations/unread-total')
+  conversationsUnreadTotal(@CurrentUser() user: AuthMeResponseDto) {
+    return this.conversations.unreadTotal(user.id);
   }
 
   /**

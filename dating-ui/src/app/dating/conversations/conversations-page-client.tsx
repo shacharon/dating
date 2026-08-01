@@ -26,20 +26,42 @@ export default function ConversationsPage() {
   const { locale, copy } = useAppLocale();
   const listCopy = copy.conversations.list;
   const formatCopy = copy.conversations.format;
-  const { reconcileFromList } = useConversationUnread();
+  const { reconcileFromList, refresh: refreshUnreadTotal } =
+    useConversationUnread();
   const realtimeMode = getRealtimeMode();
   const [conversations, setConversations] = useState<ConversationListItemDto[]>(
     [],
   );
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const load = useCallback(async () => {
+  const loadFirstPage = useCallback(async () => {
     const dto = await fetchMyConversations();
     const list = dto.conversations ?? [];
     setConversations(list);
+    setNextCursor(dto.nextCursor);
+    setHasMore(dto.hasMore);
     reconcileFromList(list);
-  }, [reconcileFromList]);
+    void refreshUnreadTotal();
+  }, [reconcileFromList, refreshUnreadTotal]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || !nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const dto = await fetchMyConversations({ cursor: nextCursor });
+      const list = dto.conversations ?? [];
+      setConversations((prev) => [...prev, ...list]);
+      setNextCursor(dto.nextCursor);
+      setHasMore(dto.hasMore);
+      reconcileFromList(list);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, nextCursor, loadingMore, reconcileFromList]);
 
   const handleListMessageNew = useCallback(
     (msg: MessageDto) => {
@@ -67,7 +89,7 @@ export default function ConversationsPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    load()
+    loadFirstPage()
       .catch((e: unknown) => {
         if (!cancelled) {
           setError(
@@ -81,16 +103,16 @@ export default function ConversationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [load, listCopy.loadFailed]);
+  }, [loadFirstPage, listCopy.loadFailed]);
 
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
-      void load().catch(() => undefined);
+      void loadFirstPage().catch(() => undefined);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [load]);
+  }, [loadFirstPage]);
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -128,7 +150,7 @@ export default function ConversationsPage() {
             <button
               type="button"
               className="mt-3 block text-sm font-medium underline"
-              onClick={() => void load().catch(() => undefined)}
+              onClick={() => void loadFirstPage().catch(() => undefined)}
             >
               {listCopy.tryAgain}
             </button>
@@ -157,69 +179,82 @@ export default function ConversationsPage() {
         )}
 
         {!loading && !error && conversations.length > 0 && (
-          <ul className="flex flex-col gap-3" data-testid="conversations-list">
-            {conversations.map((item) => {
-              const photoSrc = conversationPhotoSrc(item.otherUser.photoUrl);
-              const secondary = conversationSecondaryMeta(item.otherUser);
-              return (
-                <li key={item.id}>
-                  <Link
-                    href={`/dating/conversations/${item.id}`}
-                    className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/60"
-                    data-testid="conversation-row"
-                  >
-                    <div className="flex items-center gap-4">
-                      {photoSrc ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photoSrc}
-                          alt=""
-                          className="h-14 w-14 shrink-0 rounded-full object-cover bg-zinc-100 dark:bg-zinc-800"
-                        />
-                      ) : (
-                        <div
-                          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                          aria-hidden
-                        >
-                          ?
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                          {conversationPrimaryLabel(item.otherUser)}
-                        </p>
-                        {secondary && (
-                          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                            {secondary}
-                          </p>
-                        )}
-                        <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {formatMatchedAt(item.matchedAt, formatCopy, locale)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {item.unreadCount > 0 && (
-                          <span
-                            data-testid="conversation-unread-badge"
-                            aria-label={listCopy.unreadAria(item.unreadCount)}
-                            className="flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-xs font-semibold text-white dark:bg-emerald-500"
+          <>
+            <ul className="flex flex-col gap-3" data-testid="conversations-list">
+              {conversations.map((item) => {
+                const photoSrc = conversationPhotoSrc(item.otherUser.photoUrl);
+                const secondary = conversationSecondaryMeta(item.otherUser);
+                return (
+                  <li key={item.id}>
+                    <Link
+                      href={`/dating/conversations/${item.id}`}
+                      className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/60"
+                      data-testid="conversation-row"
+                    >
+                      <div className="flex items-center gap-4">
+                        {photoSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={photoSrc}
+                            alt=""
+                            className="h-14 w-14 shrink-0 rounded-full object-cover bg-zinc-100 dark:bg-zinc-800"
+                          />
+                        ) : (
+                          <div
+                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                            aria-hidden
                           >
-                            {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                          </span>
+                            ?
+                          </div>
                         )}
-                        <span
-                          className="text-zinc-300 dark:text-zinc-600"
-                          aria-hidden
-                        >
-                          →
-                        </span>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                            {conversationPrimaryLabel(item.otherUser)}
+                          </p>
+                          {secondary && (
+                            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                              {secondary}
+                            </p>
+                          )}
+                          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                            {formatMatchedAt(item.matchedAt, formatCopy, locale)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {item.unreadCount > 0 && (
+                            <span
+                              data-testid="conversation-unread-badge"
+                              aria-label={listCopy.unreadAria(item.unreadCount)}
+                              className="flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-xs font-semibold text-white dark:bg-emerald-500"
+                            >
+                              {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                            </span>
+                          )}
+                          <span
+                            className="text-zinc-300 dark:text-zinc-600"
+                            aria-hidden
+                          >
+                            →
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            {hasMore && (
+              <button
+                type="button"
+                data-testid="conversations-load-more"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                disabled={loadingMore}
+                onClick={() => void loadMore().catch(() => undefined)}
+              >
+                {loadingMore ? copy.common.loading : 'Load more'}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

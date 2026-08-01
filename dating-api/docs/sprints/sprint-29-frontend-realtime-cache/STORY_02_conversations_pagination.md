@@ -1,11 +1,11 @@
 # Story 02 — Conversations cursor + unread-total
 
-**Sprint 29 · Status: IN PROGRESS (Architect locked)**  
+**Sprint 29 · Status: Dev complete → Agent 2 CR**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Sprint 28 Story 4 (batched unread on full list) — pagination replaces “return all”
 
-**Handoff:** [`handoffs/STORY_02_conversations_pagination/agent-0-architect.md`](./handoffs/STORY_02_conversations_pagination/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_02_conversations_pagination/agent-0-architect.md`](./handoffs/STORY_02_conversations_pagination/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_02_conversations_pagination/agent-1-dev.md)
 
 ---
 
@@ -37,10 +37,10 @@ Full inbox + tab-focus refetch scales poorly (SCALE CR). Unread batching helped 
 
 ## Acceptance criteria
 
-- [ ] Conversations list is cursor-paginated (default page size locked)
-- [ ] Unread-total (or locked equivalent) available without full inbox
-- [ ] FE list + badge updated; no contract surprise for other clients (document)
-- [ ] Tests cover API + primary FE paths
+- [x] Conversations list is cursor-paginated (default page size locked)
+- [x] Unread-total (or locked equivalent) available without full inbox
+- [x] FE list + badge updated; no contract surprise for other clients (document)
+- [x] Tests cover API + primary FE paths
 
 ## Commit message
 

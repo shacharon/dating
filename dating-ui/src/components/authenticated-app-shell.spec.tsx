@@ -2,13 +2,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
-const { fetchMyConversations, getRealtimeMode } = vi.hoisted(() => ({
-  fetchMyConversations: vi.fn(),
+const { fetchConversationsUnreadTotal, getRealtimeMode } = vi.hoisted(() => ({
+  fetchConversationsUnreadTotal: vi.fn(),
   getRealtimeMode: vi.fn(() => 'ws' as const),
 }));
 
 vi.mock('@/lib/conversations-api', () => ({
-  fetchMyConversations,
+  fetchConversationsUnreadTotal,
 }));
 
 vi.mock('@/lib/realtime-mode', () => ({
@@ -71,7 +71,7 @@ describe('AuthenticatedAppShell locale', () => {
     };
     authState.lastError = null;
     localStorage.clear();
-    fetchMyConversations.mockResolvedValue({ conversations: [] });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 0 });
   });
 
   afterEach(() => {
@@ -129,29 +129,13 @@ describe('AuthenticatedAppShell nav unread', () => {
     };
     authState.lastError = null;
     localStorage.clear();
-    fetchMyConversations.mockResolvedValue({
-      conversations: [
-        {
-          id: 'conv_1',
-          matchedAt: '2026-06-01T10:00:00.000Z',
-          unreadCount: 2,
-          otherUser: {
-            id: 'user_peer',
-            profileId: 'prof_peer',
-            nickname: 'Noa',
-            gender: null,
-            ageYears: null,
-            locationLabel: null,
-            photoUrl: null,
-          },
-        },
-      ],
-    });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 2 });
   });
 
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('shows nav unread pill when total > 0', async () => {
@@ -168,22 +152,7 @@ describe('AuthenticatedAppShell nav unread', () => {
   });
 
   it('caps nav unread pill at 99+', async () => {
-    fetchMyConversations.mockResolvedValue({
-      conversations: Array.from({ length: 100 }, (_, i) => ({
-        id: `conv_${i}`,
-        matchedAt: '2026-06-01T10:00:00.000Z',
-        unreadCount: 1,
-        otherUser: {
-          id: `user_peer_${i}`,
-          profileId: `prof_peer_${i}`,
-          nickname: 'Noa',
-          gender: null,
-          ageYears: null,
-          locationLabel: null,
-          photoUrl: null,
-        },
-      })),
-    });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 100 });
 
     render(
       <AuthenticatedAppShell>
@@ -199,24 +168,7 @@ describe('AuthenticatedAppShell nav unread', () => {
   });
 
   it('hides nav unread pill when total is 0', async () => {
-    fetchMyConversations.mockResolvedValue({
-      conversations: [
-        {
-          id: 'conv_1',
-          matchedAt: '2026-06-01T10:00:00.000Z',
-          unreadCount: 0,
-          otherUser: {
-            id: 'user_peer',
-            profileId: 'prof_peer',
-            nickname: 'Noa',
-            gender: null,
-            ageYears: null,
-            locationLabel: null,
-            photoUrl: null,
-          },
-        },
-      ],
-    });
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 0 });
 
     render(
       <AuthenticatedAppShell>
@@ -225,7 +177,7 @@ describe('AuthenticatedAppShell nav unread', () => {
     );
 
     await waitFor(() => {
-      expect(fetchMyConversations).toHaveBeenCalled();
+      expect(fetchConversationsUnreadTotal).toHaveBeenCalled();
     });
 
     expect(screen.queryByTestId('nav-conversations-unread')).toBeNull();
@@ -256,6 +208,7 @@ describe('AuthenticatedAppShell auth error i18n', () => {
     authState.user = null;
     authState.lastError = null;
     localStorage.clear();
+    document.cookie = 'locale=; max-age=0; path=/';
   });
 
   afterEach(() => {
@@ -271,6 +224,7 @@ describe('AuthenticatedAppShell auth error i18n', () => {
     };
     cleanup();
     localStorage.clear();
+    document.cookie = 'locale=; max-age=0; path=/';
   });
 
   it('renders appShell error copy in English by default', () => {
