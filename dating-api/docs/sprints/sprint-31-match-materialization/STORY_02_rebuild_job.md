@@ -1,11 +1,11 @@
 # Story 02 — Rebuild job (Bull)
 
-**Sprint 31 · Status: CR PASS → Agent 3 PM**  
+**Sprint 31 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Story 01 schema
 
-**Handoff:** [`handoffs/STORY_02_rebuild_job/agent-0-architect.md`](./handoffs/STORY_02_rebuild_job/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_02_rebuild_job/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_02_rebuild_job/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_02_rebuild_job/agent-0-architect.md`](./handoffs/STORY_02_rebuild_job/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_02_rebuild_job/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_02_rebuild_job/agent-2-cr.md) · [`agent-3-pm.md`](./handoffs/STORY_02_rebuild_job/agent-3-pm.md)
 
 ---
 
