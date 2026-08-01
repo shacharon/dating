@@ -1,9 +1,9 @@
 # Story 04 — List reads from materialization
 
-**Sprint 31 · Status: PLANNED**  
+**Sprint 31 · Status: PLANNED → Agent 0 Architect**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
-**Dependencies:** Stories 01–02 (03 preferred so data is fresh in real use)
+**Dependencies:** Stories 01–03 Done
 
 ---
 
