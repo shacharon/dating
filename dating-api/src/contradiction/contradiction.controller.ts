@@ -1,4 +1,6 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { ContradictionService } from './contradiction.service';
 import type {
@@ -12,6 +14,7 @@ export interface DetectContradictionsBody {
 }
 
 @Controller('api/contradiction')
+@UseGuards(AuthGuard, AdminGuard)
 export class ContradictionController {
   constructor(private readonly legacy: LegacyBackendAdapter) {}
 

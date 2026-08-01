@@ -6,7 +6,10 @@ import {
   NotFoundException,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import type {
   CompareBodyDto,
   CompareGuardMatchDto,
@@ -28,6 +31,7 @@ import {
 import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 
 @Controller('api/v1/matches')
+@UseGuards(AuthGuard, AdminGuard)
 export class MatchesController {
   constructor(
     private readonly matchesService: MatchesService,

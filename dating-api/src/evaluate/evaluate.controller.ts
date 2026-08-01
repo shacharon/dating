@@ -4,7 +4,10 @@ import {
   Controller,
   Post,
   ServiceUnavailableException,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type {
   EvaluateBatchInput,
@@ -49,6 +52,7 @@ function getErrorMessage(err: unknown): string {
 }
 
 @Controller('api/evaluate')
+@UseGuards(AuthGuard, AdminGuard)
 export class EvaluateController {
   constructor(
     private readonly legacy: LegacyBackendAdapter,

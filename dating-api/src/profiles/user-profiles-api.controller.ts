@@ -8,12 +8,16 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import type { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import type { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserProfilesApiService } from './user-profiles-api.service';
 
 @Controller('api/v1/user-profiles')
+@UseGuards(AuthGuard, AdminGuard)
 export class UserProfilesApiController {
   constructor(private readonly userProfilesApi: UserProfilesApiService) {}
 

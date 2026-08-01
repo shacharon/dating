@@ -8,8 +8,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { WorkerModule } from '../workers/worker.module';
-import { AdminConfigService } from './admin-config.service';
-import { AdminGuard } from './admin.guard';
+import { AdminAuthModule } from './admin-auth.module';
 import { AdminPhotosController } from './admin-photos/admin-photos.controller';
 import { AdminPhotosService } from './admin-photos/admin-photos.service';
 import { AdminMatchQualityController } from './admin-match-quality/admin-match-quality.controller';
@@ -27,6 +26,7 @@ import { AdminReportsService } from './admin-reports/admin-reports.service';
     UsersModule,
     forwardRef(() => AuthModule),
     MeProfileModule,
+    AdminAuthModule,
   ],
   controllers: [
     AdminPhotosController,
@@ -34,13 +34,11 @@ import { AdminReportsService } from './admin-reports/admin-reports.service';
     AdminMatchQualityController,
   ],
   providers: [
-    AdminConfigService,
-    AdminGuard,
     AdminPhotosService,
     AdminReportsService,
     AdminMatchQualityService,
     MeProfileValidationPipe,
   ],
-  exports: [AdminConfigService, AdminGuard],
+  exports: [AdminAuthModule],
 })
 export class AdminModule {}

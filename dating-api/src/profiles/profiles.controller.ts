@@ -4,8 +4,11 @@ import {
   Controller,
   Post,
   ServiceUnavailableException,
+  UseGuards,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
@@ -29,6 +32,7 @@ function getErrorMessage(err: unknown): string {
 }
 
 @Controller('api/v1/profiles')
+@UseGuards(AuthGuard, AdminGuard)
 export class ProfilesController {
   constructor(
     private readonly evaluateService: EvaluateService,

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AdminAuthModule } from '../admin/admin-auth.module';
+import { AuthModule } from '../auth/auth.module';
 import { EvaluateModule } from '../evaluate/evaluate.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { USER_PROFILES_REPOSITORY } from '../domain/repositories/user-profiles.repository';
@@ -12,7 +14,7 @@ import { UserProfilesApiRepository } from './infrastructure/user-profiles-api.re
 import { ProfilesPrismaService } from './profiles-prisma.service';
 
 @Module({
-  imports: [SimpleLoggerModule, EvaluateModule],
+  imports: [SimpleLoggerModule, EvaluateModule, AuthModule, AdminAuthModule],
   controllers: [
     ProfilesController,
     ProfilesReadController,

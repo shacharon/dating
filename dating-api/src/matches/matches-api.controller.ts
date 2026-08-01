@@ -1,4 +1,6 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { buildShortReason } from './match-short-reason';
 import { resolveEngineFinalScore } from './match-score.util';
@@ -69,6 +71,7 @@ export interface MatchesApiItemDto {
  * `MATCH_RANKING_CONTRACT` (`HG_GATE_LEGACY_RANK_V1`).
  */
 @Controller('api/matches')
+@UseGuards(AuthGuard, AdminGuard)
 export class MatchesApiController {
   constructor(private readonly legacy: LegacyBackendAdapter) {}
 

@@ -1,4 +1,12 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 import { ProfilesPrismaService } from './profiles-prisma.service';
 
@@ -13,6 +21,7 @@ export interface ProfileGetResponseDto {
 }
 
 @Controller('api/v1/profiles')
+@UseGuards(AuthGuard, AdminGuard)
 export class ProfilesReadController {
   constructor(private readonly profilesPrisma: ProfilesPrismaService) {}
 

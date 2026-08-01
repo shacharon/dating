@@ -8,6 +8,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { AdminGuard } from '../admin/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { MatchesController } from './matches.controller';
 import { MatchesService } from './matches.service';
 import { MatchDaemonService } from './match-daemon.service';
@@ -80,7 +82,12 @@ describe('matches API smoke (integration)', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: HolyGrailPairSnapshotTelemetryService, useValue: telemetryMock },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(AdminGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
