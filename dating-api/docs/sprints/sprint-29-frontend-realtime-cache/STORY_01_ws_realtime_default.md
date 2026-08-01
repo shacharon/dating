@@ -1,6 +1,6 @@
 # Story 01 — WS realtime default
 
-**Sprint 29 · Status: IN PROGRESS (Dev complete → Agent 2 CR)**  
+**Sprint 29 · Status: IN PROGRESS (CR PASS → Agent 3)**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Messaging WS already exists (Sprint 4+)
