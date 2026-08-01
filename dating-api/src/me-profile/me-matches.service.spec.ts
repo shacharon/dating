@@ -134,8 +134,12 @@ describe('MeMatchesService', () => {
   let narrativeCacheFind: jest.Mock;
   let narrativeCacheUpsert: jest.Mock;
   let matchListRankQueue: { enqueueRebuild: jest.Mock };
+  let prevMaterializedFlag: string | undefined;
 
   beforeEach(() => {
+    prevMaterializedFlag = process.env['MATCH_LIST_MATERIALIZED'];
+    // Story 5 default-on; keep this suite on legacy escape hatch unless a case opts in.
+    process.env['MATCH_LIST_MATERIALIZED'] = '0';
     prisma = {
       $queryRaw: jest.fn(),
       userProfile: {
@@ -220,6 +224,14 @@ describe('MeMatchesService', () => {
       { find: narrativeCacheFind, upsert: narrativeCacheUpsert } as never,
       matchListRankQueue as never,
     );
+  });
+
+  afterEach(() => {
+    if (prevMaterializedFlag === undefined) {
+      delete process.env['MATCH_LIST_MATERIALIZED'];
+    } else {
+      process.env['MATCH_LIST_MATERIALIZED'] = prevMaterializedFlag;
+    }
   });
 
   // ─── list() ───────────────────────────────────────────────────────────────

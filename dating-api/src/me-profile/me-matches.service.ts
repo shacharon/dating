@@ -532,7 +532,11 @@ export class MeMatchesService {
       return this.listFromMaterializedRanks(userId, cursor, limit, started);
     }
 
-    // Ranked list from cache or full build
+    // Ranked list from cache or full build (legacy escape hatch)
+    this.obs.trace(
+      `me matches list source=legacy userId=${userId}`,
+      ErrorCodes.ME_MATCHES_LIST_OK,
+    );
     const full = await this.getOrBuildRankedList(userId);
     if (full.status !== 'ready' || !full.matches) {
       recordMatchListLoadTimeMs(Date.now() - started);

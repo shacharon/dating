@@ -129,6 +129,7 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
     let service: MeMatchesService;
 
     beforeEach(() => {
+      process.env['MATCH_LIST_MATERIALIZED'] = '0';
       prisma = {
         $queryRaw: jest.fn(),
         userProfile: {

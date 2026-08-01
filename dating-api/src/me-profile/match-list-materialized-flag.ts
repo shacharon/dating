@@ -1,14 +1,18 @@
 /**
- * Sprint 31 Story 4 — flagged MatchListRank list read path.
- * Env: MATCH_LIST_MATERIALIZED. On when 1/true/yes (case-insensitive). Default off.
+ * Sprint 31 — MatchListRank list read path.
+ * Env: MATCH_LIST_MATERIALIZED.
+ * Default **on** (Story 5 cutover). Escape hatch: 0 / false / no → legacy Redis+rebuild.
  */
 export const MATCH_LIST_MATERIALIZED_ENV = 'MATCH_LIST_MATERIALIZED';
+
+const MATERIALIZED_OFF = new Set(['0', 'false', 'no']);
 
 export function isMatchListMaterializedEnabled(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   const raw = env[MATCH_LIST_MATERIALIZED_ENV];
-  if (raw == null) return false;
+  if (raw == null) return true;
   const v = String(raw).trim().toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes';
+  if (v === '') return true;
+  return !MATERIALIZED_OFF.has(v);
 }

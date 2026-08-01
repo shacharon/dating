@@ -10,7 +10,7 @@
 
 Make match-list **cache misses** safe at thousands of analyzed users: kill N+1 evaluation loads, push gender/age into SQL, slim hydrated rows, cap the pool, instrument the miss path.
 
-**Non-goal:** Full async materialization / pair-score table (follow-up).
+**Non-goal:** Full async materialization / pair-score table → **[Sprint 31](../sprint-31-match-materialization/README.md)** (Story 5 cutover: default browse from `MatchListRank`; `MATCH_LIST_CANDIDATE_CAP` is legacy escape hatch only — see [OPS_CUTOVER](../sprint-31-match-materialization/OPS_CUTOVER.md)).
 
 ---
 

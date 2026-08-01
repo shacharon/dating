@@ -1,11 +1,11 @@
 # Story 05 — Cutover + deprecate request rebuild
 
-**Sprint 31 · Status: Architect locked → Agent 1 Dev**  
+**Sprint 31 · Status: Done (Agent 1 Dev complete → Agent 2 CR)**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 04 Done
 
-**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-0-architect.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-1-dev.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-1-dev.md)
 
 ---
 
@@ -20,10 +20,10 @@ Leaving dual paths forever invites regressions and “cap still defines who exis
 ## Scope / tasks
 
 1. Architect locks: default flag on; escape hatch; cap docs; backfill ops. ✅  
-2. Backfill strategy: rate-limited enqueue script + `OPS_CUTOVER.md`.  
-3. Metrics: keep existing list/rebuild metrics (no new alert wiring required).  
-4. Update Sprint 27 / SCALE notes cross-links; `.env.example`.  
-5. Specs: default path; escape hatch.
+2. Backfill strategy: rate-limited enqueue script + `OPS_CUTOVER.md`. ✅  
+3. Metrics: keep existing list/rebuild metrics (no new alert wiring required). ✅  
+4. Update Sprint 27 / SCALE notes cross-links; `.env.example`. ✅  
+5. Specs: default path; escape hatch. ✅
 
 ### Architect locks (do not reverse)
 
@@ -38,10 +38,10 @@ Leaving dual paths forever invites regressions and “cap still defines who exis
 
 ## Acceptance criteria
 
-- [ ] Default list path does not O(N)-rebuild on GET  
-- [ ] Cap stopgap no longer defines browse membership  
-- [ ] Backfill/ops steps documented  
-- [ ] Sprint-level acceptance checklist can be checked
+- [x] Default list path does not O(N)-rebuild on GET  
+- [x] Cap stopgap no longer defines browse membership  
+- [x] Backfill/ops steps documented  
+- [ ] Sprint-level acceptance checklist can be checked _(Agent 3)_
 
 ## Commit message
 

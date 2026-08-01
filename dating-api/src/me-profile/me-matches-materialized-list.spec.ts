@@ -212,6 +212,23 @@ describe('MeMatchesService materialized list', () => {
     jest.restoreAllMocks();
   });
 
+  it('unset env uses materialized path by default', async () => {
+    delete process.env[MATCH_LIST_MATERIALIZED_ENV];
+    prisma.userProfile.findUnique.mockResolvedValue(
+      makeViewer(viewerUserId, viewerProfileId),
+    );
+    prisma.matchListRank.findMany.mockResolvedValue([]);
+
+    await service.list(viewerUserId);
+
+    expect(prisma.matchListRank.findMany).toHaveBeenCalled();
+    expect(cache.get).not.toHaveBeenCalled();
+    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+      viewerUserId,
+      'list_empty',
+    );
+  });
+
   it('flag off uses Redis cache path (no matchListRank.findMany)', async () => {
     process.env[MATCH_LIST_MATERIALIZED_ENV] = '0';
     const result = await service.list(viewerUserId);

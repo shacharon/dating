@@ -1,5 +1,7 @@
 /**
- * Match-list hydrate cap (Sprint 27 Story 4) — temporary until async materialization.
+ * Match-list hydrate cap (Sprint 27 Story 4) — **legacy escape hatch only** after
+ * Sprint 31 Story 5 cutover. Default browse uses MatchListRank; this cap applies when
+ * MATCH_LIST_MATERIALIZED=0 (Redis miss → buildFullRankedList). Not browse fairness.
  * Env: MATCH_LIST_CANDIDATE_CAP. Default 1000; unset / non-finite / &lt; 1 (incl. 0) → 1000.
  */
 export const MATCH_LIST_CANDIDATE_CAP_ENV = 'MATCH_LIST_CANDIDATE_CAP';
@@ -20,8 +22,9 @@ export function resolveMatchListCandidateCap(
 }
 
 /**
- * Rebuild-job hydrate cap (Sprint 31 Story 2) — bounds Bull snapshot work only.
- * ≠ MATCH_LIST_CANDIDATE_CAP (list miss). Default 5000; invalid / &lt; 1 → 5000.
+ * Rebuild-job hydrate cap (Sprint 31 Story 2) — bounds MatchListRank membership per
+ * rebuild (raise for fairness / run OPS backfill). ≠ list miss cap.
+ * Default 5000; invalid / &lt; 1 → 5000.
  */
 export const MATCH_LIST_REBUILD_CANDIDATE_CAP_ENV =
   'MATCH_LIST_REBUILD_CANDIDATE_CAP';
