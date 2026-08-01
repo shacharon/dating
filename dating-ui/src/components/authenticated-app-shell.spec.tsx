@@ -56,6 +56,13 @@ import {
   writeStoredLocale,
 } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
+import { QueryClientTestProvider } from '@/test/query-client-wrapper';
+
+function renderShell(ui: React.ReactElement) {
+  return render(
+    <QueryClientTestProvider>{ui}</QueryClientTestProvider>,
+  );
+}
 
 describe('AuthenticatedAppShell locale', () => {
   beforeEach(() => {
@@ -82,7 +89,7 @@ describe('AuthenticatedAppShell locale', () => {
   it('wraps authenticated chrome in RTL when locale is Hebrew', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -97,7 +104,7 @@ describe('AuthenticatedAppShell locale', () => {
   });
 
   it('updates main nav labels when locale changes without reload', async () => {
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -139,7 +146,7 @@ describe('AuthenticatedAppShell nav unread', () => {
   });
 
   it('shows nav unread pill when total > 0', async () => {
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -154,7 +161,7 @@ describe('AuthenticatedAppShell nav unread', () => {
   it('caps nav unread pill at 99+', async () => {
     fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 100 });
 
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -170,7 +177,7 @@ describe('AuthenticatedAppShell nav unread', () => {
   it('hides nav unread pill when total is 0', async () => {
     fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 0 });
 
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -186,7 +193,7 @@ describe('AuthenticatedAppShell nav unread', () => {
   it('uses Hebrew unread aria label when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -228,7 +235,7 @@ describe('AuthenticatedAppShell auth error i18n', () => {
   });
 
   it('renders appShell error copy in English by default', () => {
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,
@@ -243,7 +250,7 @@ describe('AuthenticatedAppShell auth error i18n', () => {
   it('renders appShell error copy in Hebrew when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(
+    renderShell(
       <AuthenticatedAppShell>
         <div>page</div>
       </AuthenticatedAppShell>,

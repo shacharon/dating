@@ -53,6 +53,7 @@ import { MessagingShellProvider } from '@/components/messaging-shell-provider';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/message-toast.constants';
 import { setInAppNotificationsEnabledPreference } from '@/lib/message-in-app-notify';
+import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
 const peerMessage = {
   id: 'msg_1',
@@ -66,6 +67,12 @@ const peerMessage = {
 function UnreadProbe() {
   const { totalUnread } = useConversationUnread();
   return <span data-testid="nav-total">{totalUnread}</span>;
+}
+
+function renderShell(ui: React.ReactElement) {
+  return render(
+    <QueryClientTestProvider>{ui}</QueryClientTestProvider>,
+  );
 }
 
 describe('MessagingShellProvider', () => {
@@ -85,7 +92,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('shows toast on peer message.new', async () => {
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
       </MessagingShellProvider>,
@@ -105,7 +112,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('bumps nav total on peer message.new', async () => {
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <UnreadProbe />
       </MessagingShellProvider>,
@@ -125,7 +132,7 @@ describe('MessagingShellProvider', () => {
   it('skips toast and nav bump when in-app notifications are disabled', async () => {
     setInAppNotificationsEnabledPreference(false);
 
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <UnreadProbe />
       </MessagingShellProvider>,
@@ -133,6 +140,7 @@ describe('MessagingShellProvider', () => {
 
     await waitFor(() => {
       expect(onMessageNewRef.current).toBeTruthy();
+      expect(screen.getByTestId('nav-total').textContent).toBe('1');
     });
 
     onMessageNewRef.current?.(peerMessage);
@@ -142,7 +150,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('skips toast and bump for own message', async () => {
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <UnreadProbe />
       </MessagingShellProvider>,
@@ -150,6 +158,7 @@ describe('MessagingShellProvider', () => {
 
     await waitFor(() => {
       expect(onMessageNewRef.current).toBeTruthy();
+      expect(screen.getByTestId('nav-total').textContent).toBe('1');
     });
 
     onMessageNewRef.current?.({
@@ -164,7 +173,7 @@ describe('MessagingShellProvider', () => {
   it('skips toast and bump when active conversation matches', async () => {
     getActiveConversationId.mockReturnValue('conv_1');
 
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <UnreadProbe />
       </MessagingShellProvider>,
@@ -172,6 +181,7 @@ describe('MessagingShellProvider', () => {
 
     await waitFor(() => {
       expect(onMessageNewRef.current).toBeTruthy();
+      expect(screen.getByTestId('nav-total').textContent).toBe('1');
     });
 
     onMessageNewRef.current?.(peerMessage);
@@ -181,7 +191,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('navigates to conversation when toast is clicked', async () => {
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
       </MessagingShellProvider>,
@@ -203,7 +213,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('auto-dismisses toast after configured duration', async () => {
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
       </MessagingShellProvider>,
@@ -230,7 +240,7 @@ describe('MessagingShellProvider', () => {
   it('does not wire handler when realtime mode is poll', () => {
     getRealtimeMode.mockReturnValue('poll');
 
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
       </MessagingShellProvider>,
@@ -240,7 +250,7 @@ describe('MessagingShellProvider', () => {
   });
 
   it('dismisses toast when dismiss button is clicked', async () => {
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
       </MessagingShellProvider>,
@@ -264,7 +274,7 @@ describe('MessagingShellProvider', () => {
   it('shows Someone when sender is not in label cache', async () => {
     fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 0 });
 
-    render(
+    renderShell(
       <MessagingShellProvider sessionUserId="user_me">
         <div>child</div>
       </MessagingShellProvider>,

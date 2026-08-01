@@ -53,7 +53,7 @@ function MessagingShellInner({
 }): ReactElement {
   const router = useRouter();
   const realtimeMode = getRealtimeMode();
-  const { refresh, bumpFromMessage } = useConversationUnread();
+  const { bumpFromMessage } = useConversationUnread();
   const [toast, setToast] = useState<ToastState>(null);
   const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,17 +101,6 @@ function MessagingShellInner({
     getLastMessageId: () => undefined,
     onMessagesMerged: () => {},
   });
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') {
-        return;
-      }
-      void refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [refresh]);
 
   useEffect(() => {
     setLocale(readStoredLocale());

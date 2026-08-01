@@ -90,6 +90,12 @@ vi.mock('@/contexts/conversation-unread-context', () => ({
 
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
+import { queryKeys } from '@/lib/query-keys';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
+import { focusManager } from '@tanstack/react-query';
 import ConversationsPage from './conversations-page-client';
 
 vi.mock('next/link', () => ({
@@ -114,6 +120,15 @@ const otherUser = {
   photoUrl: '/api/v1/me/matches/prof_cand_1/photos/photo_1/file',
 };
 
+function renderPage(
+  ui: React.ReactElement = <ConversationsPage />,
+  client = createTestQueryClient(),
+) {
+  return render(
+    <QueryClientTestProvider client={client}>{ui}</QueryClientTestProvider>,
+  );
+}
+
 describe('ConversationsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -131,7 +146,7 @@ describe('ConversationsPage', () => {
   it('renders empty state when there are no conversations', async () => {
     fetchMyConversations.mockResolvedValue({ conversations: [], nextCursor: null, hasMore: false });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversations-empty')).toBeTruthy();
@@ -171,7 +186,7 @@ describe('ConversationsPage', () => {
       };
     });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByText('Noa')).toBeTruthy();
@@ -204,7 +219,7 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversations-list')).toBeTruthy();
@@ -228,7 +243,7 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount, container } = render(<ConversationsPage />);
+    const { unmount, container } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversations-list')).toBeTruthy();
@@ -254,7 +269,7 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-unread-badge')).toBeTruthy();
@@ -279,7 +294,7 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversations-list')).toBeTruthy();
@@ -302,7 +317,7 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-unread-badge')).toBeTruthy();
@@ -327,7 +342,7 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount } = render(<ConversationsPage />);
+    const { unmount } = renderPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('conversations-list')).toBeTruthy();
@@ -337,12 +352,7 @@ describe('ConversationsPage', () => {
     unmount();
   });
 
-  it('refetches conversations when tab becomes visible', async () => {
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => 'visible',
-    });
-
+  it('refetches conversations on window focus when stale', async () => {
     fetchMyConversations.mockResolvedValue({
       conversations: [
         {
@@ -356,16 +366,30 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-    const { unmount } = render(<ConversationsPage />);
-
-    await waitFor(() => {
-      expect(fetchMyConversations).toHaveBeenCalledTimes(1);
+    const client = createTestQueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 0,
+          retry: false,
+          refetchOnWindowFocus: true,
+        },
+      },
     });
 
-    document.dispatchEvent(new Event('visibilitychange'));
+    const { unmount } = renderPage(<ConversationsPage />, client);
 
     await waitFor(() => {
-      expect(fetchMyConversations).toHaveBeenCalledTimes(2);
+      expect(fetchMyConversations.mock.calls.length).toBeGreaterThanOrEqual(1);
+    });
+    const callsAfterMount = fetchMyConversations.mock.calls.length;
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await waitFor(() => {
+      expect(fetchMyConversations.mock.calls.length).toBeGreaterThan(
+        callsAfterMount,
+      );
     });
     unmount();
   });
@@ -398,10 +422,11 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-      const { unmount } = render(<ConversationsPage />);
+      const { unmount } = renderPage();
 
       await waitFor(() => {
         expect(messageNewHandlerRef.current).toBeTruthy();
+        expect(screen.getByTestId('conversations-list')).toBeTruthy();
       });
 
       messageNewHandlerRef.current!(peerMessage);
@@ -429,10 +454,11 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-      const { unmount } = render(<ConversationsPage />);
+      const { unmount } = renderPage();
 
       await waitFor(() => {
         expect(messageNewHandlerRef.current).toBeTruthy();
+        expect(screen.getByTestId('conversations-list')).toBeTruthy();
       });
 
       messageNewHandlerRef.current!({
@@ -469,10 +495,11 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-      const { unmount, container } = render(<ConversationsPage />);
+      const { unmount, container } = renderPage();
 
       await waitFor(() => {
         expect(messageNewHandlerRef.current).toBeTruthy();
+        expect(screen.getByTestId('conversations-list')).toBeTruthy();
       });
 
       const hrefsBefore = [
@@ -513,10 +540,11 @@ describe('ConversationsPage', () => {
       hasMore: false,
     });
 
-      const { unmount } = render(<ConversationsPage />);
+      const { unmount } = renderPage();
 
       await waitFor(() => {
         expect(messageNewHandlerRef.current).toBeTruthy();
+        expect(screen.getByTestId('conversations-list')).toBeTruthy();
       });
 
       messageNewHandlerRef.current!(peerMessage);
@@ -542,7 +570,7 @@ describe('ConversationsPage', () => {
           nextCursor: null,
           hasMore: false,
         })
-        .mockResolvedValueOnce({
+        .mockResolvedValue({
           conversations: [
             {
               id: 'mutual_live',
@@ -555,10 +583,21 @@ describe('ConversationsPage', () => {
           hasMore: false,
         });
 
-      const { unmount } = render(<ConversationsPage />);
+      const client = createTestQueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 0,
+            retry: false,
+            refetchOnWindowFocus: true,
+          },
+        },
+      });
+
+      const { unmount } = renderPage(<ConversationsPage />, client);
 
       await waitFor(() => {
         expect(messageNewHandlerRef.current).toBeTruthy();
+        expect(screen.getByTestId('conversations-list')).toBeTruthy();
       });
 
       messageNewHandlerRef.current!(peerMessage);
@@ -571,7 +610,11 @@ describe('ConversationsPage', () => {
         ).toBe('1');
       });
 
-      await loadViaVisibility();
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+      await client.invalidateQueries({
+        queryKey: queryKeys.me.conversations.list,
+      });
 
       await waitFor(() => {
         expect(
@@ -603,7 +646,7 @@ describe('ConversationsPage (i18n)', () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     fetchMyConversations.mockResolvedValue({ conversations: [], nextCursor: null, hasMore: false });
 
-    render(<ConversationsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(
@@ -632,7 +675,7 @@ describe('ConversationsPage (i18n)', () => {
       hasMore: false,
     });
 
-    render(<ConversationsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(screen.getByText('Noa')).toBeTruthy();
@@ -640,11 +683,3 @@ describe('ConversationsPage (i18n)', () => {
     });
   });
 });
-
-async function loadViaVisibility(): Promise<void> {
-  Object.defineProperty(document, 'visibilityState', {
-    configurable: true,
-    get: () => 'visible',
-  });
-  document.dispatchEvent(new Event('visibilitychange'));
-}

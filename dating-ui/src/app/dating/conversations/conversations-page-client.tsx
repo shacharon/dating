@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
@@ -9,11 +10,13 @@ import {
   conversationPhotoSrc,
   fetchMyConversations,
   type ConversationListItemDto,
+  type ConversationListResponseDto,
   type MessageDto,
 } from '@/lib/conversations-api';
 import { getActiveConversationId } from '@/lib/conversation-focus';
 import { incrementUnreadForConversation } from '@/lib/conversation-list-unread';
 import { useAppLocale } from '@/lib/i18n';
+import { queryKeys } from '@/lib/query-keys';
 import { getRealtimeMode } from '@/lib/realtime-mode';
 import {
   conversationPrimaryLabel,
@@ -28,40 +31,61 @@ export default function ConversationsPage() {
   const formatCopy = copy.conversations.format;
   const { reconcileFromList, refresh: refreshUnreadTotal } =
     useConversationUnread();
+  const queryClient = useQueryClient();
   const realtimeMode = getRealtimeMode();
-  const [conversations, setConversations] = useState<ConversationListItemDto[]>(
-    [],
+  const [optimisticRows, setOptimisticRows] = useState<
+    ConversationListItemDto[] | null
+  >(null);
+
+  const {
+    data,
+    dataUpdatedAt,
+    error: queryError,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: queryKeys.me.conversations.list,
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
+      fetchMyConversations({ cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: ConversationListResponseDto) =>
+      last.hasMore && last.nextCursor ? last.nextCursor : undefined,
+  });
+
+  const queryRows = useMemo(
+    () => data?.pages.flatMap((p) => p.conversations) ?? [],
+    [data],
   );
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
 
-  const loadFirstPage = useCallback(async () => {
-    const dto = await fetchMyConversations();
-    const list = dto.conversations ?? [];
-    setConversations(list);
-    setNextCursor(dto.nextCursor);
-    setHasMore(dto.hasMore);
-    reconcileFromList(list);
-    void refreshUnreadTotal();
-  }, [reconcileFromList, refreshUnreadTotal]);
+  // dataUpdatedAt changes on every fetch (even identical payloads) — clears optimistic bumps.
+  useEffect(() => {
+    setOptimisticRows(null);
+  }, [dataUpdatedAt]);
 
-  const loadMore = useCallback(async () => {
-    if (!hasMore || !nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const dto = await fetchMyConversations({ cursor: nextCursor });
-      const list = dto.conversations ?? [];
-      setConversations((prev) => [...prev, ...list]);
-      setNextCursor(dto.nextCursor);
-      setHasMore(dto.hasMore);
-      reconcileFromList(list);
-    } finally {
-      setLoadingMore(false);
+  const conversations = optimisticRows ?? queryRows;
+
+  useEffect(() => {
+    if (!data?.pages.length) return;
+    const lastPage = data.pages[data.pages.length - 1];
+    if (lastPage) {
+      reconcileFromList(lastPage.conversations ?? []);
     }
-  }, [hasMore, nextCursor, loadingMore, reconcileFromList]);
+    void refreshUnreadTotal();
+  }, [data, reconcileFromList, refreshUnreadTotal]);
+
+  const loadMore = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage().then((result) => {
+      const pages = result.data?.pages;
+      const last = pages?.[pages.length - 1];
+      if (last) {
+        reconcileFromList(last.conversations ?? []);
+      }
+    });
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, reconcileFromList]);
 
   const handleListMessageNew = useCallback(
     (msg: MessageDto) => {
@@ -71,11 +95,11 @@ export default function ConversationsPage() {
       if (msg.conversationId === getActiveConversationId()) {
         return;
       }
-      setConversations((prev) =>
-        incrementUnreadForConversation(prev, msg.conversationId),
+      setOptimisticRows((prev) =>
+        incrementUnreadForConversation(prev ?? queryRows, msg.conversationId),
       );
     },
-    [user?.id],
+    [user?.id, queryRows],
   );
 
   useMessagingSocket({
@@ -85,34 +109,13 @@ export default function ConversationsPage() {
     onMessagesMerged: () => {},
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    loadFirstPage()
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : listCopy.loadFailed,
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [loadFirstPage, listCopy.loadFailed]);
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      void loadFirstPage().catch(() => undefined);
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [loadFirstPage]);
+  const loading = isPending;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : queryError
+        ? listCopy.loadFailed
+        : null;
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -150,7 +153,12 @@ export default function ConversationsPage() {
             <button
               type="button"
               className="mt-3 block text-sm font-medium underline"
-              onClick={() => void loadFirstPage().catch(() => undefined)}
+              onClick={() => {
+                void refetch();
+                void queryClient.invalidateQueries({
+                  queryKey: queryKeys.me.conversations.list,
+                });
+              }}
             >
               {listCopy.tryAgain}
             </button>
@@ -243,15 +251,15 @@ export default function ConversationsPage() {
                 );
               })}
             </ul>
-            {hasMore && (
+            {hasNextPage && (
               <button
                 type="button"
                 data-testid="conversations-load-more"
                 className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                disabled={loadingMore}
-                onClick={() => void loadMore().catch(() => undefined)}
+                disabled={isFetchingNextPage}
+                onClick={loadMore}
               >
-                {loadingMore ? copy.common.loading : 'Load more'}
+                {isFetchingNextPage ? copy.common.loading : 'Load more'}
               </button>
             )}
           </>

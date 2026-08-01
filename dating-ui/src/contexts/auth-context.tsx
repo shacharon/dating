@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   authLogout,
   exchangeGoogleIdToken,
@@ -53,6 +54,7 @@ function apiUnavailableMessage(status: number): string {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -144,12 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authLogout();
     } finally {
+      queryClient.clear();
       setUser(null);
       syncInAppNotificationPreference(null);
       setStatus("unauthenticated");
       router.replace("/");
     }
-  }, [router]);
+  }, [router, queryClient]);
 
   const clearLastError = useCallback(() => setLastError(null), []);
 

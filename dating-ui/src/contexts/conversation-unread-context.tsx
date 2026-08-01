@@ -4,18 +4,18 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
   type ReactNode,
   type ReactElement,
 } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchConversationsUnreadTotal,
   type ConversationListItemDto,
+  type ConversationsUnreadTotalDto,
 } from '@/lib/conversations-api';
 import { bumpUnreadTotal } from '@/lib/conversation-unread-total';
+import { queryKeys } from '@/lib/query-keys';
 
 export type ConversationUnreadContextValue = {
   totalUnread: number;
@@ -34,8 +34,14 @@ export function ConversationUnreadProvider({
   children: ReactNode;
   onConversationsFetched?: (conversations: ConversationListItemDto[]) => void;
 }): ReactElement {
-  const [totalUnread, setTotalUnread] = useState(0);
-  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data } = useQuery({
+    queryKey: queryKeys.me.conversations.unreadTotal,
+    queryFn: fetchConversationsUnreadTotal,
+  });
+
+  const totalUnread = data?.totalUnread ?? 0;
 
   const reconcileFromList = useCallback(
     (conversations: ConversationListItemDto[]) => {
@@ -46,30 +52,22 @@ export function ConversationUnreadProvider({
   );
 
   const refresh = useCallback(async () => {
-    if (refreshInFlightRef.current) {
-      return refreshInFlightRef.current;
-    }
-    const run = (async () => {
-      try {
-        const dto = await fetchConversationsUnreadTotal();
-        setTotalUnread(dto.totalUnread);
-      } catch {
-        // silent — nav badge keeps last known total
-      } finally {
-        refreshInFlightRef.current = null;
-      }
-    })();
-    refreshInFlightRef.current = run;
-    return run;
-  }, []);
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.me.conversations.unreadTotal,
+    });
+  }, [queryClient]);
 
-  const bumpFromMessage = useCallback((conversationId: string) => {
-    setTotalUnread((prev) => bumpUnreadTotal(prev, conversationId));
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const bumpFromMessage = useCallback(
+    (conversationId: string) => {
+      queryClient.setQueryData<ConversationsUnreadTotalDto>(
+        queryKeys.me.conversations.unreadTotal,
+        (prev) => ({
+          totalUnread: bumpUnreadTotal(prev?.totalUnread ?? 0, conversationId),
+        }),
+      );
+    },
+    [queryClient],
+  );
 
   const value = useMemo(
     () => ({

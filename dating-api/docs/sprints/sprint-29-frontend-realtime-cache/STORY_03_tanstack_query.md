@@ -1,11 +1,11 @@
 # Story 03 — TanStack Query cache
 
-**Sprint 29 · Status: Architect locked → Agent 1**  
+**Sprint 29 · Status: Dev complete → Agent 2 CR**  
 **Priority:** P1  
 **Estimated effort:** 1 day  
 **Dependencies:** Prefer Story 01 (realtime) locked; Story 02 DTOs if caching conversations
 
-**Handoff:** [`handoffs/STORY_03_tanstack_query/agent-0-architect.md`](./handoffs/STORY_03_tanstack_query/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_03_tanstack_query/agent-0-architect.md`](./handoffs/STORY_03_tanstack_query/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_03_tanstack_query/agent-1-dev.md)
 
 ---
 

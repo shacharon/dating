@@ -1,6 +1,10 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
 const { fetchConversationsUnreadTotal } = vi.hoisted(() => ({
   fetchConversationsUnreadTotal: vi.fn(),
@@ -54,6 +58,12 @@ function Probe() {
   );
 }
 
+function renderUnread(ui: React.ReactElement, client = createTestQueryClient()) {
+  return render(
+    <QueryClientTestProvider client={client}>{ui}</QueryClientTestProvider>,
+  );
+}
+
 describe('ConversationUnreadProvider', () => {
   beforeEach(() => {
     fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 3 });
@@ -65,7 +75,7 @@ describe('ConversationUnreadProvider', () => {
   });
 
   it('loads total unread on mount via unread-total', async () => {
-    render(
+    renderUnread(
       <ConversationUnreadProvider>
         <Probe />
       </ConversationUnreadProvider>,
@@ -77,8 +87,30 @@ describe('ConversationUnreadProvider', () => {
     expect(fetchConversationsUnreadTotal).toHaveBeenCalled();
   });
 
+  it('does not refetch unread-total on remount within staleTime', async () => {
+    const client = createTestQueryClient();
+    const tree = (
+      <ConversationUnreadProvider>
+        <Probe />
+      </ConversationUnreadProvider>
+    );
+
+    const { unmount } = renderUnread(tree, client);
+    await waitFor(() => {
+      expect(screen.getByTestId('total').textContent).toBe('3');
+    });
+    const callsAfterFirst = fetchConversationsUnreadTotal.mock.calls.length;
+    unmount();
+
+    renderUnread(tree, client);
+    await waitFor(() => {
+      expect(screen.getByTestId('total').textContent).toBe('3');
+    });
+    expect(fetchConversationsUnreadTotal.mock.calls.length).toBe(callsAfterFirst);
+  });
+
   it('reconcileFromList does not overwrite badge total from partial page', async () => {
-    render(
+    renderUnread(
       <ConversationUnreadProvider>
         <Probe />
       </ConversationUnreadProvider>,
@@ -94,7 +126,7 @@ describe('ConversationUnreadProvider', () => {
   });
 
   it('bumpFromMessage increments total', async () => {
-    render(
+    renderUnread(
       <ConversationUnreadProvider>
         <Probe />
       </ConversationUnreadProvider>,
