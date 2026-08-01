@@ -1,10 +1,10 @@
 # Story 01 — Message violation context
 
-**Sprint 32 · Status: PLANNED**  
+**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 0 architect complete → run Agent 1**  
 **Priority:** P0  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Sprint 30 Done  
-
+**Handoffs:** [architect](./handoffs/STORY_01_message_violation_context/agent-0-architect.md)
 ---
 
 ## Objective
