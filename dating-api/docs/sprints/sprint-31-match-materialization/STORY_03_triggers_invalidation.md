@@ -1,11 +1,11 @@
 # Story 03 — Triggers + invalidation
 
-**Sprint 31 · Status: Done (Agent 1 Dev complete → Agent 2 CR)**  
+**Sprint 31 · Status: CR PASS → Agent 3 PM**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 02 rebuild job
 
-**Handoff:** [`handoffs/STORY_03_triggers_invalidation/agent-1-dev.md`](./handoffs/STORY_03_triggers_invalidation/agent-1-dev.md)
+**Handoff:** [`handoffs/STORY_03_triggers_invalidation/agent-2-cr.md`](./handoffs/STORY_03_triggers_invalidation/agent-2-cr.md)
 
 ---
 
