@@ -1,6 +1,6 @@
 # Sprint 32 — Content Moderation Ops
 
-**Status:** 🟡 **IN PROGRESS** — Story 01 Agent 2 CR PASS → run Agent 3  
+**Status:** 🟡 **IN PROGRESS** — Story 01 Done; Story 02 PLANNED → run Agent 0  
 **Priority:** P1 (post-launch ops; improves Sprint 30 admin + policy gaps)  
 **Depends on:** Sprint 30 Done (gates + `UserContentViolation` + `/admin/content-violations`)  
 **Does not block:** Sprint 31 match materialization (run in parallel / after as capacity allows)
@@ -27,7 +27,7 @@ Make moderation **operable by humans**:
 
 | Have today | Missing |
 |------------|---------|
-| Violations list + preview (100 chars) + Unblock | No **recipient** / conversation on message blocks |
+| Violations list + preview + Unblock + **recipient/conversation** on message blocks | No first-class **blocked users** queue (Story 02) |
 | Stats cards for muted/blocked counts | No first-class **blocked users** queue |
 | Binary OpenAI `flagged` | No soft / dating-specific middle step (`wanna fuck` often passes) |
 | `clearExpiredMutes()` API | No cron / scheduled clear |
@@ -38,7 +38,7 @@ Make moderation **operable by humans**:
 
 | # | Story | Priority | Est | Status |
 |---|-------|----------|-----|--------|
-| 01 | [Message violation context](./STORY_01_message_violation_context.md) | P0 | 0.5d | Agent 2 CR PASS → run Agent 3 |
+| 01 | [Message violation context](./STORY_01_message_violation_context.md) | P0 | 0.5d | ✅ Done |
 | 02 | [Admin blocked-users + full review](./STORY_02_admin_blocked_users.md) | P0 | 1d | PLANNED |
 | 03 | [Soft / dating policy layer](./STORY_03_soft_policy_layer.md) | P1 | 1d | PLANNED |
 | 04 | [Mute expiry cron + ops polish](./STORY_04_mute_cron_ops.md) | P1 | 0.5d | PLANNED |
@@ -50,7 +50,7 @@ Make moderation **operable by humans**:
 
 ## Acceptance criteria (sprint-level)
 
-- [ ] Message blocks persist `conversationId` + `recipientUserId` (nullable for profile surfaces)
+- [x] Message blocks persist `conversationId` + `recipientUserId` (nullable for profile surfaces)
 - [ ] Admin can see blocked/muted users with latest flagged phrase + recipient identity
 - [ ] Admin can Unblock with reason (keep Sprint 30 audit code)
 - [ ] Soft policy or documented “no soft tier” decision shipped in Story 03
