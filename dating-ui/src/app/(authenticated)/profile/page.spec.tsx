@@ -2,12 +2,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
-const { resolveEditableProfile, listMyProfilePhotos, fetchProfileQuality } =
-  vi.hoisted(() => ({
-    resolveEditableProfile: vi.fn(),
-    listMyProfilePhotos: vi.fn(),
-    fetchProfileQuality: vi.fn(),
-  }));
+const {
+  resolveEditableProfile,
+  listMyProfilePhotos,
+  fetchMyProfilePhotoBlob,
+  fetchProfileQuality,
+} = vi.hoisted(() => ({
+  resolveEditableProfile: vi.fn(),
+  listMyProfilePhotos: vi.fn(),
+  fetchMyProfilePhotoBlob: vi.fn(),
+  fetchProfileQuality: vi.fn(),
+}));
 
 vi.mock('@/lib/profile-form', () => ({
   resolveEditableProfile,
@@ -27,6 +32,7 @@ vi.mock('@/lib/profile-form', () => ({
 
 vi.mock('@/lib/me-photos-api', () => ({
   listMyProfilePhotos,
+  fetchMyProfilePhotoBlob,
 }));
 
 vi.mock('@/lib/profile-quality-api', async () => {
@@ -79,12 +85,6 @@ vi.mock('@/components/profile/profile-analysis-tab', () => ({
 vi.mock('@/components/notification-preferences-section', () => ({
   NotificationPreferencesSection: () => <div>notifications</div>,
 }));
-vi.mock('@/components/profile-photo-section', () => ({
-  ProfilePhotoSection: () => <div data-testid="photos">photos</div>,
-}));
-vi.mock('@/components/photo-gate-banner', () => ({
-  PhotoGateBanner: () => null,
-}));
 
 let mockSearch = '';
 
@@ -98,8 +98,14 @@ describe('ProfileHubClient', () => {
     mockSearch = '';
     localStorage.clear();
     listMyProfilePhotos.mockResolvedValue([
-      { id: 'p1', status: 'APPROVED' },
+      {
+        id: 'p1',
+        status: 'APPROVED',
+        isPrimary: true,
+        position: 0,
+      },
     ]);
+    fetchMyProfilePhotoBlob.mockRejectedValue(new Error('no blob in test'));
     fetchProfileQuality.mockResolvedValue({
       score: 80,
       completeness: {
@@ -141,6 +147,20 @@ describe('ProfileHubClient', () => {
     expect(screen.getByTestId('profile-tab-overview').getAttribute('aria-selected')).toBe(
       'true',
     );
+  });
+
+  it('renders overview hero card and edit CTA', async () => {
+    render(<ProfileHubClient />);
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-overview-hero')).toBeTruthy();
+      expect(screen.getByTestId('profile-overview-edit')).toBeTruthy();
+      expect(screen.getByTestId('profile-overview-story-prose')).toBeTruthy();
+    });
+    expect(screen.getByTestId('profile-overview-edit').getAttribute('href')).toBe(
+      '/profile?tab=edit',
+    );
+    expect(screen.queryByTestId('profile-analysis-link')).toBeNull();
+    expect(screen.queryByTestId('photos')).toBeNull();
   });
 
   it('opens edit tab from ?tab=edit', async () => {

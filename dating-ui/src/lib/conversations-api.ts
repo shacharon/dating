@@ -351,6 +351,8 @@ export async function sendConversationMessage(
 /** Resolve photo URL for browser display (same-origin or explicit API base). */
 export function conversationPhotoSrc(photoUrl: string | null): string | null {
   if (!photoUrl) return null;
+  // Absolute / object URLs must not get API base prefixed (profile hero blobs, CDN).
+  if (/^(blob:|data:|https?:)/i.test(photoUrl)) return photoUrl;
   const base = getApiBase();
   return base ? `${base}${photoUrl}` : photoUrl;
 }
