@@ -17,6 +17,9 @@ type Props = {
   feedbackSlot?: ReactNode;
 };
 
+/**
+ * Bio, narrative, shared interests, and optional feedback slot (before caution).
+ */
 export function MatchDetailContent({
   data,
   locale,

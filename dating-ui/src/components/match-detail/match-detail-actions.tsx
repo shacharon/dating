@@ -50,6 +50,10 @@ function undoAriaLabel(
     : detailCopy.undoPassAria;
 }
 
+/**
+ * Like / pass / undo / open conversation plus block-report overflow.
+ * Used by the match detail page orchestrator.
+ */
 export function MatchDetailActions({
   matchId,
   detailCopy,

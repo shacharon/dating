@@ -15,6 +15,10 @@ type Props = {
   refreshKey?: number | string;
 };
 
+/**
+ * Compact profile quality meter (score bar + suggestion chips + Improve CTA).
+ * Fetches `GET /me/profile/quality`; bump `refreshKey` after mutations.
+ */
 export function ProfileQualityMeter({ copy, refreshKey = 0 }: Props) {
   const [quality, setQuality] = useState<ProfileQualityDto | null>(null);
   const [loading, setLoading] = useState(true);

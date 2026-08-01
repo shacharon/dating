@@ -29,6 +29,9 @@ export type OnboardingTextFieldHelpProps = {
   testIdPrefix: string;
 };
 
+/**
+ * Writing-prompt help for onboarding/profile text fields (examples, tips, word count).
+ */
 export function OnboardingTextFieldHelp({
   value,
   field,

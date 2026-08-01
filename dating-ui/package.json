@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "next start",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "test": "vitest run",
     "test:e2e": "vitest run \"src/app/(authenticated)/profile/page.spec.tsx\" src/app/profile-route-redirects.spec.tsx",
     "test:watch": "vitest",

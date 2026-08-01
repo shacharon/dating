@@ -13,6 +13,7 @@ type Props = {
   detailCopy: AppCopySchema['matches']['detail'];
 };
 
+/** Hero photo plus title/subtitle header for match detail. */
 export function MatchDetailHeader({ data, detailCopy }: Props) {
   return (
     <>

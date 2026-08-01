@@ -34,6 +34,9 @@ type Props = {
   onSendMessage: (conversationId: string) => void;
 };
 
+/**
+ * Lazy-loaded celebration and report dialogs (`dynamic`, `ssr: false`).
+ */
 export function MatchDetailModals({
   data,
   matchId,

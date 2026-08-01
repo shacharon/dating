@@ -20,6 +20,7 @@ export type AppNavChromeProps = {
   newMatchCount?: number;
 };
 
+/** Sticky top navigation for md+ viewports (Matches, Conversations, Profile). */
 export function AppNavDesktop({
   pathname,
   locale,

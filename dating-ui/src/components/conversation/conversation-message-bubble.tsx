@@ -11,6 +11,7 @@ type Props = {
   locale: AppLocale;
 };
 
+/** Single message bubble with sender alignment and timestamp. */
 export function ConversationMessageBubble({
   message,
   isMine,

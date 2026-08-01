@@ -13,6 +13,7 @@ type Props = {
   onSubmit: (sentiment: 'positive' | 'negative') => void;
 };
 
+/** Thumbs up/down match-quality feedback widget for match detail. */
 export function MatchDetailFeedback({
   feedbackCopy,
   sentiment,

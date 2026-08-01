@@ -15,6 +15,9 @@ type Props = {
   onReport: () => void;
 };
 
+/**
+ * Report menu and unmatch confirm for conversation detail.
+ */
 export function ConversationActions({
   otherName,
   detailCopy,

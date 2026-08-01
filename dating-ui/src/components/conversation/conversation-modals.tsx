@@ -17,6 +17,9 @@ type Props = {
   onCloseReport: () => void;
 };
 
+/**
+ * Lazy-loaded report dialog for a conversation (`dynamic`, `ssr: false`).
+ */
 export function ConversationModals({
   conversationId,
   subjectLabel,

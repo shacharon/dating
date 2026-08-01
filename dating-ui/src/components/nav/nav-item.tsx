@@ -22,6 +22,7 @@ type NavItemProps = {
   variant: NavItemVariant;
 };
 
+/** Single primary-nav control with optional unread/new badge. */
 export function NavItem({
   href,
   label,

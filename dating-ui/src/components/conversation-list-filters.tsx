@@ -30,6 +30,9 @@ type Props = {
   copy: ConversationListFiltersCopy;
 };
 
+/**
+ * Search / filter / sort controls for the conversation list page.
+ */
 export function ConversationListFilters({
   searchQuery,
   filterType,

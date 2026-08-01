@@ -14,6 +14,9 @@ const AnalysisResultsView = dynamic(
   { ssr: false },
 );
 
+/**
+ * Profile hub Analysis tab: progress panel + lazy results view.
+ */
 export function ProfileAnalysisTab() {
   const { locale, copy } = useAppLocale();
   const pageCopy = copy.analysisPage;

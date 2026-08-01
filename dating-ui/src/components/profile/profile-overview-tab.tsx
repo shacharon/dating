@@ -22,6 +22,7 @@ type Props = {
   draft: ProfileDraft;
 };
 
+/** Profile hub Overview tab: photos, basics summary, story preview. */
 export function ProfileOverviewTab({ draft }: Props) {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;

@@ -12,6 +12,7 @@ const TAB_IDS: ProfileHubTabId[] = [
   'settings',
 ];
 
+/** Maps `?tab=` query values to a hub tab id (default overview). */
 export function parseProfileHubTab(raw: string | null): ProfileHubTabId {
   if (raw && TAB_IDS.includes(raw as ProfileHubTabId)) {
     return raw as ProfileHubTabId;
@@ -24,6 +25,7 @@ type Props = {
   copy: AppCopySchema['profile']['hub'];
 };
 
+/** Tablist for `/profile?tab=…` (overview, edit, analysis, settings). */
 export function ProfileHubTabs({ activeTab, copy }: Props) {
   const tabs: { id: ProfileHubTabId; label: string }[] = [
     { id: 'overview', label: copy.tabOverview },

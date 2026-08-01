@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dating-ui
 
-## Getting Started
+Next.js frontend for the dating product. Talks to the NestJS API in sibling package `dating-api`.
 
-First, run the development server:
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# from dating-ui/
+npm install
+npm run dev          # http://localhost:3000 (Turbopack)
+# or wait for API then start:
+npm run dev:safe
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+API is expected on the URL configured in env (see `.env.example` / local `.env`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Dev server (Turbopack, port 3000) |
+| `npm run dev:webpack` | Dev server with webpack |
+| `npm run dev:safe` | Wait for API, then `dev` |
+| `npm run clean:next` / `dev:fresh` | Clear `.next` then (optionally) restart |
+| `npm run build` | Production build |
+| `npm start` | Serve production build |
+| `npm run lint` | ESLint |
+| `npm run lint:fix` | ESLint with `--fix` |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest (single run) |
+| `npm run test:watch` | Vitest watch |
+| `npm run test:e2e` | Profile hub + redirect smoke specs |
 
-## Learn More
+## Routes
 
-To learn more about Next.js, take a look at the following resources:
+Canonical product paths (legacy aliases redirect where noted):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Public
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Path | Purpose |
+|------|---------|
+| `/` | Landing |
+| `/privacy` | Privacy policy |
+| `/terms` | Terms of service |
 
-## Deploy on Vercel
+### Onboarding
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Path | Purpose |
+|------|---------|
+| `/onboarding` | Onboarding entry |
+| `/onboarding/basic` | Step 1 — basics |
+| `/onboarding/texts` | Step 2 — story texts |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Dating app
+
+| Path | Purpose |
+|------|---------|
+| `/dating/me-matches` | Match list |
+| `/dating/me-matches/[id]` | Match detail |
+| `/dating/conversations` | Conversation list |
+| `/dating/conversations/[id]` | Conversation detail |
+
+### Profile hub
+
+| Path | Purpose |
+|------|---------|
+| `/profile` | Unified hub (`?tab=overview\|edit\|analysis\|settings`) |
+
+Legacy `/dating/profile`, `/dating/analysis`, and settings profile aliases redirect into the hub.
+
+### Admin
+
+| Path | Purpose |
+|------|---------|
+| `/admin` | Admin home |
+| `/admin/photos` | Photo moderation |
+| `/admin/reports` | Reports queue |
+| `/admin/content-violations` | Content violations |
+| `/admin/match-quality` | Match quality insights |
+
+## Architecture
+
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for nav shell, profile hub, and detail-page refactor patterns.
+
+Sprint locks and handoffs live under `docs/sprints/`.

@@ -10,6 +10,7 @@ import {
 import { ConversationsIcon, MatchesIcon, ProfileIcon } from './nav-icons';
 import { NavItem } from './nav-item';
 
+/** Fixed bottom tab bar for small viewports; shares chrome props with desktop. */
 export function AppNavMobile({
   pathname,
   locale,

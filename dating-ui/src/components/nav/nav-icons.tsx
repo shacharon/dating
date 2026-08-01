@@ -5,6 +5,7 @@ type IconProps = {
 
 const base = 'h-5 w-5 shrink-0';
 
+/** Matches nav glyph (outline or filled when active). */
 export function MatchesIcon({ filled = false, className = base }: IconProps) {
   if (filled) {
     return (
@@ -34,6 +35,7 @@ export function MatchesIcon({ filled = false, className = base }: IconProps) {
   );
 }
 
+/** Conversations nav glyph (outline or filled when active). */
 export function ConversationsIcon({
   filled = false,
   className = base,
@@ -66,6 +68,7 @@ export function ConversationsIcon({
   );
 }
 
+/** Profile nav glyph (outline or filled when active). */
 export function ProfileIcon({ filled = false, className = base }: IconProps) {
   if (filled) {
     return (

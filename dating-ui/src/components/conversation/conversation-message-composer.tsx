@@ -18,6 +18,10 @@ type Props = {
   listRef: RefObject<HTMLDivElement | null>;
 };
 
+/**
+ * Message draft composer: char limit, Enter-to-send, moderation/send errors.
+ * Owns local draft state; calls `sendMessage` from `useConversationMessages`.
+ */
 export function ConversationMessageComposer({
   detailCopy,
   modCopy,

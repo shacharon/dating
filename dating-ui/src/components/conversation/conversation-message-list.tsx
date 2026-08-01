@@ -5,6 +5,7 @@ import type { MessageDto } from '@/lib/conversations-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { ConversationMessageBubble } from '@/components/conversation/conversation-message-bubble';
 
+/** Scroll a message list container to its bottom (send / initial load). */
 export function scrollListToBottom(listEl: HTMLDivElement | null) {
   if (!listEl) return;
   if (typeof listEl.scrollTo === 'function') {
@@ -36,6 +37,10 @@ type Props = {
   loadingLabel: string;
 };
 
+/**
+ * Scrollable message thread: reconnect banner, load-earlier, bubbles, empty/error.
+ * Owns auto-scroll effects for the conversation detail page.
+ */
 export function ConversationMessageList({
   messages,
   messagesLoading,

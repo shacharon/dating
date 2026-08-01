@@ -14,7 +14,7 @@ vi.mock('next/image', () => ({
     onError?: () => void;
   }) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         data-testid={props['data-testid']}
         src={props.src}

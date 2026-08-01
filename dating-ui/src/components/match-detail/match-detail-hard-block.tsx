@@ -11,6 +11,7 @@ type Props = {
   detailCopy: AppCopySchema['matches']['detail'];
 };
 
+/** Amber banner when the match is hard-blocked from further actions. */
 export function MatchDetailHardBlock({
   hardBlocked,
   currentAction,

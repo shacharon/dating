@@ -13,6 +13,9 @@ type Props = {
   onBlocked: () => void;
 };
 
+/**
+ * Report menu and block confirm; calls `blockMatch` then `onBlocked` (list redirect).
+ */
 export function MatchDetailBlockReport({
   matchId,
   detailCopy,

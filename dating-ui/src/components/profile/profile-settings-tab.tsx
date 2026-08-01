@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { NotificationPreferencesSection } from '@/components/notification-preferences-section';
 import { useAppLocale } from '@/lib/i18n';
 
+/** Profile hub Settings tab: notifications and preference deep links. */
 export function ProfileSettingsTab() {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;

@@ -15,7 +15,10 @@ type Props = {
   locale: AppLocale;
 };
 
-/** Match card only — back link stays on the page so it shows during load/error. */
+/**
+ * Match card for conversation detail (photo, name, matched date).
+ * Back link stays on the page so it remains visible during load/error.
+ */
 export function ConversationHeader({ data, formatCopy, locale }: Props) {
   const photoSrc = conversationPhotoSrc(data.otherUser.photoUrl);
   const secondary = conversationSecondaryMeta(data.otherUser);

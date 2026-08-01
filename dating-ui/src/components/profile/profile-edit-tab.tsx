@@ -5,6 +5,9 @@ import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { useAppLocale } from '@/lib/i18n';
 
+/**
+ * Profile hub Edit tab: photos, basics, and story forms with deep-link anchors.
+ */
 export function ProfileEditTab({
   onProfileMutated,
 }: {

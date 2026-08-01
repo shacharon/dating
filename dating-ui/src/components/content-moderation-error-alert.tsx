@@ -19,6 +19,10 @@ export type ContentModerationErrorAlertProps = {
   onDismiss?: () => void;
 };
 
+/**
+ * Structured content-moderation failure UI (flagged text, why, suggestion).
+ * Used by profile forms and the conversation message composer.
+ */
 export function ContentModerationErrorAlert({
   details,
   variant,
