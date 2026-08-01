@@ -1,9 +1,11 @@
 # Story 02 — Lock expensive endpoints
 
-**Sprint 28 · Status: PLANNED**  
+**Sprint 28 · Status: IN REVIEW** (Agent 0 architect lock complete → run Agent 1)  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Prefer after Story 01 (independent OK)
+
+**Handoffs:** [architect](./handoffs/STORY_02_lock_expensive_endpoints/agent-0-architect.md)
 
 ---
 
