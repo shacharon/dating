@@ -30,7 +30,7 @@ Risk: harassment, explicit spam, and inappropriate content can flow freely throu
 
 | # | Story | Priority | Est | Status |
 |---|-------|----------|-----|--------|
-| 00 | [User consent + privacy policy](./STORY_00_consent_and_privacy.md) | P0 | 1d | Agent 1 done → run Agent 2 |
+| 00 | [User consent + privacy policy](./STORY_00_consent_and_privacy.md) | P0 | 1d | Agent 2 PASS → run Agent 3 |
 | 01 | [OpenAI moderation client + violation storage](./STORY_01_moderation_client.md) | P0 | 0.5d | PLANNED |
 | 02 | [Profile field moderation gate](./STORY_02_profile_field_gate.md) | P0 | 1d | PLANNED |
 | 03 | [Message moderation gate](./STORY_03_message_gate.md) | P0 | 1d | PLANNED |

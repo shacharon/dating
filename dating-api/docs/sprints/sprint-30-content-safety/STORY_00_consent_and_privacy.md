@@ -1,10 +1,10 @@
 # Story 00 — User consent + privacy policy for third-party moderation
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 PASS → run Agent 3**  
 **Priority:** P0 (LEGAL BLOCKER — must complete before Stories 01-05 go live)  
 **Estimated effort:** 1 day (legal review + implementation)  
 **Dependencies:** None (do FIRST)  
-**Handoffs:** [architect](./handoffs/STORY_00_consent_and_privacy/agent-0-architect.md) · [dev](./handoffs/STORY_00_consent_and_privacy/agent-1-dev.md)
+**Handoffs:** [architect](./handoffs/STORY_00_consent_and_privacy/agent-0-architect.md) · [dev](./handoffs/STORY_00_consent_and_privacy/agent-1-dev.md) · [cr](./handoffs/STORY_00_consent_and_privacy/agent-2-cr.md)
 
 ---
 
