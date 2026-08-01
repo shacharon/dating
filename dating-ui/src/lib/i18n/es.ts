@@ -9,14 +9,51 @@ export const esCopy: AppCopySchema = {
     checkingSession: "Comprobando sesion…",
   },
   landing: {
-    title: "Encuentra tu pareja",
-    subtitle: "Inicia sesion con Google para comenzar.",
+    brand: "Dating",
+    title: "Conexiones con sentido, no deslizamientos sin fin.",
+    subtitle:
+      "Emparejamiento por compatibilidad con conversaciones moderadas.",
     checkingSession: "Comprobando inicio de sesion…",
     googleSignIn: "Iniciar sesion con Google",
     signingIn: "Iniciando sesion…",
     retryApi: "Reintentar conexion con la API",
     privacyLink: "Privacidad",
     termsLink: "Terminos",
+    trust: {
+      privacy: "Privacidad por defecto",
+      moderation: "Conversaciones moderadas",
+      compatibility: "Matches por compatibilidad",
+    },
+    how: {
+      title: "Como funciona",
+      step1Title: "Cuenta tu historia",
+      step1Body:
+        "Comparte lo basico y lo que te importa — guarda el progreso cuando quieras.",
+      step2Title: "Recibe matches pensados",
+      step2Body:
+        "Mostramos personas compatibles segun tu perfil, no un aluvion de tarjetas.",
+      step3Title: "Empieza una conversacion real",
+      step3Body:
+        "Cuando hay interes mutuo, hablan en un espacio de mensajeria moderado.",
+    },
+    benefits: {
+      title: "Por que Dating",
+      depthTitle: "Profundidad sobre volumen",
+      depthBody:
+        "Menos matches, mejores — pensados para compatibilidad, no para fatiga.",
+      signalsTitle: "Senales de match claras",
+      signalsBody:
+        "Entiende por que alguien aparecio — no un feed opaco ”para ti“.",
+      safetyTitle: "Conversaciones mas seguras",
+      safetyBody:
+        "Reportes y moderacion mantienen las charlas respetuosas.",
+    },
+    closing: {
+      title: "Cuando estes listo/a",
+      subtitle:
+        "Inicia sesion con Google para crear tu perfil y ver matches.",
+      cta: "Volver al inicio de sesion",
+    },
   },
   languageSettings: {
     title: "Idioma",

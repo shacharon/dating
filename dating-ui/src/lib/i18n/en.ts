@@ -9,14 +9,50 @@ export const enCopy: AppCopySchema = {
     checkingSession: "Checking session…",
   },
   landing: {
-    title: "Find your match",
-    subtitle: "Sign in with Google to get started.",
+    brand: "Dating",
+    title: "Match on meaning, not endless swiping.",
+    subtitle:
+      "Compatibility-first matching with moderated conversations.",
     checkingSession: "Checking sign-in…",
     googleSignIn: "Sign in with Google",
     signingIn: "Signing in…",
     retryApi: "Retry connection to API",
     privacyLink: "Privacy",
     termsLink: "Terms",
+    trust: {
+      privacy: "Private by default",
+      moderation: "Moderated conversations",
+      compatibility: "Compatibility-first matches",
+    },
+    how: {
+      title: "How it works",
+      step1Title: "Tell your story",
+      step1Body:
+        "Share the basics and what matters to you — save progress anytime.",
+      step2Title: "Get thoughtful matches",
+      step2Body:
+        "We surface compatible people using your profile, not endless card spam.",
+      step3Title: "Start a real conversation",
+      step3Body:
+        "When both sides are interested, talk in a moderated messaging space.",
+    },
+    benefits: {
+      title: "Why Dating",
+      depthTitle: "Depth over volume",
+      depthBody:
+        "Fewer, better matches — built for compatibility, not swipe fatigue.",
+      signalsTitle: "Clear matching signals",
+      signalsBody:
+        "Understand why someone surfaced — not a black-box “for you” feed.",
+      safetyTitle: "Safer conversations",
+      safetyBody:
+        "Reporting and moderation tools keep chats grounded and respectful.",
+    },
+    closing: {
+      title: "Ready when you are",
+      subtitle: "Sign in with Google to build your profile and see matches.",
+      cta: "Back to sign in",
+    },
   },
   languageSettings: {
     title: "Language",

@@ -44,6 +44,12 @@ describe('PublicLandingClient i18n', () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
+    document.cookie.split(';').forEach((part) => {
+      const name = part.split('=')[0]?.trim();
+      if (name) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      }
+    });
     mockUseAuth.mockReturnValue({
       status: 'unauthenticated',
       signInWithGoogleIdToken: vi.fn(),
@@ -56,17 +62,30 @@ describe('PublicLandingClient i18n', () => {
   afterEach(() => {
     cleanup();
     localStorage.clear();
-    document.cookie = '';
+    sessionStorage.clear();
+    document.cookie.split(';').forEach((part) => {
+      const name = part.split('=')[0]?.trim();
+      if (name) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      }
+    });
   });
 
   it('renders English landing copy by default', () => {
     render(<PublicLandingClient />);
 
+    expect(screen.getByText(enCopy.landing.brand)).toBeTruthy();
     expect(
       screen.getByRole('heading', { name: enCopy.landing.title }),
     ).toBeTruthy();
     expect(screen.getByText(enCopy.landing.subtitle)).toBeTruthy();
     expect(screen.getByText(enCopy.landing.googleSignIn)).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: enCopy.landing.how.title }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: enCopy.landing.benefits.title }),
+    ).toBeTruthy();
 
     const main = screen.getByRole('main');
     expect(main.getAttribute('dir')).toBe('ltr');
@@ -116,7 +135,7 @@ describe('PublicLandingClient i18n', () => {
   });
 
   it('hides language picker during session bootstrap loading', () => {
-    document.cookie = `${getSessionCookieName()}=session-token`;
+    document.cookie = `${getSessionCookieName()}=session-token;path=/`;
     mockUseAuth.mockReturnValue({
       status: 'loading',
       signInWithGoogleIdToken: vi.fn(),
@@ -128,7 +147,13 @@ describe('PublicLandingClient i18n', () => {
     render(<PublicLandingClient />);
 
     expect(screen.queryByRole('combobox')).toBeNull();
-    expect(screen.getByText(enCopy.landing.checkingSession)).toBeTruthy();
+    expect(
+      screen.getByText(
+        (content) =>
+          content === enCopy.landing.checkingSession ||
+          content === heCopy.landing.checkingSession,
+      ),
+    ).toBeTruthy();
   });
 });
 

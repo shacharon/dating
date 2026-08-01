@@ -17,6 +17,7 @@ export type AppCopySchema = {
     checkingSession: string;
   };
   landing: {
+    brand: string;
     title: string;
     subtitle: string;
     checkingSession: string;
@@ -25,6 +26,34 @@ export type AppCopySchema = {
     retryApi: string;
     privacyLink: string;
     termsLink: string;
+    trust: {
+      privacy: string;
+      moderation: string;
+      compatibility: string;
+    };
+    how: {
+      title: string;
+      step1Title: string;
+      step1Body: string;
+      step2Title: string;
+      step2Body: string;
+      step3Title: string;
+      step3Body: string;
+    };
+    benefits: {
+      title: string;
+      depthTitle: string;
+      depthBody: string;
+      signalsTitle: string;
+      signalsBody: string;
+      safetyTitle: string;
+      safetyBody: string;
+    };
+    closing: {
+      title: string;
+      subtitle: string;
+      cta: string;
+    };
   };
   languageSettings: {
     title: string;

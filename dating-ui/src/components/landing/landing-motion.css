@@ -1,0 +1,43 @@
+/* Landing-only motion; respect reduced motion. */
+@keyframes landing-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(1.5%, -1%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-atmosphere-drift {
+  animation: landing-drift 28s ease-in-out infinite;
+}
+
+.landing-hero-copy {
+  animation: landing-fade-up 0.7s ease-out both;
+}
+
+.landing-hero-cta {
+  animation: landing-fade-up 0.7s ease-out 0.12s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-atmosphere-drift,
+  .landing-hero-copy,
+  .landing-hero-cta {
+    animation: none;
+  }
+}
