@@ -37,7 +37,7 @@ describe('MatchListEmptyState', () => {
       '/settings/preferences',
     );
     expect(screen.getByTestId('match-empty-edit-profile').getAttribute('href')).toBe(
-      '/dating/profile',
+      '/profile',
     );
     expect(screen.getByTestId('match-empty-invite-copy')).toBeTruthy();
   });

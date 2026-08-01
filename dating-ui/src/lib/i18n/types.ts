@@ -408,6 +408,36 @@ export type AppCopySchema = {
       findMatchesLink: string;
       emptyValue: string;
     };
+    hub: {
+      title: string;
+      tabOverview: string;
+      tabEdit: string;
+      tabAnalysis: string;
+      tabSettings: string;
+      tablistAria: string;
+      editProfileCta: string;
+      meterLabel: string;
+      meterImprove: string;
+      meterLoading: string;
+      meterUnavailable: string;
+      settingsNotificationsHeading: string;
+      settingsMatchPrefsHeading: string;
+      settingsMatchPrefsBody: string;
+      settingsMatchPrefsCta: string;
+      settingsAccountHeading: string;
+      settingsAccountLink: string;
+      settingsLanguageLink: string;
+      editSectionBasic: string;
+      editSectionStory: string;
+      editSectionPhotos: string;
+      suggestionPhoto: string;
+      suggestionBasics: string;
+      suggestionNickname: string;
+      suggestionLocation: string;
+      suggestionAboutMe: string;
+      suggestionAboutPartner: string;
+      suggestionAboutRelationship: string;
+    };
   };
   matchPreferences: {
     title: string;

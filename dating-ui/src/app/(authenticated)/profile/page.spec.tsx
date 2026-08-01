@@ -1,0 +1,149 @@
+/** @vitest-environment jsdom */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+
+const { resolveEditableProfile, listMyProfilePhotos } = vi.hoisted(() => ({
+  resolveEditableProfile: vi.fn(),
+  listMyProfilePhotos: vi.fn(),
+}));
+
+vi.mock('@/lib/profile-form', () => ({
+  resolveEditableProfile,
+  profileToFormFields: (p: Record<string, unknown>) => ({
+    nickname: p.nickname ?? '',
+    birthDate: (p.birthDate as string)?.slice?.(0, 10) ?? '',
+    gender: p.gender ?? '',
+    desiredPartnerGenders: p.desiredPartnerGenders ?? [],
+    city: p.city ?? '',
+    country: p.country ?? '',
+    locationLabel: p.locationLabel ?? '',
+    aboutMe: p.aboutMe ?? '',
+    aboutPartner: p.aboutPartner ?? '',
+    aboutRelationship: p.aboutRelationship ?? '',
+  }),
+}));
+
+vi.mock('@/lib/me-photos-api', () => ({
+  listMyProfilePhotos,
+}));
+
+vi.mock('@/contexts/auth-context', () => ({
+  useAuth: () => ({
+    user: { id: 'u1', displayName: 'Test' },
+    status: 'authenticated',
+  }),
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(mockSearch),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+}));
+
+vi.mock('next/link', () => ({
+  default({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  },
+}));
+
+vi.mock('@/components/profile/profile-edit-tab', () => ({
+  ProfileEditTab: () => <div data-testid="profile-edit-tab">edit</div>,
+}));
+vi.mock('@/components/profile/profile-analysis-tab', () => ({
+  ProfileAnalysisTab: () => (
+    <div data-testid="profile-analysis-tab">analysis</div>
+  ),
+}));
+vi.mock('@/components/notification-preferences-section', () => ({
+  NotificationPreferencesSection: () => <div>notifications</div>,
+}));
+vi.mock('@/components/profile-photo-section', () => ({
+  ProfilePhotoSection: () => <div data-testid="photos">photos</div>,
+}));
+vi.mock('@/components/photo-gate-banner', () => ({
+  PhotoGateBanner: () => null,
+}));
+
+let mockSearch = '';
+
+import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { heCopy } from '@/lib/i18n/he';
+import ProfileHubClient from './profile-hub-client';
+
+describe('ProfileHubClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSearch = '';
+    localStorage.clear();
+    listMyProfilePhotos.mockResolvedValue([
+      { id: 'p1', status: 'APPROVED' },
+    ]);
+    resolveEditableProfile.mockResolvedValue({
+      nickname: 'Noa',
+      birthDate: '1990-01-01',
+      gender: 'WOMAN',
+      desiredPartnerGenders: ['MAN'],
+      city: 'Tel Aviv',
+      country: 'IL',
+      locationLabel: 'TLV',
+      aboutMe: 'Hello',
+      aboutPartner: 'Kind',
+      aboutRelationship: 'Long term',
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('defaults to overview tab and shows meter', async () => {
+    render(<ProfileHubClient />);
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-hub')).toBeTruthy();
+      expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
+      expect(screen.getByTestId('profile-quality-meter')).toBeTruthy();
+    });
+    expect(screen.getByTestId('profile-tab-overview').getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('opens edit tab from ?tab=edit', async () => {
+    mockSearch = 'tab=edit';
+    render(<ProfileHubClient />);
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
+    });
+  });
+
+  it('falls back invalid tab to overview', async () => {
+    mockSearch = 'tab=nope';
+    render(<ProfileHubClient />);
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
+    });
+  });
+
+  it('renders Hebrew hub title when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    render(<ProfileHubClient />);
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', {
+          level: 1,
+          name: heCopy.profile.hub.title,
+        }),
+      ).toBeTruthy();
+    });
+  });
+});

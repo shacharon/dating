@@ -25,7 +25,11 @@ import {
   togglePartnerGender,
 } from '@/components/onboarding-basic-helpers';
 
-export function OnboardingBasicForm() {
+export function OnboardingBasicForm({
+  variant = 'onboarding',
+}: {
+  variant?: 'onboarding' | 'profileHub';
+} = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -35,6 +39,7 @@ export function OnboardingBasicForm() {
   const mod = copy.contentModeration;
   const genderCopy = copy.gender;
   const googleName = user?.displayName?.trim() || '—';
+  const isHub = variant === 'profileHub';
 
   const [nickname, setNickname] = useState('');
   const [loadedNickname, setLoadedNickname] = useState<string | null>(null);
@@ -80,11 +85,13 @@ export function OnboardingBasicForm() {
           setProfileSyncing(false);
           return;
         }
-        const path = onboardingResumePath(profile, resumeOptions);
-        if (path !== '/onboarding/basic') {
-          setProfileSyncing(false);
-          router.replace(path);
-          return;
+        if (!isHub) {
+          const path = onboardingResumePath(profile, resumeOptions);
+          if (path !== '/onboarding/basic') {
+            setProfileSyncing(false);
+            router.replace(path);
+            return;
+          }
         }
         setHasProfile(true);
         setLoadedNickname(profile.nickname ?? null);
@@ -113,7 +120,7 @@ export function OnboardingBasicForm() {
     return () => {
       cancelled = true;
     };
-  }, [router, resumeOptions, ob.loadFailed]);
+  }, [router, resumeOptions, ob.loadFailed, isHub]);
 
   function setPartnerGender(g: MeProfileGender, checked: boolean) {
     setDesiredPartnerGenders((prev) => togglePartnerGender(prev, g, checked));
@@ -206,9 +213,14 @@ export function OnboardingBasicForm() {
 
   async function handleContinueToTexts() {
     const ok = await persist(true);
-    if (ok) {
-      router.push('/onboarding/texts');
+    if (!ok) return;
+    if (isHub) {
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2000);
+      document.getElementById('story')?.scrollIntoView({ behavior: 'smooth' });
+      return;
     }
+    router.push('/onboarding/texts');
   }
 
   return (
@@ -256,7 +268,7 @@ export function OnboardingBasicForm() {
           onLocationLabelChange={setLocationLabel}
         />
 
-        <ProfilePhotoSection requiredForMatching />
+        {!isHub ? <ProfilePhotoSection requiredForMatching /> : null}
 
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -267,14 +279,26 @@ export function OnboardingBasicForm() {
           >
             {ob.saveProgress}
           </button>
-          <button
-            type="button"
-            onClick={() => void handleContinueToTexts()}
-            disabled={profileSyncing}
-            className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-          >
-            {bf.continueToStory}
-          </button>
+          {!isHub ? (
+            <button
+              type="button"
+              onClick={() => void handleContinueToTexts()}
+              disabled={profileSyncing}
+              className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              {bf.continueToStory}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleContinueToTexts()}
+              disabled={profileSyncing}
+              data-testid="profile-hub-basic-save"
+              className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              {ob.saveProgress}
+            </button>
+          )}
         </div>
       </div>
 

@@ -38,7 +38,7 @@ export function onboardingResumePath(
   }
   switch (profile.onboardingStep) {
     case 'COMPLETED':
-      return '/dating/profile';
+      return '/profile';
     case 'TEXTS':
       return '/onboarding/texts';
     case 'BASIC':

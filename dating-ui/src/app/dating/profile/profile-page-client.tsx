@@ -158,7 +158,7 @@ export default function ProfilePage() {
               {vp.matchPreferencesLinkCta(copy.profile.matchPreferencesLink)}
             </Link>
             <Link
-              href="/dating/analysis"
+              href="/profile?tab=analysis"
               data-testid="profile-analysis-link"
               className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
             >
@@ -253,7 +253,7 @@ export default function ProfilePage() {
 
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
-            href="/onboarding/basic?edit=1"
+            href="/profile?tab=edit"
             className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             {vp.editLink}

@@ -31,7 +31,11 @@ function fieldLabelFor(
   return null;
 }
 
-export function OnboardingTextsForm() {
+export function OnboardingTextsForm({
+  variant = 'onboarding',
+}: {
+  variant?: 'onboarding' | 'profileHub';
+} = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { copy } = useAppLocale();
@@ -40,6 +44,7 @@ export function OnboardingTextsForm() {
   const wh = tf.writingHelp;
   const prompts = ob.writingPrompts;
   const mod = copy.contentModeration;
+  const isHub = variant === 'profileHub';
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
@@ -70,15 +75,21 @@ export function OnboardingTextsForm() {
       try {
         const profile = await fetchMyProfile();
         if (cancelled) return;
-        const path = onboardingResumePath(profile, resumeOptions);
-        if (path !== '/onboarding/texts') {
+        if (!isHub) {
+          const path = onboardingResumePath(profile, resumeOptions);
+          if (path !== '/onboarding/texts') {
+            setProfileSyncing(false);
+            router.replace(path);
+            return;
+          }
+          if (!profile) {
+            setProfileSyncing(false);
+            router.replace('/onboarding/basic');
+            return;
+          }
+        } else if (!profile) {
           setProfileSyncing(false);
-          router.replace(path);
-          return;
-        }
-        if (!profile) {
-          setProfileSyncing(false);
-          router.replace('/onboarding/basic');
+          setLoadError(ob.loadFailed);
           return;
         }
         setAboutMe(profile.aboutMe ?? '');
@@ -95,7 +106,7 @@ export function OnboardingTextsForm() {
     return () => {
       cancelled = true;
     };
-  }, [router, resumeOptions, ob.loadFailed]);
+  }, [router, resumeOptions, ob.loadFailed, isHub]);
 
   useEffect(() => {
     if (!moderationDetails?.field) return;
@@ -178,6 +189,12 @@ export function OnboardingTextsForm() {
         onboardingStep: 'COMPLETED',
       });
       await submitMyProfileForAnalysis();
+      if (isHub) {
+        setFinishing(false);
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 2000);
+        return;
+      }
       router.replace('/dating/analysis');
     } catch (e) {
       setFinishing(false);
@@ -313,9 +330,11 @@ export function OnboardingTextsForm() {
         </button>
         <Link
           href={
-            searchParams.get('edit') === '1'
-              ? '/onboarding/basic?edit=1'
-              : '/onboarding/basic'
+            isHub
+              ? '/profile?tab=edit#basic'
+              : searchParams.get('edit') === '1'
+                ? '/onboarding/basic?edit=1'
+                : '/onboarding/basic'
           }
           prefetch
           className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}

@@ -58,6 +58,6 @@ describe('OnboardingHeader', () => {
     expect(screen.queryByTestId('onboarding-skip')).toBeNull();
     fireEvent.click(screen.getByTestId('onboarding-exit'));
     fireEvent.click(screen.getByTestId('onboarding-exit-confirm'));
-    expect(mockPush).toHaveBeenCalledWith('/dating/profile');
+    expect(mockPush).toHaveBeenCalledWith('/profile');
   });
 });

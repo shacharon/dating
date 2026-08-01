@@ -78,11 +78,11 @@ export function AppNavMobile({
           />
           <NavItem
             variant="mobile"
-            href="/dating/profile"
+            href="/profile"
             label={copy.nav.profile}
             active={profileActive}
             icon={<ProfileIcon filled={profileActive} className="h-5 w-5" />}
-            onClick={() => onNavClick('/dating/profile')}
+            onClick={() => onNavClick('/profile')}
             pending={navPending}
           />
         </div>

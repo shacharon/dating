@@ -22,6 +22,7 @@ vi.mock('@/hooks/use-messaging-socket', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   usePathname: () => '/dating/profile',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock('@/components/nav-auth', () => ({

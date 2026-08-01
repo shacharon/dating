@@ -131,7 +131,7 @@ describe('MeMatchesPage (not_ready photo gate)', () => {
     });
     expect(replaceMock).not.toHaveBeenCalled();
     expect(screen.getByTestId('match-photo-gate-cta').getAttribute('href')).toBe(
-      '/dating/profile#profile-photos',
+      '/profile?tab=edit#photos',
     );
     expect(screen.getByText('Add a photo to see matches')).toBeTruthy();
     unmount();

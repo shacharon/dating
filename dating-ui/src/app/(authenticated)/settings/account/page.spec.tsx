@@ -25,7 +25,7 @@ describe('SettingsAccountPage', () => {
     );
     expect(
       screen.getByTestId('account-link-notifications').getAttribute('href'),
-    ).toBe('/dating/profile#notification-prefs');
+    ).toBe('/profile?tab=settings#notifications');
     expect(screen.getByTestId('delete-account-section')).toBeTruthy();
   });
 });

@@ -15,7 +15,7 @@ import { OnboardingStepper } from './onboarding-stepper';
 import { onboardingUiStepFromPathname } from './onboarding-step';
 
 function leaveDestination(editMode: boolean): string {
-  return editMode ? '/dating/profile' : '/dating/me-matches';
+  return editMode ? '/profile' : '/dating/me-matches';
 }
 
 export function OnboardingHeader() {

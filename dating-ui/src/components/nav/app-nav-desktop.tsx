@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { AppCopySchema, AppLocale } from '@/lib/i18n';
 import { NavAuth } from '@/components/nav-auth';
@@ -77,11 +77,11 @@ export function AppNavDesktop({
           />
           <NavItem
             variant="desktop"
-            href="/dating/profile"
+            href="/profile"
             label={copy.nav.profile}
             active={profileActive}
             icon={<ProfileIcon filled={profileActive} />}
-            onClick={() => onNavClick('/dating/profile')}
+            onClick={() => onNavClick('/profile')}
             pending={navPending}
           />
         </nav>

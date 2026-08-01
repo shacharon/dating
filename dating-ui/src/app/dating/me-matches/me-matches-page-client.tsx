@@ -70,7 +70,7 @@ export default function MeMatchesPageClient() {
             {listCopy.backToAnalysis}
           </Link>
           <Link
-            href="/onboarding/basic?edit=1"
+            href="/profile?tab=edit#basic"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             {listCopy.editProfile}

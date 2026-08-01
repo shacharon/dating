@@ -74,7 +74,7 @@ export default function SettingsAccountPage() {
           {copy.notificationsSectionTitle}
         </h2>
         <Link
-          href="/dating/profile#notification-prefs"
+          href="/profile?tab=settings#notifications"
           data-testid="account-link-notifications"
           className="text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
         >

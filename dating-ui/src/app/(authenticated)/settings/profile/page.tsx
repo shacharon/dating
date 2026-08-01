@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function SettingsProfilePage() {
-  redirect('/dating/profile');
+export default function SettingsProfileRedirectPage() {
+  redirect('/profile');
 }

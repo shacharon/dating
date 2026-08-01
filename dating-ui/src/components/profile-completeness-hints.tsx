@@ -4,29 +4,16 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ProfileDraft } from '@/app/dating/_lib/types';
 import { listMyProfilePhotos } from '@/lib/me-photos-api';
 import {
+  basicsComplete,
+  storyComplete,
+} from '@/lib/profile-completeness';
+import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
   getCopy,
   readStoredLocale,
   type AppLocale,
 } from '@/lib/i18n';
-
-function basicsComplete(draft: ProfileDraft): boolean {
-  return (
-    draft.birthDate.trim().length > 0 &&
-    draft.gender.trim().length > 0 &&
-    draft.gender !== 'PREFER_NOT_TO_SAY' &&
-    draft.desiredPartnerGenders.length > 0
-  );
-}
-
-function storyComplete(draft: ProfileDraft): boolean {
-  return (
-    draft.aboutMe.trim().length > 0 &&
-    draft.aboutPartner.trim().length > 0 &&
-    draft.aboutRelationship.trim().length > 0
-  );
-}
 
 export function ProfileCompletenessHints({ draft }: { draft: ProfileDraft }) {
   const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());

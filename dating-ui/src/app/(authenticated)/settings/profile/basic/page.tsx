@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function SettingsProfileBasicPage() {
-  redirect('/onboarding/basic?edit=1');
+export default function SettingsProfileBasicRedirectPage() {
+  redirect('/profile?tab=edit#basic');
 }

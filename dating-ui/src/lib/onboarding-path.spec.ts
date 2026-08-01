@@ -24,7 +24,7 @@ describe('onboardingResumePath', () => {
   it('maps onboarding steps', () => {
     expect(onboardingResumePath(row('BASIC'))).toBe('/onboarding/basic');
     expect(onboardingResumePath(row('TEXTS'))).toBe('/onboarding/texts');
-    expect(onboardingResumePath(row('COMPLETED'))).toBe('/dating/profile');
+    expect(onboardingResumePath(row('COMPLETED'))).toBe('/profile');
   });
 
   it('edit=basic allows COMPLETED users to stay on basics', () => {

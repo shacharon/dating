@@ -44,7 +44,7 @@ export function MatchListPhotoGate() {
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/dating/profile#profile-photos"
+          href="/profile?tab=edit#photos"
           data-testid="match-photo-gate-cta"
           className="rounded bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 dark:bg-amber-700 dark:hover:bg-amber-600"
         >

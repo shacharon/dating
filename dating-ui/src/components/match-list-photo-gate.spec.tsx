@@ -6,7 +6,7 @@ const { listMyProfilePhotos } = vi.hoisted(() => ({
   listMyProfilePhotos: vi.fn(),
 }));
 
-vi.mock('@/lib/me-profile-api', () => ({
+vi.mock('@/lib/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
 
@@ -64,7 +64,7 @@ describe('MatchListPhotoGate', () => {
       ).toBeTruthy();
     });
     expect(screen.getByTestId('match-photo-gate-cta').getAttribute('href')).toBe(
-      '/dating/profile#profile-photos',
+      '/profile?tab=edit#photos',
     );
   });
 
