@@ -22,7 +22,7 @@ Current state:
 - Messages gated on send with progressive mute thresholds (Story 03); placeholder profanity removed
 - Violation storage, shared enforcement, and admin violations UI live (Stories 01–05)
 
-Risk: harassment, explicit spam, and inappropriate content can flow freely through the product.
+Risk addressed in-code: text gates + enforcement + admin ops UI. Prod go-live still requires Story 0 DPA + ≥7-day policy notice.
 
 ---
 
