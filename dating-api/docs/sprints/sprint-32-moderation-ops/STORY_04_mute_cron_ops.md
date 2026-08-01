@@ -1,10 +1,10 @@
 # Story 04 — Mute expiry cron + ops polish
 
-**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
+**Sprint 32 · Status: ✅ Done**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Sprint 30 `clearExpiredMutes()` exists  
-**Handoffs:** [architect](./handoffs/STORY_04_mute_cron_ops/agent-0-architect.md) · [dev](./handoffs/STORY_04_mute_cron_ops/agent-1-dev.md) · [CR](./handoffs/STORY_04_mute_cron_ops/agent-2-cr.md) 
+**Handoffs:** [architect](./handoffs/STORY_04_mute_cron_ops/agent-0-architect.md) · [dev](./handoffs/STORY_04_mute_cron_ops/agent-1-dev.md) · [CR](./handoffs/STORY_04_mute_cron_ops/agent-2-cr.md) · [PM](./handoffs/STORY_04_mute_cron_ops/agent-3-pm.md)
 
 ---
 
@@ -24,14 +24,16 @@ Don’t rely only on next-send `isUserBlocked` to clear temporary mutes; polish 
    - Link conversation id in UI (copyable) for message violations
 4. Tests for job/service invocation; no duplicate clears of indefinite mutes (`mutedUntil` null).
 
+**Shipped:** `MuteExpiryEnforcer` (15m setInterval); filters `userStatus` + `hasRecipient`; click-to-copy conversation id. No opsNote table.
+
 ---
 
 ## Acceptance criteria
 
-- [ ] Temporary mutes cleared on a schedule without requiring a send
-- [ ] Indefinite mutes untouched by cron
-- [ ] At least one Architect-locked polish item shipped
-- [ ] Tests green
+- [x] Temporary mutes cleared on a schedule without requiring a send
+- [x] Indefinite mutes untouched by cron
+- [x] At least one Architect-locked polish item shipped
+- [x] Tests green
 
 ---
 

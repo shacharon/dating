@@ -1,6 +1,6 @@
 # Sprint 32 — Content Moderation Ops
 
-**Status:** 🟡 **IN PROGRESS** — Stories 01–03 Done; Story 04 Agent 2 CR PASS → run Agent 3  
+**Status:** ✅ **Done** — Stories 01–04 accepted  
 **Priority:** P1 (post-launch ops; improves Sprint 30 admin + policy gaps)  
 **Depends on:** Sprint 30 Done (gates + `UserContentViolation` + `/admin/content-violations`)  
 **Does not block:** Sprint 31 match materialization (run in parallel / after as capacity allows)
@@ -23,15 +23,14 @@ Make moderation **operable by humans**:
 
 ---
 
-## Why (gap after Sprint 30)
+## Why (gap after Sprint 30) — closed
 
-| Have today | Missing |
-|------------|---------|
-| Violations list + preview + Unblock + **recipient/conversation** on message blocks | Mute expiry cron (Story 04) |
-| **Blocked/muted users** review queue with full phrase + recipient | Mute expiry cron |
-| Dating blocklist + sexual score ≥0.85 (`dating_policy`) + near-miss obs | Mute expiry cron |
-| Stats cards for muted/blocked counts | Mute expiry cron |
-| `clearExpiredMutes()` API | No cron / scheduled clear |
+| Have now | Was missing |
+|----------|-------------|
+| Message violation recipient + conversation | — |
+| Blocked/muted users review queue + full phrase | — |
+| Dating blocklist + sexual ≥0.85 + near-miss obs | — |
+| Mute expiry cron (15m) + admin status/recipient filters + copy conversation | — |
 
 ---
 
@@ -42,7 +41,7 @@ Make moderation **operable by humans**:
 | 01 | [Message violation context](./STORY_01_message_violation_context.md) | P0 | 0.5d | ✅ Done |
 | 02 | [Admin blocked-users + full review](./STORY_02_admin_blocked_users.md) | P0 | 1d | ✅ Done |
 | 03 | [Soft / dating policy layer](./STORY_03_soft_policy_layer.md) | P1 | 1d | ✅ Done |
-| 04 | [Mute expiry cron + ops polish](./STORY_04_mute_cron_ops.md) | P1 | 0.5d | Agent 2 PASS → run Agent 3 |
+| 04 | [Mute expiry cron + ops polish](./STORY_04_mute_cron_ops.md) | P1 | 0.5d | ✅ Done |
 
 **Order:** 01 → 02 → 03 → 04  
 **Agents:** 0 architect → 1 dev → 2 CR → 3 PM per story (same as Sprint 30). Skip Agent 4 unless Architect requires live HTTP.
@@ -55,8 +54,8 @@ Make moderation **operable by humans**:
 - [x] Admin can see blocked/muted users with latest flagged phrase + recipient identity
 - [x] Admin can Unblock with reason (keep Sprint 30 audit code)
 - [x] Soft policy or documented “no soft tier” decision shipped in Story 03
-- [ ] Temporary mutes cleared on a schedule (or Architect-locked equivalent)
-- [ ] Unit + admin HTTP tests green; no raw flagged text in **application** logs (admin API/UI only)
+- [x] Temporary mutes cleared on a schedule (or Architect-locked equivalent)
+- [x] Unit + admin HTTP tests green; no raw flagged text in **application** logs (admin API/UI only)
 
 ---
 
@@ -74,11 +73,12 @@ Make moderation **operable by humans**:
 - User self-serve appeal portal
 - Retroactive scan of historical messages
 - Per-category custom OpenAI score thresholds without product lock
+- HE/RTL dating blocklist; Redis leader for multi-instance mute cron
 
 ---
 
 ## References
 
 - Sprint 30 Story 05: `/admin/content-violations`
-- `ContentViolationService` / `AdminContentViolationsService`
-- OpenAI Moderation: binary `flagged` (sexual slang often not flagged)
+- `ContentViolationService` / `AdminContentViolationsService` / `MuteExpiryEnforcer`
+- OpenAI Moderation: binary `flagged` + dating policy layer (Story 03)
