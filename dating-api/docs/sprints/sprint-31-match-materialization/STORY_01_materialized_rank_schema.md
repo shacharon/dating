@@ -1,11 +1,11 @@
 # Story 01 — Materialized rank schema
 
-**Sprint 31 · Status: CR PASS → Agent 3 PM**  
+**Sprint 31 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** None (opens the sprint)
 
-**Handoff:** [`handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md`](./handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_01_materialized_rank_schema/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_01_materialized_rank_schema/agent-2-cr.md)
+**Handoff:** [`handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md`](./handoffs/STORY_01_materialized_rank_schema/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_01_materialized_rank_schema/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_01_materialized_rank_schema/agent-2-cr.md) · [`agent-3-pm.md`](./handoffs/STORY_01_materialized_rank_schema/agent-3-pm.md)
 
 ---
 
