@@ -1,14 +1,21 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { MessageStatus, type Prisma } from '@prisma/client';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
 import { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { ErrorCodes } from '../logging/error-codes';
+import { markHttpExceptionObservabilityLogged } from '../logging/observability-http.exception';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { hashConversationId } from '../analytics/hash-conversation-id';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { logProfanityIfDetected } from './conversation-message-profanity';
+import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { ContentViolationService } from '../content-moderation/content-violation.service';
+import { isContentModerationEnabled } from '../content-moderation/content-moderation.types';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationsService } from './me-conversations.service';
 import { NewMessageEmailService } from '../notifications/new-message-email.service';
@@ -28,6 +35,8 @@ const messageSelect = {
 } as const;
 
 const MAX_AFTER_POLL_LIMIT = 100;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 @Injectable()
 export class MeConversationMessagesService {
@@ -39,7 +48,128 @@ export class MeConversationMessagesService {
     private readonly realtime: RealtimePublisher,
     private readonly newMessageEmail: NewMessageEmailService,
     private readonly analytics: AnalyticsService,
+    private readonly moderation: OpenAIModerationClient,
+    private readonly contentViolations: ContentViolationService,
   ) {}
+
+  private async assertMessagingAllowed(userId: string): Promise<void> {
+    const status = await this.contentViolations.getUserViolationStatus(userId);
+    if (status.status !== 'messaging_muted') {
+      return;
+    }
+
+    const mutedUntil = status.mutedUntil;
+    const now = new Date();
+    if (mutedUntil != null && mutedUntil <= now) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          contentViolationStatus: 'ok',
+          contentViolationMutedUntil: null,
+        },
+      });
+      return;
+    }
+
+    this.obs.trace(
+      `messaging muted userId=${userId} mutedUntil=${mutedUntil?.toISOString() ?? 'null'}`,
+      ErrorCodes.CONTENT_MESSAGING_MUTED,
+    );
+    const ex = new ForbiddenException({
+      error: 'messaging_muted',
+      message:
+        'Messaging is temporarily restricted due to previous content violations',
+      details: {
+        mutedUntil: mutedUntil ? mutedUntil.toISOString() : null,
+      },
+    });
+    markHttpExceptionObservabilityLogged(ex);
+    throw ex;
+  }
+
+  private async moderateMessageText(
+    userId: string,
+    text: string,
+  ): Promise<void> {
+    const result = await this.moderation.checkContent(text);
+    if (result.failOpen || !result.flagged) {
+      return;
+    }
+
+    const category =
+      result.primaryCategory ?? result.categories[0] ?? 'unknown';
+
+    await this.contentViolations.recordViolation({
+      userId,
+      surface: 'message',
+      flaggedText: text,
+      category,
+      score: result.score,
+      action: 'blocked',
+    });
+
+    this.obs.trace(
+      `content moderation flagged userId=${userId} surface=message category=${category}`,
+      ErrorCodes.CONTENT_MODERATION_FLAGGED,
+    );
+
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - HOUR_MS);
+    const oneDayAgo = new Date(now.getTime() - DAY_MS);
+
+    const [hourly, daily, lifetime] = await Promise.all([
+      this.contentViolations.getViolationCount(userId, {
+        surface: 'message',
+        since: oneHourAgo,
+      }),
+      this.contentViolations.getViolationCount(userId, {
+        surface: 'message',
+        since: oneDayAgo,
+      }),
+      this.contentViolations.getViolationCount(userId, {
+        surface: 'message',
+      }),
+    ]);
+
+    let mutedUntil: Date | null | undefined;
+    let muteDuration: string | undefined;
+    if (lifetime >= 20) {
+      mutedUntil = null;
+      muteDuration = 'indefinitely';
+    } else if (daily >= 10) {
+      mutedUntil = new Date(now.getTime() + DAY_MS);
+      muteDuration = '24 hours';
+    } else if (hourly >= 3) {
+      mutedUntil = new Date(now.getTime() + HOUR_MS);
+      muteDuration = '1 hour';
+    }
+
+    if (muteDuration !== undefined) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          contentViolationStatus: 'messaging_muted',
+          contentViolationMutedUntil: mutedUntil ?? null,
+        },
+      });
+      this.obs.trace(
+        `content user muted userId=${userId} duration=${muteDuration} hourly=${hourly} daily=${daily} lifetime=${lifetime}`,
+        ErrorCodes.CONTENT_USER_MUTED,
+      );
+    }
+
+    const ex = new BadRequestException({
+      error: 'message_content_moderation_failed',
+      message: 'Your message contains inappropriate content',
+      details: {
+        category,
+        suggestion: 'Please rephrase your message respectfully',
+        ...(muteDuration ? { muted: muteDuration } : {}),
+      },
+    });
+    markHttpExceptionObservabilityLogged(ex);
+    throw ex;
+  }
 
   async listMessages(
     sessionUserId: string,
@@ -199,8 +329,15 @@ export class MeConversationMessagesService {
       throw new BadRequestException('Message text is required');
     }
 
+    if (isContentModerationEnabled()) {
+      await this.assertMessagingAllowed(sessionUserId);
+    }
+
     await this.messageRateLimit.consumeSendSlot(sessionUserId);
-    logProfanityIfDetected(this.obs, sessionUserId, conversationId, trimmed);
+
+    if (isContentModerationEnabled()) {
+      await this.moderateMessageText(sessionUserId, trimmed);
+    }
 
     const row = await this.prisma.message.create({
       data: {

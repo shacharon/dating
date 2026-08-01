@@ -1,10 +1,10 @@
 # Story 03 — Message moderation gate
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 0 complete → run Agent 1**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** Story 01 (moderation client + violation service)  
-**Handoffs:** [architect](./handoffs/STORY_03_message_gate/agent-0-architect.md)
+**Handoffs:** [architect](./handoffs/STORY_03_message_gate/agent-0-architect.md) · [dev](./handoffs/STORY_03_message_gate/agent-1-dev.md)
 
 ---
 
@@ -75,16 +75,16 @@ Gate all messages through OpenAI moderation before sending. Block explicit/harmf
 
 ## Acceptance criteria
 
-- [ ] POST `/api/v1/me/conversations/:id/messages` with flagged text → 400 with category
-- [ ] Clean message → sends normally (moderation adds ~100-200ms latency)
-- [ ] 3 violations in 1 hour → user muted for 1 hour
-- [ ] 10 violations in 24 hours → user muted for 24 hours  
-- [ ] 20 lifetime violations → user muted indefinitely
-- [ ] Muted user attempts send → 403 "Messaging is temporarily restricted"
-- [ ] Mute expiry checked on each send (auto-clear if expired)
-- [ ] Placeholder profanity check removed
-- [ ] Integration tests cover flagged/clean/muted scenarios
-- [ ] No raw message text in logs
+- [x] POST `/api/v1/me/conversations/:id/messages` with flagged text → 400 with category
+- [x] Clean message → sends normally (moderation adds ~100-200ms latency)
+- [x] 3 violations in 1 hour → user muted for 1 hour
+- [x] 10 violations in 24 hours → user muted for 24 hours  
+- [x] 20 lifetime violations → user muted indefinitely
+- [x] Muted user attempts send → 403 "Messaging is temporarily restricted"
+- [x] Mute expiry checked on each send (auto-clear if expired)
+- [x] Placeholder profanity check removed
+- [x] Integration tests cover flagged/clean/muted scenarios
+- [x] No raw message text in logs
 
 ---
 

@@ -4758,6 +4758,65 @@ describe('me profile HTTP (integration)', () => {
     });
   });
 
+  describe('Sprint 30 Story 3: message content moderation', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_message_mod_1';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    };
+
+    it('returns 400 when message text is flagged', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      moderationClientMock.checkContent.mockResolvedValue({
+        flagged: true,
+        categories: ['harassment'],
+        primaryCategory: 'harassment',
+        score: 0.9,
+        failOpen: false,
+      });
+      contentViolationsMock.getViolationCount.mockResolvedValue(1);
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'explicit harassment' })
+        .expect(400);
+
+      expect(res.body).toMatchObject({
+        error: 'message_content_moderation_failed',
+        details: { category: 'harassment' },
+      });
+      expect(contentViolationsMock.recordViolation).toHaveBeenCalled();
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when user is messaging_muted', async () => {
+      const raw = await loginAndCookie();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      contentViolationsMock.getUserViolationStatus.mockResolvedValue({
+        status: 'messaging_muted',
+        mutedUntil: new Date(Date.now() + 60 * 60 * 1000),
+        violationCount: 3,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello' })
+        .expect(403);
+
+      expect(res.body).toMatchObject({ error: 'messaging_muted' });
+      expect(moderationClientMock.checkContent).not.toHaveBeenCalled();
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── Sprint 3 Story 6: message safety guardrails ───────────────────────────
 
   describe('Sprint 3 Story 6: message safety guardrails', () => {

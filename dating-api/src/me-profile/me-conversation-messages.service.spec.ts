@@ -16,6 +16,9 @@ import type { StructuredObservabilityService } from '../logging/structured-obser
 import type { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
 import type { NewMessageEmailService } from '../notifications/new-message-email.service';
+import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import type { ContentViolationService } from '../content-moderation/content-violation.service';
+import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 
 describe('MeConversationMessagesService', () => {
   const sessionUserId = 'user_viewer_1';
@@ -27,6 +30,9 @@ describe('MeConversationMessagesService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
+    },
+    user: {
+      update: jest.fn().mockResolvedValue({}),
     },
   } as unknown as PrismaService;
 
@@ -51,6 +57,26 @@ describe('MeConversationMessagesService', () => {
     maybeNotifyBestEffort: jest.fn().mockResolvedValue(undefined),
   } as unknown as NewMessageEmailService;
 
+  const moderation = {
+    checkContent: jest.fn().mockResolvedValue({
+      flagged: false,
+      categories: [],
+      primaryCategory: null,
+      score: 0,
+      failOpen: false,
+    }),
+  };
+
+  const contentViolations = {
+    getUserViolationStatus: jest.fn().mockResolvedValue({
+      status: 'ok',
+      mutedUntil: null,
+      violationCount: 0,
+    }),
+    recordViolation: jest.fn().mockResolvedValue(undefined),
+    getViolationCount: jest.fn().mockResolvedValue(0),
+  };
+
   let service: MeConversationMessagesService;
 
   beforeEach(() => {
@@ -60,6 +86,24 @@ describe('MeConversationMessagesService', () => {
       undefined,
     );
     (realtime.publishToUsers as jest.Mock).mockReset();
+    moderation.checkContent.mockResolvedValue({
+      flagged: false,
+      categories: [],
+      primaryCategory: null,
+      score: 0,
+      failOpen: false,
+    });
+    contentViolations.getUserViolationStatus.mockResolvedValue({
+      status: 'ok',
+      mutedUntil: null,
+      violationCount: 0,
+    });
+    contentViolations.recordViolation.mockResolvedValue(undefined);
+    contentViolations.getViolationCount.mockResolvedValue(0);
+    (prisma.user.update as jest.Mock).mockResolvedValue({});
+    jest
+      .spyOn(contentModerationTypes, 'isContentModerationEnabled')
+      .mockReturnValue(true);
     const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationMessagesService(
       prisma,
@@ -69,6 +113,8 @@ describe('MeConversationMessagesService', () => {
       realtime,
       newMessageEmail,
       analytics,
+      moderation as unknown as OpenAIModerationClient,
+      contentViolations as unknown as ContentViolationService,
     );
     (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(
       {
@@ -80,6 +126,10 @@ describe('MeConversationMessagesService', () => {
         user2LastReadAt: null,
       },
     );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('creates message and returns MessageDto for ACTIVE participant with valid text', async () => {
@@ -175,34 +225,198 @@ describe('MeConversationMessagesService', () => {
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
-  it('still creates message when profanity is detected and logs profanity trace', async () => {
+  it('throws BadRequest when message is flagged and does not create', async () => {
+    moderation.checkContent.mockResolvedValue({
+      flagged: true,
+      categories: ['harassment'],
+      primaryCategory: 'harassment',
+      score: 0.9,
+      failOpen: false,
+    });
+    contentViolations.getViolationCount.mockResolvedValue(1);
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'bad stuff'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(contentViolations.recordViolation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: sessionUserId,
+        surface: 'message',
+        flaggedText: 'bad stuff',
+        category: 'harassment',
+        action: 'blocked',
+      }),
+    );
+    expect(prisma.message.create).not.toHaveBeenCalled();
+    expect(realtime.publishToUsers).not.toHaveBeenCalled();
+  });
+
+  it('mutes for 1 hour on 3rd hourly message violation', async () => {
+    moderation.checkContent.mockResolvedValue({
+      flagged: true,
+      categories: ['sexual'],
+      primaryCategory: 'sexual',
+      score: 0.8,
+      failOpen: false,
+    });
+    contentViolations.getViolationCount
+      .mockResolvedValueOnce(3) // hourly
+      .mockResolvedValueOnce(3) // daily
+      .mockResolvedValueOnce(3); // lifetime
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'flagged'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: sessionUserId },
+      data: {
+        contentViolationStatus: 'messaging_muted',
+        contentViolationMutedUntil: expect.any(Date),
+      },
+    });
+    const mutedUntil = (prisma.user.update as jest.Mock).mock.calls[0][0].data
+      .contentViolationMutedUntil as Date;
+    const delta = mutedUntil.getTime() - Date.now();
+    expect(delta).toBeGreaterThan(55 * 60 * 1000);
+    expect(delta).toBeLessThan(65 * 60 * 1000);
+  });
+
+  it('mutes for 24 hours on 10th daily message violation', async () => {
+    moderation.checkContent.mockResolvedValue({
+      flagged: true,
+      categories: ['hate'],
+      primaryCategory: 'hate',
+      score: 0.7,
+      failOpen: false,
+    });
+    contentViolations.getViolationCount
+      .mockResolvedValueOnce(2) // hourly
+      .mockResolvedValueOnce(10) // daily
+      .mockResolvedValueOnce(10); // lifetime
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'flagged'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const mutedUntil = (prisma.user.update as jest.Mock).mock.calls[0][0].data
+      .contentViolationMutedUntil as Date;
+    const delta = mutedUntil.getTime() - Date.now();
+    expect(delta).toBeGreaterThan(23 * 60 * 60 * 1000);
+    expect(delta).toBeLessThan(25 * 60 * 60 * 1000);
+  });
+
+  it('mutes indefinitely on 20th lifetime message violation', async () => {
+    moderation.checkContent.mockResolvedValue({
+      flagged: true,
+      categories: ['violence'],
+      primaryCategory: 'violence',
+      score: 0.6,
+      failOpen: false,
+    });
+    contentViolations.getViolationCount
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(20);
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'flagged'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: sessionUserId },
+      data: {
+        contentViolationStatus: 'messaging_muted',
+        contentViolationMutedUntil: null,
+      },
+    });
+  });
+
+  it('throws Forbidden when messaging_muted and mute still active', async () => {
+    contentViolations.getUserViolationStatus.mockResolvedValue({
+      status: 'messaging_muted',
+      mutedUntil: new Date(Date.now() + 60 * 60 * 1000),
+      violationCount: 3,
+    });
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(messageRateLimit.consumeSendSlot).not.toHaveBeenCalled();
+    expect(moderation.checkContent).not.toHaveBeenCalled();
+    expect(prisma.message.create).not.toHaveBeenCalled();
+  });
+
+  it('clears expired mute and allows send', async () => {
+    contentViolations.getUserViolationStatus.mockResolvedValue({
+      status: 'messaging_muted',
+      mutedUntil: new Date(Date.now() - 60_000),
+      violationCount: 3,
+    });
     (prisma.message.create as jest.Mock).mockResolvedValue({
-      id: 'msg_prof',
+      id: 'msg_after_mute',
       conversationId,
       senderId: sessionUserId,
-      text: 'badword1 hello',
+      text: 'Hi',
       createdAt: new Date(),
       status: MessageStatus.SENT,
     });
 
-    await service.sendMessage(
-      sessionUserId,
-      conversationId,
-      'badword1 hello',
-    );
+    await service.sendMessage(sessionUserId, conversationId, 'Hi');
 
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: sessionUserId },
+      data: {
+        contentViolationStatus: 'ok',
+        contentViolationMutedUntil: null,
+      },
+    });
     expect(prisma.message.create).toHaveBeenCalled();
-    expect(messageRateLimit.consumeSendSlot).toHaveBeenCalledWith(
-      sessionUserId,
-    );
-    expect(obs.trace).toHaveBeenCalledWith(
-      expect.stringContaining('profanity detected'),
-      ErrorCodes.ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED,
-    );
-    expect(obs.trace).toHaveBeenCalledWith(
-      expect.stringContaining(conversationId),
-      ErrorCodes.ME_CONVERSATIONS_MESSAGE_SEND_OK,
-    );
+  });
+
+  it('allows send when moderation fail-opens', async () => {
+    moderation.checkContent.mockResolvedValue({
+      flagged: false,
+      categories: [],
+      primaryCategory: null,
+      score: 0,
+      failOpen: true,
+    });
+    (prisma.message.create as jest.Mock).mockResolvedValue({
+      id: 'msg_failopen',
+      conversationId,
+      senderId: sessionUserId,
+      text: 'maybe',
+      createdAt: new Date(),
+      status: MessageStatus.SENT,
+    });
+
+    await service.sendMessage(sessionUserId, conversationId, 'maybe');
+
+    expect(contentViolations.recordViolation).not.toHaveBeenCalled();
+    expect(prisma.message.create).toHaveBeenCalled();
+  });
+
+  it('skips mute and moderation when feature flag is off', async () => {
+    jest
+      .spyOn(contentModerationTypes, 'isContentModerationEnabled')
+      .mockReturnValue(false);
+    (prisma.message.create as jest.Mock).mockResolvedValue({
+      id: 'msg_flag_off',
+      conversationId,
+      senderId: sessionUserId,
+      text: 'Hi',
+      createdAt: new Date(),
+      status: MessageStatus.SENT,
+    });
+
+    await service.sendMessage(sessionUserId, conversationId, 'Hi');
+
+    expect(contentViolations.getUserViolationStatus).not.toHaveBeenCalled();
+    expect(moderation.checkContent).not.toHaveBeenCalled();
+    expect(prisma.message.create).toHaveBeenCalled();
   });
 
   it('throws BadRequestException when text is empty after trim', async () => {
