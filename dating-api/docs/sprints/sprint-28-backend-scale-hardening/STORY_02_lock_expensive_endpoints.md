@@ -1,11 +1,11 @@
 # Story 02 — Lock expensive endpoints
 
-**Sprint 28 · Status: IN REVIEW** (Agent 1 implemented → Agent 2 CR)  
+**Sprint 28 · Status: IN REVIEW** (Agent 2 CR **PASS** → Agent 3 PM)  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Prefer after Story 01 (independent OK)
 
-**Handoffs:** [architect](./handoffs/STORY_02_lock_expensive_endpoints/agent-0-architect.md) · [dev](./handoffs/STORY_02_lock_expensive_endpoints/agent-1-dev.md)
+**Handoffs:** [architect](./handoffs/STORY_02_lock_expensive_endpoints/agent-0-architect.md) · [dev](./handoffs/STORY_02_lock_expensive_endpoints/agent-1-dev.md) · [cr](./handoffs/STORY_02_lock_expensive_endpoints/agent-2-cr.md)
 
 ---
 
