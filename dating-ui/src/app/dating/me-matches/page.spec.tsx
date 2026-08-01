@@ -50,10 +50,12 @@ vi.mock('next/link', () => ({
   default ({
     children,
     href,
+    scroll: _scroll,
     ...props
   }: {
     children: React.ReactNode;
     href: string;
+    scroll?: boolean;
   }) {
     return <a href={href} {...props}>{children}</a>;
   },

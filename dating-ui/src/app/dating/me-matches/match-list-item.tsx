@@ -10,6 +10,7 @@ import {
   matchListSecondaryMeta,
 } from './match-display';
 import { formatHardBlockReason } from './hard-block-display';
+import { markMatchesScrollForRestore } from './me-matches-scroll';
 
 type ListCopy = AppCopySchema['matches']['list'];
 
@@ -56,6 +57,8 @@ export function MatchListItem({
     <li>
       <Link
         href={`/dating/me-matches/${m.id}`}
+        scroll={false}
+        onClick={() => markMatchesScrollForRestore()}
         className={
           hardBlocked
             ? 'block rounded-xl border border-amber-200/80 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/20'

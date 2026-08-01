@@ -1,13 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { submitMyProfileForAnalysis } from '@/lib/me-profile-api';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { useAppLocale } from '@/lib/i18n';
 import { useInfiniteMatches } from './use-infinite-matches';
 import { MatchListItem } from './match-list-item';
+import {
+  applyMatchesScrollY,
+  consumeMatchesScrollRestore,
+} from './me-matches-scroll';
 
 export default function MeMatchesPageClient() {
   const { locale, copy } = useAppLocale();
@@ -25,6 +29,20 @@ export default function MeMatchesPageClient() {
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshSuccess, setRefreshSuccess] = useState<string | null>(null);
+  const scrollRestoreDone = useRef(false);
+
+  useEffect(() => {
+    if (scrollRestoreDone.current) return;
+    if (loading) return;
+
+    const y = consumeMatchesScrollRestore();
+    scrollRestoreDone.current = true;
+    if (y == null) return;
+
+    requestAnimationFrame(() => {
+      applyMatchesScrollY(y);
+    });
+  }, [loading, matches.length]);
 
   const handleRefreshAnalysis = async () => {
     setRefreshBusy(true);
