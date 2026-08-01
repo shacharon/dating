@@ -80,6 +80,7 @@ describe('OpenAIModerationClient', () => {
     expect(result.categories).toEqual(['sexual']);
     expect(result.primaryCategory).toBe('sexual');
     expect(result.score).toBe(0.95);
+    expect(result.sexualScore).toBe(0.95);
     expect(result.failOpen).toBe(false);
   });
 

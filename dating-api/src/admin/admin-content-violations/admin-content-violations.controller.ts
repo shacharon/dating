@@ -42,6 +42,7 @@ export class AdminContentViolationsController {
       surface: query.surface,
       category: query.category,
       userId: query.userId,
+      action: query.action,
       limit: query.limit ?? 50,
       offset: query.offset ?? 0,
       includeFullText: isIncludeFullTextQuery(query.includeFullText),

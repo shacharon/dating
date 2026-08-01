@@ -30,8 +30,13 @@ import { OpenAIModerationClient } from '../content-moderation/openai-moderation.
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import {
   isContentModerationEnabled,
+  datingPolicySexualScoreMin,
   type ContentViolationSurface,
 } from '../content-moderation/content-moderation.types';
+import {
+  evaluateContentPolicy,
+  isDatingPolicyNearMiss,
+} from '../content-moderation/dating-policy';
 import type {
   CreateMeProfileDto,
   MeLatestAnalysisResponseDto,
@@ -436,25 +441,39 @@ export class MeProfileService {
       const trimmed = value.trim();
       if (!trimmed) continue;
 
-      const result = await this.moderation.checkContent(trimmed);
-      if (result.failOpen || !result.flagged) continue;
+      const moderation = await this.moderation.checkContent(trimmed);
+      const decision = evaluateContentPolicy(trimmed, moderation);
 
-      const category =
-        result.primaryCategory ?? result.categories[0] ?? 'unknown';
+      if (decision.allow) {
+        if (isDatingPolicyNearMiss(trimmed, moderation)) {
+          this.obs.trace(
+            `content moderation near-miss sexualScore=${moderation.sexualScore} threshold=${datingPolicySexualScoreMin()} surface=${surface}`,
+            ErrorCodes.CONTENT_MODERATION_NEAR_MISS,
+          );
+        }
+        continue;
+      }
 
       await this.contentViolations.recordViolation({
         userId,
         surface,
         flaggedText: trimmed,
-        category,
-        score: result.score,
-        action: 'blocked',
+        category: decision.category,
+        score: decision.score,
+        action: decision.action,
       });
 
-      this.obs.trace(
-        `content moderation flagged userId=${userId} field=${field} category=${category}`,
-        ErrorCodes.CONTENT_MODERATION_FLAGGED,
-      );
+      if (decision.source === 'openai') {
+        this.obs.trace(
+          `content moderation flagged userId=${userId} field=${field} category=${decision.category}`,
+          ErrorCodes.CONTENT_MODERATION_FLAGGED,
+        );
+      } else {
+        this.obs.trace(
+          `content moderation dating-policy userId=${userId} field=${field} source=${decision.source} category=${decision.category}`,
+          ErrorCodes.CONTENT_MODERATION_DATING_POLICY,
+        );
+      }
 
       await this.contentViolations.enforceViolationThreshold(userId, 'profile');
 
@@ -463,7 +482,7 @@ export class MeProfileService {
         message: 'Your profile contains inappropriate content',
         details: {
           field,
-          category,
+          category: decision.category,
           suggestion:
             'Please rephrase without explicit or harmful content',
         },

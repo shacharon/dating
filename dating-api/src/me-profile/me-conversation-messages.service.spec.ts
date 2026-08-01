@@ -63,6 +63,7 @@ describe('MeConversationMessagesService', () => {
       categories: [],
       primaryCategory: null,
       score: 0,
+      sexualScore: null,
       failOpen: false,
     }),
   };
@@ -96,6 +97,7 @@ describe('MeConversationMessagesService', () => {
       categories: [],
       primaryCategory: null,
       score: 0,
+      sexualScore: null,
       failOpen: false,
     });
     contentViolations.getUserViolationStatus.mockResolvedValue({
@@ -241,6 +243,7 @@ describe('MeConversationMessagesService', () => {
       categories: ['harassment'],
       primaryCategory: 'harassment',
       score: 0.9,
+      sexualScore: null,
       failOpen: false,
     });
 
@@ -267,12 +270,41 @@ describe('MeConversationMessagesService', () => {
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
 
+  it('throws BadRequest for dating blocklist when OpenAI does not flag', async () => {
+    moderation.checkContent.mockResolvedValue({
+      flagged: false,
+      categories: [],
+      primaryCategory: null,
+      score: 0.2,
+      sexualScore: 0.2,
+      failOpen: false,
+    });
+
+    await expect(
+      service.sendMessage(sessionUserId, conversationId, 'i want to fuck'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(contentViolations.recordViolation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: sessionUserId,
+        surface: 'message',
+        flaggedText: 'i want to fuck',
+        category: 'dating_policy',
+        action: 'blocked',
+        conversationId,
+        recipientUserId: otherUserId,
+      }),
+    );
+    expect(prisma.message.create).not.toHaveBeenCalled();
+  });
+
   it('includes muteLabel from enforcement in BadRequest details', async () => {
     moderation.checkContent.mockResolvedValue({
       flagged: true,
       categories: ['sexual'],
       primaryCategory: 'sexual',
       score: 0.8,
+      sexualScore: null,
       failOpen: false,
     });
     contentViolations.enforceViolationThreshold.mockResolvedValue({
@@ -333,6 +365,7 @@ describe('MeConversationMessagesService', () => {
       categories: [],
       primaryCategory: null,
       score: 0,
+      sexualScore: null,
       failOpen: true,
     });
     (prisma.message.create as jest.Mock).mockResolvedValue({

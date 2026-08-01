@@ -84,6 +84,7 @@ describe('me profile HTTP (integration)', () => {
       categories: [],
       primaryCategory: null,
       score: 0,
+      sexualScore: null,
       failOpen: false,
     }),
   };
@@ -291,6 +292,7 @@ describe('me profile HTTP (integration)', () => {
       categories: [],
       primaryCategory: null,
       score: 0,
+      sexualScore: null,
       failOpen: false,
     });
     contentViolationsMock.getUserViolationStatus.mockResolvedValue({
@@ -644,6 +646,7 @@ describe('me profile HTTP (integration)', () => {
       categories: ['sexual'],
       primaryCategory: 'sexual',
       score: 0.95,
+      sexualScore: null,
       failOpen: false,
     });
     contentViolationsMock.getViolationCount.mockResolvedValue(1);
@@ -4789,6 +4792,7 @@ describe('me profile HTTP (integration)', () => {
         categories: ['harassment'],
         primaryCategory: 'harassment',
         score: 0.9,
+        sexualScore: null,
         failOpen: false,
       });
       contentViolationsMock.getViolationCount.mockResolvedValue(1);

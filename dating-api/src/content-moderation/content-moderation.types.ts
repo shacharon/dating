@@ -50,8 +50,26 @@ export type ModerationResult = {
   categories: string[];
   primaryCategory: string | null;
   score: number;
+  /** OpenAI `category_scores.sexual`; `null` when fail-open / missing. */
+  sexualScore: number | null;
   failOpen: boolean;
 };
+
+export const DATING_POLICY_CATEGORY = 'dating_policy';
+
+export const DATING_POLICY_SEXUAL_SCORE_MIN_DEFAULT = 0.85;
+
+export const DATING_POLICY_NEAR_MISS_FLOOR = 0.5;
+
+export type ContentPolicyDecision =
+  | { allow: true }
+  | {
+      allow: false;
+      source: 'openai' | 'dating_blocklist' | 'dating_score';
+      category: string;
+      score: number | null;
+      action: 'blocked';
+    };
 
 /** Max characters sent to Moderation API (~3k token budget). */
 export const MODERATION_INPUT_MAX_CHARS = 12_000;
@@ -71,6 +89,29 @@ export function isContentModerationEnabled(
   const raw = env.CONTENT_MODERATION_ENABLED?.trim().toLowerCase();
   if (raw === undefined || raw === '') return true;
   return raw !== '0' && raw !== 'false' && raw !== 'off' && raw !== 'no';
+}
+
+/** Unset → enabled. Explicit 0/false/off/no → disabled. */
+export function isDatingPolicyEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = env.DATING_POLICY_ENABLED?.trim().toLowerCase();
+  if (raw === undefined || raw === '') return true;
+  return raw !== '0' && raw !== 'false' && raw !== 'off' && raw !== 'no';
+}
+
+export function datingPolicySexualScoreMin(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env.DATING_POLICY_SEXUAL_SCORE_MIN?.trim();
+  if (raw === undefined || raw === '') {
+    return DATING_POLICY_SEXUAL_SCORE_MIN_DEFAULT;
+  }
+  const n = Number.parseFloat(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 1) {
+    return DATING_POLICY_SEXUAL_SCORE_MIN_DEFAULT;
+  }
+  return n;
 }
 
 export function pickPrimaryCategory(

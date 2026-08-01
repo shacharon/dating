@@ -316,6 +316,22 @@ describe('admin content violations HTTP (integration)', () => {
     expect(res.body.violations[0].flaggedText).toBe('full text for review');
   });
 
+  it('filters violations list by action=blocked', async () => {
+    prismaMock.userContentViolation.findMany.mockResolvedValue([]);
+    prismaMock.userContentViolation.count.mockResolvedValue(0);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/content-violations?action=blocked')
+      .set('Cookie', cookieHeader(ADMIN_USER_ID))
+      .expect(200);
+
+    expect(prismaMock.userContentViolation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ action: 'blocked' }),
+      }),
+    );
+  });
+
   it('returns empty blocked-users after unblock mock clears status', async () => {
     prismaMock.user.update.mockResolvedValue({});
     prismaMock.user.findMany.mockResolvedValue([]);

@@ -14,6 +14,11 @@ export class ListAdminContentViolationsQueryDto {
   @IsString()
   userId?: string;
 
+  /** Exact match: `blocked` | `warned`. */
+  @IsOptional()
+  @IsString()
+  action?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -792,6 +792,7 @@ export class EligibilityTestHarness {
           categories: [],
           primaryCategory: null,
           score: 0,
+          sexualScore: null,
           failOpen: false,
         }),
       })

@@ -15,7 +15,11 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import { PrismaService } from '../prisma/prisma.service';
 import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
-import { isContentModerationEnabled } from '../content-moderation/content-moderation.types';
+import { isContentModerationEnabled, datingPolicySexualScoreMin } from '../content-moderation/content-moderation.types';
+import {
+  evaluateContentPolicy,
+  isDatingPolicyNearMiss,
+} from '../content-moderation/dating-policy';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationsService } from './me-conversations.service';
 import { NewMessageEmailService } from '../notifications/new-message-email.service';
@@ -79,29 +83,41 @@ export class MeConversationMessagesService {
     text: string,
     context: { conversationId: string; recipientUserId: string },
   ): Promise<void> {
-    const result = await this.moderation.checkContent(text);
-    if (result.failOpen || !result.flagged) {
+    const moderation = await this.moderation.checkContent(text);
+    const decision = evaluateContentPolicy(text, moderation);
+
+    if (decision.allow) {
+      if (isDatingPolicyNearMiss(text, moderation)) {
+        this.obs.trace(
+          `content moderation near-miss sexualScore=${moderation.sexualScore} threshold=${datingPolicySexualScoreMin()} surface=message`,
+          ErrorCodes.CONTENT_MODERATION_NEAR_MISS,
+        );
+      }
       return;
     }
-
-    const category =
-      result.primaryCategory ?? result.categories[0] ?? 'unknown';
 
     await this.contentViolations.recordViolation({
       userId,
       surface: 'message',
       flaggedText: text,
-      category,
-      score: result.score,
-      action: 'blocked',
+      category: decision.category,
+      score: decision.score,
+      action: decision.action,
       conversationId: context.conversationId,
       recipientUserId: context.recipientUserId,
     });
 
-    this.obs.trace(
-      `content moderation flagged userId=${userId} surface=message category=${category} conversationId=${context.conversationId} recipientUserId=${context.recipientUserId}`,
-      ErrorCodes.CONTENT_MODERATION_FLAGGED,
-    );
+    if (decision.source === 'openai') {
+      this.obs.trace(
+        `content moderation flagged userId=${userId} surface=message category=${decision.category} conversationId=${context.conversationId} recipientUserId=${context.recipientUserId}`,
+        ErrorCodes.CONTENT_MODERATION_FLAGGED,
+      );
+    } else {
+      this.obs.trace(
+        `content moderation dating-policy userId=${userId} surface=message source=${decision.source} category=${decision.category} conversationId=${context.conversationId} recipientUserId=${context.recipientUserId}`,
+        ErrorCodes.CONTENT_MODERATION_DATING_POLICY,
+      );
+    }
 
     const enforcement = await this.contentViolations.enforceViolationThreshold(
       userId,
@@ -112,7 +128,7 @@ export class MeConversationMessagesService {
       error: 'message_content_moderation_failed',
       message: 'Your message contains inappropriate content',
       details: {
-        category,
+        category: decision.category,
         suggestion: 'Please rephrase your message respectfully',
         ...(enforcement.muteLabel ? { muted: enforcement.muteLabel } : {}),
       },

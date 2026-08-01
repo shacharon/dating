@@ -24,7 +24,7 @@ export class ContentViolationService {
     surface: ContentViolationSurface;
     flaggedText: string;
     category: string;
-    score: number;
+    score: number | null;
     action: ContentViolationAction;
     /** Message surface only — MutualMatch id */
     conversationId?: string | null;

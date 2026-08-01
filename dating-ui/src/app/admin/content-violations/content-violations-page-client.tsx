@@ -36,6 +36,7 @@ export default function AdminContentViolationsPageClient() {
   const [total, setTotal] = useState(0);
   const [surface, setSurface] = useState('');
   const [category, setCategory] = useState('');
+  const [action, setAction] = useState('');
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +51,7 @@ export default function AdminContentViolationsPageClient() {
         listAdminContentViolations({
           surface: surface || undefined,
           category: category || undefined,
+          action: action || undefined,
           userId: userId.trim() || undefined,
           limit: 50,
           offset: 0,
@@ -70,7 +72,7 @@ export default function AdminContentViolationsPageClient() {
     } finally {
       setLoading(false);
     }
-  }, [surface, category, userId]);
+  }, [surface, category, action, userId]);
 
   useEffect(() => {
     void load();
@@ -274,6 +276,19 @@ export default function AdminContentViolationsPageClient() {
               <option value="harassment">harassment</option>
               <option value="violence">violence</option>
               <option value="self-harm">self-harm</option>
+              <option value="dating_policy">dating_policy</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Action
+            <select
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              <option value="">All</option>
+              <option value="blocked">blocked</option>
+              <option value="warned">warned</option>
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">

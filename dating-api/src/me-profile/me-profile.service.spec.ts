@@ -133,6 +133,7 @@ describe('MeProfileService', () => {
         categories: [],
         primaryCategory: null,
         score: 0,
+        sexualScore: null,
         failOpen: false,
       }),
     };
@@ -1180,6 +1181,7 @@ describe('MeProfileService', () => {
         categories: ['sexual'],
         primaryCategory: 'sexual',
         score: 0.9,
+        sexualScore: null,
         failOpen: false,
       });
 
@@ -1203,6 +1205,32 @@ describe('MeProfileService', () => {
       expect(prisma.userProfile.create).not.toHaveBeenCalled();
     });
 
+    it('throws BadRequest for dating blocklist when OpenAI does not flag', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(null);
+      moderation.checkContent.mockResolvedValue({
+        flagged: false,
+        categories: [],
+        primaryCategory: null,
+        score: 0.1,
+        sexualScore: 0.1,
+        failOpen: false,
+      });
+
+      await expect(
+        service.createForUser(userId, { aboutMe: 'wanna fuck' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(contentViolations.recordViolation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          surface: 'profile_aboutMe',
+          category: 'dating_policy',
+          action: 'blocked',
+        }),
+      );
+      expect(prisma.userProfile.create).not.toHaveBeenCalled();
+    });
+
     it('sets profile_edit_blocked on 3rd profile violation', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(profileRow(baseRow));
       moderation.checkContent.mockResolvedValue({
@@ -1210,6 +1238,7 @@ describe('MeProfileService', () => {
         categories: ['hate'],
         primaryCategory: 'hate',
         score: 0.8,
+        sexualScore: null,
         failOpen: false,
       });
       contentViolations.enforceViolationThreshold.mockResolvedValue({
@@ -1255,6 +1284,7 @@ describe('MeProfileService', () => {
         categories: [],
         primaryCategory: null,
         score: 0,
+        sexualScore: null,
         failOpen: true,
       });
 

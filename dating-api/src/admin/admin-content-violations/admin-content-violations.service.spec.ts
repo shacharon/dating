@@ -125,6 +125,19 @@ describe('AdminContentViolationsService', () => {
     });
   });
 
+  it('filters violations by action', async () => {
+    prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([]);
+    prisma.userContentViolation.count = jest.fn().mockResolvedValue(0);
+
+    await service.listViolations({ action: 'blocked' });
+
+    expect(prisma.userContentViolation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { action: 'blocked' },
+      }),
+    );
+  });
+
   it('includes flaggedText on list when includeFullText is true', async () => {
     prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([
       {

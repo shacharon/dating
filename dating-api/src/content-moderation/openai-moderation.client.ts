@@ -15,6 +15,7 @@ const emptyClean = (failOpen: boolean): ModerationResult => ({
   categories: [],
   primaryCategory: null,
   score: 0,
+  sexualScore: null,
   failOpen,
 });
 
@@ -71,12 +72,18 @@ export class OpenAIModerationClient {
         scoreMap,
         categories,
       );
+      const rawSexual = scoreMap.sexual;
+      const sexualScore =
+        typeof rawSexual === 'number' && Number.isFinite(rawSexual)
+          ? rawSexual
+          : null;
 
       return {
         flagged: result.flagged === true,
         categories,
         primaryCategory,
         score,
+        sexualScore,
         failOpen: false,
       };
     } catch (err: unknown) {

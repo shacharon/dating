@@ -30,6 +30,7 @@ export class AdminContentViolationsService {
     surface?: string;
     category?: string;
     userId?: string;
+    action?: string;
     limit?: number;
     offset?: number;
     includeFullText?: boolean;
@@ -42,10 +43,12 @@ export class AdminContentViolationsService {
       surface?: string;
       category?: string;
       userId?: string;
+      action?: string;
     } = {};
     if (filters.surface?.trim()) where.surface = filters.surface.trim();
     if (filters.category?.trim()) where.category = filters.category.trim();
     if (filters.userId?.trim()) where.userId = filters.userId.trim();
+    if (filters.action?.trim()) where.action = filters.action.trim();
 
     const [rows, total] = await Promise.all([
       this.prisma.userContentViolation.findMany({

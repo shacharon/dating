@@ -475,6 +475,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
           categories: [],
           primaryCategory: null,
           score: 0,
+          sexualScore: null,
           failOpen: false,
         }),
       })

@@ -85,6 +85,7 @@ export type ListAdminContentViolationsFilters = {
   surface?: string;
   category?: string;
   userId?: string;
+  action?: string;
   limit?: number;
   offset?: number;
 };
@@ -97,6 +98,7 @@ export async function listAdminContentViolations(
   if (filters.surface) params.set('surface', filters.surface);
   if (filters.category) params.set('category', filters.category);
   if (filters.userId) params.set('userId', filters.userId);
+  if (filters.action) params.set('action', filters.action);
   if (filters.limit != null) params.set('limit', String(filters.limit));
   if (filters.offset != null) params.set('offset', String(filters.offset));
 
