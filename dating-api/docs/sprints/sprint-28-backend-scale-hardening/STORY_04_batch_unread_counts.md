@@ -1,9 +1,11 @@
 # Story 04 — Batch unread counts
 
-**Sprint 28 · Status: PLANNED**  
+**Sprint 28 · Status: IN REVIEW** (Agent 0 architect lock complete → run Agent 1)  
 **Priority:** P1  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 03 helps but is not a hard blocker
+
+**Handoffs:** [architect](./handoffs/STORY_04_batch_unread_counts/agent-0-architect.md)
 
 ---
 
