@@ -1,11 +1,11 @@
 # Story 05 — Cutover + deprecate request rebuild
 
-**Sprint 31 · Status: Done (Agent 1 Dev complete → Agent 2 CR)**  
+**Sprint 31 · Status: CR PASS → Agent 3 PM**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Story 04 Done
 
-**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-1-dev.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-1-dev.md)
+**Handoff:** [`handoffs/STORY_05_cutover_deprecate_rebuild/agent-2-cr.md`](./handoffs/STORY_05_cutover_deprecate_rebuild/agent-2-cr.md)
 
 ---
 
