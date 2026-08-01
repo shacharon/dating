@@ -1,5 +1,39 @@
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
-import type { ConversationListItemDto, ConversationOtherUserDto } from '@/lib/conversations-api';
+import type {
+  ConversationLastMessageDto,
+  ConversationListItemDto,
+  ConversationOtherUserDto,
+} from '@/lib/conversations-api';
+
+export const CONVERSATION_PREVIEW_MAX_CHARS = 60;
+
+export function normalizePreviewText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+export function truncatePreviewText(
+  text: string,
+  max: number = CONVERSATION_PREVIEW_MAX_CHARS,
+): string {
+  const normalized = normalizePreviewText(text);
+  const chars = [...normalized];
+  if (chars.length <= max) return normalized;
+  return `${chars.slice(0, max).join('')}…`;
+}
+
+export function formatConversationPreview(
+  lastMessage: ConversationLastMessageDto | null | undefined,
+  currentUserId: string | null | undefined,
+  copy: Pick<AppCopySchema['conversations']['list'], 'youPrefix' | 'noMessagesYet'>,
+): string {
+  if (!lastMessage) return copy.noMessagesYet;
+  const truncated = truncatePreviewText(lastMessage.text);
+  if (!truncated) return copy.noMessagesYet;
+  if (currentUserId && lastMessage.senderId === currentUserId) {
+    return `${copy.youPrefix}${truncated}`;
+  }
+  return truncated;
+}
 
 function metaParts(
   gender: string | null,

@@ -29,11 +29,19 @@ export interface ConversationOtherUserDto {
   photoUrl: string | null;
 }
 
+export interface ConversationLastMessageDto {
+  text: string;
+  senderId: string;
+  /** ISO-8601 */
+  sentAt: string;
+}
+
 export interface ConversationListItemDto {
   id: string;
   otherUser: ConversationOtherUserDto;
   matchedAt: string;
   unreadCount: number;
+  lastMessage: ConversationLastMessageDto | null;
 }
 
 export interface ConversationListResponseDto {
@@ -102,7 +110,10 @@ export async function fetchMyConversations(opts?: {
   }
   const dto = await readJson<ConversationListResponseDto>(res);
   return {
-    conversations: dto.conversations ?? [],
+    conversations: (dto.conversations ?? []).map((item) => ({
+      ...item,
+      lastMessage: item.lastMessage ?? null,
+    })),
     nextCursor: dto.nextCursor ?? null,
     hasMore: Boolean(dto.hasMore),
   };

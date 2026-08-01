@@ -6,6 +6,7 @@ const item = (unreadCount: number): ConversationListItemDto => ({
   id: `conv_${unreadCount}`,
   matchedAt: '2026-06-01T10:00:00.000Z',
   unreadCount,
+  lastMessage: null,
   otherUser: {
     id: 'user_peer',
     profileId: 'prof_peer',

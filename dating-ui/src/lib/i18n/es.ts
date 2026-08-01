@@ -223,6 +223,8 @@ export const esCopy: AppCopySchema = {
       unreadAria: (count) =>
         `${count} mensaje${count === 1 ? "" : "s"} sin leer`,
       loadFailed: "No se pudieron cargar las conversaciones",
+      youPrefix: "Tú: ",
+      noMessagesYet: "Aún no hay mensajes",
     },
     detail: {
       backToList: "← Volver a conversaciones",

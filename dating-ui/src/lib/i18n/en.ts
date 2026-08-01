@@ -221,6 +221,8 @@ export const enCopy: AppCopySchema = {
       unreadAria: (count) =>
         `${count} unread message${count === 1 ? "" : "s"}`,
       loadFailed: "Failed to load conversations",
+      youPrefix: "You: ",
+      noMessagesYet: "No messages yet",
     },
     detail: {
       backToList: "← Back to conversations",

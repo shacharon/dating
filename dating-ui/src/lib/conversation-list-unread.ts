@@ -1,4 +1,7 @@
-import type { ConversationListItemDto } from '@/lib/conversations-api';
+import type {
+  ConversationListItemDto,
+  MessageDto,
+} from '@/lib/conversations-api';
 
 export function sortConversationsUnreadFirst(
   items: ConversationListItemDto[],
@@ -28,4 +31,29 @@ export function incrementUnreadForConversation(
       : c,
   );
   return sortConversationsUnreadFirst(updated);
+}
+
+export function applyIncomingMessageToConversationList(
+  items: ConversationListItemDto[],
+  msg: Pick<MessageDto, 'conversationId' | 'senderId' | 'text' | 'createdAt'>,
+  opts: { bumpUnread: boolean },
+): ConversationListItemDto[] {
+  if (!items.some((c) => c.id === msg.conversationId)) {
+    return items;
+  }
+
+  const updated = items.map((c) => {
+    if (c.id !== msg.conversationId) return c;
+    return {
+      ...c,
+      unreadCount: opts.bumpUnread ? c.unreadCount + 1 : c.unreadCount,
+      lastMessage: {
+        text: msg.text,
+        senderId: msg.senderId,
+        sentAt: msg.createdAt,
+      },
+    };
+  });
+
+  return opts.bumpUnread ? sortConversationsUnreadFirst(updated) : updated;
 }

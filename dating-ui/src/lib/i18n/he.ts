@@ -204,6 +204,8 @@ export const heCopy: AppCopySchema = {
       unreadAria: (count) =>
         count === 1 ? "הודעה אחת שלא נקראה" : `${count} הודעות שלא נקראו`,
       loadFailed: "לא ניתן לטעון שיחות",
+      youPrefix: "את/ה: ",
+      noMessagesYet: "עדיין אין הודעות",
     },
     detail: {
       backToList: "← חזרה לשיחות",

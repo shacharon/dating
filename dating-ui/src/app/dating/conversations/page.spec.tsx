@@ -311,6 +311,7 @@ describe('ConversationsPage', () => {
           otherUser,
           matchedAt: '2026-05-31T12:00:00.000Z',
           unreadCount: 1,
+          lastMessage: null,
         },
       ],
       nextCursor: null,
@@ -325,6 +326,77 @@ describe('ConversationsPage', () => {
     expect(
       screen.getByTestId('conversation-unread-badge').getAttribute('aria-label'),
     ).toBe('1 unread message');
+    unmount();
+  });
+
+  it('shows No messages yet when lastMessage is null', async () => {
+    fetchMyConversations.mockResolvedValue({
+      conversations: [
+        {
+          id: 'mutual_1',
+          otherUser,
+          matchedAt: '2026-05-31T12:00:00.000Z',
+          unreadCount: 0,
+          lastMessage: null,
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-preview').textContent).toBe(
+        'No messages yet',
+      );
+    });
+    unmount();
+  });
+
+  it('shows You: prefix for own lastMessage and peer text without prefix', async () => {
+    fetchMyConversations.mockResolvedValue({
+      conversations: [
+        {
+          id: 'mutual_own',
+          otherUser,
+          matchedAt: '2026-05-31T12:00:00.000Z',
+          unreadCount: 0,
+          lastMessage: {
+            text: 'Thanks for sharing!',
+            senderId: 'user_me',
+            sentAt: '2026-08-01T12:00:00.000Z',
+          },
+        },
+        {
+          id: 'mutual_peer',
+          otherUser: { ...otherUser, id: 'user_cand_2', nickname: 'Dana' },
+          matchedAt: '2026-05-30T12:00:00.000Z',
+          unreadCount: 2,
+          lastMessage: {
+            text: 'Hey there',
+            senderId: 'user_cand_2',
+            sentAt: '2026-08-01T11:00:00.000Z',
+          },
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('conversation-preview').length).toBe(2);
+    });
+    const previews = screen.getAllByTestId('conversation-preview');
+    expect(previews[0].textContent).toBe('You: Thanks for sharing!');
+    expect(previews[1].textContent).toBe('Hey there');
+    expect(
+      screen.getByTestId('conversation-unread-badge').textContent,
+    ).toBe('2');
+    const labels = screen.getAllByTestId('conversation-primary-label');
+    expect(labels[1].className).toContain('font-semibold');
     unmount();
   });
 
@@ -416,6 +488,7 @@ describe('ConversationsPage', () => {
             otherUser,
             matchedAt: '2026-05-31T12:00:00.000Z',
             unreadCount: 0,
+            lastMessage: null,
           },
         ],
       nextCursor: null,
@@ -436,6 +509,9 @@ describe('ConversationsPage', () => {
         expect(screen.getByTestId('conversation-unread-badge').textContent).toBe(
           '1',
         );
+        expect(screen.getByTestId('conversation-preview').textContent).toBe(
+          'Hey',
+        );
       });
       unmount();
     });
@@ -448,6 +524,7 @@ describe('ConversationsPage', () => {
             otherUser,
             matchedAt: '2026-05-31T12:00:00.000Z',
             unreadCount: 0,
+            lastMessage: null,
           },
         ],
       nextCursor: null,
@@ -464,9 +541,15 @@ describe('ConversationsPage', () => {
       messageNewHandlerRef.current!({
         ...peerMessage,
         senderId: 'user_me',
+        text: 'my outbound',
       });
 
       expect(screen.queryByTestId('conversation-unread-badge')).toBeNull();
+      await waitFor(() => {
+        expect(screen.getByTestId('conversation-preview').textContent).toBe(
+          'You: my outbound',
+        );
+      });
       unmount();
     });
 
@@ -534,6 +617,7 @@ describe('ConversationsPage', () => {
             otherUser,
             matchedAt: '2026-05-31T12:00:00.000Z',
             unreadCount: 0,
+            lastMessage: null,
           },
         ],
       nextCursor: null,
@@ -553,6 +637,11 @@ describe('ConversationsPage', () => {
       expect(
         liveLink.querySelector('[data-testid="conversation-unread-badge"]'),
       ).toBeNull();
+      await waitFor(() => {
+        expect(screen.getByTestId('conversation-preview').textContent).toBe(
+          'Hey',
+        );
+      });
       unmount();
     });
 
@@ -660,7 +749,7 @@ describe('ConversationsPage (i18n)', () => {
     });
   });
 
-  it('still renders participant meta in English when locale is he', async () => {
+  it('shows Hebrew empty preview when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     fetchMyConversations.mockResolvedValue({
       conversations: [
@@ -669,6 +758,7 @@ describe('ConversationsPage (i18n)', () => {
           otherUser,
           matchedAt: '2026-05-31T12:00:00.000Z',
           unreadCount: 0,
+          lastMessage: null,
         },
       ],
       nextCursor: null,
@@ -679,7 +769,9 @@ describe('ConversationsPage (i18n)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Noa')).toBeTruthy();
-      expect(screen.getByText('FEMALE · 32y · Tel Aviv')).toBeTruthy();
+      expect(
+        screen.getByTestId('conversation-preview').textContent,
+      ).toBe(heCopy.conversations.list.noMessagesYet);
     });
   });
 });

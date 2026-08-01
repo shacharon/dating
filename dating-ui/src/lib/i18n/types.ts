@@ -197,6 +197,9 @@ export type AppCopySchema = {
       browseMatches: string;
       unreadAria: (count: number) => string;
       loadFailed: string;
+      /** Include trailing space, e.g. "You: " */
+      youPrefix: string;
+      noMessagesYet: string;
     };
     detail: {
       backToList: string;

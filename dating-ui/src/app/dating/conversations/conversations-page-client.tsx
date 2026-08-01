@@ -14,14 +14,15 @@ import {
   type MessageDto,
 } from '@/lib/conversations-api';
 import { getActiveConversationId } from '@/lib/conversation-focus';
-import { incrementUnreadForConversation } from '@/lib/conversation-list-unread';
+import { applyIncomingMessageToConversationList } from '@/lib/conversation-list-unread';
 import { useAppLocale } from '@/lib/i18n';
 import { queryKeys } from '@/lib/query-keys';
 import { getRealtimeMode } from '@/lib/realtime-mode';
 import {
   conversationPrimaryLabel,
-  conversationSecondaryMeta,
+  formatConversationPreview,
   formatMatchedAt,
+  formatMessageTime,
 } from './conversation-display';
 
 export default function ConversationsPage() {
@@ -87,14 +88,14 @@ export default function ConversationsPage() {
 
   const handleListMessageNew = useCallback(
     (msg: MessageDto) => {
-      if (!user?.id || msg.senderId === user.id) {
-        return;
-      }
-      if (msg.conversationId === getActiveConversationId()) {
-        return;
-      }
+      if (!user?.id) return;
+      const isOwn = msg.senderId === user.id;
+      const isActive = msg.conversationId === getActiveConversationId();
+      const bumpUnread = !isOwn && !isActive;
       setOptimisticRows((prev) =>
-        incrementUnreadForConversation(prev ?? queryRows, msg.conversationId),
+        applyIncomingMessageToConversationList(prev ?? queryRows, msg, {
+          bumpUnread,
+        }),
       );
     },
     [user?.id, queryRows],
@@ -189,7 +190,15 @@ export default function ConversationsPage() {
             <ul className="flex flex-col gap-3" data-testid="conversations-list">
               {conversations.map((item) => {
                 const photoSrc = conversationPhotoSrc(item.otherUser.photoUrl);
-                const secondary = conversationSecondaryMeta(item.otherUser);
+                const unread = item.unreadCount > 0;
+                const preview = formatConversationPreview(
+                  item.lastMessage,
+                  user?.id,
+                  listCopy,
+                );
+                const timestamp = item.lastMessage
+                  ? formatMessageTime(item.lastMessage.sentAt, formatCopy, locale)
+                  : formatMatchedAt(item.matchedAt, formatCopy, locale);
                 return (
                   <li key={item.id}>
                     <Link
@@ -214,20 +223,31 @@ export default function ConversationsPage() {
                           </div>
                         )}
                         <div className="min-w-0 flex-1 space-y-1">
-                          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                            {conversationPrimaryLabel(item.otherUser)}
-                          </p>
-                          {secondary && (
-                            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                              {secondary}
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p
+                              className={`truncate text-sm text-zinc-900 dark:text-zinc-100 ${
+                                unread ? 'font-semibold' : 'font-medium'
+                              }`}
+                              data-testid="conversation-primary-label"
+                            >
+                              {conversationPrimaryLabel(item.otherUser)}
                             </p>
-                          )}
-                          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                            {formatMatchedAt(item.matchedAt, formatCopy, locale)}
+                            <p
+                              className="shrink-0 text-xs text-zinc-400 dark:text-zinc-500"
+                              data-testid="conversation-list-time"
+                            >
+                              {timestamp}
+                            </p>
+                          </div>
+                          <p
+                            className="truncate text-xs text-zinc-500 dark:text-zinc-400"
+                            data-testid="conversation-preview"
+                          >
+                            {preview}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          {item.unreadCount > 0 && (
+                          {unread && (
                             <span
                               data-testid="conversation-unread-badge"
                               aria-label={listCopy.unreadAria(item.unreadCount)}

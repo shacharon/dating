@@ -11,6 +11,7 @@ const listItem = (
   id: 'conv_1',
   matchedAt: '2026-06-01T10:00:00.000Z',
   unreadCount: 0,
+  lastMessage: null,
   otherUser: {
     id: 'user_peer',
     profileId: 'prof_peer',
