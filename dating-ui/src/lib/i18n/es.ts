@@ -280,6 +280,19 @@ export const esCopy: AppCopySchema = {
     savedFlash: "Guardado.",
     saveProgress: "Guardar progreso",
     continueLater: "Continuar mas tarde",
+    header: {
+      exit: "Salir",
+      skip: "Omitir por ahora",
+      aria: "Progreso del registro",
+    },
+    stepBasic: "Basico",
+    stepTexts: "Historia",
+    exitDialog: {
+      title: "Salir del registro?",
+      body: "El progreso guardado se conserva. Los cambios sin guardar pueden perderse.",
+      cancel: "Cancelar",
+      confirm: "Salir",
+    },
     basicForm: {
       sectionTitle: "Basico",
       googleNameLabel: "Nombre de Google",

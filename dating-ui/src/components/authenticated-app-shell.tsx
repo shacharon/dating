@@ -148,14 +148,22 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   return (
     <div dir={getLocaleDirection(locale)}>
       <MessagingShellProvider sessionUserId={user.id}>
-        <AppNav
-          pathname={pathname}
-          locale={locale}
-          copy={copy}
-          navPending={navPending}
-          onNavClick={() => setNavPending(true)}
-        />
-        <div className="pb-20 md:pb-0">{children}</div>
+        {pathname.startsWith('/onboarding') ? null : (
+          <AppNav
+            pathname={pathname}
+            locale={locale}
+            copy={copy}
+            navPending={navPending}
+            onNavClick={() => setNavPending(true)}
+          />
+        )}
+        <div
+          className={
+            pathname.startsWith('/onboarding') ? undefined : 'pb-20 md:pb-0'
+          }
+        >
+          {children}
+        </div>
       </MessagingShellProvider>
     </div>
   );

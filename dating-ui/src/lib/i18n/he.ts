@@ -267,6 +267,19 @@ export const heCopy: AppCopySchema = {
     savedFlash: "נשמר.",
     saveProgress: "שמירת התקדמות",
     continueLater: "המשך מאוחר יותר",
+    header: {
+      exit: "יציאה",
+      skip: "דלג לעת עתה",
+      aria: "התקדמות בהרשמה",
+    },
+    stepBasic: "בסיס",
+    stepTexts: "סיפור",
+    exitDialog: {
+      title: "לצאת מההרשמה?",
+      body: "התקדמות שנשמרה נשארת. שינויים שלא נשמרו עלולים ללכת לאיבוד.",
+      cancel: "ביטול",
+      confirm: "יציאה",
+    },
     basicForm: {
       sectionTitle: "בסיס",
       googleNameLabel: "שם ב-Google",

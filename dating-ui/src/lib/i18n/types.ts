@@ -256,6 +256,19 @@ export type AppCopySchema = {
     savedFlash: string;
     saveProgress: string;
     continueLater: string;
+    header: {
+      exit: string;
+      skip: string;
+      aria: string;
+    };
+    stepBasic: string;
+    stepTexts: string;
+    exitDialog: {
+      title: string;
+      body: string;
+      cancel: string;
+      confirm: string;
+    };
     basicForm: {
       sectionTitle: string;
       googleNameLabel: string;

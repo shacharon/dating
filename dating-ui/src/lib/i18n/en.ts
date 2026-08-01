@@ -277,6 +277,19 @@ export const enCopy: AppCopySchema = {
     savedFlash: "Saved.",
     saveProgress: "Save progress",
     continueLater: "Continue later",
+    header: {
+      exit: "Exit",
+      skip: "Skip for now",
+      aria: "Onboarding progress",
+    },
+    stepBasic: "Basic",
+    stepTexts: "Story",
+    exitDialog: {
+      title: "Leave onboarding?",
+      body: "Saved progress stays saved. Unsaved changes may be lost.",
+      cancel: "Cancel",
+      confirm: "Leave",
+    },
     basicForm: {
       sectionTitle: "Basics",
       googleNameLabel: "Google name",
