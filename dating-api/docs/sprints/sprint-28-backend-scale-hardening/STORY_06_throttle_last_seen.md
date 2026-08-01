@@ -1,11 +1,17 @@
 # Story 06 — Throttle lastSeenAt
 
-**Sprint 28 · Status: IN PROGRESS (CR PASS → Agent 3)**  
+**Sprint 28 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (auth path)
 
-**Handoff:** [`handoffs/STORY_06_throttle_last_seen/agent-0-architect.md`](./handoffs/STORY_06_throttle_last_seen/agent-0-architect.md)
+**Handoffs:**  
+[`agent-0-architect`](./handoffs/STORY_06_throttle_last_seen/agent-0-architect.md) ·  
+[`agent-1-dev`](./handoffs/STORY_06_throttle_last_seen/agent-1-dev.md) ·  
+[`agent-2-cr`](./handoffs/STORY_06_throttle_last_seen/agent-2-cr.md) ·  
+[`agent-3-pm`](./handoffs/STORY_06_throttle_last_seen/agent-3-pm.md)
+
+**Impl commit:** `c66d5f9` · **CR:** `694fef4`
 
 ---
 
@@ -21,8 +27,8 @@ Auth guard currently does session lookup + `lastSeenAt` update + user lookup —
 
 1. Find auth/session `lastSeenAt` update path. ✅ (`SessionService.validateSessionToken`)
 2. Architect locks: threshold (ms), whether Redis session cache is in or out this story (default: **throttle only**; Redis session cache = stretch / follow-up). ✅
-3. Specs: first request updates; immediate second request skips write; after threshold updates again.
-4. Do not change session validity semantics.
+3. Specs: first request updates; immediate second request skips write; after threshold updates again. ✅
+4. Do not change session validity semantics. ✅
 
 ### Architect locks (do not reverse)
 
@@ -36,10 +42,10 @@ Auth guard currently does session lookup + `lastSeenAt` update + user lookup —
 
 ## Acceptance criteria
 
-- [ ] `lastSeenAt` not updated on every request within the window
-- [ ] Still updates after threshold / first touch
-- [ ] Tests cover skip vs write
-- [ ] No login/session breakage
+- [x] `lastSeenAt` not updated on every request within the window
+- [x] Still updates after threshold / first touch
+- [x] Tests cover skip vs write
+- [x] No login/session breakage
 
 ## Commit message
 
