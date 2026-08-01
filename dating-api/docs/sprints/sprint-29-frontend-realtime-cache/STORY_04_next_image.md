@@ -1,11 +1,11 @@
 # Story 04 — next/image optimization
 
-**Sprint 29 · Status: Dev complete → Agent 2 CR**  
+**Sprint 29 · Status: CR PASS → Agent 3 PM**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Know CDN / photo URL hosts in use
 
-**Handoff:** [`handoffs/STORY_04_next_image/agent-0-architect.md`](./handoffs/STORY_04_next_image/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_04_next_image/agent-1-dev.md)
+**Handoff:** [`handoffs/STORY_04_next_image/agent-0-architect.md`](./handoffs/STORY_04_next_image/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_04_next_image/agent-1-dev.md) · [`agent-2-cr.md`](./handoffs/STORY_04_next_image/agent-2-cr.md)
 
 ---
 
@@ -36,10 +36,10 @@ SCALE CR: images shipped unoptimized → larger payloads on match/profile surfac
 
 ## Acceptance criteria
 
-- [ ] remotePatterns (or locked loader) covers product photo URLs
-- [ ] Locked surfaces no longer force `unoptimized` without reason
-- [ ] No widespread broken images in local/dev with current storage
-- [ ] Document any remaining unoptimized exceptions
+- [x] remotePatterns (or locked loader) covers product photo URLs
+- [x] Locked surfaces no longer force `unoptimized` without reason
+- [x] No widespread broken images in local/dev with current storage
+- [x] Document any remaining unoptimized exceptions
 
 ## Commit message
 

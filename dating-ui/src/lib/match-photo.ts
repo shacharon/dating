@@ -30,9 +30,17 @@ export function shouldOptimizePhotoSrc(
     return false;
   }
   let hostname: string;
+  let pathname: string;
   try {
-    hostname = new URL(src).hostname.toLowerCase();
+    const u = new URL(src);
+    hostname = u.hostname.toLowerCase();
+    pathname = u.pathname;
   } catch {
+    return false;
+  }
+  // Never send Nest AuthGuard photo file URLs through the optimizer (no session cookie),
+  // even if the API host is accidentally listed in NEXT_PUBLIC_PHOTO_CDN_HOSTS.
+  if (pathname.includes('/api/') && pathname.includes('/photos/')) {
     return false;
   }
   const patterns = parseCdnHostPatterns(cdnHostsEnv);

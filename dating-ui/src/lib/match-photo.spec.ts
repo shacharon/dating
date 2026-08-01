@@ -49,6 +49,15 @@ describe('shouldOptimizePhotoSrc', () => {
       ),
     ).toBe(true);
   });
+
+  it('never optimizes /api/.../photos/ paths even if host is on CDN list', () => {
+    expect(
+      shouldOptimizePhotoSrc(
+        'https://d111.cloudfront.net/api/v1/me/matches/p/photos/1/file',
+        '*.cloudfront.net',
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('hostMatchesCdnPattern', () => {
