@@ -1,53 +1,44 @@
 # Story 04 — Split MeProfileService
 
-**Sprint 38 · Status: Planned**  
+**Sprint 38 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 2 days  
-**Dependencies:** None (can parallel Story 03 after Story 02)  
+**Dependencies:** Story 02 Done (may parallel Story 03)  
 **Repo:** `dating-api` only  
-**Risk:** Medium
+**Risk:** Medium  
+**Handoffs:** [agent-0-architect.md](./handoffs/STORY_04_split_me_profile_service/agent-0-architect.md) · [agent-1-dev.md](./handoffs/STORY_04_split_me_profile_service/agent-1-dev.md) · [agent-2-cr.md](./handoffs/STORY_04_split_me_profile_service/agent-2-cr.md) · [agent-3-pm.md](./handoffs/STORY_04_split_me_profile_service/agent-3-pm.md)
 
 ---
 
 ## Objective
 
-Decompose `src/me-profile/me-profile.service.ts` (~1200 LOC) into focused services with a thin orchestrator or controller-facing facade. **No API contract changes.**
+Decompose `src/me-profile/me-profile.service.ts` (~1150 LOC) into focused services under `profile/`, with `MeProfileService` as a thin facade. **No API contract changes.**
 
 ## Why
 
 One service owns CRUD, onboarding coherence, content moderation, photo upload/delete/primary, analysis submit/status, and preference dual-write.
 
-## Target split (Architect may adjust names)
+## Locked split (Architect)
 
 | Service | Responsibility |
 |---------|----------------|
-| `ProfileCrudService` | create / patch / get / nickname uniqueness |
+| `ProfileCrudService` | create / patch / get / nickname / `requireProfileForUser` |
 | `ProfilePhotoService` | upload / delete / setPrimary / getFile / list |
 | `ProfileModerationService` | edit blocked check + field moderation |
-| `ProfileAnalysisSubmitService` | submit + analysis status (+ queue enqueue) |
-| `ProfilePreferenceService` | preference upsert / dual-write helpers |
+| `ProfileAnalysisSubmitService` | submit + analysis status + latest evaluation read (+ queues) |
+| `ProfilePreferenceService` | preference upsert / dual-write |
+| Pure helpers / photo constants | `toResponse`, onboarding asserts, writable mappers, photo limits |
 | `MeProfileService` | Facade matching existing controller injections |
 
-## Scope / tasks
-
-1. Architect locks ownership of helpers currently file-local (`toResponse`, onboarding asserts, etc.).
-2. Extract without changing status machines (DRAFT → SUBMITTED → …) or photo moderation drivers.
-3. Preserve content-moderation and match-list invalidate/enqueue side effects on submit/patch.
-4. Update specs; keep HTTP integration specs green.
-
-## Out of scope
-
-- New profile fields / UI
-- Changing moderation policy thresholds
-- Repository pattern (Sprint 39)
+**Note:** Existing `MeProfileAnalysisService` (LLM/worker runner) is **out of scope** — do not merge with AnalysisSubmit.
 
 ## Acceptance criteria
 
-- [ ] Focused services + facade; former god file slimmed under Architect LOC cap
-- [ ] Controller wiring unchanged from outside (same Nest exports)
-- [ ] `me-profile.service.spec.ts` + HTTP integration green
-- [ ] Photo + submit paths still enqueue workers as today
-- [ ] No DTO / status code changes
+- [x] Focused services + facade; facade ≤ ~250 LOC (Architect caps) — facade 95 LOC, all caps met
+- [x] Controller wiring unchanged from outside (same Nest exports)
+- [x] `me-profile.service.spec.ts` (56/56) + HTTP integration green — 10 integration failures confirmed pre-existing against baseline
+- [x] Photo + submit paths still enqueue workers as today
+- [x] No DTO / status code changes
 
 ## Suggested commit
 

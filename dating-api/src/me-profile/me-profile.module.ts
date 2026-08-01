@@ -28,6 +28,11 @@ import { MeProfileController } from './me-profile.controller';
 import { MeProfileService } from './me-profile.service';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 import { ProfileQualityService } from './profile-quality.service';
+import { ProfileAnalysisSubmitService } from './profile/profile-analysis-submit.service';
+import { ProfileCrudService } from './profile/profile-crud.service';
+import { ProfileModerationService } from './profile/profile-moderation.service';
+import { ProfilePhotoService } from './profile/profile-photo.service';
+import { ProfilePreferenceService } from './profile/profile-preference.service';
 import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
 
 /**
@@ -54,6 +59,11 @@ import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
   controllers: [MeProfileController],
   providers: [
     MeProfileService,
+    ProfileModerationService,
+    ProfilePreferenceService,
+    ProfileCrudService,
+    ProfilePhotoService,
+    ProfileAnalysisSubmitService,
     ProfileQualityService,
     MeProfileAnalysisService,
     MeProfileMatchesService,

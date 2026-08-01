@@ -16,7 +16,8 @@ import type { StructuredObservabilityService } from '../logging/structured-obser
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
-import { MeProfileService } from './me-profile.service';
+import type { MeProfileService } from './me-profile.service';
+import { createMeProfileServiceForTest } from './me-profile.test-harness';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
@@ -78,18 +79,20 @@ describe('MeProfileService', () => {
   };
 
   function buildService(overrides?: { prisma?: unknown }) {
-    return new MeProfileService(
-      (overrides?.prisma ?? prisma) as unknown as PrismaService,
-      obs as unknown as StructuredObservabilityService,
-      {} as never,
-      analytics as unknown as AnalyticsService,
-      analysisQueue as never,
-      { enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1') } as never,
-      meMatches as never,
-      moderation as unknown as OpenAIModerationClient,
-      contentViolations as unknown as ContentViolationService,
-      matchListRankQueue as never,
-    );
+    return createMeProfileServiceForTest({
+      prisma: (overrides?.prisma ?? prisma) as unknown as PrismaService,
+      obs: obs as unknown as StructuredObservabilityService,
+      photoStorage: {} as never,
+      analytics: analytics as unknown as AnalyticsService,
+      analysisQueue: analysisQueue as never,
+      photoModerationQueue: {
+        enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1'),
+      } as never,
+      meMatches: meMatches as never,
+      moderation: moderation as unknown as OpenAIModerationClient,
+      contentViolations: contentViolations as unknown as ContentViolationService,
+      matchListRankQueue: matchListRankQueue as never,
+    });
   }
 
   beforeEach(() => {
