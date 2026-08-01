@@ -21,7 +21,9 @@ import { buildMatchCandidateSqlPrefilterWhere } from './me-matches-candidate-sql
 import {
   MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
   resolveMatchListCandidateCap,
+  resolveMatchListRebuildCandidateCap,
 } from './match-list-candidate-cap';
+import { toStoredMatchListScore } from './match-list-rank-score';
 import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
@@ -50,6 +52,7 @@ import {
   recordMatchListCandidatesLoaded,
   recordMatchListEvalQueryMs,
   recordMatchListLoadTimeMs,
+  recordMatchListRankRebuildMs,
   recordMatchListScoreCpuMs,
 } from '../observability/custom-metrics';
 import { resolveMatchPrimaryPhotoUrl } from '../photo-storage/cdn-url';
@@ -137,6 +140,17 @@ export interface MeMatchItemDto {
    */
   hardBlocked?: HardBlockedDto;
 }
+
+/** Sprint 31 — thin rows for MatchListRank persistence (Story 2). */
+export type MatchListRankSnapshot = {
+  status: 'ready' | 'not_ready';
+  reason?: 'no_profile' | 'not_analyzed' | 'no_photo';
+  rows: Array<{
+    candidateProfileId: string;
+    matchScore: number;
+    hardBlocked: boolean;
+  }>;
+};
 
 export interface MeMatchesListResponseDto {
   status: 'ready' | 'not_ready';
@@ -243,6 +257,127 @@ export class MeMatchesService {
   /** Drop cached ranked match list for a viewer (LIKE/PASS/BLOCK, re-analysis, etc.). */
   async invalidateMatchListCache(userId: string): Promise<void> {
     await this.cache.del(matchListCacheKey(userId));
+  }
+
+  /**
+   * Sprint 31 — thin ranked rows for MatchListRank (no list analytics).
+   * Uses MATCH_LIST_REBUILD_CANDIDATE_CAP (≠ list miss cap).
+   */
+  async buildMatchListRankSnapshot(
+    viewerUserId: string,
+  ): Promise<MatchListRankSnapshot> {
+    const dto = await this.buildFullRankedList(viewerUserId, {
+      candidateCap: resolveMatchListRebuildCandidateCap(),
+      emitListAnalytics: false,
+    });
+    if (dto.status !== 'ready') {
+      return {
+        status: 'not_ready',
+        reason: dto.reason,
+        rows: [],
+      };
+    }
+    return {
+      status: 'ready',
+      rows: (dto.matches ?? []).map((m) => ({
+        candidateProfileId: m.id,
+        matchScore: toStoredMatchListScore(m.matchScore),
+        hardBlocked: Boolean(m.hardBlocked),
+      })),
+    };
+  }
+
+  /** Persist snapshot: upsert rows + delete stale (or clear all when empty/not_ready). */
+  async persistMatchListRankSnapshot(
+    viewerUserId: string,
+    snapshot: MatchListRankSnapshot,
+  ): Promise<{ rowsWritten: number; rowsDeleted: number }> {
+    if (snapshot.status === 'not_ready' || snapshot.rows.length === 0) {
+      const del = await this.prisma.matchListRank.deleteMany({
+        where: { viewerUserId },
+      });
+      return { rowsWritten: 0, rowsDeleted: del.count };
+    }
+
+    const builtAt = new Date();
+    const ids = snapshot.rows.map((r) => r.candidateProfileId);
+    let rowsDeleted = 0;
+    let rowsWritten = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      const del = await tx.matchListRank.deleteMany({
+        where: {
+          viewerUserId,
+          candidateProfileId: { notIn: ids },
+        },
+      });
+      rowsDeleted = del.count;
+
+      for (let i = 0; i < snapshot.rows.length; i += 100) {
+        const chunk = snapshot.rows.slice(i, i + 100);
+        for (const row of chunk) {
+          await tx.matchListRank.upsert({
+            where: {
+              viewerUserId_candidateProfileId: {
+                viewerUserId,
+                candidateProfileId: row.candidateProfileId,
+              },
+            },
+            create: {
+              viewerUserId,
+              candidateProfileId: row.candidateProfileId,
+              matchScore: row.matchScore,
+              hardBlocked: row.hardBlocked,
+              builtAt,
+            },
+            update: {
+              matchScore: row.matchScore,
+              hardBlocked: row.hardBlocked,
+              builtAt,
+            },
+          });
+          rowsWritten += 1;
+        }
+      }
+    });
+
+    return { rowsWritten, rowsDeleted };
+  }
+
+  /**
+   * Snapshot → persist → invalidate Redis list cache.
+   * Does not enqueue; called by MatchListRankQueueService.
+   */
+  async rebuildMatchListRanks(
+    viewerUserId: string,
+    reason?: string,
+  ): Promise<{
+    status: 'ready' | 'not_ready';
+    reason?: MatchListRankSnapshot['reason'];
+    rowsWritten: number;
+    rowsDeleted: number;
+    rebuildMs: number;
+  }> {
+    const started = Date.now();
+    const snapshot = await this.buildMatchListRankSnapshot(viewerUserId);
+    const persist = await this.persistMatchListRankSnapshot(
+      viewerUserId,
+      snapshot,
+    );
+    await this.invalidateMatchListCache(viewerUserId);
+    const rebuildMs = Date.now() - started;
+    recordMatchListRankRebuildMs(rebuildMs);
+    this.obs.trace(
+      `match list rank rebuild viewerUserId=${viewerUserId} status=${snapshot.status} rowsWritten=${persist.rowsWritten} rowsDeleted=${persist.rowsDeleted} rebuildMs=${rebuildMs} reason=${reason ?? ''}`,
+      ErrorCodes.ME_MATCHES_LIST_OK,
+    );
+    return {
+      status: snapshot.status,
+      reason: snapshot.reason,
+      rowsWritten: persist.rowsWritten,
+      rowsDeleted: persist.rowsDeleted,
+      rebuildMs,
+    };
   }
 
   // ─── Candidate selects ─────────────────────────────────────────────────────
@@ -416,7 +551,15 @@ export class MeMatchesService {
   /** Full ranked match list (cache miss path). */
   private async buildFullRankedList(
     userId: string,
+    options?: {
+      candidateCap?: number;
+      /** When false, skip MATCH_LIST_VIEWED / photo-gate analytics (materialization). Default true. */
+      emitListAnalytics?: boolean;
+    },
   ): Promise<MeMatchesListResponseDto> {
+    const emitListAnalytics = options?.emitListAnalytics !== false;
+    const candidateCap =
+      options?.candidateCap ?? resolveMatchListCandidateCap();
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
       include: {
@@ -456,13 +599,15 @@ export class MeMatchesService {
         `me matches list: no approved photo profileId=${viewer.id} userId=${userId}`,
         ErrorCodes.ME_MATCHES_LIST_NOT_READY,
       );
-      this.analytics.track(
-        userId,
-        ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
-        {
-          surface: 'match_list',
-        },
-      );
+      if (emitListAnalytics) {
+        this.analytics.track(
+          userId,
+          ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
+          {
+            surface: 'match_list',
+          },
+        );
+      }
       return { status: 'not_ready', reason: 'no_photo' };
     }
 
@@ -504,8 +649,8 @@ export class MeMatchesService {
       );
     }
 
-    // Temporary hydrate cap until async match materialization (MATCH_LIST_CANDIDATE_CAP).
-    const candidateCap = resolveMatchListCandidateCap();
+    // Temporary hydrate cap until async match materialization (list: MATCH_LIST_CANDIDATE_CAP;
+    // rebuild snapshot may override via options.candidateCap).
     const listCandidateWhere = this.matchCandidatePhotoEligibleWhere(userId, {
       acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
       preference: viewer.preference ?? null,
@@ -864,10 +1009,12 @@ export class MeMatchesService {
       ErrorCodes.ME_MATCHES_HG_DEALBREAKER_OUTCOMES,
     );
 
-    this.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
-      matchCount: matches.length,
-      viewerProfileId: viewer.id,
-    });
+    if (emitListAnalytics) {
+      this.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
+        matchCount: matches.length,
+        viewerProfileId: viewer.id,
+      });
+    }
 
     return {
       status: 'ready',

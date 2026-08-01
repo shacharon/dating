@@ -76,3 +76,8 @@ export function recordMatchListScoreCpuMs(ms: number): void {
 export function recordMatchListCacheSetMs(ms: number): void {
   emit('match.list.cache_set_ms', ms);
 }
+
+/** Sprint 31 — MatchListRank Bull rebuild wall time (snapshot + persist). */
+export function recordMatchListRankRebuildMs(ms: number): void {
+  emit('match.list.rank_rebuild_ms', ms);
+}

@@ -1,11 +1,11 @@
 # Story 02 — Rebuild job (Bull)
 
-**Sprint 31 · Status: Architect locked → Agent 1 Dev**  
+**Sprint 31 · Status: Dev complete → Agent 2 CR**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Story 01 schema
 
-**Handoff:** [`handoffs/STORY_02_rebuild_job/agent-0-architect.md`](./handoffs/STORY_02_rebuild_job/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_02_rebuild_job/agent-0-architect.md`](./handoffs/STORY_02_rebuild_job/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_02_rebuild_job/agent-1-dev.md)
 
 ---
 
@@ -20,9 +20,9 @@ Ranking must leave the HTTP request path. Jobs are the write path for the table.
 ## Scope / tasks
 
 1. Architect locks: queue name, job payload, idempotency, concurrency, failure/retry, whether full replace vs upsert-diff, max candidates processed per job (job-internal cap ≠ browse fairness cap). ✅
-2. Processor: load viewer + pool → score → write rows; delete stale candidates no longer eligible (Architect locks soft-delete vs delete-many).
-3. Metrics/logs: `rebuild_ms`, `candidates_scored`, `rows_written`, job reason.
-4. Specs: processor with fixtures; empty pool; error path.
+2. Processor: load viewer + pool → score → write rows; delete stale candidates no longer eligible (Architect locks soft-delete vs delete-many). ✅
+3. Metrics/logs: `rebuild_ms`, `candidates_scored`, `rows_written`, job reason. ✅
+4. Specs: processor with fixtures; empty pool; error path. ✅
 
 ### Architect locks (do not reverse)
 
@@ -37,10 +37,10 @@ Ranking must leave the HTTP request path. Jobs are the write path for the table.
 
 ## Acceptance criteria
 
-- [ ] Job can rebuild one viewer end-to-end in tests  
-- [ ] Rows appear in materialized table ordered by score  
-- [ ] Stale ineligible candidates removed or marked per lock  
-- [ ] Does not run on every list GET
+- [x] Job can rebuild one viewer end-to-end in tests  
+- [x] Rows appear in materialized table ordered by score  
+- [x] Stale ineligible candidates removed or marked per lock  
+- [x] Does not run on every list GET
 
 ## Commit message
 

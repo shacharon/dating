@@ -19,6 +19,28 @@ export function resolveMatchListCandidateCap(
   return Math.floor(n);
 }
 
+/**
+ * Rebuild-job hydrate cap (Sprint 31 Story 2) — bounds Bull snapshot work only.
+ * ≠ MATCH_LIST_CANDIDATE_CAP (list miss). Default 5000; invalid / &lt; 1 → 5000.
+ */
+export const MATCH_LIST_REBUILD_CANDIDATE_CAP_ENV =
+  'MATCH_LIST_REBUILD_CANDIDATE_CAP';
+export const MATCH_LIST_REBUILD_CANDIDATE_CAP_DEFAULT = 5000;
+
+export function resolveMatchListRebuildCandidateCap(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env[MATCH_LIST_REBUILD_CANDIDATE_CAP_ENV];
+  if (raw == null || String(raw).trim() === '') {
+    return MATCH_LIST_REBUILD_CANDIDATE_CAP_DEFAULT;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) {
+    return MATCH_LIST_REBUILD_CANDIDATE_CAP_DEFAULT;
+  }
+  return Math.floor(n);
+}
+
 /** Prisma orderBy for capped list hydrate (analyzedAt DESC NULLS LAST, id ASC). */
 export const MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY = [
   { analyzedAt: { sort: 'desc' as const, nulls: 'last' as const } },
