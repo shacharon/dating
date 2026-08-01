@@ -28,7 +28,14 @@ import { MeProfileController } from './me-profile.controller';
 import { MeProfileService } from './me-profile.service';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 import { ProfileQualityService } from './profile-quality.service';
+import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
 
+/**
+ * Product me-profile module.
+ *
+ * Module-level `forwardRef(() => WorkerModule)` kept (Sprint 38 Story 2) — see WorkerModule
+ * comment. MATCH_LIST_RANK_REBUILD_PORT is exported for MatchListRankQueueService ModuleRef.
+ */
 @Module({
   imports: [
     PrismaModule,
@@ -51,6 +58,10 @@ import { ProfileQualityService } from './profile-quality.service';
     MeProfileAnalysisService,
     MeProfileMatchesService,
     MeMatchesService,
+    {
+      provide: MATCH_LIST_RANK_REBUILD_PORT,
+      useExisting: MeMatchesService,
+    },
     MeMatchActionsService,
     MeMatchFeedbackService,
     MeConversationsService,
@@ -63,6 +74,7 @@ import { ProfileQualityService } from './profile-quality.service';
   ],
   exports: [
     MeMatchesService,
+    MATCH_LIST_RANK_REBUILD_PORT,
     MeConversationsService,
     MeProfileAnalysisService,
   ],

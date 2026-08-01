@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,7 +16,10 @@ import {
   type MutualMatchDetectResult,
 } from './mutual-matches.service';
 import { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
-import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
+import {
+  MATCH_LIST_RANK_QUEUE_PORT,
+  type MatchListRankQueuePort,
+} from '../workers/match-list-rank.ports';
 
 @Injectable()
 export class MeMatchActionsService {
@@ -25,7 +29,8 @@ export class MeMatchActionsService {
     private readonly mutualMatches: MutualMatchesService,
     private readonly mutualMatchEmail: MutualMatchEmailService,
     private readonly analytics: AnalyticsService,
-    private readonly matchListRankQueue: MatchListRankQueueService,
+    @Inject(MATCH_LIST_RANK_QUEUE_PORT)
+    private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
 
   async getActionState(

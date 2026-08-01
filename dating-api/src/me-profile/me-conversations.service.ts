@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -24,7 +25,10 @@ import {
 } from './me-conversations-list-cursor';
 import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
 import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
-import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
+import {
+  MATCH_LIST_RANK_QUEUE_PORT,
+  type MatchListRankQueuePort,
+} from '../workers/match-list-rank.ports';
 
 function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
   if (!birthDate) return null;
@@ -131,7 +135,8 @@ export class MeConversationsService {
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
-    private readonly matchListRankQueue: MatchListRankQueueService,
+    @Inject(MATCH_LIST_RANK_QUEUE_PORT)
+    private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
 
   async list(

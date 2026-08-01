@@ -1,15 +1,24 @@
+import { ModuleRef } from '@nestjs/core';
 import { MatchListRankQueueService } from './match-list-rank.worker';
-import type { MeMatchesService } from '../me-profile/me-matches.service';
+import {
+  MATCH_LIST_RANK_REBUILD_PORT,
+  type MatchListRankRebuildPort,
+} from './match-list-rank.ports';
 
 describe('MatchListRankQueueService', () => {
   const rebuildMatchListRanks = jest.fn();
-  const meMatches = {
+  const rebuildPort = {
     rebuildMatchListRanks,
-  } as unknown as MeMatchesService;
+  } as unknown as MatchListRankRebuildPort;
+
+  const moduleRef = {
+    get: jest.fn().mockReturnValue(rebuildPort),
+  } as unknown as ModuleRef;
 
   beforeEach(() => {
     jest.clearAllMocks();
     delete process.env.REDIS_URL;
+    (moduleRef.get as jest.Mock).mockReturnValue(rebuildPort);
     rebuildMatchListRanks.mockResolvedValue({
       status: 'ready',
       rowsWritten: 2,
@@ -19,7 +28,7 @@ describe('MatchListRankQueueService', () => {
   });
 
   it('enqueueRebuild runs inline when Bull disabled', async () => {
-    const svc = new MatchListRankQueueService(meMatches);
+    const svc = new MatchListRankQueueService(moduleRef);
     await svc.onModuleInit();
     expect(svc.isBullEnabled()).toBe(false);
 
@@ -27,12 +36,15 @@ describe('MatchListRankQueueService', () => {
     expect(id).toBe('inline:user_v');
 
     await new Promise((r) => setImmediate(r));
+    expect(moduleRef.get).toHaveBeenCalledWith(MATCH_LIST_RANK_REBUILD_PORT, {
+      strict: false,
+    });
     expect(rebuildMatchListRanks).toHaveBeenCalledWith('user_v', 'test');
     await svc.onModuleDestroy();
   });
 
   it('enqueueRebuild skips blank viewerUserId', async () => {
-    const svc = new MatchListRankQueueService(meMatches);
+    const svc = new MatchListRankQueueService(moduleRef);
     await svc.onModuleInit();
     expect(await svc.enqueueRebuild('  ')).toBe('skipped:blank');
     expect(rebuildMatchListRanks).not.toHaveBeenCalled();

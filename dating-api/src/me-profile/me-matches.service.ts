@@ -4,7 +4,6 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  forwardRef,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
@@ -47,7 +46,11 @@ import {
   type MatchListCursorPayload,
 } from '../cache/match-list-cache';
 import { RedisCacheService } from '../cache/redis-cache.service';
-import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
+import {
+  MATCH_LIST_RANK_QUEUE_PORT,
+  type MatchListRankQueuePort,
+  type MatchListRankRebuildPort,
+} from '../workers/match-list-rank.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import { getRequestLogFields } from '../logging/request-log-context';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
@@ -284,7 +287,7 @@ export interface MeMatchDetailDto {
  * - Gender filtering is reciprocal: both viewer→candidate AND candidate→viewer must pass.
  */
 @Injectable()
-export class MeMatchesService {
+export class MeMatchesService implements MatchListRankRebuildPort {
   constructor(
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
@@ -294,8 +297,8 @@ export class MeMatchesService {
     private readonly cache: RedisCacheService,
     private readonly matchNarrativeGenerator: MatchNarrativeGenerator,
     private readonly matchNarrativeCache: MatchNarrativeCacheService,
-    @Inject(forwardRef(() => MatchListRankQueueService))
-    private readonly matchListRankQueue: MatchListRankQueueService,
+    @Inject(MATCH_LIST_RANK_QUEUE_PORT)
+    private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
 
   /** Drop cached ranked match list for a viewer (LIKE/PASS/BLOCK, re-analysis, etc.). */
@@ -391,7 +394,7 @@ export class MeMatchesService {
 
   /**
    * Snapshot → persist → invalidate Redis list cache.
-   * Does not enqueue; called by MatchListRankQueueService.
+   * Does not enqueue; called by MatchListRankQueueService via MATCH_LIST_RANK_REBUILD_PORT.
    */
   async rebuildMatchListRanks(
     viewerUserId: string,

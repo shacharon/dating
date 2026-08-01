@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Queue from 'bull';
 import { MeProfileAnalysisService } from '../me-profile/me-profile-analysis.service';
 import { MeMatchesService } from '../me-profile/me-matches.service';
@@ -7,7 +7,10 @@ import {
   PROFILE_ANALYSIS_QUEUE,
   type ProfileAnalysisJobData,
 } from './profile-analysis.queue';
-import { MatchListRankQueueService } from './match-list-rank.worker';
+import {
+  MATCH_LIST_RANK_QUEUE_PORT,
+  type MatchListRankQueuePort,
+} from './match-list-rank.ports';
 
 /**
  * Bull-backed profile analysis queue. When REDIS_URL is unset or Bull fails to
@@ -24,7 +27,8 @@ export class ProfileAnalysisQueueService
   constructor(
     private readonly analysis: MeProfileAnalysisService,
     private readonly meMatches: MeMatchesService,
-    private readonly matchListRankQueue: MatchListRankQueueService,
+    @Inject(MATCH_LIST_RANK_QUEUE_PORT)
+    private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
 
   async onModuleInit(): Promise<void> {

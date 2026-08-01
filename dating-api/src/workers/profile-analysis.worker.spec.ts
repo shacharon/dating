@@ -1,7 +1,7 @@
 import { ProfileAnalysisQueueService } from './profile-analysis.worker';
 import type { MeProfileAnalysisService } from '../me-profile/me-profile-analysis.service';
 import type { MeMatchesService } from '../me-profile/me-matches.service';
-import type { MatchListRankQueueService } from './match-list-rank.worker';
+import type { MatchListRankQueuePort } from './match-list-rank.ports';
 
 describe('ProfileAnalysisQueueService match list rank enqueue', () => {
   const analysis = {
@@ -14,7 +14,7 @@ describe('ProfileAnalysisQueueService match list rank enqueue', () => {
 
   const matchListRankQueue = {
     enqueueRebuild: jest.fn().mockResolvedValue('inline:user'),
-  } as unknown as MatchListRankQueueService;
+  } as unknown as MatchListRankQueuePort;
 
   let service: ProfileAnalysisQueueService;
 

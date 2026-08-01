@@ -1,28 +1,39 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import Queue from 'bull';
-import { MeMatchesService } from '../me-profile/me-matches.service';
 import {
   MATCH_LIST_RANK_QUEUE,
   matchListRankRebuildJobId,
   type MatchListRankRebuildJobData,
 } from './match-list-rank.queue';
+import {
+  MATCH_LIST_RANK_REBUILD_PORT,
+  type MatchListRankQueuePort,
+  type MatchListRankRebuildPort,
+} from './match-list-rank.ports';
 
 /**
  * Bull-backed MatchListRank rebuild queue (Sprint 31 Story 2).
  * REDIS_URL unset / Bull init failure → inline degraded mode.
+ *
+ * Rebuild is resolved via ModuleRef (MATCH_LIST_RANK_REBUILD_PORT) so this
+ * service does not constructor-inject MeMatchesService (Sprint 38 Story 2).
  */
 @Injectable()
 export class MatchListRankQueueService
-  implements OnModuleInit, OnModuleDestroy
+  implements OnModuleInit, OnModuleDestroy, MatchListRankQueuePort
 {
   private readonly logger = new Logger(MatchListRankQueueService.name);
   private queue: Queue.Queue<MatchListRankRebuildJobData> | null = null;
   private bullEnabled = false;
+  private rebuildPort: MatchListRankRebuildPort | null = null;
 
-  constructor(
-    @Inject(forwardRef(() => MeMatchesService))
-    private readonly meMatches: MeMatchesService,
-  ) {}
+  constructor(private readonly moduleRef: ModuleRef) {}
 
   async onModuleInit(): Promise<void> {
     const url = process.env.REDIS_URL?.trim();
@@ -80,6 +91,15 @@ export class MatchListRankQueueService
     return this.bullEnabled && this.queue != null;
   }
 
+  private getRebuildPort(): MatchListRankRebuildPort {
+    if (this.rebuildPort) return this.rebuildPort;
+    this.rebuildPort = this.moduleRef.get<MatchListRankRebuildPort>(
+      MATCH_LIST_RANK_REBUILD_PORT,
+      { strict: false },
+    );
+    return this.rebuildPort;
+  }
+
   private async runJob(data: MatchListRankRebuildJobData): Promise<void> {
     const viewerUserId = data.viewerUserId?.trim() ?? '';
     if (!viewerUserId) {
@@ -87,7 +107,7 @@ export class MatchListRankQueueService
       return;
     }
     const started = Date.now();
-    const result = await this.meMatches.rebuildMatchListRanks(
+    const result = await this.getRebuildPort().rebuildMatchListRanks(
       viewerUserId,
       data.reason,
     );

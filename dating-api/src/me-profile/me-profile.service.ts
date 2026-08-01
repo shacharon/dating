@@ -57,7 +57,10 @@ import { MeMatchesService } from './me-matches.service';
 import { loadPhotoStorageConfig } from '../photo-storage/photo-storage.config';
 import { ProfileAnalysisQueueService } from '../workers/profile-analysis.worker';
 import { PhotoModerationQueueService } from '../workers/photo-moderation.worker';
-import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
+import {
+  MATCH_LIST_RANK_QUEUE_PORT,
+  type MatchListRankQueuePort,
+} from '../workers/match-list-rank.ports';
 
 export type MeProfileSubmitResponseDto = {
   analysisJobId: string;
@@ -388,7 +391,8 @@ export class MeProfileService {
     private readonly meMatches: MeMatchesService,
     private readonly moderation: OpenAIModerationClient,
     private readonly contentViolations: ContentViolationService,
-    private readonly matchListRankQueue: MatchListRankQueueService,
+    @Inject(MATCH_LIST_RANK_QUEUE_PORT)
+    private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
 
   private async assertProfileEditAllowed(userId: string): Promise<void> {

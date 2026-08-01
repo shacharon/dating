@@ -26,12 +26,23 @@ Break critical “god” services and kill structural debt that blocks maintaina
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [Extract matching algorithm constants](./STORY_01_extract_matching_constants.md) | P0 | 0.5d | **Done** |
-| 02 | [Remove circular dependencies](./STORY_02_remove_circular_deps.md) | P0 | 1d | Planned |
+| 02 | [Remove circular dependencies](./STORY_02_remove_circular_deps.md) | P0 | 1d | **Done** |
 | 03 | [Split MeMatchesService](./STORY_03_split_me_matches_service.md) | P0 | 3d | Planned |
 | 04 | [Split MeProfileService](./STORY_04_split_me_profile_service.md) | P0 | 2d | Planned |
 
 **Order:** 01 → 02 → 03 → 04 (4 agents each: `--agent 0..3 sprint 38 story N`).  
 01 is independent; 02 should land before 03 (queue injection). 03 and 04 can parallel after 02 if two engineers.
+
+### Remaining `forwardRef` after Story 2 (intentional / out of scope)
+
+| Edge | Status |
+|------|--------|
+| MeMatches ↔ MatchListRankQueue **services** | **Removed** (ports + ModuleRef) |
+| MeProfileModule ↔ WorkerModule | **Kept** — ProfileAnalysisQueueService still needs MeProfile services |
+| MeProfile ↔ Auth / MessagingRealtime | Unchanged (out of scope) |
+| Admin / Reports / MeAccount ↔ Auth (or Worker) | Unchanged (out of scope) |
+
+Follow-up (not this sprint): break Worker→MeProfile via analysis ports + ModuleRef similar to Story 2.
 
 ---
 
