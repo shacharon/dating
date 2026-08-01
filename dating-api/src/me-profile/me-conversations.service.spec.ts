@@ -23,6 +23,7 @@ describe('MeConversationsService', () => {
     },
     userProfile: { findMany: jest.fn(), findUnique: jest.fn() },
     message: { count: jest.fn() },
+    $queryRaw: jest.fn(),
   } as unknown as PrismaService;
 
   const obs = {
@@ -37,6 +38,7 @@ describe('MeConversationsService', () => {
     const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationsService(prisma, obs, analytics);
     (prisma.message.count as jest.Mock).mockResolvedValue(0);
+    (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
   });
 
   it('returns empty list when user has no ACTIVE mutual matches', async () => {
@@ -46,6 +48,7 @@ describe('MeConversationsService', () => {
 
     expect(result).toEqual({ conversations: [] });
     expect(prisma.userProfile.findMany).not.toHaveBeenCalled();
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalled();
   });
 
@@ -193,7 +196,7 @@ describe('MeConversationsService', () => {
   });
 
   describe('list() unreadCount', () => {
-    it('returns unreadCount from message.count when lastReadAt is null', async () => {
+    it('returns unreadCount from batch query when lastReadAt is null', async () => {
       (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
         {
           id: 'mutual_1',
@@ -204,14 +207,18 @@ describe('MeConversationsService', () => {
         },
       ]);
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.message.count as jest.Mock).mockResolvedValue(3);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { conversationId: 'mutual_1', cnt: 3 },
+      ]);
 
       const result = await service.list(sessionUserId);
 
       expect(result.conversations[0].unreadCount).toBe(3);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.message.count).not.toHaveBeenCalled();
     });
 
-    it('returns zero unread when lastReadAt is set and count is 0', async () => {
+    it('returns zero unread when batch omits conversation (no matching messages)', async () => {
       const readAt = new Date('2026-06-01T12:00:00.000Z');
       (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
         {
@@ -224,22 +231,16 @@ describe('MeConversationsService', () => {
         },
       ]);
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.message.count as jest.Mock).mockResolvedValue(0);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
 
       const result = await service.list(sessionUserId);
 
       expect(result.conversations[0].unreadCount).toBe(0);
-      expect(prisma.message.count).toHaveBeenCalledWith({
-        where: {
-          conversationId: 'mutual_1',
-          senderId: otherUserIdA,
-          status: MessageStatus.SENT,
-          createdAt: { gt: readAt },
-        },
-      });
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.message.count).not.toHaveBeenCalled();
     });
 
-    it('counts only messages from the other user', async () => {
+    it('batches unread for all conversations in one query (not N message.count)', async () => {
       (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
         {
           id: 'mutual_1',
@@ -248,19 +249,30 @@ describe('MeConversationsService', () => {
           createdAt: new Date('2026-05-31T10:00:00.000Z'),
           ...listRowReadDefaults,
         },
+        {
+          id: 'mutual_2',
+          userId1: sessionUserId,
+          userId2: otherUserIdB,
+          createdAt: new Date('2026-05-31T11:00:00.000Z'),
+          ...listRowReadDefaults,
+        },
       ]);
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.message.count as jest.Mock).mockResolvedValue(1);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { conversationId: 'mutual_1', cnt: 1 },
+        { conversationId: 'mutual_2', cnt: 2 },
+      ]);
 
-      await service.list(sessionUserId);
+      const result = await service.list(sessionUserId);
 
-      expect(prisma.message.count).toHaveBeenCalledWith({
-        where: {
-          conversationId: 'mutual_1',
-          senderId: otherUserIdA,
-          status: MessageStatus.SENT,
-        },
-      });
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.message.count).not.toHaveBeenCalled();
+      expect(result.conversations.find((c) => c.id === 'mutual_1')?.unreadCount).toBe(
+        1,
+      );
+      expect(result.conversations.find((c) => c.id === 'mutual_2')?.unreadCount).toBe(
+        2,
+      );
     });
 
     it('sorts conversations with higher unreadCount before newer matchedAt', async () => {
@@ -283,9 +295,10 @@ describe('MeConversationsService', () => {
         },
       ]);
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.message.count as jest.Mock)
-        .mockResolvedValueOnce(0)
-        .mockResolvedValueOnce(3);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { conversationId: 'mutual_new', cnt: 0 },
+        { conversationId: 'mutual_old', cnt: 3 },
+      ]);
 
       const result = await service.list(sessionUserId);
 

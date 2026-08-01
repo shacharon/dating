@@ -77,7 +77,12 @@ describe('me profile HTTP (integration)', () => {
   });
   const prismaMock = {
     $transaction: jest.fn(),
-    $queryRaw: jest.fn(async (sql: { values: unknown[] }) => {
+    $queryRaw: jest.fn(async (sql: { values: unknown[]; strings?: readonly string[] }) => {
+      const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+      // Sprint 28 Story 4 — inbox unread batch (UNNEST on Message). Default empty; tests override.
+      if (sqlText.includes('UNNEST') || sqlText.includes('"Message"')) {
+        return [];
+      }
       const rows: Array<{
         profileId: string;
         evaluationJson: unknown;
@@ -85,6 +90,9 @@ describe('me profile HTTP (integration)', () => {
         version: unknown;
       }> = [];
       for (const profileId of sql.values as string[]) {
+        if (typeof profileId !== 'string') {
+          continue;
+        }
         const row = await prismaMock.userProfileEvaluation.findFirst({
           where: { profileId },
           orderBy: { createdAt: 'desc' },
@@ -4114,7 +4122,9 @@ describe('me profile HTTP (integration)', () => {
         },
       ]);
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.message.count.mockResolvedValue(3);
+      prismaMock.$queryRaw.mockResolvedValue([
+        { conversationId: CONVERSATION_ID, cnt: 3 },
+      ]);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -4122,13 +4132,8 @@ describe('me profile HTTP (integration)', () => {
         .expect(200);
 
       expect(res.body.conversations[0].unreadCount).toBe(3);
-      expect(prismaMock.message.count).toHaveBeenCalledWith({
-        where: {
-          conversationId: CONVERSATION_ID,
-          senderId: CANDIDATE_USER_ID,
-          status: 'SENT',
-        },
-      });
+      expect(prismaMock.$queryRaw).toHaveBeenCalled();
+      expect(prismaMock.message.count).not.toHaveBeenCalled();
     });
 
     it('returns unreadCount 0 after mark-as-read then list', async () => {
@@ -4162,9 +4167,9 @@ describe('me profile HTTP (integration)', () => {
         },
       );
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.message.count
-        .mockResolvedValueOnce(3)
-        .mockResolvedValueOnce(0);
+      prismaMock.$queryRaw
+        .mockResolvedValueOnce([{ conversationId: CONVERSATION_ID, cnt: 3 }])
+        .mockResolvedValueOnce([]);
 
       const before = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -4205,12 +4210,9 @@ describe('me profile HTTP (integration)', () => {
         },
       ]);
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.message.count.mockImplementation(
-        async (args: { where: { conversationId: string } }) => {
-          if (args.where.conversationId === CONVERSATION_ID) return 2;
-          return 0;
-        },
-      );
+      prismaMock.$queryRaw.mockResolvedValue([
+        { conversationId: CONVERSATION_ID, cnt: 2 },
+      ]);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')

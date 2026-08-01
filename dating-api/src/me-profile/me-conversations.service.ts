@@ -15,6 +15,7 @@ import { hashConversationId } from '../analytics/hash-conversation-id';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
 
 function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
   if (!birthDate) return null;
@@ -144,12 +145,22 @@ export class MeConversationsService {
     });
     const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
 
-    const unreadCounts = await Promise.all(
-      rows.map((row) => this.countUnreadForMatchRow(sessionUserId, row)),
+    const unreadSpecs = rows.map((row) => {
+      const otherUserId =
+        row.userId1 === sessionUserId ? row.userId2 : row.userId1;
+      return {
+        conversationId: row.id,
+        otherUserId,
+        lastReadAt: lastReadAtForUser(row, sessionUserId),
+      };
+    });
+    const unreadByConversationId = await batchUnreadCountsByConversationId(
+      this.prisma,
+      unreadSpecs,
     );
 
     const asOf = new Date();
-    const conversations: ConversationListItemDto[] = rows.map((row, index) => {
+    const conversations: ConversationListItemDto[] = rows.map((row) => {
       const otherUserId =
         row.userId1 === sessionUserId ? row.userId2 : row.userId1;
       const profile = profileByUserId.get(otherUserId);
@@ -162,7 +173,7 @@ export class MeConversationsService {
           asOf,
         ),
         matchedAt: row.createdAt.toISOString(),
-        unreadCount: unreadCounts[index] ?? 0,
+        unreadCount: unreadByConversationId.get(row.id) ?? 0,
       };
     });
 
