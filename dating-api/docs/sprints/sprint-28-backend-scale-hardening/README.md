@@ -4,7 +4,7 @@
 **Depends on:** Sprint 27 Done (match-list stopgap). **Does not** require live AWS.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`QUICKSTART.md`](./QUICKSTART.md) · [`PRISMA_CONNECTION_POOL.md`](../../ops/PRISMA_CONNECTION_POOL.md) · [`PUBLIC_HTTP_ALLOWLIST.md`](../../ops/PUBLIC_HTTP_ALLOWLIST.md) · [`INDEX_MIGRATIONS.md`](../../ops/INDEX_MIGRATIONS.md)
 
-**Parked:** [Sprint 20 live apply](../sprint-20-aws-dev-deployment/README.md) (prep complete; deploy deferred).
+**Parked (alert — later):** [Sprint 20 live apply](../sprint-20-aws-dev-deployment/README.md) — prep complete; **do not start deploy now**.
 
 ---
 
@@ -44,5 +44,7 @@ Stories are mostly independent after 01; prefer sequential to keep review simple
 | Next | Focus |
 |------|--------|
 | **29** | [Frontend realtime + cache](../sprint-29-frontend-realtime-cache/README.md) — WS default, conversations cursor, TanStack, images, lazy admin |
-| **30** | Match materialization (async precomputed ranks) |
-| **Infra** | Sprint 20 live apply when deploy hold lifts |
+| **30** | [Content safety](../sprint-30-content-safety/README.md) — Done |
+| **31** | [Async match materialization](../sprint-31-match-materialization/README.md) |
+| **32** | [Moderation ops](../sprint-32-moderation-ops/README.md) — blocked-users admin, recipient context, soft policy |
+| **Infra (alert)** | [Sprint 20 live apply](../sprint-20-aws-dev-deployment/README.md) — parked; resume later |

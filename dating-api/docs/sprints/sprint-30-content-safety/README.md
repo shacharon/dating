@@ -109,25 +109,25 @@ ALTER TABLE User ADD COLUMN contentViolationCount INT DEFAULT 0;
 
 ---
 
-## Acceptance criteria (sprint-level)
-
-- [ ] Profile fields with explicit content → blocked on save, user sees error with category
-- [ ] Messages with explicit content → blocked on send, user sees error with category  
-- [ ] 3 profile violations → `User.contentViolationStatus = 'profile_edit_blocked'`
-- [ ] 10 message violations in one day → `User.contentViolationStatus = 'messaging_muted'`
-- [ ] Admin can view all violations at `/admin/content-violations` with filters
-- [ ] All gates covered by integration tests
-- [ ] Observability: violations logged with category + surface + userId (no raw text in logs)
-
----
-
 ## Out of scope (future)
 
 - Rewording suggestions (requires second LLM call — expensive/slow)
 - Self-hosted moderation (privacy purist option — requires GPU + model maintenance)
-- Appeal flow (manual review → unblock)
 - Retroactive scanning of existing profiles/messages
 
+**Follow-up sprint:** [Sprint 32 — Content Moderation Ops](../sprint-32-moderation-ops/README.md) — recipient context, blocked-users admin table, soft/dating policy, mute cron. (Sprint 31 is match materialization.)
+
+---
+
+## Acceptance criteria (sprint-level)
+
+- [x] Profile fields with explicit content → blocked on save, user sees error with category
+- [x] Messages with explicit content → blocked on send, user sees error with category  
+- [x] 3 profile violations → `User.contentViolationStatus = 'profile_edit_blocked'`
+- [x] Message mute ladder (3/hr, 10/day, 20 lifetime) → `messaging_muted`
+- [x] Admin can view violations at `/admin/content-violations` with filters + Unblock
+- [x] Gates covered by unit/integration tests
+- [x] Observability: violations logged with category + surface + userId (no raw text in logs)
 ---
 
 ## Rollout plan
