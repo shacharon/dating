@@ -1,6 +1,6 @@
 # Sprint 28 — Backend Scale Hardening
 
-**Status:** 🟡 **IN PROGRESS** — Stories 1–4 Done; Story 5 CR PASS → next Agent 3 
+**Status:** 🟡 **IN PROGRESS** — Stories 1–5 Done; next Story 6 Agent 0 
 **Depends on:** Sprint 27 Done (match-list stopgap). **Does not** require live AWS.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`QUICKSTART.md`](./QUICKSTART.md) · [`PRISMA_CONNECTION_POOL.md`](../../ops/PRISMA_CONNECTION_POOL.md) · [`PUBLIC_HTTP_ALLOWLIST.md`](../../ops/PUBLIC_HTTP_ALLOWLIST.md) · [`INDEX_MIGRATIONS.md`](../../ops/INDEX_MIGRATIONS.md)
 
@@ -31,7 +31,7 @@ Cut abuse risk and DB chatter that still hurts after Sprint 27 — without waiti
 | 02 | [Lock expensive endpoints](./STORY_02_lock_expensive_endpoints.md) | **Done** |
 | 03 | [Missing indexes](./STORY_03_missing_indexes.md) | **Done** |
 | 04 | [Batch unread counts](./STORY_04_batch_unread_counts.md) | **Done** |
-| 05 | [Message RL → Redis](./STORY_05_message_rate_limit_redis.md) | In progress (CR PASS) |
+| 05 | [Message RL → Redis](./STORY_05_message_rate_limit_redis.md) | **Done** |
 | 06 | [Throttle lastSeenAt](./STORY_06_throttle_last_seen.md) | Planned |
 
 **Order:** 01 → 02 → 03 → 04 → 05 → 06 (4 agents each: `--agent 0..3 sprint 28 story N`).  

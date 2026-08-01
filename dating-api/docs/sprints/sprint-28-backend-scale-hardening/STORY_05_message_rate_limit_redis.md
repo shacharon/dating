@@ -1,11 +1,17 @@
 # Story 05 — Message send rate limit → Redis
 
-**Sprint 28 · Status: IN PROGRESS (CR PASS → Agent 3)**  
+**Sprint 28 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Redis already used for WS RL / cache locally
 
-**Handoff:** [`handoffs/STORY_05_message_rate_limit_redis/agent-0-architect.md`](./handoffs/STORY_05_message_rate_limit_redis/agent-0-architect.md)
+**Handoffs:**  
+[`agent-0-architect`](./handoffs/STORY_05_message_rate_limit_redis/agent-0-architect.md) ·  
+[`agent-1-dev`](./handoffs/STORY_05_message_rate_limit_redis/agent-1-dev.md) ·  
+[`agent-2-cr`](./handoffs/STORY_05_message_rate_limit_redis/agent-2-cr.md) ·  
+[`agent-3-pm`](./handoffs/STORY_05_message_rate_limit_redis/agent-3-pm.md)
+
+**Impl commit:** `403130d` · **CR:** `fecbe6f`
 
 ---
 
@@ -15,14 +21,14 @@ Move HTTP conversation message rate limiting from in-memory to Redis so multi-AP
 
 ## Why
 
-[`ConversationMessageRateLimitService`](../../../src/me-profile/conversation-message-rate-limit.service.ts) is process-local today. WS path already has a Redis store pattern to mirror.
+[`ConversationMessageRateLimitService`](../../../src/me-profile/conversation-message-rate-limit.service.ts) was process-local. WS path already had a Redis store pattern to mirror.
 
 ## Scope / tasks
 
-1. Mirror [`messaging-ws-rate-limit-redis.store.ts`](../../../src/messaging-realtime/messaging-ws-rate-limit-redis.store.ts) patterns for HTTP send RL.
+1. Mirror [`messaging-ws-rate-limit-redis.store.ts`](../../../src/messaging-realtime/messaging-ws-rate-limit-redis.store.ts) patterns for HTTP send RL. ✅
 2. Architect locks: key shape, window, fail-open vs fail-closed when Redis down. ✅
 3. Keep memory fallback for tests / Redis-less local if locked. ✅
-4. Specs for allow / 429 / window recovery.
+4. Specs for allow / 429 / window recovery. ✅
 
 ### Architect locks (do not reverse)
 
@@ -37,10 +43,10 @@ Move HTTP conversation message rate limiting from in-memory to Redis so multi-AP
 
 ## Acceptance criteria
 
-- [ ] Message send RL uses Redis when Redis is configured
-- [ ] 429 behavior preserved (`{ message: 'Too many messages. Please wait.' }`)
-- [ ] Multi-process safe (key `http:msg:ratelimit:{userId}`)
-- [ ] Tests cover Redis path (mock) and memory fallback
+- [x] Message send RL uses Redis when Redis is configured
+- [x] 429 behavior preserved (`{ message: 'Too many messages. Please wait.' }`)
+- [x] Multi-process safe (key `http:msg:ratelimit:{userId}`)
+- [x] Tests cover Redis path (mock) and memory fallback
 
 ## Commit message
 
