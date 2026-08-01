@@ -4,6 +4,14 @@ export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: AppLocale = "en";
 
+export type OnboardingWritingPromptField = {
+  questions: string[];
+  examples: string[];
+  include: string[];
+  avoid: string[];
+  tone: string[];
+};
+
 /**
  * Minimal, typed copy contract for gradual migration from hardcoded strings.
  * Keep this intentionally small and expand only when wiring new surfaces.
@@ -337,6 +345,23 @@ export type AppCopySchema = {
       genderMissingError: string;
       verifyFailedError: string;
       finishFailedError: string;
+      writingHelp: {
+        ideasHeading: string;
+        showExamples: string;
+        hideExamples: string;
+        showTips: string;
+        hideTips: string;
+        exampleLabel: (n: number) => string;
+        includeHeading: string;
+        avoidHeading: string;
+        toneHeading: string;
+        wordCountLine: (words: number) => string;
+      };
+    };
+    writingPrompts: {
+      aboutMe: OnboardingWritingPromptField;
+      aboutPartner: OnboardingWritingPromptField;
+      aboutRelationship: OnboardingWritingPromptField;
     };
   };
   notifications: {

@@ -13,6 +13,7 @@ import {
   type ContentModerationDetails,
 } from '@/lib/content-moderation-error';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
+import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text-field-help';
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
 
@@ -36,6 +37,8 @@ export function OnboardingTextsForm() {
   const { copy } = useAppLocale();
   const ob = copy.onboarding;
   const tf = ob.textsForm;
+  const wh = tf.writingHelp;
+  const prompts = ob.writingPrompts;
   const mod = copy.contentModeration;
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
@@ -235,6 +238,12 @@ export function OnboardingTextsForm() {
           className={`${inputClass} min-h-[6rem]`}
           placeholder={tf.aboutMePlaceholder}
         />
+        <OnboardingTextFieldHelp
+          value={aboutMe}
+          field={prompts.aboutMe}
+          chrome={wh}
+          testIdPrefix="ot-about-me"
+        />
       </div>
 
       <div>
@@ -253,6 +262,12 @@ export function OnboardingTextsForm() {
           className={`${inputClass} min-h-[6rem]`}
           placeholder={tf.aboutPartnerPlaceholder}
         />
+        <OnboardingTextFieldHelp
+          value={aboutPartner}
+          field={prompts.aboutPartner}
+          chrome={wh}
+          testIdPrefix="ot-about-partner"
+        />
       </div>
 
       <div>
@@ -270,6 +285,12 @@ export function OnboardingTextsForm() {
           rows={4}
           className={`${inputClass} min-h-[6rem]`}
           placeholder={tf.aboutRelationshipPlaceholder}
+        />
+        <OnboardingTextFieldHelp
+          value={aboutRelationship}
+          field={prompts.aboutRelationship}
+          chrome={wh}
+          testIdPrefix="ot-about-rel"
         />
       </div>
 

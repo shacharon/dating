@@ -373,6 +373,111 @@ export const esCopy: AppCopySchema = {
         "Vuelve a lo basico y elige un genero antes de enviar a analisis.",
       verifyFailedError: "No se pudo verificar tu perfil. Intentalo de nuevo.",
       finishFailedError: "No se pudo finalizar el registro",
+      writingHelp: {
+        ideasHeading: "Ideas para escribir",
+        showExamples: "Mostrar ejemplos",
+        hideExamples: "Ocultar ejemplos",
+        showTips: "Consejos de escritura",
+        hideTips: "Ocultar consejos",
+        exampleLabel: (n) => `Ejemplo ${n}`,
+        includeHeading: "Que incluir",
+        avoidHeading: "Que evitar",
+        toneHeading: "Tono",
+        wordCountLine: (words) =>
+          `${words} palabras · Unas 50–150 recomendadas`,
+      },
+    },
+    writingPrompts: {
+      aboutMe: {
+        questions: [
+          "Que te gusta hacer cuando por fin tienes una tarde o un fin de semana libre?",
+          "Que tipo de conversaciones o actividades compartidas te ayudan a sentir conexion?",
+          "Que hay de concreto en tu personalidad que tus amigos notan rapido?",
+          "De que tienes curiosidad o que estas aprendiendo ahora—trabajo, hobbies o el dia a dia?",
+        ],
+        examples: [
+          "Trabajo en diseno de producto y desconecto cocinando cenas elaboradas para amigos. Entre semana suelo estar en casa con un podcast y un cuaderno; los fines de semana busco galerias pequenas o una panaderia nueva. Soy calmado/a en grupos pero me animo cuando la charla es profunda. Busco personas que prefieran planes tranquilos y no necesiten que cada noche sea ruidosa.",
+          "Paso mucho tiempo al aire libre: bicicleta, caminatas cortas, lo que despeje la cabeza despues de pantallas. Entreno un equipo juvenil de futbol dos veces por semana y sigo siendo raro/a de competitivo/a en juegos de mesa. Mis amigos dicen que soy fiable y con humor seco. Valoro la honestidad, aparecer cuando digo que voy, y parejas que disfruten el silencio comodo tanto como una buena charla sobre un partido.",
+          "Mi vida social es mas de interior: noches de jazz, cenas largas y maratones de peliculas malas con comentarios. Leo mucha ficcion y te recomendare tres libros que odies. Soy introvertido/a pero calido/a cuando te conozco. Me importa mas la amabilidad bajo estres que un curriculo perfecto, y estoy construyendo una vida con espacio para la curiosidad.",
+        ],
+        include: [
+          "Algunos hobbies o rutinas concretas (no un CV completo)",
+          "Como pasas el tiempo libre y que te da energia",
+          "Rasgos de personalidad que otros reconocerian",
+          "El tipo de conexion o ritmo que te conviene",
+        ],
+        avoid: [
+          'Frases vagas como "me gusta divertirme" o "busco pasarlo bien"',
+          'Listas de exigencias, insultos o ataques de "sin drama"',
+          "Contenido sexual explicito o tono de ligue agresivo",
+          "Copiar un resumen de LinkedIn demasiado pulido",
+        ],
+        tone: [
+          "Prefiere un detalle vivo a cinco afirmaciones genericas",
+          "Suena como tu en una primera conversacion, no como un anuncio",
+          "Especifico y calido gana a ingenioso y frio",
+        ],
+      },
+      aboutPartner: {
+        questions: [
+          "Que habitos o intereses cotidianos harían mas facil el dia a dia con alguien?",
+          "Como esperas que una pareja muestre cuidado—palabras, tiempo, planes pequenos u otra forma?",
+          "Que valores o formas de tratar a la gente te importan mas en un match?",
+          "Que ritmo compartido buscas—noches tranquilas, fines sociales, viajes o una mezcla?",
+        ],
+        examples: [
+          "Me atrae alguien curioso/a y con los pies en la tierra: feliz debatiendo una pelicula y luego cocinando algo simple sin gran produccion. La honestidad emocional importa mas que escribir todo el dia. Quiero una pareja con sus propias amistades y hobbies, que avise si cambian los planes y sepa reirse cuando un plan de fin de semana se cae. La amabilidad con el personal de servicio es un buen signo para mi.",
+          "Me gustaria alguien activo/a sin convertir el fitness en personalidad. Piensa en caminatas al atardecer, probar una clase juntos y luego recuperarse en el sofa. El estilo de comunicacion importa: claro, con poca drama, dispuesto/a a decir lo que necesita. Busco animo mutuo ante el estres del trabajo y la sensacion de que el fin de semana puede ser descanso y un poco de aventura.",
+          "Mi pareja ideal es comoda socialmente pero no el centro de cada sala: alguien que disfrute una cena animada y tambien un martes tranquilo. Valoro la disponibilidad emocional, el respeto a los limites y el humor sin crueldad. Gustos compartidos en musica o libros son un plus; respeto y cumplir lo prometido son necesarios. Busco energia de equipo, no un proyecto que arreglar.",
+        ],
+        include: [
+          "Rasgos y conductas con las que te gusta convivir",
+          "Como te gusta pasar tiempo juntos",
+          "Valores (respeto, honestidad, curiosidad) en lenguaje sencillo",
+          "Encaje de ritmo y estilo de vida (social vs tranquilo, activo vs hogareño)",
+        ],
+        avoid: [
+          'Listas de compras ("tiene que medir X, rico, sin hijos…")',
+          "Textos solo negativos sobre exparejas o estereotipos de genero",
+          'Lenguaje de "lista de deseos" sexualizado',
+          "Exigencias contradictorias que no dejan espacio a una persona real",
+        ],
+        tone: [
+          "Describe la sensacion de un buen match, no una tarjeta de puntuacion",
+          "Invita, no interrogues",
+          "Mantente lo bastante abierto/a para que personas distintas puedan encajar",
+        ],
+      },
+      aboutRelationship: {
+        questions: [
+          "Como se veria una buena semana juntos en un mundo ideal para ti?",
+          "Que tan importantes son independencia y estar juntos, y como los equilibras?",
+          "Que esperas construir en el proximo ano o dos—companerismo, compromiso, proyectos compartidos?",
+          "Como sueles manejar un desacuerdo, y que te ayuda a sentirte seguro/a despues?",
+        ],
+        examples: [
+          "Quiero una relacion que se sienta como base: chequeos regulares, comidas juntos unas veces por semana y espacio para hobbies en solitario. Me interesa algo intencional que pueda crecer hacia un compromiso a largo plazo, sin apresurar etiquetas en la primera semana. Comunico mejor cara a cara cuando algo es dificil. Lealtad, humor y reparar tras el conflicto me importan mas que la intensidad constante.",
+          "Espero una pareja con un toque social—amigos, reuniones pequenas, viajes de vez en cuando—equilibrada con tiempo tranquilo de recuperacion. La igualdad al planear y en el trabajo emocional importa. Me gustan expectativas claras sobre exclusividad cuando ambos estamos listos. Tras un conflicto me enfrío un poco y luego hablamos sin llevar la cuenta. Busco a alguien que vea el dating como trabajo en equipo, no como un examen.",
+          "Me encantaria una conexion de baja drama y alta confianza: celebramos logros pequenos, protegemos el tiempo libre del otro y seguimos curiosos por sus metas. Estoy abierto/a a construir un futuro compartido, incluidas conversaciones practicas cuando el momento sea adecuado. El afecto por consistencia me importa mucho—aparecer, recordar detalles, cumplir promesas. Quiero calidez y estabilidad mas que fuegos artificiales cada dia.",
+        ],
+        include: [
+          "El tipo de conexion diaria que quieres",
+          "Que tan serio o abierto te sientes (con tus palabras)",
+          "Preferencias de independencia vs estar juntos",
+          "Como te gusta manejar conflicto o estres en pareja",
+        ],
+        avoid: [
+          "Ultimatums o plazos que suenan a contrato",
+          'Frases vagas de "ya veremos" sin sustancia',
+          "Menospreciar otros estilos de relacion",
+          "Contenido explicito o presion sobre el ritmo fisico",
+        ],
+        tone: [
+          "Se honesto/a sobre el ritmo sin sonar rigido/a",
+          "Enfocate en el cuidado mutuo, no en el control",
+          "Unos ritmos concretos ganan a ideales abstractos",
+        ],
+      },
     },
   },
   notifications: {

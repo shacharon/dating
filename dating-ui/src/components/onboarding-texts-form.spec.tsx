@@ -119,6 +119,46 @@ describe('OnboardingTextsForm', () => {
     });
   });
 
+  it('shows writing help with word count and collapsed examples under each field', async () => {
+    render(<OnboardingTextsForm />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ot-about-me-writing-help')).toBeTruthy();
+    });
+
+    expect(screen.getByTestId('ot-about-partner-writing-help')).toBeTruthy();
+    expect(screen.getByTestId('ot-about-rel-writing-help')).toBeTruthy();
+
+    const wh = enCopy.onboarding.textsForm.writingHelp;
+    expect(screen.getAllByText(wh.ideasHeading)).toHaveLength(3);
+    expect(screen.queryByTestId('ot-about-me-examples-panel')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel), {
+      target: { value: 'one two three' },
+    });
+    expect(screen.getByTestId('ot-about-me-word-count').textContent).toBe(
+      wh.wordCountLine(3),
+    );
+
+    fireEvent.click(screen.getByTestId('ot-about-me-examples-toggle'));
+    expect(screen.getByTestId('ot-about-me-examples-panel')).toBeTruthy();
+    expect(
+      screen.getByText(enCopy.onboarding.writingPrompts.aboutMe.examples[0]),
+    ).toBeTruthy();
+  });
+
+  it('shows localized writing help heading when locale is he', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    render(<OnboardingTextsForm />);
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(heCopy.onboarding.textsForm.writingHelp.ideasHeading)
+          .length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
   it('shows moderation alert (not only flat string) on save failure', async () => {
     const { ContentModerationApiError } = await import(
       '@/lib/content-moderation-error'
