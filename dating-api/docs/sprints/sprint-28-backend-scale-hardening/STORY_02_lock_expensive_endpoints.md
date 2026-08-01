@@ -1,11 +1,11 @@
 # Story 02 — Lock expensive endpoints
 
-**Sprint 28 · Status: IN REVIEW** (Agent 2 CR **PASS** → Agent 3 PM)  
+**Sprint 28 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 0.5–1 day  
 **Dependencies:** Prefer after Story 01 (independent OK)
 
-**Handoffs:** [architect](./handoffs/STORY_02_lock_expensive_endpoints/agent-0-architect.md) · [dev](./handoffs/STORY_02_lock_expensive_endpoints/agent-1-dev.md) · [cr](./handoffs/STORY_02_lock_expensive_endpoints/agent-2-cr.md)
+**Handoffs:** [architect](./handoffs/STORY_02_lock_expensive_endpoints/agent-0-architect.md) · [dev](./handoffs/STORY_02_lock_expensive_endpoints/agent-1-dev.md) · [cr](./handoffs/STORY_02_lock_expensive_endpoints/agent-2-cr.md) · [pm](./handoffs/STORY_02_lock_expensive_endpoints/agent-3-pm.md)
 
 ---
 
@@ -27,10 +27,10 @@ Scale CR P0: open `POST /api/evaluate/*`, `POST /api/v1/matches/rebuild`, and op
 
 ## Acceptance criteria
 
-- [ ] Expensive evaluate / rebuild / open profile mutation paths are not anonymously callable in production config
-- [ ] Documented allow-list of remaining public routes
-- [ ] Tests cover reject path
-- [ ] Product `/api/v1/me/*` auth flows unchanged
+- [x] Expensive evaluate / rebuild / open profile mutation paths are not anonymously callable in production config
+- [x] Documented allow-list of remaining public routes
+- [x] Tests cover reject path
+- [x] Product `/api/v1/me/*` auth flows unchanged
 
 ## Commit message
 
