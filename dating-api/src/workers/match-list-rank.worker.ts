@@ -120,12 +120,15 @@ export class MatchListRankQueueService
         });
         return String(job.id);
       } catch (err) {
-        this.logger.debug(
-          `match-list-rank enqueue coalesced jobId=${jobId}: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
-        return jobId;
+        const msg = err instanceof Error ? err.message : String(err);
+        // Bull rejects duplicate jobId while pending/active — coalesce.
+        if (/already exists|Job.*exists/i.test(msg)) {
+          this.logger.debug(
+            `match-list-rank enqueue coalesced jobId=${jobId}: ${msg}`,
+          );
+          return jobId;
+        }
+        throw err;
       }
     }
     const inlineId = `inline:${id}`;
