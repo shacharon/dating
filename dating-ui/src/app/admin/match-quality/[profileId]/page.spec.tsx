@@ -31,7 +31,7 @@ vi.mock('next/link', () => ({
   },
 }));
 
-import AdminMatchQualityCandidatePage from './page';
+import AdminMatchQualityCandidatePage from './candidate-page-client';
 
 const auditFixture = {
   candidateProfileId: 'cand_profile_1',

@@ -38,7 +38,7 @@ vi.mock('next/link', () => ({
   },
 }));
 
-import AdminPhotosPage from './page';
+import AdminPhotosPage from './photos-page-client';
 
 describe('AdminPhotosPage', () => {
   beforeEach(() => {

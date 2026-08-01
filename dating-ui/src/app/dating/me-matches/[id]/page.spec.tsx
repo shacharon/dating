@@ -595,7 +595,9 @@ describe('MeMatchDetailPage (match photos)', () => {
 
     fireEvent.click(screen.getByTestId('match-detail-report'));
 
-    expect(screen.getByTestId('report-user-dialog')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId('report-user-dialog')).toBeTruthy();
+    });
   });
 });
 

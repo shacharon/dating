@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -11,9 +12,7 @@ import {
   type MeMatchDetailDto,
 } from '@/lib/me-matches-api';
 import { matchDetailSubtitle, matchDetailTitle } from '../match-display';
-import { MatchCelebrationModal } from '@/components/match-celebration-modal';
 import { MatchPhoto } from '@/components/match-photo';
-import { ReportUserDialog } from '@/components/report-user-dialog';
 import { useAppLocale } from '@/lib/i18n';
 import { formatHardBlockReason } from '../hard-block-display';
 import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
@@ -24,6 +23,22 @@ import {
 import { useMatchActions } from '@/hooks/use-match-actions';
 import { useMatchFeedback } from '@/hooks/use-match-feedback';
 import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
+
+const MatchCelebrationModal = dynamic(
+  () =>
+    import('@/components/match-celebration-modal').then((m) => ({
+      default: m.MatchCelebrationModal,
+    })),
+  { ssr: false },
+);
+
+const ReportUserDialog = dynamic(
+  () =>
+    import('@/components/report-user-dialog').then((m) => ({
+      default: m.ReportUserDialog,
+    })),
+  { ssr: false },
+);
 
 type YourAction = 'LIKE' | 'PASS' | 'BLOCK' | null;
 
@@ -535,7 +550,7 @@ export default function MeMatchDetailPage() {
         )}
       </div>
 
-      {data && celebrationData && (
+      {data && celebrationData ? (
         <MatchCelebrationModal
           open
           onClose={dismissCelebration}
@@ -545,8 +560,8 @@ export default function MeMatchDetailPage() {
             router.push(`/dating/conversations/${celebrationData.conversationId}`);
           }}
         />
-      )}
-      {data && id ? (
+      ) : null}
+      {data && id && reportOpen ? (
         <ReportUserDialog
           open={reportOpen}
           onClose={() => setReportOpen(false)}

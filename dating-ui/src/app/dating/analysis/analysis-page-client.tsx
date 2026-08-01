@@ -1,10 +1,18 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { mapEvaluationToViewModel } from '@/lib/analysis-presentation';
 import { AnalysisProgressPanel } from '@/components/analysis-progress-panel';
 import { useAppLocale } from '@/lib/i18n';
-import { AnalysisResultsView } from './analysis-results-view';
 import { useAnalysisPage } from './use-analysis-page';
+
+const AnalysisResultsView = dynamic(
+  () =>
+    import('./analysis-results-view').then((m) => ({
+      default: m.AnalysisResultsView,
+    })),
+  { ssr: false },
+);
 
 export default function DatingAnalysisPageClient() {
   const { locale, copy } = useAppLocale();

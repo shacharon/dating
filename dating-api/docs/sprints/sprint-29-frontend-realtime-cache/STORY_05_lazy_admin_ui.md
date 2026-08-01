@@ -1,11 +1,11 @@
 # Story 05 — Lazy-load admin / heavy UI
 
-**Sprint 29 · Status: Architect locked → Agent 1 Dev**  
+**Sprint 29 · Status: Dev complete → Agent 2 CR**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (FE-only)
 
-**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md`](./handoffs/STORY_05_lazy_admin_ui/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_05_lazy_admin_ui/agent-1-dev.md)
 
 ---
 

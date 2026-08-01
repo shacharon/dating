@@ -46,6 +46,7 @@ async function flush(times = 8): Promise<void> {
   for (let i = 0; i < times; i++) {
     await act(async () => {
       await new Promise<void>((resolve) => queueMicrotask(resolve));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
     });
   }
 }
@@ -121,6 +122,10 @@ describe('DatingAnalysisPage', () => {
       root.render(createElement(DatingAnalysisPage));
     });
     await flush();
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
 
     const text = div.textContent ?? '';
     expect(text).toContain(

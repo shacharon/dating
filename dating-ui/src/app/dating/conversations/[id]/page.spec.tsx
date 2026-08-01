@@ -669,7 +669,9 @@ describe('ConversationDetailPage', () => {
     });
 
     fireEvent.click(screen.getByTestId('conversation-report-open'));
-    expect(screen.getByTestId('report-user-dialog')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId('report-user-dialog')).toBeTruthy();
+    });
     unmount();
   });
 

@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -17,12 +18,19 @@ import {
   formatMatchedOnDate,
   formatMessageTime,
 } from '../conversation-display';
-import { ReportUserDialog } from '@/components/report-user-dialog';
 import { useAppLocale } from '@/lib/i18n';
 import { setActiveConversationId } from '@/lib/conversation-focus';
 import { useConversationMessages } from '@/hooks/use-conversation-messages';
 import { useConversationActions } from '@/hooks/use-conversation-actions';
 import { getRealtimeMode } from '@/lib/realtime-mode';
+
+const ReportUserDialog = dynamic(
+  () =>
+    import('@/components/report-user-dialog').then((m) => ({
+      default: m.ReportUserDialog,
+    })),
+  { ssr: false },
+);
 
 function scrollListToBottom(listEl: HTMLDivElement | null) {
   if (!listEl) return;
@@ -439,7 +447,7 @@ export default function ConversationDetailPage() {
           </>
         )}
       </div>
-      {data && id ? (
+      {data && id && reportOpen ? (
         <ReportUserDialog
           open={reportOpen}
           onClose={() => setReportOpen(false)}

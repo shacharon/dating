@@ -36,7 +36,7 @@ vi.mock('next/link', () => ({
   },
 }));
 
-import AdminMatchQualityPage from './page';
+import AdminMatchQualityPage from './match-quality-page-client';
 
 const summaryFixture = {
   windowDays: 7,
