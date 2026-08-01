@@ -28,6 +28,31 @@ function truncateId(id: string): string {
   return id.length > 12 ? `${id.slice(0, 8)}…` : id;
 }
 
+function CopyableConversationId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // ignore clipboard failures in restricted contexts
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleCopy()}
+      title={copied ? 'Copied' : `Click to copy ${id}`}
+      className="font-mono text-[10px] text-left text-emerald-700 hover:underline dark:text-emerald-400"
+    >
+      {copied ? 'Copied' : truncateId(id)}
+    </button>
+  );
+}
+
 export default function AdminContentViolationsPageClient() {
   const [blockedUsers, setBlockedUsers] = useState<AdminBlockedUserItem[]>([]);
   const [blockedTotal, setBlockedTotal] = useState(0);
@@ -37,6 +62,8 @@ export default function AdminContentViolationsPageClient() {
   const [surface, setSurface] = useState('');
   const [category, setCategory] = useState('');
   const [action, setAction] = useState('');
+  const [userStatus, setUserStatus] = useState('');
+  const [hasRecipient, setHasRecipient] = useState('');
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +79,8 @@ export default function AdminContentViolationsPageClient() {
           surface: surface || undefined,
           category: category || undefined,
           action: action || undefined,
+          userStatus: userStatus || undefined,
+          hasRecipient: hasRecipient === '1' || undefined,
           userId: userId.trim() || undefined,
           limit: 50,
           offset: 0,
@@ -72,7 +101,7 @@ export default function AdminContentViolationsPageClient() {
     } finally {
       setLoading(false);
     }
-  }, [surface, category, action, userId]);
+  }, [surface, category, action, userStatus, hasRecipient, userId]);
 
   useEffect(() => {
     void load();
@@ -214,9 +243,7 @@ export default function AdminContentViolationsPageClient() {
                       </td>
                       <td className="px-3 py-2 font-mono text-[10px]">
                         {latest?.conversationId ? (
-                          <span title={latest.conversationId}>
-                            {truncateId(latest.conversationId)}
-                          </span>
+                          <CopyableConversationId id={latest.conversationId} />
                         ) : (
                           <span className="text-zinc-400">—</span>
                         )}
@@ -292,6 +319,30 @@ export default function AdminContentViolationsPageClient() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Status
+            <select
+              value={userStatus}
+              onChange={(e) => setUserStatus(e.target.value)}
+              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              <option value="">All</option>
+              <option value="ok">ok</option>
+              <option value="profile_edit_blocked">profile_edit_blocked</option>
+              <option value="messaging_muted">messaging_muted</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Has recipient
+            <select
+              value={hasRecipient}
+              onChange={(e) => setHasRecipient(e.target.value)}
+              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              <option value="">All</option>
+              <option value="1">Yes</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
             User ID
             <input
               value={userId}
@@ -359,9 +410,7 @@ export default function AdminContentViolationsPageClient() {
                     </td>
                     <td className="px-3 py-2 font-mono text-[10px]">
                       {row.conversationId ? (
-                        <span title={row.conversationId}>
-                          {truncateId(row.conversationId)}
-                        </span>
+                        <CopyableConversationId id={row.conversationId} />
                       ) : (
                         <span className="text-zinc-400">—</span>
                       )}

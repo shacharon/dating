@@ -332,6 +332,27 @@ describe('admin content violations HTTP (integration)', () => {
     );
   });
 
+  it('filters violations list by userStatus and hasRecipient', async () => {
+    prismaMock.userContentViolation.findMany.mockResolvedValue([]);
+    prismaMock.userContentViolation.count.mockResolvedValue(0);
+
+    await request(app.getHttpServer())
+      .get(
+        '/api/v1/admin/content-violations?userStatus=messaging_muted&hasRecipient=1',
+      )
+      .set('Cookie', cookieHeader(ADMIN_USER_ID))
+      .expect(200);
+
+    expect(prismaMock.userContentViolation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          user: { contentViolationStatus: 'messaging_muted' },
+          recipientUserId: { not: null },
+        }),
+      }),
+    );
+  });
+
   it('returns empty blocked-users after unblock mock clears status', async () => {
     prismaMock.user.update.mockResolvedValue({});
     prismaMock.user.findMany.mockResolvedValue([]);

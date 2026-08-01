@@ -18,6 +18,7 @@ import { AdminGuard } from '../admin.guard';
 import { AdminContentViolationsService } from './admin-content-violations.service';
 import { ListAdminBlockedUsersQueryDto } from './dto/list-admin-blocked-users.dto';
 import {
+  isHasRecipientQuery,
   isIncludeFullTextQuery,
   ListAdminContentViolationsQueryDto,
 } from './dto/list-admin-content-violations.dto';
@@ -43,6 +44,8 @@ export class AdminContentViolationsController {
       category: query.category,
       userId: query.userId,
       action: query.action,
+      userStatus: query.userStatus,
+      hasRecipient: isHasRecipientQuery(query.hasRecipient),
       limit: query.limit ?? 50,
       offset: query.offset ?? 0,
       includeFullText: isIncludeFullTextQuery(query.includeFullText),

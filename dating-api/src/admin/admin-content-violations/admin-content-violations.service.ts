@@ -31,6 +31,8 @@ export class AdminContentViolationsService {
     category?: string;
     userId?: string;
     action?: string;
+    userStatus?: string;
+    hasRecipient?: boolean;
     limit?: number;
     offset?: number;
     includeFullText?: boolean;
@@ -44,11 +46,19 @@ export class AdminContentViolationsService {
       category?: string;
       userId?: string;
       action?: string;
+      recipientUserId?: { not: null };
+      user?: { contentViolationStatus: string };
     } = {};
     if (filters.surface?.trim()) where.surface = filters.surface.trim();
     if (filters.category?.trim()) where.category = filters.category.trim();
     if (filters.userId?.trim()) where.userId = filters.userId.trim();
     if (filters.action?.trim()) where.action = filters.action.trim();
+    if (filters.userStatus?.trim()) {
+      where.user = { contentViolationStatus: filters.userStatus.trim() };
+    }
+    if (filters.hasRecipient === true) {
+      where.recipientUserId = { not: null };
+    }
 
     const [rows, total] = await Promise.all([
       this.prisma.userContentViolation.findMany({

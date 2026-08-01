@@ -1,10 +1,10 @@
 # Story 04 — Mute expiry cron + ops polish
 
-**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 0 architect complete → run Agent 1**  
+**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Sprint 30 `clearExpiredMutes()` exists  
-**Handoffs:** [architect](./handoffs/STORY_04_mute_cron_ops/agent-0-architect.md) 
+**Handoffs:** [architect](./handoffs/STORY_04_mute_cron_ops/agent-0-architect.md) · [dev](./handoffs/STORY_04_mute_cron_ops/agent-1-dev.md) 
 
 ---
 

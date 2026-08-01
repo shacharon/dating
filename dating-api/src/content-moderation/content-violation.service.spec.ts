@@ -304,6 +304,15 @@ describe('ContentViolationService', () => {
     );
   });
 
+  it('clearExpiredMutes where excludes indefinite mutes (mutedUntil null)', async () => {
+    (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+    await service.clearExpiredMutes();
+    const arg = (prisma.user.updateMany as jest.Mock).mock.calls[0][0];
+    expect(arg.where.contentViolationMutedUntil).toEqual(
+      expect.objectContaining({ not: null }),
+    );
+  });
+
   it('getViolationStats aggregates counts', async () => {
     (prisma.userContentViolation.groupBy as jest.Mock)
       .mockResolvedValueOnce([

@@ -19,6 +19,16 @@ export class ListAdminContentViolationsQueryDto {
   @IsString()
   action?: string;
 
+  /** Exact match on user.contentViolationStatus. */
+  @IsOptional()
+  @IsString()
+  userStatus?: string;
+
+  /** Truthy when `1` / `true` / `yes` → recipientUserId not null. */
+  @IsOptional()
+  @IsString()
+  hasRecipient?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -70,4 +80,9 @@ export function isIncludeFullTextQuery(raw: string | undefined): boolean {
   if (raw == null || raw === '') return false;
   const v = raw.trim().toLowerCase();
   return v === '1' || v === 'true' || v === 'yes';
+}
+
+/** Same truthy rules as includeFullText. */
+export function isHasRecipientQuery(raw: string | undefined): boolean {
+  return isIncludeFullTextQuery(raw);
 }

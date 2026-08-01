@@ -138,6 +138,25 @@ describe('AdminContentViolationsService', () => {
     );
   });
 
+  it('filters violations by userStatus and hasRecipient', async () => {
+    prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([]);
+    prisma.userContentViolation.count = jest.fn().mockResolvedValue(0);
+
+    await service.listViolations({
+      userStatus: 'messaging_muted',
+      hasRecipient: true,
+    });
+
+    expect(prisma.userContentViolation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          user: { contentViolationStatus: 'messaging_muted' },
+          recipientUserId: { not: null },
+        },
+      }),
+    );
+  });
+
   it('includes flaggedText on list when includeFullText is true', async () => {
     prisma.userContentViolation.findMany = jest.fn().mockResolvedValue([
       {
