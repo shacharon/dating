@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   matchPhotoPlaceholderInitial,
   matchPhotoSrc,
+  shouldOptimizePhotoSrc,
 } from '@/lib/match-photo';
 
 export type MatchPhotoVariant = 'list' | 'hero' | 'celebration' | 'header';
@@ -44,9 +45,12 @@ const skeletonClasses: Record<MatchPhotoVariant, string> = {
   header: 'h-20 w-20 shrink-0 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700',
 };
 
-function isAbsoluteHttpUrl(src: string): boolean {
-  return /^https?:\/\//i.test(src);
-}
+const sizesByVariant: Record<MatchPhotoVariant, string> = {
+  list: '112px',
+  header: '112px',
+  celebration: '112px',
+  hero: '(max-width: 768px) 100vw, 800px',
+};
 
 export function MatchPhoto({
   photoUrl,
@@ -82,7 +86,7 @@ export function MatchPhoto({
   }
 
   const imgClass = [variantClasses[variant], className].filter(Boolean).join(' ');
-  const useNextImage = isAbsoluteHttpUrl(src!);
+  const optimize = shouldOptimizePhotoSrc(src!);
 
   return (
     <div className="relative inline-block">
@@ -93,22 +97,22 @@ export function MatchPhoto({
           aria-hidden
         />
       )}
-      {useNextImage ? (
+      {optimize ? (
         <Image
           src={src!}
           alt={variant === 'hero' ? displayName : ''}
           width={variant === 'hero' ? 800 : 112}
           height={variant === 'hero' ? 600 : 112}
+          sizes={sizesByVariant[variant]}
           className={[imgClass, imageLoaded ? '' : 'absolute opacity-0'].join(' ')}
           data-testid={testId}
           priority={priority}
           loading={priority ? undefined : 'lazy'}
-          unoptimized
           onLoad={() => setImageLoaded(true)}
           onError={() => setLoadFailed(true)}
         />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- session-authenticated relative URLs
+        // eslint-disable-next-line @next/next/no-img-element -- AuthGuard / relative cookie URLs (optimizer has no session)
         <img
           src={src!}
           alt={variant === 'hero' ? displayName : ''}

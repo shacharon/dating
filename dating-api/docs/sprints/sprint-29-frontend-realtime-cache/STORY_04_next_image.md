@@ -1,11 +1,11 @@
 # Story 04 — next/image optimization
 
-**Sprint 29 · Status: Architect locked → Agent 1**  
+**Sprint 29 · Status: Dev complete → Agent 2 CR**  
 **Priority:** P2  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Know CDN / photo URL hosts in use
 
-**Handoff:** [`handoffs/STORY_04_next_image/agent-0-architect.md`](./handoffs/STORY_04_next_image/agent-0-architect.md)
+**Handoff:** [`handoffs/STORY_04_next_image/agent-0-architect.md`](./handoffs/STORY_04_next_image/agent-0-architect.md) · [`agent-1-dev.md`](./handoffs/STORY_04_next_image/agent-1-dev.md)
 
 ---
 

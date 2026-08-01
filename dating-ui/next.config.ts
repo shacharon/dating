@@ -2,6 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildImageRemotePatterns } from "./src/lib/image-remote-patterns";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,6 +18,9 @@ const nextConfig: NextConfig = {
   /** Avoid picking a parent folder when multiple lockfiles exist (Turbopack workspace root). */
   turbopack: {
     root: projectRoot,
+  },
+  images: {
+    remotePatterns: buildImageRemotePatterns(),
   },
   /**
    * Proxy `/api/*` to dating-api so the browser can call same-origin `/api/...`

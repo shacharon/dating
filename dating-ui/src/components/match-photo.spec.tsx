@@ -1,7 +1,34 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
-import { MatchPhoto } from '@/components/match-photo';
+
+vi.mock('next/image', () => ({
+  default: function MockNextImage(props: {
+    src: string;
+    unoptimized?: boolean;
+    sizes?: string;
+    'data-testid'?: string;
+    alt?: string;
+    className?: string;
+    onLoad?: () => void;
+    onError?: () => void;
+  }) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+      <img
+        data-testid={props['data-testid']}
+        src={props.src}
+        alt={props.alt ?? ''}
+        className={props.className}
+        data-next-image="1"
+        data-unoptimized={props.unoptimized === true ? 'true' : 'false'}
+        data-sizes={props.sizes ?? ''}
+        onLoad={props.onLoad}
+        onError={props.onError}
+      />
+    );
+  },
+}));
 
 vi.mock('@/lib/match-photo', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/match-photo')>();
@@ -11,23 +38,58 @@ vi.mock('@/lib/match-photo', async (importOriginal) => {
   };
 });
 
+import { MatchPhoto } from '@/components/match-photo';
+
 describe('MatchPhoto', () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
-  it('renders img when photoUrl is set', () => {
+  it('renders img for relative photo paths (cookie-safe)', () => {
     render(
       <MatchPhoto
         variant="list"
-        photoUrl="/photos/1/file"
+        photoUrl="/api/v1/me/matches/p/photos/1/file"
         displayName="River"
         testId="photo-unit"
       />,
     );
     const img = screen.getByTestId('photo-unit');
     expect(img.tagName).toBe('IMG');
-    expect(img.getAttribute('src')).toBe('/photos/1/file');
+    expect(img.getAttribute('data-next-image')).toBeNull();
+    expect(img.getAttribute('src')).toBe('/api/v1/me/matches/p/photos/1/file');
+  });
+
+  it('renders img for absolute API-like hosts when CDN unset', () => {
+    vi.stubEnv('NEXT_PUBLIC_PHOTO_CDN_HOSTS', '');
+    render(
+      <MatchPhoto
+        variant="list"
+        photoUrl="http://127.0.0.1:3001/api/v1/me/matches/p/photos/1/file"
+        displayName="River"
+        testId="photo-unit"
+      />,
+    );
+    const img = screen.getByTestId('photo-unit');
+    expect(img.getAttribute('data-next-image')).toBeNull();
+    expect(img.tagName).toBe('IMG');
+  });
+
+  it('renders next/image without unoptimized for CDN hosts', () => {
+    vi.stubEnv('NEXT_PUBLIC_PHOTO_CDN_HOSTS', '*.cloudfront.net');
+    render(
+      <MatchPhoto
+        variant="list"
+        photoUrl="https://d111.cloudfront.net/photo.jpg"
+        displayName="River"
+        testId="photo-unit"
+      />,
+    );
+    const img = screen.getByTestId('photo-unit');
+    expect(img.getAttribute('data-next-image')).toBe('1');
+    expect(img.getAttribute('data-unoptimized')).toBe('false');
+    expect(img.getAttribute('data-sizes')).toBe('112px');
   });
 
   it('renders placeholder when photoUrl is null', () => {
@@ -77,6 +139,8 @@ describe('MatchPhoto', () => {
       />,
     );
     expect(screen.getByTestId('photo-unit').tagName).toBe('IMG');
-    expect(screen.getByTestId('photo-unit').getAttribute('src')).toBe('/good.jpg');
+    expect(screen.getByTestId('photo-unit').getAttribute('src')).toBe(
+      '/good.jpg',
+    );
   });
 });
