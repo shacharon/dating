@@ -1,6 +1,6 @@
 # Story 06 — Throttle lastSeenAt
 
-**Sprint 28 · Status: IN PROGRESS (Architect locked)**  
+**Sprint 28 · Status: IN PROGRESS (Dev complete → Agent 2 CR)**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** None (auth path)

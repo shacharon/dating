@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SESSION_LAST_SEEN_THROTTLE_MS } from './session.constants';
 import { hashSessionToken } from './session-token.crypto';
 import { SessionService } from './session.service';
 
@@ -163,7 +164,7 @@ describe('SessionService', () => {
       jest.useRealTimers();
     });
 
-    it('returns session and updates lastSeenAt when valid', async () => {
+    it('returns session and updates lastSeenAt when lastSeenAt is null', async () => {
       const exp = new Date('2035-06-01T12:00:00.000Z');
       prisma.userSession.findUnique.mockResolvedValue({
         id: 's1',
@@ -171,6 +172,7 @@ describe('SessionService', () => {
         sessionTokenHash,
         expiresAt: exp,
         revokedAt: null,
+        lastSeenAt: null,
       });
       prisma.userSession.update.mockResolvedValue({});
 
@@ -185,6 +187,64 @@ describe('SessionService', () => {
           data: expect.objectContaining({ lastSeenAt: expect.any(Date) }),
         }),
       );
+    });
+
+    it('skips lastSeenAt update when within throttle window', async () => {
+      const now = new Date('2035-06-01T12:00:00.000Z');
+      const exp = new Date('2035-07-01T12:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      prisma.userSession.findUnique.mockResolvedValue({
+        id: 's1',
+        userId: 'u1',
+        sessionTokenHash,
+        expiresAt: exp,
+        revokedAt: null,
+        lastSeenAt: new Date(now.getTime() - 1_000),
+      });
+
+      await expect(service.validateSessionToken(raw)).resolves.toEqual({
+        sessionId: 's1',
+        userId: 'u1',
+        expiresAt: exp,
+      });
+      expect(prisma.userSession.update).not.toHaveBeenCalled();
+
+      jest.useRealTimers();
+    });
+
+    it('updates lastSeenAt when older than throttle window', async () => {
+      const now = new Date('2035-06-01T12:00:00.000Z');
+      const exp = new Date('2035-07-01T12:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      prisma.userSession.findUnique.mockResolvedValue({
+        id: 's1',
+        userId: 'u1',
+        sessionTokenHash,
+        expiresAt: exp,
+        revokedAt: null,
+        lastSeenAt: new Date(
+          now.getTime() - SESSION_LAST_SEEN_THROTTLE_MS - 1,
+        ),
+      });
+      prisma.userSession.update.mockResolvedValue({});
+
+      await expect(service.validateSessionToken(raw)).resolves.toEqual({
+        sessionId: 's1',
+        userId: 'u1',
+        expiresAt: exp,
+      });
+      expect(prisma.userSession.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 's1' },
+          data: { lastSeenAt: now },
+        }),
+      );
+
+      jest.useRealTimers();
     });
   });
 

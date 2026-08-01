@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SESSION_LAST_SEEN_THROTTLE_MS } from './session.constants';
 import { generateSessionToken, hashSessionToken } from './session-token.crypto';
 import type {
   CreateSessionMetadata,
@@ -50,7 +51,7 @@ export class SessionService {
   /**
    * Resolves a cookie/session bearer to a user session, or `null` if missing,
    * revoked, expired, malformed, or pepper is not configured.
-   * Updates `lastSeenAt` when valid.
+   * Updates `lastSeenAt` when valid and due (throttled).
    */
   async validateSessionToken(
     rawToken: string | undefined | null,
@@ -79,13 +80,19 @@ export class SessionService {
       return null;
     }
 
-    try {
-      await this.prisma.userSession.update({
-        where: { id: row.id },
-        data: { lastSeenAt: now },
-      });
-    } catch {
-      /* row may race-delete; validation still stands */
+    const shouldTouchLastSeen =
+      row.lastSeenAt == null ||
+      now.getTime() - row.lastSeenAt.getTime() >= SESSION_LAST_SEEN_THROTTLE_MS;
+
+    if (shouldTouchLastSeen) {
+      try {
+        await this.prisma.userSession.update({
+          where: { id: row.id },
+          data: { lastSeenAt: now },
+        });
+      } catch {
+        /* row may race-delete; validation still stands */
+      }
     }
 
     return {
