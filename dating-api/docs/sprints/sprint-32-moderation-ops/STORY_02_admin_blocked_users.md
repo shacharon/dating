@@ -1,10 +1,10 @@
 # Story 02 — Admin blocked-users + full review
 
-**Sprint 32 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
+**Sprint 32 · Status: ✅ Done**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** Story 01 (recipient fields available)  
-**Handoffs:** [architect](./handoffs/STORY_02_admin_blocked_users/agent-0-architect.md) · [dev](./handoffs/STORY_02_admin_blocked_users/agent-1-dev.md) · [CR](./handoffs/STORY_02_admin_blocked_users/agent-2-cr.md)
+**Handoffs:** [architect](./handoffs/STORY_02_admin_blocked_users/agent-0-architect.md) · [dev](./handoffs/STORY_02_admin_blocked_users/agent-1-dev.md) · [CR](./handoffs/STORY_02_admin_blocked_users/agent-2-cr.md) · [PM](./handoffs/STORY_02_admin_blocked_users/agent-3-pm.md)
 ---
 
 ## Objective
@@ -29,10 +29,10 @@ Give admins a **manual review queue** of people currently blocked/muted, with ph
 
 ## Acceptance criteria
 
-- [ ] Admin sees all currently blocked/muted users in one table
-- [ ] Last blocked phrase + recipient visible for message cases
-- [ ] Unblock works and is audited (`ADMIN_CONTENT_UNBLOCK`)
-- [ ] Non-admin still 403
+- [x] Admin sees all currently blocked/muted users in one table
+- [x] Last blocked phrase + recipient visible for message cases
+- [x] Unblock works and is audited (`ADMIN_CONTENT_UNBLOCK`)
+- [x] Non-admin still 403
 
 ---
 

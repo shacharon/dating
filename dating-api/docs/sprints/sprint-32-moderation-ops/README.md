@@ -1,6 +1,6 @@
 # Sprint 32 — Content Moderation Ops
 
-**Status:** 🟡 **IN PROGRESS** — Story 01 Done; Story 02 Agent 2 CR PASS → run Agent 3  
+**Status:** 🟡 **IN PROGRESS** — Stories 01–02 Done; next Story 03  
 **Priority:** P1 (post-launch ops; improves Sprint 30 admin + policy gaps)  
 **Depends on:** Sprint 30 Done (gates + `UserContentViolation` + `/admin/content-violations`)  
 **Does not block:** Sprint 31 match materialization (run in parallel / after as capacity allows)
@@ -39,7 +39,7 @@ Make moderation **operable by humans**:
 | # | Story | Priority | Est | Status |
 |---|-------|----------|-----|--------|
 | 01 | [Message violation context](./STORY_01_message_violation_context.md) | P0 | 0.5d | ✅ Done |
-| 02 | [Admin blocked-users + full review](./STORY_02_admin_blocked_users.md) | P0 | 1d | Agent 2 PASS → run Agent 3 |
+| 02 | [Admin blocked-users + full review](./STORY_02_admin_blocked_users.md) | P0 | 1d | ✅ Done |
 | 03 | [Soft / dating policy layer](./STORY_03_soft_policy_layer.md) | P1 | 1d | PLANNED |
 | 04 | [Mute expiry cron + ops polish](./STORY_04_mute_cron_ops.md) | P1 | 0.5d | PLANNED |
 
@@ -51,8 +51,8 @@ Make moderation **operable by humans**:
 ## Acceptance criteria (sprint-level)
 
 - [x] Message blocks persist `conversationId` + `recipientUserId` (nullable for profile surfaces)
-- [ ] Admin can see blocked/muted users with latest flagged phrase + recipient identity
-- [ ] Admin can Unblock with reason (keep Sprint 30 audit code)
+- [x] Admin can see blocked/muted users with latest flagged phrase + recipient identity
+- [x] Admin can Unblock with reason (keep Sprint 30 audit code)
 - [ ] Soft policy or documented “no soft tier” decision shipped in Story 03
 - [ ] Temporary mutes cleared on a schedule (or Architect-locked equivalent)
 - [ ] Unit + admin HTTP tests green; no raw flagged text in **application** logs (admin API/UI only)
