@@ -1,6 +1,6 @@
 # Sprint 29 — Frontend Realtime + Cache
 
-**Status:** 🟡 **IN PROGRESS** — Story 1 Done; next Story 2 Agent 0  
+**Status:** 🟡 **IN PROGRESS** — Story 1 Done; Story 2 Architect locked → next Agent 1  
 **Depends on:** Sprint 28 Done (backend hardening). **Does not** require live AWS.  
 **Companion:** [`SCALE_READINESS_CR.md`](../../SCALE_READINESS_CR.md) · [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · [`QUICKSTART.md`](./QUICKSTART.md) · prior: [Sprint 28](../sprint-28-backend-scale-hardening/README.md)
 
@@ -27,7 +27,7 @@ Cut FE chatter that still hurts after Sprint 28:
 | # | Story | Status |
 |---|-------|--------|
 | 01 | [WS realtime default](./STORY_01_ws_realtime_default.md) | **Done** |
-| 02 | [Conversations cursor + unread-total](./STORY_02_conversations_pagination.md) | Planned |
+| 02 | [Conversations cursor + unread-total](./STORY_02_conversations_pagination.md) | In progress (Architect) |
 | 03 | [TanStack Query cache](./STORY_03_tanstack_query.md) | Planned |
 | 04 | [next/image optimization](./STORY_04_next_image.md) | Planned |
 | 05 | [Lazy-load admin / heavy UI](./STORY_05_lazy_admin_ui.md) | Planned |
