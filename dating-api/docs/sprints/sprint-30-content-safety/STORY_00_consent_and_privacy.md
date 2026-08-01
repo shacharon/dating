@@ -1,10 +1,11 @@
 # Story 00 — User consent + privacy policy for third-party moderation
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 PASS → run Agent 3**  
+**Sprint 30 · Status: ✅ Done**  
 **Priority:** P0 (LEGAL BLOCKER — must complete before Stories 01-05 go live)  
 **Estimated effort:** 1 day (legal review + implementation)  
 **Dependencies:** None (do FIRST)  
-**Handoffs:** [architect](./handoffs/STORY_00_consent_and_privacy/agent-0-architect.md) · [dev](./handoffs/STORY_00_consent_and_privacy/agent-1-dev.md) · [cr](./handoffs/STORY_00_consent_and_privacy/agent-2-cr.md)
+**Handoffs:** [architect](./handoffs/STORY_00_consent_and_privacy/agent-0-architect.md) · [dev](./handoffs/STORY_00_consent_and_privacy/agent-1-dev.md) · [cr](./handoffs/STORY_00_consent_and_privacy/agent-2-cr.md) · [pm](./handoffs/STORY_00_consent_and_privacy/agent-3-pm.md)  
+**PM decision:** **ACCEPT** (2026-08-01) — disclosure/docs deliverable done; DPA + 7-day notice remain **ops gates** before prod moderation.
 
 ---
 
@@ -21,11 +22,11 @@ Update privacy policy, terms of service, and onboarding flow to disclose third-p
 - This is a **new data processor** (though OpenAI is already processing profile text for analysis — this story extends that disclosure)
 
 **Jurisdictions to cover:**
-1. **GDPR (European Union)** — requires explicit consent for third-party data processing + data processing agreement (DPA)
+1. **GDPR (European Union)** — disclose processor + document legal basis (MVP: Art. 6(1)(f) legitimate interest) + DPA with OpenAI
 2. **CCPA (California / US)** — requires disclosure of third-party sharing in privacy policy
 3. **Israeli Privacy Protection Law** — requires disclosure + reasonable security measures
 
-**Key legal requirement:** Users must be informed BEFORE their data is sent to OpenAI.
+**Key legal requirement:** Users must be informed BEFORE moderation sends their text to OpenAI (profile analysis already uses OpenAI — Story 0 extends disclosure).
 
 ---
 
@@ -127,9 +128,9 @@ messaging or profile editing.
 **GDPR (EU):**
 - [x] Legal basis documented (legitimate interest: safety)
 - [x] Third-party processor disclosed with retention policy
-- [x] DPA with OpenAI in place
+- [ ] DPA with OpenAI in place — **PENDING OPS** (prod moderation blocker; documented in `CONTENT_MODERATION_COMPLIANCE.md`)
 - [x] User rights to object/appeal documented
-- [x] Data minimization (only flagged text stored, not all text)
+- [x] Data minimization intent documented (implementation in Stories 01+)
 
 **CCPA (California):**
 - [x] Disclose third-party sharing in privacy policy
@@ -161,12 +162,12 @@ Show once per user, store `User.contentModerationDisclosureShown: boolean`.
 
 ## Acceptance criteria
 
-- [ ] Privacy policy updated with OpenAI disclosure + retention policy
-- [ ] Terms of service include acceptable use policy
-- [ ] OpenAI DPA verified/signed and saved to `docs/legal/`
-- [ ] Compliance checklist completed for GDPR, CCPA, Israeli law
-- [ ] (Optional) In-app disclosure banner implemented
-- [ ] Legal review completed by external counsel (if available)
+- [x] Privacy policy updated with OpenAI disclosure + retention policy (`dating-ui/content/legal/privacy.md`)
+- [x] Terms of service include expanded acceptable use + automated enforcement (`dating-ui/content/legal/terms.md`)
+- [ ] OpenAI DPA verified/signed — **PENDING OPS** (checklist in `docs/legal/CONTENT_MODERATION_COMPLIANCE.md`; not a Story 0 code fail)
+- [x] Compliance checklist completed for GDPR, CCPA, Israeli law (`docs/legal/CONTENT_MODERATION_COMPLIANCE.md`)
+- [x] ~~(Optional) In-app disclosure banner~~ — **out of scope** per architect (deferred)
+- [ ] Legal review completed by external counsel (if available) — optional; DRAFT footer remains until cleared
 
 ---
 
@@ -264,12 +265,13 @@ export default function PrivacyPage() {
 
 ## Deliverables
 
-- [ ] `dating-ui/src/app/privacy/page.tsx` (updated)
-- [ ] `dating-ui/src/app/terms/page.tsx` (updated)
-- [ ] `docs/legal/openai-dpa.pdf` (saved copy of signed DPA)
-- [ ] `docs/legal/CONTENT_MODERATION_COMPLIANCE.md` (checklist + legal basis documentation)
-- [ ] (Optional) `prisma/migrations/YYYYMMDDHHMMSS_add_content_moderation_consent/migration.sql`
-- [ ] (Optional) In-app disclosure banner component
+- [x] `dating-ui/content/legal/privacy.md` (updated — pages load via existing `LegalDocumentPage`)
+- [x] `dating-ui/content/legal/terms.md` (updated)
+- [ ] `docs/legal/openai-dpa.pdf` — **not committed** by design; ops vault after DPA accepted
+- [x] `docs/legal/CONTENT_MODERATION_COMPLIANCE.md` (checklist + legal basis documentation)
+- [x] `docs/legal/DATA_RETENTION.md` (violation retention deltas)
+- [x] ~~(Optional) consent migration~~ — Option B deferred
+- [x] ~~(Optional) In-app disclosure banner~~ — deferred per architect
 
 ---
 
