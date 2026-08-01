@@ -1,6 +1,6 @@
 # Story 05 — Message send rate limit → Redis
 
-**Sprint 28 · Status: IN PROGRESS (Dev complete → Agent 2 CR)**  
+**Sprint 28 · Status: IN PROGRESS (CR PASS → Agent 3)**  
 **Priority:** P1  
 **Estimated effort:** 0.5 day  
 **Dependencies:** Redis already used for WS RL / cache locally
