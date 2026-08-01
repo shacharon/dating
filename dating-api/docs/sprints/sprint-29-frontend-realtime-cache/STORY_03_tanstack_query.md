@@ -1,9 +1,11 @@
 # Story 03 — TanStack Query cache
 
-**Sprint 29 · Status: PLANNED**  
+**Sprint 29 · Status: Architect locked → Agent 1**  
 **Priority:** P1  
 **Estimated effort:** 1 day  
 **Dependencies:** Prefer Story 01 (realtime) locked; Story 02 DTOs if caching conversations
+
+**Handoff:** [`handoffs/STORY_03_tanstack_query/agent-0-architect.md`](./handoffs/STORY_03_tanstack_query/agent-0-architect.md)
 
 ---
 
@@ -17,10 +19,22 @@ SCALE CR: redundant refetches (conversations, profile, matches) with no shared c
 
 ## Scope / tasks
 
-1. Architect locks: which queries migrate first (conversations list, unread-total, auth/me — pick 2–3); `staleTime`; invalidation on WS/message events.
+1. Architect locks: which queries migrate first (conversations list, unread-total, auth/me — pick 2–3); `staleTime`; invalidation on WS/message events. ✅
 2. Add `@tanstack/react-query` + provider in app shell.
 3. Migrate locked call sites; leave others for follow-up.
 4. Specs: provider smoke; at least one hook/query unit or page test with mocked QueryClient.
+
+### Architect locks (do not reverse)
+
+| Decision | Lock |
+|----------|------|
+| Migrate | **unread-total** + **conversations list** (`useInfiniteQuery`) only |
+| Skip | `auth/me`, matches, messages, profile |
+| Package | `@tanstack/react-query` v5 |
+| staleTime | **30s** global default; `refetchOnWindowFocus: true` |
+| Keys | `['me','conversations','unread-total']`, `['me','conversations','list']` |
+| Context | Keep `ConversationUnreadProvider` API; back with Query |
+| Logout | `queryClient.clear()` (or invalidate `['me']`) |
 
 ## Acceptance criteria
 
