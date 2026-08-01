@@ -29,8 +29,7 @@ export default function ConversationsPage() {
   const { locale, copy } = useAppLocale();
   const listCopy = copy.conversations.list;
   const formatCopy = copy.conversations.format;
-  const { reconcileFromList, refresh: refreshUnreadTotal } =
-    useConversationUnread();
+  const { reconcileFromList } = useConversationUnread();
   const queryClient = useQueryClient();
   const realtimeMode = getRealtimeMode();
   const [optimisticRows, setOptimisticRows] = useState<
@@ -73,8 +72,7 @@ export default function ConversationsPage() {
     if (lastPage) {
       reconcileFromList(lastPage.conversations ?? []);
     }
-    void refreshUnreadTotal();
-  }, [data, reconcileFromList, refreshUnreadTotal]);
+  }, [data, reconcileFromList]);
 
   const loadMore = useCallback(() => {
     if (!hasNextPage || isFetchingNextPage) return;
