@@ -72,3 +72,4 @@ The Nest app does **not** return 404 on `/api/v1/admin/*` in v1 when UI admin is
 - [PUBLIC_HTTP_ALLOWLIST.md](./PUBLIC_HTTP_ALLOWLIST.md) — product/public routes vs admin-locked legacy evaluate/matches/profiles
 - [LAUNCH_COHORT_RUNBOOK.md](../sprints/sprint-09-product-mvp/LAUNCH_COHORT_RUNBOOK.md) §3 moderation/reports
 - [Sprint 11 Story 0](../sprints/sprint-11-match-quality-intelligence/STORY_00_admin_security_hardening.md)
+- **AWS follow-on (parked with Sprint 20 live apply):** [Story 06 gated admin hostname](../sprints/sprint-20-aws-dev-deployment/STORY_06_gated_admin_hostname.md) · [Story 07 deny public admin API](../sprints/sprint-20-aws-dev-deployment/STORY_07_deny_public_admin_api.md)

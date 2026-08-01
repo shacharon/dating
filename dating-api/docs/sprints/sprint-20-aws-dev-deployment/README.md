@@ -1,23 +1,30 @@
 # Sprint 20 — Deploy to AWS `dev` (ECS Fargate)
 
+> ## 🚨 ALERT — LIVE APPLY PARKED (do not start now)
+>
 > **Status:** ✅ **PREP COMPLETE** (Stories 01–05 code + 4-agent CR).  
-> **LIVE_APPLY = DEFERRED** — `terraform apply` / first deploy / [`VERIFIED_DEV.md`](./VERIFIED_DEV.md) are **on hold** (not blocking product hardening). Sprint 20 is **not** VERIFIED until live smoke + load pass.
+> **LIVE_APPLY = ON HOLD** — resume **later**, not in the current product sprint queue.  
+> Do **not** run `terraform apply`, first ECS deploy, or fill [`VERIFIED_DEV.md`](./VERIFIED_DEV.md) until this hold is explicitly lifted.  
+> Sprint 20 is **not** VERIFIED until live smoke + load pass.
+>
+> Keep this sprint **visible / on alert** in roadmaps so it is not forgotten — but it is **not** the next coding task.
 >
 > **Depends on:** Sprint 19 (performance + real photo moderation) merged, since this sprint deploys that work.
 >
 > **Companion runbook:** [`DEPLOY_AWS_DEV.md`](../../../../DEPLOY_AWS_DEV.md) at the repo root is the operational reference. This sprint turns that runbook into reproducible, reviewed artifacts (containers, IaC, CI/CD) instead of manual click-ops.
 >
-> **Product next:** [Sprint 28 — Backend scale hardening](../sprint-28-backend-scale-hardening/README.md) (no cloud required).
+> **Product next:** [Sprint 32 — Moderation ops](../sprint-32-moderation-ops/README.md) (product). This sprint stays parked for live apply + gated admin.
 
 ---
 
-## Resume live apply (when deploy hold lifts)
+## Resume live apply (when hold is explicitly lifted)
 
 1. Confirm AWS account / region / hostname / ACM / OAuth redirect / Terraform state backend (see prerequisites below).
 2. Story 02: `terraform apply` for `dev`.
 3. Story 03: seed Secrets Manager / SSM; verify task defs resolve `DATABASE_URL` etc.
 4. Story 04: run CI deploy path against `dev` (migrate one-shot → API/UI roll → `/health`).
 5. Story 05: fill [`VERIFIED_DEV.md`](./VERIFIED_DEV.md) (smoke + k6 + e2e). Only then set Status = **VERIFIED**.
+6. Then unpark Stories **06–07** (gated admin hostname + deny public admin API).
 
 ---
 
@@ -56,7 +63,10 @@ Route53 → ACM/HTTPS → ALB ──┬── target group: dating-ui  (Fargate,
 | 03 | [Secrets & runtime config](./STORY_03_secrets_and_config.md) | Every env var from the runbook wired via SSM/Secrets Manager; prod-safe defaults. | ✅ **Done (PENDING_LIVE_VERIFY)** |
 | 04 | [CI/CD pipeline](./STORY_04_cicd_pipeline.md) | build → test → image push → migrate (one-shot) → rolling deploy → `/health` gate. | ✅ **Done (PENDING_LIVE_DEPLOY)** |
 | 05 | [Cloud verification](./STORY_05_verification.md) | Smoke + checklist + CI gate tooling ready; live e2e/k6 sign-off pending infra ([`VERIFIED_DEV.md`](./VERIFIED_DEV.md)). | ✅ **Done (PENDING_INFRA)** |
-Recommended execution order is 01 → 02 → 03 → 04 → 05. Stories 01 and 02 can run in parallel.
+| 06 | [Gated admin hostname](./STORY_06_gated_admin_hostname.md) | Admin UI only on network-gated host; public UI keeps admin 404. | ⏸️ **PARKED** (after live apply) |
+| 07 | [Deny public admin API](./STORY_07_deny_public_admin_api.md) | ALB/WAF deny `/api/v1/admin*` on public origin. | ⏸️ **PARKED** (after live apply) |
+
+Recommended execution order is 01 → 02 → 03 → 04 → 05, then **06 → 07** after VERIFIED. Stories 01 and 02 can run in parallel.
 
 ---
 
