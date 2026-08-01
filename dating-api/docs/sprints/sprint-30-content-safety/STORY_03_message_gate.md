@@ -1,10 +1,10 @@
 # Story 03 — Message moderation gate
 
-**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 1 complete → run Agent 2**  
+**Sprint 30 · Status: 🟡 IN PROGRESS — Agent 2 CR PASS → run Agent 3**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** Story 01 (moderation client + violation service)  
-**Handoffs:** [architect](./handoffs/STORY_03_message_gate/agent-0-architect.md) · [dev](./handoffs/STORY_03_message_gate/agent-1-dev.md)
+**Handoffs:** [architect](./handoffs/STORY_03_message_gate/agent-0-architect.md) · [dev](./handoffs/STORY_03_message_gate/agent-1-dev.md) · [CR](./handoffs/STORY_03_message_gate/agent-2-cr.md)
 
 ---
 
