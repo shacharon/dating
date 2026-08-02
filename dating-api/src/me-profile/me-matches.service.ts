@@ -24,6 +24,7 @@ import {
   resolveMatchListCandidateCap,
   resolveMatchListRebuildCandidateCap,
 } from './match-list-candidate-cap';
+import { resolveMatchListRebuildBudgetMs } from './match-list-rebuild-budget';
 import { toStoredMatchListScore } from './match-list-rank-score';
 import { isMatchListMaterializedEnabled } from './match-list-materialized-flag';
 import {
@@ -50,6 +51,7 @@ import {
   MATCH_LIST_RANK_QUEUE_PORT,
   type MatchListRankQueuePort,
   type MatchListRankRebuildPort,
+  type MatchListRankRebuildResult,
 } from '../workers/match-list-rank.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import { getRequestLogFields } from '../logging/request-log-context';
@@ -63,6 +65,7 @@ import {
   recordMatchListCandidatesLoaded,
   recordMatchListEvalQueryMs,
   recordMatchListLoadTimeMs,
+  recordMatchListRankRebuildBudgetStop,
   recordMatchListRankRebuildMs,
   recordMatchListScoreCpuMs,
 } from '../observability/custom-metrics';
@@ -188,7 +191,7 @@ export interface MeMatchItemDto {
 
 /** Sprint 31 — thin rows for MatchListRank persistence (Story 2). */
 export type MatchListRankSnapshot = {
-  status: 'ready' | 'not_ready';
+  status: 'ready' | 'not_ready' | 'budget_exceeded';
   reason?: 'no_profile' | 'not_analyzed' | 'no_photo';
   rows: Array<{
     candidateProfileId: string;
@@ -230,6 +233,11 @@ export interface MeMatchesListResponseDto {
   nextCursor?: string | null;
   /** True when more ranked matches exist after this page. */
   hasMore?: boolean;
+  /**
+   * Sprint 39 — set when rebuild scoring hit MATCH_LIST_REBUILD_BUDGET_MS.
+   * List GET paths do not set this.
+   */
+  budgetExceeded?: boolean;
 }
 
 export interface MeMatchDetailDto {
@@ -313,11 +321,23 @@ export class MeMatchesService implements MatchListRankRebuildPort {
    */
   async buildMatchListRankSnapshot(
     viewerUserId: string,
+    options?: {
+      deadlineAtMs?: number;
+      now?: () => number;
+    },
   ): Promise<MatchListRankSnapshot> {
     const dto = await this.buildFullRankedList(viewerUserId, {
       candidateCap: resolveMatchListRebuildCandidateCap(),
       emitListAnalytics: false,
+      deadlineAtMs: options?.deadlineAtMs,
+      now: options?.now,
     });
+    if (dto.budgetExceeded) {
+      return {
+        status: 'budget_exceeded',
+        rows: [],
+      };
+    }
     if (dto.status !== 'ready') {
       return {
         status: 'not_ready',
@@ -340,6 +360,10 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     viewerUserId: string,
     snapshot: MatchListRankSnapshot,
   ): Promise<{ rowsWritten: number; rowsDeleted: number }> {
+    // Sprint 39 — never wipe ranks on a budget abort (caller should skip persist).
+    if (snapshot.status === 'budget_exceeded') {
+      return { rowsWritten: 0, rowsDeleted: 0 };
+    }
     if (snapshot.status === 'not_ready' || snapshot.rows.length === 0) {
       const del = await this.prisma.matchListRank.deleteMany({
         where: { viewerUserId },
@@ -395,19 +419,32 @@ export class MeMatchesService implements MatchListRankRebuildPort {
   /**
    * Snapshot → persist → invalidate Redis list cache.
    * Does not enqueue; called by MatchListRankQueueService via MATCH_LIST_RANK_REBUILD_PORT.
+   * Sprint 39: on budget exceed, skip persist + invalidate (leave prior ranks).
    */
   async rebuildMatchListRanks(
     viewerUserId: string,
     reason?: string,
-  ): Promise<{
-    status: 'ready' | 'not_ready';
-    reason?: MatchListRankSnapshot['reason'];
-    rowsWritten: number;
-    rowsDeleted: number;
-    rebuildMs: number;
-  }> {
+  ): Promise<MatchListRankRebuildResult> {
     const started = Date.now();
-    const snapshot = await this.buildMatchListRankSnapshot(viewerUserId);
+    const deadlineAtMs = started + resolveMatchListRebuildBudgetMs();
+    const snapshot = await this.buildMatchListRankSnapshot(viewerUserId, {
+      deadlineAtMs,
+    });
+    if (snapshot.status === 'budget_exceeded') {
+      const rebuildMs = Date.now() - started;
+      recordMatchListRankRebuildMs(rebuildMs);
+      recordMatchListRankRebuildBudgetStop();
+      this.obs.trace(
+        `match list rank rebuild budget_exceeded viewerUserId=${viewerUserId} rebuildMs=${rebuildMs} reason=${reason ?? ''}`,
+        ErrorCodes.ME_MATCHES_LIST_OK,
+      );
+      return {
+        status: 'budget_exceeded',
+        rowsWritten: 0,
+        rowsDeleted: 0,
+        rebuildMs,
+      };
+    }
     const persist = await this.persistMatchListRankSnapshot(
       viewerUserId,
       snapshot,
@@ -827,6 +864,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
        * Preserves input order; skips pool cap / pool meta counts.
        */
       candidateProfileIds?: string[];
+      /** Sprint 39 — wall deadline for rebuild scoring; list paths omit this. */
+      deadlineAtMs?: number;
+      now?: () => number;
     },
   ): Promise<MeMatchesListResponseDto> {
     const emitListAnalytics = options?.emitListAnalytics !== false;
@@ -834,6 +874,8 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     const isPageHydrate = pageIds != null;
     const candidateCap =
       options?.candidateCap ?? resolveMatchListCandidateCap();
+    const nowFn = options?.now ?? Date.now;
+    const deadlineAtMs = options?.deadlineAtMs;
     const viewer = await this.prisma.userProfile.findUnique({
       where: { userId },
       include: {
@@ -1053,8 +1095,13 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       recommendation: MatchRecommendationDto | null;
     };
     const pendingHardBlocks: PendingHardBlockMatch[] = [];
+    let budgetExceeded = false;
 
     for (const row of candidateRows) {
+      if (deadlineAtMs != null && nowFn() >= deadlineAtMs) {
+        budgetExceeded = true;
+        break;
+      }
       const candidateBridge = buildProductProfileMatchingBridge(
         {
           ...row,
@@ -1353,6 +1400,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
             filteredNoPhotoCandidates,
           }),
       matches,
+      ...(budgetExceeded ? { budgetExceeded: true } : {}),
     };
   }
 

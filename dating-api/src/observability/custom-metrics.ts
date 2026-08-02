@@ -81,3 +81,8 @@ export function recordMatchListCacheSetMs(ms: number): void {
 export function recordMatchListRankRebuildMs(ms: number): void {
   emit('match.list.rank_rebuild_ms', ms);
 }
+
+/** Sprint 39 — rebuild scoring stopped by MATCH_LIST_REBUILD_BUDGET_MS. */
+export function recordMatchListRankRebuildBudgetStop(): void {
+  emit('match.list.rank_rebuild_budget_stop', 1);
+}

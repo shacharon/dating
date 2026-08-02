@@ -114,6 +114,15 @@ export class MatchListRankQueueService
     this.logger.log(
       `match-list-rank rebuild done viewerUserId=${viewerUserId} status=${result.status} rowsWritten=${result.rowsWritten} rowsDeleted=${result.rowsDeleted} rebuildMs=${result.rebuildMs} wallMs=${Date.now() - started} reason=${data.reason ?? ''}`,
     );
+    if (result.status === 'budget_exceeded') {
+      if (data.reason === 'rebuild_budget') {
+        this.logger.warn(
+          `match-list-rank budget_exceeded again viewerUserId=${viewerUserId} — not requeueing (tune MATCH_LIST_REBUILD_BUDGET_MS / MATCH_LIST_REBUILD_CANDIDATE_CAP)`,
+        );
+        return;
+      }
+      await this.enqueueRebuild(viewerUserId, 'rebuild_budget');
+    }
   }
 
   /**

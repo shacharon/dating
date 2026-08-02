@@ -96,4 +96,49 @@ describe('MeMatchesService MatchListRank persist', () => {
     expect(upsert.mock.calls[0][0].create.matchScore).toBe(-1);
     expect(result).toEqual({ rowsWritten: 2, rowsDeleted: 1 });
   });
+
+  it('budget_exceeded persist is a no-op (does not clear ranks)', async () => {
+    const deleteMany = jest.fn();
+    const prisma = {
+      matchListRank: { deleteMany, upsert: jest.fn() },
+      $transaction: jest.fn(),
+    };
+    const svc = makeService(prisma);
+    const result = await svc.persistMatchListRankSnapshot('user_v', {
+      status: 'budget_exceeded',
+      rows: [],
+    });
+    expect(deleteMany).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(result).toEqual({ rowsWritten: 0, rowsDeleted: 0 });
+  });
+
+  it('rebuildMatchListRanks skips persist+invalidate on budget_exceeded', async () => {
+    const prisma = {
+      matchListRank: { deleteMany: jest.fn(), upsert: jest.fn() },
+      $transaction: jest.fn(),
+    };
+    const cache = { del: jest.fn().mockResolvedValue(undefined) };
+    const svc = new MeMatchesService(
+      prisma as never,
+      { trace: jest.fn() } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      cache as never,
+      {} as never,
+      {} as never,
+      { enqueueRebuild: jest.fn() } as never,
+    );
+    jest.spyOn(svc, 'buildMatchListRankSnapshot').mockResolvedValue({
+      status: 'budget_exceeded',
+      rows: [],
+    });
+    const persistSpy = jest.spyOn(svc, 'persistMatchListRankSnapshot');
+    const result = await svc.rebuildMatchListRanks('user_v', 'test');
+    expect(result.status).toBe('budget_exceeded');
+    expect(result.rowsWritten).toBe(0);
+    expect(persistSpy).not.toHaveBeenCalled();
+    expect(cache.del).not.toHaveBeenCalled();
+  });
 });

@@ -24,7 +24,7 @@ Improve testability and operational scale on the post-split services:
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [UserProfile repository port](./STORY_01_user_profile_repository.md) | P1 | 2d | **Done** |
-| 02 | [Match list rebuild time-bounds](./STORY_02_rebuild_time_bounds.md) | P1 | 2d | Planned |
+| 02 | [Match list rebuild time-bounds](./STORY_02_rebuild_time_bounds.md) | P1 | 2d | **Done** |
 | 03 | [Redis cache metrics](./STORY_03_cache_metrics.md) | P1 | 1d | Planned |
 | 04 | [Prisma pool verify + connection metrics](./STORY_04_prisma_pool_verify_metrics.md) | P1 | 0.5–1d | Planned |
 

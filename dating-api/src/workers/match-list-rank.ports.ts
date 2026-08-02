@@ -18,7 +18,7 @@ export const MATCH_LIST_RANK_REBUILD_PORT = Symbol(
 );
 
 export type MatchListRankRebuildResult = {
-  status: 'ready' | 'not_ready';
+  status: 'ready' | 'not_ready' | 'budget_exceeded';
   reason?: 'no_profile' | 'not_analyzed' | 'no_photo';
   rowsWritten: number;
   rowsDeleted: number;
