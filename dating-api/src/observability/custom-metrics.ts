@@ -44,6 +44,25 @@ export function recordCacheMiss(): void {
   emit('cache.hit_rate', 0, ['result:miss']);
 }
 
+export type CacheOp = 'get' | 'set' | 'del' | 'setNx';
+
+export type CacheDegradedReason = 'error' | 'unavailable';
+
+/** Sprint 39 — Redis transport RTT when client is available. */
+export function recordCacheOpMs(op: CacheOp, ms: number): void {
+  emit('cache.op_ms', ms, [`op:${op}`]);
+}
+
+/** Sprint 39 — Redis fail-open / error (or setNx when unavailable). */
+export function recordCacheDegraded(
+  op: CacheOp,
+  reason?: CacheDegradedReason,
+): void {
+  const tags = [`op:${op}`];
+  if (reason) tags.push(`reason:${reason}`);
+  emit('cache.degraded', 1, tags);
+}
+
 /** Hydrated candidate rows on match-list cache-miss rebuild (ready only). */
 export function recordMatchListCandidatesLoaded(count: number): void {
   emit('match.list.candidates_loaded', count);

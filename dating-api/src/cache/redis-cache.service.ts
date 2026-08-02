@@ -1,5 +1,10 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { createClient, type RedisClientType } from 'redis';
+import {
+  recordCacheDegraded,
+  recordCacheOpMs,
+  type CacheOp,
+} from '../observability/custom-metrics';
 
 @Injectable()
 export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
@@ -51,12 +56,31 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     return this.available && this.client != null;
   }
 
+  private logDegraded(
+    op: CacheOp,
+    reason: 'error' | 'unavailable',
+    err?: unknown,
+  ): void {
+    recordCacheDegraded(op, reason);
+    this.logger.warn(
+      JSON.stringify({
+        event: 'match_list_cache_degraded',
+        op,
+        reason,
+        ...(err != null
+          ? { err: err instanceof Error ? err.message : String(err) }
+          : {}),
+      }),
+    );
+  }
+
   async get<T>(key: string): Promise<T | null> {
     if (!this.client || !this.available) return null;
     const started = Date.now();
     try {
       const raw = await this.client.get(key);
       const ms = Date.now() - started;
+      recordCacheOpMs('get', ms);
       if (raw == null) {
         this.logger.log(
           JSON.stringify({
@@ -74,13 +98,7 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
       );
       return JSON.parse(raw) as T;
     } catch (err) {
-      this.logger.warn(
-        JSON.stringify({
-          event: 'match_list_cache_degraded',
-          op: 'get',
-          err: err instanceof Error ? err.message : String(err),
-        }),
-      );
+      this.logDegraded('get', 'error', err);
       return null;
     }
   }
@@ -90,25 +108,21 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     const started = Date.now();
     try {
       await this.client.set(key, JSON.stringify(value), { EX: ttlSeconds });
+      const ms = Date.now() - started;
+      recordCacheOpMs('set', ms);
       this.logger.log(
         JSON.stringify({
           event: 'cache',
           cache: {
             event: 'set',
             keyPrefix: key.split(':').slice(0, 2).join(':'),
-            ms: Date.now() - started,
+            ms,
             ttlSeconds,
           },
         }),
       );
     } catch (err) {
-      this.logger.warn(
-        JSON.stringify({
-          event: 'match_list_cache_degraded',
-          op: 'set',
-          err: err instanceof Error ? err.message : String(err),
-        }),
-      );
+      this.logDegraded('set', 'error', err);
     }
   }
 
@@ -117,24 +131,20 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     const started = Date.now();
     try {
       await this.client.del(key);
+      const ms = Date.now() - started;
+      recordCacheOpMs('del', ms);
       this.logger.log(
         JSON.stringify({
           event: 'cache',
           cache: {
             event: 'del',
             keyPrefix: key.split(':').slice(0, 2).join(':'),
-            ms: Date.now() - started,
+            ms,
           },
         }),
       );
     } catch (err) {
-      this.logger.warn(
-        JSON.stringify({
-          event: 'match_list_cache_degraded',
-          op: 'del',
-          err: err instanceof Error ? err.message : String(err),
-        }),
-      );
+      this.logDegraded('del', 'error', err);
     }
   }
 
@@ -147,21 +157,20 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     value: unknown,
     ttlSeconds: number,
   ): Promise<boolean> {
-    if (!this.client || !this.available) return true;
+    if (!this.client || !this.available) {
+      this.logDegraded('setNx', 'unavailable');
+      return true;
+    }
+    const started = Date.now();
     try {
       const result = await this.client.set(key, JSON.stringify(value), {
         NX: true,
         EX: ttlSeconds,
       });
+      recordCacheOpMs('setNx', Date.now() - started);
       return result === 'OK';
     } catch (err) {
-      this.logger.warn(
-        JSON.stringify({
-          event: 'match_list_cache_degraded',
-          op: 'setNx',
-          err: err instanceof Error ? err.message : String(err),
-        }),
-      );
+      this.logDegraded('setNx', 'error', err);
       return true;
     }
   }
