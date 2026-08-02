@@ -1,10 +1,11 @@
 # Story 02 — MatchListRank persist transaction tighten
 
-**Sprint 40 · Status: Planned**  
+**Sprint 40 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 1 day  
-**Dependencies:** Sprint 38 Story 03 (persist lives in split ranking/persist path)  
-**Repo:** `dating-api` only
+**Dependencies:** Sprint 38 Story 03 preferred but **not required** (persist still on `MeMatchesService`)  
+**Repo:** `dating-api` only  
+**Handoffs:** [agent-0-architect.md](./handoffs/STORY_02_rank_persist_bulk/agent-0-architect.md) · [agent-1-dev.md](./handoffs/STORY_02_rank_persist_bulk/agent-1-dev.md) · [agent-2-cr.md](./handoffs/STORY_02_rank_persist_bulk/agent-2-cr.md) · [agent-3-pm.md](./handoffs/STORY_02_rank_persist_bulk/agent-3-pm.md)
 
 ---
 
@@ -15,6 +16,16 @@ Reduce long Prisma transactions in `persistMatchListRankSnapshot` (delete stale 
 ## Why
 
 Audit: looping upserts inside `$transaction` holds locks; large rebuilds amplify contention.
+
+## Locked policy (Architect)
+
+| Item | Decision |
+|------|----------|
+| Approach | Chunked upserts (`Promise.all` per chunk of 100), **then** `deleteMany(notIn)` |
+| Order | Upsert-before-delete (safer mid-failure than delete-first) |
+| Raw SQL bulk | Out of scope |
+| Chunk constant | `MATCH_LIST_RANK_PERSIST_CHUNK = 100` (not in scoring constants) |
+| MeMatches split | Do not wait — implement on current service |
 
 ## Scope / tasks
 
@@ -27,13 +38,14 @@ Audit: looping upserts inside `$transaction` holds locks; large rebuilds amplify
 
 - Changing MatchListRank schema
 - Changing list cursor encoding
+- Raw SQL `ON CONFLICT` bulk
 
 ## Acceptance criteria
 
-- [ ] No single unbounded multi-thousand sequential upsert in one open txn (or Architect-approved equivalent with measured improvement)
-- [ ] Persist tests green
-- [ ] Rebuild still invalidates Redis list cache after persist
-- [ ] No list API change
+- [x] No single unbounded multi-thousand sequential upsert in one open txn (or Architect-approved equivalent with measured improvement)
+- [x] Persist tests green
+- [x] Rebuild still invalidates Redis list cache after persist
+- [x] No list API change
 
 ## Suggested commit
 

@@ -1,5 +1,6 @@
 import { MeMatchesService } from './me-matches.service';
 import type { MatchListRankSnapshot } from './me-matches.service';
+import { MATCH_LIST_RANK_PERSIST_CHUNK } from './match-list-rank-persist.constants';
 
 describe('MeMatchesService MatchListRank persist', () => {
   function makeService(prisma: {
@@ -59,16 +60,24 @@ describe('MeMatchesService MatchListRank persist', () => {
     expect(result.rowsDeleted).toBe(2);
   });
 
-  it('ready upserts and deletes stale ids', async () => {
-    const deleteMany = jest.fn().mockResolvedValue({ count: 1 });
-    const upsert = jest.fn().mockResolvedValue({});
+  it('ready upserts then deletes stale ids (upsert-before-delete)', async () => {
+    const callOrder: string[] = [];
+    const deleteMany = jest.fn().mockImplementation(async () => {
+      callOrder.push('deleteMany');
+      return { count: 1 };
+    });
+    const upsert = jest.fn().mockImplementation(async () => {
+      callOrder.push('upsert');
+      return {};
+    });
     const prisma = {
       matchListRank: { deleteMany, upsert },
-      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<void>) =>
-        fn({
-          matchListRank: { deleteMany, upsert },
-        }),
-      ),
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<void>) => {
+        callOrder.push('txn');
+        await fn({
+          matchListRank: { deleteMany: jest.fn(), upsert },
+        });
+      }),
     };
     const svc = makeService(prisma);
     const result = await svc.persistMatchListRankSnapshot('user_v', {
@@ -86,15 +95,50 @@ describe('MeMatchesService MatchListRank persist', () => {
         },
       ],
     });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledTimes(2);
+    expect(upsert.mock.calls[0][0].create.matchScore).toBe(-1);
     expect(deleteMany).toHaveBeenCalledWith({
       where: {
         viewerUserId: 'user_v',
         candidateProfileId: { notIn: ['prof_a', 'prof_b'] },
       },
     });
-    expect(upsert).toHaveBeenCalledTimes(2);
-    expect(upsert.mock.calls[0][0].create.matchScore).toBe(-1);
+    expect(callOrder.indexOf('upsert')).toBeGreaterThan(-1);
+    expect(callOrder.indexOf('deleteMany')).toBeGreaterThan(
+      callOrder.lastIndexOf('upsert'),
+    );
     expect(result).toEqual({ rowsWritten: 2, rowsDeleted: 1 });
+  });
+
+  it('splits upserts across chunk transactions for large snapshots', async () => {
+    const upsert = jest.fn().mockResolvedValue({});
+    const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    const prisma = {
+      matchListRank: { deleteMany, upsert },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<void>) =>
+        fn({
+          matchListRank: { deleteMany: jest.fn(), upsert },
+        }),
+      ),
+    };
+    const svc = makeService(prisma);
+    const rows = Array.from(
+      { length: MATCH_LIST_RANK_PERSIST_CHUNK + 1 },
+      (_, i) => ({
+        candidateProfileId: `prof_${i}`,
+        matchScore: i,
+        hardBlocked: false,
+      }),
+    );
+    const result = await svc.persistMatchListRankSnapshot('user_v', {
+      status: 'ready',
+      rows,
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(upsert).toHaveBeenCalledTimes(MATCH_LIST_RANK_PERSIST_CHUNK + 1);
+    expect(deleteMany).toHaveBeenCalledTimes(1);
+    expect(result.rowsWritten).toBe(MATCH_LIST_RANK_PERSIST_CHUNK + 1);
   });
 
   it('budget_exceeded persist is a no-op (does not clear ranks)', async () => {

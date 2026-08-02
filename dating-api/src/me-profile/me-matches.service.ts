@@ -25,6 +25,10 @@ import {
   resolveMatchListRebuildCandidateCap,
 } from './match-list-candidate-cap';
 import { resolveMatchListRebuildBudgetMs } from './match-list-rebuild-budget';
+import {
+  MATCH_LIST_RANK_PERSIST_CHUNK,
+  MATCH_LIST_RANK_PERSIST_TX,
+} from './match-list-rank-persist.constants';
 import { toStoredMatchListScore } from './match-list-rank-score';
 import { isMatchListMaterializedEnabled } from './match-list-materialized-flag';
 import {
@@ -355,7 +359,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     };
   }
 
-  /** Persist snapshot: upsert rows + delete stale (or clear all when empty/not_ready). */
+  /** Persist snapshot: upsert rows (chunked) then delete stale (or clear all when empty/not_ready). */
   async persistMatchListRankSnapshot(
     viewerUserId: string,
     snapshot: MatchListRankSnapshot,
@@ -373,47 +377,46 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     const builtAt = new Date();
     const ids = snapshot.rows.map((r) => r.candidateProfileId);
-    let rowsDeleted = 0;
-    let rowsWritten = 0;
 
-    await this.prisma.$transaction(async (tx) => {
-      const del = await tx.matchListRank.deleteMany({
-        where: {
-          viewerUserId,
-          candidateProfileId: { notIn: ids },
-        },
-      });
-      rowsDeleted = del.count;
-
-      for (let i = 0; i < snapshot.rows.length; i += 100) {
-        const chunk = snapshot.rows.slice(i, i + 100);
-        for (const row of chunk) {
-          await tx.matchListRank.upsert({
-            where: {
-              viewerUserId_candidateProfileId: {
+    // Sprint 40 — upsert-before-delete in short chunked txns (not one unbounded txn).
+    for (let i = 0; i < snapshot.rows.length; i += MATCH_LIST_RANK_PERSIST_CHUNK) {
+      const chunk = snapshot.rows.slice(i, i + MATCH_LIST_RANK_PERSIST_CHUNK);
+      await this.prisma.$transaction(async (tx) => {
+        await Promise.all(
+          chunk.map((row) =>
+            tx.matchListRank.upsert({
+              where: {
+                viewerUserId_candidateProfileId: {
+                  viewerUserId,
+                  candidateProfileId: row.candidateProfileId,
+                },
+              },
+              create: {
                 viewerUserId,
                 candidateProfileId: row.candidateProfileId,
+                matchScore: row.matchScore,
+                hardBlocked: row.hardBlocked,
+                builtAt,
               },
-            },
-            create: {
-              viewerUserId,
-              candidateProfileId: row.candidateProfileId,
-              matchScore: row.matchScore,
-              hardBlocked: row.hardBlocked,
-              builtAt,
-            },
-            update: {
-              matchScore: row.matchScore,
-              hardBlocked: row.hardBlocked,
-              builtAt,
-            },
-          });
-          rowsWritten += 1;
-        }
-      }
+              update: {
+                matchScore: row.matchScore,
+                hardBlocked: row.hardBlocked,
+                builtAt,
+              },
+            }),
+          ),
+        );
+      }, MATCH_LIST_RANK_PERSIST_TX);
+    }
+
+    const del = await this.prisma.matchListRank.deleteMany({
+      where: {
+        viewerUserId,
+        candidateProfileId: { notIn: ids },
+      },
     });
 
-    return { rowsWritten, rowsDeleted };
+    return { rowsWritten: snapshot.rows.length, rowsDeleted: del.count };
   }
 
   /**

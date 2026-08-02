@@ -21,7 +21,7 @@
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [Match scoring stage pipeline](./STORY_01_match_scoring_stages.md) | P1 | 3d | **Done** |
-| 02 | [MatchListRank persist transaction tighten](./STORY_02_rank_persist_bulk.md) | P1 | 1d | Planned |
+| 02 | [MatchListRank persist transaction tighten](./STORY_02_rank_persist_bulk.md) | P1 | 1d | **Done** |
 | 03 | [Prisma slow-query observability](./STORY_03_slow_query_observability.md) | P1 | 1d | Planned |
 
 **Order:** 01 → 02 → 03 (02/03 can parallel after Architect locks).
