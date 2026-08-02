@@ -1,6 +1,6 @@
 # Sprint 39 — Repository Pattern + Scale Hardening (P1 High)
 
-**Status:** 📋 Planned  
+**Status:** ✅ Done  
 **Depends on:** Sprint 38 Done (god service split)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md) · Prior: [Sprint 28 scale hardening](../sprint-28-backend-scale-hardening/README.md) · [Sprint 31 materialization](../sprint-31-match-materialization/README.md)
 
@@ -26,7 +26,7 @@ Improve testability and operational scale on the post-split services:
 | 01 | [UserProfile repository port](./STORY_01_user_profile_repository.md) | P1 | 2d | **Done** |
 | 02 | [Match list rebuild time-bounds](./STORY_02_rebuild_time_bounds.md) | P1 | 2d | **Done** |
 | 03 | [Redis cache metrics](./STORY_03_cache_metrics.md) | P1 | 1d | **Done** |
-| 04 | [Prisma pool verify + connection metrics](./STORY_04_prisma_pool_verify_metrics.md) | P1 | 0.5–1d | Planned |
+| 04 | [Prisma pool verify + connection metrics](./STORY_04_prisma_pool_verify_metrics.md) | P1 | 0.5–1d | **Done** |
 
 **Order:** 01 → 02 → 03 → 04 (or 03/04 parallel after 01).
 

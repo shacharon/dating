@@ -31,7 +31,7 @@ resource "aws_secretsmanager_secret_version" "db" {
     port     = aws_db_instance.this.port
     dbname   = var.db_name
     # Ready-to-use URL for Story 03 / ECS secrets injection
-    database_url = "postgresql://${var.db_username}:${urlencode(random_password.master.result)}@${aws_db_instance.this.address}:${aws_db_instance.this.port}/${var.db_name}?schema=public&sslmode=require"
+    database_url = "postgresql://${var.db_username}:${urlencode(random_password.master.result)}@${aws_db_instance.this.address}:${aws_db_instance.this.port}/${var.db_name}?schema=public&sslmode=require&connection_limit=10&pool_timeout=10"
   })
 }
 

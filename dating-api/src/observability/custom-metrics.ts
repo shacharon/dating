@@ -105,3 +105,13 @@ export function recordMatchListRankRebuildMs(ms: number): void {
 export function recordMatchListRankRebuildBudgetStop(): void {
   emit('match.list.rank_rebuild_budget_stop', 1);
 }
+
+/** Sprint 39 — Prisma pool wait timed out (error code P2024). */
+export function recordPrismaPoolTimeout(): void {
+  emit('db.prisma.pool_timeout', 1);
+}
+
+/** Sprint 39 — production boot: DATABASE_URL missing connection_limit. */
+export function recordPrismaPoolConfigMissing(): void {
+  emit('db.prisma.pool_config_missing', 1);
+}

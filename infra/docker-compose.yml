@@ -55,7 +55,7 @@ services:
     image: dating-api:local
     container_name: dating-migrate
     environment:
-      DATABASE_URL: postgresql://dating_user:dating_pass@postgres:5432/dating?schema=public
+      DATABASE_URL: postgresql://dating_user:dating_pass@postgres:5432/dating?schema=public&connection_limit=10&pool_timeout=10
     entrypoint: ["/bin/sh", "./scripts/docker-migrate.sh"]
     depends_on:
       postgres:
@@ -76,7 +76,7 @@ services:
       NODE_ENV: production
       PORT: "3001"
       STRUCTURED_LOG_FILE: "0"
-      DATABASE_URL: postgresql://dating_user:dating_pass@postgres:5432/dating?schema=public
+      DATABASE_URL: postgresql://dating_user:dating_pass@postgres:5432/dating?schema=public&connection_limit=10&pool_timeout=10
       REDIS_URL: redis://redis:6379
       PHOTO_STORAGE_DRIVER: local
       PHOTO_UPLOAD_DIR: uploads/profile-photos

@@ -110,9 +110,9 @@ cd ../dating-ui && npm ci && npm run build && npm test
 
 ### 4.2 Connection string
 ```
-DATABASE_URL="postgresql://<user>:<password>@<rds-endpoint>:5432/dating?schema=public&sslmode=require"
+DATABASE_URL="postgresql://<user>:<password>@<rds-endpoint>:5432/dating?schema=public&sslmode=require&connection_limit=10&pool_timeout=10"
 ```
-> **Nuance:** local uses host port **5433** (docker-compose remaps). RDS is **5432**. Don't copy the local port. Add `sslmode=require` for RDS.
+> **Nuance:** local uses host port **5433** (docker-compose remaps). RDS is **5432**. Don't copy the local port. Add `sslmode=require` for RDS. Include Prisma pool params (`connection_limit` / `pool_timeout`) — see `dating-api/docs/ops/PRISMA_CONNECTION_POOL.md`.
 
 ### 4.3 Migrations — run as a one-shot, NOT in the app entrypoint (fixes **L6**)
 ```bash
@@ -213,7 +213,7 @@ Put these in **SSM Parameter Store** or **Secrets Manager** and inject at runtim
 ### 6.1 `dating-api` — required for a healthy cloud boot
 ```bash
 # --- boot blockers / core ---
-DATABASE_URL=postgresql://user:pass@rds-endpoint:5432/dating?schema=public&sslmode=require
+DATABASE_URL=postgresql://user:pass@rds-endpoint:5432/dating?schema=public&sslmode=require&connection_limit=10&pool_timeout=10
 OPENAI_API_KEY=sk-...                 # REQUIRED — API crashes without it (L5)
 REDIS_URL=redis://elasticache:6379    # required in practice (L2/L3/L9)
 PORT=3001

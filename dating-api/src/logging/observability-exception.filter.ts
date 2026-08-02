@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core';
 import { SentryBridgeService } from '../observability/sentry-bridge.service';
+import { maybeRecordPrismaPoolTimeout } from '../prisma/prisma-pool.helpers';
 import { ErrorCodes } from './error-codes';
 import { isHttpExceptionObservabilityLogged } from './observability-http.exception';
 import { StructuredObservabilityService } from './structured-observability.service';
@@ -21,6 +22,7 @@ export class ObservabilityExceptionFilter extends BaseExceptionFilter {
   }
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    maybeRecordPrismaPoolTimeout(exception);
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       if (
