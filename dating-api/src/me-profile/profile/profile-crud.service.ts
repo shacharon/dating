@@ -14,7 +14,6 @@ import {
 import { ErrorCodes } from '../../logging/error-codes';
 import { markHttpExceptionObservabilityLogged } from '../../logging/observability-http.exception';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { PrismaService } from '../../prisma/prisma.service';
 import { isContentModerationEnabled } from '../../content-moderation/content-moderation.types';
 import {
   MATCH_LIST_RANK_QUEUE_PORT,
@@ -25,8 +24,11 @@ import type {
   MeProfileResponseDto,
   PatchMeProfileDto,
 } from '../me-profile.dto';
+import {
+  USER_PROFILE_REPOSITORY,
+  type IUserProfileRepository,
+} from '../repositories/user-profile.repository';
 import { ProfileModerationService } from './profile-moderation.service';
-import { ProfilePreferenceService } from './profile-preference.service';
 import {
   applyOnboardingCompletionToWriteData,
   assertOnboardingStepCoherent,
@@ -40,16 +42,16 @@ import {
 @Injectable()
 export class ProfileCrudService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(USER_PROFILE_REPOSITORY)
+    private readonly profiles: IUserProfileRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly profileModeration: ProfileModerationService,
-    private readonly preference: ProfilePreferenceService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
 
   async requireProfileForUser(userId: string): Promise<UserProfile> {
-    const profile = await this.prisma.userProfile.findUnique({ where: { userId } });
+    const profile = await this.profiles.findByUserId(userId);
     if (!profile) {
       throw new NotFoundException({
         error: 'profile_not_found',
@@ -64,14 +66,7 @@ export class ProfileCrudService {
     nickname: string,
     excludeProfileId: string | null,
   ): Promise<void> {
-    const taken = await this.prisma.userProfile.findFirst({
-      where: {
-        nickname,
-        ...(excludeProfileId ? { NOT: { id: excludeProfileId } } : {}),
-      },
-      select: { id: true },
-    });
-    if (taken) {
+    if (await this.profiles.isNicknameTaken(nickname, excludeProfileId)) {
       throw new ConflictException({
         error: 'nickname_taken',
         message: 'This nickname is already in use.',
@@ -80,10 +75,7 @@ export class ProfileCrudService {
   }
 
   async getForUser(userId: string): Promise<MeProfileResponseDto | null> {
-    const row = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: { preference: true },
-    });
+    const row = await this.profiles.findByUserIdWithPreference(userId);
     return row ? toResponse(row, row.preference) : null;
   }
 
@@ -91,9 +83,7 @@ export class ProfileCrudService {
     userId: string,
     body: CreateMeProfileDto,
   ): Promise<MeProfileResponseDto> {
-    const existing = await this.prisma.userProfile.findUnique({
-      where: { userId },
-    });
+    const existing = await this.profiles.findByUserId(userId);
     if (existing) {
       this.obs.error(
         'me profile POST: profile already exists for user',
@@ -122,21 +112,19 @@ export class ProfileCrudService {
     }
 
     try {
-      const row = await this.prisma.$transaction(async (tx) => {
-        const writable = toPrismaWritableData(body);
-        if (body.gender === undefined) {
-          writable.gender = ProfileGender.PREFER_NOT_TO_SAY;
-        }
-        applyOnboardingCompletionToWriteData(writable, body, null);
-        const created = await tx.userProfile.create({
-          data: {
-            user: { connect: { id: userId } },
-            status: UserProfileStatus.DRAFT,
-            ...writable,
-          } as Prisma.UserProfileCreateInput,
-        });
-        await this.preference.upsertPreference(tx, created.id, body);
-        return created;
+      const writable = toPrismaWritableData(body);
+      if (body.gender === undefined) {
+        writable.gender = ProfileGender.PREFER_NOT_TO_SAY;
+      }
+      applyOnboardingCompletionToWriteData(writable, body, null);
+      const row = await this.profiles.createWithPreference({
+        userId,
+        profileData: {
+          user: { connect: { id: userId } },
+          status: UserProfileStatus.DRAFT,
+          ...writable,
+        } as Prisma.UserProfileCreateInput,
+        preferenceBody: body,
       });
       this.obs.trace(
         `me profile created profileId=${row.id}`,
@@ -146,10 +134,7 @@ export class ProfileCrudService {
         userId,
         'preferences_changed',
       );
-      const full = await this.prisma.userProfile.findUnique({
-        where: { userId },
-        include: { preference: true },
-      });
+      const full = await this.profiles.findByUserIdWithPreference(userId);
       if (!full) {
         const ex = new InternalServerErrorException({
           message: 'Profile could not be loaded after create',
@@ -188,10 +173,7 @@ export class ProfileCrudService {
     userId: string,
     body: PatchMeProfileDto,
   ): Promise<MeProfileResponseDto> {
-    const existing = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: { preference: true },
-    });
+    const existing = await this.profiles.findByUserIdWithPreference(userId);
     if (!existing) {
       throw new NotFoundException({
         error: 'profile_not_found',
@@ -235,14 +217,11 @@ export class ProfileCrudService {
     }
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        if (hasProfileFieldChanges) {
-          await tx.userProfile.update({
-            where: { userId },
-            data,
-          });
-        }
-        await this.preference.upsertPreference(tx, existing.id, body);
+      await this.profiles.updateByUserIdWithPreference({
+        userId,
+        profileId: existing.id,
+        profileData: hasProfileFieldChanges ? data : null,
+        preferenceBody: body,
       });
       if (hasPrefChanges) {
         await this.matchListRankQueue.enqueueRebuild(
@@ -250,10 +229,7 @@ export class ProfileCrudService {
           'preferences_changed',
         );
       }
-      const full = await this.prisma.userProfile.findUnique({
-        where: { userId },
-        include: { preference: true },
-      });
+      const full = await this.profiles.findByUserIdWithPreference(userId);
       if (!full) {
         const ex = new InternalServerErrorException({
           message: 'Profile could not be loaded after patch',

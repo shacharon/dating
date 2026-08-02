@@ -33,6 +33,8 @@ import { ProfileCrudService } from './profile/profile-crud.service';
 import { ProfileModerationService } from './profile/profile-moderation.service';
 import { ProfilePhotoService } from './profile/profile-photo.service';
 import { ProfilePreferenceService } from './profile/profile-preference.service';
+import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
+import { USER_PROFILE_REPOSITORY } from './repositories/user-profile.repository';
 import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
 
 /**
@@ -61,6 +63,10 @@ import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
     MeProfileService,
     ProfileModerationService,
     ProfilePreferenceService,
+    {
+      provide: USER_PROFILE_REPOSITORY,
+      useClass: PrismaUserProfileRepository,
+    },
     ProfileCrudService,
     ProfilePhotoService,
     ProfileAnalysisSubmitService,

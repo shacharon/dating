@@ -14,6 +14,8 @@ import { ProfileCrudService } from './profile/profile-crud.service';
 import { ProfileModerationService } from './profile/profile-moderation.service';
 import { ProfilePhotoService } from './profile/profile-photo.service';
 import { ProfilePreferenceService } from './profile/profile-preference.service';
+import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
+import type { IUserProfileRepository } from './repositories/user-profile.repository';
 
 /** Collaborator dependencies, in the same order as the pre-split `MeProfileService` constructor. */
 export type MeProfileServiceTestDeps = {
@@ -27,6 +29,8 @@ export type MeProfileServiceTestDeps = {
   moderation: OpenAIModerationClient;
   contentViolations: ContentViolationService;
   matchListRankQueue: MatchListRankQueuePort;
+  /** Optional port double — when omitted, uses real PrismaUserProfileRepository over `prisma`. */
+  userProfiles?: IUserProfileRepository;
 };
 
 /**
@@ -42,11 +46,13 @@ export function createMeProfileServiceForTest(
     deps.contentViolations,
   );
   const preference = new ProfilePreferenceService();
+  const profiles =
+    deps.userProfiles ??
+    new PrismaUserProfileRepository(deps.prisma, preference);
   const crud = new ProfileCrudService(
-    deps.prisma,
+    profiles,
     deps.obs,
     moderation,
-    preference,
     deps.matchListRankQueue,
   );
   const photos = new ProfilePhotoService(
@@ -58,6 +64,7 @@ export function createMeProfileServiceForTest(
     crud,
   );
   const analysisSubmit = new ProfileAnalysisSubmitService(
+    profiles,
     deps.prisma,
     deps.obs,
     deps.analytics,

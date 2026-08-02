@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -20,6 +21,10 @@ import {
   type AnalysisStatusResponseDto,
 } from '../dto/analysis-status-response.dto';
 import { MeMatchesService } from '../me-matches.service';
+import {
+  USER_PROFILE_REPOSITORY,
+  type IUserProfileRepository,
+} from '../repositories/user-profile.repository';
 import type { MeProfileSubmitResponseDto } from './me-profile-submit.dto';
 import { SUBMITTABLE_STATUSES, toResponse } from './profile-write.helpers';
 
@@ -30,6 +35,8 @@ import { SUBMITTABLE_STATUSES, toResponse } from './profile-write.helpers';
 @Injectable()
 export class ProfileAnalysisSubmitService {
   constructor(
+    @Inject(USER_PROFILE_REPOSITORY)
+    private readonly profiles: IUserProfileRepository,
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
@@ -44,9 +51,7 @@ export class ProfileAnalysisSubmitService {
    * Rejected prior states: SUBMITTED (already pending), ANALYZING (in flight).
    */
   async submitForUser(userId: string): Promise<MeProfileSubmitResponseDto> {
-    const existing = await this.prisma.userProfile.findUnique({
-      where: { userId },
-    });
+    const existing = await this.profiles.findByUserId(userId);
 
     if (!existing) {
       throw new NotFoundException({
@@ -106,13 +111,10 @@ export class ProfileAnalysisSubmitService {
     }
 
     try {
-      const row = await this.prisma.userProfile.update({
-        where: { userId },
-        data: {
-          status: UserProfileStatus.SUBMITTED,
-          submittedAt: new Date(),
-          lastAnalysisError: null,
-        },
+      const row = await this.profiles.updateByUserId(userId, {
+        status: UserProfileStatus.SUBMITTED,
+        submittedAt: new Date(),
+        lastAnalysisError: null,
       });
       this.obs.trace(
         `me profile submitted profileId=${row.id}`,
@@ -130,10 +132,7 @@ export class ProfileAnalysisSubmitService {
         profileId: row.id,
       });
 
-      const full = await this.prisma.userProfile.findUnique({
-        where: { userId },
-        include: { preference: true },
-      });
+      const full = await this.profiles.findByUserIdWithPreference(userId);
       if (!full) {
         const ex = new InternalServerErrorException({
           message: 'Profile could not be loaded after submit',
@@ -169,15 +168,7 @@ export class ProfileAnalysisSubmitService {
   async getAnalysisStatusForUser(
     userId: string,
   ): Promise<AnalysisStatusResponseDto> {
-    const row = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      select: {
-        status: true,
-        submittedAt: true,
-        analyzedAt: true,
-        lastAnalysisError: true,
-      },
-    });
+    const row = await this.profiles.findAnalysisStatusFieldsByUserId(userId);
     if (!row) {
       throw new NotFoundException({
         error: 'profile_not_found',
@@ -207,9 +198,7 @@ export class ProfileAnalysisSubmitService {
   async getLatestAnalysisForUser(
     userId: string,
   ): Promise<MeLatestAnalysisResponseDto> {
-    const profile = await this.prisma.userProfile.findUnique({
-      where: { userId },
-    });
+    const profile = await this.profiles.findByUserId(userId);
     if (!profile) {
       throw new NotFoundException({
         error: 'profile_not_found',
