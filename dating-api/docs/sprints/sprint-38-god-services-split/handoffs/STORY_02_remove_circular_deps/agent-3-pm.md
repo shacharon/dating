@@ -12,7 +12,7 @@
 
 ## Summary
 
-Story 2 **accepted**. Service-level MeMatches ↔ MatchListRankQueue `forwardRef` removed via ports + ModuleRef. Module-level MeProfile ↔ Worker cycle retained and documented. CR **PASS**. Agent 4 skipped.
+Story 2 **accepted** (`95c9f5b`). Service-level MeMatches ↔ MatchListRankQueue `forwardRef` removed via ports + ModuleRef. Module-level MeProfile ↔ Worker cycle retained and documented. CR **PASS**. Agent 4 skipped.
 
 ---
 

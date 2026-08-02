@@ -39,10 +39,15 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.bak
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
+
+# Local scratch backups (agent / editor)
+*.bak
+*.bak-*
 
 # temp directory
 .temp

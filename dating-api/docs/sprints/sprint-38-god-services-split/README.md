@@ -27,7 +27,7 @@ Break critical “god” services and kill structural debt that blocks maintaina
 |---|-------|----------|--------|--------|
 | 01 | [Extract matching algorithm constants](./STORY_01_extract_matching_constants.md) | P0 | 0.5d | **Done** |
 | 02 | [Remove circular dependencies](./STORY_02_remove_circular_deps.md) | P0 | 1d | **Done** |
-| 03 | [Split MeMatchesService](./STORY_03_split_me_matches_service.md) | P0 | 3d | Rejected (re-run Agent 1) |
+| 03 | [Split MeMatchesService](./STORY_03_split_me_matches_service.md) | P0 | 3d | Planned |
 | 04 | [Split MeProfileService](./STORY_04_split_me_profile_service.md) | P0 | 2d | **Done** |
 
 **Order:** 01 → 02 → 03 → 04 (4 agents each: `--agent 0..3 sprint 38 story N`).  

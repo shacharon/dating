@@ -12,7 +12,7 @@
 
 ## Summary
 
-Story 1 **accepted**. Architect locked constant catalog + `match-engine.ts`-only call sites; Dev extracted `matching-algorithm.constants.ts` with zero score drift; CR **PASS**. Agent 4 skipped. Commit lands code + Sprint 38 story/handoff docs.
+Story 1 **accepted**. Architect locked constant catalog + `match-engine.ts`-only call sites; Dev extracted `matching-algorithm.constants.ts` with zero score drift; CR **PASS**. Agent 4 skipped. Landed in `30b845a`.
 
 ---
 
