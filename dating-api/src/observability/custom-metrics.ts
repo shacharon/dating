@@ -115,3 +115,13 @@ export function recordPrismaPoolTimeout(): void {
 export function recordPrismaPoolConfigMissing(): void {
   emit('db.prisma.pool_config_missing', 1);
 }
+
+export type PrismaSlowQuerySeverityTag = 'slow' | 'very_slow';
+
+/** Sprint 40 — slow Prisma query duration (only when over threshold). */
+export function recordPrismaSlowQueryMs(
+  ms: number,
+  severity: PrismaSlowQuerySeverityTag,
+): void {
+  emit('db.prisma.query_ms', ms, [`severity:${severity}`]);
+}

@@ -1,6 +1,6 @@
 # Sprint 40 — Match Engine Stages + DB Ops (P1 Medium)
 
-**Status:** 📋 Planned  
+**Status:** ✅ Done  
 **Depends on:** Sprint 38 Done; Sprint 39 recommended (not hard-blocked for Story 01)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)
 
@@ -22,7 +22,7 @@
 |---|-------|----------|--------|--------|
 | 01 | [Match scoring stage pipeline](./STORY_01_match_scoring_stages.md) | P1 | 3d | **Done** |
 | 02 | [MatchListRank persist transaction tighten](./STORY_02_rank_persist_bulk.md) | P1 | 1d | **Done** |
-| 03 | [Prisma slow-query observability](./STORY_03_slow_query_observability.md) | P1 | 1d | Planned |
+| 03 | [Prisma slow-query observability](./STORY_03_slow_query_observability.md) | P1 | 1d | **Done** |
 
 **Order:** 01 → 02 → 03 (02/03 can parallel after Architect locks).
 

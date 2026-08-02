@@ -178,6 +178,11 @@ export const ErrorCodes = {
   CONTENT_USER_MUTED: 'CONTENT_USER_MUTED',
   CONTENT_MUTES_EXPIRED: 'CONTENT_MUTES_EXPIRED',
 
+  /** Sprint 40 — Prisma query duration >= PRISMA_SLOW_QUERY_MS (structured trace). */
+  PRISMA_SLOW_QUERY: 'PRISMA_SLOW_QUERY',
+  /** Sprint 40 — Prisma query duration >= PRISMA_VERY_SLOW_QUERY_MS (structured error, no stack). */
+  PRISMA_VERY_SLOW_QUERY: 'PRISMA_VERY_SLOW_QUERY',
+
   /** Generic HTTP layer */
   HTTP_EXCEPTION: 'HTTP_EXCEPTION',
   HTTP_UNHANDLED: 'HTTP_UNHANDLED',
