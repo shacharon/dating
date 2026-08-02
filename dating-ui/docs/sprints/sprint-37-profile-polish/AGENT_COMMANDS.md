@@ -22,7 +22,7 @@
 
 ### Story 37.2: Edit Tab Guided Sections
 **Priority:** 🔴 HIGH  
-**Goal:** 3 focused sections (Basics, Photos, Story) with sticky nav, progress, collapse
+**Goal:** 3 focused panes (Basics, Photos, Story) with sticky nav + progress (one at a time; no accordion)
 
 ```bash
 --agent 0 sprint 37 story 2
