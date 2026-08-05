@@ -113,6 +113,11 @@ describe('match-engine compare', () => {
     expect(result).toHaveProperty('coverageFactor');
     expect(result).toHaveProperty('confidence');
     expect(result).toHaveProperty('infoFlags');
+    expect(result).toHaveProperty('compatibilityBreakdown');
+    expect(result.compatibilityBreakdown.finalScore).toBe(result.finalScore);
+    expect(result.compatibilityBreakdown.values.score).toBe(
+      Math.round(result.valuesAlignment),
+    );
     expect(result.explainability.positiveChips.length).toBeLessThanOrEqual(3);
     expect(result.explainability.reasonShort.length).toBeGreaterThan(10);
     expect(typeof result.compatibility).toBe('number');

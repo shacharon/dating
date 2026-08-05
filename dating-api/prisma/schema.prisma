@@ -68,6 +68,8 @@ model User {
   status                      UserStatus @default(ACTIVE)
   emailNotificationsEnabled   Boolean    @default(true)
   inAppNotificationsEnabled   Boolean    @default(true)
+  /// Sprint 43 Story 2 — email when a new HIGH (≥85) browse match appears.
+  highPriorityMatchEmailsEnabled Boolean @default(true)
   lastLoginAt                 DateTime?
   deletedAt                   DateTime?
   createdAt   DateTime   @default(now())
@@ -88,6 +90,7 @@ model User {
   reportsAsReported     UserReport[] @relation("ReportsByReported")
   matchFeedbacks        MatchFeedback[]
   matchListRanks        MatchListRank[]
+  highPriorityMatchEmailLogs HighPriorityMatchEmailLog[]
   contentViolationStatus     String    @default("ok")
   contentViolationMutedUntil DateTime?
   contentViolationCount      Int       @default(0)
@@ -389,6 +392,19 @@ model MatchListRank {
   @@index([viewerUserId, hardBlocked, matchScore(sort: Desc), candidateProfileId])
   @@index([candidateProfileId])
   @@index([viewerUserId, builtAt])
+}
+
+/// Sprint 43 Story 2 — HIGH priority browse-match email send log (frequency + per-pair dedup).
+model HighPriorityMatchEmailLog {
+  id                 String   @id @default(cuid())
+  viewerUserId       String
+  viewer             User     @relation(fields: [viewerUserId], references: [id], onDelete: Cascade)
+  candidateProfileId String
+  matchScore         Float
+  sentAt             DateTime @default(now())
+
+  @@unique([viewerUserId, candidateProfileId])
+  @@index([viewerUserId, sentAt])
 }
 
 /// Sprint 22 — lazy LLM match narrative cache (keyed by evaluation pair + prompt version).

@@ -233,6 +233,7 @@ describe('MeMatchesService', () => {
       { find: narrativeCacheFind, upsert: narrativeCacheUpsert } as never,
       { generate: openerGenerate } as never,
       { find: openerCacheFind, upsert: openerCacheUpsert } as never,
+      { notifyAfterRebuildBestEffort: jest.fn() } as never,
       matchListRankQueue as never,
     );
   });
@@ -3071,6 +3072,7 @@ describe('MeMatchesService', () => {
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
         { generate: jest.fn().mockResolvedValue({ opener: null, source: 'none' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { notifyAfterRebuildBestEffort: jest.fn() } as never,
       { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 
@@ -3107,6 +3109,7 @@ describe('MeMatchesService', () => {
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
         { generate: jest.fn().mockResolvedValue({ opener: null, source: 'none' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { notifyAfterRebuildBestEffort: jest.fn() } as never,
       { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 
@@ -3153,6 +3156,7 @@ describe('MeMatchesService', () => {
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
         { generate: jest.fn().mockResolvedValue({ opener: null, source: 'none' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { notifyAfterRebuildBestEffort: jest.fn() } as never,
       { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 

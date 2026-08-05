@@ -81,12 +81,16 @@ export class UsersService {
     const data: {
       emailNotificationsEnabled?: boolean;
       inAppNotificationsEnabled?: boolean;
+      highPriorityMatchEmailsEnabled?: boolean;
     } = {};
     if (patch.emailNotificationsEnabled !== undefined) {
       data.emailNotificationsEnabled = patch.emailNotificationsEnabled;
     }
     if (patch.inAppNotificationsEnabled !== undefined) {
       data.inAppNotificationsEnabled = patch.inAppNotificationsEnabled;
+    }
+    if (patch.highPriorityMatchEmailsEnabled !== undefined) {
+      data.highPriorityMatchEmailsEnabled = patch.highPriorityMatchEmailsEnabled;
     }
 
     return this.prisma.user.update({
@@ -95,6 +99,7 @@ export class UsersService {
       select: {
         emailNotificationsEnabled: true,
         inAppNotificationsEnabled: true,
+        highPriorityMatchEmailsEnabled: true,
       },
     });
   }

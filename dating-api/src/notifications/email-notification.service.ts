@@ -25,13 +25,13 @@ export class EmailNotificationService {
     okCode: ErrorCode;
     failCode: ErrorCode;
     skippedProviderCode: ErrorCode;
-  }): Promise<void> {
+  }): Promise<'sent' | 'skipped_provider' | 'failed'> {
     if (!this.config.isSendingEnabled) {
       this.obs.trace(
         `email skipped provider disabled userId=${params.userId} subject=${params.subject}`,
         params.skippedProviderCode,
       );
-      return;
+      return 'skipped_provider';
     }
 
     const unsubscribeUrl = this.unsubscribeTokens.buildUnsubscribeUrl(params.userId);
@@ -50,6 +50,7 @@ export class EmailNotificationService {
         `email sent userId=${params.userId} to=${params.to} subject=${params.subject}`,
         params.okCode,
       );
+      return 'sent';
     } catch (err) {
       this.obs.error(
         `email send failed userId=${params.userId} to=${params.to} subject=${params.subject}`,
@@ -60,6 +61,7 @@ export class EmailNotificationService {
         errorCode: params.failCode,
         tags: { subsystem: 'notifications' },
       });
+      return 'failed';
     }
   }
 }

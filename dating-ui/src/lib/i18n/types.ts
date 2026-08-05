@@ -34,6 +34,7 @@ export type AppCopySchema = {
     retryApi: string;
     privacyLink: string;
     termsLink: string;
+    supportLink: string;
     trust: {
       privacy: string;
       moderation: string;
@@ -90,12 +91,19 @@ export type AppCopySchema = {
       refreshStarted: string;
       refreshFailed: string;
       loadFailed: string;
+      loadFailedTitle: string;
+      loadFailedBody: string;
+      tryAgain: string;
       listBuilding: string;
+      listBuildingHint: string;
+      listBuildingRefresh: string;
       photoGate: {
         title: string;
         body: string;
         bodyPending: string;
         cta: string;
+        whyToggle: string;
+        whyBody: string;
       };
       actionBadge: {
         liked: { label: string; ariaLabel: string };
@@ -141,6 +149,8 @@ export type AppCopySchema = {
         goodTitle: string;
         otherTitle: string;
         count: (n: number) => string;
+        /** Sprint 43 — link to public algorithm explainer */
+        learnHowMatchingWorks: string;
       };
     };
     detail: {
@@ -198,6 +208,26 @@ export type AppCopySchema = {
         evidenceViewer: (viewerQuote: string) => string;
         evidenceCounterparty: (counterpartyQuote: string) => string;
       };
+      /** Sprint 43 — algorithm transparency expandable */
+      breakdown: {
+        toggle: string;
+        headingWithScore: (score: number) => string;
+        honestyNote: string;
+        valuesTitle: string;
+        personalityTitle: string;
+        interestsTitle: string;
+        challengesTitle: string;
+        scoreLabel: (score: number) => string;
+        bandsLabel: (your: string, their: string) => string;
+        sharedCount: (n: number) => string;
+        noSharedInterests: string;
+        learnMore: string;
+        matchLevel: {
+          high: string;
+          medium: string;
+          low: string;
+        };
+      };
     };
     celebration: {
       title: string;
@@ -242,6 +272,7 @@ export type AppCopySchema = {
       sortAlphabetical: string;
       filteredEmptyTitle: string;
       filteredEmptyBody: string;
+      clearFilters: string;
       loadMore: string;
     };
     detail: {
@@ -411,6 +442,8 @@ export type AppCopySchema = {
       inAppHelp: string;
       emailLabel: string;
       emailHelp: string;
+      highPriorityLabel: string;
+      highPriorityHelp: string;
       saveError: string;
     };
     matchPreferencesLink: string;
@@ -520,8 +553,30 @@ export type AppCopySchema = {
     legalSectionTitle: string;
     privacyLink: string;
     termsLink: string;
+    supportLink: string;
     notificationsSectionTitle: string;
     notificationsLink: string;
+  };
+  support: {
+    title: string;
+    subtitle: string;
+    issueTypeLabel: string;
+    issueTypes: {
+      matches: string;
+      photo: string;
+      conversation: string;
+      bug: string;
+      feature: string;
+      other: string;
+    };
+    descriptionLabel: string;
+    descriptionPlaceholder: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    submit: string;
+    missingEmailConfig: string;
+    mailtoHint: string;
+    slaHint: string;
   };
   deleteAccount: {
     title: string;
@@ -586,6 +641,7 @@ export type AppCopySchema = {
     waitHint: string;
     editProfileLink: string;
     addPhotoLink: string;
+    learnAlgorithmLink: string;
     failedTitle: string;
     retryButton: string;
     redirecting: string;
@@ -634,5 +690,29 @@ export type AppCopySchema = {
     dismiss: string;
     messagingMuted: string;
     categoryDatingPolicy: string;
+  };
+  /** Sprint 43 — public /about/algorithm */
+  algorithmExplainer: {
+    back: string;
+    title: string;
+    intro: string;
+    factorsTitle: string;
+    mutualFitTitle: string;
+    mutualFitBody: string;
+    relationshipTitle: string;
+    relationshipBody: string;
+    valuesTitle: string;
+    valuesBody: string;
+    interestsTitle: string;
+    interestsBody: string;
+    frictionTitle: string;
+    frictionBody: string;
+    priorityTitle: string;
+    priorityHigh: string;
+    priorityGood: string;
+    priorityOther: string;
+    challengesWhyTitle: string;
+    challengesWhyBody: string;
+    weightsNote: string;
   };
 };

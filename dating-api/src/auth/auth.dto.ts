@@ -9,6 +9,7 @@ export interface AuthMeResponseDto {
   status: UserStatus;
   emailNotificationsEnabled: boolean;
   inAppNotificationsEnabled: boolean;
+  highPriorityMatchEmailsEnabled: boolean;
 }
 
 /** POST /api/v1/auth/google request body (no user id from client). */
@@ -30,5 +31,7 @@ export function toAuthMeResponseDto(user: User): AuthMeResponseDto {
     status: user.status,
     emailNotificationsEnabled: user.emailNotificationsEnabled ?? true,
     inAppNotificationsEnabled: user.inAppNotificationsEnabled ?? true,
+    highPriorityMatchEmailsEnabled:
+      user.highPriorityMatchEmailsEnabled ?? true,
   };
 }

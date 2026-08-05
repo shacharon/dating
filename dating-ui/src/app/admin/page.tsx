@@ -34,6 +34,14 @@ export default function AdminIndexPage() {
         </li>
         <li>
           <Link
+            href="/admin/beta-metrics"
+            className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+          >
+            Beta metrics
+          </Link>
+        </li>
+        <li>
+          <Link
             href="/admin/content-violations"
             className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
           >

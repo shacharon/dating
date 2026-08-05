@@ -121,6 +121,7 @@ import {
   compareWithStatus,
   type MatchExplainabilityDto,
   type MatchRecommendationDto,
+  type CompatibilityBreakdownDto,
 } from '../matches/match-engine';
 import {
   MATCH_NARRATIVE_PROMPT_VERSION,
@@ -135,6 +136,7 @@ import {
   ConversationStarterGenerator,
   buildConversationStarterFactPack,
 } from '../matches/conversation-starter';
+import { HighPriorityMatchEmailService } from '../notifications/high-priority-match-email.service';
 
 /** Max LLM narrative generates per list request — HIGH only (Sprint 41 Story 4 lock). */
 const LIST_WHY_TLDR_EAGER_MAX = 3;
@@ -332,6 +334,11 @@ export interface MeMatchDetailDto {
    */
   matchNarrative?: string;
   /**
+   * Sprint 43 — component scores + top signals for algorithm transparency (detail only).
+   * Omitted when unscored / compare guard. List DTO never includes this.
+   */
+  compatibilityBreakdown?: CompatibilityBreakdownDto | null;
+  /**
    * Present when this candidate is hard-ineligible but “existing” for the viewer
    * (LIKE and/or ACTIVE MutualMatch). Absent for eligible matches.
    */
@@ -367,6 +374,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     private readonly matchNarrativeCache: MatchNarrativeCacheService,
     private readonly conversationStarterGenerator: ConversationStarterGenerator,
     private readonly conversationStarterCache: ConversationStarterCacheService,
+    private readonly highPriorityMatchEmail: HighPriorityMatchEmailService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
@@ -516,11 +524,37 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         rebuildMs,
       };
     }
+
+    let priorRows: Array<{
+      candidateProfileId: string;
+      matchScore: number;
+      hardBlocked: boolean;
+    }> = [];
+    if (snapshot.status === 'ready' && snapshot.rows.length > 0) {
+      priorRows = await this.prisma.matchListRank.findMany({
+        where: { viewerUserId },
+        select: {
+          candidateProfileId: true,
+          matchScore: true,
+          hardBlocked: true,
+        },
+      });
+    }
+
     const persist = await this.persistMatchListRankSnapshot(
       viewerUserId,
       snapshot,
     );
     await this.invalidateMatchListCache(viewerUserId);
+
+    if (snapshot.status === 'ready' && snapshot.rows.length > 0) {
+      void this.highPriorityMatchEmail.notifyAfterRebuildBestEffort({
+        viewerUserId,
+        priorRows,
+        newRows: snapshot.rows,
+      });
+    }
+
     const rebuildMs = Date.now() - started;
     recordMatchListRankRebuildMs(rebuildMs);
     this.obs.trace(
@@ -1877,6 +1911,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     let matchScore: number | null = null;
     let explainability: MatchExplainabilityDto | null = null;
     let recommendation: MatchRecommendationDto | null = null;
+    let compatibilityBreakdown: CompatibilityBreakdownDto | null = null;
 
     const result = compareWithStatus(
       viewerRead.enginePayload,
@@ -1887,6 +1922,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     if (!('status' in result)) {
       matchScore = result.finalScore;
       explainability = result.explainability;
+      compatibilityBreakdown = result.compatibilityBreakdown;
       recommendation = result.recommendation
         ? withRecommendationPlaces(result.recommendation, result.finalScore, {
             viewerPlace: viewerBridge.location.locationLabel,
@@ -1954,6 +1990,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       explainability,
       recommendation,
       ...(matchNarrative !== undefined ? { matchNarrative } : {}),
+      ...(compatibilityBreakdown != null
+        ? { compatibilityBreakdown }
+        : {}),
       ...(hardBlocked !== undefined ? { hardBlocked } : {}),
     };
   }

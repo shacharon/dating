@@ -1,12 +1,16 @@
 # Story 03 — Empty states & onboarding polish
 
-**Sprint 43 · Status: Planned**  
+**Sprint 43 · Status: Done (ACCEPT)**  
 **Priority:** P1 (UX completeness)  
 **Estimated effort:** 1 day  
-**Dependencies:** Sprints 41-42 complete  
+**Dependencies:** Sprints 41-42 complete; Stories 01–02 Done  
 **Repo:** `dating-ui` primarily  
 **Risk:** Low (UI polish only)  
-**Handoffs:** `handoffs/STORY_03_empty_states_polish/agent-*.md`
+**Handoffs:** `handoffs/STORY_03_empty_states_polish/agent-*.md`  
+**Architect lock:** [`handoffs/STORY_03_empty_states_polish/agent-0-architect.md`](./handoffs/STORY_03_empty_states_polish/agent-0-architect.md) — **Skip Agent 4**  
+**Dev handoff:** [`handoffs/STORY_03_empty_states_polish/agent-1-dev.md`](./handoffs/STORY_03_empty_states_polish/agent-1-dev.md)  
+**CR handoff:** [`handoffs/STORY_03_empty_states_polish/agent-2-cr.md`](./handoffs/STORY_03_empty_states_polish/agent-2-cr.md)  
+**PM handoff:** [`handoffs/STORY_03_empty_states_polish/agent-3-pm.md`](./handoffs/STORY_03_empty_states_polish/agent-3-pm.md) — **ACCEPT**
 
 ---
 
@@ -368,14 +372,17 @@ export function MatchCardSkeleton() {
 
 ## Locked Policy (Architect)
 
+Full lock: [`handoffs/STORY_03_empty_states_polish/agent-0-architect.md`](./handoffs/STORY_03_empty_states_polish/agent-0-architect.md).
+
 | Item | Decision |
 |------|----------|
-| Illustration style | Simple icons (emoji or lucide-react) |
-| Copy tone | Friendly, encouraging, helpful |
-| CTAs | Always provide next action |
-| Loading states | Show spinner + estimated time |
-| Error states | "Try again" + "Contact support" |
-| Empty celebrations | Positive framing ("You're all set!" vs "Nothing here") |
+| Scope | **Polish existing** empties — not greenfield onboarding; no backend |
+| Reject | Invented `analyzing` matches reason; `/support`; fake 10x stats; lucide/emoji icon pack; remount orphans |
+| Matches | Error **Try again**; richer `listBuilding` + Refresh; photo gate copy; keep redirects + `MatchListEmptyState` |
+| Conversations | Fix “Keep swiping!”; filtered-empty **Clear filters** |
+| Analysis | Keep `AnalysisProgressPanel`; optional `/about/algorithm` link |
+| Shared UI | Thin `EmptyStatePanel` layout helper (Tailwind only) — optional where it helps |
+| Agent 4 | **Skip** |
 
 ---
 
@@ -404,13 +411,13 @@ export function MatchCardSkeleton() {
 
 ## Acceptance Criteria
 
-- [x] All major pages have empty states
-- [x] Every empty state has primary CTA
-- [x] Copy is friendly and actionable
-- [x] Loading states show progress
-- [x] Error states allow retry + support contact
-- [x] Mobile responsive
-- [x] Dark mode styling correct
+- [x] Match list error has Try again; `listBuilding` / empty / photo gate copy polished
+- [x] Conversations empty copy fixed (no “swiping”); filtered-empty has Clear filters
+- [x] Analysis wait keeps progress panel (+ optional algorithm link)
+- [x] Copy friendly and actionable (EN/ES/HE)
+- [x] No `/support`, no fake stats, no new icon library
+- [x] Mobile / dark mode via existing tokens
+- [x] Specs updated for changed copy / CTAs
 
 ---
 

@@ -5,17 +5,21 @@ import { useAuth } from '@/contexts/auth-context';
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
-  DEFAULT_LOCALE,
   getCopy,
   readStoredLocale,
   type AppLocale,
 } from '@/lib/i18n';
 import { patchNotificationPreferences } from '@/lib/notification-preferences-api';
 
+type PrefKey =
+  | 'inAppNotificationsEnabled'
+  | 'emailNotificationsEnabled'
+  | 'highPriorityMatchEmailsEnabled';
+
 export function NotificationPreferencesSection() {
   const { user, refresh } = useAuth();
   const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
-  const [saving, setSaving] = useState<'inApp' | 'email' | null>(null);
+  const [saving, setSaving] = useState<PrefKey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const copy = getCopy(locale).profile.notifications;
@@ -47,12 +51,11 @@ export function NotificationPreferencesSection() {
     return null;
   }
 
-  const handleToggle = async (
-    key: 'inAppNotificationsEnabled' | 'emailNotificationsEnabled',
-    next: boolean,
-  ) => {
+  const highPriorityEnabled = user.highPriorityMatchEmailsEnabled ?? true;
+
+  const handleToggle = async (key: PrefKey, next: boolean) => {
     setError(null);
-    setSaving(key === 'inAppNotificationsEnabled' ? 'inApp' : 'email');
+    setSaving(key);
     try {
       await patchNotificationPreferences({ [key]: next });
       await refresh();
@@ -109,6 +112,27 @@ export function NotificationPreferencesSection() {
             <span className="font-medium">{copy.emailLabel}</span>
             <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
               {copy.emailHelp}
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-zinc-900 dark:text-zinc-100">
+          <input
+            type="checkbox"
+            data-testid="notification-pref-high-priority"
+            checked={highPriorityEnabled}
+            disabled={saving !== null || !user.emailNotificationsEnabled}
+            onChange={(e) =>
+              void handleToggle(
+                'highPriorityMatchEmailsEnabled',
+                e.target.checked,
+              )
+            }
+            className="mt-0.5 rounded border-zinc-400 text-zinc-900 dark:border-zinc-500"
+          />
+          <span>
+            <span className="font-medium">{copy.highPriorityLabel}</span>
+            <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+              {copy.highPriorityHelp}
             </span>
           </span>
         </label>

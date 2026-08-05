@@ -9,4 +9,8 @@ export class PatchNotificationPreferencesDto {
   @IsOptional()
   @IsBoolean()
   inAppNotificationsEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  highPriorityMatchEmailsEnabled?: boolean;
 }

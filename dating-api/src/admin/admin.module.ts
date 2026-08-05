@@ -18,6 +18,8 @@ import { AdminMatchQualityController } from './admin-match-quality/admin-match-q
 import { AdminMatchQualityService } from './admin-match-quality/admin-match-quality.service';
 import { AdminReportsController } from './admin-reports/admin-reports.controller';
 import { AdminReportsService } from './admin-reports/admin-reports.service';
+import { AdminBetaMetricsController } from './admin-beta-metrics/admin-beta-metrics.controller';
+import { AdminBetaMetricsService } from './admin-beta-metrics/admin-beta-metrics.service';
 
 @Module({
   imports: [
@@ -37,12 +39,14 @@ import { AdminReportsService } from './admin-reports/admin-reports.service';
     AdminReportsController,
     AdminMatchQualityController,
     AdminContentViolationsController,
+    AdminBetaMetricsController,
   ],
   providers: [
     AdminPhotosService,
     AdminReportsService,
     AdminMatchQualityService,
     AdminContentViolationsService,
+    AdminBetaMetricsService,
     MeProfileValidationPipe,
   ],
   exports: [AdminAuthModule],

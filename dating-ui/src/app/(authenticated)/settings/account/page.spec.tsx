@@ -15,13 +15,16 @@ vi.mock('next/navigation', () => ({
 import SettingsAccountPage from '@/app/(authenticated)/settings/account/account-page-client';
 
 describe('SettingsAccountPage', () => {
-  it('links to privacy, terms, and notification preferences', () => {
+  it('links to privacy, terms, support, and notification preferences', () => {
     render(<SettingsAccountPage />);
     expect(screen.getByTestId('account-link-privacy').getAttribute('href')).toBe(
       '/privacy',
     );
     expect(screen.getByTestId('account-link-terms').getAttribute('href')).toBe(
       '/terms',
+    );
+    expect(screen.getByTestId('account-link-support').getAttribute('href')).toBe(
+      '/support',
     );
     expect(
       screen.getByTestId('account-link-notifications').getAttribute('href'),

@@ -7,6 +7,7 @@ export type AuthUser = {
   status: string;
   emailNotificationsEnabled: boolean;
   inAppNotificationsEnabled: boolean;
+  highPriorityMatchEmailsEnabled: boolean;
 };
 
 export type AuthStatus =

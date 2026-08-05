@@ -104,6 +104,13 @@ export function AnalysisProgressPanel({
         >
           {copy.addPhotoLink}
         </Link>
+        <Link
+          href="/about/algorithm"
+          data-testid="analysis-learn-algorithm"
+          className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+        >
+          {copy.learnAlgorithmLink}
+        </Link>
         {failed && onRetry ? (
           <button
             type="button"

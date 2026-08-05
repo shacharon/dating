@@ -46,6 +46,7 @@ export type {
   MatchInfoFlag,
   MatchExplainabilityDto,
   MatchRecommendationDto,
+  CompatibilityBreakdownDto,
   MatchDebugPenaltyDto,
   MatchDebugDto,
   CompareAlignmentDto,

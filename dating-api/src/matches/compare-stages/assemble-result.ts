@@ -10,6 +10,7 @@ import type { CapsCalibrationState } from '../calibration-policy';
 import type { CoverageConfidenceState, MatchInfoFlag } from '../coverage-policy';
 import { applyDirectionalDisplayCalibration } from '../display-policy';
 import type { FrictionAndPenaltiesState } from '../friction-policy';
+import { buildCompatibilityBreakdown } from '../match-compatibility-breakdown';
 import { buildMatchExplainability } from '../match-explainability';
 import {
   ALIGNMENT_CHIP_MIN_PAIR_SCORE,
@@ -212,6 +213,16 @@ export function buildFinalResultDto(
     dealbreakers: dealbreakers.map((d) => d.code),
   });
 
+  const compatibilityBreakdown = buildCompatibilityBreakdown({
+    finalScore: finalScoreClamped,
+    valuesAlignment,
+    interestAlignment: interestAlignmentValue,
+    friction,
+    breakdown: compatAB.breakdown ?? [],
+    tensionMatrix,
+    sharedInterests,
+  });
+
   return {
     aToB: displayAToB,
     bToA: displayBToA,
@@ -250,5 +261,6 @@ export function buildFinalResultDto(
     debug,
     explainability,
     recommendation,
+    compatibilityBreakdown,
   };
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { ConversationListFilters } from '@/components/conversation-list-filters';
+import { EmptyStatePanel } from '@/components/empty-state-panel';
 import { useAuth } from '@/contexts/auth-context';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
@@ -255,24 +256,16 @@ export default function ConversationsPage() {
         )}
 
         {!loading && !error && conversations.length === 0 && (
-          <div
-            className="rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900"
-            role="status"
-            data-testid="conversations-empty"
-          >
-            <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              {listCopy.emptyTitle}
-            </p>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              {listCopy.emptyBody}
-            </p>
-            <Link
-              href="/dating/me-matches"
-              className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-            >
-              {listCopy.browseMatches}
-            </Link>
-          </div>
+          <EmptyStatePanel
+            testId="conversations-empty"
+            title={listCopy.emptyTitle}
+            description={listCopy.emptyBody}
+            primaryAction={{
+              label: listCopy.browseMatches,
+              href: '/dating/me-matches',
+              testId: 'conversations-browse-matches',
+            }}
+          />
         )}
 
         {!loading && !error && conversations.length > 0 && (
@@ -288,18 +281,23 @@ export default function ConversationsPage() {
             />
 
             {visibleConversations.length === 0 ? (
-              <div
-                className="rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900"
-                role="status"
-                data-testid="conversations-filtered-empty"
-              >
-                <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                  {listCopy.filteredEmptyTitle}
-                </p>
-                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                  {listCopy.filteredEmptyBody}
-                </p>
-              </div>
+              <EmptyStatePanel
+                testId="conversations-filtered-empty"
+                title={listCopy.filteredEmptyTitle}
+                description={listCopy.filteredEmptyBody}
+                primaryAction={{
+                  label: listCopy.clearFilters,
+                  testId: 'conversations-clear-filters',
+                  onClick: () => {
+                    setSearchQuery(DEFAULT_CONVERSATION_LIST_CONTROLS.searchQuery);
+                    setDebouncedSearch(
+                      DEFAULT_CONVERSATION_LIST_CONTROLS.searchQuery,
+                    );
+                    setFilterType(DEFAULT_CONVERSATION_LIST_CONTROLS.filterType);
+                    setSortBy(DEFAULT_CONVERSATION_LIST_CONTROLS.sortBy);
+                  },
+                }}
+              />
             ) : (
               <ul className="flex flex-col gap-3" data-testid="conversations-list">
                 {visibleConversations.map((item) => {

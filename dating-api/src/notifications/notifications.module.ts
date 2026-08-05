@@ -15,6 +15,7 @@ import { NoopEmailProvider } from './noop-email.provider';
 import { PhotoRejectionEmailService } from './photo-rejection-email.service';
 import { ReportOpsEmailService } from './report-ops-email.service';
 import { ResendEmailProvider } from './resend-email.provider';
+import { HighPriorityMatchEmailService } from './high-priority-match-email.service';
 
 @Module({
   imports: [
@@ -36,12 +37,14 @@ import { ResendEmailProvider } from './resend-email.provider';
     NewMessageEmailService,
     ReportOpsEmailService,
     PhotoRejectionEmailService,
+    HighPriorityMatchEmailService,
   ],
   exports: [
     MutualMatchEmailService,
     NewMessageEmailService,
     ReportOpsEmailService,
     PhotoRejectionEmailService,
+    HighPriorityMatchEmailService,
   ],
 })
 export class NotificationsModule {}

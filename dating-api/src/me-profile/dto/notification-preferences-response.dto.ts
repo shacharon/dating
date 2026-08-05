@@ -2,4 +2,5 @@
 export interface NotificationPreferencesResponseDto {
   emailNotificationsEnabled: boolean;
   inAppNotificationsEnabled: boolean;
+  highPriorityMatchEmailsEnabled: boolean;
 }

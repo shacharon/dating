@@ -21,6 +21,7 @@ vi.mock('@/contexts/auth-context', () => ({
       status: 'ACTIVE',
       emailNotificationsEnabled: true,
       inAppNotificationsEnabled: true,
+      highPriorityMatchEmailsEnabled: true,
     },
     refresh: refreshMock,
     status: 'authenticated',
@@ -39,6 +40,7 @@ describe('NotificationPreferencesSection', () => {
     patchNotificationPreferences.mockResolvedValue({
       emailNotificationsEnabled: true,
       inAppNotificationsEnabled: false,
+      highPriorityMatchEmailsEnabled: true,
     });
     refreshMock.mockResolvedValue(undefined);
   });
@@ -47,10 +49,11 @@ describe('NotificationPreferencesSection', () => {
     cleanup();
   });
 
-  it('renders both toggles', () => {
+  it('renders toggles including high-priority', () => {
     render(<NotificationPreferencesSection />);
     expect(screen.getByTestId('notification-pref-in-app')).toBeTruthy();
     expect(screen.getByTestId('notification-pref-email')).toBeTruthy();
+    expect(screen.getByTestId('notification-pref-high-priority')).toBeTruthy();
   });
 
   it('patches preference and refreshes auth on in-app toggle', async () => {

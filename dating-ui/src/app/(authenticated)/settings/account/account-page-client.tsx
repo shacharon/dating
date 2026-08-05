@@ -66,6 +66,15 @@ export default function SettingsAccountPage() {
               {copy.termsLink}
             </Link>
           </li>
+          <li>
+            <Link
+              href="/support"
+              data-testid="account-link-support"
+              className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+            >
+              {copy.supportLink}
+            </Link>
+          </li>
         </ul>
       </section>
 

@@ -19,6 +19,7 @@ export const enCopy: AppCopySchema = {
     retryApi: "Retry connection to API",
     privacyLink: "Privacy",
     termsLink: "Terms",
+    supportLink: "Support",
     trust: {
       privacy: "Private by default",
       moderation: "Moderated conversations",
@@ -83,13 +84,23 @@ export const enCopy: AppCopySchema = {
         "Refresh started — scores will update once analysis completes.",
       refreshFailed: "Refresh failed",
       loadFailed: "Failed to load matches",
+      loadFailedTitle: "Couldn't load matches",
+      loadFailedBody:
+        "Something went wrong loading your list. Check your connection and try again.",
+      tryAgain: "Try again",
       listBuilding: "Finding your matches…",
+      listBuildingHint:
+        "We're ranking people who fit your preferences. This usually takes a moment.",
+      listBuildingRefresh: "Refresh",
       photoGate: {
         title: "Add a photo to see matches",
         body: "You need at least one approved photo before we can show people here.",
         bodyPending:
           "Your photo is still under review. Once it's approved, matches will appear here.",
         cta: "Go to photos",
+        whyToggle: "Why do I need a photo?",
+        whyBody:
+          "A photo helps others recognize you and keeps the community safer. We only show matches after at least one photo is approved.",
       },
       actionBadge: {
         liked: { label: "Liked", ariaLabel: "You liked this match" },
@@ -144,6 +155,7 @@ export const enCopy: AppCopySchema = {
         goodTitle: "Good matches",
         otherTitle: "Other matches",
         count: (n) => `(${n})`,
+        learnHowMatchingWorks: "Learn how matching works",
       },
       updatedPrefix: "Updated",
     },
@@ -212,6 +224,27 @@ export const enCopy: AppCopySchema = {
         evidenceViewer: (viewerQuote) => `You: "${viewerQuote}"`,
         evidenceCounterparty: (counterpartyQuote) => `Them: "${counterpartyQuote}"`,
       },
+      breakdown: {
+        toggle: "How we calculated this",
+        headingWithScore: (score) => `How we calculated ${score}%`,
+        honestyNote:
+          "These are the standout factors behind the score — not an average that equals the percentage. Your match % also includes how you fit each other’s preferences and relationship style.",
+        valuesTitle: "Life goals & values",
+        personalityTitle: "Personality",
+        interestsTitle: "Shared interests",
+        challengesTitle: "Things to watch",
+        scoreLabel: (score) => `${score}%`,
+        bandsLabel: (your, their) => `You: ${your} · Them: ${their}`,
+        sharedCount: (n) =>
+          n === 1 ? "1 shared interest" : `${n} shared interests`,
+        noSharedInterests: "No shared interest tags yet.",
+        learnMore: "Learn more about our algorithm →",
+        matchLevel: {
+          high: "Strong",
+          medium: "Moderate",
+          low: "Different",
+        },
+      },
     },
     celebration: {
       title: "It's a match!",
@@ -234,7 +267,7 @@ export const enCopy: AppCopySchema = {
       title: "Conversations",
       subtitle: "Your mutual matches — open a conversation to message.",
       tryAgain: "Try again",
-      emptyTitle: "No matches yet. Keep swiping!",
+      emptyTitle: "No conversations yet",
       emptyBody:
         "When you and someone both like each other, they will appear here.",
       browseMatches: "Browse matches",
@@ -257,6 +290,7 @@ export const enCopy: AppCopySchema = {
       sortAlphabetical: "A–Z",
       filteredEmptyTitle: "No conversations match",
       filteredEmptyBody: "Try another name or clear filters.",
+      clearFilters: "Clear filters",
       loadMore: "Load more",
     },
     detail: {
@@ -524,6 +558,9 @@ export const enCopy: AppCopySchema = {
       emailLabel: "Email me when I'm away",
       emailHelp:
         "Email when you're not online. Unsubscribe link in emails still works.",
+      highPriorityLabel: "High-priority match emails",
+      highPriorityHelp:
+        "Email when a new 85%+ compatibility match appears in your list (at most once per day).",
       saveError: "Could not save notification settings. Please try again.",
     },
     matchPreferencesLink: "Match preferences",
@@ -643,8 +680,32 @@ export const enCopy: AppCopySchema = {
     legalSectionTitle: "Legal",
     privacyLink: "Privacy policy",
     termsLink: "Terms of use",
+    supportLink: "Get help",
     notificationsSectionTitle: "Notifications",
     notificationsLink: "Notification preferences →",
+  },
+  support: {
+    title: "Get help",
+    subtitle:
+      "Tell us what’s going wrong. We’ll open your email app so the message reaches our team.",
+    issueTypeLabel: "What’s wrong?",
+    issueTypes: {
+      matches: "Can’t see matches",
+      photo: "Photo upload failed",
+      conversation: "Conversation not loading",
+      bug: "Other bug",
+      feature: "Feature request",
+      other: "Something else",
+    },
+    descriptionLabel: "Describe the issue",
+    descriptionPlaceholder: "What happened? Include steps if you can.",
+    emailLabel: "Your email (for follow-up)",
+    emailPlaceholder: "you@example.com",
+    submit: "Open email to send",
+    missingEmailConfig:
+      "Support email isn’t configured yet. Please try again later.",
+    mailtoHint: "Opens your mail app — nothing is stored in the app.",
+    slaHint: "We aim to reply within 24 hours for urgent issues, 3 days otherwise.",
   },
   deleteAccount: {
     title: "Delete account",
@@ -714,6 +775,7 @@ export const enCopy: AppCopySchema = {
     waitHint: "Usually a few minutes.",
     editProfileLink: "Edit profile",
     addPhotoLink: "Add or change photo",
+    learnAlgorithmLink: "Learn how matching works",
     failedTitle: "Analysis failed. You can try again or update your profile.",
     retryButton: "Try again",
     redirecting: "Redirecting to matches…",
@@ -722,8 +784,9 @@ export const enCopy: AppCopySchema = {
     emptyMatches: {
       title: "No matches to show right now",
       bodyWithPlace: (place: string) =>
-        `More people are joining in ${place}. Check back soon.`,
-      bodyGeneric: "More people are joining — check back soon.",
+        `More people are joining in ${place}. Widen preferences or invite a friend while you wait.`,
+      bodyGeneric:
+        "Widen your preferences or invite a friend — more people join every day.",
       filterHint: "Your match preferences may narrow the list.",
       editPreferences: "Edit preferences",
       editProfile: "Edit profile",
@@ -763,5 +826,36 @@ export const enCopy: AppCopySchema = {
     dismiss: 'Dismiss',
     messagingMuted: 'Messaging is temporarily restricted',
     categoryDatingPolicy: 'Community dating policy',
+  },
+  algorithmExplainer: {
+    back: "← Back",
+    title: "How we match you",
+    intro:
+      "We look at how well two people fit each other’s preferences, relationship style, life goals and values, and shared interests — then we account for areas that may need care.",
+    factorsTitle: "What goes into a match score",
+    mutualFitTitle: "Mutual preference fit",
+    mutualFitBody:
+      "The largest part of the score: how well each of you fits what the other is looking for.",
+    relationshipTitle: "Relationship style",
+    relationshipBody:
+      "About a quarter of how we combine factors — how your relationship rhythms and balance line up.",
+    valuesTitle: "Life goals & values",
+    valuesBody:
+      "Things like clarity about commitment, money mindset, lifestyle pace, and shared values.",
+    interestsTitle: "Shared interests",
+    interestsBody:
+      "Overlapping hobbies and activities — a smaller part of the score, still useful for conversation.",
+    frictionTitle: "Things that can lower a score",
+    frictionBody:
+      "When important differences show up (pace, emotional depth, independence, and similar), we reduce the score and may surface “things to watch.”",
+    priorityTitle: "Priority tiers",
+    priorityHigh: "HIGH — 85% and up: message these first.",
+    priorityGood: "GOOD — 70–84%: solid matches worth a look.",
+    priorityOther: "OTHER — under 70%: still visible, lower priority.",
+    challengesWhyTitle: "Why we show challenges",
+    challengesWhyBody:
+      "Perfect matches don’t exist. Naming friction helps you decide with open eyes — not to scare you off.",
+    weightsNote:
+      "Section percentages on a match profile are component scores (what stood out), not the exact weights used in the final percentage.",
   },
 };

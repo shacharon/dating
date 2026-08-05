@@ -81,7 +81,8 @@ export class MeProfileController {
   ) {
     if (
       body.emailNotificationsEnabled === undefined &&
-      body.inAppNotificationsEnabled === undefined
+      body.inAppNotificationsEnabled === undefined &&
+      body.highPriorityMatchEmailsEnabled === undefined
     ) {
       throw new BadRequestException(
         'At least one notification preference must be provided',

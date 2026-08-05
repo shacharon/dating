@@ -58,6 +58,41 @@ export interface MatchExplanationTrait {
   strength: 'strong' | 'moderate';
 }
 
+/** Sprint 43 — algorithm transparency section scores (detail only; not blend weights). */
+export type BreakdownMatchLevel = 'high' | 'medium' | 'low';
+export type BreakdownBand = 'Low' | 'Medium' | 'High';
+
+export type BreakdownSignalDto = {
+  key: string;
+  label: string;
+  match: BreakdownMatchLevel;
+  yourBand?: BreakdownBand;
+  theirBand?: BreakdownBand;
+};
+
+export type BreakdownSectionDto = {
+  score: number;
+  signals: BreakdownSignalDto[];
+};
+
+export type InterestsSectionDto = {
+  score: number;
+  shared: string[];
+  sharedCount: number;
+};
+
+export type ChallengesSectionDto = {
+  areas: Array<{ id: string; label: string; note?: string }>;
+};
+
+export type CompatibilityBreakdownDto = {
+  finalScore: number;
+  values: BreakdownSectionDto;
+  personality?: BreakdownSectionDto;
+  interests: InterestsSectionDto;
+  challenges?: ChallengesSectionDto;
+};
+
 export type HardBlockDirection = 'viewer_to_them' | 'them_to_viewer';
 
 export type HardBlockReasonDto = {
@@ -158,6 +193,11 @@ export interface MeMatchDetailDto {
    * Omitted when unscored / absent; list responses never include this field.
    */
   matchNarrative?: string;
+  /**
+   * Sprint 43 — component scores + top signals for algorithm transparency (detail only).
+   * Absent when unscored. List responses never include this.
+   */
+  compatibilityBreakdown?: CompatibilityBreakdownDto | null;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
   /** Relative path to primary photo file endpoint; null when absent. */

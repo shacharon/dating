@@ -134,6 +134,48 @@ describe('MeMatchesPage (empty list)', () => {
     expect(screen.getByTestId('match-empty-invite-copy')).toBeTruthy();
     unmount();
   });
+
+  it('shows try-again empty panel when matches load fails', async () => {
+    fetchMyMatches.mockRejectedValue(new Error('Network down'));
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('matches-load-error')).toBeTruthy();
+    });
+    expect(screen.getByTestId('matches-load-error').getAttribute('role')).toBe(
+      'alert',
+    );
+    expect(screen.getByText('Network down')).toBeTruthy();
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [],
+    });
+    fireEvent.click(screen.getByTestId('matches-try-again'));
+    await waitFor(() => {
+      expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('shows listBuilding wait panel with refresh and algorithm link', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [],
+      listBuilding: true,
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('matches-list-building')).toBeTruthy();
+    });
+    expect(screen.getByTestId('matches-list-building-refresh')).toBeTruthy();
+    expect(
+      screen.getByTestId('matches-list-building-learn').getAttribute('href'),
+    ).toBe('/about/algorithm');
+    unmount();
+  });
 });
 
 describe('MeMatchesPage (not_ready photo gate)', () => {

@@ -1,12 +1,16 @@
 # Story 04 — Beta launch preparation
 
-**Sprint 43 · Status: Planned**  
+**Sprint 43 · Status: Done (ACCEPT)**  
 **Priority:** P0 (launch gate)  
 **Estimated effort:** 2 days  
 **Dependencies:** Stories 1-3 complete (product ready)  
 **Repo:** Both (operational readiness)  
-**Risk:** Low (non-coding, checklist execution)  
-**Handoffs:** `handoffs/STORY_04_beta_launch_prep/agent-*.md`
+**Risk:** Low–medium (docs + thin admin/support; not full BI)  
+**Handoffs:** `handoffs/STORY_04_beta_launch_prep/agent-*.md`  
+**Architect lock:** [`handoffs/STORY_04_beta_launch_prep/agent-0-architect.md`](./handoffs/STORY_04_beta_launch_prep/agent-0-architect.md) — **Skip Agent 4**  
+**Dev handoff:** [`handoffs/STORY_04_beta_launch_prep/agent-1-dev.md`](./handoffs/STORY_04_beta_launch_prep/agent-1-dev.md)  
+**CR handoff:** [`handoffs/STORY_04_beta_launch_prep/agent-2-cr.md`](./handoffs/STORY_04_beta_launch_prep/agent-2-cr.md)  
+**PM handoff:** [`handoffs/STORY_04_beta_launch_prep/agent-3-pm.md`](./handoffs/STORY_04_beta_launch_prep/agent-3-pm.md) — **ACCEPT**
 
 ---
 
@@ -426,14 +430,17 @@ Target: 100 sign-ups by Week 1
 
 ## Locked Policy (Architect)
 
+Full lock: [`handoffs/STORY_04_beta_launch_prep/agent-0-architect.md`](./handoffs/STORY_04_beta_launch_prep/agent-0-architect.md).
+
 | Item | Decision |
 |------|----------|
-| Beta size | 100 users (Tel Aviv only) |
-| Dashboard access | Admin only (password-protected) |
-| Support response | <24h for critical, <3 days for non-critical |
-| Metrics refresh | Daily manual query (automate later) |
-| Kill criteria review | Week 4 checkpoint (not earlier) |
-| User communication | Weekly email update during beta |
+| Scope | Docs pack + thin admin metrics (Postgres) + mailto `/support` — not Grafana/tickets/charts |
+| Dashboard | `/admin/beta-metrics` + `GET /api/v1/admin/beta-metrics`; existing `ADMIN_USER_IDS` gate |
+| Metrics | Active 7d, sign-ups, D7 (small-n rules), opener usage/response, HIGH share, HP emails; CW cookbook secondary |
+| Support | Public `/support` → mailto (`NEXT_PUBLIC_SUPPORT_EMAIL`); no SupportTicket DB |
+| Invite / kill / schedule / smoke | `dating-api/docs/beta/*`; user emails **not** in git |
+| Kill review | Week 4; weekly Monday ritual |
+| Agent 4 | **Skip** |
 
 ---
 
@@ -449,13 +456,14 @@ Target: 100 sign-ups by Week 1
 
 ## Acceptance Criteria
 
-- [x] Metrics dashboard shows key numbers
-- [x] Support intake form exists and works
-- [x] Invite email template ready
-- [x] 100-user target list created
+- [x] Metrics dashboard shows key numbers (`/admin/beta-metrics`)
+- [x] Support intake exists (`/support` mailto)
+- [x] Invite email template ready (`docs/beta/`)
+- [x] 100-user target list **template** created (live sheet external)
 - [x] Kill criteria documented
 - [x] Launch week schedule planned
 - [x] Pre-launch smoke test checklist complete
+- [x] No chart libs / SupportTicket migration / PII lists in git
 
 ---
 

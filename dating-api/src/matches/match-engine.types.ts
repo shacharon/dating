@@ -5,10 +5,12 @@
 import type { Dealbreaker } from '../domain/dealbreakers';
 import type { RelationshipBalanceResult } from '../domain/relationshipBalance';
 import type { MatchInfoFlag } from './coverage-policy';
+import type { CompatibilityBreakdownDto } from './match-compatibility-breakdown';
 import type { MatchExplainabilityDto } from './match-explainability';
 import type { MatchRecommendationDto } from './match-recommendation';
 
 export type { MatchInfoFlag };
+export type { CompatibilityBreakdownDto } from './match-compatibility-breakdown';
 export type { MatchExplainabilityDto } from './match-explainability';
 export type { MatchRecommendationDto } from './match-recommendation';
 
@@ -109,6 +111,11 @@ export interface CompareResultDto {
   explainability: MatchExplainabilityDto;
   /** User-facing recommendation layer above explainability (deterministic; no scoring impact). */
   recommendation: MatchRecommendationDto;
+  /**
+   * Sprint 43 — component scores + top signals for algorithm transparency.
+   * Display only; section %s are not blend weights.
+   */
+  compatibilityBreakdown: CompatibilityBreakdownDto;
 }
 
 export interface CompareNotAnalyzedResultDto {

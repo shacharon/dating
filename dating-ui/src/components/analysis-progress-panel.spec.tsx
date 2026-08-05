@@ -21,4 +21,11 @@ describe('AnalysisProgressPanel', () => {
       'Analyzing your profile',
     );
   });
+
+  it('links to the algorithm explainer', () => {
+    render(<AnalysisProgressPanel profileStatus="ANALYZING" />);
+    expect(screen.getByTestId('analysis-learn-algorithm').getAttribute('href')).toBe(
+      '/about/algorithm',
+    );
+  });
 });

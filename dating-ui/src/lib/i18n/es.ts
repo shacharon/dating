@@ -19,6 +19,7 @@ export const esCopy: AppCopySchema = {
     retryApi: "Reintentar conexion con la API",
     privacyLink: "Privacidad",
     termsLink: "Terminos",
+    supportLink: "Soporte",
     trust: {
       privacy: "Privacidad por defecto",
       moderation: "Conversaciones moderadas",
@@ -86,13 +87,23 @@ export const esCopy: AppCopySchema = {
         "Actualizacion iniciada — las puntuaciones se actualizaran al completar el analisis.",
       refreshFailed: "Error al actualizar",
       loadFailed: "No se pudieron cargar las coincidencias",
+      loadFailedTitle: "No se pudieron cargar las coincidencias",
+      loadFailedBody:
+        "Algo salió mal al cargar tu lista. Revisa la conexión e inténtalo de nuevo.",
+      tryAgain: "Intentar de nuevo",
       listBuilding: "Buscando coincidencias…",
+      listBuildingHint:
+        "Estamos ordenando a las personas que encajan con tus preferencias. Suele tardar un momento.",
+      listBuildingRefresh: "Actualizar",
       photoGate: {
         title: "Agrega una foto para ver coincidencias",
         body: "Necesitas al menos una foto aprobada antes de poder ver personas aqui.",
         bodyPending:
           "Tu foto sigue en revision. Cuando se apruebe, las coincidencias apareceran aqui.",
         cta: "Ir a fotos",
+        whyToggle: "¿Por qué necesito una foto?",
+        whyBody:
+          "Una foto ayuda a que te reconozcan y mantiene la comunidad más segura. Solo mostramos coincidencias cuando hay al menos una foto aprobada.",
       },
       actionBadge: {
         liked: { label: "Me gusta", ariaLabel: "Te gusto esta coincidencia" },
@@ -147,6 +158,7 @@ export const esCopy: AppCopySchema = {
         goodTitle: "Buenas coincidencias",
         otherTitle: "Otras coincidencias",
         count: (n) => `(${n})`,
+        learnHowMatchingWorks: "Como funciona el matching",
       },
     },
     detail: {
@@ -214,6 +226,27 @@ export const esCopy: AppCopySchema = {
         evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
         evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
       },
+      breakdown: {
+        toggle: "Como calculamos esto",
+        headingWithScore: (score) => `Como calculamos el ${score}%`,
+        honestyNote:
+          "Estos son los factores destacados detras del puntaje — no un promedio que suma el porcentaje. El % tambien incluye como encajan sus preferencias y estilo de relacion.",
+        valuesTitle: "Metas y valores",
+        personalityTitle: "Personalidad",
+        interestsTitle: "Intereses compartidos",
+        challengesTitle: "Cosas a tener en cuenta",
+        scoreLabel: (score) => `${score}%`,
+        bandsLabel: (your, their) => `Tu: ${your} · Ella/el: ${their}`,
+        sharedCount: (n) =>
+          n === 1 ? "1 interes compartido" : `${n} intereses compartidos`,
+        noSharedInterests: "Aun no hay intereses compartidos.",
+        learnMore: "Mas sobre nuestro algoritmo →",
+        matchLevel: {
+          high: "Fuerte",
+          medium: "Moderado",
+          low: "Diferente",
+        },
+      },
     },
     celebration: {
       title: "¡Hay coincidencia!",
@@ -236,9 +269,9 @@ export const esCopy: AppCopySchema = {
       title: "Conversaciones",
       subtitle: "Tus coincidencias mutuas — abre una conversacion para escribir.",
       tryAgain: "Intentar de nuevo",
-      emptyTitle: "Aun no hay coincidencias. ¡Sigue explorando!",
+      emptyTitle: "Aún no hay conversaciones",
       emptyBody:
-        "Cuando ambos se gusten, apareceran aqui.",
+        "Cuando ambos se gusten, aparecerán aquí.",
       browseMatches: "Ver coincidencias",
       unreadAria: (count) =>
         `${count} mensaje${count === 1 ? "" : "s"} sin leer`,
@@ -259,6 +292,7 @@ export const esCopy: AppCopySchema = {
       sortAlphabetical: "A–Z",
       filteredEmptyTitle: "Ninguna conversación coincide",
       filteredEmptyBody: "Prueba otro nombre o borra los filtros.",
+      clearFilters: "Borrar filtros",
       loadMore: "Cargar más",
     },
     detail: {
@@ -529,6 +563,9 @@ export const esCopy: AppCopySchema = {
       emailLabel: "Enviarme correo cuando no estoy en linea",
       emailHelp:
         "Correo cuando no estas en linea. El enlace de baja en los correos sigue funcionando.",
+      highPriorityLabel: "Correos de coincidencias de alta prioridad",
+      highPriorityHelp:
+        "Te avisamos por correo cuando aparece una nueva coincidencia de 85%+ (como maximo una vez al dia).",
       saveError:
         "No se pudieron guardar las preferencias. Intentalo de nuevo.",
     },
@@ -656,8 +693,33 @@ export const esCopy: AppCopySchema = {
     legalSectionTitle: "Legal",
     privacyLink: "Politica de privacidad",
     termsLink: "Terminos de uso",
+    supportLink: "Obtener ayuda",
     notificationsSectionTitle: "Notificaciones",
     notificationsLink: "Preferencias de notificaciones →",
+  },
+  support: {
+    title: "Obtener ayuda",
+    subtitle:
+      "Cuentanos que falla. Abriremos tu app de correo para que el mensaje llegue al equipo.",
+    issueTypeLabel: "Que ocurre?",
+    issueTypes: {
+      matches: "No veo coincidencias",
+      photo: "Fallo al subir foto",
+      conversation: "La conversacion no carga",
+      bug: "Otro error",
+      feature: "Peticion de funcion",
+      other: "Otra cosa",
+    },
+    descriptionLabel: "Describe el problema",
+    descriptionPlaceholder: "Que paso? Incluye pasos si puedes.",
+    emailLabel: "Tu correo (para respuesta)",
+    emailPlaceholder: "tu@ejemplo.com",
+    submit: "Abrir correo para enviar",
+    missingEmailConfig:
+      "El correo de soporte aun no esta configurado. Intentalo mas tarde.",
+    mailtoHint: "Abre tu app de correo — no guardamos el mensaje en la app.",
+    slaHint:
+      "Intentamos responder en 24h si es urgente, o en 3 dias en otros casos.",
   },
   deleteAccount: {
     title: "Eliminar cuenta",
@@ -727,6 +789,7 @@ export const esCopy: AppCopySchema = {
     waitHint: "Suele tardar unos minutos.",
     editProfileLink: "Editar perfil",
     addPhotoLink: "Agregar o cambiar foto",
+    learnAlgorithmLink: "Cómo funciona el matching",
     failedTitle:
       "El analisis fallo. Puedes intentar de nuevo o actualizar tu perfil.",
     retryButton: "Intentar de nuevo",
@@ -736,8 +799,9 @@ export const esCopy: AppCopySchema = {
     emptyMatches: {
       title: "No hay coincidencias por ahora",
       bodyWithPlace: (place: string) =>
-        `Mas personas se estan uniendo en ${place}. Vuelve pronto.`,
-      bodyGeneric: "Mas personas se estan uniendo — vuelve pronto.",
+        `Mas personas se estan uniendo en ${place}. Amplía preferencias o invita a un amigo mientras esperas.`,
+      bodyGeneric:
+        "Amplía tus preferencias o invita a un amigo — cada día se unen más personas.",
       filterHint: "Tus preferencias pueden reducir la lista.",
       editPreferences: "Editar preferencias",
       editProfile: "Editar perfil",
@@ -777,5 +841,36 @@ export const esCopy: AppCopySchema = {
     dismiss: 'Cerrar',
     messagingMuted: 'La mensajeria esta temporalmente restringida',
     categoryDatingPolicy: 'Politica de la comunidad de citas',
+  },
+  algorithmExplainer: {
+    back: "← Volver",
+    title: "Como te emparejamos",
+    intro:
+      "Miramos que tan bien encajan las preferencias de cada uno, el estilo de relacion, metas y valores, e intereses compartidos — y luego consideramos areas que pueden necesitar cuidado.",
+    factorsTitle: "Que entra en el puntaje",
+    mutualFitTitle: "Ajuste mutuo de preferencias",
+    mutualFitBody:
+      "La parte mas grande del puntaje: que tan bien cada uno encaja con lo que el otro busca.",
+    relationshipTitle: "Estilo de relacion",
+    relationshipBody:
+      "Cerca de un cuarto de la mezcla — como se alinean el ritmo y el equilibrio de la relacion.",
+    valuesTitle: "Metas y valores",
+    valuesBody:
+      "Cosas como claridad de compromiso, mentalidad sobre el dinero, ritmo de vida y valores compartidos.",
+    interestsTitle: "Intereses compartidos",
+    interestsBody:
+      "Pasatiempos y actividades en comun — una parte menor del puntaje, util para conversar.",
+    frictionTitle: "Lo que puede bajar el puntaje",
+    frictionBody:
+      "Cuando aparecen diferencias importantes (ritmo, profundidad emocional, independencia), bajamos el puntaje y podemos mostrar “cosas a tener en cuenta.”",
+    priorityTitle: "Niveles de prioridad",
+    priorityHigh: "ALTO — 85% o mas: escribe a estos primero.",
+    priorityGood: "BUENO — 70–84%: coincidencias solidas.",
+    priorityOther: "OTRO — menos de 70%: visibles, menor prioridad.",
+    challengesWhyTitle: "Por que mostramos desafios",
+    challengesWhyBody:
+      "No existen matches perfectos. Nombrar fricciones ayuda a decidir con ojos abiertos.",
+    weightsNote:
+      "Los porcentajes por seccion en un perfil son puntajes de componentes (lo destacado), no los pesos exactos del porcentaje final.",
   },
 };

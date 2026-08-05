@@ -108,6 +108,7 @@ describe('UsersService', () => {
     prisma.user.update.mockResolvedValue({
       emailNotificationsEnabled: false,
       inAppNotificationsEnabled: true,
+      highPriorityMatchEmailsEnabled: true,
     });
 
     const result = await service.updateNotificationPreferences('user-1', {
@@ -120,11 +121,13 @@ describe('UsersService', () => {
       select: {
         emailNotificationsEnabled: true,
         inAppNotificationsEnabled: true,
+        highPriorityMatchEmailsEnabled: true,
       },
     });
     expect(result).toEqual({
       emailNotificationsEnabled: false,
       inAppNotificationsEnabled: true,
+      highPriorityMatchEmailsEnabled: true,
     });
   });
 

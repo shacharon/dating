@@ -187,6 +187,9 @@ describe('MeMatchesService materialized list', () => {
       cache as never,
       { generate: jest.fn() } as never,
       { find: jest.fn(), upsert: jest.fn() } as never,
+      { generate: jest.fn() } as never,
+      { find: jest.fn(), upsert: jest.fn() } as never,
+      { notifyAfterRebuildBestEffort: jest.fn() } as never,
       matchListRankQueue as never,
     );
 

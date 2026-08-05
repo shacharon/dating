@@ -3,6 +3,7 @@ import { getApiBase } from '@/lib/api-base';
 export type NotificationPreferences = {
   emailNotificationsEnabled: boolean;
   inAppNotificationsEnabled: boolean;
+  highPriorityMatchEmailsEnabled: boolean;
 };
 
 const JSON_HEADERS = {

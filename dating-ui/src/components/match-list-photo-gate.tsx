@@ -13,6 +13,7 @@ export function MatchListPhotoGate() {
   const { copy } = useAppLocale();
   const gate = copy.matches.list.photoGate;
   const [pendingReview, setPendingReview] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +51,25 @@ export function MatchListPhotoGate() {
         >
           {gate.cta}
         </Link>
+      </div>
+      <div className="mt-4">
+        <button
+          type="button"
+          data-testid="match-photo-gate-why"
+          className="text-sm font-medium text-amber-900 underline-offset-4 hover:underline dark:text-amber-200"
+          aria-expanded={whyOpen}
+          onClick={() => setWhyOpen((open) => !open)}
+        >
+          {gate.whyToggle}
+        </button>
+        {whyOpen ? (
+          <p
+            data-testid="match-photo-gate-why-body"
+            className="mx-auto mt-2 max-w-md text-sm text-amber-900/80 dark:text-amber-200/80"
+          >
+            {gate.whyBody}
+          </p>
+        ) : null}
       </div>
     </div>
   );

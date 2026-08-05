@@ -6,7 +6,10 @@ import type { AppCopySchema } from '@/lib/i18n';
 export function LandingFooter({
   copy,
 }: {
-  copy: Pick<AppCopySchema['landing'], 'privacyLink' | 'termsLink'>;
+  copy: Pick<
+    AppCopySchema['landing'],
+    'privacyLink' | 'termsLink' | 'supportLink'
+  >;
 }) {
   return (
     <footer
@@ -22,6 +25,16 @@ export function LandingFooter({
       </span>
       <Link href="/terms" className="hover:text-zinc-700 dark:hover:text-zinc-300">
         {copy.termsLink}
+      </Link>
+      <span className="mx-2" aria-hidden="true">
+        ·
+      </span>
+      <Link
+        href="/support"
+        data-testid="landing-support-link"
+        className="hover:text-zinc-700 dark:hover:text-zinc-300"
+      >
+        {copy.supportLink}
       </Link>
     </footer>
   );

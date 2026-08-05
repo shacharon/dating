@@ -18,6 +18,10 @@ export const ProductAnalyticsEvents = {
   MATCH_FEEDBACK: 'match.feedback',
   REFERRAL_LANDING_VIEWED: 'referral.landing_viewed',
   REFERRAL_SIGNUP_COMPLETED: 'referral.signup_completed',
+  NOTIFICATION_HIGH_PRIORITY_MATCH_EMAIL_SENT:
+    'notification.high_priority_match_email_sent',
+  NOTIFICATION_HIGH_PRIORITY_MATCH_EMAIL_SKIPPED:
+    'notification.high_priority_match_email_skipped',
 } as const;
 
 export type ProductAnalyticsEventName =

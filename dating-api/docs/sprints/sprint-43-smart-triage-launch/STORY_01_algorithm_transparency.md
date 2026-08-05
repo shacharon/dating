@@ -1,12 +1,16 @@
 # Story 01 — Algorithm transparency UI
 
-**Sprint 43 · Status: Planned**  
+**Sprint 43 · Status: Done (ACCEPT)**  
 **Priority:** P0 (trust-building feature)  
 **Estimated effort:** 2 days  
 **Dependencies:** Sprint 41-42 complete (algorithm visible)  
-**Repo:** `dating-ui` primarily  
+**Repo:** `dating-api` + `dating-ui` (detail DTO mapping + UI)  
 **Risk:** Medium (complexity could confuse users)  
-**Handoffs:** `handoffs/STORY_01_algorithm_transparency/agent-*.md`
+**Handoffs:** `handoffs/STORY_01_algorithm_transparency/agent-*.md`  
+**Architect lock:** [`handoffs/STORY_01_algorithm_transparency/agent-0-architect.md`](./handoffs/STORY_01_algorithm_transparency/agent-0-architect.md) — **Skip Agent 4**  
+**Dev handoff:** [`handoffs/STORY_01_algorithm_transparency/agent-1-dev.md`](./handoffs/STORY_01_algorithm_transparency/agent-1-dev.md)  
+**CR handoff:** [`handoffs/STORY_01_algorithm_transparency/agent-2-cr.md`](./handoffs/STORY_01_algorithm_transparency/agent-2-cr.md) — **approved**  
+**PM handoff:** [`handoffs/STORY_01_algorithm_transparency/agent-3-pm.md`](./handoffs/STORY_01_algorithm_transparency/agent-3-pm.md) — **ACCEPT**
 
 ---
 
@@ -338,14 +342,19 @@ trackEvent('algorithm.explainer_viewed');
 
 ## Locked Policy (Architect)
 
+Full lock: [`handoffs/STORY_01_algorithm_transparency/agent-0-architect.md`](./handoffs/STORY_01_algorithm_transparency/agent-0-architect.md).
+
 | Item | Decision |
 |------|----------|
-| Detail level | Show top 3-5 signals per category (not all 50) |
-| Jargon | Plain language (not "dealbreaker filter coefficient") |
-| Visual design | Green ✅ for high match, yellow ⚠️ for challenges |
-| Expandable | Collapsed by default (opt-in, not overwhelming) |
-| Explainer page | `/about/algorithm` (public, no auth required) |
-| Mobile UX | Breakdown scrollable, not squeezed |
+| Blend truth | **Reject** story 40/40/20 — real weights in `COMPATIBILITY_BLEND_WEIGHTS`; section %s are component/derived, not blend weights |
+| Buckets | Values ← `valuesAlignment` + TIER1; Personality ← TIER2 mean×10 + TIER2 signals; Interests ← `interestAlignment` + shared tags; Challenges ← tensionMatrix when `friction ≥ 3` (**no** challenge %) |
+| Signals | Top **3** per section; labels from `POSITIVE_CHIP_BY_SIGNAL` / tension chips |
+| API | Build in assemble pipeline → `CompareResultDto.compatibilityBreakdown` → **detail DTO only** (not list); no Prisma; no list-cache bump |
+| Surface | Detail expandable (collapsed default); browse = link to explainer only |
+| Visual | Emerald strong / amber challenges; **no** emoji chrome; no detail header score badge |
+| Explainer page | `/about/algorithm` public; honest qualitative (or rounded real) weights |
+| Analytics | `emitProductLog`: `match_breakdown_expanded`, `algorithm_explainer_viewed` |
+| Agent 4 | **Skip** |
 
 ---
 
@@ -382,8 +391,8 @@ trackEvent('algorithm.explainer_viewed');
 - [x] `/about/algorithm` explainer page exists
 - [x] Plain language, no jargon
 - [x] Mobile responsive
-- [x] Analytics track expansion rate
-- [x] User testing: ≥4/5 say it's helpful
+- [x] Analytics track expansion rate (events wired; rate measured in beta)
+- [ ] User testing: ≥4/5 say it's helpful — **deferred to beta** (engineering gate accepted)
 
 ---
 

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const { listMyProfilePhotos } = vi.hoisted(() => ({
   listMyProfilePhotos: vi.fn(),
@@ -21,6 +21,9 @@ vi.mock('@/lib/i18n', () => ({
             bodyPending:
               "Your photo is still under review. Once it's approved, matches will appear here.",
             cta: 'Go to photos',
+            whyToggle: 'Why do I need a photo?',
+            whyBody:
+              'A photo helps others recognize you and keeps the community safer.',
           },
         },
       },
@@ -52,6 +55,10 @@ describe('MatchListPhotoGate', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it('shows default body when there are no pending photos', async () => {
     listMyProfilePhotos.mockResolvedValue([]);
     render(<MatchListPhotoGate />);
@@ -79,5 +86,21 @@ describe('MatchListPhotoGate', () => {
         ),
       ).toBeTruthy();
     });
+  });
+
+  it('expands why-a-photo copy without fake stats', async () => {
+    listMyProfilePhotos.mockResolvedValue([]);
+    render(<MatchListPhotoGate />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-photo-gate-why')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('match-photo-gate-why'));
+    expect(screen.getByTestId('match-photo-gate-why-body').textContent).toContain(
+      'keeps the community safer',
+    );
+    expect(screen.getByTestId('match-photo-gate-why-body').textContent).not.toMatch(
+      /10x/i,
+    );
   });
 });

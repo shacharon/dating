@@ -18,6 +18,7 @@ export const heCopy: AppCopySchema = {
     retryApi: "נסו שוב להתחבר לשרת",
     privacyLink: "פרטיות",
     termsLink: "תנאים",
+    supportLink: "תמיכה",
     trust: {
       privacy: "פרטיות כברירת מחדל",
       moderation: "שיחות מפוקחות",
@@ -76,13 +77,23 @@ export const heCopy: AppCopySchema = {
       refreshStarted: "הרענון התחיל — הציונים יתעדכנו עם סיום הניתוח.",
       refreshFailed: "הרענון נכשל",
       loadFailed: "לא ניתן לטעון התאמות",
+      loadFailedTitle: "לא ניתן לטעון התאמות",
+      loadFailedBody:
+        "משהו השתבש בטעינת הרשימה. בדקו את החיבור ונסו שוב.",
+      tryAgain: "נסו שוב",
       listBuilding: "מחפשים התאמות…",
+      listBuildingHint:
+        "אנחנו מדרגים אנשים שמתאימים להעדפות שלכם. בדרך כלל זה לוקח רגע.",
+      listBuildingRefresh: "רענון",
       photoGate: {
         title: "הוסיפו תמונה כדי לראות התאמות",
         body: "נדרשת לפחות תמונה מאושרת אחת לפני שנוכל להציג אנשים כאן.",
         bodyPending:
           "התמונה שלכם עדיין בבדיקה. אחרי שתאושר, ההתאמות יופיעו כאן.",
         cta: "לתמונות",
+        whyToggle: "למה צריך תמונה?",
+        whyBody:
+          "תמונה עוזרת לאחרים לזהות אתכם ושומרת על קהילה בטוחה יותר. אנחנו מציגים התאמות רק אחרי שיש לפחות תמונה מאושרת אחת.",
       },
       actionBadge: {
         liked: { label: "אהבתי", ariaLabel: "אהבת את ההתאמה הזו" },
@@ -132,6 +143,7 @@ export const heCopy: AppCopySchema = {
         goodTitle: "התאמות טובות",
         otherTitle: "התאמות נוספות",
         count: (n) => `(${n})`,
+        learnHowMatchingWorks: "איך עובדת ההתאמה",
       },
     },
     detail: {
@@ -195,6 +207,27 @@ export const heCopy: AppCopySchema = {
         evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
         evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
       },
+      breakdown: {
+        toggle: "איך חישבנו את זה",
+        headingWithScore: (score) => `איך חישבנו ${score}%`,
+        honestyNote:
+          "אלו הגורמים הבולטים מאחורי הציון — לא ממוצע ששווה לאחוז. אחוז ההתאמה כולל גם עד כמה אתם מתאימים להעדפות זה של זה ולסגנון הזוגיות.",
+        valuesTitle: "מטרות חיים וערכים",
+        personalityTitle: "אישיות",
+        interestsTitle: "תחומי עניין משותפים",
+        challengesTitle: "נקודות לתשומת לב",
+        scoreLabel: (score) => `${score}%`,
+        bandsLabel: (your, their) => `את/ה: ${your} · הם: ${their}`,
+        sharedCount: (n) =>
+          n === 1 ? "תחום עניין משותף אחד" : `${n} תחומי עניין משותפים`,
+        noSharedInterests: "עדיין אין תגיות עניין משותפות.",
+        learnMore: "למידע נוסף על האלגוריתם ←",
+        matchLevel: {
+          high: "חזק",
+          medium: "בינוני",
+          low: "שונה",
+        },
+      },
     },
     celebration: {
       title: "יש התאמה!",
@@ -217,7 +250,7 @@ export const heCopy: AppCopySchema = {
       title: "שיחות",
       subtitle: "התאמות הדדיות — פתחו שיחה כדי לשלוח הודעה.",
       tryAgain: "נסו שוב",
-      emptyTitle: "עדיין אין התאמות. המשיכו לגלוש!",
+      emptyTitle: "עדיין אין שיחות",
       emptyBody: "כשאתם ומישהו אחר מסמנים אהבתי, הם יופיעו כאן.",
       browseMatches: "עיון בהתאמות",
       unreadAria: (count) =>
@@ -239,6 +272,7 @@ export const heCopy: AppCopySchema = {
       sortAlphabetical: "א–ת",
       filteredEmptyTitle: "אין שיחות תואמות",
       filteredEmptyBody: "נסו שם אחר או נקו את הסינון.",
+      clearFilters: "נקה סינון",
       loadMore: "טען עוד",
     },
     detail: {
@@ -504,6 +538,9 @@ export const heCopy: AppCopySchema = {
       inAppHelp: "הודעה כשמתקבלת הודעה חדשה כשהאפליקציה פתוחה.",
       emailLabel: "שלחו לי מייל כשאני לא מחובר/ת",
       emailHelp: "מייל כשאינך מחובר/ת. קישור ההסרה מהמיילים עדיין פעיל.",
+      highPriorityLabel: "מיילים על התאמות בעדיפות גבוהה",
+      highPriorityHelp:
+        "שליחת מייל כשמופיעה התאמה חדשה של 85%+ ברשימה (לכל היותר פעם ביום).",
       saveError: "לא ניתן לשמור הגדרות התראות. נסו שוב.",
     },
     matchPreferencesLink: "העדפות התאמה",
@@ -623,8 +660,31 @@ export const heCopy: AppCopySchema = {
     legalSectionTitle: "משפטי",
     privacyLink: "מדיניות פרטיות",
     termsLink: "תנאי שימוש",
+    supportLink: "קבלת עזרה",
     notificationsSectionTitle: "התראות",
     notificationsLink: "העדפות התראות ←",
+  },
+  support: {
+    title: "קבלת עזרה",
+    subtitle:
+      "ספרו לנו מה לא עובד. נפתח את אפליקציית המייל כדי שההודעה תגיע לצוות.",
+    issueTypeLabel: "מה הבעיה?",
+    issueTypes: {
+      matches: "לא רואים התאמות",
+      photo: "העלאת תמונה נכשלה",
+      conversation: "השיחה לא נטענת",
+      bug: "באג אחר",
+      feature: "בקשת פיצ'ר",
+      other: "משהו אחר",
+    },
+    descriptionLabel: "תיאור הבעיה",
+    descriptionPlaceholder: "מה קרה? הוסיפו שלבים אם אפשר.",
+    emailLabel: "האימייל שלכם (למענה)",
+    emailPlaceholder: "you@example.com",
+    submit: "פתיחת מייל לשליחה",
+    missingEmailConfig: "כתובת התמיכה עדיין לא הוגדרה. נסו שוב מאוחר יותר.",
+    mailtoHint: "פותח את אפליקציית המייל — ההודעה לא נשמרת באפליקציה.",
+    slaHint: "נשתדל לענות תוך 24 שעות לדחוף, ועד 3 ימים אחרת.",
   },
   deleteAccount: {
     title: "מחיקת חשבון",
@@ -690,6 +750,7 @@ export const heCopy: AppCopySchema = {
     waitHint: "בדרך כלל כמה דקות.",
     editProfileLink: "עריכת פרופיל",
     addPhotoLink: "הוספה או שינוי תמונה",
+    learnAlgorithmLink: "איך ההתאמה עובדת",
     failedTitle: "הניתוח נכשל. אפשר לנסות שוב או לעדכן את הפרופיל.",
     retryButton: "נסו שוב",
     redirecting: "מעבירים להתאמות…",
@@ -698,8 +759,9 @@ export const heCopy: AppCopySchema = {
     emptyMatches: {
       title: "אין התאמות להצגה כרגע",
       bodyWithPlace: (place: string) =>
-        `עוד אנשים מצטרפים ב${place}. בדקו שוב בקרוב.`,
-      bodyGeneric: "עוד אנשים מצטרפים — בדקו שוב בקרוב.",
+        `עוד אנשים מצטרפים ב${place}. הרחיבו העדפות או הזמינו חבר/ה בזמן ההמתנה.`,
+      bodyGeneric:
+        "הרחיבו העדפות או הזמינו חבר/ה — כל יום מצטרפים עוד אנשים.",
       filterHint: "העדפות ההתאמה עלולות לצמצם את הרשימה.",
       editPreferences: "עריכת העדפות",
       editProfile: "עריכת פרופיל",
@@ -739,5 +801,36 @@ export const heCopy: AppCopySchema = {
     dismiss: 'סגור',
     messagingMuted: 'שליחת הודעות מוגבלת זמנית',
     categoryDatingPolicy: 'מדיניות קהילת הדייטינג',
+  },
+  algorithmExplainer: {
+    back: "← חזרה",
+    title: "איך אנחנו מתאימים אתכם",
+    intro:
+      "אנחנו בודקים עד כמה כל אחד מתאים להעדפות של השני, סגנון זוגיות, מטרות חיים וערכים, ותחומי עניין משותפים — ואז מתחשבים באזורים שדורשים תשומת לב.",
+    factorsTitle: "מה נכנס לציון ההתאמה",
+    mutualFitTitle: "התאמת העדפות הדדית",
+    mutualFitBody:
+      "החלק הגדול ביותר בציון: עד כמה כל אחד מתאים למה שהשני מחפש.",
+    relationshipTitle: "סגנון זוגיות",
+    relationshipBody:
+      "בערך רבע מהשילוב — איך הקצב והאיזון בזוגיות מתיישבים.",
+    valuesTitle: "מטרות חיים וערכים",
+    valuesBody:
+      "דברים כמו בהירות לגבי מחויבות, גישה לכסף, קצב חיים וערכים משותפים.",
+    interestsTitle: "תחומי עניין משותפים",
+    interestsBody:
+      "תחביבים ופעילויות חופפים — חלק קטן יותר מהציון, עדיין שימושי לשיחה.",
+    frictionTitle: "מה יכול להוריד ציון",
+    frictionBody:
+      "כשמופיעים הבדלים חשובים (קצב, עומק רגשי, עצמאות), אנחנו מורידים את הציון ולפעמים מציגים \"נקודות לתשומת לב\".",
+    priorityTitle: "רמות עדיפות",
+    priorityHigh: "גבוה — 85% ומעלה: כתבו לאלה קודם.",
+    priorityGood: "טוב — 70–84%: התאמות ראויות.",
+    priorityOther: "אחר — מתחת ל־70%: גלוי, עדיפות נמוכה יותר.",
+    challengesWhyTitle: "למה אנחנו מציגים אתגרים",
+    challengesWhyBody:
+      "אין התאמות מושלמות. לנקוב בחיכוך עוזר להחליט בעיניים פקוחות.",
+    weightsNote:
+      "אחוזי הסעיפים בפרופיל התאמה הם ציוני רכיבים (מה שבולט), לא המשקלות המדויקים של האחוז הסופי.",
   },
 };

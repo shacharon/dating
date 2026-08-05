@@ -1,6 +1,6 @@
 # Sprint 43 — Smart Triage Polish & Go-Live (P0 Launch Readiness)
 
-**Status:** 📋 Planned  
+**Status:** ✅ Done (Stories 01–04 ACCEPT — execute beta ops via `docs/beta/`)  
 **Depends on:** Sprint 42 complete + positive opener metrics  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)
 
@@ -36,10 +36,10 @@ Polish the Smart Triage experience and add trust-building features that make the
 
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
-| 01 | [Algorithm transparency UI](./STORY_01_algorithm_transparency.md) | P0 | 2d | Planned |
-| 02 | [Priority match notifications](./STORY_02_priority_notifications.md) | P1 | 2d | Planned |
-| 03 | [Empty states & onboarding polish](./STORY_03_empty_states_polish.md) | P1 | 1d | Planned |
-| 04 | [Beta launch preparation](./STORY_04_beta_launch_prep.md) | P0 | 2d | Planned |
+| 01 | [Algorithm transparency UI](./STORY_01_algorithm_transparency.md) | P0 | 2d | Done (ACCEPT) |
+| 02 | [Priority match notifications](./STORY_02_priority_notifications.md) | P1 | 2d | Done (ACCEPT) |
+| 03 | [Empty states & onboarding polish](./STORY_03_empty_states_polish.md) | P1 | 1d | Done (ACCEPT) |
+| 04 | [Beta launch preparation](./STORY_04_beta_launch_prep.md) | P0 | 2d | Done (ACCEPT) |
 
 **Order:** 01 (transparency) → 02 (notifications) → 03 (polish) → 04 (launch prep) — can parallelize 01-03 if multiple devs
 

@@ -8,6 +8,7 @@ import {
   splitNarrativeParagraphs,
 } from '@/app/dating/me-matches/[id]/match-detail-prose';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
+import { MatchCompatibilityBreakdown } from '@/components/match-detail/match-compatibility-breakdown';
 
 type Props = {
   data: MeMatchDetailDto;
@@ -18,7 +19,7 @@ type Props = {
 };
 
 /**
- * Bio, narrative, shared interests, and optional feedback slot (before caution).
+ * Bio, narrative, shared interests, transparency breakdown, and optional feedback.
  */
 export function MatchDetailContent({
   data,
@@ -30,6 +31,7 @@ export function MatchDetailContent({
   const sharedNote = formatSharedInterestNote(
     data.explainability?.sharedInterestNote,
   );
+  const breakdown = data.compatibilityBreakdown;
 
   return (
     <div className="space-y-5 px-6 py-5 text-sm">
@@ -58,6 +60,14 @@ export function MatchDetailContent({
         >
           {sharedNote}
         </p>
+      ) : null}
+      {breakdown ? (
+        <MatchCompatibilityBreakdown
+          candidateProfileId={data.id}
+          matchScore={data.matchScore}
+          breakdown={breakdown}
+          copy={detailCopy.breakdown}
+        />
       ) : null}
       {feedbackSlot}
       {data.recommendation?.caution ? (

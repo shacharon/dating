@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { submitMyProfileForAnalysis } from '@/lib/me-profile-api';
+import { EmptyStatePanel } from '@/components/empty-state-panel';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { useAppLocale } from '@/lib/i18n';
@@ -147,12 +148,20 @@ export default function MeMatchesPageClient() {
         )}
 
         {!loading && error && (
-          <div
-            className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+          <EmptyStatePanel
+            testId="matches-load-error"
             role="alert"
-          >
-            {error}
-          </div>
+            title={listCopy.loadFailedTitle}
+            description={listCopy.loadFailedBody}
+            detail={error !== listCopy.loadFailed ? error : undefined}
+            primaryAction={{
+              label: listCopy.tryAgain,
+              onClick: () => {
+                void reload();
+              },
+              testId: 'matches-try-again',
+            }}
+          />
         )}
 
         {!loading &&
@@ -204,13 +213,23 @@ export default function MeMatchesPageClient() {
           data?.status === 'ready' &&
           matches.length === 0 &&
           data.listBuilding && (
-            <p
-              className="text-sm text-zinc-500 dark:text-zinc-400"
-              role="status"
-              data-testid="matches-list-building"
-            >
-              {listCopy.listBuilding}
-            </p>
+            <EmptyStatePanel
+              testId="matches-list-building"
+              title={listCopy.listBuilding}
+              description={listCopy.listBuildingHint}
+              primaryAction={{
+                label: listCopy.listBuildingRefresh,
+                onClick: () => {
+                  void reload();
+                },
+                testId: 'matches-list-building-refresh',
+              }}
+              secondaryAction={{
+                label: listCopy.priority.learnHowMatchingWorks,
+                href: '/about/algorithm',
+                testId: 'matches-list-building-learn',
+              }}
+            />
           )}
 
         {!loading &&

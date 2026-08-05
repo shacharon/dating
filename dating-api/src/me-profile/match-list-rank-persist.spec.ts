@@ -21,6 +21,7 @@ describe('MeMatchesService MatchListRank persist', () => {
       {} as never,
       {} as never,
       {} as never,
+      { notifyAfterRebuildBestEffort: jest.fn() } as never,
       { enqueueRebuild: jest.fn() } as never,
     );
   }
@@ -172,6 +173,9 @@ describe('MeMatchesService MatchListRank persist', () => {
       cache as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
+      { notifyAfterRebuildBestEffort: jest.fn() } as never,
       { enqueueRebuild: jest.fn() } as never,
     );
     jest.spyOn(svc, 'buildMatchListRankSnapshot').mockResolvedValue({

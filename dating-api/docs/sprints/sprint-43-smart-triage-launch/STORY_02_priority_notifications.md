@@ -1,12 +1,16 @@
 # Story 02 — Priority match notifications
 
-**Sprint 43 · Status: Planned**  
+**Sprint 43 · Status: Done (ACCEPT)**  
 **Priority:** P1 (retention driver)  
 **Estimated effort:** 2 days  
-**Dependencies:** Sprint 41-42 complete (priority ranking exists)  
+**Dependencies:** Sprint 41-42 complete (priority ranking exists); Story 01 Done  
 **Repo:** Both `dating-api` (send logic) and `dating-ui` (notification preferences)  
-**Risk:** Low (reuse existing notification infrastructure from Sprint 8)  
-**Handoffs:** `handoffs/STORY_02_priority_notifications/agent-*.md`
+**Risk:** Low (reuse Resend + prefs from Sprint 6/8)  
+**Handoffs:** `handoffs/STORY_02_priority_notifications/agent-*.md`  
+**Architect lock:** [`handoffs/STORY_02_priority_notifications/agent-0-architect.md`](./handoffs/STORY_02_priority_notifications/agent-0-architect.md) — **Skip Agent 4**  
+**Dev handoff:** [`handoffs/STORY_02_priority_notifications/agent-1-dev.md`](./handoffs/STORY_02_priority_notifications/agent-1-dev.md)  
+**CR handoff:** [`handoffs/STORY_02_priority_notifications/agent-2-cr.md`](./handoffs/STORY_02_priority_notifications/agent-2-cr.md) — **approved**  
+**PM handoff:** [`handoffs/STORY_02_priority_notifications/agent-3-pm.md`](./handoffs/STORY_02_priority_notifications/agent-3-pm.md) — **ACCEPT**
 
 ---
 
@@ -325,15 +329,17 @@ export default function NotificationSettingsPage() {
 
 ## Locked Policy (Architect)
 
+Full lock: [`handoffs/STORY_02_priority_notifications/agent-0-architect.md`](./handoffs/STORY_02_priority_notifications/agent-0-architect.md).
+
 | Item | Decision |
 |------|----------|
-| Priority threshold | HIGH only (≥85%) gets email |
-| Frequency limit | Max 1 per day (prevent spam) |
-| Default state | Enabled (opt-out, not opt-in) |
-| Subject line | No match name (privacy) |
-| Email content | Match name, score, opener, CTA |
-| Unsubscribe | Required by law, easy to access |
-| Push notifications | Defer to later (email only for v1) |
+| Trigger | **New HIGH (≥85) on MatchListRank rebuild** — **not** mutual LIKE (mutual already emails) |
+| Channel | Email only (Resend); push/digest/in-app center deferred |
+| Frequency | Max **1 email / user / 24h**; never re-email same viewer↔candidate |
+| Prefs | Additive `User.highPriorityMatchEmailsEnabled` (default true) + existing global email flag; extend current settings section — **no** new prefs table / `/settings/notifications` page |
+| Content | Subject without name/emoji; body nickname + score + whyTldr/reasonShort; opener only if cache hit; CTA **View profile** → match detail |
+| Privacy | No photos; no tracking pixels; no open/click tracking in v1 |
+| Agent 4 | **Skip** |
 
 ---
 
@@ -349,14 +355,15 @@ export default function NotificationSettingsPage() {
 
 ## Acceptance Criteria
 
-- [x] HIGH priority mutual match triggers email notification
-- [x] Email includes match name, score, reason, opener
-- [x] Frequency limit: Max 1 HIGH notification per 24h
-- [x] User can toggle notification preferences
-- [x] Unsubscribe link works
-- [x] Email renders correctly on mobile
-- [x] Analytics track sends, opens, clicks
+- [x] New HIGH (≥85) browse candidate after rank rebuild triggers email (not mutual LIKE)
+- [x] Email includes match name, score, optional reason/opener (cache), View profile CTA
+- [x] Frequency limit: Max 1 HIGH notification per 24h + per-pair never re-send
+- [x] User can toggle HIGH + global email preferences
+- [x] Unsubscribe link works (+ settings deep-link)
+- [x] Simple HTML suitable for mobile clients
+- [x] Analytics track sends + skips (opens/clicks deferred to beta)
 - [x] No notifications sent if user disabled them
+- [ ] Live Resend inbox smoke — **deferred** (engineering gate accepted)
 
 ---
 

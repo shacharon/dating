@@ -151,7 +151,7 @@ describe('ConversationsPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('conversations-empty')).toBeTruthy();
     });
-    expect(screen.getByText(/No matches yet. Keep swiping!/)).toBeTruthy();
+    expect(screen.getByText(/No conversations yet/)).toBeTruthy();
     unmount();
   });
 
@@ -885,6 +885,14 @@ describe('ConversationsPage (list controls)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('conversations-filtered-empty')).toBeTruthy();
       expect(screen.getByText(/No conversations match/)).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('conversations-clear-filters'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('conversations-filtered-empty')).toBeNull();
+      expect(screen.getByText('Noa')).toBeTruthy();
+      expect(screen.getByText('Dana')).toBeTruthy();
     });
     unmount();
   });
