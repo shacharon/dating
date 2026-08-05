@@ -94,22 +94,31 @@ describe('Match narrative wire + cache (Sprint 22 Story 2 integration)', () => {
     return { searcherCookie, searcherProfileId, counterpartyProfileId };
   }
 
-  it('list omits matchNarrative and does not call the generator', async () => {
-    const { searcherCookie, counterpartyProfileId } =
-      await setupCompatiblePair('narr-list');
+  it('list omits matchNarrative; may omit whyTldr until cache/HIGH eager', async () => {
+    const prev = process.env.MATCH_LIST_MATERIALIZED;
+    process.env.MATCH_LIST_MATERIALIZED = '0';
+    try {
+      const { searcherCookie, counterpartyProfileId } =
+        await setupCompatiblePair('narr-list');
 
-    const res = await harness.getMatches(searcherCookie);
-    expect(res.status).toBe(200);
-    expect(res.body.status).toBe('ready');
+      const res = await harness.getMatches(searcherCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ready');
 
-    const row = res.body.matches.find(
-      (m: { id: string }) => m.id === counterpartyProfileId,
-    );
-    expect(row).toBeDefined();
-    expect(typeof row.matchScore).toBe('number');
-    expect(Number.isFinite(row.matchScore)).toBe(true);
-    expect(row).not.toHaveProperty('matchNarrative');
-    expect(harness.matchNarrativeGeneratorStub.generate).not.toHaveBeenCalled();
+      const row = res.body.matches.find(
+        (m: { id: string }) => m.id === counterpartyProfileId,
+      );
+      expect(row).toBeDefined();
+      expect(typeof row.matchScore).toBe('number');
+      expect(Number.isFinite(row.matchScore)).toBe(true);
+      expect(row).not.toHaveProperty('matchNarrative');
+      expect(row).toHaveProperty('whyTldr');
+      // Cold cache + score may not be HIGH → null is OK (no coach filler).
+      expect(row.whyTldr === null || typeof row.whyTldr === 'string').toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.MATCH_LIST_MATERIALIZED;
+      else process.env.MATCH_LIST_MATERIALIZED = prev;
+    }
   });
 
   it('detail returns matchNarrative; second open is a cache hit', async () => {

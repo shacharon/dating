@@ -1,8 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import {
@@ -20,9 +27,29 @@ import { ConversationMessageList } from '@/components/conversation/conversation-
 import { ConversationMessageComposer } from '@/components/conversation/conversation-message-composer';
 import { ConversationActions } from '@/components/conversation/conversation-actions';
 import { ConversationModals } from '@/components/conversation/conversation-modals';
+import { emitProductLog } from '@/lib/observability/product-logger';
+import { starterFromSearchParam } from '@/lib/conversation-opener-draft';
 
 export default function ConversationDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-zinc-50 px-6 py-10 font-sans dark:bg-zinc-950">
+          <p className="text-sm text-zinc-400" role="status">
+            Loading…
+          </p>
+        </div>
+      }
+    >
+      <ConversationDetailPageInner />
+    </Suspense>
+  );
+}
+
+function ConversationDetailPageInner() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { locale, copy } = useAppLocale();
   const detailCopy = copy.conversations.detail;
@@ -31,6 +58,19 @@ export default function ConversationDetailPage() {
   const { refresh: refreshNavUnread } = useConversationUnread();
   const id = typeof params.id === 'string' ? params.id : '';
   const realtimeMode = getRealtimeMode();
+
+  const starterFromUrl = useMemo(
+    () => starterFromSearchParam(searchParams.get('starter')),
+    [searchParams],
+  );
+
+  /** Retained after URL strip so first send can attribute opener (Story 3). */
+  const openerBaselineRef = useRef(starterFromUrl);
+  useEffect(() => {
+    if (starterFromUrl) {
+      openerBaselineRef.current = starterFromUrl;
+    }
+  }, [starterFromUrl]);
 
   const [data, setData] = useState<ConversationDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +134,40 @@ export default function ConversationDetailPage() {
       cancelled = true;
     };
   }, [id, detailCopy.loadFailed]);
+
+  const handleInitialDraftApplied = useCallback(
+    (draft: string) => {
+      if (!id) return;
+      emitProductLog({
+        level: 'trace',
+        route: `/dating/conversations/${id}`,
+        message: 'conversation.opener_prefilled',
+        meta: {
+          event: 'conversation.opener_prefilled',
+          conversationId: id,
+          openerLength: draft.length,
+        },
+      });
+      router.replace(`/dating/conversations/${id}`, { scroll: false });
+    },
+    [id, router],
+  );
+
+  const sendMessageWithOpenerAttribution = useCallback(
+    async (content: string) => {
+      const baseline = openerBaselineRef.current.trim();
+      await sendMessage(
+        content,
+        baseline
+          ? { openerAttribution: { originalOpener: baseline } }
+          : undefined,
+      );
+      if (baseline) {
+        openerBaselineRef.current = '';
+      }
+    },
+    [sendMessage],
+  );
 
   const otherName = data ? conversationPrimaryLabel(data.otherUser) : '';
 
@@ -163,8 +237,10 @@ export default function ConversationDetailPage() {
                 sendError={sendError}
                 sendModerationDetails={sendModerationDetails}
                 clearSendError={clearSendError}
-                sendMessage={sendMessage}
+                sendMessage={sendMessageWithOpenerAttribution}
                 listRef={listRef}
+                initialDraft={starterFromUrl || undefined}
+                onInitialDraftApplied={handleInitialDraftApplied}
               />
             </section>
 

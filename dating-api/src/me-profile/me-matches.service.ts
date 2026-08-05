@@ -116,6 +116,7 @@ import {
   buildMatchExplanationTraits,
   type MatchExplanationTrait,
 } from '../matches/match-explanation-traits';
+import { withRecommendationPlaces } from '../matches/match-recommendation';
 import {
   compareWithStatus,
   type MatchExplainabilityDto,
@@ -126,8 +127,40 @@ import {
   MatchNarrativeCacheService,
   MatchNarrativeGenerator,
   buildMatchNarrativeFactPack,
+  buildNarrativeTldr,
 } from '../matches/match-narrative';
+import {
+  CONVERSATION_STARTER_PROMPT_VERSION,
+  ConversationStarterCacheService,
+  ConversationStarterGenerator,
+  buildConversationStarterFactPack,
+} from '../matches/conversation-starter';
 
+/** Max LLM narrative generates per list request — HIGH only (Sprint 41 Story 4 lock). */
+const LIST_WHY_TLDR_EAGER_MAX = 3;
+
+/** Max LLM conversation-starter generates per list request (HIGH only). */
+const LIST_SUGGESTED_OPENER_EAGER_MAX = 3;
+
+type ListWhyMeta = {
+  candidateEvaluationId: string;
+  finalScore: number;
+  explainability: MatchExplainabilityDto;
+  recommendation: MatchRecommendationDto;
+};
+
+type ListWhyAbout = {
+  aboutMe?: string | null;
+  aboutPartner?: string | null;
+  aboutRelationship?: string | null;
+};
+
+/** Internal hydrate payload — `whyMeta` used after rank overlay on materialized path. */
+type RankedListBuildResult = MeMatchesListResponseDto & {
+  whyMetaByCandidateId?: Map<string, ListWhyMeta>;
+  viewerEvaluationId?: string;
+  viewerAbout?: ListWhyAbout;
+};
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
 /** Prisma where for MatchListRank rows strictly after a list cursor. */
@@ -192,6 +225,16 @@ export interface MeMatchItemDto {
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /**
+   * Sprint 41 Story 4 — short WHY for browse (extract of cached matchNarrative).
+   * Null when no LLM narrative is cached yet (empty one-liner is OK).
+   */
+  whyTldr: string | null;
+  /**
+   * Sprint 42 Story 1 — LLM (or deterministic fallback) conversation opener.
+   * HIGH only; null when not HIGH, hard-blocked, no context, or generation failed.
+   */
+  suggestedOpener: string | null;
   /** Viewer's action toward this candidate's user, if any. */
   yourAction: 'LIKE' | 'PASS' | 'BLOCK' | null;
   /**
@@ -250,6 +293,11 @@ export interface MeMatchesListResponseDto {
    * List GET paths do not set this.
    */
   budgetExceeded?: boolean;
+  /**
+   * True when ranks are empty and a rebuild was enqueued — list may appear shortly.
+   * Present when `status = 'ready'` and `matches` is empty.
+   */
+  listBuilding?: boolean;
 }
 
 export interface MeMatchDetailDto {
@@ -317,6 +365,8 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     private readonly cache: RedisCacheService,
     private readonly matchNarrativeGenerator: MatchNarrativeGenerator,
     private readonly matchNarrativeCache: MatchNarrativeCacheService,
+    private readonly conversationStarterGenerator: ConversationStarterGenerator,
+    private readonly conversationStarterCache: ConversationStarterCacheService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
   ) {}
@@ -367,7 +417,10 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     };
   }
 
-  /** Persist snapshot: upsert rows (chunked) then delete stale (or clear all when empty/not_ready). */
+  /** Persist snapshot: upsert rows (chunked) then delete stale.
+   * Never wipe on not_ready / budget_exceeded — leave prior ranks (avoids empty list on refresh).
+   * Ready + empty rows still clears (true empty eligible set).
+   */
   async persistMatchListRankSnapshot(
     viewerUserId: string,
     snapshot: MatchListRankSnapshot,
@@ -376,7 +429,11 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     if (snapshot.status === 'budget_exceeded') {
       return { rowsWritten: 0, rowsDeleted: 0 };
     }
-    if (snapshot.status === 'not_ready' || snapshot.rows.length === 0) {
+    // Keep prior ranks while profile is SUBMITTED/ANALYZING / gate not ready.
+    if (snapshot.status === 'not_ready') {
+      return { rowsWritten: 0, rowsDeleted: 0 };
+    }
+    if (snapshot.rows.length === 0) {
       const del = await this.prisma.matchListRank.deleteMany({
         where: { viewerUserId },
       });
@@ -423,6 +480,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         candidateProfileId: { notIn: ids },
       },
     });
+
+    // Ranks exist again — allow a future list_empty enqueue if they later vanish.
+    await this.cache.del(matchListListEmptyEnqueueKey(viewerUserId));
 
     return { rowsWritten: snapshot.rows.length, rowsDeleted: del.count };
   }
@@ -634,8 +694,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     const rankRows = await this.fetchMatchListRankPage(userId, cursor, limit + 1);
     if (rankRows.length === 0) {
+      let listBuilding = false;
       if (cursor == null) {
-        await this.maybeEnqueueListEmpty(userId);
+        listBuilding = await this.maybeEnqueueListEmpty(userId);
       }
       recordMatchListLoadTimeMs(Date.now() - started);
       return {
@@ -647,6 +708,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         matches: [],
         nextCursor: null,
         hasMore: false,
+        listBuilding,
       };
     }
 
@@ -683,6 +745,35 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         ...item,
         matchScore,
         ...toPriorityFields(matchScore),
+      });
+    }
+
+    const whyMeta = hydrated.whyMetaByCandidateId ?? new Map();
+    // Align meta.finalScore with displayed rank score for HIGH eager fact pack.
+    for (const item of matches) {
+      const meta = whyMeta.get(item.id);
+      if (meta && item.matchScore != null && Number.isFinite(item.matchScore)) {
+        whyMeta.set(item.id, { ...meta, finalScore: item.matchScore });
+      }
+    }
+
+    if (
+      hydrated.viewerEvaluationId &&
+      hydrated.viewerAbout &&
+      matches.length > 0
+    ) {
+      await this.attachWhyTldrsToListItems({
+        viewerProfileId: gate.viewerProfileId,
+        viewerEvaluationId: hydrated.viewerEvaluationId,
+        matches,
+        whyMetaByCandidateId: whyMeta,
+        viewerAbout: hydrated.viewerAbout,
+      });
+      await this.attachSuggestedOpenersToListItems({
+        viewerProfileId: gate.viewerProfileId,
+        viewerEvaluationId: hydrated.viewerEvaluationId,
+        matches,
+        whyMetaByCandidateId: whyMeta,
       });
     }
 
@@ -822,14 +913,18 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     });
   }
 
-  private async maybeEnqueueListEmpty(userId: string): Promise<void> {
+  private async maybeEnqueueListEmpty(userId: string): Promise<boolean> {
     const acquired = await this.cache.setNx(
       matchListListEmptyEnqueueKey(userId),
       { at: new Date().toISOString() },
       MATCH_LIST_LIST_EMPTY_ENQUEUE_TTL_SECONDS,
     );
-    if (!acquired) return;
+    if (!acquired) {
+      // Another request already queued rebuild recently — treat as still building.
+      return true;
+    }
     await this.matchListRankQueue.enqueueRebuild(userId, 'list_empty');
+    return true;
   }
 
   private async getOrBuildRankedList(
@@ -850,14 +945,15 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     }
     recordCacheMiss();
     const built = await this.buildFullRankedList(userId);
-    if (built.status === 'ready' && built.matches) {
+    const dto = this.toPublicListDto(built);
+    if (dto.status === 'ready' && dto.matches) {
       const {
         matches,
         nextCursor: _n,
         hasMore: _h,
         status,
         ...statusMeta
-      } = built;
+      } = dto;
       const cacheSetStarted = Date.now();
       await this.cache.set(
         key,
@@ -871,7 +967,18 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       );
       recordMatchListCacheSetMs(Date.now() - cacheSetStarted);
     }
-    return built;
+    return dto;
+  }
+
+  /** Drop internal hydrate fields before HTTP / Redis list payloads. */
+  private toPublicListDto(built: RankedListBuildResult): MeMatchesListResponseDto {
+    const {
+      whyMetaByCandidateId: _whyMeta,
+      viewerEvaluationId: _viewerEvalId,
+      viewerAbout: _viewerAbout,
+      ...dto
+    } = built;
+    return dto;
   }
 
   /** Full ranked match list (cache miss path). */
@@ -890,7 +997,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       deadlineAtMs?: number;
       now?: () => number;
     },
-  ): Promise<MeMatchesListResponseDto> {
+  ): Promise<RankedListBuildResult> {
     const emitListAnalytics = options?.emitListAnalytics !== false;
     const pageIds = options?.candidateProfileIds;
     const isPageHydrate = pageIds != null;
@@ -1091,6 +1198,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     const scoreCpuStarted = Date.now();
     const matches: MeMatchItemDto[] = [];
+    const whyMetaByCandidateId = new Map<string, ListWhyMeta>();
     const hgDimensionOutcomeCounts = emptyHolyGrailDimensionOutcomeCounts();
     const dealbreakerOutcomeCounts = emptyDealbreakerTagOutcomeCounts();
     const viewerTextFields = {
@@ -1236,7 +1344,16 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         if (!('status' in result)) {
           matchScore = result.finalScore;
           explainability = result.explainability;
-          recommendation = result.recommendation;
+          recommendation = result.recommendation
+            ? withRecommendationPlaces(
+                result.recommendation,
+                result.finalScore,
+                {
+                  viewerPlace: viewerBridge.location.locationLabel,
+                  candidatePlace: candidateBridge.location.locationLabel,
+                },
+              )
+            : null;
         }
         pendingHardBlocks.push({
           row,
@@ -1266,12 +1383,30 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       if (!('status' in result)) {
         matchScore = result.finalScore;
         explainability = result.explainability;
-        recommendation = result.recommendation;
+        recommendation = result.recommendation
+          ? withRecommendationPlaces(result.recommendation, result.finalScore, {
+              viewerPlace: viewerBridge.location.locationLabel,
+              candidatePlace: candidateBridge.location.locationLabel,
+            })
+          : null;
       }
 
       const primaryPhotoId = pickApprovedPrimaryPhotoId(approvedPhotos);
       const primaryStorageKey =
         approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ?? null;
+
+      if (
+        matchScore != null &&
+        explainability != null &&
+        recommendation != null
+      ) {
+        whyMetaByCandidateId.set(row.id, {
+          candidateEvaluationId: candidateEval.id,
+          finalScore: matchScore,
+          explainability,
+          recommendation,
+        });
+      }
 
       matches.push({
         id: row.id,
@@ -1292,6 +1427,8 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         approvedPhotoCount: approvedPhotos.length,
         explainability,
         recommendation,
+        whyTldr: null,
+        suggestedOpener: null,
         yourAction: matchActionToYourAction(
           actionByTargetUserId.get(row.userId) ?? null,
         ),
@@ -1351,6 +1488,8 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           approvedPhotoCount: approvedPhotos.length,
           explainability: pending.explainability,
           recommendation: pending.recommendation,
+          whyTldr: null,
+          suggestedOpener: null,
           yourAction: matchActionToYourAction(
             actionByTargetUserId.get(pending.row.userId) ?? null,
           ),
@@ -1409,6 +1548,30 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       });
     }
 
+    const viewerAbout: ListWhyAbout = {
+      aboutMe: viewerProfileCore.aboutMe,
+      aboutPartner: viewerProfileCore.aboutPartner,
+      aboutRelationship: viewerProfileCore.aboutRelationship,
+    };
+
+    // Materialized path overlays rank score/tier after hydrate — attach WHY there
+    // so HIGH eager uses the displayed tier (Architect lock).
+    if (!isPageHydrate) {
+      await this.attachWhyTldrsToListItems({
+        viewerProfileId: viewer.id,
+        viewerEvaluationId: viewerEval.id,
+        matches,
+        whyMetaByCandidateId,
+        viewerAbout,
+      });
+      await this.attachSuggestedOpenersToListItems({
+        viewerProfileId: viewer.id,
+        viewerEvaluationId: viewerEval.id,
+        matches,
+        whyMetaByCandidateId,
+      });
+    }
+
     return {
       status: 'ready',
       viewerProfileId: viewer.id,
@@ -1425,6 +1588,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           }),
       matches,
       ...(budgetExceeded ? { budgetExceeded: true } : {}),
+      whyMetaByCandidateId,
+      viewerEvaluationId: viewerEval.id,
+      viewerAbout,
     };
   }
 
@@ -1721,7 +1887,12 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     if (!('status' in result)) {
       matchScore = result.finalScore;
       explainability = result.explainability;
-      recommendation = result.recommendation;
+      recommendation = result.recommendation
+        ? withRecommendationPlaces(result.recommendation, result.finalScore, {
+            viewerPlace: viewerBridge.location.locationLabel,
+            candidatePlace: candidateBridge.location.locationLabel,
+          })
+        : null;
       const built = buildMatchExplanationTraits(
         result.explainability.positiveChips,
         result.finalScore,
@@ -1811,6 +1982,34 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       aboutRelationship?: string | null;
     };
   }): Promise<string> {
+    const resolved = await this.resolveMatchNarrativeEntry(args);
+    return resolved.narrative;
+  }
+
+  /**
+   * Shared narrative resolve for detail + list WHY TLDR.
+   * Returns LLM-sourced TLDR only when cache hit or fresh LLM store (never for fallback).
+   */
+  private async resolveMatchNarrativeEntry(args: {
+    viewerProfileId: string;
+    candidateProfileId: string;
+    viewerEvaluationId: string;
+    candidateEvaluationId: string;
+    finalScore: number;
+    explainability: MatchExplainabilityDto;
+    recommendation: MatchRecommendationDto;
+    traits?: MatchExplanationTrait[];
+    viewerAbout?: {
+      aboutMe?: string | null;
+      aboutPartner?: string | null;
+      aboutRelationship?: string | null;
+    };
+    candidateAbout?: {
+      aboutMe?: string | null;
+      aboutPartner?: string | null;
+      aboutRelationship?: string | null;
+    };
+  }): Promise<{ narrative: string; whyTldr: string | null }> {
     const promptVersion = MATCH_NARRATIVE_PROMPT_VERSION;
     const cacheKey = {
       viewerProfileId: args.viewerProfileId,
@@ -1822,12 +2021,15 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     try {
       const cached = await this.matchNarrativeCache.find(cacheKey);
-      if (cached != null && cached.length > 0) {
+      if (cached != null && cached.narrative.length > 0) {
         this.obs.trace(
           `me matches narrative cache hit viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion}`,
           ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_HIT,
         );
-        return cached;
+        return {
+          narrative: cached.narrative,
+          whyTldr: cached.narrativeTldr?.trim() || null,
+        };
       }
     } catch {
       // treat as miss
@@ -1856,6 +2058,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     });
 
     if (generated.source === 'llm') {
+      const narrativeTldr = buildNarrativeTldr(generated.narrative);
       this.obs.trace(
         `me matches narrative llm ok viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion} source=llm`,
         ErrorCodes.ME_MATCHES_NARRATIVE_LLM_OK,
@@ -1864,6 +2067,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         await this.matchNarrativeCache.upsert({
           ...cacheKey,
           narrative: generated.narrative,
+          narrativeTldr,
         });
         this.obs.trace(
           `me matches narrative cache store ok viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion}`,
@@ -1875,14 +2079,260 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           ErrorCodes.ME_MATCHES_NARRATIVE_CACHE_STORE_FAIL,
         );
       }
-    } else {
-      this.obs.trace(
-        `me matches narrative fallback viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion} source=fallback`,
-        ErrorCodes.ME_MATCHES_NARRATIVE_FALLBACK,
-      );
+      return {
+        narrative: generated.narrative,
+        whyTldr: narrativeTldr || null,
+      };
     }
 
-    return generated.narrative;
+    this.obs.trace(
+      `me matches narrative fallback viewerProfileId=${args.viewerProfileId} candidateProfileId=${args.candidateProfileId} promptVersion=${promptVersion} source=fallback`,
+      ErrorCodes.ME_MATCHES_NARRATIVE_FALLBACK,
+    );
+
+    // Fallback never persists and must not populate list whyTldr (Architect lock).
+    return {
+      narrative: generated.narrative,
+      whyTldr: null,
+    };
+  }
+
+  /**
+   * Attach browse WHY TLDR from narrative cache; page misses may eager-generate (capped).
+   * Prefer HIGH, then GOOD, then OTHER. Scrubs list `primaryTakeaway` to whyTldr.
+   */
+  private async attachWhyTldrsToListItems(args: {
+    viewerProfileId: string;
+    viewerEvaluationId: string;
+    matches: MeMatchItemDto[];
+    whyMetaByCandidateId: Map<string, ListWhyMeta>;
+    viewerAbout?: ListWhyAbout;
+  }): Promise<void> {
+    const promptVersion = MATCH_NARRATIVE_PROMPT_VERSION;
+    const eagerMisses: Array<{
+      item: MeMatchItemDto;
+      meta: ListWhyMeta;
+    }> = [];
+
+    for (const item of args.matches) {
+      item.whyTldr = null;
+      if (item.hardBlocked) {
+        if (item.recommendation) {
+          item.recommendation = {
+            ...item.recommendation,
+            primaryTakeaway: '',
+          };
+        }
+        continue;
+      }
+
+      const meta = args.whyMetaByCandidateId.get(item.id);
+      if (!meta) {
+        if (item.recommendation) {
+          item.recommendation = {
+            ...item.recommendation,
+            primaryTakeaway: '',
+          };
+        }
+        continue;
+      }
+
+      const cacheKey = {
+        viewerProfileId: args.viewerProfileId,
+        candidateProfileId: item.id,
+        viewerEvaluationId: args.viewerEvaluationId,
+        candidateEvaluationId: meta.candidateEvaluationId,
+        promptVersion,
+      };
+
+      try {
+        const cached = await this.matchNarrativeCache.find(cacheKey);
+        if (cached?.narrative?.trim()) {
+          // Prefer stored TLDR; extract if legacy row has narrative but null tldr.
+          item.whyTldr =
+            cached.narrativeTldr?.trim() ||
+            buildNarrativeTldr(cached.narrative) ||
+            null;
+        } else if (item.priorityTier === 'HIGH') {
+          // GOOD/OTHER: cache-only (Architect: HIGH eager ≤3).
+          eagerMisses.push({ item, meta });
+        }
+      } catch {
+        if (item.priorityTier === 'HIGH') {
+          eagerMisses.push({ item, meta });
+        }
+      }
+
+      if (item.recommendation) {
+        item.recommendation = {
+          ...item.recommendation,
+          primaryTakeaway: item.whyTldr ?? '',
+        };
+      }
+    }
+
+    eagerMisses.sort(
+      (a, b) =>
+        (b.item.matchScore ?? 0) - (a.item.matchScore ?? 0),
+    );
+    const toGenerate = eagerMisses.slice(0, LIST_WHY_TLDR_EAGER_MAX);
+    if (toGenerate.length === 0) return;
+
+    const aboutById = new Map<string, ListWhyAbout>();
+    try {
+      const aboutRows = await this.prisma.userProfile.findMany({
+        where: { id: { in: toGenerate.map(({ item }) => item.id) } },
+        select: {
+          id: true,
+          aboutMe: true,
+          aboutPartner: true,
+          aboutRelationship: true,
+        },
+      });
+      for (const row of aboutRows) {
+        aboutById.set(row.id, {
+          aboutMe: row.aboutMe,
+          aboutPartner: row.aboutPartner,
+          aboutRelationship: row.aboutRelationship,
+        });
+      }
+    } catch {
+      // Proceed without about excerpts rather than failing the list.
+    }
+
+    const results = await Promise.allSettled(
+      toGenerate.map(async ({ item, meta }) => {
+        const traits = buildMatchExplanationTraits(
+          meta.explainability.positiveChips,
+          meta.finalScore,
+        );
+        const candidateAbout = aboutById.get(item.id);
+        const resolved = await this.resolveMatchNarrativeEntry({
+          viewerProfileId: args.viewerProfileId,
+          candidateProfileId: item.id,
+          viewerEvaluationId: args.viewerEvaluationId,
+          candidateEvaluationId: meta.candidateEvaluationId,
+          finalScore: meta.finalScore,
+          explainability: meta.explainability,
+          recommendation: meta.recommendation,
+          traits: traits.length > 0 ? traits : undefined,
+          viewerAbout: args.viewerAbout,
+          candidateAbout,
+        });
+        return { item, whyTldr: resolved.whyTldr };
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue;
+      const { item, whyTldr } = result.value;
+      if (!whyTldr?.trim()) continue;
+      item.whyTldr = whyTldr.trim();
+      if (item.recommendation) {
+        item.recommendation = {
+          ...item.recommendation,
+          primaryTakeaway: item.whyTldr,
+        };
+      }
+    }
+  }
+
+  /**
+   * Sprint 42 Story 1 — attach suggestedOpener for HIGH list rows (cache + capped eager LLM).
+   * Call after priority tiers are final. Never throws to the client.
+   */
+  private async attachSuggestedOpenersToListItems(args: {
+    viewerProfileId: string;
+    viewerEvaluationId: string;
+    matches: MeMatchItemDto[];
+    whyMetaByCandidateId: Map<string, ListWhyMeta>;
+  }): Promise<void> {
+    const promptVersion = CONVERSATION_STARTER_PROMPT_VERSION;
+    const eagerMisses: Array<{
+      item: MeMatchItemDto;
+      meta: ListWhyMeta;
+    }> = [];
+
+    for (const item of args.matches) {
+      item.suggestedOpener = null;
+      if (item.hardBlocked) continue;
+      if (item.priorityTier !== 'HIGH') continue;
+
+      const meta = args.whyMetaByCandidateId.get(item.id);
+      if (!meta) continue;
+
+      const cacheKey = {
+        viewerProfileId: args.viewerProfileId,
+        candidateProfileId: item.id,
+        viewerEvaluationId: args.viewerEvaluationId,
+        candidateEvaluationId: meta.candidateEvaluationId,
+        promptVersion,
+      };
+
+      try {
+        const cached = await this.conversationStarterCache.find(cacheKey);
+        if (cached?.opener?.trim()) {
+          item.suggestedOpener = cached.opener.trim();
+          continue;
+        }
+      } catch {
+        // Treat as miss — may still eager-generate.
+      }
+
+      eagerMisses.push({ item, meta });
+    }
+
+    const toGenerate = eagerMisses.slice(0, LIST_SUGGESTED_OPENER_EAGER_MAX);
+    if (toGenerate.length === 0) return;
+
+    const results = await Promise.allSettled(
+      toGenerate.map(async ({ item, meta }) => {
+        const factPack = buildConversationStarterFactPack({
+          finalScore: meta.finalScore,
+          explainability: meta.explainability,
+          viewerNickname: null,
+          candidateNickname: item.nickname,
+        });
+        const cacheKey = {
+          viewerProfileId: args.viewerProfileId,
+          candidateProfileId: item.id,
+          viewerEvaluationId: args.viewerEvaluationId,
+          candidateEvaluationId: meta.candidateEvaluationId,
+          promptVersion,
+        };
+
+        const generated = await this.conversationStarterGenerator.generate({
+          factPack,
+          requestId: randomUUID(),
+        });
+
+        if (generated.source === 'none' || !generated.opener?.trim()) {
+          return { item, opener: null as string | null };
+        }
+
+        const opener = generated.opener.trim();
+        if (generated.source === 'llm') {
+          try {
+            await this.conversationStarterCache.upsert({
+              ...cacheKey,
+              opener,
+              model: generated.model ?? null,
+            });
+          } catch {
+            // Still return opener for this response even if cache write fails.
+          }
+        }
+
+        return { item, opener };
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue;
+      const { item, opener } = result.value;
+      if (!opener?.trim()) continue;
+      item.suggestedOpener = opener.trim();
+    }
   }
 
   async getPrimaryPhotoFileById(

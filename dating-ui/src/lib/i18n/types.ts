@@ -90,6 +90,7 @@ export type AppCopySchema = {
       refreshStarted: string;
       refreshFailed: string;
       loadFailed: string;
+      listBuilding: string;
       photoGate: {
         title: string;
         body: string;
@@ -128,6 +129,11 @@ export type AppCopySchema = {
         whyHeading: string;
         whyEmpty: string;
         viewProfile: string;
+        /** Sprint 42 Story 2 */
+        openerHeading: string;
+        useOpener: string;
+        openerWaiting: string;
+        useOpenerAria: (name: string) => string;
       };
       priority: {
         highTitle: string;

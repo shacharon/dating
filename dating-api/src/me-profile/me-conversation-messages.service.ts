@@ -25,6 +25,10 @@ import { ConversationMessageRateLimitService } from './conversation-message-rate
 import { MeConversationsService } from './me-conversations.service';
 import { NewMessageEmailService } from '../notifications/new-message-email.service';
 import {
+  OpenerTrackingService,
+  wasOpenerEdited,
+} from '../matches/conversation-starter';
+import {
   type MessageDto,
   type MessageListDto,
   toMessageDto,
@@ -53,6 +57,7 @@ export class MeConversationMessagesService {
     private readonly analytics: AnalyticsService,
     private readonly moderation: OpenAIModerationClient,
     private readonly contentViolations: ContentViolationService,
+    private readonly openerTracking: OpenerTrackingService,
   ) {}
 
   private async assertMessagingAllowed(userId: string): Promise<void> {
@@ -292,6 +297,7 @@ export class MeConversationMessagesService {
     sessionUserId: string,
     conversationId: string,
     text: string,
+    openerAttribution?: { originalOpener: string },
   ): Promise<MessageDto> {
     const match = await this.conversations.assertActiveConversationParticipant(
       sessionUserId,
@@ -332,8 +338,36 @@ export class MeConversationMessagesService {
       ErrorCodes.ME_CONVERSATIONS_MESSAGE_SEND_OK,
     );
 
+    const originalOpener = openerAttribution?.originalOpener?.trim() ?? '';
+    const wasOpenerPrefill = originalOpener.length > 0;
+    const wasOpenerEditedFlag = wasOpenerPrefill
+      ? wasOpenerEdited(trimmed, originalOpener)
+      : false;
+
     this.analytics.track(sessionUserId, ProductAnalyticsEvents.MESSAGE_SENT, {
       conversationIdHash: hashConversationId(conversationId),
+      wasOpenerPrefill,
+      wasOpenerEdited: wasOpenerEditedFlag,
+    });
+
+    const otherUserId =
+      sessionUserId === match.userId1 ? match.userId2 : match.userId1;
+
+    if (wasOpenerPrefill) {
+      void this.openerTracking.trackOpenerSentBestEffort({
+        sessionUserId,
+        conversationId,
+        messageId: row.id,
+        sentText: trimmed,
+        originalOpener,
+        otherUserId,
+      });
+    }
+
+    void this.openerTracking.trackOpenerReplyBestEffort({
+      sessionUserId,
+      conversationId,
+      justCreatedMessageId: row.id,
     });
 
     const dto = toMessageDto(row);
@@ -344,11 +378,9 @@ export class MeConversationMessagesService {
       conversationId,
     );
 
-    const recipientUserId =
-      sessionUserId === match.userId1 ? match.userId2 : match.userId1;
     void this.newMessageEmail.maybeNotifyBestEffort({
       conversationId,
-      recipientUserId,
+      recipientUserId: otherUserId,
       senderUserId: sessionUserId,
       messageId: dto.id,
     });

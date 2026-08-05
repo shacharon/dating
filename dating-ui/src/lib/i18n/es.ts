@@ -86,6 +86,7 @@ export const esCopy: AppCopySchema = {
         "Actualizacion iniciada — las puntuaciones se actualizaran al completar el analisis.",
       refreshFailed: "Error al actualizar",
       loadFailed: "No se pudieron cargar las coincidencias",
+      listBuilding: "Buscando coincidencias…",
       photoGate: {
         title: "Agrega una foto para ver coincidencias",
         body: "Necesitas al menos una foto aprobada antes de poder ver personas aqui.",
@@ -134,6 +135,10 @@ export const esCopy: AppCopySchema = {
         whyHeading: "Por que coincidimos",
         whyEmpty: "Aun no hay una explicacion.",
         viewProfile: "Ver perfil",
+        openerHeading: "Prueba esto",
+        useOpener: "Like y usar opener",
+        openerWaiting: "Opener listo cuando haya match",
+        useOpenerAria: (name) => `Dar like a ${name} y usar el opener sugerido`,
       },
       priority: {
         highTitle: "Escribe a estos primero",

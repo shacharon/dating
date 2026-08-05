@@ -115,9 +115,9 @@ export function MatchListItem({
                 )}
               </div>
             )}
-            {!hardBlocked && m.recommendation?.primaryTakeaway?.trim() && (
+            {!hardBlocked && m.whyTldr?.trim() && (
               <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                {m.recommendation.primaryTakeaway.trim()}
+                {m.whyTldr.trim()}
               </p>
             )}
             {sharedNote ? (

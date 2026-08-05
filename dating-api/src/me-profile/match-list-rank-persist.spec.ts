@@ -19,11 +19,13 @@ describe('MeMatchesService MatchListRank persist', () => {
       { del: jest.fn().mockResolvedValue(undefined) } as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
       { enqueueRebuild: jest.fn() } as never,
     );
   }
 
-  it('not_ready clears all ranks for viewer', async () => {
+  it('not_ready leaves prior ranks (no wipe)', async () => {
     const deleteMany = jest.fn().mockResolvedValue({ count: 3 });
     const prisma = {
       matchListRank: { deleteMany, upsert: jest.fn() },
@@ -36,10 +38,8 @@ describe('MeMatchesService MatchListRank persist', () => {
       rows: [],
     };
     const result = await svc.persistMatchListRankSnapshot('user_v', snapshot);
-    expect(deleteMany).toHaveBeenCalledWith({
-      where: { viewerUserId: 'user_v' },
-    });
-    expect(result).toEqual({ rowsWritten: 0, rowsDeleted: 3 });
+    expect(deleteMany).not.toHaveBeenCalled();
+    expect(result).toEqual({ rowsWritten: 0, rowsDeleted: 0 });
   });
 
   it('ready empty rows clears ranks', async () => {

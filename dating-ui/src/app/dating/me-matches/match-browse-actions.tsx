@@ -1,16 +1,19 @@
 'use client';
 
-import { useMatchActions } from '@/hooks/use-match-actions';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 export type MatchBrowseActionsProps = {
   matchId: string;
-  initialAction: MeMatchItemDto['yourAction'];
   detailCopy: AppCopySchema['matches']['detail'];
   disabled: boolean;
-  onMutualMatch: (conversationId: string) => void;
-  onActionSuccess?: (action: 'LIKE' | 'PASS' | 'BLOCK') => void;
+  currentAction: MeMatchItemDto['yourAction'];
+  actionLoading: boolean;
+  canUndo: boolean;
+  actionError: string | null;
+  like: () => Promise<void>;
+  pass: () => Promise<void>;
+  undo: () => Promise<void>;
 };
 
 function actionStatusMessage(
@@ -31,30 +34,19 @@ function actionStatusMessage(
 
 /**
  * Like / Pass / undo for photo-first browse cards.
+ * Action state owned by parent (shared with opener “Like & use”).
  */
 export function MatchBrowseActions({
-  matchId,
-  initialAction = null,
   detailCopy,
   disabled,
-  onMutualMatch,
-  onActionSuccess,
+  currentAction,
+  actionLoading,
+  canUndo,
+  actionError,
+  like,
+  pass,
+  undo,
 }: MatchBrowseActionsProps) {
-  const {
-    like,
-    pass,
-    undo,
-    actionLoading,
-    currentAction,
-    canUndo,
-    error: actionError,
-  } = useMatchActions({
-    matchId,
-    initialAction: initialAction ?? null,
-    onMutualMatch,
-    onActionSuccess,
-  });
-
   const statusMessage = actionStatusMessage(currentAction, detailCopy);
 
   if (disabled) {

@@ -20,6 +20,9 @@ export interface MatchRecommendationInput {
   dealbreakers?: string[];
   /** Optional stable ID for template variation (e.g. matchId); defaults to finalScore. */
   stableId?: string;
+  /** Optional city/place labels for same-place opener hooks. */
+  viewerPlace?: string;
+  candidatePlace?: string;
 }
 
 /** Dealbreaker family buckets for concrete caution phrases. */
@@ -41,18 +44,22 @@ const DEALBREAKER_CAUTION_BY_FAMILY: Record<string, string> = {
 };
 
 /**
- * Build primary takeaway: plain list TLDR (Sprint 23 Story 1).
+ * Build primary takeaway: actionable list TLDR (interest → place → caution → decide).
  * `stableId` retained for API compatibility; unused by the plain builder.
  */
 function buildPrimaryTakeaway(
   finalScore: number,
   explainability: MatchExplainabilityDto,
   _stableId: string,
+  places?: { viewerPlace?: string; candidatePlace?: string },
 ): string {
   return buildPlainMatchListTldr({
     finalScore,
     positiveChips: explainability.positiveChips,
     sharedInterestNote: explainability.sharedInterestNote,
+    tensionChip: explainability.tensionChip,
+    viewerPlace: places?.viewerPlace,
+    candidatePlace: places?.candidatePlace,
   });
 }
 
@@ -132,6 +139,10 @@ export function buildMatchRecommendation(
     input.finalScore,
     input.explainability,
     stableId,
+    {
+      viewerPlace: input.viewerPlace,
+      candidatePlace: input.candidatePlace,
+    },
   );
   const caution = buildCaution(
     input.friction,
@@ -146,4 +157,28 @@ export function buildMatchRecommendation(
     ...(caution !== undefined ? { caution } : {}),
     suggestedNextAction,
   };
+}
+
+/**
+ * Recompute takeaway with place labels when compare lacked city context.
+ * Keeps caution / next action / explainability unchanged.
+ */
+export function withRecommendationPlaces(
+  recommendation: MatchRecommendationDto,
+  finalScore: number,
+  places: { viewerPlace?: string | null; candidatePlace?: string | null },
+): MatchRecommendationDto {
+  // Incomplete mocks / legacy payloads may omit nested explainability.
+  if (!recommendation.explainability) {
+    return recommendation;
+  }
+  const primaryTakeaway = buildPlainMatchListTldr({
+    finalScore,
+    positiveChips: recommendation.explainability.positiveChips,
+    sharedInterestNote: recommendation.explainability.sharedInterestNote,
+    tensionChip: recommendation.explainability.tensionChip,
+    viewerPlace: places.viewerPlace ?? undefined,
+    candidatePlace: places.candidatePlace ?? undefined,
+  });
+  return { ...recommendation, primaryTakeaway };
 }

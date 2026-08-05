@@ -126,10 +126,20 @@ const FEMALE_NAMES = [
 
 function interestsForIndex(i: number): [string, string, string] {
   const n = QA50_INTEREST_CODES.length;
+  // Shared buckets so many M↔F pairs overlap (opener hooks on the list).
+  const bucket = i % 8;
+  const second = (bucket + 3) % n;
+  let third = (i + 11) % n;
+  if (third === bucket || third === second) {
+    third = (bucket + 5) % n;
+  }
+  if (third === bucket || third === second) {
+    third = (bucket + 6) % n;
+  }
   return [
-    QA50_INTEREST_CODES[i % n]!,
-    QA50_INTEREST_CODES[(i + 8) % n]!,
-    QA50_INTEREST_CODES[(i + 16) % n]!,
+    QA50_INTEREST_CODES[bucket]!,
+    QA50_INTEREST_CODES[second]!,
+    QA50_INTEREST_CODES[third]!,
   ];
 }
 

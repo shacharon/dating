@@ -17,6 +17,11 @@ import {
   consumeMatchesScrollRestore,
 } from './me-matches-scroll';
 import { matchListPrimaryLabel } from './match-display';
+import {
+  conversationUrlWithStarter,
+  readOpenerDraft,
+  clearOpenerDraft,
+} from '@/lib/conversation-opener-draft';
 
 const MatchCelebrationModal = dynamic(
   () =>
@@ -27,6 +32,7 @@ const MatchCelebrationModal = dynamic(
 );
 
 type CelebrationContext = {
+  matchProfileId: string;
   conversationId: string;
   candidateName: string;
   photoUrl: string | null;
@@ -92,6 +98,7 @@ export default function MeMatchesPageClient() {
   ) => {
     const match = matches.find((m) => m.id === matchId);
     setCelebrationContext({
+      matchProfileId: matchId,
       conversationId,
       candidateName: match
         ? matchListPrimaryLabel(match)
@@ -195,9 +202,24 @@ export default function MeMatchesPageClient() {
         {!loading &&
           !error &&
           data?.status === 'ready' &&
-          matches.length === 0 && <MatchListEmptyState />}
+          matches.length === 0 &&
+          data.listBuilding && (
+            <p
+              className="text-sm text-zinc-500 dark:text-zinc-400"
+              role="status"
+              data-testid="matches-list-building"
+            >
+              {listCopy.listBuilding}
+            </p>
+          )}
 
-        {!loading && !error && data?.status === 'ready' && matches.length > 0 && (
+        {!loading &&
+          !error &&
+          data?.status === 'ready' &&
+          matches.length === 0 &&
+          !data.listBuilding && <MatchListEmptyState />}
+
+        {!error && data?.status === 'ready' && matches.length > 0 && (
           <div className="space-y-6">
             <MatchPrioritySections
               matches={matches}
@@ -239,8 +261,17 @@ export default function MeMatchesPageClient() {
           candidateName={celebrationContext.candidateName}
           photoUrl={celebrationContext.photoUrl}
           onSendMessage={() => {
+            const draft = readOpenerDraft();
+            const opener =
+              draft?.matchProfileId === celebrationContext.matchProfileId
+                ? draft.opener
+                : null;
+            if (opener) clearOpenerDraft();
             router.push(
-              `/dating/conversations/${celebrationContext.conversationId}`,
+              conversationUrlWithStarter(
+                celebrationContext.conversationId,
+                opener,
+              ),
             );
           }}
         />

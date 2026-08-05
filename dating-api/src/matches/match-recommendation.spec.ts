@@ -4,7 +4,7 @@ import type { MatchExplainabilityDto } from './match-explainability';
 
 describe('buildMatchRecommendation', () => {
   describe('high score, no friction', () => {
-    it('returns plain takeaway with conversation action', () => {
+    it('returns actionable takeaway with conversation action', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: ['Emotional depth', 'Direct communication'],
         reasonShort: 'Strong alignment on emotional depth and direct communication.',
@@ -22,8 +22,7 @@ describe('buildMatchRecommendation', () => {
           positiveChips: explainability.positiveChips,
         }),
       );
-      expect(result.primaryTakeaway).toContain('real depth and presence');
-      expect(result.primaryTakeaway).toContain('being straight with each other');
+      expect(result.primaryTakeaway).toBe('This one feels like a real match — say hello.');
       expect(result.primaryTakeaway.toLowerCase()).not.toContain(
         'emotional depth',
       );
@@ -45,10 +44,28 @@ describe('buildMatchRecommendation', () => {
       });
 
       expect(result.primaryTakeaway).toBe(
-        'Some real overlap — open to see why.',
+        'This one feels like a real match — say hello.',
       );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Start a conversation');
+    });
+
+    it('prefers shared interest opener', () => {
+      const explainability: MatchExplainabilityDto = {
+        positiveChips: ['Ambition alignment'],
+        sharedInterestNote: 'You both enjoy hiking.',
+        reasonShort: 'Strong ambition alignment.',
+      };
+
+      const result = buildMatchRecommendation({
+        finalScore: 85,
+        friction: 0,
+        explainability,
+      });
+
+      expect(result.primaryTakeaway).toBe(
+        "You're both into hiking — ask about that first.",
+      );
     });
   });
 
@@ -66,10 +83,9 @@ describe('buildMatchRecommendation', () => {
         explainability,
       });
 
-      expect(result.primaryTakeaway).toContain('matching social energy');
-      expect(result.primaryTakeaway).toContain('a drive for goals');
-      expect(result.primaryTakeaway.toLowerCase()).not.toContain(
-        'ambition alignment',
+      // No shared interest → tension drives the takeaway line.
+      expect(result.primaryTakeaway).toBe(
+        'Heads up on closeness vs space — read their profile before you write.',
       );
       expect(result.caution).toBe('Watch for closeness vs space.');
       expect(result.suggestedNextAction).toBe('Start a conversation');
@@ -88,7 +104,9 @@ describe('buildMatchRecommendation', () => {
         dealbreakers: ['KIDS_MISMATCH'],
       });
 
-      expect(result.primaryTakeaway).toContain('care about health together');
+      expect(result.primaryTakeaway).toBe(
+        'This one feels like a real match — say hello.',
+      );
       expect(result.caution).toContain('lifestyle');
       expect(result.suggestedNextAction).toBe('Start a conversation');
     });
@@ -112,7 +130,7 @@ describe('buildMatchRecommendation', () => {
   });
 
   describe('medium score', () => {
-    it('returns solid takeaway for 60-79 band', () => {
+    it('returns decide takeaway for 60-79 band', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: ['Independence fit', 'Lifestyle pace'],
         reasonShort: 'Solid alignment on independence and lifestyle pace.',
@@ -124,15 +142,14 @@ describe('buildMatchRecommendation', () => {
         explainability,
       });
 
-      expect(result.primaryTakeaway).toContain(
-        'space and togetherness balance',
+      expect(result.primaryTakeaway).toBe(
+        "There's something here — open their profile and see.",
       );
-      expect(result.primaryTakeaway).toContain('a similar daily pace');
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Review profile and message');
     });
 
-    it('returns moderate takeaway for 50-59 band', () => {
+    it('returns decide takeaway for 50-59 band', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: ['Money mindset'],
         reasonShort: 'Moderate overlap on money mindset.',
@@ -144,7 +161,9 @@ describe('buildMatchRecommendation', () => {
         explainability,
       });
 
-      expect(result.primaryTakeaway).toContain('similar money habits');
+      expect(result.primaryTakeaway).toBe(
+        "Thin fit so far — only dig in if you're curious.",
+      );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Worth a closer look');
     });
@@ -162,14 +181,16 @@ describe('buildMatchRecommendation', () => {
         explainability,
       });
 
-      expect(result.primaryTakeaway).toContain('strong mutual attraction');
+      expect(result.primaryTakeaway).toBe(
+        'Heads up on emotional depth gap — read their profile before you write.',
+      );
       expect(result.caution).toBe('Watch for emotional depth gap.');
       expect(result.suggestedNextAction).toBe('Worth a closer look');
     });
   });
 
   describe('low score', () => {
-    it('returns plain takeaway for 40-49 band', () => {
+    it('returns decide takeaway for 40-49 band', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: ['Relationship expectations'],
         reasonShort: 'Partial overlap on relationship expectations.',
@@ -181,11 +202,8 @@ describe('buildMatchRecommendation', () => {
         explainability,
       });
 
-      expect(result.primaryTakeaway).toContain(
-        'similar ideas about partnership',
-      );
-      expect(result.primaryTakeaway.toLowerCase()).not.toContain(
-        'relationship expectations',
+      expect(result.primaryTakeaway).toBe(
+        "Thin fit so far — only dig in if you're curious.",
       );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Skim profile first');
@@ -203,7 +221,9 @@ describe('buildMatchRecommendation', () => {
         explainability,
       });
 
-      expect(result.primaryTakeaway).toContain('similar closeness style');
+      expect(result.primaryTakeaway).toBe(
+        "Not much clicking yet — skip unless something pulls you in.",
+      );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Consider other matches first');
     });
@@ -221,7 +241,7 @@ describe('buildMatchRecommendation', () => {
       });
 
       expect(result.primaryTakeaway).toBe(
-        'Limited overlap — open only if curious.',
+        "Not much clicking yet — skip unless something pulls you in.",
       );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Consider other matches first');
@@ -242,8 +262,9 @@ describe('buildMatchRecommendation', () => {
         dealbreakers: ['RELIGION_MISMATCH', 'KIDS_MISMATCH'],
       });
 
-      expect(result.primaryTakeaway).toContain('a drive for goals');
-      expect(result.primaryTakeaway).toContain('matching social energy');
+      expect(result.primaryTakeaway).toBe(
+        "There's something here — open their profile and see.",
+      );
       expect(result.caution).toContain('lifestyle');
       expect(result.suggestedNextAction).toBe('Review profile and message');
     });

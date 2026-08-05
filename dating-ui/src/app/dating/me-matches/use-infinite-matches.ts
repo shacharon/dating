@@ -9,6 +9,9 @@ import {
 } from '@/lib/me-matches-api';
 
 const PAGE_LIMIT = 20;
+/** Poll while ranks rebuild after empty list (soft ceiling). */
+const LIST_BUILDING_POLL_MS = 3000;
+const LIST_BUILDING_MAX_POLLS = 4;
 
 export type UseInfiniteMatchesResult = {
   data: MeMatchesListDto | null;
@@ -62,7 +65,13 @@ export function useInfiniteMatches(
         return;
       }
       setData(dto);
-      setMatches(dto.matches ?? []);
+      const incoming = dto.matches ?? [];
+      if (incoming.length > 0) {
+        setMatches(incoming);
+      } else if (!dto.listBuilding) {
+        setMatches([]);
+      }
+      // listBuilding + empty: keep prior cards visible while ranks rebuild
       setNextCursor(dto.nextCursor ?? null);
       setHasMore(Boolean(dto.hasMore));
     } catch (e: unknown) {
@@ -75,6 +84,43 @@ export function useInfiniteMatches(
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // While ranks rebuild, poll a few times instead of flashing the launch empty state.
+  useEffect(() => {
+    if (!data || data.status !== 'ready' || !data.listBuilding) return;
+    if (matches.length > 0) return;
+    let cancelled = false;
+    let polls = 0;
+    const tick = async () => {
+      if (cancelled || polls >= LIST_BUILDING_MAX_POLLS) return;
+      polls += 1;
+      try {
+        const dto = await fetchMyMatches({ limit: PAGE_LIMIT });
+        if (cancelled) return;
+        if (dto.status !== 'ready') return;
+        setData(dto);
+        if ((dto.matches?.length ?? 0) > 0) {
+          setMatches(dto.matches ?? []);
+          setNextCursor(dto.nextCursor ?? null);
+          setHasMore(Boolean(dto.hasMore));
+          return;
+        }
+        if (!dto.listBuilding || polls >= LIST_BUILDING_MAX_POLLS) {
+          setMatches([]);
+        }
+      } catch {
+        // keep building / prior error path
+      }
+      if (!cancelled && polls < LIST_BUILDING_MAX_POLLS) {
+        window.setTimeout(() => void tick(), LIST_BUILDING_POLL_MS);
+      }
+    };
+    const id = window.setTimeout(() => void tick(), LIST_BUILDING_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [data, matches.length]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || !nextCursor || loadingMoreRef.current) return;

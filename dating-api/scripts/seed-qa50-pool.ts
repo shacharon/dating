@@ -299,13 +299,14 @@ async function upsertProfile(def: Qa50ProfileDef): Promise<void> {
     create: {
       profileId: def.profileId,
       acceptedPartnerGenders: desired.map(String),
-      partnerAgeMin: 22,
-      partnerAgeMax: 45,
+      // Null age window: avoid HG AGE FAIL when a real viewer has no birthDate (Story 4).
+      partnerAgeMin: null,
+      partnerAgeMax: null,
     },
     update: {
       acceptedPartnerGenders: desired.map(String),
-      partnerAgeMin: 22,
-      partnerAgeMax: 45,
+      partnerAgeMin: null,
+      partnerAgeMax: null,
     },
   });
 

@@ -133,6 +133,9 @@ describe('MeMatchesService', () => {
   let narrativeGenerate: jest.Mock;
   let narrativeCacheFind: jest.Mock;
   let narrativeCacheUpsert: jest.Mock;
+  let openerGenerate: jest.Mock;
+  let openerCacheFind: jest.Mock;
+  let openerCacheUpsert: jest.Mock;
   let matchListRankQueue: { enqueueRebuild: jest.Mock };
   let prevMaterializedFlag: string | undefined;
 
@@ -210,6 +213,12 @@ describe('MeMatchesService', () => {
     });
     narrativeCacheFind = jest.fn().mockResolvedValue(null);
     narrativeCacheUpsert = jest.fn().mockResolvedValue(undefined);
+    openerGenerate = jest.fn().mockResolvedValue({
+      opener: null,
+      source: 'none',
+    });
+    openerCacheFind = jest.fn().mockResolvedValue(null);
+    openerCacheUpsert = jest.fn().mockResolvedValue(undefined);
     matchListRankQueue = {
       enqueueRebuild: jest.fn().mockResolvedValue('inline:u'),
     };
@@ -222,6 +231,8 @@ describe('MeMatchesService', () => {
       cache as never,
       { generate: narrativeGenerate } as never,
       { find: narrativeCacheFind, upsert: narrativeCacheUpsert } as never,
+      { generate: openerGenerate } as never,
+      { find: openerCacheFind, upsert: openerCacheUpsert } as never,
       matchListRankQueue as never,
     );
   });
@@ -2097,7 +2108,7 @@ describe('MeMatchesService', () => {
     });
 
     it('getById() returns cached matchNarrative without calling generator', async () => {
-      narrativeCacheFind.mockResolvedValue('Cached narrative from DB.');
+      narrativeCacheFind.mockResolvedValue({ narrative: 'Cached narrative from DB.', narrativeTldr: 'Cached narrative from DB.' });
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -2186,6 +2197,7 @@ describe('MeMatchesService', () => {
           viewerEvaluationId: `eval_${viewerProfileId}`,
           candidateEvaluationId: `eval_${candidateProfileId}`,
           narrative: 'LLM prose about shared depth.',
+          narrativeTldr: expect.any(String),
         });
       } finally {
         spy.mockRestore();
@@ -2212,7 +2224,7 @@ describe('MeMatchesService', () => {
     };
 
     it('cache hit skips generator', async () => {
-      narrativeCacheFind.mockResolvedValue('hit text');
+      narrativeCacheFind.mockResolvedValue({ narrative: 'hit text', narrativeTldr: 'hit text' });
       const text = await (service as any).resolveMatchNarrative(baseArgs);
       expect(text).toBe('hit text');
       expect(narrativeGenerate).not.toHaveBeenCalled();
@@ -2276,6 +2288,378 @@ describe('MeMatchesService', () => {
       const text = await (service as any).resolveMatchNarrative(baseArgs);
       expect(text).toBe('Structured fallback without chip soup.');
       expect(narrativeCacheUpsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('attachWhyTldrsToListItems()', () => {
+    const exp = {
+      positiveChips: ['Emotional depth'],
+      reasonShort: 'Short',
+    };
+    const rec = {
+      explainability: exp,
+      primaryTakeaway: 'Coach template',
+      suggestedNextAction: 'Next',
+    };
+
+    function makeItem(
+      id: string,
+      tier: 'HIGH' | 'GOOD' | 'OTHER',
+      score: number,
+    ) {
+      return {
+        id,
+        nickname: null,
+        gender: 'FEMALE',
+        ageYears: 30,
+        locationLabel: 'Tel Aviv',
+        analyzedAt: null,
+        hasEvaluation: true,
+        matchScore: score,
+        priorityScore: score,
+        priorityTier: tier,
+        primaryPhotoUrl: null,
+        approvedPhotoCount: 1,
+        explainability: exp,
+        recommendation: { ...rec },
+        whyTldr: null as string | null,
+        yourAction: null,
+      };
+    }
+
+    it('sets whyTldr from cache hit and scrubs primaryTakeaway', async () => {
+      narrativeCacheFind.mockResolvedValue({
+        narrative: 'Full why text about shared depth.',
+        narrativeTldr: 'Full why text about shared depth.',
+      });
+      const item = makeItem('c1', 'GOOD', 75);
+      const whyMeta = new Map([
+        [
+          'c1',
+          {
+            candidateEvaluationId: 'eval_c1',
+            finalScore: 75,
+            explainability: exp,
+            recommendation: rec,
+          },
+        ],
+      ]);
+      await (service as any).attachWhyTldrsToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: whyMeta,
+      });
+      expect(item.whyTldr).toBe('Full why text about shared depth.');
+      expect(item.recommendation?.primaryTakeaway).toBe(
+        'Full why text about shared depth.',
+      );
+      expect(narrativeGenerate).not.toHaveBeenCalled();
+    });
+
+    it('does not eager-generate GOOD miss (cache-only)', async () => {
+      narrativeCacheFind.mockResolvedValue(null);
+      narrativeGenerate.mockResolvedValue({
+        narrative: 'LLM why about shared cooking and calm evenings.',
+        source: 'llm',
+        promptVersion: 'v4',
+      });
+      prisma.userProfile.findMany.mockResolvedValue([]);
+      const item = makeItem('c1', 'GOOD', 75);
+      const whyMeta = new Map([
+        [
+          'c1',
+          {
+            candidateEvaluationId: 'eval_c1',
+            finalScore: 75,
+            explainability: exp,
+            recommendation: rec,
+          },
+        ],
+      ]);
+      await (service as any).attachWhyTldrsToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: whyMeta,
+      });
+      expect(narrativeGenerate).not.toHaveBeenCalled();
+      expect(item.whyTldr).toBeNull();
+    });
+
+    it('eager-generates HIGH misses up to 3 only', async () => {
+      narrativeCacheFind.mockResolvedValue(null);
+      narrativeGenerate.mockResolvedValue({
+        narrative: 'LLM why about shared life goals and calm talks.',
+        source: 'llm',
+        promptVersion: 'v4',
+      });
+      prisma.userProfile.findMany.mockResolvedValue([]);
+      const items = [
+        makeItem('g1', 'GOOD', 75),
+        makeItem('h1', 'HIGH', 90),
+        makeItem('h2', 'HIGH', 91),
+        makeItem('h3', 'HIGH', 92),
+        makeItem('o1', 'OTHER', 50),
+        makeItem('h4', 'HIGH', 93),
+        makeItem('h5', 'HIGH', 94),
+      ];
+      const whyMeta = new Map(
+        items.map((it) => [
+          it.id,
+          {
+            candidateEvaluationId: `eval_${it.id}`,
+            finalScore: it.matchScore!,
+            explainability: exp,
+            recommendation: rec,
+          },
+        ]),
+      );
+      await (service as any).attachWhyTldrsToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: items,
+        whyMetaByCandidateId: whyMeta,
+        viewerAbout: { aboutMe: 'I cook.' },
+      });
+      expect(narrativeGenerate).toHaveBeenCalledTimes(3);
+      expect(items.filter((i) => i.whyTldr != null).length).toBe(3);
+      expect(items.find((i) => i.id === 'g1')?.whyTldr).toBeNull();
+      expect(items.find((i) => i.id === 'o1')?.whyTldr).toBeNull();
+    });
+
+    it('fallback generate leaves whyTldr null (no poison cache)', async () => {
+      narrativeCacheFind.mockResolvedValue(null);
+      narrativeGenerate.mockResolvedValue({
+        narrative: 'Fallback opener band only.',
+        source: 'fallback',
+        promptVersion: 'v4',
+      });
+      prisma.userProfile.findMany.mockResolvedValue([]);
+      const item = makeItem('h1', 'HIGH', 90);
+      await (service as any).attachWhyTldrsToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: new Map([
+          [
+            'h1',
+            {
+              candidateEvaluationId: 'eval_h1',
+              finalScore: 90,
+              explainability: exp,
+              recommendation: rec,
+            },
+          ],
+        ]),
+      });
+      expect(item.whyTldr).toBeNull();
+      expect(narrativeCacheUpsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('attachSuggestedOpenersToListItems()', () => {
+    const exp = {
+      positiveChips: ['Emotional depth'],
+      reasonShort: 'Short',
+      sharedInterestNote: 'You both enjoy hiking.',
+    };
+    const rec = {
+      explainability: exp,
+      primaryTakeaway: 'Coach',
+      suggestedNextAction: 'Next',
+    };
+
+    function makeItem(
+      id: string,
+      tier: 'HIGH' | 'GOOD' | 'OTHER',
+      score: number,
+    ) {
+      return {
+        id,
+        nickname: 'Sara',
+        gender: 'FEMALE',
+        ageYears: 30,
+        locationLabel: 'Tel Aviv',
+        analyzedAt: null,
+        hasEvaluation: true,
+        matchScore: score,
+        priorityScore: score,
+        priorityTier: tier,
+        primaryPhotoUrl: null,
+        approvedPhotoCount: 1,
+        explainability: exp,
+        recommendation: { ...rec },
+        whyTldr: null as string | null,
+        suggestedOpener: null as string | null,
+        yourAction: null,
+      };
+    }
+
+    it('sets suggestedOpener from cache for HIGH', async () => {
+      openerCacheFind.mockResolvedValue({
+        opener: 'Fellow hiker — Israel Trail yet?',
+      });
+      const item = makeItem('h1', 'HIGH', 90);
+      await (service as any).attachSuggestedOpenersToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: new Map([
+          [
+            'h1',
+            {
+              candidateEvaluationId: 'eval_h1',
+              finalScore: 90,
+              explainability: exp,
+              recommendation: rec,
+            },
+          ],
+        ]),
+      });
+      expect(item.suggestedOpener).toBe('Fellow hiker — Israel Trail yet?');
+      expect(openerGenerate).not.toHaveBeenCalled();
+    });
+
+    it('skips GOOD tier without generating', async () => {
+      openerCacheFind.mockResolvedValue(null);
+      const item = makeItem('g1', 'GOOD', 75);
+      await (service as any).attachSuggestedOpenersToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: new Map([
+          [
+            'g1',
+            {
+              candidateEvaluationId: 'eval_g1',
+              finalScore: 75,
+              explainability: exp,
+              recommendation: rec,
+            },
+          ],
+        ]),
+      });
+      expect(item.suggestedOpener).toBeNull();
+      expect(openerGenerate).not.toHaveBeenCalled();
+    });
+
+    it('eager-generates up to 3 HIGH misses and upserts LLM', async () => {
+      openerCacheFind.mockResolvedValue(null);
+      openerGenerate.mockResolvedValue({
+        opener: 'Into hiking too — favorite trail?',
+        source: 'llm',
+        promptVersion: 'v1',
+      });
+      const items = [
+        makeItem('h1', 'HIGH', 95),
+        makeItem('h2', 'HIGH', 92),
+        makeItem('h3', 'HIGH', 90),
+        makeItem('h4', 'HIGH', 88),
+      ];
+      const whyMeta = new Map(
+        items.map((it) => [
+          it.id,
+          {
+            candidateEvaluationId: `eval_${it.id}`,
+            finalScore: it.matchScore!,
+            explainability: exp,
+            recommendation: rec,
+          },
+        ]),
+      );
+      await (service as any).attachSuggestedOpenersToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: items,
+        whyMetaByCandidateId: whyMeta,
+      });
+      expect(openerGenerate).toHaveBeenCalledTimes(3);
+      expect(items[0]!.suggestedOpener).toMatch(/hiking/i);
+      expect(items[1]!.suggestedOpener).toMatch(/hiking/i);
+      expect(items[2]!.suggestedOpener).toMatch(/hiking/i);
+      expect(items[3]!.suggestedOpener).toBeNull();
+      expect(openerCacheUpsert).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not upsert fallback openers', async () => {
+      openerCacheFind.mockResolvedValue(null);
+      openerGenerate.mockResolvedValue({
+        opener: "I saw you're into hiking too — what's your favorite part?",
+        source: 'fallback',
+        promptVersion: 'v1',
+      });
+      const item = makeItem('h1', 'HIGH', 90);
+      await (service as any).attachSuggestedOpenersToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: new Map([
+          [
+            'h1',
+            {
+              candidateEvaluationId: 'eval_h1',
+              finalScore: 90,
+              explainability: exp,
+              recommendation: rec,
+            },
+          ],
+        ]),
+      });
+      expect(item.suggestedOpener).toMatch(/hiking/i);
+      expect(openerCacheUpsert).not.toHaveBeenCalled();
+    });
+
+    it('leaves hardBlocked HIGH without opener and does not generate', async () => {
+      openerCacheFind.mockResolvedValue(null);
+      const item = {
+        ...makeItem('h1', 'HIGH', 90),
+        hardBlocked: { reasons: [] },
+      };
+      await (service as any).attachSuggestedOpenersToListItems({
+        viewerProfileId,
+        viewerEvaluationId: 'eval_v1',
+        matches: [item],
+        whyMetaByCandidateId: new Map([
+          [
+            'h1',
+            {
+              candidateEvaluationId: 'eval_h1',
+              finalScore: 90,
+              explainability: exp,
+              recommendation: rec,
+            },
+          ],
+        ]),
+      });
+      expect(item.suggestedOpener).toBeNull();
+      expect(openerGenerate).not.toHaveBeenCalled();
+      expect(openerCacheFind).not.toHaveBeenCalled();
+    });
+
+    it('swallows generator rejection without throwing', async () => {
+      openerCacheFind.mockResolvedValue(null);
+      openerGenerate.mockRejectedValue(new Error('llm down'));
+      const item = makeItem('h1', 'HIGH', 90);
+      await expect(
+        (service as any).attachSuggestedOpenersToListItems({
+          viewerProfileId,
+          viewerEvaluationId: 'eval_v1',
+          matches: [item],
+          whyMetaByCandidateId: new Map([
+            [
+              'h1',
+              {
+                candidateEvaluationId: 'eval_h1',
+                finalScore: 90,
+                explainability: exp,
+                recommendation: rec,
+              },
+            ],
+          ]),
+        }),
+      ).resolves.toBeUndefined();
+      expect(item.suggestedOpener).toBeNull();
     });
   });
 
@@ -2685,6 +3069,8 @@ describe('MeMatchesService', () => {
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { generate: jest.fn().mockResolvedValue({ opener: null, source: 'none' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
 
@@ -2718,6 +3104,8 @@ describe('MeMatchesService', () => {
         { track: jest.fn() } as unknown as AnalyticsService,
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { generate: jest.fn().mockResolvedValue({ opener: null, source: 'none' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );
@@ -2762,6 +3150,8 @@ describe('MeMatchesService', () => {
         { track: jest.fn() } as unknown as AnalyticsService,
         { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
         { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        { generate: jest.fn().mockResolvedValue({ opener: null, source: 'none' }) } as never,
         { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
       { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
       );

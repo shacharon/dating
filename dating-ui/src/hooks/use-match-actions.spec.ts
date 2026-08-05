@@ -296,4 +296,29 @@ describe('useMatchActions', () => {
 
     expect(api.passMatch).not.toHaveBeenCalled();
   });
+
+  it('should allow LIKE to overwrite PASS (opener Like & use)', async () => {
+    const mockResult = {
+      id: 'action-1',
+      actorUserId: 'user-1',
+      targetUserId: 'user-2',
+      targetProfileIdSnapshot: 'profile-1',
+      action: 'LIKE' as const,
+      createdAt: '2024-01-01T00:00:00Z',
+      mutualMatch: false,
+      conversationId: null,
+    };
+    vi.mocked(api.likeMatch).mockResolvedValue(mockResult);
+
+    const { result } = renderHook(() =>
+      useMatchActions({ matchId: mockMatchId, initialAction: 'PASS' }),
+    );
+
+    await act(async () => {
+      await result.current.like();
+    });
+
+    expect(api.likeMatch).toHaveBeenCalledWith(mockMatchId);
+    expect(result.current.currentAction).toBe('LIKE');
+  });
 });

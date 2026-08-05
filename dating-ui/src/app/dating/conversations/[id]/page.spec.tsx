@@ -119,7 +119,8 @@ vi.mock('@/contexts/conversation-unread-context', () => ({
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: 'mutual_abc' }),
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockPush }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';

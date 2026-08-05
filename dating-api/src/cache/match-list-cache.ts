@@ -1,7 +1,7 @@
 /** Cursor / cache helpers for ranked match list pagination (no Nest imports). */
 
 export const MATCH_LIST_CACHE_TTL_SECONDS = 3600;
-export const MATCH_LIST_CACHE_VERSION = 1 as const;
+export const MATCH_LIST_CACHE_VERSION = 3 as const;
 
 export function matchListCacheKey(userId: string): string {
   return `match:list:${userId}`;

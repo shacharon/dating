@@ -83,6 +83,7 @@ export const enCopy: AppCopySchema = {
         "Refresh started — scores will update once analysis completes.",
       refreshFailed: "Refresh failed",
       loadFailed: "Failed to load matches",
+      listBuilding: "Finding your matches…",
       photoGate: {
         title: "Add a photo to see matches",
         body: "You need at least one approved photo before we can show people here.",
@@ -131,6 +132,10 @@ export const enCopy: AppCopySchema = {
         whyHeading: "Why we matched",
         whyEmpty: "No explanation available yet.",
         viewProfile: "View profile",
+        openerHeading: "Try this",
+        useOpener: "Like & use opener",
+        openerWaiting: "Opener ready when you match",
+        useOpenerAria: (name) => `Like ${name} and use suggested opener`,
       },
       priority: {
         highTitle: "Message these first",

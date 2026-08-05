@@ -64,3 +64,23 @@
 ```text
 --agent 3 sprint 41 story 3
 ```
+
+---
+
+## Story 4 — Browse WHY TLDR from match narrative
+
+```text
+--agent 0 sprint 41 story 4
+```
+
+```text
+--agent 1 sprint 41 story 4
+```
+
+```text
+--agent 2 sprint 41 story 4
+```
+
+```text
+--agent 3 sprint 41 story 4
+```

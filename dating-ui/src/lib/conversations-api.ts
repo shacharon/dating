@@ -301,9 +301,18 @@ export async function fetchConversationMessages(
 export async function sendConversationMessage(
   conversationId: string,
   text: string,
+  opts?: { openerAttribution?: { originalOpener: string } },
 ): Promise<MessageDto> {
   const base = getApiBase();
   const path = `/api/v1/me/conversations/${encodeURIComponent(conversationId)}/messages`;
+  const body: {
+    text: string;
+    openerAttribution?: { originalOpener: string };
+  } = { text };
+  const original = opts?.openerAttribution?.originalOpener?.trim();
+  if (original) {
+    body.openerAttribution = { originalOpener: original };
+  }
   let res: Response;
   try {
     res = await fetch(`${base}${path}`, {
@@ -313,7 +322,7 @@ export async function sendConversationMessage(
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new Error(apiUnreachableMessage(base, path));

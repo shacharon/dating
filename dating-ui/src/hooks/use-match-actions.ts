@@ -51,7 +51,11 @@ export function useMatchActions({
 
   const recordAction = useCallback(
     async (action: ActionType, errorMessage: string): Promise<void> => {
-      if (actionLoading || currentAction != null) return;
+      // Allow LIKE to overwrite PASS so browse “Like & use opener” works after a pass
+      // (Architect Story 2: yourAction null/PASS).
+      const likeOverPass =
+        action === 'LIKE' && currentAction === 'PASS';
+      if (actionLoading || (currentAction != null && !likeOverPass)) return;
 
       setError(null);
       setActionLoading(true);

@@ -83,7 +83,14 @@ describe('MeConversationMessagesService', () => {
     }),
   };
 
+  const openerTracking = {
+    trackOpenerSentBestEffort: jest.fn().mockResolvedValue(undefined),
+    trackOpenerReplyBestEffort: jest.fn().mockResolvedValue(undefined),
+    markLifecycleBestEffort: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: MeConversationMessagesService;
+  let analytics: AnalyticsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -116,7 +123,7 @@ describe('MeConversationMessagesService', () => {
     jest
       .spyOn(contentModerationTypes, 'isContentModerationEnabled')
       .mockReturnValue(true);
-    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
+    analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationMessagesService(
       prisma,
       conversations,
@@ -127,6 +134,7 @@ describe('MeConversationMessagesService', () => {
       analytics,
       moderation as unknown as OpenAIModerationClient,
       contentViolations as unknown as ContentViolationService,
+      openerTracking as never,
     );
     (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(
       {
@@ -195,6 +203,53 @@ describe('MeConversationMessagesService', () => {
       senderUserId: sessionUserId,
       messageId: 'msg_abc',
     });
+    expect(openerTracking.trackOpenerReplyBestEffort).toHaveBeenCalled();
+    expect(openerTracking.trackOpenerSentBestEffort).not.toHaveBeenCalled();
+    expect(analytics.track).toHaveBeenCalledWith(
+      sessionUserId,
+      expect.any(String),
+      expect.objectContaining({
+        wasOpenerPrefill: false,
+        wasOpenerEdited: false,
+      }),
+    );
+  });
+
+  it('attributes opener send when originalOpener provided', async () => {
+    const createdAt = new Date('2026-05-31T16:00:00.000Z');
+    (prisma.message.create as jest.Mock).mockResolvedValue({
+      id: 'msg_opener',
+      conversationId,
+      senderId: sessionUserId,
+      text: 'Into hiking — edited',
+      createdAt,
+      status: MessageStatus.SENT,
+    });
+
+    await service.sendMessage(sessionUserId, conversationId, 'Into hiking — edited', {
+      originalOpener: 'Into hiking?',
+    });
+
+    expect(openerTracking.trackOpenerSentBestEffort).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: 'msg_opener',
+        originalOpener: 'Into hiking?',
+        otherUserId,
+      }),
+    );
+    expect(analytics.track).toHaveBeenCalledWith(
+      sessionUserId,
+      expect.any(String),
+      expect.objectContaining({
+        wasOpenerPrefill: true,
+        wasOpenerEdited: true,
+      }),
+    );
+    const props = (analytics.track as jest.Mock).mock.calls[0][2] as Record<
+      string,
+      unknown
+    >;
+    expect(JSON.stringify(props)).not.toMatch(/hiking/i);
   });
 
   it('returns MessageDto when publishToUsers throws', async () => {

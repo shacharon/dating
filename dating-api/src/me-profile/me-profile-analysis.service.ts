@@ -204,6 +204,7 @@ export function latestEvaluationForProfile(
 
 /** Payload shape used by `MeMatchesService` when batch-loading latest evals. */
 export type LatestEvaluationForMatchPick = {
+  id: string;
   profileId: string;
   evaluationJson: Prisma.JsonValue;
   createdAt: Date;
@@ -212,6 +213,7 @@ export type LatestEvaluationForMatchPick = {
 };
 
 type LatestEvalRawRow = {
+  id: string;
   profileId: string;
   evaluationJson: Prisma.JsonValue;
   createdAt: Date | string;
@@ -237,6 +239,7 @@ export async function latestEvaluationsForProfileIds(
     const chunk = unique.slice(i, i + LATEST_EVAL_BATCH_SIZE);
     const rows = await prisma.$queryRaw<LatestEvalRawRow[]>(Prisma.sql`
       SELECT DISTINCT ON ("profileId")
+        "id",
         "profileId",
         "evaluationJson",
         "createdAt",
@@ -247,6 +250,7 @@ export async function latestEvaluationsForProfileIds(
     `);
     for (const row of rows) {
       out.set(row.profileId, {
+        id: row.id,
         profileId: row.profileId,
         evaluationJson: row.evaluationJson,
         createdAt:

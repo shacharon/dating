@@ -94,6 +94,16 @@ export interface MeMatchItemDto {
   priorityScore?: number | null;
   /** Sprint 41 — HIGH ≥85, GOOD ≥70, OTHER otherwise. */
   priorityTier?: 'HIGH' | 'GOOD' | 'OTHER';
+  /**
+   * Sprint 41 Story 4 — short WHY for browse (extract of match narrative).
+   * Null/absent when no cached narrative yet.
+   */
+  whyTldr?: string | null;
+  /**
+   * Sprint 42 — LLM conversation opener for HIGH matches.
+   * Null/absent when not HIGH or generation failed.
+   */
+  suggestedOpener?: string | null;
   /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
   profileAnalysisStale?: boolean;
   explainability: MatchExplainabilityDto | null;
@@ -121,6 +131,8 @@ export interface MeMatchesListDto {
   matches?: MeMatchItemDto[];
   nextCursor?: string | null;
   hasMore?: boolean;
+  /** Ranks empty; rebuild enqueued — poll briefly before treating as empty. */
+  listBuilding?: boolean;
 }
 
 /** Response shape of `GET /api/v1/me/matches/:id`. */
@@ -468,3 +480,26 @@ export async function upsertMatchFeedback(
   }
   return readJson<MatchFeedbackDto>(res);
 }
+
+/**
+ * Sprint 42 Story 3 — best-effort opener lifecycle (displayed | used).
+ * Ignores network/HTTP errors (never blocks UI).
+ */
+export function postOpenerLifecycleBestEffort(
+  candidateProfileId: string,
+  event: 'displayed' | 'used',
+): void {
+  const id = candidateProfileId.trim();
+  if (!id) return;
+  const base = getApiBase();
+  const path = `/api/v1/me/matches/${encodeURIComponent(id)}/opener-lifecycle`;
+  void fetch(`${base}${path}`, {
+    method: 'POST',
+    ...credFetch,
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ event }),
+  }).catch(() => {
+    // ignore
+  });
+}
+

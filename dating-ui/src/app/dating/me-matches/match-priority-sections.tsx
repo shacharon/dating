@@ -64,18 +64,22 @@ function useSectionViewed(tier: MatchPriorityTier, enabled: boolean) {
 function CollapsibleSection({
   tier,
   title,
+  description,
   countLabel,
   count,
   open,
   onOpenChange,
+  accent,
   children,
 }: {
-  tier: 'GOOD' | 'OTHER';
+  tier: MatchPriorityTier;
   title: string;
+  description?: string;
   countLabel: string;
   count: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  accent?: boolean;
   children: ReactNode;
 }) {
   const sectionRef = useSectionViewed(tier, count > 0);
@@ -85,33 +89,51 @@ function CollapsibleSection({
     <section
       ref={sectionRef}
       data-testid={`match-priority-section-${tier.toLowerCase()}`}
-      className="space-y-3"
+      className={
+        accent
+          ? 'space-y-3 border-l-2 border-emerald-500 pl-4'
+          : 'space-y-3'
+      }
     >
-      <button
-        type="button"
-        data-testid={`match-priority-toggle-${tier.toLowerCase()}`}
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => {
-          const next = !open;
-          onOpenChange(next);
-          if (next) {
-            emitSectionEvent('match.priority_section_expanded', tier);
-          }
-        }}
-        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-offset-zinc-950"
-      >
-        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          {title}{' '}
-          <span className="font-medium text-zinc-500 dark:text-zinc-400">
-            {countLabel}
+      {/* Sticky so open sections with tall browse cards stay closable without scrolling to top. */}
+      <div className="sticky top-0 z-10 -mx-1 bg-zinc-50/95 px-1 py-1 backdrop-blur-sm dark:bg-zinc-950/95">
+        <button
+          type="button"
+          data-testid={`match-priority-toggle-${tier.toLowerCase()}`}
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => {
+            const next = !open;
+            onOpenChange(next);
+            if (next) {
+              emitSectionEvent('match.priority_section_expanded', tier);
+            }
+          }}
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-offset-zinc-950"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              {title}{' '}
+              <span className="font-medium text-zinc-500 dark:text-zinc-400">
+                {countLabel}
+              </span>
+            </span>
+            {description ? (
+              <span className="mt-0.5 block text-xs font-normal text-zinc-500 dark:text-zinc-400">
+                {description}
+              </span>
+            ) : null}
           </span>
-        </span>
-        <span className="text-zinc-400" aria-hidden>
-          {open ? '▾' : '▸'}
-        </span>
-      </button>
-      <div id={panelId} hidden={!open} data-testid={`match-priority-panel-${tier.toLowerCase()}`}>
+          <span className="shrink-0 text-zinc-400" aria-hidden>
+            {open ? '▾' : '▸'}
+          </span>
+        </button>
+      </div>
+      <div
+        id={panelId}
+        hidden={!open}
+        data-testid={`match-priority-panel-${tier.toLowerCase()}`}
+      >
         {open ? children : null}
       </div>
     </section>
@@ -130,10 +152,10 @@ export function MatchPrioritySections({
   renderBlocked,
 }: Props) {
   const { high, good, other, blocked } = groupMatchesByPriority(matches);
+  const [highOpen, setHighOpen] = useState(true);
   const [goodOpen, setGoodOpen] = useState(false);
   const [otherOpen, setOtherOpen] = useState(false);
   const priorityCopy = listCopy.priority;
-  const highRef = useSectionViewed('HIGH', high.length > 0);
 
   let browseIndex = 0;
 
@@ -161,24 +183,18 @@ export function MatchPrioritySections({
   return (
     <div className="space-y-8" data-testid="match-priority-sections">
       {high.length > 0 && (
-        <section
-          ref={highRef}
-          data-testid="match-priority-section-high"
-          className="space-y-3 border-l-2 border-emerald-500 pl-4"
+        <CollapsibleSection
+          tier="HIGH"
+          title={priorityCopy.highTitle}
+          description={priorityCopy.highDescription}
+          countLabel={priorityCopy.count(high.length)}
+          count={high.length}
+          open={highOpen}
+          onOpenChange={setHighOpen}
+          accent
         >
-          <header>
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {priorityCopy.highTitle}{' '}
-              <span className="font-medium text-zinc-500 dark:text-zinc-400">
-                {priorityCopy.count(high.length)}
-              </span>
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              {priorityCopy.highDescription}
-            </p>
-          </header>
           {renderCards(high)}
-        </section>
+        </CollapsibleSection>
       )}
 
       {good.length > 0 && (

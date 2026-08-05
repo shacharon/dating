@@ -451,6 +451,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
           ...baseMatch,
           // Runtime extra field (API should omit; UI must still ignore).
           matchNarrative: longNarrative.repeat(8),
+          whyTldr: 'Clear overlap: real depth and presence.',
           explainability: {
             positiveChips: ['Emotional depth'],
             reasonShort: 'You share real overlap on Ambition alignment, Emotional depth',
@@ -460,7 +461,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
               positiveChips: ['Emotional depth'],
               reasonShort: 'You share real overlap on Ambition alignment, Emotional depth',
             },
-            primaryTakeaway: 'Clear overlap: real depth and presence.',
+            primaryTakeaway: 'Coach template ignored',
             suggestedNextAction: 'Worth a closer look',
           },
         } as typeof baseMatch & { matchNarrative: string },
@@ -478,12 +479,14 @@ describe('MeMatchesPage (yourAction badges)', () => {
     unmount();
   });
 
-  it('prefers primaryTakeaway over chip-jargon reasonShort on list', async () => {
+  it('prefers whyTldr over chip-jargon reasonShort on list', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [
         {
           ...baseMatch,
+          whyTldr:
+            'You both share a drive for goals and real depth and presence.',
           explainability: {
             positiveChips: ['Ambition alignment', 'Emotional depth'],
             reasonShort:
@@ -495,8 +498,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
               reasonShort:
                 'You share real overlap on Ambition alignment, Emotional depth, and …',
             },
-            primaryTakeaway:
-              'You both share a drive for goals and real depth and presence.',
+            primaryTakeaway: 'Coach template ignored',
             suggestedNextAction: 'Worth a closer look',
           },
         },
@@ -519,7 +521,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
     unmount();
   });
 
-  it('omits one-liner when takeaway and chips are empty (never reasonShort)', async () => {
+  it('omits one-liner when whyTldr is empty (never reasonShort)', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [
@@ -687,9 +689,10 @@ describe('MeMatchesPage (i18n)', () => {
         {
           ...baseMatch,
           yourAction: 'LIKE' as const,
+          whyTldr: 'Clear overlap: real depth and presence.',
           recommendation: {
             explainability: baseMatch.explainability,
-            primaryTakeaway: 'Clear overlap: real depth and presence.',
+            primaryTakeaway: '',
             suggestedNextAction: 'Next',
           },
         },
@@ -721,7 +724,7 @@ describe('MeMatchesPage (i18n)', () => {
     });
   });
 
-  it('still renders API list takeaway in English when locale is he', async () => {
+  it('still renders API whyTldr in English when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
     render(<MeMatchesPage />);
@@ -743,7 +746,7 @@ describe('MeMatchesPage (priority sections)', () => {
     cleanup();
   });
 
-  it('shows HIGH section expanded and omits empty GOOD', async () => {
+  it('shows HIGH section expanded by default and omits empty GOOD', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [
@@ -763,11 +766,23 @@ describe('MeMatchesPage (priority sections)', () => {
       expect(screen.getByTestId('match-priority-section-high')).toBeTruthy();
     });
     expect(screen.getByText(/Message these first/)).toBeTruthy();
+    expect(
+      screen.getByTestId('match-priority-toggle-high').getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(
+      screen.getByTestId('match-priority-panel-high').hasAttribute('hidden'),
+    ).toBe(false);
     expect(screen.getByTestId('match-browse-card')).toBeTruthy();
     expect(screen.getByTestId('match-browse-score-badge').textContent).toBe(
       '90%',
     );
     expect(screen.queryByTestId('match-priority-section-good')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('match-priority-toggle-high'));
+    expect(
+      screen.getByTestId('match-priority-panel-high').hasAttribute('hidden'),
+    ).toBe(true);
+    expect(screen.queryByTestId('match-browse-card')).toBeNull();
   });
 
   it('collapses GOOD by default and expands on toggle', async () => {
@@ -808,6 +823,13 @@ describe('MeMatchesPage (priority sections)', () => {
         }),
       }),
     );
+
+    // Can close again (toggle is sticky so it stays reachable while scrolled).
+    fireEvent.click(screen.getByTestId('match-priority-toggle-good'));
+    expect(
+      screen.getByTestId('match-priority-panel-good').hasAttribute('hidden'),
+    ).toBe(true);
+    expect(screen.queryByText('GoodOne')).toBeNull();
   });
 
   it('keeps hard-blocked outside priority card stacks', async () => {

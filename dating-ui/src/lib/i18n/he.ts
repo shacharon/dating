@@ -76,6 +76,7 @@ export const heCopy: AppCopySchema = {
       refreshStarted: "הרענון התחיל — הציונים יתעדכנו עם סיום הניתוח.",
       refreshFailed: "הרענון נכשל",
       loadFailed: "לא ניתן לטעון התאמות",
+      listBuilding: "מחפשים התאמות…",
       photoGate: {
         title: "הוסיפו תמונה כדי לראות התאמות",
         body: "נדרשת לפחות תמונה מאושרת אחת לפני שנוכל להציג אנשים כאן.",
@@ -120,6 +121,10 @@ export const heCopy: AppCopySchema = {
         whyHeading: "למה התאמנו",
         whyEmpty: "עדיין אין הסבר.",
         viewProfile: "צפייה בפרופיל",
+        openerHeading: "נסו את זה",
+        useOpener: "לייק ושימוש בפתיח",
+        openerWaiting: "הפתיח מוכן כשתתאימו",
+        useOpenerAria: (name) => `לייק ל-${name} ושימוש בפתיח המוצע`,
       },
       priority: {
         highTitle: "כתבו לאלה קודם",

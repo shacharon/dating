@@ -104,6 +104,11 @@ export const ErrorCodes = {
   ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED:
     'ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED',
 
+  /** Sprint 42 Story 3 — opener lifecycle / send / reply tracking failed (best-effort). */
+  OPENER_TRACKING_BEST_EFFORT_FAILED: 'OPENER_TRACKING_BEST_EFFORT_FAILED',
+  /** Sprint 42 Story 3 — opener lifecycle endpoint accepted (always 204). */
+  OPENER_LIFECYCLE_OK: 'OPENER_LIFECYCLE_OK',
+
   /** Sprint 4 Story 1 — messaging WebSocket connected. */
   MESSAGING_WS_CONNECT_OK: 'MESSAGING_WS_CONNECT_OK',
   /** Sprint 4 Story 1 — messaging WebSocket disconnected. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { MAX_MESSAGE_TEXT_LENGTH } from '@/lib/conversation-message-limits';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import type { ContentModerationDetails } from '@/lib/content-moderation-error';
@@ -16,7 +16,18 @@ type Props = {
   clearSendError: () => void;
   sendMessage: (content: string) => Promise<void>;
   listRef: RefObject<HTMLDivElement | null>;
+  /** Sprint 42 — applied once on mount from `?starter=`. */
+  initialDraft?: string;
+  /** Called once after initialDraft is applied. */
+  onInitialDraftApplied?: (draft: string) => void;
 };
+
+function clampDraft(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  if (trimmed.length <= MAX_MESSAGE_TEXT_LENGTH) return trimmed;
+  return trimmed.slice(0, MAX_MESSAGE_TEXT_LENGTH);
+}
 
 /**
  * Message draft composer: char limit, Enter-to-send, moderation/send errors.
@@ -31,8 +42,23 @@ export function ConversationMessageComposer({
   clearSendError,
   sendMessage,
   listRef,
+  initialDraft,
+  onInitialDraftApplied,
 }: Props) {
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(() =>
+    initialDraft ? clampDraft(initialDraft) : '',
+  );
+  const appliedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const clamped = initialDraft ? clampDraft(initialDraft) : '';
+    if (!clamped) return;
+    if (appliedKeyRef.current === clamped) return;
+    appliedKeyRef.current = clamped;
+    setDraft(clamped);
+    onInitialDraftApplied?.(clamped);
+  }, [initialDraft, onInitialDraftApplied]);
+
   const draftTrimmed = draft.trim();
   const overLimit = draft.length > MAX_MESSAGE_TEXT_LENGTH;
   const canSend =
@@ -93,6 +119,7 @@ export function ConversationMessageComposer({
       </label>
       <textarea
         id="conversation-message-input"
+        data-testid="conversation-message-input"
         rows={3}
         value={draft}
         onChange={(e) => {

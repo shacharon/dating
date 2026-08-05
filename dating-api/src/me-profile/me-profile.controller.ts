@@ -31,7 +31,7 @@ import {
   CreateMeProfileDto,
   PatchMeProfileDto,
 } from './me-profile.dto';
-import { SendConversationMessageDto, parseMessageListLimit } from './me-conversation-messages.dto';
+import { SendConversationMessageDto, OpenerLifecycleDto, parseMessageListLimit } from './me-conversation-messages.dto';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { CreateMatchActionDto } from './me-match-actions.dto';
 import { UpsertMatchFeedbackDto } from './me-match-feedback.dto';
@@ -47,6 +47,7 @@ import { parseConversationListLimit } from './dto/me-conversations-list-query.dt
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 import { ProfileQualityService } from './profile-quality.service';
 import { UsersService } from '../users/users.service';
+import { OpenerTrackingService } from '../matches/conversation-starter';
 
 /**
  * Authenticated product profile (1:1 with `User`). User id is always from the session — never from the client path or body.
@@ -63,6 +64,7 @@ export class MeProfileController {
     private readonly matchFeedback: MeMatchFeedbackService,
     private readonly conversations: MeConversationsService,
     private readonly conversationMessages: MeConversationMessagesService,
+    private readonly openerTracking: OpenerTrackingService,
     private readonly obs: StructuredObservabilityService,
     private readonly users: UsersService,
   ) {}
@@ -163,7 +165,34 @@ export class MeProfileController {
     @Param('id') id: string,
     @Body() body: SendConversationMessageDto,
   ) {
-    return this.conversationMessages.sendMessage(user.id, id, body.text);
+    return this.conversationMessages.sendMessage(
+      user.id,
+      id,
+      body.text,
+      body.openerAttribution,
+    );
+  }
+
+  /**
+   * Sprint 42 Story 3 — best-effort opener lifecycle (displayed | used). Always 204.
+   */
+  @Post('matches/:id/opener-lifecycle')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UsePipes(MeProfileValidationPipe)
+  async trackOpenerLifecycle(
+    @CurrentUser() user: AuthMeResponseDto,
+    @Param('id') candidateProfileId: string,
+    @Body() body: OpenerLifecycleDto,
+  ): Promise<void> {
+    await this.openerTracking.markLifecycleBestEffort({
+      sessionUserId: user.id,
+      candidateProfileId: candidateProfileId.trim(),
+      event: body.event,
+    });
+    this.obs.trace(
+      `opener lifecycle event=${body.event} candidateProfileId=${candidateProfileId}`,
+      ErrorCodes.OPENER_LIFECYCLE_OK,
+    );
   }
 
   /**

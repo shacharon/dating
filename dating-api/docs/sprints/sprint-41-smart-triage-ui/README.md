@@ -1,6 +1,6 @@
 # Sprint 41 — Smart Triage UI (P0 Product Pivot)
 
-**Status:** 🚧 In progress (Stories 01–02 Done; Story 03 engineering ready — human validation pending)  
+**Status:** 🚧 In progress (Stories 01–02 Done; Story 03 engineering ready — human validation pending; Story 04 Done)  
 **Depends on:** Sprint 40 Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)
 
@@ -38,8 +38,9 @@ Flip the information hierarchy: let users swipe on photos naturally (like Tinder
 | 01 | [Photo-first match browse UI](./STORY_01_photo_first_browse.md) | P0 | 2d | Done |
 | 02 | [Match priority ranking backend + frontend](./STORY_02_priority_ranking.md) | P0 | 2d | Done |
 | 03 | [User validation testing](./STORY_03_validation_testing.md) | P0 | 1d | Engineering ready — human PENDING |
+| 04 | [Browse WHY TLDR from match narrative](./STORY_04_why_tldr_from_narrative.md) | P0 | 2d | Done |
 
-**Order:** 01 → 02 → 03 (sequential: UI foundation, then intelligence, then validate)
+**Order:** 01 → 02 → 03 (validate gate). Story 04 can run in parallel with 03 human sessions (depends on Sprint 22 narrative, not on validation PASS).
 
 ---
 
@@ -66,10 +67,14 @@ Flip the information hierarchy: let users swipe on photos naturally (like Tinder
 - Implement priority ranking logic (reuse existing `finalScore`)
 - No algorithm changes (just surfacing what exists)
 
-### No Changes
+### No Changes (Stories 01–03)
 - Database schema (use existing scores)
 - Match algorithm (Sprint 40 stages)
 - LLM narratives (just repositioned in UI)
+
+### Story 04 addendum
+- Browse one-liner becomes TLDR of `matchNarrative` (same WHY as profile)
+- Kill hardcoded list takeaway templates; optional `MatchNarrativeCache` TLDR column + HIGH eager generate
 
 ---
 

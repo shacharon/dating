@@ -2,8 +2,8 @@ import { buildMatchRecommendation } from './match-recommendation';
 import type { MatchExplainabilityDto } from './match-explainability';
 
 describe('buildMatchRecommendation (refined rules)', () => {
-  describe('multi-chip takeaway', () => {
-    it('uses top 2 chips when ≥2 chips available', () => {
+  describe('actionable takeaway', () => {
+    it('uses decide line when only chips (no interest/place)', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: ['Emotional depth', 'Direct communication', 'Social rhythm'],
         reasonShort: 'Strong alignment on emotional depth, direct communication, and social rhythm.',
@@ -16,14 +16,11 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'test-1',
       });
 
-      expect(result.primaryTakeaway).toContain(
-        'real depth and presence and being straight with each other',
-      );
-      expect(result.primaryTakeaway.toLowerCase()).not.toContain('social rhythm');
+      expect(result.primaryTakeaway).toBe('This one feels like a real match — say hello.');
       expect(result.primaryTakeaway.toLowerCase()).not.toContain('emotional depth');
     });
 
-    it('uses single chip when exactly 1 chip', () => {
+    it('uses decide line for single chip without interest', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: ['Ambition alignment'],
         reasonShort: 'Strong alignment on ambition.',
@@ -36,14 +33,13 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'test-2',
       });
 
-      expect(result.primaryTakeaway).toContain('a drive for goals');
+      expect(result.primaryTakeaway).toBe('This one feels like a real match — say hello.');
       expect(result.primaryTakeaway.toLowerCase()).not.toContain(
         'ambition alignment',
       );
-      expect(result.primaryTakeaway).not.toContain(' and ');
     });
 
-    it('extracts hint from reasonShort when 0 chips', () => {
+    it('uses decide band when 0 chips', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: [],
         reasonShort: 'Only partial signal shows through; nothing is reading as a convincing shared story yet.',
@@ -57,13 +53,14 @@ describe('buildMatchRecommendation (refined rules)', () => {
       });
 
       expect(result.primaryTakeaway).toBe(
-        'A few touchpoints — open to see why.',
+        "Thin fit so far — only dig in if you're curious.",
       );
     });
 
-    it('uses band line when 0 chips (ignores reasonShort keywords)', () => {
+    it('uses tension line when tension present and no interest', () => {
       const explainability: MatchExplainabilityDto = {
         positiveChips: [],
+        tensionChip: 'Emotional depth gap',
         reasonShort: 'Main tension: emotional depth gap.',
       };
 
@@ -75,7 +72,7 @@ describe('buildMatchRecommendation (refined rules)', () => {
       });
 
       expect(result.primaryTakeaway).toBe(
-        'A few touchpoints — open to see why.',
+        'Heads up on emotional depth gap — read their profile before you write.',
       );
     });
   });
@@ -246,8 +243,8 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'existing-1',
       });
 
-      expect(result.primaryTakeaway).toContain(
-        'matching social energy and a drive for goals',
+      expect(result.primaryTakeaway).toBe(
+        'Heads up on closeness vs space — read their profile before you write.',
       );
       expect(result.caution).toBe('Watch for closeness vs space.');
       expect(result.suggestedNextAction).toBe('Start a conversation');
@@ -266,8 +263,8 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'existing-2',
       });
 
-      expect(result.primaryTakeaway).toContain(
-        'space and togetherness balance and a similar daily pace',
+      expect(result.primaryTakeaway).toBe(
+        "There's something here — open their profile and see.",
       );
       expect(result.caution).toBeUndefined();
       expect(result.suggestedNextAction).toBe('Review profile and message');
@@ -287,7 +284,9 @@ describe('buildMatchRecommendation (refined rules)', () => {
         stableId: 'existing-3',
       });
 
-      expect(result.primaryTakeaway).toContain('strong mutual attraction');
+      expect(result.primaryTakeaway).toBe(
+        'Heads up on emotional depth gap — read their profile before you write.',
+      );
       expect(result.caution).toBe('Watch for emotional depth gap.');
       expect(result.suggestedNextAction).toBe('Worth a closer look');
     });

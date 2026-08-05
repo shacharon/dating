@@ -63,40 +63,39 @@ describe('match-display browse helpers', () => {
     ).toBe('Tel Aviv');
   });
 
-  it('prefers takeaway then shared note then first chip', () => {
+  it('uses whyTldr only for browse one-liner (no template takeaway / chips)', () => {
     expect(
       matchBrowseOneLiner({
         ...baseItem,
+        whyTldr: 'Shared pace of life shows up clearly.',
         recommendation: {
           explainability: {
             positiveChips: ['Chip'],
             reasonShort: 'Short',
           },
-          primaryTakeaway: 'Takeaway line',
+          primaryTakeaway: 'Coach template should be ignored',
           suggestedNextAction: 'Next',
         },
       }),
-    ).toBe('Takeaway line');
+    ).toBe('Shared pace of life shows up clearly.');
 
     expect(
       matchBrowseOneLiner({
         ...baseItem,
+        recommendation: {
+          explainability: {
+            positiveChips: ['Chip A'],
+            reasonShort: 'Short',
+          },
+          primaryTakeaway: 'Say hello template',
+          suggestedNextAction: 'Next',
+        },
         explainability: {
           positiveChips: ['Chip A'],
           reasonShort: 'Short',
           sharedInterestNote: 'You both enjoy hiking.',
         },
       }),
-    ).toMatch(/hiking/i);
-
-    expect(
-      matchBrowseOneLiner({
-        ...baseItem,
-        explainability: {
-          positiveChips: ['Chip A'],
-          reasonShort: 'Short',
-        },
-      }),
-    ).toBe('Chip A');
+    ).toBeNull();
   });
 });

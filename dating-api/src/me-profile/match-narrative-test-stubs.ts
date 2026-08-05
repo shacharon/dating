@@ -3,6 +3,7 @@
  * Keeps integration tests off the live OpenAI path while still exercising cache DI.
  */
 import { MATCH_NARRATIVE_PROMPT_VERSION } from '../matches/match-narrative';
+import { buildNarrativeTldr } from '../matches/match-narrative/match-narrative-tldr';
 
 const COMPOUND_UNIQUE =
   'viewerProfileId_candidateProfileId_viewerEvaluationId_candidateEvaluationId_promptVersion';
@@ -23,9 +24,11 @@ function cacheKey(parts: {
   ].join('\0');
 }
 
+type StoreRow = { narrative: string; narrativeTldr: string | null };
+
 /** In-memory Prisma delegate for `MatchNarrativeCache`. */
 export function createMatchNarrativeCachePrismaMock() {
-  const store = new Map<string, string>();
+  const store = new Map<string, StoreRow>();
   return {
     store,
     matchNarrativeCache: {
@@ -33,18 +36,53 @@ export function createMatchNarrativeCachePrismaMock() {
         async ({
           where,
         }: {
-          where: Record<string, {
-            viewerProfileId: string;
-            candidateProfileId: string;
-            viewerEvaluationId: string;
-            candidateEvaluationId: string;
-            promptVersion: string;
-          }>;
+          where: Record<
+            string,
+            {
+              viewerProfileId: string;
+              candidateProfileId: string;
+              viewerEvaluationId: string;
+              candidateEvaluationId: string;
+              promptVersion: string;
+            }
+          >;
         }) => {
           const parts = where[COMPOUND_UNIQUE];
           if (!parts) return null;
-          const narrative = store.get(cacheKey(parts));
-          return narrative != null ? { narrative } : null;
+          const row = store.get(cacheKey(parts));
+          return row != null
+            ? { narrative: row.narrative, narrativeTldr: row.narrativeTldr }
+            : null;
+        },
+      ),
+      update: jest.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: Record<
+            string,
+            {
+              viewerProfileId: string;
+              candidateProfileId: string;
+              viewerEvaluationId: string;
+              candidateEvaluationId: string;
+              promptVersion: string;
+            }
+          >;
+          data: { narrativeTldr?: string };
+        }) => {
+          const parts = where[COMPOUND_UNIQUE];
+          if (!parts) return null;
+          const key = cacheKey(parts);
+          const existing = store.get(key);
+          if (!existing) return null;
+          const next = {
+            ...existing,
+            narrativeTldr: data.narrativeTldr ?? existing.narrativeTldr,
+          };
+          store.set(key, next);
+          return next;
         },
       ),
       upsert: jest.fn(
@@ -52,13 +90,16 @@ export function createMatchNarrativeCachePrismaMock() {
           where,
           create,
         }: {
-          where: Record<string, {
-            viewerProfileId: string;
-            candidateProfileId: string;
-            viewerEvaluationId: string;
-            candidateEvaluationId: string;
-            promptVersion: string;
-          }>;
+          where: Record<
+            string,
+            {
+              viewerProfileId: string;
+              candidateProfileId: string;
+              viewerEvaluationId: string;
+              candidateEvaluationId: string;
+              promptVersion: string;
+            }
+          >;
           create: {
             viewerProfileId: string;
             candidateProfileId: string;
@@ -66,11 +107,18 @@ export function createMatchNarrativeCachePrismaMock() {
             candidateEvaluationId: string;
             promptVersion: string;
             narrative: string;
+            narrativeTldr?: string | null;
             model?: string | null;
           };
         }) => {
           const parts = where[COMPOUND_UNIQUE] ?? create;
-          store.set(cacheKey(parts), create.narrative);
+          store.set(cacheKey(parts), {
+            narrative: create.narrative,
+            narrativeTldr:
+              create.narrativeTldr?.trim() ||
+              buildNarrativeTldr(create.narrative) ||
+              null,
+          });
           return { id: 'narr_cache_row', ...create };
         },
       ),

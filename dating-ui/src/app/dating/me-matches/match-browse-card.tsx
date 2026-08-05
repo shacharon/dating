@@ -4,8 +4,11 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { MatchPhoto } from '@/components/match-photo';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import { postOpenerLifecycleBestEffort } from '@/lib/me-matches-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { emitProductLog } from '@/lib/observability/product-logger';
+import { useMatchActions } from '@/hooks/use-match-actions';
+import { saveOpenerDraft } from '@/lib/conversation-opener-draft';
 import {
   formatBrowseAge,
   matchBrowseLocation,
@@ -14,6 +17,7 @@ import {
 } from './match-display';
 import { MatchBrowseActions } from './match-browse-actions';
 import { MatchWhySection } from './match-why-section';
+import { MatchOpenerSection } from './match-opener-section';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
 import { resolvePriorityTier } from './match-priority';
 
@@ -65,6 +69,22 @@ export function MatchBrowseCard({
   const score =
     m.matchScore != null && Number.isFinite(m.matchScore) ? m.matchScore : null;
   const isHigh = tier === 'HIGH';
+  const opener = m.suggestedOpener?.trim() ?? '';
+  const showOpener = isHigh && Boolean(opener);
+
+  const {
+    like,
+    pass,
+    undo,
+    actionLoading,
+    currentAction,
+    canUndo,
+    error: actionError,
+  } = useMatchActions({
+    matchId: m.id,
+    initialAction: m.yourAction ?? null,
+    onMutualMatch,
+  });
 
   useEffect(() => {
     const node = cardRef.current;
@@ -88,6 +108,27 @@ export function MatchBrowseCard({
     if (open) {
       emitCardViewed(m.id, true);
     }
+  };
+
+  const handleLikeAndUseOpener = async () => {
+    if (!opener) return;
+    saveOpenerDraft({
+      matchProfileId: m.id,
+      opener,
+      savedAt: Date.now(),
+    });
+    emitProductLog({
+      level: 'trace',
+      route: '/dating/me-matches',
+      message: 'conversation.opener_used',
+      meta: {
+        event: 'conversation.opener_used',
+        matchProfileId: m.id,
+        openerLength: opener.length,
+      },
+    });
+    postOpenerLifecycleBestEffort(m.id, 'used');
+    await like();
   };
 
   return (
@@ -167,12 +208,27 @@ export function MatchBrowseCard({
             listCopy={listCopy}
           />
 
+          {showOpener ? (
+            <MatchOpenerSection
+              match={m}
+              browse={listCopy.browse}
+              currentAction={currentAction}
+              actionLoading={actionLoading}
+              onLikeAndUse={handleLikeAndUseOpener}
+            />
+          ) : null}
+
           <MatchBrowseActions
             matchId={m.id}
-            initialAction={m.yourAction}
             detailCopy={detailCopy}
             disabled={false}
-            onMutualMatch={onMutualMatch}
+            currentAction={currentAction}
+            actionLoading={actionLoading}
+            canUndo={canUndo}
+            actionError={actionError}
+            like={like}
+            pass={pass}
+            undo={undo}
           />
 
           <Link
@@ -189,4 +245,3 @@ export function MatchBrowseCard({
     </li>
   );
 }
-

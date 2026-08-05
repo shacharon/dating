@@ -32,4 +32,12 @@ export {
 } from './match-narrative-voice';
 export { MatchNarrativeLlmSchema } from './match-narrative.schema';
 export { MatchNarrativeGenerator } from './match-narrative.generator';
-export { MatchNarrativeCacheService } from './match-narrative-cache.service';
+export {
+  MatchNarrativeCacheService,
+  type MatchNarrativeCacheEntry,
+  type MatchNarrativeCacheKey,
+} from './match-narrative-cache.service';
+export {
+  buildNarrativeTldr,
+  NARRATIVE_TLDR_MAX_CHARS,
+} from './match-narrative-tldr';

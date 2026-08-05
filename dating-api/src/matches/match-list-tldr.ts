@@ -1,38 +1,83 @@
 /**
- * Plain one-line list TLDR from structured chips (Sprint 23 Story 1).
- * Deterministic, no LLM, no chip-label display strings.
+ * Human browse-card one-liner for matches.
+ * Priority: shared interest → place → tension caution → score decide.
+ * Sounds like a friend, not product UX. Deterministic, no LLM.
  */
-
-import { CHIP_TO_TRAIT } from './match-explanation-traits';
 
 export const LIST_TLDR_MAX_CHARS = 120;
 
 export type BuildPlainMatchListTldrInput = {
   finalScore: number;
   positiveChips: readonly string[];
-  /** Reserved for thin-chip path; unused in v1 templates. */
+  /** e.g. "You both enjoy hiking, cooking." from explainability */
   sharedInterestNote?: string;
+  /** Short place label for candidate (city), optional */
+  candidatePlace?: string;
+  /** Short place label for viewer (city), optional */
+  viewerPlace?: string;
+  /** Explainability tension chip label, optional */
+  tensionChip?: string;
 };
 
-function collectListPhrases(positiveChips: readonly string[]): string[] {
-  const phrases: string[] = [];
-  for (const chip of positiveChips) {
-    const meta = CHIP_TO_TRAIT[chip];
-    if (!meta) continue;
-    phrases.push(meta.listPhrase);
-    if (phrases.length >= 2) break;
-  }
-  return phrases;
+function normalizePlace(place: string | undefined): string | null {
+  const t = place?.trim() ?? '';
+  if (t.length <= 1) return null;
+  return t.replace(/,\s*IL\s*$/i, '').trim() || null;
 }
 
-function bandOnlyLine(finalScore: number): string {
+/** Pull hobby labels out of "You both enjoy hiking, cooking." */
+function parseSharedInterestLabels(note: string): string[] {
+  const m = note.match(/you both enjoy\s+(.+?)\.?$/i);
+  if (!m?.[1]) return [];
+  return m[1]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.replace(/_/g, ' '));
+}
+
+function interestOpener(sharedInterestNote: string): string {
+  const labels = parseSharedInterestLabels(sharedInterestNote);
+  if (labels.length >= 2) {
+    return `You're both into ${labels[0]} and ${labels[1]} — ask about that.`;
+  }
+  if (labels.length === 1) {
+    return `You're both into ${labels[0]} — ask about that first.`;
+  }
+  const note = sharedInterestNote.trim().replace(/\.$/, '');
+  if (!note) return '';
+  return `${note} — ask about that.`;
+}
+
+function placeOpener(
+  viewerPlace: string,
+  candidatePlace: string,
+): string | null {
+  const a = normalizePlace(viewerPlace);
+  const b = normalizePlace(candidatePlace);
+  if (!a || !b) return null;
+  if (a.toLowerCase() === b.toLowerCase()) {
+    return `You're both in ${a} — coffee wouldn't be hard.`;
+  }
+  return null;
+}
+
+function tensionLine(tensionChip: string): string {
+  const t = tensionChip.trim().toLowerCase();
+  return `Heads up on ${t} — read their profile before you write.`;
+}
+
+function decideLine(finalScore: number): string {
+  if (finalScore >= 80) {
+    return 'This one feels like a real match — say hello.';
+  }
   if (finalScore >= 60) {
-    return 'Some real overlap — open to see why.';
+    return "There's something here — open their profile and see.";
   }
   if (finalScore >= 40) {
-    return 'A few touchpoints — open to see why.';
+    return "Thin fit so far — only dig in if you're curious.";
   }
-  return 'Limited overlap — open only if curious.';
+  return "Not much clicking yet — skip unless something pulls you in.";
 }
 
 /** Exported for unit tests — hard-cap helper. */
@@ -45,19 +90,29 @@ export function truncateListTldrLine(text: string, maxChars: number): string {
 }
 
 /**
- * One short plain-English line for match list cards.
+ * One short human line for match list cards.
  */
 export function buildPlainMatchListTldr(
   input: BuildPlainMatchListTldrInput,
 ): string {
-  const phrases = collectListPhrases(input.positiveChips);
+  const shared = input.sharedInterestNote?.trim();
   let line: string;
-  if (phrases.length >= 2) {
-    line = `You both share ${phrases[0]} and ${phrases[1]}.`;
-  } else if (phrases.length === 1) {
-    line = `Clear overlap: ${phrases[0]}.`;
+
+  if (shared) {
+    line = interestOpener(shared);
   } else {
-    line = bandOnlyLine(input.finalScore);
+    const place = placeOpener(
+      input.viewerPlace ?? '',
+      input.candidatePlace ?? '',
+    );
+    if (place) {
+      line = place;
+    } else if (input.tensionChip?.trim()) {
+      line = tensionLine(input.tensionChip);
+    } else {
+      line = decideLine(input.finalScore);
+    }
   }
+
   return truncateListTldrLine(line, LIST_TLDR_MAX_CHARS);
 }

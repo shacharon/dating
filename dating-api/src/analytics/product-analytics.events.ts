@@ -5,6 +5,8 @@ export const ProductAnalyticsEvents = {
   MATCH_MUTUAL_CREATED: 'match.mutual_created',
   CONVERSATION_OPENED: 'conversation.opened',
   MESSAGE_SENT: 'message.sent',
+  OPENER_DISPLAYED: 'opener.displayed',
+  OPENER_USED: 'opener.used',
   MESSAGING_WS_CONNECTED: 'messaging.ws_connected',
   MESSAGING_WS_DISCONNECTED: 'messaging.ws_disconnected',
   USER_REPORTED: 'user.reported',

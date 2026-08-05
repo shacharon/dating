@@ -58,11 +58,7 @@ export function MatchWhySection({
               <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
                 {body}
               </p>
-            ) : (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {browse.whyEmpty}
-              </p>
-            )}
+            ) : null}
             {(chips.length > 0 || tension) && (
               <ul className="flex flex-wrap gap-2" data-testid="match-why-chips">
                 {chips.map((chip) => (

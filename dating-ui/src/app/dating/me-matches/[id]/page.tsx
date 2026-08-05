@@ -19,6 +19,11 @@ import { MatchDetailContent } from '@/components/match-detail/match-detail-conte
 import { MatchDetailFeedback } from '@/components/match-detail/match-detail-feedback';
 import { MatchDetailActions } from '@/components/match-detail/match-detail-actions';
 import { MatchDetailModals } from '@/components/match-detail/match-detail-modals';
+import {
+  clearOpenerDraft,
+  conversationUrlWithStarter,
+  readOpenerDraft,
+} from '@/lib/conversation-opener-draft';
 
 export default function MeMatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -177,7 +182,11 @@ export default function MeMatchDetailPage() {
           onDismissCelebration={dismissCelebration}
           onCloseReport={() => setReportOpen(false)}
           onSendMessage={(conversationId) => {
-            router.push(`/dating/conversations/${conversationId}`);
+            const draft = readOpenerDraft();
+            const opener =
+              draft?.matchProfileId === id ? draft.opener : null;
+            if (opener) clearOpenerDraft();
+            router.push(conversationUrlWithStarter(conversationId, opener));
           }}
         />
       ) : null}

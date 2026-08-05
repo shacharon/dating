@@ -40,7 +40,10 @@ export interface UseConversationMessagesReturn {
   messages: MessageDto[];
   loading: boolean;
   error: string | null;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (
+    content: string,
+    opts?: { openerAttribution?: { originalOpener: string } },
+  ) => Promise<void>;
   sending: boolean;
   sendError: string | null;
   sendModerationDetails: ContentModerationDetails | null;
@@ -250,13 +253,20 @@ export function useConversationMessages(
   }, []);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (
+      content: string,
+      opts?: { openerAttribution?: { originalOpener: string } },
+    ) => {
       if (!conversationId || !content.trim()) return;
       setSendError(null);
       setSendModerationDetails(null);
       setSending(true);
       try {
-        const sent = await sendConversationMessage(conversationId, content);
+        const sent = await sendConversationMessage(
+          conversationId,
+          content,
+          opts,
+        );
         setMessages((prev) => appendUniqueMessages(prev, [sent]));
         await new Promise((r) => setTimeout(r, SEND_COOLDOWN_MS));
       } catch (e: unknown) {

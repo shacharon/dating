@@ -15,6 +15,11 @@ import {
   MatchNarrativeCacheService,
   MatchNarrativeGenerator,
 } from '../matches/match-narrative';
+import {
+  ConversationStarterCacheService,
+  ConversationStarterGenerator,
+  OpenerTrackingService,
+} from '../matches/conversation-starter';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { MeConversationsService } from './me-conversations.service';
@@ -87,6 +92,9 @@ import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
     MeProfileValidationPipe,
     MatchNarrativeGenerator,
     MatchNarrativeCacheService,
+    ConversationStarterGenerator,
+    ConversationStarterCacheService,
+    OpenerTrackingService,
   ],
   exports: [
     MeMatchesService,

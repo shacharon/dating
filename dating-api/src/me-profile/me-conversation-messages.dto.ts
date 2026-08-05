@@ -1,6 +1,22 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { BadRequestException } from '@nestjs/common';
 import { MAX_MESSAGE_TEXT_LENGTH } from './conversation-message.constants';
+
+/** Optional opener attribution on send (Sprint 42 Story 3). */
+export class OpenerAttributionDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  originalOpener!: string;
+}
 
 export class SendConversationMessageDto {
   @IsString()
@@ -9,6 +25,17 @@ export class SendConversationMessageDto {
     message: 'Message exceeds 2000 characters',
   })
   text!: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OpenerAttributionDto)
+  openerAttribution?: OpenerAttributionDto;
+}
+
+export class OpenerLifecycleDto {
+  @IsString()
+  @IsIn(['displayed', 'used'])
+  event!: 'displayed' | 'used';
 }
 
 export interface MessageDto {

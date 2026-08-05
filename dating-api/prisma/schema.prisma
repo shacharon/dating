@@ -400,6 +400,8 @@ model MatchNarrativeCache {
   candidateEvaluationId String
   promptVersion         String
   narrative             String   @db.Text
+  /// Sprint 41 Story 4 — short extract of `narrative` for browse cards (nullable = legacy).
+  narrativeTldr         String?  @db.VarChar(200)
   /// Optional model id string from LLM config (diagnostics only).
   model                 String?
   createdAt             DateTime @default(now())
@@ -408,6 +410,43 @@ model MatchNarrativeCache {
   @@unique([viewerProfileId, candidateProfileId, viewerEvaluationId, candidateEvaluationId, promptVersion])
   @@index([viewerProfileId, candidateProfileId])
   @@index([createdAt])
+}
+
+/// Sprint 42 Story 1 — LLM conversation opener cache (profile + eval pair + prompt version).
+/// Story 3 — lifecycle analytics columns (displayed → used → sent → replied).
+model ConversationStarterCache {
+  id                    String    @id @default(cuid())
+  viewerProfileId       String
+  candidateProfileId    String
+  viewerEvaluationId    String
+  candidateEvaluationId String
+  promptVersion         String
+  opener                String    @db.VarChar(200)
+  /// Diagnostics only (model id string from LLM config).
+  model                 String?
+  displayed             Boolean   @default(false)
+  displayedAt           DateTime?
+  used                  Boolean   @default(false)
+  usedAt                DateTime?
+  edited                Boolean   @default(false)
+  sent                  Boolean   @default(false)
+  sentAt                DateTime?
+  /// Soft id — MutualMatch Message.id when opener was sent.
+  sentMessageId         String?
+  /// Soft id — MutualMatch.id when opener was sent.
+  mutualMatchId         String?
+  receivedReply         Boolean   @default(false)
+  replyReceivedAt       DateTime?
+  /// Whole minutes from sentAt → first reply.
+  responseTimeMin       Int?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([viewerProfileId, candidateProfileId, viewerEvaluationId, candidateEvaluationId, promptVersion])
+  @@index([viewerProfileId, candidateProfileId])
+  @@index([createdAt])
+  @@index([sentMessageId])
+  @@index([mutualMatchId])
 }
 
 model UserSession {
