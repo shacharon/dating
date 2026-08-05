@@ -38,6 +38,8 @@
     "verify:sprint41-validation": "ts-node --project tsconfig.json scripts/verify-sprint41-validation-fixtures.ts",
     "seed:qa50": "ts-node --project tsconfig.json scripts/seed-qa50-pool.ts",
     "verify:qa50": "ts-node --project tsconfig.json scripts/verify-qa50-pool.ts",
+    "qa50:ranks": "ts-node --project tsconfig.json scripts/build-qa50-match-ranks.ts",
+    "verify:qa50-matches": "ts-node --project tsconfig.json scripts/verify-qa50-matches.ts",
     "match-quality:compare": "ts-node --project tsconfig.json scripts/match-quality-compare.ts",
     "match-list:backfill-ranks": "ts-node --project tsconfig.json scripts/enqueue-match-list-rank-backfill.ts"
   },

@@ -1,6 +1,6 @@
 # Sprint QA — Local Israel match pool (~50 profiles)
 
-**Status:** 🚧 In progress (Story 01 Done; Stories 02–03 open)  
+**Status:** 🚧 In progress (Stories 01–02 Done; Story 03 open)  
 **Priority:** P1 (QA / understanding Smart Triage with volume)  
 **Depends on:** Sprint 41 Stories 1–2 shipped (browse + priority UI)  
 **Blocks:** Better human validation of Story 41.3 (optional follow-up with real photos later)  
@@ -42,7 +42,7 @@ You have **~2 real email users**. Smart Triage (photo-first + HIGH/GOOD/OTHER) i
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [Seed ~50 deletable Israel profiles](./STORY_01_seed_qa50_pool.md) | P0 | 0.5–1d | Done |
-| 02 | [Run / verify match lists for QA viewers](./STORY_02_match_qa50_pool.md) | P0 | 0.5d | Planned |
+| 02 | [Run / verify match lists for QA viewers](./STORY_02_match_qa50_pool.md) | P0 | 0.5d | Done |
 | 03 | [Fake 3–4 QA logins + operator guide](./STORY_03_qa50_fake_logins.md) | P1 | 0.25d | Planned |
 
 **Order:** 01 → 02 → 03.
@@ -84,7 +84,7 @@ You have **~2 real email users**. Smart Triage (photo-first + HIGH/GOOD/OTHER) i
 
 - [x] `npm run seed:qa50` creates ~50 profiles  
 - [x] `npm run seed:qa50 -- --cleanup` removes only `qa50_*`  
-- [ ] At least one QA viewer sees a multi-tier match list on `/dating/me-matches`  
+- [x] At least one QA viewer sees a multi-tier match list on `/dating/me-matches`  
 - [x] All 24 interest codes appear on ≥1 profile  
 - [x] ≥3 Israel cities represented  
 - [x] Docs list cookies for 3–4 fake logins  
