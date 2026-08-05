@@ -1,21 +1,42 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { submitMyProfileForAnalysis } from '@/lib/me-profile-api';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { useAppLocale } from '@/lib/i18n';
+import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
 import { useInfiniteMatches } from './use-infinite-matches';
 import { MatchListItem } from './match-list-item';
+import { MatchBrowseCard } from './match-browse-card';
 import {
   applyMatchesScrollY,
   consumeMatchesScrollRestore,
 } from './me-matches-scroll';
+import { matchListPrimaryLabel } from './match-display';
+
+const MatchCelebrationModal = dynamic(
+  () =>
+    import('@/components/match-celebration-modal').then((m) => ({
+      default: m.MatchCelebrationModal,
+    })),
+  { ssr: false },
+);
+
+type CelebrationContext = {
+  conversationId: string;
+  candidateName: string;
+  photoUrl: string | null;
+};
 
 export default function MeMatchesPageClient() {
+  const router = useRouter();
   const { locale, copy } = useAppLocale();
   const listCopy = copy.matches.list;
+  const detailCopy = copy.matches.detail;
   const {
     data,
     matches,
@@ -29,7 +50,14 @@ export default function MeMatchesPageClient() {
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshSuccess, setRefreshSuccess] = useState<string | null>(null);
+  const [celebrationContext, setCelebrationContext] =
+    useState<CelebrationContext | null>(null);
   const scrollRestoreDone = useRef(false);
+  const {
+    dismissCelebration,
+    celebrationData,
+    triggerCelebration,
+  } = useCelebrationFlow();
 
   useEffect(() => {
     if (scrollRestoreDone.current) return;
@@ -57,6 +85,26 @@ export default function MeMatchesPageClient() {
     } finally {
       setRefreshBusy(false);
     }
+  };
+
+  const handleMutualMatch = (
+    matchId: string,
+    conversationId: string,
+  ) => {
+    const match = matches.find((m) => m.id === matchId);
+    setCelebrationContext({
+      conversationId,
+      candidateName: match
+        ? matchListPrimaryLabel(match)
+        : detailCopy.matchLabel,
+      photoUrl: match?.primaryPhotoUrl ?? null,
+    });
+    triggerCelebration(conversationId);
+  };
+
+  const handleDismissCelebration = () => {
+    dismissCelebration();
+    setCelebrationContext(null);
   };
 
   return (
@@ -151,16 +199,30 @@ export default function MeMatchesPageClient() {
           matches.length === 0 && <MatchListEmptyState />}
 
         {!loading && !error && data?.status === 'ready' && matches.length > 0 && (
-          <ul className="flex flex-col gap-3">
-            {matches.map((m, index) => (
-              <MatchListItem
-                key={m.id}
-                match={m}
-                index={index}
-                locale={locale}
-                listCopy={listCopy}
-              />
-            ))}
+          <ul className="flex flex-col gap-6">
+            {matches.map((m, index) =>
+              m.hardBlocked ? (
+                <MatchListItem
+                  key={m.id}
+                  match={m}
+                  index={index}
+                  locale={locale}
+                  listCopy={listCopy}
+                />
+              ) : (
+                <MatchBrowseCard
+                  key={m.id}
+                  match={m}
+                  index={index}
+                  locale={locale}
+                  listCopy={listCopy}
+                  detailCopy={detailCopy}
+                  onMutualMatch={(conversationId) =>
+                    handleMutualMatch(m.id, conversationId)
+                  }
+                />
+              ),
+            )}
             <li
               ref={sentinelRef}
               className="h-4 list-none"
@@ -176,6 +238,20 @@ export default function MeMatchesPageClient() {
           </ul>
         )}
       </div>
+
+      {celebrationData && celebrationContext ? (
+        <MatchCelebrationModal
+          open
+          onClose={handleDismissCelebration}
+          candidateName={celebrationContext.candidateName}
+          photoUrl={celebrationContext.photoUrl}
+          onSendMessage={() => {
+            router.push(
+              `/dating/conversations/${celebrationContext.conversationId}`,
+            );
+          }}
+        />
+      ) : null}
     </div>
   );
 }

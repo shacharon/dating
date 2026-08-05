@@ -1,10 +1,45 @@
 import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
+import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 
 function usableLocationLabel(locationLabel: string | null): string | null {
   const trimmed = locationLabel?.trim() ?? '';
   // Hide empty / junk single-character labels (e.g. stray "e").
   if (trimmed.length <= 1) return null;
   return trimmed;
+}
+
+/** Plain age for browse overlay (e.g. "32"), not list meta "32y". */
+export function formatBrowseAge(ageYears: number | null): string | null {
+  if (ageYears == null || !Number.isFinite(ageYears)) return null;
+  return String(Math.trunc(ageYears));
+}
+
+export function matchBrowseLocation(m: MeMatchItemDto): string | null {
+  return usableLocationLabel(m.locationLabel);
+}
+
+/**
+ * One-liner under browse photo: takeaway → shared interests → first positive chip.
+ */
+export function matchBrowseOneLiner(m: MeMatchItemDto): string | null {
+  const takeaway = m.recommendation?.primaryTakeaway?.trim();
+  if (takeaway) return takeaway;
+
+  const shared = formatSharedInterestNote(m.explainability?.sharedInterestNote);
+  if (shared) return shared;
+
+  const chip = m.explainability?.positiveChips?.[0]?.trim();
+  if (chip) return chip;
+
+  return null;
+}
+
+export function matchBrowseWhyBody(m: MeMatchItemDto): string | null {
+  const takeaway = m.recommendation?.primaryTakeaway?.trim();
+  if (takeaway) return takeaway;
+  const reason = m.explainability?.reasonShort?.trim();
+  if (reason) return reason;
+  return null;
 }
 
 function matchMetaParts(

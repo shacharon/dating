@@ -3,6 +3,9 @@ import {
   matchListPrimaryLabel,
   matchListSecondaryMeta,
   matchDetailSubtitle,
+  matchBrowseOneLiner,
+  formatBrowseAge,
+  matchBrowseLocation,
 } from './match-display';
 import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
 
@@ -47,5 +50,53 @@ describe('match-display location junk filter', () => {
         locationLabel: 'e',
       }),
     ).toBe('FEMALE · 81y');
+  });
+});
+
+describe('match-display browse helpers', () => {
+  it('formats plain age and hides junk location', () => {
+    expect(formatBrowseAge(32)).toBe('32');
+    expect(formatBrowseAge(null)).toBeNull();
+    expect(matchBrowseLocation(baseItem)).toBeNull();
+    expect(
+      matchBrowseLocation({ ...baseItem, locationLabel: 'Tel Aviv' }),
+    ).toBe('Tel Aviv');
+  });
+
+  it('prefers takeaway then shared note then first chip', () => {
+    expect(
+      matchBrowseOneLiner({
+        ...baseItem,
+        recommendation: {
+          explainability: {
+            positiveChips: ['Chip'],
+            reasonShort: 'Short',
+          },
+          primaryTakeaway: 'Takeaway line',
+          suggestedNextAction: 'Next',
+        },
+      }),
+    ).toBe('Takeaway line');
+
+    expect(
+      matchBrowseOneLiner({
+        ...baseItem,
+        explainability: {
+          positiveChips: ['Chip A'],
+          reasonShort: 'Short',
+          sharedInterestNote: 'You both enjoy hiking.',
+        },
+      }),
+    ).toMatch(/hiking/i);
+
+    expect(
+      matchBrowseOneLiner({
+        ...baseItem,
+        explainability: {
+          positiveChips: ['Chip A'],
+          reasonShort: 'Short',
+        },
+      }),
+    ).toBe('Chip A');
   });
 });

@@ -5,16 +5,26 @@ import type { MatchRecommendationDto } from '@/lib/me-matches-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 
-const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock } = vi.hoisted(() => ({
+const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock, pushMock, likeMatch, passMatch, undoMatchAction, fetchMatchAction } = vi.hoisted(() => ({
   fetchMyMatches: vi.fn(),
   submitMyProfileForAnalysis: vi.fn(),
   fetchMyProfile: vi.fn(),
   listMyProfilePhotos: vi.fn(),
   replaceMock: vi.fn(),
+  pushMock: vi.fn(),
+  likeMatch: vi.fn(),
+  passMatch: vi.fn(),
+  undoMatchAction: vi.fn(),
+  fetchMatchAction: vi.fn(),
 }));
 
 vi.mock('@/lib/me-matches-api', () => ({
   fetchMyMatches,
+  likeMatch,
+  passMatch,
+  undoMatchAction,
+  fetchMatchAction,
+  blockMatch: vi.fn(),
 }));
 
 vi.mock('@/lib/me-profile-api', () => ({
@@ -32,6 +42,10 @@ vi.mock('@/contexts/auth-context', () => ({
   }),
 }));
 
+vi.mock('@/lib/observability/product-logger', () => ({
+  emitProductLog: vi.fn(),
+}));
+
 class MockIntersectionObserver {
   observe = vi.fn();
   unobserve = vi.fn();
@@ -43,7 +57,14 @@ vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 import MeMatchesPage from './me-matches-page-client';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: replaceMock }),
+  useRouter: () => ({ replace: replaceMock, push: pushMock }),
+}));
+
+vi.mock('next/dynamic', () => ({
+  default: () =>
+    function MockDynamic() {
+      return null;
+    },
 }));
 
 vi.mock('next/link', () => ({
@@ -306,7 +327,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
     vi.clearAllMocks();
   });
 
-  it('shows Liked badge when yourAction is LIKE', async () => {
+  it('shows liked status when yourAction is LIKE', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [{ ...baseMatch, yourAction: 'LIKE' as const }],
@@ -315,13 +336,13 @@ describe('MeMatchesPage (yourAction badges)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('You liked this match')).toBeTruthy();
-      expect(screen.getByText('Liked')).toBeTruthy();
+      expect(screen.getByText('You liked this person')).toBeTruthy();
     });
+    expect(screen.queryByTestId('match-browse-like')).toBeNull();
     unmount();
   });
 
-  it('shows Passed badge when yourAction is PASS', async () => {
+  it('shows passed status when yourAction is PASS', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [{ ...baseMatch, yourAction: 'PASS' as const }],
@@ -330,13 +351,13 @@ describe('MeMatchesPage (yourAction badges)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('You passed on this match')).toBeTruthy();
-      expect(screen.getByText('Passed')).toBeTruthy();
+      expect(screen.getByText('You passed on this person')).toBeTruthy();
     });
+    expect(screen.queryByTestId('match-browse-like')).toBeNull();
     unmount();
   });
 
-  it('does not show action badge when yourAction is null', async () => {
+  it('shows Like/Pass when yourAction is null', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [{ ...baseMatch, yourAction: null }],
@@ -345,13 +366,10 @@ describe('MeMatchesPage (yourAction badges)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getAllByRole('heading', { level: 1, name: /Your matches/i }).length,
-      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId('match-browse-like')).toBeTruthy();
+      expect(screen.getByTestId('match-browse-pass')).toBeTruthy();
     });
-    expect(screen.queryByLabelText('You liked this match')).toBeNull();
-    expect(screen.queryByText('Liked')).toBeNull();
-    expect(screen.queryByLabelText('You passed on this match')).toBeNull();
+    expect(screen.queryByText('You liked this person')).toBeNull();
     unmount();
   });
 
@@ -399,10 +417,11 @@ describe('MeMatchesPage (yourAction badges)', () => {
     expect(screen.queryByText('Edit your story')).toBeNull();
     expect(screen.queryByText('→')).toBeNull();
     expect(screen.queryByText('70')).toBeNull();
+    expect(screen.queryByTestId('match-browse-card')).toBeNull();
     unmount();
   });
 
-  it('shows nickname as primary label when provided', async () => {
+  it('shows nickname, age, and location on photo-first card', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [{ ...baseMatch, nickname: 'River', gender: 'FEMALE', ageYears: 29, locationLabel: 'Tel Aviv' }],
@@ -411,9 +430,11 @@ describe('MeMatchesPage (yourAction badges)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('River')).toBeTruthy();
+      expect(screen.getByTestId('match-browse-name').textContent).toMatch(/River/);
+      expect(screen.getByTestId('match-browse-name').textContent).toMatch(/29/);
     });
-    expect(screen.getByText(/FEMALE · 29y · Tel Aviv/)).toBeTruthy();
+    expect(screen.getByTestId('match-browse-location').textContent).toBe('Tel Aviv');
+    expect(screen.queryByText(/FEMALE · 29y · Tel Aviv/)).toBeNull();
     unmount();
   });
 
@@ -489,23 +510,26 @@ describe('MeMatchesPage (yourAction badges)', () => {
       ).toBeTruthy();
     });
     expect(screen.queryByText(/Ambition alignment/)).toBeNull();
+    expect(screen.getByTestId('match-why-toggle').getAttribute('aria-expanded')).toBe(
+      'false',
+    );
     unmount();
   });
 
-  it('omits list subtitle when primaryTakeaway missing (never reasonShort)', async () => {
+  it('omits one-liner when takeaway and chips are empty (never reasonShort)', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [
         {
           ...baseMatch,
           explainability: {
-            positiveChips: ['Ambition alignment'],
+            positiveChips: [],
             reasonShort:
               'You share real overlap on Ambition alignment and more jargon',
           },
           recommendation: {
             explainability: {
-              positiveChips: ['Ambition alignment'],
+              positiveChips: [],
               reasonShort:
                 'You share real overlap on Ambition alignment and more jargon',
             },
@@ -519,12 +543,47 @@ describe('MeMatchesPage (yourAction badges)', () => {
     const { unmount } = render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Tel Aviv/)).toBeTruthy();
+      expect(screen.getByTestId('match-browse-card')).toBeTruthy();
     });
-    expect(screen.queryByText(/Ambition alignment/)).toBeNull();
+    expect(screen.queryByTestId('match-browse-oneliner')).toBeNull();
     expect(
       screen.queryByText(/You share real overlap on Ambition/),
     ).toBeNull();
+    unmount();
+  });
+
+  it('expands why section and shows chips', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          recommendation: {
+            explainability: {
+              positiveChips: ['Emotional depth'],
+              reasonShort: 'Aligned',
+            },
+            primaryTakeaway: 'Clear overlap: real depth and presence.',
+            suggestedNextAction: 'Next',
+          },
+        },
+      ],
+    });
+
+    const { unmount } = render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-why-toggle')).toBeTruthy();
+    });
+    expect(screen.getByTestId('match-why-panel').hasAttribute('hidden')).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByTestId('match-why-toggle'));
+    expect(screen.getByTestId('match-why-panel').hasAttribute('hidden')).toBe(
+      false,
+    );
+    expect(screen.getByTestId('match-why-chips')).toBeTruthy();
+    expect(screen.getByText('Emotional depth')).toBeTruthy();
     unmount();
   });
 });
@@ -532,6 +591,10 @@ describe('MeMatchesPage (yourAction badges)', () => {
 describe('MeMatchesPage (blocked list exclusion)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('does not render blocked match when API excludes them from list', async () => {
@@ -547,15 +610,16 @@ describe('MeMatchesPage (blocked list exclusion)', () => {
       ],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    render(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Haifa/)).toBeTruthy();
+      expect(screen.getByTestId('match-browse-location').textContent).toBe(
+        'Haifa',
+      );
     });
     expect(
       document.querySelector('a[href="/dating/me-matches/prof-blocked"]'),
     ).toBeNull();
-    unmount();
   });
 });
 
@@ -568,7 +632,7 @@ describe('MeMatchesPage (match photos)', () => {
     cleanup();
   });
 
-  it('renders photo thumbnail when primaryPhotoUrl is set', async () => {
+  it('renders browse photo when primaryPhotoUrl is set', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [
@@ -582,12 +646,16 @@ describe('MeMatchesPage (match photos)', () => {
     render(<MeMatchesPage />);
 
     await waitFor(() => {
-      const photo = screen.getByTestId('match-list-photo');
+      const photos = screen.getAllByTestId('match-browse-photo');
+      const photo = photos[0]!;
       expect(photo.tagName).toBe('IMG');
       expect(photo.getAttribute('src')).toBe(
         '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
       );
     });
+    expect(
+      screen.getAllByTestId('match-browse-photo-region')[0]!.className,
+    ).toMatch(/h-\[70vh\]/);
   });
 
   it('renders placeholder when primaryPhotoUrl is null', async () => {
@@ -599,7 +667,7 @@ describe('MeMatchesPage (match photos)', () => {
     render(<MeMatchesPage />);
 
     await waitFor(() => {
-      const photo = screen.getByTestId('match-list-photo');
+      const photo = screen.getByTestId('match-browse-photo');
       expect(photo.tagName).toBe('DIV');
       expect(photo.textContent).toBe('F');
     });
@@ -644,7 +712,9 @@ describe('MeMatchesPage (i18n)', () => {
         }),
       ).toBeTruthy();
       expect(screen.getByText(heCopy.matches.list.subtitle)).toBeTruthy();
-      expect(screen.getByText(heCopy.matches.list.actionBadge.liked.label)).toBeTruthy();
+      expect(
+        screen.getByText(heCopy.matches.detail.actionStatus.liked),
+      ).toBeTruthy();
     });
   });
 

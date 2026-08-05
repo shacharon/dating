@@ -143,4 +143,21 @@ describe('MatchPhoto', () => {
       '/good.jpg',
     );
   });
+
+  it('renders browse placeholder filling parent sizing classes', () => {
+    render(
+      <div className="h-[70vh]">
+        <MatchPhoto
+          variant="browse"
+          photoUrl={null}
+          displayName="River"
+          testId="browse-unit"
+        />
+      </div>,
+    );
+    const el = screen.getByTestId('browse-unit');
+    expect(el.textContent).toBe('R');
+    expect(el.className).toMatch(/h-full/);
+    expect(el.className).toMatch(/w-full/);
+  });
 });

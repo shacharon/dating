@@ -128,6 +128,13 @@ export const esCopy: AppCopySchema = {
         evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
         evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
       },
+      browse: {
+        whyToggle: "Ver por que coincidimos",
+        whyToggleWithScore: (score) => `Ver por que coincidimos (${score}%)`,
+        whyHeading: "Por que coincidimos",
+        whyEmpty: "Aun no hay una explicacion.",
+        viewProfile: "Ver perfil",
+      },
     },
     detail: {
       backToMatches: "← Volver a coincidencias",

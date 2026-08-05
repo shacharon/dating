@@ -122,6 +122,13 @@ export type AppCopySchema = {
         evidenceViewer: (viewerQuote: string) => string;
         evidenceCounterparty: (counterpartyQuote: string) => string;
       };
+      browse: {
+        whyToggle: string;
+        whyToggleWithScore: (score: number) => string;
+        whyHeading: string;
+        whyEmpty: string;
+        viewProfile: string;
+      };
     };
     detail: {
       backToMatches: string;

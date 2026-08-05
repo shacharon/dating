@@ -114,6 +114,13 @@ export const heCopy: AppCopySchema = {
         evidenceViewer: (viewerQuote) => `“${viewerQuote}”`,
         evidenceCounterparty: (counterpartyQuote) => `“${counterpartyQuote}”`,
       },
+      browse: {
+        whyToggle: "למה התאמנו",
+        whyToggleWithScore: (score) => `למה התאמנו (${score}%)`,
+        whyHeading: "למה התאמנו",
+        whyEmpty: "עדיין אין הסבר.",
+        viewProfile: "צפייה בפרופיל",
+      },
     },
     detail: {
       backToMatches: "← חזרה להתאמות",

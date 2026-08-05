@@ -125,6 +125,13 @@ export const enCopy: AppCopySchema = {
         evidenceViewer: (viewerQuote) => `You: "${viewerQuote}"`,
         evidenceCounterparty: (counterpartyQuote) => `Them: "${counterpartyQuote}"`,
       },
+      browse: {
+        whyToggle: "See why we matched",
+        whyToggleWithScore: (score) => `See why we matched (${score}%)`,
+        whyHeading: "Why we matched",
+        whyEmpty: "No explanation available yet.",
+        viewProfile: "View profile",
+      },
       updatedPrefix: "Updated",
     },
     detail: {
