@@ -65,19 +65,50 @@ function pngChunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, typeBuf, data, crcBuf]);
 }
 
-function solidPng(r: number, g: number, b: number, size = 48): Buffer {
-  const row = Buffer.alloc(1 + size * 3);
+/**
+ * Approach A (Story 4): larger synthetic gradient + soft oval "portrait" blob.
+ * Still generated — no stock faces / S3.
+ */
+function syntheticPortraitPng(
+  r: number,
+  g: number,
+  b: number,
+  size = 320,
+): Buffer {
   const rows: Buffer[] = [];
+  const cx = size * 0.5;
+  const cy = size * 0.42;
+  const rx = size * 0.28;
+  const ry = size * 0.36;
   for (let y = 0; y < size; y++) {
+    const row = Buffer.alloc(1 + size * 3);
     row[0] = 0;
+    const gy = y / (size - 1);
     for (let x = 0; x < size; x++) {
+      const gx = x / (size - 1);
+      // Vertical + diagonal wash from base RGB toward lighter/darker ends
+      const wash = 0.55 + 0.35 * gy + 0.1 * gx;
+      let pr = Math.min(255, Math.round(r * wash + 40 * (1 - gy)));
+      let pg = Math.min(255, Math.round(g * wash + 28 * gx));
+      let pb = Math.min(255, Math.round(b * wash + 50 * gy));
+
+      const dx = (x - cx) / rx;
+      const dy = (y - cy) / ry;
+      const oval = dx * dx + dy * dy;
+      if (oval < 1) {
+        const edge = Math.max(0, 1 - oval);
+        const lift = 0.25 + 0.55 * edge;
+        pr = Math.min(255, Math.round(pr * (1 - lift) + (r + 60) * lift));
+        pg = Math.min(255, Math.round(pg * (1 - lift) + (g + 40) * lift));
+        pb = Math.min(255, Math.round(pb * (1 - lift) + (b + 30) * lift));
+      }
+
       const o = 1 + x * 3;
-      const t = (x + y) % 8;
-      row[o] = Math.min(255, r + t);
-      row[o + 1] = Math.min(255, g + t);
-      row[o + 2] = Math.min(255, b + t);
+      row[o] = pr;
+      row[o + 1] = pg;
+      row[o + 2] = pb;
     }
-    rows.push(Buffer.from(row));
+    rows.push(row);
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(size, 0);
@@ -87,7 +118,7 @@ function solidPng(r: number, g: number, b: number, size = 48): Buffer {
   ihdr[10] = 0;
   ihdr[11] = 0;
   ihdr[12] = 0;
-  const idat = deflateSync(Buffer.concat(rows));
+  const idat = deflateSync(Buffer.concat(rows), { level: 6 });
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     pngChunk('IHDR', ihdr),
@@ -169,7 +200,11 @@ async function writeLocalPhoto(storageKey: string, bytes: Buffer): Promise<void>
 async function upsertApprovedPhoto(def: Qa50ProfileDef): Promise<void> {
   const uploadDir = loadPhotoStorageConfig(process.env).uploadDir;
   const storageKey = `${uploadDir.replace(/\\/g, '/')}/${def.profileId}/${def.photoId}.png`;
-  const bytes = solidPng(def.photoRgb[0], def.photoRgb[1], def.photoRgb[2]);
+  const bytes = syntheticPortraitPng(
+    def.photoRgb[0],
+    def.photoRgb[1],
+    def.photoRgb[2],
+  );
   await writeLocalPhoto(storageKey, bytes);
 
   await prisma.userProfilePhoto.upsert({

@@ -22,4 +22,8 @@
 --agent 1 sprint qa-pool story 3
 --agent 2 sprint qa-pool story 3
 --agent 3 sprint qa-pool story 3
+--agent 0 sprint qa-pool story 4
+--agent 1 sprint qa-pool story 4
+--agent 2 sprint qa-pool story 4
+--agent 3 sprint qa-pool story 4
 ```

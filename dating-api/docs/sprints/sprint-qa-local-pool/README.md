@@ -1,6 +1,6 @@
 # Sprint QA — Local Israel match pool (~50 profiles)
 
-**Status:** ✅ Done (Stories 01–03)  
+**Status:** ✅ Done (Stories 01–04)  
 **Priority:** P1 (QA / understanding Smart Triage with volume)  
 **Depends on:** Sprint 41 Stories 1–2 shipped (browse + priority UI)  
 **Blocks:** Better human validation of Story 41.3 (optional follow-up with real photos later)  
@@ -43,9 +43,10 @@ You have **~2 real email users**. Smart Triage (photo-first + HIGH/GOOD/OTHER) i
 |---|-------|----------|--------|--------|
 | 01 | [Seed ~50 deletable Israel profiles](./STORY_01_seed_qa50_pool.md) | P0 | 0.5–1d | Done |
 | 02 | [Run / verify match lists for QA viewers](./STORY_02_match_qa50_pool.md) | P0 | 0.5d | Done |
-| 03 | [Fake 3–4 QA logins + operator guide](./STORY_03_qa50_fake_logins.md) | P1 | 0.25d | Done |
+| 03 | [Fake 3–4 QA logins + operator guide](./STORY_03_qa50_fake_logins.md) | P1 | 0.25d | Done (parked for day-to-day) |
+| 04 | [Real-user list: ≥1 photo each + ranks for you](./STORY_04_real_viewer_qa50_list.md) | P0 | 0.5–1d | Done |
 
-**Order:** 01 → 02 → 03.
+**Order:** 01 → 02 → 03 → 04.
 
 ---
 
@@ -89,6 +90,8 @@ You have **~2 real email users**. Smart Triage (photo-first + HIGH/GOOD/OTHER) i
 - [x] ≥3 Israel cities represented  
 - [x] Docs list cookies for 3–4 fake logins  
 - [x] Real email users untouched after cleanup  
+- [x] Real login sees ≥5 qa50 matches (Story 04)  
+- [x] Every qa50 profile has ≥1 APPROVED photo suitable for browse (Story 04)  
 
 ---
 
