@@ -327,6 +327,9 @@ describe('MeMatchesService materialized list', () => {
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).toBeTruthy();
     expect(result.matches?.map((m) => m.id)).toEqual(['p1', 'p2']);
+    // List score/tier come from MatchListRank, not hydrate re-compare.
+    expect(result.matches?.map((m) => m.matchScore)).toEqual([90, 80]);
+    expect(result.matches?.map((m) => m.priorityTier)).toEqual(['HIGH', 'GOOD']);
     expect(analytics.track).toHaveBeenCalledWith(
       viewerUserId,
       ProductAnalyticsEvents.MATCH_LIST_VIEWED,

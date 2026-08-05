@@ -1,12 +1,17 @@
 # Story 03 — User validation testing
 
-**Sprint 41 · Status: Planned**  
+**Sprint 41 · Status: Engineering ready — human validation PENDING**  
 **Priority:** P0 (validation gate)  
 **Estimated effort:** 1 day  
 **Dependencies:** Stories 1 & 2 complete  
 **Repo:** Both (testing full UX flow)  
 **Risk:** Low (non-coding, but critical decision gate)  
-**Handoffs:** `handoffs/STORY_03_validation_testing/agent-*.md`
+**Handoffs:** `handoffs/STORY_03_validation_testing/agent-*.md`  
+**Architect:** [handoffs/STORY_03_validation_testing/agent-0-architect.md](./handoffs/STORY_03_validation_testing/agent-0-architect.md)  
+**Dev:** [handoffs/STORY_03_validation_testing/agent-1-dev.md](./handoffs/STORY_03_validation_testing/agent-1-dev.md)  
+**CR:** [handoffs/STORY_03_validation_testing/agent-2-cr.md](./handoffs/STORY_03_validation_testing/agent-2-cr.md)  
+**PM:** [handoffs/STORY_03_validation_testing/agent-3-pm.md](./handoffs/STORY_03_validation_testing/agent-3-pm.md)  
+**Product decision:** see [VALIDATION_RESULTS.md](./VALIDATION_RESULTS.md) (`PENDING_OPERATOR`)
 
 ---
 
@@ -51,33 +56,37 @@ After Stories 1 & 2:
 ## Scope / Tasks
 
 ### Agent 0 (Architect)
-1. Design test protocol:
-   - How many test profiles to create?
-   - What diversity (age, interests, scores)?
-   - What questions to ask testers?
-2. Define success metrics (quantitative + qualitative)
-3. Lock test environment (localhost? staging?)
-4. Analytics to capture: Time on page, expansions, hypothetical actions
+1. ✅ Design test protocol:
+   - How many test profiles to create? → **2 viewers + 10 candidates** (primary Viewer A pool)
+   - What diversity (age, interests, scores)? → ages 26–38, varied interests/life goals; scores **2 HIGH / 4 GOOD / 4 OTHER**
+   - What questions to ask testers? → locked script in architect handoff (observe → message-first → sections → HIGH-vs-photo → frustration)
+2. ✅ Define success metrics (quantitative + qualitative) — stopwatch + expand rates + ≥3/5 positive
+3. ✅ Lock test environment → **localhost only** (local Postgres + local photo storage); never prod/staging real users
+4. ✅ Analytics → human worksheet **primary**; reuse existing `emitProductLog`; verify script for tier counts; **no** new persisted analytics
 
 ### Agent 1 (Senior Dev)
-1. Create 10 diverse test profiles:
-   - Mix of HIGH/GOOD/OTHER priority
+1. ✅ Create 10 diverse test profiles (×2 pools: female for A, male for B)
+   - Mix of HIGH/GOOD/OTHER priority (2/4/4 via `MatchListRank`)
    - Varied photos, interests, life goals
    - Represent realistic dating pool
-2. Seed test data in dev database
-3. Create 2-3 "viewer" test accounts
-4. Run algorithm to generate matches
-5. Verify: Priority distribution reasonable (not all HIGH or all OTHER)
-6. Add temporary analytics logging (console or file) for test session
+2. ✅ Seed test data in dev database (`npm run seed:sprint41-validation`)
+3. ✅ Create 2 viewer test accounts (fixed session tokens)
+4. ✅ Materialize ranks (upserted scores; not live engine luck)
+5. ✅ Verify: Priority distribution 2/4/4 (`npm run verify:sprint41-validation` PASS)
+6. ✅ Analytics: verify script + reuse existing `emitProductLog` (no new persistence)
 
 ### Agent 2 (Code Review)
-1. Review test profiles for realism (not all 10/10s or edge cases)
-2. Verify analytics capture plan (what to measure)
-3. Check: Test doesn't pollute production data
-4. Spot-check: HIGH priority matches make sense (shared goals, interests)
+1. ✅ Review test profiles for realism (not all 10/10s or edge cases)
+2. ✅ Verify analytics capture plan (what to measure)
+3. ✅ Check: Test doesn't pollute production data
+4. ✅ Spot-check: HIGH priority matches make sense (shared goals, interests)
+5. ✅ CR fix: materialized list overlays `MatchListRank` score/tier (otherwise UI all OTHER)
 
 ### Agent 3 (PM)
-**Run the validation:**
+1. ✅ Engineering gate: verify fixtures, regression suites, live Viewer A list smoke (2/4/4)
+2. ⏳ **Operator:** Run 5 × ~10 min human sessions (worksheet + script below)
+3. ⏳ Fill quantitative + qualitative sections in `VALIDATION_RESULTS.md`
+4. ⏳ Record Decision PASS / MIXED / FAIL — **required before Sprint 42**
 
 #### Test Protocol
 
@@ -86,8 +95,8 @@ After Stories 1 & 2:
 **Environment:** Localhost on laptop/phone
 
 **Setup:**
-1. Create unique test account for each tester
-2. Pre-generate 10 matches (mix of priorities)
+1. Use Viewer A session cookie from `TEST_PROFILES.md` (shared fixture pool)
+2. Pre-seeded 10 matches (mix of priorities) — `npm run seed:sprint41-validation`
 3. Start on `/dating/me-matches`
 
 **Tasks:**
@@ -171,10 +180,14 @@ Create `VALIDATION_RESULTS.md`:
 
 | Item | Decision |
 |------|----------|
-| Pass threshold | ≥3/5 testers positive + metrics hit targets |
-| Test environment | Localhost dev (not production) |
-| Test data | Synthetic profiles (not real users) |
-| Analytics | Temporary console logging (not persisted) |
+| Pass threshold | ≥3/5 testers positive + metrics hit targets → PASS; 2–3/5 → MIXED; ≤1/5 → FAIL |
+| Test environment | **Localhost only** (UI + API + local Postgres). Abort seed if `NODE_ENV=production` or prod-like `DATABASE_URL` |
+| Test data | Synthetic `s41val_*` profiles only; `--cleanup` scoped to prefix; local photo files |
+| Fixture mix | Viewer A sees **10** candidates: **2 HIGH / 4 GOOD / 4 OTHER** via upserted `MatchListRank` (not live engine luck) |
+| Viewers | **2** accounts with fixed session tokens (protocol may use Viewer A for all 5 sessions) |
+| Thresholds / UI | **Frozen** — do not retune 85/70 or change browse chrome in this story |
+| Analytics | Stopwatch + observer worksheet **primary**; existing client `emitProductLog`; verify script for distribution; **no** new DB/server analytics |
+| Docs | `TEST_PROFILES.md` + template `VALIDATION_RESULTS.md` (+ optional session worksheet) |
 | Decision gate | If FAIL → pause Sprint 42, reassess pivot |
 
 ---
@@ -182,11 +195,11 @@ Create `VALIDATION_RESULTS.md`:
 ## Acceptance Criteria
 
 - [x] 10 diverse test profiles created
-- [x] 5 people tested the UX (10 min each)
-- [x] Quantitative metrics captured (swipe speed, expansions)
-- [x] Qualitative feedback documented
-- [x] `VALIDATION_RESULTS.md` written
-- [x] Decision made: Proceed to Sprint 42 OR pivot again
+- [ ] 5 people tested the UX (10 min each) — **operator**
+- [ ] Quantitative metrics captured (swipe speed, expansions) — **operator**
+- [ ] Qualitative feedback documented — **operator**
+- [x] `VALIDATION_RESULTS.md` written (engineering filled; human Decision pending)
+- [ ] Decision made: Proceed to Sprint 42 OR pivot again — **PENDING_OPERATOR**
 
 ---
 

@@ -670,9 +670,20 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     const byId = new Map((hydrated.matches ?? []).map((m) => [m.id, m]));
     const matches: MeMatchItemDto[] = [];
-    for (const id of pageIds) {
-      const item = byId.get(id);
-      if (item) matches.push(item);
+    // Materialized `MatchListRank.matchScore` is list source of truth for score/tier
+    // (hydrate may re-compare for explainability). Unscored ranks use -1.
+    for (const rank of pageRanks) {
+      const item = byId.get(rank.candidateProfileId);
+      if (!item) continue;
+      const matchScore =
+        Number.isFinite(rank.matchScore) && rank.matchScore >= 0
+          ? rank.matchScore
+          : item.matchScore;
+      matches.push({
+        ...item,
+        matchScore,
+        ...toPriorityFields(matchScore),
+      });
     }
 
     const lastRank = pageRanks[pageRanks.length - 1]!;
