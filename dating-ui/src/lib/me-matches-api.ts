@@ -88,6 +88,12 @@ export interface MeMatchItemDto {
   hasEvaluation: boolean;
   /** Engine final score 0–100. Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  /**
+   * Sprint 41 — same as `matchScore` when finite; null when unscored.
+   */
+  priorityScore?: number | null;
+  /** Sprint 41 — HIGH ≥85, GOOD ≥70, OTHER otherwise. */
+  priorityTier?: 'HIGH' | 'GOOD' | 'OTHER';
   /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
   profileAnalysisStale?: boolean;
   explainability: MatchExplainabilityDto | null;

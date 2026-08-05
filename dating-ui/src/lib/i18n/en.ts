@@ -132,6 +132,14 @@ export const enCopy: AppCopySchema = {
         whyEmpty: "No explanation available yet.",
         viewProfile: "View profile",
       },
+      priority: {
+        highTitle: "Message these first",
+        highDescription:
+          "Highest compatibility based on life goals, personality, and interests.",
+        goodTitle: "Good matches",
+        otherTitle: "Other matches",
+        count: (n) => `(${n})`,
+      },
       updatedPrefix: "Updated",
     },
     detail: {

@@ -5,7 +5,7 @@ import type { MatchRecommendationDto } from '@/lib/me-matches-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 
-const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock, pushMock, likeMatch, passMatch, undoMatchAction, fetchMatchAction } = vi.hoisted(() => ({
+const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock, pushMock, likeMatch, passMatch, undoMatchAction, fetchMatchAction, emitProductLog } = vi.hoisted(() => ({
   fetchMyMatches: vi.fn(),
   submitMyProfileForAnalysis: vi.fn(),
   fetchMyProfile: vi.fn(),
@@ -16,6 +16,7 @@ const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfil
   passMatch: vi.fn(),
   undoMatchAction: vi.fn(),
   fetchMatchAction: vi.fn(),
+  emitProductLog: vi.fn(),
 }));
 
 vi.mock('@/lib/me-matches-api', () => ({
@@ -43,7 +44,7 @@ vi.mock('@/contexts/auth-context', () => ({
 }));
 
 vi.mock('@/lib/observability/product-logger', () => ({
-  emitProductLog: vi.fn(),
+  emitProductLog,
 }));
 
 class MockIntersectionObserver {
@@ -90,7 +91,9 @@ const baseMatch = {
   locationLabel: 'Tel Aviv',
   analyzedAt: '2026-04-18T00:00:00.000Z',
   hasEvaluation: true,
-  matchScore: 70,
+  matchScore: 90,
+  priorityScore: 90,
+  priorityTier: 'HIGH' as const,
   explainability: {
     positiveChips: ['Emotional depth'],
     reasonShort: 'Aligned',
@@ -416,7 +419,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
     expect(screen.getByText(/You: "I don't want smokers"/)).toBeTruthy();
     expect(screen.queryByText('Edit your story')).toBeNull();
     expect(screen.queryByText('→')).toBeNull();
-    expect(screen.queryByText('70')).toBeNull();
+    expect(screen.queryByText('90')).toBeNull();
     expect(screen.queryByTestId('match-browse-card')).toBeNull();
     unmount();
   });
@@ -728,5 +731,114 @@ describe('MeMatchesPage (i18n)', () => {
         screen.getByText('Clear overlap: real depth and presence.'),
       ).toBeTruthy();
     });
+  });
+});
+
+describe('MeMatchesPage (priority sections)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('shows HIGH section expanded and omits empty GOOD', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          id: 'high-1',
+          matchScore: 90,
+          priorityScore: 90,
+          priorityTier: 'HIGH',
+        },
+      ],
+    });
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-priority-section-high')).toBeTruthy();
+    });
+    expect(screen.getByText(/Message these first/)).toBeTruthy();
+    expect(screen.getByTestId('match-browse-card')).toBeTruthy();
+    expect(screen.getByTestId('match-browse-score-badge').textContent).toBe(
+      '90%',
+    );
+    expect(screen.queryByTestId('match-priority-section-good')).toBeNull();
+  });
+
+  it('collapses GOOD by default and expands on toggle', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          id: 'good-1',
+          matchScore: 75,
+          priorityScore: 75,
+          priorityTier: 'GOOD',
+          nickname: 'GoodOne',
+        },
+      ],
+    });
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-priority-toggle-good')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('match-priority-section-high')).toBeNull();
+    expect(
+      screen.getByTestId('match-priority-panel-good').hasAttribute('hidden'),
+    ).toBe(true);
+    fireEvent.click(screen.getByTestId('match-priority-toggle-good'));
+    expect(
+      screen.getByTestId('match-priority-panel-good').hasAttribute('hidden'),
+    ).toBe(false);
+    expect(screen.getByText('GoodOne')).toBeTruthy();
+    expect(emitProductLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'match.priority_section_expanded',
+        meta: expect.objectContaining({
+          event: 'match.priority_section_expanded',
+          tier: 'GOOD',
+        }),
+      }),
+    );
+  });
+
+  it('keeps hard-blocked outside priority card stacks', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'ready',
+      matches: [
+        {
+          ...baseMatch,
+          id: 'blocked-1',
+          yourAction: 'LIKE' as const,
+          hardBlocked: {
+            disabled: true as const,
+            reasons: [
+              {
+                code: 'DB_SMOKING_EXCLUDED_TRAIT_PRESENT',
+                dimension: 'smoking',
+                direction: 'viewer_to_them' as const,
+                message: 'x',
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    render(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-priority-blocked-trailer')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('match-browse-card')).toBeNull();
+    expect(screen.getByText('No longer a match')).toBeTruthy();
   });
 });

@@ -11,7 +11,7 @@ import { useAppLocale } from '@/lib/i18n';
 import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
 import { useInfiniteMatches } from './use-infinite-matches';
 import { MatchListItem } from './match-list-item';
-import { MatchBrowseCard } from './match-browse-card';
+import { MatchPrioritySections } from './match-priority-sections';
 import {
   applyMatchesScrollY,
   consumeMatchesScrollRestore,
@@ -43,7 +43,6 @@ export default function MeMatchesPageClient() {
     loading,
     loadingMore,
     error,
-    hasMore,
     reload,
     sentinelRef,
   } = useInfiniteMatches(listCopy.loadFailed);
@@ -199,43 +198,37 @@ export default function MeMatchesPageClient() {
           matches.length === 0 && <MatchListEmptyState />}
 
         {!loading && !error && data?.status === 'ready' && matches.length > 0 && (
-          <ul className="flex flex-col gap-6">
-            {matches.map((m, index) =>
-              m.hardBlocked ? (
-                <MatchListItem
-                  key={m.id}
-                  match={m}
-                  index={index}
-                  locale={locale}
-                  listCopy={listCopy}
-                />
-              ) : (
-                <MatchBrowseCard
-                  key={m.id}
-                  match={m}
-                  index={index}
-                  locale={locale}
-                  listCopy={listCopy}
-                  detailCopy={detailCopy}
-                  onMutualMatch={(conversationId) =>
-                    handleMutualMatch(m.id, conversationId)
-                  }
-                />
-              ),
-            )}
-            <li
+          <div className="space-y-6">
+            <MatchPrioritySections
+              matches={matches}
+              locale={locale}
+              listCopy={listCopy}
+              detailCopy={detailCopy}
+              onMutualMatch={handleMutualMatch}
+              renderBlocked={(blocked) =>
+                blocked.map((m, index) => (
+                  <MatchListItem
+                    key={m.id}
+                    match={m}
+                    index={index}
+                    locale={locale}
+                    listCopy={listCopy}
+                  />
+                ))
+              }
+            />
+            <div
               ref={sentinelRef}
-              className="h-4 list-none"
+              className="h-4"
               aria-hidden
               data-testid="matches-infinite-sentinel"
             />
             {loadingMore && (
-              <li className="list-none py-2 text-center text-xs text-zinc-400">
+              <p className="py-2 text-center text-xs text-zinc-400">
                 {copy.common.loading}
-              </li>
+              </p>
             )}
-            {!hasMore ? null : null}
-          </ul>
+          </div>
         )}
       </div>
 

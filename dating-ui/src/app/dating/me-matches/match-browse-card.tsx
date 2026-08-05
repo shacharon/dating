@@ -15,6 +15,7 @@ import {
 import { MatchBrowseActions } from './match-browse-actions';
 import { MatchWhySection } from './match-why-section';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
+import { resolvePriorityTier } from './match-priority';
 
 export type MatchBrowseCardProps = {
   match: MeMatchItemDto;
@@ -60,6 +61,10 @@ export function MatchBrowseCard({
   const location = matchBrowseLocation(m);
   const oneLiner = matchBrowseOneLiner(m);
   const showAgeBesideName = Boolean(m.nickname?.trim() && age);
+  const tier = resolvePriorityTier(m);
+  const score =
+    m.matchScore != null && Number.isFinite(m.matchScore) ? m.matchScore : null;
+  const isHigh = tier === 'HIGH';
 
   useEffect(() => {
     const node = cardRef.current;
@@ -90,7 +95,12 @@ export function MatchBrowseCard({
       <article
         ref={cardRef}
         data-testid="match-browse-card"
-        className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"
+        data-priority-tier={tier}
+        className={
+          isHigh
+            ? 'overflow-hidden rounded-2xl border border-emerald-400/60 bg-white ring-1 ring-emerald-500/40 dark:border-emerald-500/50 dark:bg-zinc-900 dark:ring-emerald-400/30'
+            : 'overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900'
+        }
       >
         <div
           data-testid="match-browse-photo-region"
@@ -108,6 +118,14 @@ export function MatchBrowseCard({
             testId="match-browse-photo"
             className="!h-full !w-full"
           />
+          {score != null ? (
+            <span
+              data-testid="match-browse-score-badge"
+              className="pointer-events-none absolute end-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold tabular-nums text-white"
+            >
+              {Math.round(score)}%
+            </span>
+          ) : null}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-5 pb-5 pt-16">
             <Link
               href={`/dating/me-matches/${m.id}`}
@@ -171,3 +189,4 @@ export function MatchBrowseCard({
     </li>
   );
 }
+

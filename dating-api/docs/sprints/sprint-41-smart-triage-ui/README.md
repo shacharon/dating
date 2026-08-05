@@ -1,6 +1,6 @@
 # Sprint 41 — Smart Triage UI (P0 Product Pivot)
 
-**Status:** 🚧 In progress (Story 01 Done)  
+**Status:** 🚧 In progress (Stories 01–02 Done)  
 **Depends on:** Sprint 40 Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)
 
@@ -36,7 +36,7 @@ Flip the information hierarchy: let users swipe on photos naturally (like Tinder
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [Photo-first match browse UI](./STORY_01_photo_first_browse.md) | P0 | 2d | Done |
-| 02 | [Match priority ranking backend + frontend](./STORY_02_priority_ranking.md) | P0 | 2d | Planned |
+| 02 | [Match priority ranking backend + frontend](./STORY_02_priority_ranking.md) | P0 | 2d | Done |
 | 03 | [User validation testing](./STORY_03_validation_testing.md) | P0 | 1d | Planned |
 
 **Order:** 01 → 02 → 03 (sequential: UI foundation, then intelligence, then validate)

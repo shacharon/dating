@@ -1653,6 +1653,17 @@ describe('MeMatchesService', () => {
     // Verify DESC order
     expect(scores[0]!).toBeGreaterThanOrEqual(scores[1]!);
     expect(scores[1]!).toBeGreaterThanOrEqual(scores[2]!);
+    for (const m of result.matches!) {
+      expect(m.priorityScore).toBe(m.matchScore);
+      expect(['HIGH', 'GOOD', 'OTHER']).toContain(m.priorityTier);
+      if (m.matchScore != null && m.matchScore >= 85) {
+        expect(m.priorityTier).toBe('HIGH');
+      } else if (m.matchScore != null && m.matchScore >= 70) {
+        expect(m.priorityTier).toBe('GOOD');
+      } else {
+        expect(m.priorityTier).toBe('OTHER');
+      }
+    }
   });
 
   it('list() sorts null matchScores last', async () => {

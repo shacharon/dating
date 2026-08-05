@@ -129,6 +129,13 @@ export type AppCopySchema = {
         whyEmpty: string;
         viewProfile: string;
       };
+      priority: {
+        highTitle: string;
+        highDescription: string;
+        goodTitle: string;
+        otherTitle: string;
+        count: (n: number) => string;
+      };
     };
     detail: {
       backToMatches: string;

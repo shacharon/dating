@@ -121,6 +121,13 @@ export const heCopy: AppCopySchema = {
         whyEmpty: "עדיין אין הסבר.",
         viewProfile: "צפייה בפרופיל",
       },
+      priority: {
+        highTitle: "כתבו לאלה קודם",
+        highDescription: "התאמה גבוהה לפי מטרות חיים, אישיות ותחומי עניין.",
+        goodTitle: "התאמות טובות",
+        otherTitle: "התאמות נוספות",
+        count: (n) => `(${n})`,
+      },
     },
     detail: {
       backToMatches: "← חזרה להתאמות",

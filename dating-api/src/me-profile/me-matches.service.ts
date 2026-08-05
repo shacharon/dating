@@ -30,6 +30,7 @@ import {
   MATCH_LIST_RANK_PERSIST_TX,
 } from './match-list-rank-persist.constants';
 import { toStoredMatchListScore } from './match-list-rank-score';
+import { toPriorityFields } from './match-priority';
 import { isMatchListMaterializedEnabled } from './match-list-materialized-flag';
 import {
   buildProductProfileMatchingBridge,
@@ -178,6 +179,13 @@ export interface MeMatchItemDto {
   hasEvaluation: boolean;
   /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
   matchScore: number | null;
+  /**
+   * Sprint 41 — same as `matchScore` when finite; null when unscored.
+   * Presentation alias for triage UI (no algorithm change).
+   */
+  priorityScore: number | null;
+  /** Sprint 41 — HIGH ≥85, GOOD ≥70, OTHER otherwise (incl. null score). */
+  priorityTier: 'HIGH' | 'GOOD' | 'OTHER';
   /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
   profileAnalysisStale?: boolean;
   primaryPhotoUrl: string | null;
@@ -1263,6 +1271,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         analyzedAt: row.analyzedAt?.toISOString() ?? null,
         hasEvaluation: row._count.evaluations > 0,
         matchScore,
+        ...toPriorityFields(matchScore),
         profileAnalysisStale: row.updatedAt > candidateEval.createdAt,
         primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
           profileId: row.id,
@@ -1320,6 +1329,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           analyzedAt: pending.row.analyzedAt?.toISOString() ?? null,
           hasEvaluation: pending.row._count.evaluations > 0,
           matchScore: pending.matchScore,
+          ...toPriorityFields(pending.matchScore),
           profileAnalysisStale:
             pending.row.updatedAt > pending.candidateEval.createdAt,
           primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({

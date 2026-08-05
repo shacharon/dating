@@ -135,6 +135,14 @@ export const esCopy: AppCopySchema = {
         whyEmpty: "Aun no hay una explicacion.",
         viewProfile: "Ver perfil",
       },
+      priority: {
+        highTitle: "Escribe a estos primero",
+        highDescription:
+          "Mayor compatibilidad segun objetivos, personalidad e intereses.",
+        goodTitle: "Buenas coincidencias",
+        otherTitle: "Otras coincidencias",
+        count: (n) => `(${n})`,
+      },
     },
     detail: {
       backToMatches: "← Volver a coincidencias",
