@@ -58,6 +58,9 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'emotionalExpression',
     'growthMindset',
     'selfAwareness',
+    'patienceTolerance',
+    'intimacyPacing',
+    'monogamyAlignment',
   ],
   relationship: [
     'emotionalDepth',
@@ -94,6 +97,9 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'emotionalExpression',
     'growthMindset',
     'selfAwareness',
+    'patienceTolerance',
+    'intimacyPacing',
+    'monogamyAlignment',
   ],
 };
 

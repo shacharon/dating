@@ -61,6 +61,10 @@ export interface EnrichedSignals {
   /** Shadow Expansion-13 — from evaluationJson.self.signals when extracted. */
   growthMindset?: number | null;
   selfAwareness?: number | null;
+  /** Shadow Expansion-14 — from evaluationJson.self.signals when extracted. */
+  patienceTolerance?: number | null;
+  intimacyPacing?: number | null;
+  monogamyAlignment?: number | null;
 }
 
 export function getSignal(
@@ -636,5 +640,44 @@ export const tensionRules: TensionRule[] = [
     penalty: 3,
     explain:
       'Neither partner shows strong self-insight — patterns may be harder to name and resolve together',
+  },
+  {
+    id: 'patience_tolerance_gap',
+    name: 'Patience/tolerance gap (MED)',
+    when: (a, b) => {
+      const aP = getSignal(a, 'patienceTolerance');
+      const bP = getSignal(b, 'patienceTolerance');
+      if (aP == null || bP == null) return false;
+      return (aP >= 8 && bP <= 3) || (bP >= 8 && aP <= 3);
+    },
+    penalty: 3,
+    explain:
+      'One is highly tolerant of quirks and flaws, the other more critical — daily friction likely',
+  },
+  {
+    id: 'intimacy_pacing_clash',
+    name: 'Intimacy pacing clash (MED-HIGH)',
+    when: (a, b) => {
+      const aI = getSignal(a, 'intimacyPacing');
+      const bI = getSignal(b, 'intimacyPacing');
+      if (aI == null || bI == null) return false;
+      return (aI >= 8 && bI <= 3) || (bI >= 8 && aI <= 3);
+    },
+    penalty: 4,
+    explain:
+      'One moves quickly toward closeness, the other prefers to take things slow',
+  },
+  {
+    id: 'monogamy_alignment_mismatch',
+    name: 'Monogamy alignment mismatch (HIGH — structural dealbreaker territory)',
+    when: (a, b) => {
+      const aM = getSignal(a, 'monogamyAlignment');
+      const bM = getSignal(b, 'monogamyAlignment');
+      if (aM == null || bM == null) return false;
+      return (aM <= 2 && bM >= 8) || (bM <= 2 && aM >= 8);
+    },
+    penalty: 8,
+    explain:
+      'One expects strict exclusivity, the other seeks an open/non-monogamous structure',
   },
 ];

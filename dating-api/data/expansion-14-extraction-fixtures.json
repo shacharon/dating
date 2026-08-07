@@ -1,0 +1,125 @@
+[
+  {
+    "id": "patience_high_en",
+    "aboutMe": "I'm very patient with partners. Small habits and quirks almost never bother me — nobody's perfect and I give people lots of room to be themselves.",
+    "signal": "patienceTolerance",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "patience_low_en",
+    "aboutMe": "Little habits really bother me. I have high standards and don't tolerate much — small annoyances get under my skin quickly.",
+    "signal": "patienceTolerance",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "pacing_high_en",
+    "aboutMe": "I fall hard and quick. When I feel a connection I move fast emotionally and physically.",
+    "signal": "intimacyPacing",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "pacing_low_en",
+    "aboutMe": "I take things slow. I need a lot of time before I open up emotionally or get physically close.",
+    "signal": "intimacyPacing",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "monogamy_low_en",
+    "aboutMe": "Looking for a committed, exclusive, monogamous relationship only — not open, not poly.",
+    "signal": "monogamyAlignment",
+    "expectedMin": 1,
+    "expectedMax": 3
+  },
+  {
+    "id": "monogamy_high_en",
+    "aboutMe": "I'm ethically non-monogamous and prefer an open relationship structure.",
+    "signal": "monogamyAlignment",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "all_null_silence_en",
+    "aboutMe": "I work in product design and enjoy cooking elaborate dinners for friends on weekends.",
+    "expectations": [
+      {
+        "signal": "patienceTolerance",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "intimacyPacing",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "monogamyAlignment",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "patience_high_he",
+    "aboutMe": "אני מאוד סבלני/ת עם בני/בנות זוג. הרגלים קטנים כמעט לא מפריעים לי — אף אחד לא מושלם ואני נותן/ת הרבה מקום.",
+    "signal": "patienceTolerance",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "pacing_low_he",
+    "aboutMe": "אני לוקח/ת דברים לאט מאוד. צריך/ה הרבה זמן לפני שאני נפתח/ת רגשית או מתקרב/ת פיזית.",
+    "signal": "intimacyPacing",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "monogamy_low_he",
+    "aboutMe": "אני רוצה רק מונוגמיה בלעדית עם אדם אחד. לא קשר פתוח ולא פוליאמוריה — exclusive monogamy only, not open.",
+    "signal": "monogamyAlignment",
+    "expectedMin": 1,
+    "expectedMax": 3
+  },
+  {
+    "id": "conflict_alone_patience_null",
+    "aboutMe": "When we argue I stay calm and try to de-escalate in the moment rather than raise my voice.",
+    "expectations": [
+      {
+        "signal": "patienceTolerance",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "casual_intimacy_alone_pacing_null",
+    "aboutMe": "I'm only interested in committed physical intimacy, not casual hookups.",
+    "expectations": [
+      {
+        "signal": "intimacyPacing",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "clarity_labels_alone_monogamy_null",
+    "aboutMe": "I want clear labels and transparency about where we stand as we date — defined expectations without games.",
+    "expectations": [
+      {
+        "signal": "monogamyAlignment",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  }
+]

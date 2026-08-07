@@ -204,6 +204,12 @@ export const enCopy: AppCopySchema = {
             "You both value feedback and growing as partners",
           "Self-awareness match":
             "You both have clear insight into your own patterns",
+          "Patience match":
+            "You're both patient and accepting of each other's quirks",
+          "Pace of closeness":
+            "You move toward closeness at a similar pace",
+          "Aligned on relationship structure":
+            "You're aligned on what exclusivity means to you",
         },
         interestOverlap: {
           travel: "You both love travel",
@@ -536,6 +542,9 @@ export const enCopy: AppCopySchema = {
           "A partner really listens to me when they…",
           "A time I changed my mind about something important…",
           "One thing I'm working on about myself…",
+          "Something about my partner that would test my patience, and how I'd handle it…",
+          "How fast do you like to move emotionally/physically in a new relationship?",
+          "What does an exclusive relationship mean to you?",
         ],
         examples: [
           "I work in product design and decompress by cooking elaborate dinners for friends. Weeknights I'm usually at home with a podcast and a sketchbook; weekends I hunt small galleries or try a new bakery. I'm calm in groups but light up when the talk gets thoughtful. Looking for people who like slow plans and don't need every night out to be loud.",

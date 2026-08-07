@@ -2969,6 +2969,282 @@ describe('ExtractionService behavior locks', () => {
     });
   });
 
+  describe('Expansion-14 shadow signals', () => {
+    it('extracts high patienceTolerance when LLM returns very-patient score', async () => {
+      // Semantic: "Nobody's perfect, I try to be understanding about the little things"
+      const text =
+        "Nobody's perfect, I try to be understanding about the little things.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { patienceTolerance: 9 },
+          [
+            {
+              signal: 'patienceTolerance',
+              quote:
+                "Nobody's perfect, I try to be understanding about the little things",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['patienceTolerance']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'patienceTolerance'),
+      ).toBe(true);
+    });
+
+    it('extracts low patienceTolerance when LLM returns highly-critical score', async () => {
+      // Semantic: "Little habits really bother me"
+      const text = 'Little habits really bother me.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { patienceTolerance: 2 },
+          [
+            {
+              signal: 'patienceTolerance',
+              quote: 'Little habits really bother me',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['patienceTolerance']).toBe(2);
+    });
+
+    it('returns null for patienceTolerance when tolerance stance is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, patienceTolerance: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['patienceTolerance']).toBeNull();
+    });
+
+    it('extracts high intimacyPacing when LLM returns moves-fast score', async () => {
+      // Semantic: "When I feel a connection I move fast"
+      const text = 'When I feel a connection I move fast.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { intimacyPacing: 9 },
+          [
+            {
+              signal: 'intimacyPacing',
+              quote: 'When I feel a connection I move fast',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['intimacyPacing']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'intimacyPacing')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low intimacyPacing when LLM returns takes-things-slow score', async () => {
+      // Semantic: "I take things slow, need time before I open up" / Hebrew slow-open
+      const text = 'I take things slow, need time before I open up.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { intimacyPacing: 2 },
+          [
+            {
+              signal: 'intimacyPacing',
+              quote: 'I take things slow, need time before I open up',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['intimacyPacing']).toBe(2);
+    });
+
+    it('returns null for intimacyPacing when pacing preference is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, intimacyPacing: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['intimacyPacing']).toBeNull();
+    });
+
+    it('extracts high monogamyAlignment when LLM returns open/poly score', async () => {
+      // Semantic: "I'm ethically non-monogamous / poly" — HIGH = open (do not invert)
+      const text = "I'm ethically non-monogamous and prefer a poly structure.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { monogamyAlignment: 9 },
+          [
+            {
+              signal: 'monogamyAlignment',
+              quote: "I'm ethically non-monogamous and prefer a poly structure",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['monogamyAlignment']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'monogamyAlignment'),
+      ).toBe(true);
+    });
+
+    it('extracts low monogamyAlignment when LLM returns strict-mono score', async () => {
+      // Semantic: "Looking for a committed, exclusive relationship only" / Hebrew exclusive-only
+      const text = 'Looking for a committed, exclusive relationship only.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { monogamyAlignment: 2 },
+          [
+            {
+              signal: 'monogamyAlignment',
+              quote: 'Looking for a committed, exclusive relationship only',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['monogamyAlignment']).toBe(2);
+    });
+
+    it('returns null for monogamyAlignment when structure stance is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, monogamyAlignment: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['monogamyAlignment']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-14 scores to null', async () => {
+      const text = "Nobody's perfect, I try to be understanding.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { patienceTolerance: 11 },
+          [
+            {
+              signal: 'patienceTolerance',
+              quote: "Nobody's perfect, I try to be understanding",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['patienceTolerance']).toBeNull();
+    });
+
+    it('extracts partner patienceTolerance when LLM returns desired-partner patience score', async () => {
+      const text =
+        'I want a partner who is patient with quirks and little differences.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { patienceTolerance: 8 },
+          [
+            {
+              signal: 'patienceTolerance',
+              quote: 'patient with quirks and little differences',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['patienceTolerance']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'patienceTolerance'),
+      ).toBe(true);
+    });
+
+    it('extracts partner intimacyPacing when LLM returns desired-partner pacing score', async () => {
+      const text = 'I want a partner who takes things slow into closeness.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { intimacyPacing: 8 },
+          [
+            {
+              signal: 'intimacyPacing',
+              quote: 'takes things slow into closeness',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['intimacyPacing']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'intimacyPacing')).toBe(
+        true,
+      );
+    });
+
+    it('extracts partner monogamyAlignment when LLM returns desired-partner structure score', async () => {
+      // HIGH = open/poly polarity (do not invert); smoke score 8
+      const text =
+        'I want a partner who is open to ethically non-monogamous structures.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { monogamyAlignment: 8 },
+          [
+            {
+              signal: 'monogamyAlignment',
+              quote: 'open to ethically non-monogamous structures',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['monogamyAlignment']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'monogamyAlignment'),
+      ).toBe(true);
+    });
+  });
+
   describe('Expansion-09 interest tags', () => {
     it('preserves biking from mocked LLM interests', async () => {
       const text = 'I love cycling and mountain bike weekends.';

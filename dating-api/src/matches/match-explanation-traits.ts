@@ -221,6 +221,22 @@ export const CHIP_TO_TRAIT: Record<
     evidence: 'You both have clear insight into your own patterns',
     listPhrase: 'shared self-insight',
   },
+  'Patience match': {
+    group: 'Emotional connection',
+    evidence:
+      "You're both patient and accepting of each other's quirks",
+    listPhrase: 'both patient with quirks',
+  },
+  'Pace of closeness': {
+    group: 'Physical connection',
+    evidence: 'You move toward closeness at a similar pace',
+    listPhrase: 'similar pace to closeness',
+  },
+  'Aligned on relationship structure': {
+    group: 'Relationship structure',
+    evidence: "You're aligned on what exclusivity means to you",
+    listPhrase: 'aligned on exclusivity / structure',
+  },
 };
 
 /**

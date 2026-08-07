@@ -49,6 +49,10 @@ import {
   EXPANSION_13_PARTNER_SHADOW_SIGNAL_BLOCK,
   EXPANSION_13_SELF_SHADOW_SIGNAL_BLOCK,
 } from './expansion-13-signal-definitions';
+import {
+  EXPANSION_14_PARTNER_SHADOW_SIGNAL_BLOCK,
+  EXPANSION_14_SELF_SHADOW_SIGNAL_BLOCK,
+} from './expansion-14-signal-definitions';
 import { EXPANSION_09_INTEREST_GUIDANCE_BLOCK } from './expansion-09-interest-guidance';
 import {
   buildExtractionPipelineTrace,
@@ -89,7 +93,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -115,18 +119,18 @@ SIGNAL RULES:
 - healthBodyConsciousness = explicit health/wellness values focus (caring about health — not how much they actually exercise/move)
 - spirituality = explicit spiritual/inner meaning orientation — not practical ritual observance level alone
 - intellectualCuriosity = explicit need for mental stimulation / ideas / deep learning with a partner (not merely "I'm smart" or listing books, and not formal degree/credential filters)
-- conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / de-escalating in the moment) — not post-conflict apology, ownership, or reconnection alone (→ repairSkills), and not grudge/forgiveness pacing alone (→ forgivenessStyle)
+- conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / de-escalating in the moment) — not post-conflict apology, ownership, or reconnection alone (→ repairSkills), and not grudge/forgiveness pacing alone (→ forgivenessStyle), and not day-to-day tolerance for quirks/flaws outside fights alone (→ patienceTolerance)
 - adventureNovelty = explicit novelty vs routine / new-experiences preference (not life tempo alone, not homebody preference, not travel hobby tag alone)
 - structureChaosTolerance = explicit order vs chaos preference
 - empathyCompassion = explicit care for partner's feelings, attunement, compassionate responses (not generic kindness) — not listening attention/presence / not-interrupting alone (→ listeningPresence), and not inward self-insight / naming own patterns alone (→ selfAwareness)
 - vulnerabilityOpenness = explicit comfort sharing fears/struggles/authentic self (not merely "honest communication") — not willingness to change / take feedback / self-improvement alone (→ growthMindset)
-- emotionalRegulation = explicit emotional steadiness vs reactivity under stress; calm recovery in the moment (not merely "I'm emotional") — not letting go of grudges over time after conflict (→ forgivenessStyle), and not pursue vs withdraw / support-seeking direction alone (→ stressResponse), and not knowing/naming own patterns/triggers alone (→ selfAwareness)
+- emotionalRegulation = explicit emotional steadiness vs reactivity under stress; calm recovery in the moment (not merely "I'm emotional") — not letting go of grudges over time after conflict (→ forgivenessStyle), and not pursue vs withdraw / support-seeking direction alone (→ stressResponse), and not knowing/naming own patterns/triggers alone (→ selfAwareness), and not tolerance threshold for partner's imperfections alone (→ patienceTolerance)
 - physicalAffectionStyle = explicit touch/cuddling/PDA/closeness needs (not general attractiveness, not casual vs committed intimacy boundary) — not verbal/emotional expression / words-of-affirmation alone (→ emotionalExpression)
 - humorPlayfulness = explicit need for banter, silliness, shared laughter, lightness in love (not merely "I'm funny" or generic "fun-loving")
 - creativeExpression = explicit need for creative outlets / making / self-expression through creation (not merely job title "artist" or hobby tag)
 - physicalActivityLevel = explicit daily athletic/activity behavior / how much they move (not merely wellness values or "I care about fitness")
 - domesticComfort = explicit homebody vs always-out preference for evenings/weekends (not social energy intro/extro, not calm vs busy pace alone)
-- casualIntimacyIntent = explicit casual vs committed-only physical intimacy stance (not looks priority, not affection/touch needs alone, not commitment-labels alone)
+- casualIntimacyIntent = explicit casual vs committed-only physical intimacy stance (not looks priority, not affection/touch needs alone, not commitment-labels alone, not speed-to-closeness / pacing alone → intimacyPacing)
 - supportExchangeOrientation = explicit openness to arrangement/money-in-relationship dynamics (not save/spend philosophy, not emotional support alone)
 - supportProviderOrientation = explicit desire to give ongoing financial support (not occasional date generosity alone)
 - supportRecipientOrientation = explicit desire to receive ongoing financial support (not emotional support alone)
@@ -143,6 +147,9 @@ SIGNAL RULES:
 - emotionalExpression = explicit outward verbal expression of feelings/affection/appreciation (reserved/actions-not-words LOW ↔ frequently says feelings HIGH); not emotional depth alone, not physical touch affection alone
 - growthMindset = explicit openness to feedback / willingness to change and learn as a partner (defensive/fixed LOW ↔ seeks feedback and adapts HIGH); not vulnerability/sharing-fears alone, not directness/speaking style alone
 - selfAwareness = explicit insight into own patterns/triggers/tendencies (little insight LOW ↔ clearly names patterns/origins HIGH); not in-the-moment emotional regulation alone, not empathy/caring-about-others alone
+- patienceTolerance = explicit day-to-day tolerance for partner flaws/quirks/differences (highly critical LOW ↔ very patient/accepting HIGH); not during-conflict fight style alone, not own emotional regulation alone
+- intimacyPacing = explicit preferred speed toward emotional/physical closeness (very slow LOW ↔ moves fast HIGH); not casual-vs-committed intimacy type alone
+- monogamyAlignment = explicit exclusive-vs-open/poly structure expectation (strict mono LOW ↔ open/poly HIGH — do not invert); not labels/boundaries/dating-approach clarity alone
 
 ${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
 
@@ -168,6 +175,8 @@ ${EXPANSION_12_SELF_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_13_SELF_SHADOW_SIGNAL_BLOCK}
 
+${EXPANSION_14_SELF_SHADOW_SIGNAL_BLOCK}
+
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
 Reject signals derived only from:
@@ -175,6 +184,7 @@ Reject signals derived only from:
 - vague emotional tone
 - job or logistics
 Only accept signals tied to clear behavior, pattern, preference, or personal rule.
+- "nobody's perfect / little habits bother me" / "I take things slow" / "exclusive only" / "poly / open relationship" -> patienceTolerance / intimacyPacing / monogamyAlignment when explicit; do not dump into conflictStyle, casualIntimacyIntent, or relationshipClarity alone
 
 LOGISTICS GUARD:
 Do NOT derive signals from work, travel, or schedule unless explicit personal preference is stated.
@@ -330,7 +340,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -347,14 +357,14 @@ Do NOT nullify structured relationship descriptions due to sparsity.
 
 SIGNAL RULES:
 - emotionalDepth = explicit vulnerability, emotional openness, naming feelings — not how outwardly feelings are verbally expressed alone (→ emotionalExpression)
-- relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules
+- relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules — not exclusive-vs-open/poly structure alone (→ monogamyAlignment)
 - traditionalism = explicit desire for kids, marriage, traditional family structure — not practical religious ritual observance alone (kosher/Shabbat/דתי practice → religiousObservance)
 - lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher — not morning vs night sleep chronotype
 - socialBattery = explicit social-energy cues only
 - physicalPriority = explicit looks, attraction, chemistry, appearance — not casual vs committed intimacy boundary, and not which body/build type preference (→ physicalTypePreference)
 - intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations — not formal degree/credential filter (→ educationLevel)
-- conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / calm discussion in the moment) — not post-conflict repair/apology alone (→ repairSkills), not forgiveness/grudge pacing alone (→ forgivenessStyle)
-- casualIntimacyIntent = desired partner's casual vs committed-only physical intimacy stance (not looks priority alone)
+- conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / calm discussion in the moment) — not post-conflict repair/apology alone (→ repairSkills), not forgiveness/grudge pacing alone (→ forgivenessStyle), and not day-to-day patience for quirks/flaws alone (→ patienceTolerance)
+- casualIntimacyIntent = desired partner's casual vs committed-only physical intimacy stance (not looks priority alone, not speed-to-closeness alone → intimacyPacing)
 - supportExchangeOrientation = desired openness to arrangement/money-in-relationship dynamics (not emotional support alone)
 - supportProviderOrientation = wanting a partner who GIVES ongoing financial support
 - supportRecipientOrientation = wanting a partner who RECEIVES / expects ongoing financial support
@@ -371,6 +381,9 @@ SIGNAL RULES:
 - emotionalExpression = desired partner outward verbal expression of feelings/affection (reserved/actions-not-words LOW ↔ frequently says feelings HIGH); not emotional depth alone, not physical touch alone
 - growthMindset = desired partner openness to feedback / willingness to change (defensive/fixed LOW ↔ seeks feedback and grows HIGH); not vulnerability/sharing-fears alone
 - selfAwareness = desired partner insight into own patterns/triggers (little insight LOW ↔ clearly names patterns/origins HIGH); not calm-under-stress regulation alone, not empathy alone
+- patienceTolerance = desired partner day-to-day tolerance for flaws/quirks/differences (highly critical LOW ↔ very patient/accepting HIGH); not during-conflict fight style alone
+- intimacyPacing = desired partner speed toward emotional/physical closeness (very slow LOW ↔ moves fast HIGH); not casual-vs-committed intimacy type alone
+- monogamyAlignment = desired partner exclusive-vs-open/poly structure expectation (strict mono LOW ↔ open/poly HIGH — do not invert); not labels/boundaries/dating-approach clarity alone
 
 ${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
 
@@ -383,6 +396,8 @@ ${EXPANSION_11_PARTNER_SHADOW_SIGNAL_BLOCK}
 ${EXPANSION_12_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_13_PARTNER_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_14_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 DIRECTION LOCK:
 For lifestylePace:
@@ -409,6 +424,7 @@ Examples:
 - "needs me close when stressed" / "jealous / needs check-ins" -> stressResponse / jealousySecurity when explicit; do not dump into attachmentSecurity or independence alone
 - "puts phone away / really listens" / "says I love you often / open about feelings" -> listeningPresence / emotionalExpression when explicit; do not dump into emotionalDepth alone
 - "welcomes feedback / always working on being a better partner" / "I know I shut down when criticized" -> growthMindset / selfAwareness when explicit; do not dump into vulnerability or regulation alone
+- "patient with quirks" / "moves fast / takes it slow" / "exclusive only" / "open / poly" -> patienceTolerance / intimacyPacing / monogamyAlignment when explicit; do not dump into conflictStyle, casualIntimacyIntent, or relationshipClarity alone
 - "open to kids later" -> traditionalism, NOT relationshipClarity
 
 MULTI-MAPPING:

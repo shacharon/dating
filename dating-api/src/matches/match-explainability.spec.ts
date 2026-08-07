@@ -335,6 +335,48 @@ describe('pickPositiveChips', () => {
     expect(chips).toContain('Self-awareness match');
   });
 
+  it('includes Expansion-14 Patience match from synthetic both-high patience entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'patienceMatch',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Patience match');
+  });
+
+  it('includes Expansion-14 Pace of closeness from synthetic pacing entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'intimacyPaceAligned',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Pace of closeness');
+  });
+
+  it('includes Expansion-14 Aligned on relationship structure from synthetic monogamy entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'monogamyStructureAligned',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Aligned on relationship structure');
+  });
+
   it('emits interestOverlapTags (max 2 preferred) from sharedInterests', () => {
     const dto = buildMatchExplainability({
       compatibility: 70,
@@ -468,6 +510,18 @@ describe('buildMatchExplainability', () => {
   it('maps Expansion-13 tension rule ids to chip labels', () => {
     expect(TENSION_CHIP_BY_ID.growth_mindset_gap).toBe('Different growth pace');
     expect(TENSION_CHIP_BY_ID.both_low_self_awareness).toBe('Self-insight gap');
+  });
+
+  it('maps Expansion-14 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.patience_tolerance_gap).toBe(
+      'Different tolerance levels',
+    );
+    expect(TENSION_CHIP_BY_ID.intimacy_pacing_clash).toBe(
+      'Different pace to closeness',
+    );
+    expect(TENSION_CHIP_BY_ID.monogamy_alignment_mismatch).toBe(
+      'Relationship structure mismatch',
+    );
   });
 
   it('shows empathy_gap tension chip when friction >= 3', () => {
@@ -699,6 +753,39 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'both_low_self_awareness', penalty: 3 }],
     });
     expect(dto.tensionChip).toBe('Self-insight gap');
+  });
+
+  it('shows Expansion-14 patience_tolerance_gap tension chip (Different tolerance levels)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 3,
+      breakdown: [],
+      tensionMatrix: [{ id: 'patience_tolerance_gap', penalty: 3 }],
+    });
+    expect(dto.tensionChip).toBe('Different tolerance levels');
+  });
+
+  it('shows Expansion-14 intimacy_pacing_clash tension chip (Different pace to closeness)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'intimacy_pacing_clash', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Different pace to closeness');
+  });
+
+  it('shows Expansion-14 monogamy_alignment_mismatch tension chip (Relationship structure mismatch)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 8,
+      breakdown: [],
+      tensionMatrix: [{ id: 'monogamy_alignment_mismatch', penalty: 8 }],
+    });
+    expect(dto.tensionChip).toBe('Relationship structure mismatch');
   });
 
   it('shows education_level_gap tension chip when friction >= 3', () => {

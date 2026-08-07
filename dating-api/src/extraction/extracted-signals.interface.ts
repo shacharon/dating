@@ -118,6 +118,15 @@ export const SHADOW_SIGNAL_KEYS = [
    */
   'growthMindset',
   'selfAwareness',
+  /**
+   * Expansion-14 — Tolerance & Intimacy Pacing (shadow until promote).
+   * patienceTolerance: day-to-day tolerance for quirks/flaws — NOT conflictStyle / emotionalRegulation alone.
+   * intimacyPacing: speed toward closeness — NOT casualIntimacyIntent (type) alone.
+   * monogamyAlignment: exclusive vs open/poly structure (low=mono, high=open) — NOT relationshipClarity alone.
+   */
+  'patienceTolerance',
+  'intimacyPacing',
+  'monogamyAlignment',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -135,8 +144,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 32 shadow + 4 buffer. */
-export const MAX_EVIDENCE_ITEMS = 51;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 35 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 54;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

@@ -248,4 +248,30 @@ describe('buildMatchExplanationTraits', () => {
       CHIP_TO_TRAIT['Self-awareness match'].evidence,
     );
   });
+
+  it('maps Expansion-14 Patience match chip', () => {
+    const traits = buildMatchExplanationTraits(['Patience match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Emotional connection');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Patience match'].evidence);
+  });
+
+  it('maps Expansion-14 Pace of closeness chip', () => {
+    const traits = buildMatchExplanationTraits(['Pace of closeness'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Physical connection');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Pace of closeness'].evidence);
+  });
+
+  it('maps Expansion-14 Aligned on relationship structure chip', () => {
+    const traits = buildMatchExplanationTraits(
+      ['Aligned on relationship structure'],
+      70,
+    );
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Relationship structure');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Aligned on relationship structure'].evidence,
+    );
+  });
 });

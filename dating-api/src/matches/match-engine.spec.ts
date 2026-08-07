@@ -2085,6 +2085,372 @@ describe('Expansion-13 shadow E2E via compare', () => {
   });
 });
 
+type Expansion14ShadowKey =
+  | 'patienceTolerance'
+  | 'intimacyPacing'
+  | 'monogamyAlignment';
+
+function makeProfileWithExpansion14Shadow(
+  id: string,
+  name: string,
+  official: Partial<Record<SignalKey, number>>,
+  shadow: Partial<Record<Expansion14ShadowKey, number | null>>,
+  relationshipFitScore = 50,
+  interestsTop3: string[] = [],
+): ProfileJsonPayload {
+  const signals = {
+    ...makeSignals(official),
+    ...shadow,
+  } as Record<string, number>;
+  return makeProfile(id, name, signals, relationshipFitScore, undefined, interestsTop3);
+}
+
+describe('Expansion-14 shadow E2E via compare', () => {
+  it('keeps Expansion-14 shadow keys out of COMPATIBILITY_SIGNAL_KEYS', () => {
+    expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+    for (const key of [
+      'patienceTolerance',
+      'intimacyPacing',
+      'monogamyAlignment',
+    ] as const) {
+      expect(COMPATIBILITY_SIGNAL_KEYS as readonly string[]).not.toContain(key);
+    }
+  });
+
+  it('Expansion-14 keys are distinct from adjacent signals and interest tags', () => {
+    for (const key of [
+      'patienceTolerance',
+      'intimacyPacing',
+      'monogamyAlignment',
+    ] as const) {
+      expect(INTEREST_CANONICAL_TAGS as readonly string[]).not.toContain(key);
+    }
+    expect('patienceTolerance').not.toBe('conflictStyle');
+    expect('patienceTolerance').not.toBe('emotionalRegulation');
+    expect('intimacyPacing').not.toBe('casualIntimacyIntent');
+    expect('monogamyAlignment').not.toBe('relationshipClarity');
+  });
+
+  it('patience_tolerance_gap surfaces Different tolerance levels', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { patienceTolerance: 9 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { patienceTolerance: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different tolerance levels');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'patience_tolerance_gap'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('intimacy_pacing_clash surfaces Different pace to closeness', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { intimacyPacing: 9 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { intimacyPacing: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Different pace to closeness',
+    );
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'intimacy_pacing_clash'),
+    ).toBe(true);
+  });
+
+  it('monogamy_alignment_mismatch surfaces Relationship structure mismatch (dealbreaker)', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { monogamyAlignment: 2 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { monogamyAlignment: 9 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Relationship structure mismatch',
+    );
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'monogamy_alignment_mismatch'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(8);
+  });
+
+  it('includes Patience match when both patienceTolerance high', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { patienceTolerance: 8 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { patienceTolerance: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Patience match');
+  });
+
+  it('includes Pace of closeness when both intimacyPacing high (fast)', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { intimacyPacing: 8 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { intimacyPacing: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Pace of closeness');
+  });
+
+  it('includes Pace of closeness when both intimacyPacing low (slow)', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { intimacyPacing: 2 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { intimacyPacing: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Pace of closeness');
+  });
+
+  it('includes Aligned on relationship structure when both mono', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { monogamyAlignment: 2 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { monogamyAlignment: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Aligned on relationship structure',
+    );
+  });
+
+  it('includes Aligned on relationship structure when both open', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { monogamyAlignment: 8 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { monogamyAlignment: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Aligned on relationship structure',
+    );
+  });
+
+  it('does not include Patience match when both patienceTolerance critical/low', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { patienceTolerance: 2 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { patienceTolerance: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain('Patience match');
+  });
+
+  it('does not include Aligned on relationship structure for mono vs open', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { monogamyAlignment: 2 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { monogamyAlignment: 9 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain(
+      'Aligned on relationship structure',
+    );
+  });
+
+  it('excludes Expansion-14 shadow keys from alignments DTO', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { patienceTolerance: 8 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { patienceTolerance: 8 },
+    );
+    const result = compare(a, b);
+    expect(
+      result.alignments.every(
+        (row) =>
+          row.key !== 'Patience match' &&
+          row.key !== 'Pace of closeness' &&
+          row.key !== 'Aligned on relationship structure' &&
+          row.key !== 'Patience with differences' &&
+          row.key !== 'Relationship structure' &&
+          !/patienceTolerance|intimacyPacing|monogamyAlignment/i.test(row.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('null shadow on one side skips patience_tolerance_gap', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { patienceTolerance: 9 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { patienceTolerance: null },
+    );
+    const result = compare(a, b);
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'patience_tolerance_gap'),
+    ).toBe(false);
+  });
+
+  it('compatibility unchanged when only Expansion-14 shadow signals differ', () => {
+    const highA = makeProfileWithExpansion14Shadow(
+      'a1',
+      'A1',
+      {},
+      {
+        patienceTolerance: 8,
+        intimacyPacing: 8,
+        monogamyAlignment: 2,
+      },
+    );
+    const highB = makeProfileWithExpansion14Shadow(
+      'b1',
+      'B1',
+      {},
+      {
+        patienceTolerance: 8,
+        intimacyPacing: 8,
+        monogamyAlignment: 2,
+      },
+    );
+    const gapA = makeProfileWithExpansion14Shadow(
+      'a2',
+      'A2',
+      {},
+      {
+        patienceTolerance: 9,
+        intimacyPacing: 9,
+        monogamyAlignment: 2,
+      },
+    );
+    const gapB = makeProfileWithExpansion14Shadow(
+      'b2',
+      'B2',
+      {},
+      {
+        patienceTolerance: 2,
+        intimacyPacing: 2,
+        monogamyAlignment: 9,
+      },
+    );
+    const aligned = compare(highA, highB);
+    const gapped = compare(gapA, gapB);
+    expect(aligned.compatibility).toBe(gapped.compatibility);
+  });
+
+  it('Expansion-13 non-regression: Different growth pace still surfaces', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { growthMindset: 9 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { growthMindset: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different growth pace');
+  });
+
+  it('Expansion-12 non-regression: Different listening styles still surfaces', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 9 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Different listening styles',
+    );
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

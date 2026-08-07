@@ -210,6 +210,12 @@ export const esCopy: AppCopySchema = {
             "Ambos valoran el feedback y crecer como pareja",
           "Self-awareness match":
             "Ambos tienen buena comprensión de sus propios patrones",
+          "Patience match":
+            "Ambos son pacientes y aceptan las diferencias del otro",
+          "Pace of closeness":
+            "Avanzan hacia la cercanía a un ritmo similar",
+          "Aligned on relationship structure":
+            "Están alineados sobre lo que significa la exclusividad",
         },
         interestOverlap: {
           travel: "A ambos les gusta viajar",
@@ -543,6 +549,9 @@ export const esCopy: AppCopySchema = {
           "Una pareja realmente me escucha cuando…",
           "Una vez que cambié de opinión sobre algo importante…",
           "Una cosa en la que estoy trabajando sobre mí…",
+          "Algo de mi pareja que pondría a prueba mi paciencia, y cómo lo manejaría…",
+          "¿Qué tan rápido te gusta avanzar emocional/físicamente en una relación nueva?",
+          "¿Qué significa para ti una relación exclusiva?",
         ],
         examples: [
           "Trabajo en diseno de producto y desconecto cocinando cenas elaboradas para amigos. Entre semana suelo estar en casa con un podcast y un cuaderno; los fines de semana busco galerias pequenas o una panaderia nueva. Soy calmado/a en grupos pero me animo cuando la charla es profunda. Busco personas que prefieran planes tranquilos y no necesiten que cada noche sea ruidosa.",

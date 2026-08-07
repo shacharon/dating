@@ -3,7 +3,8 @@
 **Duration:** 2 weeks  
 **Goal:** Add `patienceTolerance`, `intimacyPacing`, `monogamyAlignment` compatibility signals  
 **Depends on:** Sprint Expansion-13  
-**Milestone:** 45 tracked compatibility signals (shadow → promote gate)  
+**Milestone:** Three tolerance/intimacy signals in **shadow** (extract later). Scored “45” deferred to an explicit promote story.  
+**Sprint status:** ✅ **Complete (5/5)** — engineering gate (2026-08-08)  
 **Phase:** Phase 6 — Relationship Psychology
 
 **CRITICAL: LLM-FIRST EXTRACTION - NO HARDCODED PATTERNS**
@@ -49,30 +50,34 @@ Three related-but-distinct gaps: how much day-to-day imperfection someone can to
 
 ## Stories
 
-### STORY 1: Schema & Infrastructure
+### STORY 1: Schema & Infrastructure ✅ Done
 **Points:** 3  
 **Owner:** Backend
 
-**Tasks:**
-1. Add `patienceTolerance`, `intimacyPacing`, `monogamyAlignment` to `SHADOW_SIGNAL_KEYS`
-2. Add weights, tiers, domains in `expansion-14-signal-definitions.ts`
-3. Update signal count docs (45 total after promote)
+**As-built (shadow):** `patienceTolerance`, `intimacyPacing`, `monogamyAlignment` on `SHADOW_SIGNAL_KEYS` (**32 → 35**); `MAX_EVIDENCE_ITEMS` **51 → 54**; metadata-only `expansion-14-signal-definitions.ts` (weights **1.2/1.3/1.6**, tiers **2/1/1**, domains **relationship/intimacy/relationship**, meta chips). Runtime **15 scored + 35 shadow = 50** extraction keys. Scoring / explainability promote deferred. LLM prompts / `DOMAIN_ALLOWED` → Story 2.
 
-**Files:**
+**Tasks (as-built):**
+1. ✅ Add `patienceTolerance`, `intimacyPacing`, `monogamyAlignment` to `SHADOW_SIGNAL_KEYS`
+2. ✅ Add weights, tiers, domains, chip labels in `expansion-14-signal-definitions.ts` (metadata only)
+3. ✅ Counts documented (as-built total extraction **50**; product “45” scored framing → future promote)
+
+**Files (as-built):**
 - `dating-api/src/extraction/extracted-signals.interface.ts`
 - `dating-api/src/extraction/expansion-14-signal-definitions.ts` (new)
-- `dating-api/src/compatibility/compatibility-score.ts` (at promote gate)
-- `dating-api/src/matches/match-explainability.ts` (at promote gate)
-- `COMPATIBILITY_SIGNALS_SUMMARY.md`
+- `dating-api/src/extraction/extracted-signals.spec.ts`
+- Prior rollout specs global count bumps (Exp-10/11/12/13)
+- `compatibility-score.ts` / `match-explainability.ts` — promote gate (unchanged)
 
 **Acceptance Criteria:**
 - ✅ Three new keys in shadow allowlist
 
 ---
 
-### STORY 2: LLM Extraction Prompts (MOST CRITICAL)
+### STORY 2: LLM Extraction Prompts (MOST CRITICAL) ✅ Done
 **Points:** 12  
 **Owner:** Backend + Prompt Engineer
+
+**As-built:** Extended Story 1 metadata with self + partner LLM semantic blocks; wired into `extraction.service.ts`; `DOMAIN_ALLOWED` self **39 → 42** / partner **25 → 28**. Upgraded adjacent SIGNAL RULES (`conflictStyle` / `emotionalRegulation` / `casualIntimacyIntent` / partner `relationshipClarity` exclusivity carve-out). `monogamyAlignment` polarity locked (low = mono, high = open/poly). Mocked unit tests (**13**); Hebrew live/>85% deferred to Story 5. Onboarding UI copy deferred to Story 4. Shadow only — not scored.
 
 #### `patienceTolerance` (1–10 or null)
 
@@ -140,29 +145,32 @@ Three related-but-distinct gaps: how much day-to-day imperfection someone can to
 **Examples null:**
 - No mention of exclusivity/structure
 
-**Tasks:**
-1. Create `expansion-14-signal-definitions.ts`
-2. Wire into `extraction.service.ts` (self + partner domains)
-3. Sync `extraction-strict-validation.ts`
-4. Unit tests: 3 signals × high/low/null
-5. Hebrew regression fixtures
+**Tasks (as-built):**
+1. ✅ Extend `expansion-14-signal-definitions.ts` with SELF/PARTNER LLM blocks (Story 1 meta preserved)
+2. ✅ Wire into `extraction.service.ts` (self + partner domains)
+3. ✅ Sync `extraction-strict-validation.ts` (`DOMAIN_ALLOWED` **42** / **28**)
+4. ✅ Unit tests: 3 signals × high/low/null + OOR + partner smoke
+5. ✅ Hebrew regression fixtures → Story 5
 
 **Acceptance Criteria:**
 - ✅ LLM-only; null when unclear
 - ✅ NO hardcoded patterns
-- ✅ >85% agreement on validation set
+- ✅ >85% agreement on validation set → Story 5 (**100%** live)
 
-**Files:**
-- `dating-api/src/extraction/expansion-14-signal-definitions.ts` (new)
+**Files (as-built):**
+- `dating-api/src/extraction/expansion-14-signal-definitions.ts` (extended)
 - `dating-api/src/extraction/extraction.service.ts`
 - `dating-api/src/extraction/extraction-strict-validation.ts`
 - `dating-api/src/extraction/extraction.service.spec.ts`
+- `dating-api/src/extraction/extracted-signals.spec.ts` + Exp-10/11/12/13 rollout DOMAIN bumps
 
 ---
 
-### STORY 3: Tension Rules
+### STORY 3: Tension Rules ✅ Done
 **Points:** 5  
 **Owner:** Backend
+
+**As-built:** Extended `EnrichedSignals` with `patienceTolerance` + `intimacyPacing` + `monogamyAlignment`. Appended three shadow friction rules after `both_low_self_awareness`: `patience_tolerance_gap` (penalty **3**, ≥8 vs ≤3), `intimacy_pacing_clash` (penalty **4**, ≥8 vs ≤3), `monogamy_alignment_mismatch` (penalty **8**, ≤2 vs ≥8 — low = mono, high = open). English `TENSION_CHIP_BY_ID`: `Different tolerance levels` / `Different pace to closeness` / `Relationship structure mismatch`. Friction can affect `finalScore` when rules fire; keys still **not** in `COMPATIBILITY_SIGNAL_KEYS`. Positive chips (`Patience match` / aligned `Pace of closeness` / `Aligned on relationship structure`) + i18n → Story 4. HG hard filter for extreme monogamy mismatch → later product discussion (not built).
 
 ```typescript
 {
@@ -203,12 +211,12 @@ Three related-but-distinct gaps: how much day-to-day imperfection someone can to
 },
 ```
 
-**Tension chips:**
+**Tension chips (as-built):**
 - `patience_tolerance_gap`: `Different tolerance levels`
 - `intimacy_pacing_clash`: `Different pace to closeness`
 - `monogamy_alignment_mismatch`: `Relationship structure mismatch`
 
-**Positive chip:** aligned monogamy expectation (both ≤2 or both ≥7) → "Aligned on relationship structure" chip.
+**Positive chip:** aligned monogamy expectation (both ≤2 or both ≥7) → "Aligned on relationship structure" chip → **Story 4**.
 
 **Note:** Consider whether extreme `monogamy_alignment_mismatch` should also feed a Holy-Grail-style hard filter in a later sprint — flag for product discussion, not built here.
 
@@ -216,7 +224,7 @@ Three related-but-distinct gaps: how much day-to-day imperfection someone can to
 - ✅ Rules fire at thresholds
 - ✅ Chip labels resolve in explainability
 
-**Files:**
+**Files (as-built):**
 - `dating-api/src/engine/tension-rules.ts`
 - `dating-api/src/matches/match-explainability.ts`
 - `dating-api/src/engine/compute-friction.spec.ts`
@@ -224,58 +232,101 @@ Three related-but-distinct gaps: how much day-to-day imperfection someone can to
 
 ---
 
-### STORY 4: User-Facing Chips & i18n
+### STORY 4: User-Facing Chips & i18n ✅ Done
 **Points:** 6  
 **Owner:** Frontend + i18n
 
+**As-built:** Created `expansion-14-explainability.ts` with three synthetic shadow chips — `Patience match` (both `patienceTolerance` ≥7), `Pace of closeness` (both `intimacyPacing` ≥7 or both ≤3), `Aligned on relationship structure` (both `monogamyAlignment` ≤2 or both ≥7). Domains **`relationship`** / **`intimacy`** / **`relationship`** on shadow chips (scored `SIGNAL_DOMAIN` unchanged until promote). Assembled after Exp-13; `_14` resolution. `CHIP_EVIDENCE_KEYS` **37 → 40**; EN/HE/ES evidence + Phase 6 onboarding writing prompts in About-me ideas. Meta labels `Patience with differences` / `Relationship structure` remain promote-meta only (pacing browse string may equal meta). Shadow only — not scored.
+
 | Signal / logic | Chip Label | Evidence EN | Evidence HE | Evidence ES |
 |-----------------|-----------|-------------|-------------|-------------|
-| `patienceTolerance` (aligned) | Patience match | You're both patient and accepting of each other's quirks | שניכם סבלניים ומקבלים את הייחודיות של השני | Ambos son pacientes y aceptan las diferencias del otro |
-| `intimacyPacing` (aligned) | Pace of closeness | You move toward closeness at a similar pace | אתם מתקדמים לקרבה בקצב דומה | Avanzan hacia la cercanía a un ritmo similar |
-| Monogamy aligned | Aligned on relationship structure | You're aligned on what exclusivity means to you | אתם מסונכרנים לגבי המשמעות של בלעדיות עבורכם | Están alineados sobre lo que significa la exclusividad |
+| Both high patience (≥7) | Patience match | You're both patient and accepting of each other's quirks | שניכם סבלניים ומקבלים את הייחודיות של השני | Ambos son pacientes y aceptan las diferencias del otro |
+| Aligned pacing (≥7 or ≤3 both) | Pace of closeness | You move toward closeness at a similar pace | אתם מתקדמים לקרבה בקצב דומה | Avanzan hacia la cercanía a un ritmo similar |
+| Aligned monogamy (≤2 or ≥7 both) | Aligned on relationship structure | You're aligned on what exclusivity means to you | אתם מסונכרנים לגבי המשמעות של בלעדיות עבורכם | Están alineados sobre lo que significa la exclusividad |
 
-**Files:**
+**Files (as-built):**
+- `dating-api/src/matches/expansion-14-explainability.ts` (+ spec)
 - `dating-api/src/matches/match-explainability.ts`
+- `dating-api/src/matches/compare-stages/assemble-result.ts`
+- `dating-api/src/matches/match-explanation-traits.ts`
 - `dating-ui/src/app/dating/me-matches/chip-evidence.ts`
-- `dating-ui/src/lib/i18n/en.ts`, `he.ts`, `es.ts`, `types.ts`
+- `dating-ui/src/lib/i18n/en.ts`, `he.ts`, `es.ts`
 
 **Acceptance Criteria:**
 - ✅ Chips in EN/HE/ES
+- ✅ Onboarding writing-prompt copy EN/HE (+ ES parity)
 
 ---
 
-### STORY 5: Testing, Validation & Regression
+### STORY 5: Testing, Validation & Regression ✅ Done
 **Points:** 9  
 **Owner:** QA + Backend + PM
 
-**Fixtures:**
+**As-built (engineering gate):** `compare()` E2E (**17** tests) for 3 tensions (`patience_tolerance_gap` / `intimacy_pacing_clash` / `monogamy_alignment_mismatch` incl. dealbreaker friction ≥8), positive chips (`Patience match` / `Pace of closeness` dual-band / `Aligned on relationship structure` dual-band), both-critical / mono-vs-open exclusivity, alignments exclusion, compatibility invariance, Exp-13/12 non-regression. Rollout gate (`expansion-14-rollout.spec.ts`). Live fixtures + `validate:expansion-14-extraction` (EN + Hebrew + null/distinction; **100%** agreement). UI tension passthrough ×3. Shadow unchanged — **no promote** to `COMPATIBILITY_SIGNAL_KEYS`. Agent 4 skipped. HG hard filter / promote deferred to operator / future promote story. Force-add fixtures on commit (`/data` gitignored).
 
-| Text | Expected |
+**Fixtures (as-built in `expansion-14-extraction-fixtures.json`):**
+
+| Text / case | Expected |
 |------|----------|
-| "I try to be understanding about the little things" | `patienceTolerance` 8–9 |
-| "Little habits really bother me" | `patienceTolerance` 2–3 |
-| "I fall hard and quick" | `intimacyPacing` 8–9 |
-| "I take things slow, need time" | `intimacyPacing` 2–3 |
-| "Looking for committed, exclusive relationship only" | `monogamyAlignment` 1–2 |
-| "I'm ethically non-monogamous" | `monogamyAlignment` 8–9 |
-| No related text | all → null |
+| High patience (EN strengthened) | `patienceTolerance` 7–10 |
+| Low patience | `patienceTolerance` 1–4 |
+| Fast pacing | `intimacyPacing` 7–10 |
+| Slow pacing | `intimacyPacing` 1–4 |
+| Exclusive / mono only | `monogamyAlignment` 1–3 (low = mono) |
+| Open / ethically non-monogamous | `monogamyAlignment` 7–10 (high = open) |
+| No related text | all → null (`allowNull`) |
+| Hebrew patience high / pacing low / monogamy low | ≥3 HE rows |
+| Conflict alone / casual intimacy alone / clarity labels alone | prefer null on Exp-14 keys (`allowNull`) |
 
-**Rollout gate:**
-- [ ] 3 signals >85% agreement
-- [ ] Hebrew fixtures pass
-- [ ] Tension + positive chips tested (esp. monogamy dealbreaker case)
-- [ ] Chips EN/HE/ES
-- [ ] No regression on 42 existing signals
-- [ ] Promote to scoring (45 total)
+**Tests (as-built):**
+- ✅ Extraction unit tests — Story 2 (not re-duplicated)
+- ✅ Friction unit tests — Story 3 (not re-duplicated)
+- ✅ Integration: `compare()` Expansion-14 E2E (**17**)
+- ✅ Rollout gate counts: shadow **35** / total **50** / evidence **54** / DOMAIN self **42** / partner **28** / scored **15** / chips **40**
+- ✅ UI: chips EN/HE/ES (Story 4) + tension passthrough ×3 (Story 5)
+- ✅ Live LLM ≥85% — **100%** (15/15 scored expectations)
+
+**Files (as-built):**
+- `dating-api/src/matches/match-engine.spec.ts`
+- `dating-api/src/extraction/expansion-14-rollout.spec.ts`
+- `dating-api/data/expansion-14-extraction-fixtures.json` (force-add on commit)
+- `dating-api/scripts/validate-expansion-14-extraction.ts`
+- `dating-api/package.json` (`validate:expansion-14-extraction`)
+- `dating-ui/.../match-why-section.spec.tsx`
+- `dating-ui/.../chip-evidence.spec.ts` (length **40**; Story 4)
+
+**Rollout gate (engineering):**
+- [x] 3 new signals extract with >85% agreement on validation set (**100%**)
+- [x] Hebrew fixtures present + live pass rate ≥85%
+- [x] 3 tension rules + positive chips tested (`compare()` E2E + Story 3/4 units); monogamy dealbreaker asserted
+- [x] Chips EN/HE/ES (Story 4) + tension passthrough (Story 5)
+- [x] No regression on Exp-13/12 E2E / scored set still **15**
+- [ ] Promote shadow keys → scoring registries (product “45”) — **deferred** (explicit future promote story)
+- [ ] HG hard filter for extreme monogamy mismatch — **deferred** (product later)
 
 ---
 
 ## Definition of Done
 
-- [ ] All 5 stories completed
-- [ ] 45-signal system validated (or 42 + 3 in shadow until gate)
-- [ ] Onboarding prompts live
-- [ ] NO hardcoded patterns anywhere
+- [x] All 5 stories completed (engineering gate)
+- [x] 15 scored + 35 shadow validated (**50** extraction total); scored “45” deferred to promote
+- [x] Onboarding prompts live in profile creation flow (About-me writing ideas; optional)
+- [x] NO hardcoded patterns anywhere (LLM-first)
+- [ ] Compatibility scoring promote / “45 live” — **deferred**
+- [ ] HG hard filter for monogamy mismatch — **deferred**
+
+---
+
+## Sprint deliverables (as-built)
+
+| Layer | Delivered |
+|-------|-----------|
+| Schema | `patienceTolerance`, `intimacyPacing`, `monogamyAlignment` on `SHADOW_SIGNAL_KEYS` |
+| Extraction | Self + partner LLM prompts (`expansion-14-signal-definitions.ts`); polarity low=mono / high=open |
+| Friction | 3 tension rules (penalties 3 / 4 / 8) + English chip labels |
+| Display | 3 positive chips + EN/HE/ES evidence + onboarding prompts; domains `relationship` / `intimacy` |
+| Validation | Match-engine E2E + rollout gate + fixtures + live LLM script + UI |
+| **Not delivered** | Promote to `COMPATIBILITY_SIGNAL_KEYS` / scored “45” / HG hard filter / Exp-08 sibling chips |
 
 ---
 

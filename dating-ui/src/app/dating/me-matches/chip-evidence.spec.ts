@@ -127,8 +127,19 @@ describe('chipToEvidence', () => {
       'Grows together',
       'Self-awareness match',
     ] as const;
-    expect(CHIP_EVIDENCE_KEYS.length).toBe(37);
     for (const chip of EXPANSION_13_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
+  it('includes Expansion-14 tolerance & intimacy pacing chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_14_CHIPS = [
+      'Patience match',
+      'Pace of closeness',
+      'Aligned on relationship structure',
+    ] as const;
+    expect(CHIP_EVIDENCE_KEYS.length).toBe(40);
+    for (const chip of EXPANSION_14_CHIPS) {
       expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
     }
   });
