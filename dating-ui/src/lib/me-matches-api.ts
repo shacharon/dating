@@ -58,6 +58,19 @@ export interface MatchExplanationTrait {
   strength: 'strong' | 'moderate';
 }
 
+/** Sprint 44 — match card teaser mode ids. */
+export type TeaserMode = 'first_chapter' | 'ready_again' | 'new_chapter';
+
+/** Sprint 44 — mode-aware teaser payload on list/detail match items. */
+export type MatchTeaserDto = {
+  mode: TeaserMode;
+  lines: string[];
+  claim?: string;
+  showScore: boolean;
+  score: number | null;
+  askHint?: string;
+};
+
 export type HardBlockDirection = 'viewer_to_them' | 'them_to_viewer';
 
 export type HardBlockReasonDto = {
@@ -98,6 +111,11 @@ export interface MeMatchItemDto {
   profileAnalysisStale?: boolean;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /**
+   * Sprint 44 — mode-aware teaser copy for browse cards.
+   * Default mode is `first_chapter` until chapter intent is wired.
+   */
+  teaser?: MatchTeaserDto;
   /** Relative path to primary photo file endpoint; null when absent. */
   primaryPhotoUrl?: string | null;
   yourAction?: 'LIKE' | 'PASS' | 'BLOCK' | null;
@@ -148,6 +166,8 @@ export interface MeMatchDetailDto {
   matchNarrative?: string;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /** Sprint 44 — mode-aware teaser copy (same builder as list). */
+  teaser?: MatchTeaserDto;
   /** Relative path to primary photo file endpoint; null when absent. */
   primaryPhotoUrl?: string | null;
   /** Present when hard-ineligible but already Liked / mutual with the viewer. */

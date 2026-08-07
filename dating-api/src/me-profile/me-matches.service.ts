@@ -127,6 +127,12 @@ import {
   MatchNarrativeGenerator,
   buildMatchNarrativeFactPack,
 } from '../matches/match-narrative';
+import {
+  buildDefaultMatchTeaser,
+  resolveTeaserMode,
+  withTeaserScore,
+  type MatchTeaserDto,
+} from '../matches/match-teaser';
 
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
@@ -192,6 +198,11 @@ export interface MeMatchItemDto {
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /**
+   * Sprint 44 — mode-aware teaser copy for browse cards.
+   * Mode from viewer datingChapter / age proxy (Story 5).
+   */
+  teaser: MatchTeaserDto;
   /** Viewer's action toward this candidate's user, if any. */
   yourAction: 'LIKE' | 'PASS' | 'BLOCK' | null;
   /**
@@ -278,6 +289,10 @@ export interface MeMatchDetailDto {
   approvedPhotoCount: number;
   explainability: MatchExplainabilityDto | null;
   recommendation: MatchRecommendationDto | null;
+  /**
+   * Sprint 44 — mode-aware teaser copy (same builder as list; default first_chapter).
+   */
+  teaser: MatchTeaserDto;
   /**
    * Sprint 22 — grounded long-form "why you match" narrative (detail only).
    * Omitted on compare guards / unscored pairs. List DTO never includes this.
@@ -670,6 +685,11 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     const byId = new Map((hydrated.matches ?? []).map((m) => [m.id, m]));
     const matches: MeMatchItemDto[] = [];
+    const viewerTeaserCtx = {
+      datingChapter: gate.viewerDatingChapter,
+      ageYears: gate.viewerAgeYears,
+    };
+    const viewerMode = resolveTeaserMode(viewerTeaserCtx);
     // Materialized `MatchListRank.matchScore` is list source of truth for score/tier
     // (hydrate may re-compare for explainability). Unscored ranks use -1.
     for (const rank of pageRanks) {
@@ -679,10 +699,22 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         Number.isFinite(rank.matchScore) && rank.matchScore >= 0
           ? rank.matchScore
           : item.matchScore;
+      const priority = toPriorityFields(matchScore);
+      const teaserFacts = {
+        score: matchScore,
+        priorityTier: priority.priorityTier,
+        explainability: item.explainability,
+        recommendation: item.recommendation,
+      };
       matches.push({
         ...item,
         matchScore,
-        ...toPriorityFields(matchScore),
+        ...priority,
+        // Rebuild when missing or mode drifted (chapter change / age proxy vs old cache).
+        teaser:
+          item.teaser && item.teaser.mode === viewerMode
+            ? withTeaserScore(item.teaser, matchScore)
+            : buildDefaultMatchTeaser(teaserFacts, viewerTeaserCtx),
       });
     }
 
@@ -732,6 +764,8 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         viewerGender: string | null;
         viewerAcceptedPartnerGenders: string[] | null;
         viewerProfileAnalysisStale: boolean;
+        viewerDatingChapter: string | null;
+        viewerAgeYears: number | null;
       }
   > {
     const viewer = await this.prisma.userProfile.findUnique({
@@ -792,6 +826,8 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         ? [...viewerBridge.acceptedPartnerGenders]
         : null,
       viewerProfileAnalysisStale: viewer.updatedAt > viewerEval.createdAt,
+      viewerDatingChapter: viewer.datingChapter ?? null,
+      viewerAgeYears: viewerBridge.derivedSelfAgeYears,
     };
   }
 
@@ -1115,6 +1151,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       matchScore: number | null;
       explainability: MatchExplainabilityDto | null;
       recommendation: MatchRecommendationDto | null;
+      candidatePayload: ReturnType<
+        typeof buildMeMatchesParticipantReadModel
+      >['enginePayload'];
     };
     const pendingHardBlocks: PendingHardBlockMatch[] = [];
     let budgetExceeded = false;
@@ -1246,6 +1285,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           matchScore,
           explainability,
           recommendation,
+          candidatePayload: candidateRead.enginePayload,
         });
         continue;
       }
@@ -1273,6 +1313,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       const primaryStorageKey =
         approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ?? null;
 
+      const priority = toPriorityFields(matchScore);
       matches.push({
         id: row.id,
         nickname: row.nickname?.trim() ? row.nickname.trim() : null,
@@ -1282,7 +1323,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         analyzedAt: row.analyzedAt?.toISOString() ?? null,
         hasEvaluation: row._count.evaluations > 0,
         matchScore,
-        ...toPriorityFields(matchScore),
+        ...priority,
         profileAnalysisStale: row.updatedAt > candidateEval.createdAt,
         primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
           profileId: row.id,
@@ -1292,6 +1333,20 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         approvedPhotoCount: approvedPhotos.length,
         explainability,
         recommendation,
+        teaser: buildDefaultMatchTeaser(
+          {
+            score: matchScore,
+            priorityTier: priority.priorityTier,
+            explainability,
+            recommendation,
+            viewerPayload: viewerRead.enginePayload,
+            candidatePayload: candidateRead.enginePayload,
+          },
+          {
+            datingChapter: viewer.datingChapter,
+            ageYears: viewerBridge.derivedSelfAgeYears,
+          },
+        ),
         yourAction: matchActionToYourAction(
           actionByTargetUserId.get(row.userId) ?? null,
         ),
@@ -1329,6 +1384,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         const primaryStorageKey =
           approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ??
           null;
+        const priority = toPriorityFields(pending.matchScore);
         matches.push({
           id: pending.row.id,
           nickname: pending.row.nickname?.trim()
@@ -1340,7 +1396,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           analyzedAt: pending.row.analyzedAt?.toISOString() ?? null,
           hasEvaluation: pending.row._count.evaluations > 0,
           matchScore: pending.matchScore,
-          ...toPriorityFields(pending.matchScore),
+          ...priority,
           profileAnalysisStale:
             pending.row.updatedAt > pending.candidateEval.createdAt,
           primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
@@ -1351,6 +1407,20 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           approvedPhotoCount: approvedPhotos.length,
           explainability: pending.explainability,
           recommendation: pending.recommendation,
+          teaser: buildDefaultMatchTeaser(
+            {
+              score: pending.matchScore,
+              priorityTier: priority.priorityTier,
+              explainability: pending.explainability,
+              recommendation: pending.recommendation,
+              viewerPayload: viewerRead.enginePayload,
+              candidatePayload: pending.candidatePayload,
+            },
+            {
+              datingChapter: viewer.datingChapter,
+              ageYears: viewerBridge.derivedSelfAgeYears,
+            },
+          ),
           yourAction: matchActionToYourAction(
             actionByTargetUserId.get(pending.row.userId) ?? null,
           ),
@@ -1754,6 +1824,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       ErrorCodes.ME_MATCHES_DETAIL_OK,
     );
 
+    const priority = toPriorityFields(matchScore);
     return {
       id: candidate.id,
       nickname: candidate.nickname?.trim() ? candidate.nickname.trim() : null,
@@ -1782,6 +1853,20 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       approvedPhotoCount: (candidate.photos ?? []).length,
       explainability,
       recommendation,
+      teaser: buildDefaultMatchTeaser(
+        {
+          score: matchScore,
+          priorityTier: priority.priorityTier,
+          explainability,
+          recommendation,
+          viewerPayload: viewerRead.enginePayload,
+          candidatePayload: candidateRead.enginePayload,
+        },
+        {
+          datingChapter: viewer.datingChapter,
+          ageYears: viewerBridge.derivedSelfAgeYears,
+        },
+      ),
       ...(matchNarrative !== undefined ? { matchNarrative } : {}),
       ...(hardBlocked !== undefined ? { hardBlocked } : {}),
     };

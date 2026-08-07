@@ -133,7 +133,49 @@ export const esCopy: AppCopySchema = {
         whyToggleWithScore: (score) => `Ver por que coincidimos (${score}%)`,
         whyHeading: "Por que coincidimos",
         whyEmpty: "Aun no hay una explicacion.",
+        hookEmpty: "Algo en comun — abre para ver mas",
         viewProfile: "Ver perfil",
+        chipEvidence: {
+          "Ambition alignment":
+            "Su impulso y ambicion estan bien alineados",
+          "Social rhythm":
+            "Sus niveles de energia social estan bien alineados",
+          "Wellness focus":
+            "La salud y el cuerpo les importan a ambos",
+          "Emotional depth":
+            "Ambos valoran la profundidad y la presencia emocional en una relacion",
+          "Secure attachment":
+            "Comparten un enfoque similar hacia la cercania y la disponibilidad emocional",
+          "Direct communication":
+            "Ambos son directos, lo que reduce malentendidos",
+          "Independence fit":
+            "Su necesidad de espacio y de estar juntos es mutuamente compatible",
+          "Shared values":
+            "Comparten terreno comun en valores que dan forma al dia a dia",
+          "Money mindset":
+            "Su enfoque hacia el dinero y la seguridad es compatible",
+          "Relationship expectations":
+            "Ambos buscan algo similar en como funciona una relacion",
+          "Lifestyle pace":
+            "Se mueven a un ritmo similar — la forma en que organizan el dia coincide",
+          "Physical chemistry":
+            "Las senales de atraccion fisica son fuertes y mutuas",
+          "Lifestyle & status":
+            "Estan alineados en estilo de vida y posicionamiento social",
+          "Conflict approach":
+            "Manejan el desacuerdo de formas compatibles — es menos probable que el conflicto los descarrile",
+        },
+        modeB: {
+          sublabel: "Por que vale tu tiempo",
+          whyExpand: "Ver el por que completo",
+          claimEmpty: "Buen encaje en metas — abre para detalles",
+          scoreAria: (score) => `Puntuacion de compatibilidad ${score} por ciento`,
+        },
+        modeC: {
+          sectionLabel: "Que encaja",
+          whyExpand: "El por que completo",
+          linesEmpty: "Solape claro en metas — abre para saber mas",
+        },
       },
       priority: {
         highTitle: "Escribe a estos primero",
@@ -386,6 +428,16 @@ export const esCopy: AppCopySchema = {
       locationLabelLabel: "Etiqueta de ubicacion",
       locationLabelPlaceholder: "p. ej. Tel Aviv, Israel",
       continueToStory: "Continuar a la historia",
+      datingChapter: {
+        question: "En que punto de tu historia de citas estas?",
+        helper:
+          "Esto solo cambia como presentamos las coincidencias — no a quien mostramos.",
+        first_chapter: "Recien empiezo mi capitulo",
+        ready_again: "Listo/a de nuevo tras una relacion larga",
+        new_chapter: "Construyendo un capitulo nuevo",
+        newChapterSubtext:
+          "Divorciado/a, separado/a, o volviendo a citas mas adelante",
+      },
     },
     textsForm: {
       intro:
@@ -526,6 +578,21 @@ export const esCopy: AppCopySchema = {
         "Correo cuando no estas en linea. El enlace de baja en los correos sigue funcionando.",
       saveError:
         "No se pudieron guardar las preferencias. Intentalo de nuevo.",
+    },
+    datingChapter: {
+      settingsTitle: "Capitulo de citas",
+      settingsSubtitle: "Cambiar como se ven las tarjetas de coincidencia",
+      clearLabel: "Usar valor por defecto segun edad",
+      saveError: "No se pudo guardar el capitulo. Intentalo de nuevo.",
+      savedFlash: "Capitulo de citas guardado.",
+      question: "En que punto de tu historia de citas estas?",
+      helper:
+        "Esto solo cambia como presentamos las coincidencias — no a quien mostramos.",
+      first_chapter: "Recien empiezo mi capitulo",
+      ready_again: "Listo/a de nuevo tras una relacion larga",
+      new_chapter: "Construyendo un capitulo nuevo",
+      newChapterSubtext:
+        "Divorciado/a, separado/a, o volviendo a citas mas adelante",
     },
     matchPreferencesLink: "Preferencias de coincidencias",
     matchPreferencesLinkHelp:

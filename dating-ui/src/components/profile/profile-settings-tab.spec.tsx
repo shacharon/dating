@@ -22,6 +22,12 @@ vi.mock('@/components/notification-preferences-section', () => ({
   ),
 }));
 
+vi.mock('@/components/dating-chapter-preferences-section', () => ({
+  DatingChapterPreferencesSection: () => (
+    <div data-testid="mock-dating-chapter">dating chapter</div>
+  ),
+}));
+
 import { ProfileSettingsTab } from '@/components/profile/profile-settings-tab';
 
 describe('ProfileSettingsTab', () => {

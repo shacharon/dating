@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { getCandidateAudit, type CandidateAuditResponse } from '@/lib/admin-match-quality-api';
+import { enCopy } from '@/lib/i18n/en';
+import { chipToEvidence } from '@/app/dating/me-matches/chip-evidence';
 
 const WINDOW_OPTIONS = [7, 30] as const;
 type WindowDays = (typeof WINDOW_OPTIONS)[number];
@@ -177,7 +179,9 @@ export default function AdminMatchQualityCandidatePage() {
                   </p>
                   <ul className="list-inside list-disc text-zinc-600 dark:text-zinc-400">
                     {chips.map((chip) => (
-                      <li key={chip}>{chip}</li>
+                      <li key={chip}>
+                        {chipToEvidence(chip, enCopy.matches.list.browse.chipEvidence)}
+                      </li>
                     ))}
                   </ul>
                 </div>

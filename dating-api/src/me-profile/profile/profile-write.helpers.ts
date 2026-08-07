@@ -208,6 +208,7 @@ export function toResponse(
     aboutPartner: row.aboutPartner,
     aboutRelationship: row.aboutRelationship,
     birthDate: row.birthDate ?? null,
+    datingChapter: row.datingChapter ?? null,
     gender: row.gender ?? null,
     desiredPartnerGenders: parseDesiredPartnerGenders(row.desiredPartnerGenders),
     city: row.city ?? null,
@@ -284,6 +285,9 @@ export function toPrismaWritableData(
   if (body.birthDate !== undefined) {
     data.birthDate =
       body.birthDate === null ? null : new Date(body.birthDate);
+  }
+  if (body.datingChapter !== undefined) {
+    data.datingChapter = body.datingChapter;
   }
   if (body.gender !== undefined) {
     // DB column is NOT NULL; DTO allows null (cleared / prefer-not-to-say intent).

@@ -54,6 +54,8 @@ export function createMeProfileServiceForTest(
     deps.obs,
     moderation,
     deps.matchListRankQueue,
+    deps.meMatches,
+    deps.analytics,
   );
   const photos = new ProfilePhotoService(
     deps.prisma,

@@ -75,7 +75,9 @@ describe('AdminMatchQualityCandidatePage', () => {
       expect(screen.getByText('3')).toBeTruthy();
     });
     expect(screen.getByText('74')).toBeTruthy();
-    expect(screen.getByText('Social rhythm')).toBeTruthy();
+    expect(
+      screen.getByText('Your social energy levels are well-matched'),
+    ).toBeTruthy();
     expect(screen.getByText('Strong overlap on lifestyle')).toBeTruthy();
     expect(screen.getByText('viewer_user_1')).toBeTruthy();
   });

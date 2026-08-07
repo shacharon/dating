@@ -1,5 +1,8 @@
-import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchDetailDto, MeMatchItemDto, TeaserMode } from '@/lib/me-matches-api';
 import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
+
+/** QA preview override — client display only (Sprint 44 Story 3). */
+export const TEASER_MODE_PREVIEW_STORAGE_KEY = 'dating.teaserModePreview';
 
 function usableLocationLabel(locationLabel: string | null): string | null {
   const trimmed = locationLabel?.trim() ?? '';
@@ -20,6 +23,7 @@ export function matchBrowseLocation(m: MeMatchItemDto): string | null {
 
 /**
  * One-liner under browse photo: takeaway → shared interests → first positive chip.
+ * Kept for non–Mode-A interim and Why helpers.
  */
 export function matchBrowseOneLiner(m: MeMatchItemDto): string | null {
   const takeaway = m.recommendation?.primaryTakeaway?.trim();
@@ -32,6 +36,86 @@ export function matchBrowseOneLiner(m: MeMatchItemDto): string | null {
   if (chip) return chip;
 
   return null;
+}
+
+/** Read QA teaser-mode preview from localStorage (null when unset / SSR). */
+export function readTeaserModePreview(): TeaserMode | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(TEASER_MODE_PREVIEW_STORAGE_KEY);
+    if (
+      raw === 'ready_again' ||
+      raw === 'new_chapter' ||
+      raw === 'first_chapter'
+    ) {
+      return raw;
+    }
+  } catch {
+    // ignore quota / privacy errors
+  }
+  return null;
+}
+
+/** Effective browse teaser mode (preview override wins). */
+export function resolveBrowseTeaserMode(m: MeMatchItemDto): TeaserMode {
+  const preview = readTeaserModePreview();
+  if (
+    preview === 'ready_again' ||
+    preview === 'new_chapter' ||
+    preview === 'first_chapter'
+  ) {
+    return preview;
+  }
+  return m.teaser?.mode ?? 'first_chapter';
+}
+
+/**
+ * Mode A always-visible hook. Never invent facts — API teaser or i18n empty only.
+ */
+export function resolveMatchBrowseHook(
+  m: MeMatchItemDto,
+  hookEmpty: string,
+): string {
+  const mode = resolveBrowseTeaserMode(m);
+  if (mode !== 'first_chapter') {
+    return matchBrowseOneLiner(m) ?? hookEmpty;
+  }
+  const line = m.teaser?.lines?.[0]?.trim();
+  if (line) return line;
+  return hookEmpty;
+}
+
+/**
+ * Mode B life-goal claim. Prefer teaser.claim only — no hobby/takeaway fallback.
+ */
+export function resolveMatchBrowseClaim(
+  m: MeMatchItemDto,
+  claimEmpty: string,
+): string {
+  const claim = m.teaser?.claim?.trim();
+  if (claim) {
+    const stripped = claim.replace(/^["“]+|["”]+$/g, '').trim();
+    return stripped || claimEmpty;
+  }
+  return claimEmpty;
+}
+
+export type BrowseHybridLines = { line1: string; line2: string | null };
+
+/**
+ * Mode C hybrid teaser lines. Prefer teaser.lines only — no hook/claim/takeaway invent.
+ */
+export function resolveMatchBrowseHybridLines(
+  m: MeMatchItemDto,
+  linesEmpty: string,
+): BrowseHybridLines {
+  const lines = m.teaser?.lines ?? [];
+  const line1 = lines[0]?.trim() ?? '';
+  const line2 = lines[1]?.trim() || null;
+  if (!line1) {
+    return { line1: linesEmpty, line2: null };
+  }
+  return { line1, line2 };
 }
 
 export function matchBrowseWhyBody(m: MeMatchItemDto): string | null {

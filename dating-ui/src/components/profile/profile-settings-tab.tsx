@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { NotificationPreferencesSection } from '@/components/notification-preferences-section';
+import { DatingChapterPreferencesSection } from '@/components/dating-chapter-preferences-section';
 import { MatchPreferencesPreviewCard } from '@/components/profile/match-preferences-preview-card';
 import {
   matchPreferencesPreviewHasValues,
@@ -63,6 +64,10 @@ export function ProfileSettingsTab() {
           {hub.settingsNotificationsHeading}
         </h2>
         <NotificationPreferencesSection />
+      </section>
+
+      <section id="dating-chapter" className="scroll-mt-24 space-y-3">
+        <DatingChapterPreferencesSection />
       </section>
 
       <MatchPreferencesPreviewCard

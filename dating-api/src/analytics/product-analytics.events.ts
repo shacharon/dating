@@ -10,6 +10,7 @@ export const ProductAnalyticsEvents = {
   USER_REPORTED: 'user.reported',
   ACCOUNT_DELETED: 'account.deleted',
   PROFILE_PHOTO_GATE_BLOCKED: 'profile.photo_gate_blocked',
+  PROFILE_DATING_CHAPTER_SET: 'profile.dating_chapter_set',
   PHOTO_MODERATION_PENDING: 'photo.moderation_pending',
   PHOTO_MODERATION_DECIDED: 'photo.moderation_decided',
   REPORT_OPS_RESOLVED: 'report.ops_resolved',

@@ -1,3 +1,5 @@
+import type { ChipEvidenceMap } from "@/app/dating/me-matches/chip-evidence";
+
 export const SUPPORTED_LOCALES = ["en", "es", "he"] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -127,7 +129,27 @@ export type AppCopySchema = {
         whyToggleWithScore: (score: number) => string;
         whyHeading: string;
         whyEmpty: string;
+        /** Mode A empty hook when teaser.lines missing (Sprint 44 Story 2). */
+        hookEmpty: string;
         viewProfile: string;
+        /**
+         * Human evidence strings keyed by English API chip labels
+         * (e.g. "Ambition alignment" → localized sentence).
+         */
+        chipEvidence: ChipEvidenceMap;
+        /** Mode B ready-again copy (Sprint 44 Story 3). */
+        modeB: {
+          sublabel: string;
+          whyExpand: string;
+          claimEmpty: string;
+          scoreAria: (score: number) => string;
+        };
+        /** Mode C new-chapter hybrid copy (Sprint 44 Story 4). */
+        modeC: {
+          sectionLabel: string;
+          whyExpand: string;
+          linesEmpty: string;
+        };
       };
       priority: {
         highTitle: string;
@@ -359,6 +381,14 @@ export type AppCopySchema = {
       locationLabelLabel: string;
       locationLabelPlaceholder: string;
       continueToStory: string;
+      datingChapter: {
+        question: string;
+        helper: string;
+        first_chapter: string;
+        ready_again: string;
+        new_chapter: string;
+        newChapterSubtext: string;
+      };
     };
     textsForm: {
       intro: string;
@@ -406,6 +436,19 @@ export type AppCopySchema = {
       emailLabel: string;
       emailHelp: string;
       saveError: string;
+    };
+    datingChapter: {
+      settingsTitle: string;
+      settingsSubtitle: string;
+      clearLabel: string;
+      saveError: string;
+      savedFlash: string;
+      question: string;
+      helper: string;
+      first_chapter: string;
+      ready_again: string;
+      new_chapter: string;
+      newChapterSubtext: string;
     };
     matchPreferencesLink: string;
     matchPreferencesLinkHelp: string;

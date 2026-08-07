@@ -11,6 +11,8 @@ import {
   UserProfile,
   UserProfileStatus,
 } from '@prisma/client';
+import { AnalyticsService } from '../../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import { ErrorCodes } from '../../logging/error-codes';
 import { markHttpExceptionObservabilityLogged } from '../../logging/observability-http.exception';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
@@ -24,6 +26,7 @@ import type {
   MeProfileResponseDto,
   PatchMeProfileDto,
 } from '../me-profile.dto';
+import { MeMatchesService } from '../me-matches.service';
 import {
   USER_PROFILE_REPOSITORY,
   type IUserProfileRepository,
@@ -48,6 +51,8 @@ export class ProfileCrudService {
     private readonly profileModeration: ProfileModerationService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
+    private readonly meMatches: MeMatchesService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async requireProfileForUser(userId: string): Promise<UserProfile> {
@@ -227,6 +232,19 @@ export class ProfileCrudService {
         await this.matchListRankQueue.enqueueRebuild(
           userId,
           'preferences_changed',
+        );
+      }
+      if (
+        body.datingChapter !== undefined &&
+        body.datingChapter !== existing.datingChapter
+      ) {
+        await this.meMatches.invalidateMatchListCache(userId);
+        this.analytics.track(
+          userId,
+          ProductAnalyticsEvents.PROFILE_DATING_CHAPTER_SET,
+          {
+            dating_chapter: body.datingChapter ?? 'unset',
+          },
         );
       }
       const full = await this.profiles.findByUserIdWithPreference(userId);

@@ -5,12 +5,15 @@ import type { MeMatchItemDto } from '@/lib/me-matches-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 import { matchBrowseWhyBody } from './match-display';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
+import { chipToEvidence } from './chip-evidence';
 
 export type MatchWhySectionProps = {
   match: MeMatchItemDto;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   listCopy: AppCopySchema['matches']['list'];
+  /** Override collapsed Why toggle label (e.g. Mode B expand copy). */
+  whyToggle?: string;
 };
 
 /**
@@ -21,6 +24,7 @@ export function MatchWhySection({
   open,
   onOpenChange,
   listCopy,
+  whyToggle: whyToggleOverride,
 }: MatchWhySectionProps) {
   const browse = listCopy.browse;
   const body = matchBrowseWhyBody(match);
@@ -28,7 +32,8 @@ export function MatchWhySection({
   const tension = match.explainability?.tensionChip?.trim();
   const score = match.matchScore;
   const toggleLabel =
-    score != null ? browse.whyToggleWithScore(score) : browse.whyToggle;
+    whyToggleOverride ??
+    (score != null ? browse.whyToggleWithScore(score) : browse.whyToggle);
 
   return (
     <div data-testid="match-why-section">
@@ -38,7 +43,7 @@ export function MatchWhySection({
         aria-expanded={open}
         aria-controls={`match-why-panel-${match.id}`}
         onClick={() => onOpenChange(!open)}
-        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-1 py-2 text-left text-sm font-medium text-zinc-700 outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-200 dark:ring-offset-zinc-900"
+        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-1 py-2 text-start text-sm font-medium text-zinc-700 outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-200 dark:ring-offset-zinc-900"
       >
         <span>{open ? browse.whyHeading : toggleLabel}</span>
         <span className="text-zinc-400" aria-hidden>
@@ -70,7 +75,7 @@ export function MatchWhySection({
                     key={chip}
                     className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
                   >
-                    {chip}
+                    {chipToEvidence(chip, browse.chipEvidence)}
                   </li>
                 ))}
                 {tension ? (

@@ -130,7 +130,46 @@ export const enCopy: AppCopySchema = {
         whyToggleWithScore: (score) => `See why we matched (${score}%)`,
         whyHeading: "Why we matched",
         whyEmpty: "No explanation available yet.",
+        hookEmpty: "A little in common — open to see more",
         viewProfile: "View profile",
+        chipEvidence: {
+          "Ambition alignment": "Your drive and ambition are well-matched",
+          "Social rhythm": "Your social energy levels are well-matched",
+          "Wellness focus": "Health and physicality matter to both of you",
+          "Emotional depth":
+            "You both value depth and emotional presence in a relationship",
+          "Secure attachment":
+            "You share a similar approach to closeness and emotional availability",
+          "Direct communication":
+            "You're both direct, which reduces misread signals",
+          "Independence fit":
+            "Your need for space and togetherness is mutually compatible",
+          "Shared values":
+            "You share meaningful common ground on values that shape daily life",
+          "Money mindset":
+            "Your approach to finances and security is compatible",
+          "Relationship expectations":
+            "You're both looking for something similar in how a relationship works",
+          "Lifestyle pace":
+            "You move at a similar pace — how you structure your days aligns",
+          "Physical chemistry":
+            "Physical attraction signals are strong and mutual",
+          "Lifestyle & status":
+            "You're aligned on lifestyle and social positioning",
+          "Conflict approach":
+            "You handle disagreement in compatible ways — conflict is less likely to derail you",
+        },
+        modeB: {
+          sublabel: "Why this is worth your time",
+          whyExpand: "See the full why",
+          claimEmpty: "Strong life-goal fit — open for details",
+          scoreAria: (score) => `Match score ${score} percent`,
+        },
+        modeC: {
+          sectionLabel: "What lines up",
+          whyExpand: "Full why",
+          linesEmpty: "Clear life-goal overlap — open to learn more",
+        },
       },
       priority: {
         highTitle: "Message these first",
@@ -382,6 +421,16 @@ export const enCopy: AppCopySchema = {
       locationLabelLabel: "Location label",
       locationLabelPlaceholder: "e.g. Tel Aviv, Israel",
       continueToStory: "Continue to story",
+      datingChapter: {
+        question: "Where are you in your dating story?",
+        helper:
+          "This only changes how we present matches — not who we show.",
+        first_chapter: "Just starting my chapter",
+        ready_again: "Ready again after a long relationship",
+        new_chapter: "Building a new chapter",
+        newChapterSubtext:
+          "Divorced, separated, or dating again later in life",
+      },
     },
     textsForm: {
       intro:
@@ -520,6 +569,21 @@ export const enCopy: AppCopySchema = {
       emailHelp:
         "Email when you're not online. Unsubscribe link in emails still works.",
       saveError: "Could not save notification settings. Please try again.",
+    },
+    datingChapter: {
+      settingsTitle: "Dating chapter",
+      settingsSubtitle: "Change how match cards look",
+      clearLabel: "Use age-based default",
+      saveError: "Could not save dating chapter. Please try again.",
+      savedFlash: "Dating chapter saved.",
+      question: "Where are you in your dating story?",
+      helper:
+        "This only changes how we present matches — not who we show.",
+      first_chapter: "Just starting my chapter",
+      ready_again: "Ready again after a long relationship",
+      new_chapter: "Building a new chapter",
+      newChapterSubtext:
+        "Divorced, separated, or dating again later in life",
     },
     matchPreferencesLink: "Match preferences",
     matchPreferencesLinkHelp:

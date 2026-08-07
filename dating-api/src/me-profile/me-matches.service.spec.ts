@@ -2542,6 +2542,13 @@ describe('MeMatchesService', () => {
       expect(typeof match.explainability?.reasonShort).toBe('string');
       expect(match.recommendation).not.toBeNull();
       expect(typeof match.recommendation?.primaryTakeaway).toBe('string');
+      expect(match.teaser).toEqual(
+        expect.objectContaining({
+          mode: 'first_chapter',
+          showScore: true,
+        }),
+      );
+      expect(match.teaser.lines.length).toBeGreaterThan(0);
     });
 
     // ── Requirement 3: getById() returns full detail ─────────────────────────

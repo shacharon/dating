@@ -31,6 +31,7 @@ describe('MeProfileService', () => {
     status: UserProfileStatus.DRAFT,
     onboardingStep: UserProfileOnboardingStep.BASIC,
     gender: ProfileGender.FEMALE,
+    datingChapter: null as string | null,
     aboutMe: 'a' as string | null,
     aboutPartner: null as string | null,
     aboutRelationship: null as string | null,
@@ -1428,6 +1429,59 @@ describe('MeProfileService', () => {
       await service.patchForUser(userId, { aboutMe: 'updated' });
 
       expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+    });
+
+    it('patchForUser datingChapter change invalidates match list cache and tracks analytics', async () => {
+      const updated = { ...baseRow, datingChapter: 'ready_again' };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(baseRow))
+        .mockResolvedValueOnce({
+          ...baseRow,
+          desiredPartnerGenders: baseRow.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(updated));
+      prisma.userProfile.update.mockResolvedValue(updated);
+
+      const r = await service.patchForUser(userId, {
+        datingChapter: 'ready_again' as never,
+      });
+
+      expect(r.datingChapter).toBe('ready_again');
+      expect(prisma.userProfile.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { datingChapter: 'ready_again' },
+      });
+      expect(meMatches.invalidateMatchListCache).toHaveBeenCalledWith(userId);
+      expect(analytics.track).toHaveBeenCalledWith(
+        userId,
+        ProductAnalyticsEvents.PROFILE_DATING_CHAPTER_SET,
+        { dating_chapter: 'ready_again' },
+      );
+      expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+    });
+
+    it('patchForUser same datingChapter does not invalidate cache', async () => {
+      const row = { ...baseRow, datingChapter: 'first_chapter' };
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(profileRow(row))
+        .mockResolvedValueOnce({
+          ...row,
+          desiredPartnerGenders: row.desiredPartnerGenders,
+        })
+        .mockResolvedValueOnce(profileRow(row));
+      prisma.userProfile.update.mockResolvedValue(row);
+
+      await service.patchForUser(userId, {
+        datingChapter: 'first_chapter' as never,
+        aboutMe: 'same-chapter',
+      });
+
+      expect(meMatches.invalidateMatchListCache).not.toHaveBeenCalled();
+      expect(analytics.track).not.toHaveBeenCalledWith(
+        userId,
+        ProductAnalyticsEvents.PROFILE_DATING_CHAPTER_SET,
+        expect.anything(),
+      );
     });
   });
 });

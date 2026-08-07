@@ -20,10 +20,15 @@ import { onboardingResumePath } from '@/lib/onboarding-path';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { OnboardingBasicFields } from '@/components/onboarding-basic-fields';
 import {
+  DatingChapterFields,
+  type DatingChapterValue,
+} from '@/components/dating-chapter-fields';
+import {
   ageFromBirthInput,
   normalizeNicknameValue,
   togglePartnerGender,
 } from '@/components/onboarding-basic-helpers';
+import type { MeDatingChapter } from '@/lib/me-profile-api';
 
 export function OnboardingBasicForm({
   variant = 'onboarding',
@@ -54,6 +59,9 @@ export function OnboardingBasicForm({
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [locationLabel, setLocationLabel] = useState('');
+  const [datingChapter, setDatingChapter] = useState<DatingChapterValue | null>(
+    null,
+  );
 
   const [hasProfile, setHasProfile] = useState(false);
   /** False once initial profile fetch + step guard finishes (form stays mounted; no full-page loading gate). */
@@ -112,6 +120,14 @@ export function OnboardingBasicForm({
         setCity(profile.city ?? '');
         setCountry(profile.country ?? '');
         setLocationLabel(profile.locationLabel ?? '');
+        const chapter = profile.datingChapter;
+        setDatingChapter(
+          chapter === 'first_chapter' ||
+            chapter === 'ready_again' ||
+            chapter === 'new_chapter'
+            ? chapter
+            : null,
+        );
         setProfileSyncing(false);
       } catch (e) {
         if (!cancelled) {
@@ -143,6 +159,7 @@ export function OnboardingBasicForm({
       city: city.trim() ? city.trim() : null,
       country: country.trim() ? country.trim() : null,
       locationLabel: locationLabel.trim() ? locationLabel.trim() : null,
+      datingChapter: datingChapter as MeDatingChapter | null,
       onboardingStep: advanceToTexts ? ('TEXTS' as const) : ('BASIC' as const),
     };
 
@@ -271,6 +288,13 @@ export function OnboardingBasicForm({
           onCountryChange={setCountry}
           locationLabel={locationLabel}
           onLocationLabelChange={setLocationLabel}
+        />
+
+        <DatingChapterFields
+          copy={bf.datingChapter}
+          value={datingChapter}
+          onChange={setDatingChapter}
+          disabled={profileSyncing}
         />
 
         {!isHub ? <ProfilePhotoSection requiredForMatching /> : null}

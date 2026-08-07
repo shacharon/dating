@@ -248,6 +248,17 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         expect(row).not.toHaveProperty('evaluationSummary');
         expect(row).not.toHaveProperty('matchExplanationTraits');
         expect(row).not.toHaveProperty('matchNarrative');
+        // Sprint 44 Story 1 — teaser always present; default mode until Story 5.
+        expect(row.teaser).toEqual(
+          expect.objectContaining({
+            mode: 'first_chapter',
+            showScore: true,
+            score: 72,
+            lines: expect.any(Array),
+          }),
+        );
+        expect(row.teaser.lines.length).toBeGreaterThan(0);
+        expect(row.teaser.lines[0]!.length).toBeGreaterThan(0);
       } finally {
         cmpSpy.mockRestore();
         hgSpy.mockRestore();
@@ -352,6 +363,14 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
         expect(detail.evaluationSummary).toBe('Summary line.');
         expect(typeof detail.matchNarrative).toBe('string');
         expect(detail.matchNarrative!.length).toBeGreaterThan(0);
+        expect(detail.teaser).toEqual(
+          expect.objectContaining({
+            mode: 'first_chapter',
+            showScore: true,
+            score: 72,
+          }),
+        );
+        expect(detail.teaser.lines.length).toBeGreaterThan(0);
       } finally {
         cmpSpy.mockRestore();
         hgSpy.mockRestore();

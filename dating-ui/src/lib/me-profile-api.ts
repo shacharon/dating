@@ -105,6 +105,17 @@ export const ME_PARTNER_GENDER_CHOICES: readonly MePartnerGenderChoice[] = [
 /** Mirrors dating-api `UserProfileOnboardingStep`. */
 export type MeProfileOnboardingStep = 'BASIC' | 'TEXTS' | 'COMPLETED';
 
+/** Mirrors dating-api `DatingChapter` / TeaserMode. */
+export type MeDatingChapter =
+  | 'first_chapter'
+  | 'ready_again'
+  | 'new_chapter';
+
+export const ME_DATING_CHAPTERS: readonly MeDatingChapter[] = [
+  'first_chapter',
+  'ready_again',
+  'new_chapter',
+] as const;
 export type InferredDealbreakerDto = {
   tag: string;
   classification: 'HARD_EXCLUDE' | 'HARD_REQUIRE';
@@ -123,6 +134,7 @@ export interface MeProfileDto {
   aboutPartner: string | null;
   aboutRelationship: string | null;
   birthDate?: string | null;
+  datingChapter?: MeDatingChapter | null;
   gender?: MeProfileGender | null;
   desiredPartnerGenders?: MeProfileGender[] | null;
   city?: string | null;
@@ -146,6 +158,7 @@ export interface CreateMeProfileBody {
   onboardingStep?: MeProfileOnboardingStep;
   nickname?: string | null;
   birthDate?: string | null;
+  datingChapter?: MeDatingChapter | null;
   gender?: MeProfileGender | null;
   desiredPartnerGenders?: MeProfileGender[] | null;
   city?: string | null;

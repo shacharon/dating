@@ -28,6 +28,13 @@ enum UserProfileOnboardingStep {
   COMPLETED
 }
 
+/** Match-card teaser presentation intent (Sprint 44). Values align with TeaserMode. */
+enum DatingChapter {
+  first_chapter
+  ready_again
+  new_chapter
+}
+
 enum ProfileGender {
   MALE
   FEMALE
@@ -133,6 +140,8 @@ model UserProfile {
   aboutPartner          String?
   aboutRelationship     String?
   birthDate             DateTime?
+  /// Viewer presentation intent for match teasers (Sprint 44). Null = age proxy.
+  datingChapter         DatingChapter?
   gender                ProfileGender
   desiredPartnerGenders Json?
   city                  String?

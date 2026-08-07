@@ -1,4 +1,4 @@
-import { ProfileGender, UserProfileOnboardingStep } from '@prisma/client';
+import { ProfileGender, UserProfileOnboardingStep, DatingChapter } from '@prisma/client';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -48,6 +48,14 @@ export class MeProfileWritableFieldsDto {
   )
   @Validate(BirthDateNotFutureConstraint)
   birthDate?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsEnum(DatingChapter, {
+    message:
+      'datingChapter must be first_chapter, ready_again, or new_chapter',
+  })
+  datingChapter?: DatingChapter | null;
 
   @IsOptional()
   @IsEnum(ProfileGender, {

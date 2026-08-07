@@ -119,7 +119,45 @@ export const heCopy: AppCopySchema = {
         whyToggleWithScore: (score) => `למה התאמנו (${score}%)`,
         whyHeading: "למה התאמנו",
         whyEmpty: "עדיין אין הסבר.",
+        hookEmpty: "יש קצת במשותף — כדאי לפתוח ולראות",
         viewProfile: "צפייה בפרופיל",
+        chipEvidence: {
+          "Ambition alignment": "הדרייב והשאיפות שלכם תואמים היטב",
+          "Social rhythm": "רמות האנרגיה החברתית שלכם תואמות",
+          "Wellness focus": "בריאות וגוף חשובים לשניכם",
+          "Emotional depth":
+            "שניכם מעריכים עומק ונוכחות רגשית במערכת יחסים",
+          "Secure attachment":
+            "יש לכם גישה דומה לקרבה ולזמינות רגשית",
+          "Direct communication":
+            "שניכם ישירים — וזה מפחית אי־הבנות",
+          "Independence fit":
+            "הצורך שלכם במרחב וביחד תואם זה לזה",
+          "Shared values":
+            "יש לכם בסיס משותף בערכים שמעצבים את היומיום",
+          "Money mindset": "הגישה שלכם לכסף ולביטחון תואמת",
+          "Relationship expectations":
+            "שניכם מחפשים משהו דומה באיך שמערכת יחסים עובדת",
+          "Lifestyle pace":
+            "אתם נעים בקצב דומה — איך שמארגנים את היום תואם",
+          "Physical chemistry":
+            "יש סימנים חזקים והדדיים למשיכה פיזית",
+          "Lifestyle & status":
+            "אתם מיושרים באורח חיים ובמיצוב חברתי",
+          "Conflict approach":
+            "אתם מתמודדים עם מחלוקות בדרכים תואמות — פחות סיכוי שקונפליקט ידרדר אתכם",
+        },
+        modeB: {
+          sublabel: "למה זה שווה את הזמן שלך",
+          whyExpand: "לראות את כל הסיבה",
+          claimEmpty: "התאמה חזקה במטרות — כדאי לפתוח",
+          scoreAria: (score) => `ציון התאמה ${score} אחוז`,
+        },
+        modeC: {
+          sectionLabel: "מה מסתדר",
+          whyExpand: "כל הסיבה",
+          linesEmpty: "יש חפיפה ברורה במטרות — כדאי לפתוח",
+        },
       },
       priority: {
         highTitle: "כתבו לאלה קודם",
@@ -364,6 +402,15 @@ export const heCopy: AppCopySchema = {
       locationLabelLabel: "תווית מיקום",
       locationLabelPlaceholder: "למשל תל אביב, ישראל",
       continueToStory: "המשך לסיפור",
+      datingChapter: {
+        question: "איפה את/ה בסיפור הדייטים שלך?",
+        helper: "זה משנה רק איך מציגים לך התאמות — לא את מי מציגים.",
+        first_chapter: "בתחילת הדרך",
+        ready_again: "מוכן/ה שוב אחרי מערכת יחסים ארוכה",
+        new_chapter: "בונה פרק חדש",
+        newChapterSubtext:
+          "גרוש/ה, פרוד/ה, או חוזר/ת לדייטים בשלב מאוחר יותר",
+      },
     },
     textsForm: {
       intro:
@@ -500,6 +547,20 @@ export const heCopy: AppCopySchema = {
       emailLabel: "שלחו לי מייל כשאני לא מחובר/ת",
       emailHelp: "מייל כשאינך מחובר/ת. קישור ההסרה מהמיילים עדיין פעיל.",
       saveError: "לא ניתן לשמור הגדרות התראות. נסו שוב.",
+    },
+    datingChapter: {
+      settingsTitle: "פרק הדייטים",
+      settingsSubtitle: "לשנות איך נראות כרטיסי ההתאמה",
+      clearLabel: "ברירת מחדל לפי גיל",
+      saveError: "לא ניתן לשמור את פרק הדייטים. נסו שוב.",
+      savedFlash: "פרק הדייטים נשמר.",
+      question: "איפה את/ה בסיפור הדייטים שלך?",
+      helper: "זה משנה רק איך מציגים לך התאמות — לא את מי מציגים.",
+      first_chapter: "בתחילת הדרך",
+      ready_again: "מוכן/ה שוב אחרי מערכת יחסים ארוכה",
+      new_chapter: "בונה פרק חדש",
+      newChapterSubtext:
+        "גרוש/ה, פרוד/ה, או חוזר/ת לדייטים בשלב מאוחר יותר",
     },
     matchPreferencesLink: "העדפות התאמה",
     matchPreferencesLinkHelp:

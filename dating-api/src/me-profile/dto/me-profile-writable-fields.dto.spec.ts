@@ -93,6 +93,19 @@ describe('MeProfileWritableFieldsDto / CreateMeProfileDto validation', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
+  it('accepts datingChapter enum and null clear', async () => {
+    expect(
+      await validateCreate({ datingChapter: 'ready_again' }),
+    ).toHaveLength(0);
+    expect(await validateCreate({ datingChapter: null })).toHaveLength(0);
+  });
+
+  it('rejects invalid datingChapter', async () => {
+    const errors = await validateCreate({ datingChapter: 'younger' });
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.some((e) => e.property === 'datingChapter')).toBe(true);
+  });
+
   it('rejects Sprint-15-removed preference fields on patch (forbidNonWhitelisted)', async () => {
     const removed = [
       'minimumPartnerEducation',

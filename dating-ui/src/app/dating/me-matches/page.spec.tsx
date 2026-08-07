@@ -463,6 +463,12 @@ describe('MeMatchesPage (yourAction badges)', () => {
             primaryTakeaway: 'Clear overlap: real depth and presence.',
             suggestedNextAction: 'Worth a closer look',
           },
+          teaser: {
+            mode: 'first_chapter' as const,
+            lines: ['Clear overlap: real depth and presence.'],
+            showScore: true,
+            score: 90,
+          },
         } as typeof baseMatch & { matchNarrative: string },
       ],
     });
@@ -499,6 +505,14 @@ describe('MeMatchesPage (yourAction badges)', () => {
               'You both share a drive for goals and real depth and presence.',
             suggestedNextAction: 'Worth a closer look',
           },
+          teaser: {
+            mode: 'first_chapter' as const,
+            lines: [
+              'You both share a drive for goals and real depth and presence.',
+            ],
+            showScore: true,
+            score: 90,
+          },
         },
       ],
     });
@@ -519,7 +533,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
     unmount();
   });
 
-  it('omits one-liner when takeaway and chips are empty (never reasonShort)', async () => {
+  it('shows Mode A empty hook when teaser lines missing (never reasonShort)', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       matches: [
@@ -548,7 +562,9 @@ describe('MeMatchesPage (yourAction badges)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('match-browse-card')).toBeTruthy();
     });
-    expect(screen.queryByTestId('match-browse-oneliner')).toBeNull();
+    expect(screen.getByTestId('match-browse-hook').textContent).toBe(
+      'A little in common — open to see more',
+    );
     expect(
       screen.queryByText(/You share real overlap on Ambition/),
     ).toBeNull();
@@ -586,7 +602,11 @@ describe('MeMatchesPage (yourAction badges)', () => {
       false,
     );
     expect(screen.getByTestId('match-why-chips')).toBeTruthy();
-    expect(screen.getByText('Emotional depth')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'You both value depth and emotional presence in a relationship',
+      ),
+    ).toBeTruthy();
     unmount();
   });
 });
@@ -691,6 +711,12 @@ describe('MeMatchesPage (i18n)', () => {
             explainability: baseMatch.explainability,
             primaryTakeaway: 'Clear overlap: real depth and presence.',
             suggestedNextAction: 'Next',
+          },
+          teaser: {
+            mode: 'first_chapter' as const,
+            lines: ['Clear overlap: real depth and presence.'],
+            showScore: true,
+            score: 90,
           },
         },
       ],

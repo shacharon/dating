@@ -3,14 +3,17 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { MatchPhoto } from '@/components/match-photo';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto, TeaserMode } from '@/lib/me-matches-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { emitProductLog } from '@/lib/observability/product-logger';
 import {
   formatBrowseAge,
   matchBrowseLocation,
-  matchBrowseOneLiner,
   matchListPrimaryLabel,
+  resolveBrowseTeaserMode,
+  resolveMatchBrowseClaim,
+  resolveMatchBrowseHook,
+  resolveMatchBrowseHybridLines,
 } from './match-display';
 import { MatchBrowseActions } from './match-browse-actions';
 import { MatchWhySection } from './match-why-section';
@@ -29,6 +32,7 @@ export type MatchBrowseCardProps = {
 function emitCardViewed(
   matchProfileId: string,
   explanation_expanded: boolean,
+  teaser_mode: TeaserMode,
 ): void {
   emitProductLog({
     level: 'trace',
@@ -38,12 +42,14 @@ function emitCardViewed(
       event: 'match.card_viewed',
       matchProfileId,
       explanation_expanded,
+      teaser_mode,
     },
   });
 }
 
 /**
  * Photo-first match browse card (eligible matches only).
+ * Sprint 44 — Mode A hook; Mode B score + claim; Mode C hybrid lines.
  */
 export function MatchBrowseCard({
   match: m,
@@ -59,11 +65,30 @@ export function MatchBrowseCard({
   const displayName = matchListPrimaryLabel(m);
   const age = formatBrowseAge(m.ageYears);
   const location = matchBrowseLocation(m);
-  const oneLiner = matchBrowseOneLiner(m);
+  const teaserMode = resolveBrowseTeaserMode(m);
+  const isModeB = teaserMode === 'ready_again';
+  const isModeC = teaserMode === 'new_chapter';
+  const modeBCopy = listCopy.browse.modeB;
+  const modeCCopy = listCopy.browse.modeC;
+  const hook = resolveMatchBrowseHook(m, listCopy.browse.hookEmpty);
+  const claim = resolveMatchBrowseClaim(m, modeBCopy.claimEmpty);
+  const hybrid = resolveMatchBrowseHybridLines(m, modeCCopy.linesEmpty);
   const showAgeBesideName = Boolean(m.nickname?.trim() && age);
   const tier = resolvePriorityTier(m);
   const score =
     m.matchScore != null && Number.isFinite(m.matchScore) ? m.matchScore : null;
+  const showScoreHero =
+    isModeB && score != null && m.teaser?.showScore !== false;
+  const showScoreBadge =
+    !isModeB &&
+    !isModeC &&
+    score != null &&
+    m.teaser?.showScore !== false;
+  const whyToggleOverride = isModeB
+    ? modeBCopy.whyExpand
+    : isModeC
+      ? modeCCopy.whyExpand
+      : undefined;
   const isHigh = tier === 'HIGH';
 
   useEffect(() => {
@@ -75,18 +100,18 @@ export function MatchBrowseCard({
         const entry = entries[0];
         if (!entry?.isIntersecting || viewedRef.current) return;
         viewedRef.current = true;
-        emitCardViewed(m.id, false);
+        emitCardViewed(m.id, false, teaserMode);
       },
       { threshold: 0.5 },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [m.id]);
+  }, [m.id, teaserMode]);
 
   const handleWhyOpenChange = (open: boolean) => {
     setWhyOpen(open);
     if (open) {
-      emitCardViewed(m.id, true);
+      emitCardViewed(m.id, true, teaserMode);
     }
   };
 
@@ -96,6 +121,7 @@ export function MatchBrowseCard({
         ref={cardRef}
         data-testid="match-browse-card"
         data-priority-tier={tier}
+        data-teaser-mode={teaserMode}
         className={
           isHigh
             ? 'overflow-hidden rounded-2xl border border-emerald-400/60 bg-white ring-1 ring-emerald-500/40 dark:border-emerald-500/50 dark:bg-zinc-900 dark:ring-emerald-400/30'
@@ -118,12 +144,12 @@ export function MatchBrowseCard({
             testId="match-browse-photo"
             className="!h-full !w-full"
           />
-          {score != null ? (
+          {showScoreBadge ? (
             <span
               data-testid="match-browse-score-badge"
               className="pointer-events-none absolute end-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold tabular-nums text-white"
             >
-              {Math.round(score)}%
+              {Math.round(score!)}%
             </span>
           ) : null}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-5 pb-5 pt-16">
@@ -151,20 +177,74 @@ export function MatchBrowseCard({
         </div>
 
         <div className="space-y-3 px-5 py-4">
-          {oneLiner ? (
-            <p
-              className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"
-              data-testid="match-browse-oneliner"
+          {isModeB ? (
+            <div
+              className="space-y-2 text-center"
+              data-testid="match-browse-mode-b-teaser"
             >
-              {oneLiner}
+              {showScoreHero ? (
+                <p
+                  className="text-4xl font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50"
+                  data-testid="match-browse-score-hero"
+                  aria-label={modeBCopy.scoreAria(Math.round(score!))}
+                >
+                  {Math.round(score!)}%
+                </p>
+              ) : null}
+              <p
+                className="break-words text-base font-medium leading-snug text-zinc-800 line-clamp-3 dark:text-zinc-200 sm:text-lg"
+                data-testid="match-browse-claim"
+              >
+                “{claim}”
+              </p>
+              <p
+                className="text-xs text-zinc-500 dark:text-zinc-400 sm:text-sm"
+                data-testid="match-browse-mode-b-sublabel"
+              >
+                {modeBCopy.sublabel}
+              </p>
+            </div>
+          ) : isModeC ? (
+            <div
+              className="space-y-1.5 text-start"
+              data-testid="match-browse-mode-c-teaser"
+            >
+              <p
+                className="break-words text-base font-medium leading-snug tabular-nums text-zinc-900 line-clamp-2 dark:text-zinc-50 sm:text-lg"
+                data-testid="match-browse-hybrid-line1"
+              >
+                {hybrid.line1}
+              </p>
+              {hybrid.line2 ? (
+                <p
+                  className="break-words text-sm leading-snug text-zinc-600 line-clamp-2 dark:text-zinc-400"
+                  data-testid="match-browse-hybrid-line2"
+                >
+                  {hybrid.line2}
+                </p>
+              ) : null}
+              <p
+                className="pt-1 text-xs text-zinc-500 dark:text-zinc-400 sm:text-sm"
+                data-testid="match-browse-mode-c-section-label"
+              >
+                {modeCCopy.sectionLabel}
+              </p>
+            </div>
+          ) : (
+            <p
+              className="break-words text-sm leading-relaxed text-zinc-700 line-clamp-3 dark:text-zinc-300"
+              data-testid="match-browse-hook"
+            >
+              {hook}
             </p>
-          ) : null}
+          )}
 
           <MatchWhySection
             match={m}
             open={whyOpen}
             onOpenChange={handleWhyOpenChange}
             listCopy={listCopy}
+            whyToggle={whyToggleOverride}
           />
 
           <MatchBrowseActions
@@ -189,4 +269,3 @@ export function MatchBrowseCard({
     </li>
   );
 }
-
