@@ -2,7 +2,7 @@
 
 ## What We're Adding
 
-**10 new compatibility signals** in 6 sprints + **5 profile-gap signals** in Sprint 7 + **4 lifestyle/values signals** in Sprint 8 (~4 months total)
+**33 new compatibility signals** across 15 sprints: 10 (Sprints 1–6) + 5 profile-gap (Sprint 7) + 4 lifestyle/values (Sprint 8) + interest taxonomy (Sprint 9) + **14 relationship-psychology signals** (Sprints 10–15, Phase 6) (~7 months total)
 
 ### Phase 1: Emotional Intelligence (5 signals)
 | Signal | Weight | What It Measures | Why It Matters |
@@ -22,7 +22,7 @@
 | `domesticComfort` | 1.1 | Home vs out preference | Where you spend time together |
 | `adventureNovelty` | 1.2 | New experiences vs routine | Spontaneity vs stability tension |
 
-**Total after expansion: 34 signals** (15 current + 10 Phase 1–2 + 5 Phase 3 + 4 Phase 4)
+**Total after expansion: 48 signals** (15 current + 10 Phase 1–2 + 5 Phase 3 + 4 Phase 4 + 14 Phase 6), plus a 19-tag interest taxonomy (Phase 5)
 
 ---
 
@@ -93,6 +93,25 @@ return await llm.extractScore(prompt, 0, 10);
 
 ---
 
+## Phase 6: Relationship Psychology (14 signals, Sprints 10–15)
+
+**Full detail:** `PHASE6_RELATIONSHIP_PSYCHOLOGY_ROADMAP.md`
+
+Deepest EQ layer yet — how people fight, recover, feel heard, grow, and balance family/friends/alone-time. Backed by Gottman's repair/forgiveness research and attachment-under-stress patterns (pursuer-distancer). Uses **optional onboarding prompts** (given to users during profile creation) to elicit richer signal text, since these traits rarely appear spontaneously in a generic bio.
+
+| Sprint | Signals | Theme |
+|--------|---------|-------|
+| 10 | `repairSkills`, `forgivenessStyle` | Conflict Recovery |
+| 11 | `stressResponse`, `jealousySecurity` | Stress & Security |
+| 12 | `listeningPresence`, `emotionalExpression` | Feeling Heard |
+| 13 | `growthMindset`, `selfAwareness` | Growth & Self-Awareness |
+| 14 | `patienceTolerance`, `intimacyPacing`, `monogamyAlignment` | Tolerance & Intimacy Pacing |
+| 15 | `familyEnmeshment`, `friendCoupleBalance`, `aloneTimeNeed` | Family & Social Ecosystem |
+
+**Deliverable after Sprint 15: 48 total signals.**
+
+---
+
 ## Rollout Strategy
 
 ### Shadow Mode (Sprints 1-3)
@@ -106,8 +125,8 @@ return await llm.extractScore(prompt, 0, 10);
 - Monitor match quality metrics
 - Compare satisfaction vs control group
 
-### Full Rollout (Post-Sprint 8)
-- All matches use 34 signals
+### Full Rollout (Post-Sprint 15)
+- All matches use 48 signals
 - Backfill old profiles
 - Monitor performance and quality
 
@@ -134,7 +153,7 @@ return await llm.extractScore(prompt, 0, 10);
 
 ## Resource Requirements
 
-**Time:** ~4 months (8 × 2-week sprints)
+**Time:** ~7 months (15 sprints, mostly 2 weeks; Sprint 9 is 1 week)
 
 **Effort Breakdown:**
 - 20% LLM prompt engineering
@@ -221,4 +240,4 @@ Batch calls, cache results, parallel extraction. Target <100ms added.
 Consensus from 50+ years of relationship research (Gottman, attachment theory, EQ framework). Biggest gaps in current coverage.
 
 **"Can we add more later?"**  
-Sprint 7–8 closed profile-gap signals from real Hebrew samples. Later candidates: repair skills, listening quality, growth mindset, family orientation.
+Sprint 7–8 closed profile-gap signals from real Hebrew samples. Sprints 10–15 (Phase 6) added the full relationship-psychology layer: repair, forgiveness, stress response, jealousy/security, listening, expression, growth mindset, self-awareness, patience, intimacy pacing, monogamy alignment, family enmeshment, friend/couple balance, and alone-time need.

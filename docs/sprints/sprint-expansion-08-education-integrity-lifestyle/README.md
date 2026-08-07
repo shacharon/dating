@@ -54,32 +54,35 @@ These may appear in free text; treat as **null** for scoring and do not surface 
 
 ## Stories
 
-### STORY 1: Schema & Infrastructure
+### STORY 1: Schema & Infrastructure ✅ Done
 **Points:** 3  
 **Owner:** Backend
 
-**Tasks:**
-1. Add `educationLevel`, `honestyIntegrity`, `chronotype`, `physicalTypePreference` to shadow allowlist (`extracted-signals.interface.ts`)
-2. Add weights, tiers, domains in `expansion-08-signal-definitions.ts`
-3. Update signal count docs (34 total after promote)
+**As-built (shadow mode):** Four net-new keys on `SHADOW_SIGNAL_KEYS` + metadata-only `expansion-08-signal-definitions.ts` (weights/tiers/domains/chip labels). Scoring/tension/chips deferred at Story 1; prompts landed in Story 2. Counts: **24** shadow / **39** total / `MAX_EVIDENCE_ITEMS` **43**; scored still **15**.
 
-**Files:**
+**Tasks (README original — overridden by architect):**
+1. ✅ Add four keys to shadow allowlist (`extracted-signals.interface.ts`)
+2. ✅ Add weights/tiers/domains/chip labels in `expansion-08-signal-definitions.ts` (not wired into `COMPATIBILITY_WEIGHTS` / `SignalKey`)
+3. ⏭️ Update signal count docs (34 total after promote) — deferred / not a Story 1 gate
+
+**Files (as-built):**
 - `dating-api/src/extraction/extracted-signals.interface.ts`
 - `dating-api/src/extraction/expansion-08-signal-definitions.ts` (new)
-- `dating-api/src/compatibility/compatibility-score.ts` (at promote gate)
-- `dating-api/src/matches/match-explainability.ts` (at promote gate)
-- `COMPATIBILITY_SIGNALS_SUMMARY.md`
+- Specs under `dating-api/src/extraction/`
+- Promote-gate files (`compatibility-score.ts`, `match-explainability.ts`, `COMPATIBILITY_SIGNALS_SUMMARY.md`) — **out of scope** Story 1
 
 **Acceptance Criteria:**
 - ✅ Four new keys in shadow allowlist
-- ✅ Unit test: keys validate in strict extraction schema
-- ⏭️ Promote to scoring registries at Story 5 gate
+- ✅ Unit test: keys validate in strict extraction schema / shadow-mode specs
+- ⏭️ Promote to scoring registries at Story 5 gate (optional — keep shadow until explicit promote) — **not promoted; deferred**
 
 ---
 
-### STORY 2: LLM Extraction Prompts (MOST CRITICAL)
+### STORY 2: LLM Extraction Prompts (MOST CRITICAL) ✅ Done
 **Points:** 10  
 **Owner:** Backend + Prompt Engineer
+
+**As-built:** Extended `expansion-08-signal-definitions.ts` with self + partner semantic blocks; wired into `extraction.service.ts`; `DOMAIN_ALLOWED` self **31** / partner **17**; scale **1–10 or null**; PROTECTED vs adjacent keys; ethical nulls (race/anatomy); Hebrew-aware semantics (no keyword matchers). Category storage deferred (score alone for v1). Live Hebrew fixtures + >85% deferred to Story 5. Shadow only — no scoring.
 
 **Principle:** Pure semantic extraction via LLM. NO regex, NO keywords, NO if/else.
 
@@ -162,7 +165,7 @@ These may appear in free text; treat as **null** for scoring and do not surface 
 
 **LLM also extracts optional category hint** (for pair friction, not user-facing chip alone):
 - Categories (examples): `athletic`, `curvy`, `slim`, `petite`, `average`, `flexible`, `unspecified`
-- Store category as shadow metadata if pipeline supports it; otherwise score alone is enough for v1
+- **As-built Story 2:** prompt meaning aids only — **no** structured category storage (score alone for v1; Story 3 may add if clash needs it)
 
 **Examples HIGH (8–10):**
 - "I love curvy/fuller women"
@@ -176,30 +179,32 @@ These may appear in free text; treat as **null** for scoring and do not surface 
 **Examples null:**
 - Mentions "beautiful" without type specificity (`physicalPriority` may still fire)
 
-**Tasks:**
-1. Create `expansion-08-signal-definitions.ts` with semantic definitions + EN/HE examples
-2. Wire into `extraction.service.ts` (self + partner domains)
-3. Sync `extraction-strict-validation.ts` allowlist
-4. Unit tests: 4 signals × high/low/null
-5. Hebrew regression fixtures from gap analysis table above
+**Tasks (as-built):**
+1. ✅ Extended `expansion-08-signal-definitions.ts` with semantic definitions (Story 1 created metadata; Story 2 added LLM blocks)
+2. ✅ Wired into `extraction.service.ts` (self + partner domains)
+3. ✅ Synced `extraction-strict-validation.ts` allowlist (self 31 / partner 17)
+4. ✅ Unit tests with mocked LLM (high/low/null + OOR + partner smokes)
+5. ⏭️ Hebrew profile regression fixtures — Story 5
 
 **Acceptance Criteria:**
 - ✅ LLM-only; null when unclear
-- ✅ Racist / sexual-anatomy-only text → null on these four (do not invent scores)
+- ✅ Racist / sexual-anatomy-only text → null on these four (prompt ethical lock; live fixtures Story 5)
 - ✅ NO hardcoded patterns
-- ✅ >85% agreement on validation set (Story 5)
+- ⏭️ >85% agreement on validation set — Story 5
 
-**Files:**
-- `dating-api/src/extraction/expansion-08-signal-definitions.ts` (new)
+**Files (as-built):**
+- `dating-api/src/extraction/expansion-08-signal-definitions.ts` (extended)
 - `dating-api/src/extraction/extraction.service.ts`
 - `dating-api/src/extraction/extraction-strict-validation.ts`
-- `dating-api/src/extraction/extraction.service.spec.ts`
+- `dating-api/src/extraction/extraction.service.spec.ts` / `extracted-signals.spec.ts`
 
 ---
 
-### STORY 3: Tension Rules
+### STORY 3: Tension Rules ✅ Done
 **Points:** 4  
 **Owner:** Backend
+
+**As-built (shadow mode):** Three friction rules on Exp-08 keys + `EnrichedSignals` fields (all four, including `physicalTypePreference` for future) + English `TENSION_CHIP_BY_ID` labels. `physical_type_specificity_clash` **soft-skipped** (no category metadata; no score-gap fallback). No `COMPATIBILITY_SIGNAL_KEYS` promote. Positive chips deferred to Story 4.
 
 ```typescript
 {
@@ -255,20 +260,21 @@ These may appear in free text; treat as **null** for scoring and do not surface 
 },
 ```
 
-**Tension chips:**
-- `education_level_gap`: `Education expectations`
-- `honesty_integrity_gap`: `Honesty values gap`
-- `chronotype_clash`: `Morning vs night`
-- `physical_type_specificity_clash`: `Physical type mismatch`
+**Tension chips (as-built):**
+- ✅ `education_level_gap`: `Education expectations`
+- ✅ `honesty_integrity_gap`: `Honesty values gap`
+- ✅ `chronotype_clash`: `Morning vs night`
+- ⏭️ `physical_type_specificity_clash`: `Physical type mismatch` — **soft-skipped** (no category metadata)
 
-**Note:** If category metadata is not ready in v1, implement first three tension rules fully; ship `physical_type_specificity_clash` only when categories exist (or soft-skip).
+**Note:** If category metadata is not ready in v1, implement first three tension rules fully; ship `physical_type_specificity_clash` only when categories exist (or soft-skip). **As-built: soft-skipped.**
 
 **Acceptance Criteria:**
-- ✅ Rules fire at thresholds (unit tests)
+- ✅ Rules fire at thresholds (unit tests) — three shipped rules
 - ✅ Chip labels resolve in explainability
-- ✅ No tension from race/ethnic/anatomy text alone
+- ✅ No tension from race/ethnic/anatomy text alone (Exp-08 nulls → predicates false)
+- ⏭️ Physical-type clash — deferred until category metadata
 
-**Files:**
+**Files (as-built):**
 - `dating-api/src/engine/tension-rules.ts`
 - `dating-api/src/matches/match-explainability.ts`
 - `dating-api/src/engine/compute-friction.spec.ts`

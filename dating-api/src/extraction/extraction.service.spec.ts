@@ -475,8 +475,8 @@ describe('ExtractionService', () => {
     }
 
     const covPercent = coveragePercent(overlapping, totalSignals);
-    // With 35 signals (15 official + 20 shadow), 5 overlapping ≈ 14%
-    expect(covPercent).toBeGreaterThanOrEqual(14);
+    // With 39 signals (15 official + 24 shadow), 5 overlapping ≈ 12%
+    expect(covPercent).toBeGreaterThanOrEqual(12);
   });
 });
 
@@ -1886,6 +1886,295 @@ describe('ExtractionService behavior locks', () => {
       expect(result.signals['religiousObservance']).toBe(8);
       expect(
         result.evidence.some((e) => e.signal === 'religiousObservance'),
+      ).toBe(true);
+    });
+  });
+
+  describe('Expansion-08 shadow signals', () => {
+    it('extracts high educationLevel when LLM returns degree-filter score', async () => {
+      // Semantic: "Only university-educated with a bachelor's" / "רק עם תואר ראשון"
+      const text =
+        "Only university-educated with a bachelor's — looking for the same.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { educationLevel: 9 },
+          [
+            {
+              signal: 'educationLevel',
+              quote: "Only university-educated with a bachelor's",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['educationLevel']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'educationLevel')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low educationLevel when LLM returns credentials-do-not-matter score', async () => {
+      // Semantic: "Degrees don't impress me" / street smarts over diplomas
+      const text =
+        "Degrees don't impress me. Street smarts over diplomas every time.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { educationLevel: 2 },
+          [
+            {
+              signal: 'educationLevel',
+              quote: "Degrees don't impress me",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['educationLevel']).toBe(2);
+    });
+
+    it('returns null for educationLevel when only "smart" cues exist', async () => {
+      const text = "I'm smart and love deep conversations about ideas.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { intellectualCuriosity: 8, educationLevel: null },
+          [
+            {
+              signal: 'intellectualCuriosity',
+              quote: 'love deep conversations about ideas',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['educationLevel']).toBeNull();
+    });
+
+    it('extracts high honestyIntegrity when LLM returns integrity-central score', async () => {
+      // Semantic: "ישרה כמו סרגל" / "Looking for someone honest as a ruler"
+      const text =
+        'Looking for someone honest as a ruler. No games, no lies.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { honestyIntegrity: 9 },
+          [
+            {
+              signal: 'honestyIntegrity',
+              quote: 'honest as a ruler. No games, no lies',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['honestyIntegrity']).toBe(9);
+    });
+
+    it('returns null for honestyIntegrity when honesty is unmentioned', async () => {
+      const text = 'I am ambitious and driven. I work hard and want something real.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, honestyIntegrity: null },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['honestyIntegrity']).toBeNull();
+    });
+
+    it('extracts high chronotype when LLM returns night-owl score', async () => {
+      // Semantic: "לישון עד מאוחר בשבת" / sleep late Saturday
+      const text =
+        'I love sleeping late on Saturday — you too? Night owl energy.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { chronotype: 9 },
+          [
+            {
+              signal: 'chronotype',
+              quote: 'I love sleeping late on Saturday',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['chronotype']).toBe(9);
+    });
+
+    it('extracts low chronotype when LLM returns early-bird score', async () => {
+      const text = 'Up at 5am every day. Early mornings are my thing.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { chronotype: 2 },
+          [
+            {
+              signal: 'chronotype',
+              quote: 'Up at 5am every day',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['chronotype']).toBe(2);
+    });
+
+    it('returns null for chronotype when no sleep rhythm cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, chronotype: null },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['chronotype']).toBeNull();
+    });
+
+    it('extracts high physicalTypePreference when LLM returns exclusive type score', async () => {
+      // Semantic: "אוהב שמנות ומלאות" / curvy preference
+      const text = 'I love curvy/fuller women — that type is a must for me.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalTypePreference: 9 },
+          [
+            {
+              signal: 'physicalTypePreference',
+              quote: 'I love curvy/fuller women',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalTypePreference']).toBe(9);
+    });
+
+    it('extracts low physicalTypePreference when LLM returns flexible/appearance-agnostic score', async () => {
+      // Semantic: "לא איכפת לו ממראה חיצוני"
+      const text =
+        "Doesn't care about appearance — personality matters more than body type.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalTypePreference: 2 },
+          [
+            {
+              signal: 'physicalTypePreference',
+              quote: "Doesn't care about appearance",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalTypePreference']).toBe(2);
+    });
+
+    it('returns null for physicalTypePreference when only "beautiful" cues exist', async () => {
+      const text = 'Looking for someone beautiful and attractive.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalTypePreference: null },
+          [],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalTypePreference']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-08 signal to null via validateAndClean', async () => {
+      const text =
+        'Only university-educated with a bachelor\'s — degree required.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { educationLevel: 11 },
+          [
+            {
+              signal: 'educationLevel',
+              quote: 'degree required',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['educationLevel']).toBeNull();
+    });
+
+    it('extracts partner educationLevel when LLM returns desired-partner credential score', async () => {
+      const text =
+        'Looking for a partner with at least a bachelor\'s degree from university.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { educationLevel: 8 },
+          [
+            {
+              signal: 'educationLevel',
+              quote: "bachelor's degree from university",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['educationLevel']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'educationLevel')).toBe(
+        true,
+      );
+    });
+
+    it('extracts partner physicalTypePreference when LLM returns desired-partner type score', async () => {
+      const text = 'Looking for an athletic, fit partner — that build matters.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { physicalTypePreference: 8 },
+          [
+            {
+              signal: 'physicalTypePreference',
+              quote: 'athletic, fit partner',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['physicalTypePreference']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'physicalTypePreference'),
       ).toBe(true);
     });
   });

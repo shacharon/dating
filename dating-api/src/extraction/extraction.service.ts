@@ -29,6 +29,10 @@ import {
   EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK,
 } from './expansion-07-signal-definitions';
 import {
+  EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK,
+  EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK,
+} from './expansion-08-signal-definitions';
+import {
   buildExtractionPipelineTrace,
   buildRawLlmPersistenceLogPayload,
   toExtractionSnapshot,
@@ -68,7 +72,7 @@ INTERESTS:
 - "I'm a runner" -> "Running"
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -86,14 +90,14 @@ EVIDENCE RULES:
 SIGNAL RULES:
 - emotionalDepth = explicit introspection, vulnerability, emotional self-awareness
 - attachmentSecurity = explicit closeness, fusion, anchor-like bond, inseparable emotional union
-- directness = explicit transparency, no secrets, clear communication
+- directness = explicit transparency, no secrets, clear communication — not honesty/integrity/"no games" as a core relationship value alone
 - independence = explicit autonomy vs fusion; shared-everything / merged-life language = low
 - socialBattery = explicit social-energy preference only
-- lifestylePace = explicit pace/rhythm (calm vs high-action busy life) — not home-vs-out nesting preference alone, and not novelty-vs-routine preference
-- ambition = explicit goals, drive
+- lifestylePace = explicit pace/rhythm (calm vs high-action busy life) — not home-vs-out nesting preference alone, not novelty-vs-routine preference, and not morning vs night sleep chronotype
+- ambition = explicit goals, drive — not formal education/credential preference alone
 - healthBodyConsciousness = explicit health/wellness values focus (caring about health — not how much they actually exercise/move)
 - spirituality = explicit spiritual/inner meaning orientation — not practical ritual observance level alone
-- intellectualCuriosity = explicit need for mental stimulation / ideas / deep learning with a partner (not merely "I'm smart" or listing books)
+- intellectualCuriosity = explicit need for mental stimulation / ideas / deep learning with a partner (not merely "I'm smart" or listing books, and not formal degree/credential filters)
 - conflictStyle = explicit disagreement handling, repair, de-escalation
 - adventureNovelty = explicit novelty vs routine / new-experiences preference (not life tempo alone, not homebody preference, not travel hobby tag alone)
 - structureChaosTolerance = explicit order vs chaos preference
@@ -110,6 +114,10 @@ SIGNAL RULES:
 - supportProviderOrientation = explicit desire to give ongoing financial support (not occasional date generosity alone)
 - supportRecipientOrientation = explicit desire to receive ongoing financial support (not emotional support alone)
 - religiousObservance = explicit practical religious practice level (not inner spirituality alone, not traditional family-structure alone)
+- educationLevel = explicit formal education/degree importance or credential filter (not intellectual curiosity alone, not ambition alone)
+- honestyIntegrity = explicit honesty/integrity/"no games" value (not communication bluntness/directness alone); prefer null if unmentioned
+- chronotype = explicit morning vs night sleep/energy rhythm (not busy vs calm lifestyle pace alone)
+- physicalTypePreference = explicit body/build type specificity vs flexibility (not looks-importance alone); race/anatomy-only → null
 
 ${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
 
@@ -124,6 +132,8 @@ ${EXPANSION_05_SELF_SHADOW_SIGNAL_BLOCK}
 ${EXPANSION_06_SELF_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK}
 
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
@@ -285,7 +295,7 @@ INTERESTS:
 - Do not infer
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -304,18 +314,24 @@ SIGNAL RULES:
 - emotionalDepth = explicit vulnerability, emotional openness, naming feelings
 - relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules
 - traditionalism = explicit desire for kids, marriage, traditional family structure — not practical religious ritual observance alone (kosher/Shabbat/דתי practice → religiousObservance)
-- lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher
+- lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher — not morning vs night sleep chronotype
 - socialBattery = explicit social-energy cues only
-- physicalPriority = explicit looks, attraction, chemistry, appearance — not casual vs committed intimacy boundary
-- intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations
+- physicalPriority = explicit looks, attraction, chemistry, appearance — not casual vs committed intimacy boundary, and not which body/build type preference (→ physicalTypePreference)
+- intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations — not formal degree/credential filter (→ educationLevel)
 - conflictStyle = explicit disagreement handling, repair, calm discussion, de-escalation
 - casualIntimacyIntent = desired partner's casual vs committed-only physical intimacy stance (not looks priority alone)
 - supportExchangeOrientation = desired openness to arrangement/money-in-relationship dynamics (not emotional support alone)
 - supportProviderOrientation = wanting a partner who GIVES ongoing financial support
 - supportRecipientOrientation = wanting a partner who RECEIVES / expects ongoing financial support
 - religiousObservance = desired partner's practical religious practice level (not marriage/kids traditionalism alone)
+- educationLevel = how much formal education/credentials matter in a partner (not intellectual curiosity alone)
+- honestyIntegrity = desired partner honesty/integrity/"no games" emphasis (not bluntness alone); prefer null if unmentioned
+- chronotype = desired partner sleep/energy rhythm early bird vs night owl (not lifestyle pace alone)
+- physicalTypePreference = how specific body/build type preferences are for a partner (not looks-importance alone); race/anatomy-only → null
 
 ${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 DIRECTION LOCK:
 For lifestylePace:

@@ -306,6 +306,13 @@ describe('buildMatchExplainability', () => {
     );
   });
 
+  it('maps Expansion-08 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.education_level_gap).toBe('Education expectations');
+    expect(TENSION_CHIP_BY_ID.honesty_integrity_gap).toBe('Honesty values gap');
+    expect(TENSION_CHIP_BY_ID.chronotype_clash).toBe('Morning vs night');
+    expect(TENSION_CHIP_BY_ID.physical_type_specificity_clash).toBeUndefined();
+  });
+
   it('shows empathy_gap tension chip when friction >= 3', () => {
     const dto = buildMatchExplainability({
       compatibility: 55,
@@ -403,6 +410,39 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'religious_observance_gap', penalty: 5 }],
     });
     expect(dto.tensionChip).toBe('Religious practice gap');
+  });
+
+  it('shows honesty_integrity_gap tension chip when friction >= 3', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 5,
+      breakdown: [],
+      tensionMatrix: [{ id: 'honesty_integrity_gap', penalty: 5 }],
+    });
+    expect(dto.tensionChip).toBe('Honesty values gap');
+  });
+
+  it('shows chronotype_clash tension chip when friction >= 3', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 3,
+      breakdown: [],
+      tensionMatrix: [{ id: 'chronotype_clash', penalty: 3 }],
+    });
+    expect(dto.tensionChip).toBe('Morning vs night');
+  });
+
+  it('shows education_level_gap tension chip when friction >= 3', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'education_level_gap', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Education expectations');
   });
 
   it('omits tensionChip for creative_mismatch alone when friction < 3', () => {

@@ -46,6 +46,10 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'supportProviderOrientation',
     'supportRecipientOrientation',
     'religiousObservance',
+    'educationLevel',
+    'honestyIntegrity',
+    'chronotype',
+    'physicalTypePreference',
   ],
   relationship: [
     'emotionalDepth',
@@ -70,6 +74,10 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'supportProviderOrientation',
     'supportRecipientOrientation',
     'religiousObservance',
+    'educationLevel',
+    'honestyIntegrity',
+    'chronotype',
+    'physicalTypePreference',
   ],
 };
 

@@ -614,4 +614,159 @@ describe('compute-friction', () => {
       ).toBe(false);
     });
   });
+
+  describe('Expansion-08 shadow tension rules', () => {
+    it('education_level_gap fires when education priorities diverge', () => {
+      const a: EnrichedSignals = { educationLevel: 9 };
+      const b: EnrichedSignals = { educationLevel: 3 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'education_level_gap');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(4);
+    });
+
+    it('education_level_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { educationLevel: 3 };
+      const b: EnrichedSignals = { educationLevel: 9 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'education_level_gap')).toBe(
+        true,
+      );
+    });
+
+    it('education_level_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { educationLevel: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'education_level_gap')).toBe(
+        false,
+      );
+    });
+
+    it('education_level_gap fires at gap exactly 5 with one side >= 8', () => {
+      const a: EnrichedSignals = { educationLevel: 8 };
+      const b: EnrichedSignals = { educationLevel: 3 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'education_level_gap')).toBe(
+        true,
+      );
+    });
+
+    it('education_level_gap does not fire when gap is 4', () => {
+      const a: EnrichedSignals = { educationLevel: 8 };
+      const b: EnrichedSignals = { educationLevel: 4 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'education_level_gap')).toBe(
+        false,
+      );
+    });
+
+    it('education_level_gap does not fire when neither side is >= 8', () => {
+      const a: EnrichedSignals = { educationLevel: 7 };
+      const b: EnrichedSignals = { educationLevel: 2 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'education_level_gap')).toBe(
+        false,
+      );
+    });
+
+    it('honesty_integrity_gap fires when honesty emphasis diverges', () => {
+      const a: EnrichedSignals = { honestyIntegrity: 9 };
+      const b: EnrichedSignals = { honestyIntegrity: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'honesty_integrity_gap');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(5);
+    });
+
+    it('honesty_integrity_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { honestyIntegrity: 2 };
+      const b: EnrichedSignals = { honestyIntegrity: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'honesty_integrity_gap'),
+      ).toBe(true);
+    });
+
+    it('honesty_integrity_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { honestyIntegrity: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'honesty_integrity_gap'),
+      ).toBe(false);
+    });
+
+    it('honesty_integrity_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { honestyIntegrity: 7 };
+      const b: EnrichedSignals = { honestyIntegrity: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'honesty_integrity_gap'),
+      ).toBe(false);
+    });
+
+    it('honesty_integrity_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { honestyIntegrity: 8 };
+      const b: EnrichedSignals = { honestyIntegrity: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'honesty_integrity_gap'),
+      ).toBe(true);
+    });
+
+    it('chronotype_clash fires when sleep rhythms diverge', () => {
+      const a: EnrichedSignals = { chronotype: 9 };
+      const b: EnrichedSignals = { chronotype: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'chronotype_clash');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(3);
+    });
+
+    it('chronotype_clash fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { chronotype: 2 };
+      const b: EnrichedSignals = { chronotype: 9 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'chronotype_clash')).toBe(
+        true,
+      );
+    });
+
+    it('chronotype_clash does not fire when either side is null', () => {
+      const a: EnrichedSignals = { chronotype: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'chronotype_clash')).toBe(
+        false,
+      );
+    });
+
+    it('chronotype_clash does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { chronotype: 7 };
+      const b: EnrichedSignals = { chronotype: 4 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'chronotype_clash')).toBe(
+        false,
+      );
+    });
+
+    it('chronotype_clash fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { chronotype: 8 };
+      const b: EnrichedSignals = { chronotype: 3 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'chronotype_clash')).toBe(
+        true,
+      );
+    });
+
+    it('physical_type_specificity_clash is soft-skipped (no rule without categories)', () => {
+      const a: EnrichedSignals = { physicalTypePreference: 9 };
+      const b: EnrichedSignals = { physicalTypePreference: 2 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'physical_type_specificity_clash'),
+      ).toBe(false);
+    });
+  });
 });

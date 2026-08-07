@@ -140,6 +140,9 @@ export const TENSION_CHIP_BY_ID: Record<string, string> = {
   support_both_provider: 'Both want to provide',
   support_both_recipient: 'Both seek support',
   religious_observance_gap: 'Religious practice gap',
+  education_level_gap: 'Education expectations',
+  honesty_integrity_gap: 'Honesty values gap',
+  chronotype_clash: 'Morning vs night',
 };
 
 function isSignalKey(k: string): k is SignalKey {

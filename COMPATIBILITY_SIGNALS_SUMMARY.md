@@ -231,8 +231,8 @@ The current 15 signals are **good** but skew toward **cognitive/lifestyle** comp
 **✅ Sprint plans created!** See:
 
 1. **Executive Summary:** `docs/sprints/EXPANSION_SUMMARY.md`
-   - 19 new signals in 8 sprints
-   - ~4-month timeline
+   - 33 new signals in 15 sprints
+   - ~7-month timeline
    - Resource requirements
 
 2. **LLM-First Principle:** `docs/sprints/LLM_FIRST_PRINCIPLE.md`
@@ -241,7 +241,7 @@ The current 15 signals are **good** but skew toward **cognitive/lifestyle** comp
    - Code review checklist
 
 3. **Full Roadmap:** `docs/sprints/EXPANSION_NEW_SIGNALS_ROADMAP.md`
-   - 8 sprint breakdown (34 signals total)
+   - 15 sprint breakdown (48 signals total)
    - Migration strategy
    - Success metrics
 
@@ -259,9 +259,14 @@ The current 15 signals are **good** but skew toward **cognitive/lifestyle** comp
    - Tags: `biking`, `camping`, `nature` (not signals)
    - Overlap chips EN/HE/ES
 
-7. **Sprint 1 Details:** `docs/sprints/sprint-expansion-01-empathy-vulnerability/README.md`
+7. **Phase 6 — Relationship Psychology (Sprints 10–15):** `docs/sprints/PHASE6_RELATIONSHIP_PSYCHOLOGY_ROADMAP.md`
+   - 14 signals: repair, forgiveness, stress response, jealousy/security, listening, expression, growth mindset, self-awareness, patience, intimacy pacing, monogamy alignment, family enmeshment, friend/couple balance, alone-time need
+   - Master onboarding prompt reference (EN/HE) to elicit richer profile text
+   - Individual sprint docs: `sprint-expansion-10-conflict-recovery/` through `sprint-expansion-15-family-social-ecosystem/`
+
+8. **Sprint 1 Details:** `docs/sprints/sprint-expansion-01-empathy-vulnerability/README.md`
    - Story-level breakdown
    - Acceptance criteria
    - Testing plan
 
-**Next:** Complete Expansion 01–08, then Sprint 9 for interest taxonomy gaps.
+**Next:** Complete Expansion 01–09, then Phase 6 (Sprints 10–15) for the relationship-psychology layer.

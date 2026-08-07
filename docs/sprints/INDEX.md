@@ -19,7 +19,11 @@
 
 4. **Full Roadmap** (15 min read)  
    `EXPANSION_NEW_SIGNALS_ROADMAP.md`  
-   9 sprints, detailed breakdown, migration strategy.
+   15 sprints, detailed breakdown, migration strategy.
+
+4b. **Phase 6 Roadmap** (10 min read) — Relationship Psychology  
+   `PHASE6_RELATIONSHIP_PSYCHOLOGY_ROADMAP.md`  
+   14 signals, 6 sprints, master onboarding prompt reference.
 
 5. **Sprint 1 Details** (20 min read)  
    `sprint-expansion-01-empathy-vulnerability/README.md`  
@@ -49,6 +53,13 @@
 - `sprint-expansion-07-profile-gap-signals/` — Sprint 7: Profile Gap Signals (Hebrew samples) ✅
 - `sprint-expansion-08-education-integrity-lifestyle/` — Sprint 8: Education, Integrity, Chronotype & Physical Type
 - `sprint-expansion-09-interest-taxonomy/` — Sprint 9: Interest Taxonomy (`biking`, `camping`, `nature`)
+- `sprint-expansion-10-conflict-recovery/` — Sprint 10: Conflict Recovery (`repairSkills`, `forgivenessStyle`)
+- `sprint-expansion-11-stress-security/` — Sprint 11: Stress & Security (`stressResponse`, `jealousySecurity`)
+- `sprint-expansion-12-feeling-heard/` — Sprint 12: Feeling Heard (`listeningPresence`, `emotionalExpression`)
+- `sprint-expansion-13-growth-self-awareness/` — Sprint 13: Growth & Self-Awareness (`growthMindset`, `selfAwareness`)
+- `sprint-expansion-14-tolerance-intimacy-pacing/` — Sprint 14: Tolerance & Intimacy Pacing (`patienceTolerance`, `intimacyPacing`, `monogamyAlignment`)
+- `sprint-expansion-15-family-social-ecosystem/` — Sprint 15: Family & Social Ecosystem (`familyEnmeshment`, `friendCoupleBalance`, `aloneTimeNeed`)
+- `PHASE6_RELATIONSHIP_PSYCHOLOGY_ROADMAP.md` — Phase 6 overview + master onboarding prompts
 - `EXPANSION_AGENT_COMMANDS.md` — All agent commands (copy-paste)
 
 ---
@@ -137,7 +148,8 @@ All signals come from published relationship research:
 - Sprint 7: Phase 3 (Profile Gap Signals) — 2 weeks
 - Sprint 8: Phase 4 (Education, Integrity, Lifestyle) — 2 weeks
 - Sprint 9: Interest Taxonomy Gaps — 1 week
-- Total: ~4+ months
+- Sprint 10-15: Phase 6 (Relationship Psychology) — 12 weeks
+- Total: ~7 months
 
 ---
 

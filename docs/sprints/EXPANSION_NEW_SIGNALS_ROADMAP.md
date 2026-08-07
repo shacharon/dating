@@ -1,7 +1,7 @@
 # New Compatibility Signals Expansion Roadmap
 
 ## Overview
-Add **19 new compatibility signals** (10 in Phase 1–2 + 5 profile-gap in Phase 3 + 4 lifestyle/values in Phase 4) to match engine.
+Add **33 new compatibility signals** (10 in Phase 1–2 + 5 profile-gap in Phase 3 + 4 lifestyle/values in Phase 4 + 14 relationship-psychology in Phase 6) to match engine, plus a 19-tag interest taxonomy (Phase 5).
 
 **CRITICAL PRINCIPLE: LLM-FIRST EXTRACTION - NO HARDCODED PATTERNS**
 
@@ -239,6 +239,56 @@ All signal extraction uses LLM with clear semantic definitions, not regex/keywor
 
 ---
 
+## Phase 6: Relationship Psychology (14 signals)
+
+**Full detail:** `PHASE6_RELATIONSHIP_PSYCHOLOGY_ROADMAP.md` (master onboarding prompt reference + cross-cutting rules)
+
+### Sprint 10: Conflict Recovery
+- Add `repairSkills`, `forgivenessStyle`
+- Onboarding prompts: "When we disagree, I usually…", "After a fight, I tend to…"
+- Tensions: `repair_skills_gap` (5), `both_low_repair` (6), `forgiveness_style_gap` (4)
+- **Deliverable:** 36 signals
+
+### Sprint 11: Stress & Security
+- Add `stressResponse`, `jealousySecurity`
+- Onboarding prompts: stress-support needs, jealousy/security
+- Tensions: `stress_response_clash` (5), `jealousy_security_gap` (5), `both_high_jealousy` (3)
+- **Deliverable:** 38 signals
+
+### Sprint 12: Feeling Heard
+- Add `listeningPresence`, `emotionalExpression`
+- Onboarding prompts: feeling loved, feeling listened to
+- Tensions: `listening_presence_gap` (4), `emotional_expression_gap` (4)
+- **Deliverable:** 40 signals
+
+### Sprint 13: Growth & Self-Awareness
+- Add `growthMindset`, `selfAwareness` (new `personal` domain)
+- Onboarding prompts: changed your mind, working on yourself
+- Tensions: `growth_mindset_gap` (4), `both_low_self_awareness` (3)
+- **Deliverable:** 42 signals
+
+### Sprint 14: Tolerance & Intimacy Pacing
+- Add `patienceTolerance`, `intimacyPacing`, `monogamyAlignment`
+- Onboarding prompts: patience test, pacing, exclusivity meaning
+- Tensions: `patience_tolerance_gap` (3), `intimacy_pacing_clash` (4), `monogamy_alignment_mismatch` (8 — near dealbreaker)
+- **Deliverable:** 45 signals
+
+### Sprint 15: Family & Social Ecosystem
+- Add `familyEnmeshment`, `friendCoupleBalance`, `aloneTimeNeed`
+- Onboarding prompts: family involvement, weekend balance, recharge style
+- Tensions: `family_enmeshment_gap` (4), `friend_couple_balance_gap` (3), `alone_time_need_gap` (3)
+- **Deliverable:** 48 signals — Phase 6 complete
+
+**Docs:**
+- `sprint-expansion-10-conflict-recovery/README.md`
+- `sprint-expansion-11-stress-security/README.md`
+- `sprint-expansion-12-feeling-heard/README.md`
+- `sprint-expansion-13-growth-self-awareness/README.md`
+- `sprint-expansion-14-tolerance-intimacy-pacing/README.md`
+- `sprint-expansion-15-family-social-ecosystem/README.md`
+
+---
+
 ## Cross-Cutting Stories (All Sprints)
 
 ### LLM Extraction Pattern (Every Sprint)
@@ -334,7 +384,7 @@ Do not rely on keywords alone.
 - Monitor for regressions
 
 ### Phase 3: Full Rollout
-- All matches use 34 signals (15 old + 19 new)
+- All matches use 48 signals (15 old + 33 new)
 - Backfill old profiles with new signal extraction
 - Monitor match satisfaction metrics
 - Interest overlap chips live in match UI
@@ -362,7 +412,7 @@ Do not rely on keywords alone.
 
 ## Resource Estimate
 
-- **8 sprints** × 2 weeks = **~4 months**
+- **15 sprints** (mostly 2 weeks, Sprint 9 is 1 week) = **~7 months**
 - **5 stories per sprint** × 3 days avg = **~2 weeks per sprint**
 - **LLM prompt engineering:** 20% of time
 - **Testing & validation:** 30% of time

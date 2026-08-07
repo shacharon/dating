@@ -868,3 +868,526 @@
 ```text
 --agent 3 expansion 09 story 4
 ```
+
+---
+
+## Sprint Expansion-10 — Conflict Recovery
+
+**Signals:** `repairSkills`, `forgivenessStyle`  
+**Doc:** `docs/sprints/sprint-expansion-10-conflict-recovery/README.md`
+
+```text
+--agent 0 expansion 10 story 1
+```
+
+```text
+--agent 1 expansion 10 story 1
+```
+
+```text
+--agent 2 expansion 10 story 1
+```
+
+```text
+--agent 3 expansion 10 story 1
+```
+
+```text
+--agent 0 expansion 10 story 2
+```
+
+```text
+--agent 1 expansion 10 story 2
+```
+
+```text
+--agent 2 expansion 10 story 2
+```
+
+```text
+--agent 3 expansion 10 story 2
+```
+
+```text
+--agent 0 expansion 10 story 3
+```
+
+```text
+--agent 1 expansion 10 story 3
+```
+
+```text
+--agent 2 expansion 10 story 3
+```
+
+```text
+--agent 3 expansion 10 story 3
+```
+
+```text
+--agent 0 expansion 10 story 4
+```
+
+```text
+--agent 1 expansion 10 story 4
+```
+
+```text
+--agent 2 expansion 10 story 4
+```
+
+```text
+--agent 3 expansion 10 story 4
+```
+
+```text
+--agent 0 expansion 10 story 5
+```
+
+```text
+--agent 1 expansion 10 story 5
+```
+
+```text
+--agent 2 expansion 10 story 5
+```
+
+```text
+--agent 3 expansion 10 story 5
+```
+
+---
+
+## Sprint Expansion-11 — Stress & Security
+
+**Signals:** `stressResponse`, `jealousySecurity`  
+**Doc:** `docs/sprints/sprint-expansion-11-stress-security/README.md`
+
+```text
+--agent 0 expansion 11 story 1
+```
+
+```text
+--agent 1 expansion 11 story 1
+```
+
+```text
+--agent 2 expansion 11 story 1
+```
+
+```text
+--agent 3 expansion 11 story 1
+```
+
+```text
+--agent 0 expansion 11 story 2
+```
+
+```text
+--agent 1 expansion 11 story 2
+```
+
+```text
+--agent 2 expansion 11 story 2
+```
+
+```text
+--agent 3 expansion 11 story 2
+```
+
+```text
+--agent 0 expansion 11 story 3
+```
+
+```text
+--agent 1 expansion 11 story 3
+```
+
+```text
+--agent 2 expansion 11 story 3
+```
+
+```text
+--agent 3 expansion 11 story 3
+```
+
+```text
+--agent 0 expansion 11 story 4
+```
+
+```text
+--agent 1 expansion 11 story 4
+```
+
+```text
+--agent 2 expansion 11 story 4
+```
+
+```text
+--agent 3 expansion 11 story 4
+```
+
+```text
+--agent 0 expansion 11 story 5
+```
+
+```text
+--agent 1 expansion 11 story 5
+```
+
+```text
+--agent 2 expansion 11 story 5
+```
+
+```text
+--agent 3 expansion 11 story 5
+```
+
+---
+
+## Sprint Expansion-12 — Feeling Heard
+
+**Signals:** `listeningPresence`, `emotionalExpression`  
+**Doc:** `docs/sprints/sprint-expansion-12-feeling-heard/README.md`
+
+```text
+--agent 0 expansion 12 story 1
+```
+
+```text
+--agent 1 expansion 12 story 1
+```
+
+```text
+--agent 2 expansion 12 story 1
+```
+
+```text
+--agent 3 expansion 12 story 1
+```
+
+```text
+--agent 0 expansion 12 story 2
+```
+
+```text
+--agent 1 expansion 12 story 2
+```
+
+```text
+--agent 2 expansion 12 story 2
+```
+
+```text
+--agent 3 expansion 12 story 2
+```
+
+```text
+--agent 0 expansion 12 story 3
+```
+
+```text
+--agent 1 expansion 12 story 3
+```
+
+```text
+--agent 2 expansion 12 story 3
+```
+
+```text
+--agent 3 expansion 12 story 3
+```
+
+```text
+--agent 0 expansion 12 story 4
+```
+
+```text
+--agent 1 expansion 12 story 4
+```
+
+```text
+--agent 2 expansion 12 story 4
+```
+
+```text
+--agent 3 expansion 12 story 4
+```
+
+```text
+--agent 0 expansion 12 story 5
+```
+
+```text
+--agent 1 expansion 12 story 5
+```
+
+```text
+--agent 2 expansion 12 story 5
+```
+
+```text
+--agent 3 expansion 12 story 5
+```
+
+---
+
+## Sprint Expansion-13 — Growth & Self-Awareness
+
+**Signals:** `growthMindset`, `selfAwareness`  
+**Doc:** `docs/sprints/sprint-expansion-13-growth-self-awareness/README.md`
+
+```text
+--agent 0 expansion 13 story 1
+```
+
+```text
+--agent 1 expansion 13 story 1
+```
+
+```text
+--agent 2 expansion 13 story 1
+```
+
+```text
+--agent 3 expansion 13 story 1
+```
+
+```text
+--agent 0 expansion 13 story 2
+```
+
+```text
+--agent 1 expansion 13 story 2
+```
+
+```text
+--agent 2 expansion 13 story 2
+```
+
+```text
+--agent 3 expansion 13 story 2
+```
+
+```text
+--agent 0 expansion 13 story 3
+```
+
+```text
+--agent 1 expansion 13 story 3
+```
+
+```text
+--agent 2 expansion 13 story 3
+```
+
+```text
+--agent 3 expansion 13 story 3
+```
+
+```text
+--agent 0 expansion 13 story 4
+```
+
+```text
+--agent 1 expansion 13 story 4
+```
+
+```text
+--agent 2 expansion 13 story 4
+```
+
+```text
+--agent 3 expansion 13 story 4
+```
+
+```text
+--agent 0 expansion 13 story 5
+```
+
+```text
+--agent 1 expansion 13 story 5
+```
+
+```text
+--agent 2 expansion 13 story 5
+```
+
+```text
+--agent 3 expansion 13 story 5
+```
+
+---
+
+## Sprint Expansion-14 — Tolerance & Intimacy Pacing
+
+**Signals:** `patienceTolerance`, `intimacyPacing`, `monogamyAlignment`  
+**Doc:** `docs/sprints/sprint-expansion-14-tolerance-intimacy-pacing/README.md`
+
+```text
+--agent 0 expansion 14 story 1
+```
+
+```text
+--agent 1 expansion 14 story 1
+```
+
+```text
+--agent 2 expansion 14 story 1
+```
+
+```text
+--agent 3 expansion 14 story 1
+```
+
+```text
+--agent 0 expansion 14 story 2
+```
+
+```text
+--agent 1 expansion 14 story 2
+```
+
+```text
+--agent 2 expansion 14 story 2
+```
+
+```text
+--agent 3 expansion 14 story 2
+```
+
+```text
+--agent 0 expansion 14 story 3
+```
+
+```text
+--agent 1 expansion 14 story 3
+```
+
+```text
+--agent 2 expansion 14 story 3
+```
+
+```text
+--agent 3 expansion 14 story 3
+```
+
+```text
+--agent 0 expansion 14 story 4
+```
+
+```text
+--agent 1 expansion 14 story 4
+```
+
+```text
+--agent 2 expansion 14 story 4
+```
+
+```text
+--agent 3 expansion 14 story 4
+```
+
+```text
+--agent 0 expansion 14 story 5
+```
+
+```text
+--agent 1 expansion 14 story 5
+```
+
+```text
+--agent 2 expansion 14 story 5
+```
+
+```text
+--agent 3 expansion 14 story 5
+```
+
+---
+
+## Sprint Expansion-15 — Family & Social Ecosystem
+
+**Signals:** `familyEnmeshment`, `friendCoupleBalance`, `aloneTimeNeed`  
+**Doc:** `docs/sprints/sprint-expansion-15-family-social-ecosystem/README.md`  
+**Final sprint of Phase 6 — includes full rollout gate for all 14 relationship-psychology signals.**
+
+```text
+--agent 0 expansion 15 story 1
+```
+
+```text
+--agent 1 expansion 15 story 1
+```
+
+```text
+--agent 2 expansion 15 story 1
+```
+
+```text
+--agent 3 expansion 15 story 1
+```
+
+```text
+--agent 0 expansion 15 story 2
+```
+
+```text
+--agent 1 expansion 15 story 2
+```
+
+```text
+--agent 2 expansion 15 story 2
+```
+
+```text
+--agent 3 expansion 15 story 2
+```
+
+```text
+--agent 0 expansion 15 story 3
+```
+
+```text
+--agent 1 expansion 15 story 3
+```
+
+```text
+--agent 2 expansion 15 story 3
+```
+
+```text
+--agent 3 expansion 15 story 3
+```
+
+```text
+--agent 0 expansion 15 story 4
+```
+
+```text
+--agent 1 expansion 15 story 4
+```
+
+```text
+--agent 2 expansion 15 story 4
+```
+
+```text
+--agent 3 expansion 15 story 4
+```
+
+```text
+--agent 0 expansion 15 story 5
+```
+
+```text
+--agent 1 expansion 15 story 5
+```
+
+```text
+--agent 2 expansion 15 story 5
+```
+
+```text
+--agent 3 expansion 15 story 5
+```

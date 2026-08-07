@@ -44,6 +44,11 @@ export interface EnrichedSignals {
   supportProviderOrientation?: number | null;
   supportRecipientOrientation?: number | null;
   religiousObservance?: number | null;
+  /** Shadow Expansion-08 — from evaluationJson.self.signals when extracted. */
+  educationLevel?: number | null;
+  honestyIntegrity?: number | null;
+  chronotype?: number | null;
+  physicalTypePreference?: number | null;
 }
 
 export function getSignal(
@@ -450,5 +455,44 @@ export const tensionRules: TensionRule[] = [
     penalty: 5,
     explain:
       'Very different levels of religious practice — may affect daily life compatibility',
+  },
+  {
+    id: 'education_level_gap',
+    name: 'Education level gap (MED)',
+    when: (a, b) => {
+      const aEd = getSignal(a, 'educationLevel');
+      const bEd = getSignal(b, 'educationLevel');
+      if (aEd == null || bEd == null) return false;
+      return Math.abs(aEd - bEd) >= 5 && (aEd >= 8 || bEd >= 8);
+    },
+    penalty: 4,
+    explain:
+      'One strongly requires formal education credentials, the other does not share that priority',
+  },
+  {
+    id: 'honesty_integrity_gap',
+    name: 'Honesty / integrity mismatch (MED-HIGH)',
+    when: (a, b) => {
+      const aH = getSignal(a, 'honestyIntegrity');
+      const bH = getSignal(b, 'honestyIntegrity');
+      if (aH == null || bH == null) return false;
+      return (aH >= 8 && bH <= 3) || (bH >= 8 && aH <= 3);
+    },
+    penalty: 5,
+    explain:
+      'Very different emphasis on honesty and integrity as relationship values',
+  },
+  {
+    id: 'chronotype_clash',
+    name: 'Morning vs night rhythm clash (MED)',
+    when: (a, b) => {
+      const aC = getSignal(a, 'chronotype');
+      const bC = getSignal(b, 'chronotype');
+      if (aC == null || bC == null) return false;
+      return (aC >= 8 && bC <= 3) || (bC >= 8 && aC <= 3);
+    },
+    penalty: 3,
+    explain:
+      'One is a strong night owl, the other a strong early bird — daily rhythm may clash',
   },
 ];

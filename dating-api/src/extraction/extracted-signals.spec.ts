@@ -8,6 +8,13 @@ import {
   EXPANSION_07_SHADOW_SIGNAL_KEYS,
 } from './expansion-07-signal-definitions';
 import {
+  EXPANSION_08_PROMOTION_CHIP_LABELS,
+  EXPANSION_08_PROMOTION_DOMAINS,
+  EXPANSION_08_PROMOTION_TIERS,
+  EXPANSION_08_PROMOTION_WEIGHTS,
+  EXPANSION_08_SHADOW_SIGNAL_KEYS,
+} from './expansion-08-signal-definitions';
+import {
   EXTRACTION_SIGNAL_KEYS,
   MAX_EVIDENCE_ITEMS,
   OFFICIAL_EXTRACTION_SIGNAL_KEYS,
@@ -69,8 +76,15 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS).toContain('religiousObservance');
     });
 
-    it('contains exactly 20 keys', () => {
-      expect(SHADOW_SIGNAL_KEYS.length).toBe(20);
+    it('includes Expansion-08 education/integrity/lifestyle keys', () => {
+      expect(SHADOW_SIGNAL_KEYS).toContain('educationLevel');
+      expect(SHADOW_SIGNAL_KEYS).toContain('honestyIntegrity');
+      expect(SHADOW_SIGNAL_KEYS).toContain('chronotype');
+      expect(SHADOW_SIGNAL_KEYS).toContain('physicalTypePreference');
+    });
+
+    it('contains exactly 24 keys', () => {
+      expect(SHADOW_SIGNAL_KEYS.length).toBe(24);
     });
   });
 
@@ -95,6 +109,10 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS_SET.has('supportProviderOrientation')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('supportRecipientOrientation')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('religiousObservance')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('educationLevel')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('honestyIntegrity')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('chronotype')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('physicalTypePreference')).toBe(true);
     });
 
     it('does not include official keys', () => {
@@ -114,11 +132,11 @@ describe('extracted-signals shape', () => {
       }
     });
 
-    it('total count equals 15 official + 20 shadow', () => {
+    it('total count equals 15 official + 24 shadow', () => {
       expect(EXTRACTION_SIGNAL_KEYS.length).toBe(
         OFFICIAL_EXTRACTION_SIGNAL_KEYS.length + SHADOW_SIGNAL_KEYS.length,
       );
-      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(35);
+      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(39);
     });
   });
 
@@ -129,8 +147,8 @@ describe('extracted-signals shape', () => {
       );
     });
 
-    it('equals 39 (15 official + 20 shadow + 4 buffer)', () => {
-      expect(MAX_EVIDENCE_ITEMS).toBe(39);
+    it('equals 43 (15 official + 24 shadow + 4 buffer)', () => {
+      expect(MAX_EVIDENCE_ITEMS).toBe(43);
     });
   });
 
@@ -269,7 +287,7 @@ describe('extracted-signals shape', () => {
     it('allows adventureNovelty on self domain (not legacy noveltyVsRoutine)', () => {
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain('adventureNovelty');
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).not.toContain('noveltyVsRoutine');
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(27);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(31);
     });
   });
 
@@ -302,8 +320,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(27);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(13);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(31);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(17);
     });
 
     it('exposes promotion-ready metadata for all five keys', () => {
@@ -327,6 +345,70 @@ describe('extracted-signals shape', () => {
       );
       expect(EXPANSION_07_PROMOTION_CHIP_LABELS.religiousObservance).toBe(
         'Religious practice',
+      );
+    });
+  });
+
+  describe('Expansion-08 shadow mode (no scoring wire-up)', () => {
+    const expansion08Keys = [
+      'educationLevel',
+      'honestyIntegrity',
+      'chronotype',
+      'physicalTypePreference',
+    ] as const;
+
+    it('keeps Expansion-08 keys out of official extraction', () => {
+      const official = new Set<string>(OFFICIAL_EXTRACTION_SIGNAL_KEYS);
+      for (const k of expansion08Keys) {
+        expect(official.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps Expansion-08 keys out of compatibility scoring keys', () => {
+      const scored = new Set<string>(COMPATIBILITY_SIGNAL_KEYS);
+      for (const k of expansion08Keys) {
+        expect(scored.has(k)).toBe(false);
+      }
+    });
+
+    it('allows Expansion-08 keys on self and partner domains', () => {
+      for (const k of expansion08Keys) {
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
+      }
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(31);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(17);
+    });
+
+    it('exposes promotion-ready metadata for all four keys', () => {
+      expect(EXPANSION_08_SHADOW_SIGNAL_KEYS).toEqual([...expansion08Keys]);
+      expect(EXPANSION_08_SHADOW_SIGNAL_KEYS.length).toBe(4);
+      expect(EXPANSION_08_PROMOTION_WEIGHTS.educationLevel).toBe(1.3);
+      expect(EXPANSION_08_PROMOTION_WEIGHTS.honestyIntegrity).toBe(1.4);
+      expect(EXPANSION_08_PROMOTION_WEIGHTS.chronotype).toBe(1.1);
+      expect(EXPANSION_08_PROMOTION_WEIGHTS.physicalTypePreference).toBe(1.2);
+      expect(EXPANSION_08_PROMOTION_TIERS.educationLevel).toBe(1);
+      expect(EXPANSION_08_PROMOTION_TIERS.honestyIntegrity).toBe(1);
+      expect(EXPANSION_08_PROMOTION_TIERS.chronotype).toBe(3);
+      expect(EXPANSION_08_PROMOTION_TIERS.physicalTypePreference).toBe(3);
+      expect(EXPANSION_08_PROMOTION_DOMAINS.educationLevel).toBe('values');
+      expect(EXPANSION_08_PROMOTION_DOMAINS.honestyIntegrity).toBe('values');
+      expect(EXPANSION_08_PROMOTION_DOMAINS.chronotype).toBe('lifestyle');
+      expect(EXPANSION_08_PROMOTION_DOMAINS.physicalTypePreference).toBe(
+        'lifestyle',
+      );
+      expect(EXPANSION_08_PROMOTION_CHIP_LABELS.educationLevel).toBe(
+        'Education alignment',
+      );
+      expect(EXPANSION_08_PROMOTION_CHIP_LABELS.honestyIntegrity).toBe(
+        'Honesty & integrity',
+      );
+      expect(EXPANSION_08_PROMOTION_CHIP_LABELS.chronotype).toBe(
+        'Sleep & energy rhythm',
+      );
+      expect(EXPANSION_08_PROMOTION_CHIP_LABELS.physicalTypePreference).toBe(
+        'Physical type fit',
       );
     });
   });

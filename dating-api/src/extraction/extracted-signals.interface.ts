@@ -78,6 +78,18 @@ export const SHADOW_SIGNAL_KEYS = [
   'supportProviderOrientation',
   'supportRecipientOrientation',
   'religiousObservance',
+  /**
+   * Expansion-08 — Education, Integrity, Chronotype & Physical Type (shadow until promote).
+   * educationLevel: formal education/degree importance — NOT intellectualCuriosity / ambition alone.
+   * honestyIntegrity: honesty/integrity/no-games value — NOT directness (bluntness) alone.
+   * chronotype: morning↔night sleep/energy rhythm — NOT lifestylePace (tempo).
+   * physicalTypePreference: specificity of body/build preference — NOT physicalPriority (looks importance).
+   * Ethical: race/ethnicity and sexual-anatomy preferences are NEVER scored keys.
+   */
+  'educationLevel',
+  'honestyIntegrity',
+  'chronotype',
+  'physicalTypePreference',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -95,8 +107,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 20 shadow + 4 buffer. */
-export const MAX_EVIDENCE_ITEMS = 39;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 24 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 43;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(
