@@ -2585,6 +2585,199 @@ describe('ExtractionService behavior locks', () => {
     });
   });
 
+  describe('Expansion-12 shadow signals', () => {
+    it('extracts high listeningPresence when LLM returns deeply-present score', async () => {
+      // Semantic: "I always put my phone away when my partner is talking" / Hebrew phone-away
+      const text =
+        'I always put my phone away when my partner is talking to me.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { listeningPresence: 9 },
+          [
+            {
+              signal: 'listeningPresence',
+              quote: 'I always put my phone away when my partner is talking',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['listeningPresence']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'listeningPresence'),
+      ).toBe(true);
+    });
+
+    it('extracts low listeningPresence when LLM returns distracted score', async () => {
+      // Semantic: "I get distracted easily during conversations"
+      const text = 'I get distracted easily during conversations.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { listeningPresence: 2 },
+          [
+            {
+              signal: 'listeningPresence',
+              quote: 'I get distracted easily during conversations',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['listeningPresence']).toBe(2);
+    });
+
+    it('returns null for listeningPresence when listening behavior is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, listeningPresence: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['listeningPresence']).toBeNull();
+    });
+
+    it('extracts high emotionalExpression when LLM returns very-expressive score', async () => {
+      // Semantic: "I tell my partner I love them multiple times a day" / Hebrew love-you-often
+      const text =
+        'I tell my partner I love them multiple times a day.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { emotionalExpression: 9 },
+          [
+            {
+              signal: 'emotionalExpression',
+              quote: 'I tell my partner I love them multiple times a day',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalExpression']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'emotionalExpression'),
+      ).toBe(true);
+    });
+
+    it('extracts low emotionalExpression when LLM returns reserved score', async () => {
+      // Semantic: "I show love through actions, not words"
+      const text = 'I show love through actions, not words.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { emotionalExpression: 2 },
+          [
+            {
+              signal: 'emotionalExpression',
+              quote: 'I show love through actions, not words',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalExpression']).toBe(2);
+    });
+
+    it('returns null for emotionalExpression when expression style is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, emotionalExpression: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalExpression']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-12 scores to null', async () => {
+      const text =
+        'I always put my phone away when my partner is talking to me.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { listeningPresence: 11 },
+          [
+            {
+              signal: 'listeningPresence',
+              quote: 'I always put my phone away when my partner is talking',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['listeningPresence']).toBeNull();
+    });
+
+    it('extracts partner listeningPresence when LLM returns desired-partner listening score', async () => {
+      const text =
+        'Looking for a partner who puts their phone away and really listens.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { listeningPresence: 8 },
+          [
+            {
+              signal: 'listeningPresence',
+              quote: 'puts their phone away and really listens',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['listeningPresence']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'listeningPresence'),
+      ).toBe(true);
+    });
+
+    it('extracts partner emotionalExpression when LLM returns desired-partner expression score', async () => {
+      const text =
+        'I want a partner who says I love you often and is open about feelings.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { emotionalExpression: 8 },
+          [
+            {
+              signal: 'emotionalExpression',
+              quote: 'says I love you often and is open about feelings',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['emotionalExpression']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'emotionalExpression'),
+      ).toBe(true);
+    });
+  });
+
   describe('Expansion-09 interest tags', () => {
     it('preserves biking from mocked LLM interests', async () => {
       const text = 'I love cycling and mountain bike weekends.';

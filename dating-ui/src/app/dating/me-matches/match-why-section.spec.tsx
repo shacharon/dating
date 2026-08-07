@@ -661,3 +661,97 @@ describe('MatchWhySection Expansion-11 chips', () => {
     expect(screen.getByText('Shared jealousy risk')).toBeTruthy();
   });
 });
+
+describe('MatchWhySection Expansion-12 chips', () => {
+  it('EN — Feels heard shows evidence not raw chip label', () => {
+    const enCopy = getCopy('en');
+    const evidence = enCopy.matches.list.browse.chipEvidence['Feels heard'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Feels heard'],
+          reasonShort: 'Both listen with presence.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Feels heard')).toBeNull();
+  });
+
+  it('HE — Expressiveness match shows Hebrew evidence', () => {
+    const heCopy = getCopy('he');
+    const evidence =
+      heCopy.matches.list.browse.chipEvidence['Expressiveness match'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Expressiveness match'],
+          reasonShort: 'Compatible expression.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={heCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Expressiveness match')).toBeNull();
+  });
+
+  it('includes Expansion-12 onboarding writing prompts in EN/HE/ES', () => {
+    expect(getCopy('en').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'I feel most loved when my partner…',
+        'A partner really listens to me when they…',
+      ]),
+    );
+    expect(getCopy('he').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'אני מרגיש/ה הכי אהוב/ה כש...',
+        'בן/בת זוג באמת מקשיב/ה לי כש...',
+      ]),
+    );
+    expect(getCopy('es').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'Me siento más amado/a cuando mi pareja…',
+        'Una pareja realmente me escucha cuando…',
+      ]),
+    );
+  });
+
+  it('renders Expansion-12 Different listening styles tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Listening mismatch.',
+          tensionChip: 'Different listening styles',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Different listening styles')).toBeTruthy();
+  });
+
+  it('renders Expansion-12 Different expression styles tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Expression mismatch.',
+          tensionChip: 'Different expression styles',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Different expression styles')).toBeTruthy();
+  });
+});

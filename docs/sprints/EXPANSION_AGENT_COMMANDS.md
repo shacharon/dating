@@ -1048,7 +1048,9 @@
 ## Sprint Expansion-12 — Feeling Heard
 
 **Signals:** `listeningPresence`, `emotionalExpression`  
-**Doc:** `docs/sprints/sprint-expansion-12-feeling-heard/README.md`
+**Doc:** `docs/sprints/sprint-expansion-12-feeling-heard/README.md`  
+
+**This repo (as of 2026-08-07):** Expansion-12 is **Complete (5/5)** at the engineering gate (shadow). **No** scoring promote. See `handoffs/STORY_05_testing_validation/agent-3-pm.md`.
 
 ```text
 --agent 0 expansion 12 story 1

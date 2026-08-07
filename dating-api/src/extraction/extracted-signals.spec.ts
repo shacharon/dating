@@ -29,6 +29,13 @@ import {
   EXPANSION_11_SHADOW_SIGNAL_KEYS,
 } from './expansion-11-signal-definitions';
 import {
+  EXPANSION_12_PROMOTION_CHIP_LABELS,
+  EXPANSION_12_PROMOTION_DOMAINS,
+  EXPANSION_12_PROMOTION_TIERS,
+  EXPANSION_12_PROMOTION_WEIGHTS,
+  EXPANSION_12_SHADOW_SIGNAL_KEYS,
+} from './expansion-12-signal-definitions';
+import {
   EXTRACTION_SIGNAL_KEYS,
   MAX_EVIDENCE_ITEMS,
   OFFICIAL_EXTRACTION_SIGNAL_KEYS,
@@ -107,8 +114,13 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS).toContain('jealousySecurity');
     });
 
-    it('contains exactly 28 keys', () => {
-      expect(SHADOW_SIGNAL_KEYS.length).toBe(28);
+    it('includes Expansion-12 feeling heard keys', () => {
+      expect(SHADOW_SIGNAL_KEYS).toContain('listeningPresence');
+      expect(SHADOW_SIGNAL_KEYS).toContain('emotionalExpression');
+    });
+
+    it('contains exactly 30 keys', () => {
+      expect(SHADOW_SIGNAL_KEYS.length).toBe(30);
     });
   });
 
@@ -141,6 +153,8 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS_SET.has('forgivenessStyle')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('stressResponse')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('jealousySecurity')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('listeningPresence')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('emotionalExpression')).toBe(true);
     });
 
     it('does not include official keys', () => {
@@ -160,11 +174,11 @@ describe('extracted-signals shape', () => {
       }
     });
 
-    it('total count equals 15 official + 28 shadow', () => {
+    it('total count equals 15 official + 30 shadow', () => {
       expect(EXTRACTION_SIGNAL_KEYS.length).toBe(
         OFFICIAL_EXTRACTION_SIGNAL_KEYS.length + SHADOW_SIGNAL_KEYS.length,
       );
-      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(43);
+      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(45);
     });
   });
 
@@ -175,8 +189,8 @@ describe('extracted-signals shape', () => {
       );
     });
 
-    it('equals 47 (15 official + 28 shadow + 4 buffer)', () => {
-      expect(MAX_EVIDENCE_ITEMS).toBe(47);
+    it('equals 49 (15 official + 30 shadow + 4 buffer)', () => {
+      expect(MAX_EVIDENCE_ITEMS).toBe(49);
     });
   });
 
@@ -315,7 +329,7 @@ describe('extracted-signals shape', () => {
     it('allows adventureNovelty on self domain (not legacy noveltyVsRoutine)', () => {
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain('adventureNovelty');
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).not.toContain('noveltyVsRoutine');
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(35);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
     });
   });
 
@@ -348,8 +362,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(35);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(21);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(23);
     });
 
     it('exposes promotion-ready metadata for all five keys', () => {
@@ -405,8 +419,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(35);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(21);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(23);
     });
 
     it('exposes promotion-ready metadata for all four keys', () => {
@@ -471,8 +485,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(35);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(21);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(23);
     });
 
     it('exposes promotion-ready metadata for both keys', () => {
@@ -544,8 +558,71 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(35);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(21);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(23);
+    });
+  });
+
+  describe('Expansion-12 shadow mode (no scoring wire-up)', () => {
+    const expansion12Keys = [
+      'listeningPresence',
+      'emotionalExpression',
+    ] as const;
+
+    it('keeps Expansion-12 keys out of official extraction', () => {
+      const official = new Set<string>(OFFICIAL_EXTRACTION_SIGNAL_KEYS);
+      for (const k of expansion12Keys) {
+        expect(official.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps Expansion-12 keys out of compatibility scoring keys', () => {
+      const scored = new Set<string>(COMPATIBILITY_SIGNAL_KEYS);
+      for (const k of expansion12Keys) {
+        expect(scored.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps adjacent scored keys official and Exp-11 still shadow', () => {
+      expect(OFFICIAL_EXTRACTION_SIGNAL_KEYS).toContain('directness');
+      expect(OFFICIAL_EXTRACTION_SIGNAL_KEYS).toContain('emotionalDepth');
+      expect(SHADOW_SIGNAL_KEYS).toContain('empathyCompassion');
+      expect(SHADOW_SIGNAL_KEYS).toContain('physicalAffectionStyle');
+      expect(SHADOW_SIGNAL_KEYS).toContain('stressResponse');
+      expect(SHADOW_SIGNAL_KEYS).toContain('jealousySecurity');
+      expect(SHADOW_SIGNAL_KEYS).toContain('listeningPresence');
+      expect(SHADOW_SIGNAL_KEYS).toContain('emotionalExpression');
+    });
+
+    it('exposes promotion-ready metadata for both keys', () => {
+      expect(EXPANSION_12_SHADOW_SIGNAL_KEYS).toEqual([...expansion12Keys]);
+      expect(EXPANSION_12_SHADOW_SIGNAL_KEYS.length).toBe(2);
+      expect(EXPANSION_12_PROMOTION_WEIGHTS.listeningPresence).toBe(1.3);
+      expect(EXPANSION_12_PROMOTION_WEIGHTS.emotionalExpression).toBe(1.2);
+      expect(EXPANSION_12_PROMOTION_TIERS.listeningPresence).toBe(2);
+      expect(EXPANSION_12_PROMOTION_TIERS.emotionalExpression).toBe(2);
+      expect(EXPANSION_12_PROMOTION_DOMAINS.listeningPresence).toBe(
+        'communication',
+      );
+      expect(EXPANSION_12_PROMOTION_DOMAINS.emotionalExpression).toBe(
+        'emotional',
+      );
+      expect(EXPANSION_12_PROMOTION_CHIP_LABELS.listeningPresence).toBe(
+        'Quality listening',
+      );
+      expect(EXPANSION_12_PROMOTION_CHIP_LABELS.emotionalExpression).toBe(
+        'Expressiveness',
+      );
+    });
+
+    it('requires DOMAIN_ALLOWED membership on self + partner (Story 2)', () => {
+      for (const k of expansion12Keys) {
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
+      }
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(23);
     });
   });
 });

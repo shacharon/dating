@@ -1610,6 +1610,229 @@ describe('Expansion-11 shadow E2E via compare', () => {
   });
 });
 
+type Expansion12ShadowKey = 'listeningPresence' | 'emotionalExpression';
+
+function makeProfileWithExpansion12Shadow(
+  id: string,
+  name: string,
+  official: Partial<Record<SignalKey, number>>,
+  shadow: Partial<Record<Expansion12ShadowKey, number | null>>,
+  relationshipFitScore = 50,
+  interestsTop3: string[] = [],
+): ProfileJsonPayload {
+  const signals = {
+    ...makeSignals(official),
+    ...shadow,
+  } as Record<string, number>;
+  return makeProfile(id, name, signals, relationshipFitScore, undefined, interestsTop3);
+}
+
+describe('Expansion-12 shadow E2E via compare', () => {
+  it('keeps Expansion-12 shadow keys out of COMPATIBILITY_SIGNAL_KEYS', () => {
+    expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+    for (const key of ['listeningPresence', 'emotionalExpression'] as const) {
+      expect(COMPATIBILITY_SIGNAL_KEYS as readonly string[]).not.toContain(key);
+    }
+  });
+
+  it('Expansion-12 keys are distinct from adjacent signals and interest tags', () => {
+    for (const key of ['listeningPresence', 'emotionalExpression'] as const) {
+      expect(INTEREST_CANONICAL_TAGS as readonly string[]).not.toContain(key);
+    }
+    expect('listeningPresence').not.toBe('empathyCompassion');
+    expect('listeningPresence').not.toBe('directness');
+    expect('emotionalExpression').not.toBe('emotionalDepth');
+    expect('emotionalExpression').not.toBe('physicalAffectionStyle');
+  });
+
+  it('listening_presence_gap surfaces Different listening styles', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 9 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different listening styles');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'listening_presence_gap'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('emotional_expression_gap surfaces Different expression styles', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { emotionalExpression: 9 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { emotionalExpression: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Different expression styles',
+    );
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'emotional_expression_gap'),
+    ).toBe(true);
+  });
+
+  it('includes Feels heard when both listeningPresence high', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 8 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Feels heard');
+  });
+
+  it('includes Expressiveness match when both emotionalExpression high', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { emotionalExpression: 8 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { emotionalExpression: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Expressiveness match',
+    );
+  });
+
+  it('does not include Feels heard when both listeningPresence low', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 2 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain('Feels heard');
+  });
+
+  it('excludes Expansion-12 shadow keys from alignments DTO', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 8 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: 8 },
+    );
+    const result = compare(a, b);
+    expect(
+      result.alignments.every(
+        (row) =>
+          row.key !== 'Feels heard' &&
+          row.key !== 'Expressiveness match' &&
+          row.key !== 'Quality listening' &&
+          row.key !== 'Expressiveness' &&
+          !/listeningPresence|emotionalExpression/i.test(row.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('null shadow on one side skips listening_presence_gap', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 9 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: null },
+    );
+    const result = compare(a, b);
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'listening_presence_gap'),
+    ).toBe(false);
+  });
+
+  it('compatibility unchanged when only Expansion-12 shadow signals differ', () => {
+    const highA = makeProfileWithExpansion12Shadow(
+      'a1',
+      'A1',
+      {},
+      { listeningPresence: 8, emotionalExpression: 8 },
+    );
+    const highB = makeProfileWithExpansion12Shadow(
+      'b1',
+      'B1',
+      {},
+      { listeningPresence: 8, emotionalExpression: 8 },
+    );
+    const gapA = makeProfileWithExpansion12Shadow(
+      'a2',
+      'A2',
+      {},
+      { listeningPresence: 9, emotionalExpression: 9 },
+    );
+    const gapB = makeProfileWithExpansion12Shadow(
+      'b2',
+      'B2',
+      {},
+      { listeningPresence: 2, emotionalExpression: 2 },
+    );
+    const aligned = compare(highA, highB);
+    const gapped = compare(gapA, gapB);
+    expect(aligned.compatibility).toBe(gapped.compatibility);
+  });
+
+  it('Expansion-11 non-regression: Pursue vs withdraw under stress still surfaces', () => {
+    const a = makeProfileWithExpansion11Shadow('a', 'A', {}, { stressResponse: 9 });
+    const b = makeProfileWithExpansion11Shadow('b', 'B', {}, { stressResponse: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Pursue vs withdraw under stress',
+    );
+  });
+
+  it('Expansion-10 non-regression: Different repair styles still surfaces', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 9 });
+    const b = makeProfileWithExpansion10Shadow('b', 'B', {}, { repairSkills: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different repair styles');
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

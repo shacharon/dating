@@ -202,6 +202,10 @@ export const esCopy: AppCopySchema = {
             "Manejan el estrés de forma compatible",
           "Secure & trusting":
             "Ambos son seguros y confiados en la relación",
+          "Feels heard":
+            "Ambos están presentes y escuchan profundamente",
+          "Expressiveness match":
+            "Expresan sentimientos y afecto de forma similar",
         },
         interestOverlap: {
           travel: "A ambos les gusta viajar",
@@ -531,6 +535,8 @@ export const esCopy: AppCopySchema = {
           "Después de una pelea, suelo…",
           "Cuando estoy estresado/a, necesito que mi pareja…",
           "¿Te pones celoso/a fácilmente? ¿Qué te ayuda a sentirte seguro/a?",
+          "Me siento más amado/a cuando mi pareja…",
+          "Una pareja realmente me escucha cuando…",
         ],
         examples: [
           "Trabajo en diseno de producto y desconecto cocinando cenas elaboradas para amigos. Entre semana suelo estar en casa con un podcast y un cuaderno; los fines de semana busco galerias pequenas o una panaderia nueva. Soy calmado/a en grupos pero me animo cuando la charla es profunda. Busco personas que prefieran planes tranquilos y no necesiten que cada noche sea ruidosa.",

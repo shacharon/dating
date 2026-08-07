@@ -54,6 +54,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'forgivenessStyle',
     'stressResponse',
     'jealousySecurity',
+    'listeningPresence',
+    'emotionalExpression',
   ],
   relationship: [
     'emotionalDepth',
@@ -86,6 +88,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'forgivenessStyle',
     'stressResponse',
     'jealousySecurity',
+    'listeningPresence',
+    'emotionalExpression',
   ],
 };
 

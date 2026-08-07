@@ -104,6 +104,13 @@ export const SHADOW_SIGNAL_KEYS = [
    */
   'stressResponse',
   'jealousySecurity',
+  /**
+   * Expansion-12 — Feeling Heard (shadow until promote).
+   * listeningPresence: attention/presence when partner speaks — NOT empathyCompassion / directness alone.
+   * emotionalExpression: outward verbal/emotional expression — NOT emotionalDepth / physicalAffectionStyle alone.
+   */
+  'listeningPresence',
+  'emotionalExpression',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -121,8 +128,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 28 shadow + 4 buffer. */
-export const MAX_EVIDENCE_ITEMS = 47;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 30 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 49;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

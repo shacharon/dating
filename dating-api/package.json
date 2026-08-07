@@ -46,6 +46,7 @@
     "validate:expansion-09-extraction": "ts-node --project tsconfig.json scripts/validate-expansion-09-extraction.ts",
     "validate:expansion-10-extraction": "ts-node --project tsconfig.json scripts/validate-expansion-10-extraction.ts",
     "validate:expansion-11-extraction": "ts-node --project tsconfig.json scripts/validate-expansion-11-extraction.ts",
+    "validate:expansion-12-extraction": "ts-node --project tsconfig.json scripts/validate-expansion-12-extraction.ts",
     "validate:phase1-eq-extraction": "ts-node --project tsconfig.json scripts/validate-phase1-eq-extraction.ts",
     "report:phase1-eq-correlation": "ts-node --project tsconfig.json scripts/phase1-eq-correlation-report.ts",
     "seed:qa50": "ts-node --project tsconfig.json scripts/seed-qa50-pool.ts",

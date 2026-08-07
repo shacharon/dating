@@ -22,9 +22,9 @@ describe('Expansion-10 rollout gate', () => {
     for (const k of expansion10Keys) {
       expect(SHADOW_SIGNAL_KEYS).toContain(k);
     }
-    expect(SHADOW_SIGNAL_KEYS.length).toBe(28);
-    expect(EXTRACTION_SIGNAL_KEYS.length).toBe(43);
-    expect(MAX_EVIDENCE_ITEMS).toBe(47);
+    expect(SHADOW_SIGNAL_KEYS.length).toBe(30);
+    expect(EXTRACTION_SIGNAL_KEYS.length).toBe(45);
+    expect(MAX_EVIDENCE_ITEMS).toBe(49);
     expect(EXPANSION_10_SHADOW_SIGNAL_KEYS).toEqual([...expansion10Keys]);
   });
 
@@ -41,8 +41,8 @@ describe('Expansion-10 rollout gate', () => {
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
     }
-    expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(35);
-    expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(21);
+    expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(37);
+    expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(23);
   });
 
   it('exposes promotion-ready metadata matching Story 1', () => {

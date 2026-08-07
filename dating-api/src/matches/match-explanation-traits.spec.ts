@@ -216,4 +216,20 @@ describe('buildMatchExplanationTraits', () => {
       CHIP_TO_TRAIT['Secure & trusting'].evidence,
     );
   });
+
+  it('maps Expansion-12 Feels heard chip', () => {
+    const traits = buildMatchExplanationTraits(['Feels heard'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('How you communicate');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Feels heard'].evidence);
+  });
+
+  it('maps Expansion-12 Expressiveness match chip', () => {
+    const traits = buildMatchExplanationTraits(['Expressiveness match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Emotional connection');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Expressiveness match'].evidence,
+    );
+  });
 });

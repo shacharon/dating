@@ -41,6 +41,10 @@ import {
   EXPANSION_11_PARTNER_SHADOW_SIGNAL_BLOCK,
   EXPANSION_11_SELF_SHADOW_SIGNAL_BLOCK,
 } from './expansion-11-signal-definitions';
+import {
+  EXPANSION_12_PARTNER_SHADOW_SIGNAL_BLOCK,
+  EXPANSION_12_SELF_SHADOW_SIGNAL_BLOCK,
+} from './expansion-12-signal-definitions';
 import { EXPANSION_09_INTEREST_GUIDANCE_BLOCK } from './expansion-09-interest-guidance';
 import {
   buildExtractionPipelineTrace,
@@ -81,7 +85,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -97,9 +101,9 @@ EVIDENCE RULES:
 - If no exact quote exists, set null
 
 SIGNAL RULES:
-- emotionalDepth = explicit introspection, vulnerability, emotional self-awareness
+- emotionalDepth = explicit introspection, vulnerability, emotional self-awareness — not how outwardly feelings are verbally expressed (→ emotionalExpression)
 - attachmentSecurity = explicit closeness, fusion, anchor-like bond, inseparable emotional union — not specifically how grudges/resentment are handled post-conflict (→ forgivenessStyle), not pursue/withdraw under stress alone (→ stressResponse), and not jealousy/possessiveness alone (→ jealousySecurity)
-- directness = explicit transparency, no secrets, clear communication — not honesty/integrity/"no games" as a core relationship value alone, and not post-conflict ownership/apology alone (→ repairSkills)
+- directness = explicit transparency, no secrets, clear communication — not honesty/integrity/"no games" as a core relationship value alone, and not post-conflict ownership/apology alone (→ repairSkills), and not how they receive / listen / give attention alone (→ listeningPresence)
 - independence = explicit autonomy vs fusion; shared-everything / merged-life language = low — not jealousy/trust/possessiveness alone (→ jealousySecurity)
 - socialBattery = explicit social-energy preference only
 - lifestylePace = explicit pace/rhythm (calm vs high-action busy life) — not home-vs-out nesting preference alone, not novelty-vs-routine preference, and not morning vs night sleep chronotype
@@ -110,10 +114,10 @@ SIGNAL RULES:
 - conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / de-escalating in the moment) — not post-conflict apology, ownership, or reconnection alone (→ repairSkills), and not grudge/forgiveness pacing alone (→ forgivenessStyle)
 - adventureNovelty = explicit novelty vs routine / new-experiences preference (not life tempo alone, not homebody preference, not travel hobby tag alone)
 - structureChaosTolerance = explicit order vs chaos preference
-- empathyCompassion = explicit care for partner's feelings, attunement, compassionate responses (not generic kindness)
+- empathyCompassion = explicit care for partner's feelings, attunement, compassionate responses (not generic kindness) — not listening attention/presence / not-interrupting alone (→ listeningPresence)
 - vulnerabilityOpenness = explicit comfort sharing fears/struggles/authentic self (not merely "honest communication")
 - emotionalRegulation = explicit emotional steadiness vs reactivity under stress; calm recovery in the moment (not merely "I'm emotional") — not letting go of grudges over time after conflict (→ forgivenessStyle), and not pursue vs withdraw / support-seeking direction alone (→ stressResponse)
-- physicalAffectionStyle = explicit touch/cuddling/PDA/closeness needs (not general attractiveness, not casual vs committed intimacy boundary)
+- physicalAffectionStyle = explicit touch/cuddling/PDA/closeness needs (not general attractiveness, not casual vs committed intimacy boundary) — not verbal/emotional expression / words-of-affirmation alone (→ emotionalExpression)
 - humorPlayfulness = explicit need for banter, silliness, shared laughter, lightness in love (not merely "I'm funny" or generic "fun-loving")
 - creativeExpression = explicit need for creative outlets / making / self-expression through creation (not merely job title "artist" or hobby tag)
 - physicalActivityLevel = explicit daily athletic/activity behavior / how much they move (not merely wellness values or "I care about fitness")
@@ -131,6 +135,8 @@ SIGNAL RULES:
 - forgivenessStyle = explicit letting-go vs holding grudges / rehashing past issues (not attachment closeness alone, not in-the-moment emotional regulation alone)
 - stressResponse = explicit pursue vs withdraw direction under stress (seek closeness/support HIGH ↔ handle alone/withdraw LOW); compatibility axis — not attachment closeness alone, not emotional reactivity alone, not post-conflict repair alone
 - jealousySecurity = explicit jealousy/possessiveness vs trust regarding partner's other attention (HIGH = more jealous); not independence/autonomy alone, not general attachment security alone
+- listeningPresence = explicit attention/presence when partner speaks (distracted/interrupting LOW ↔ deeply present / partner feels heard HIGH); not empathy/caring alone, not directness/speaking style alone
+- emotionalExpression = explicit outward verbal expression of feelings/affection/appreciation (reserved/actions-not-words LOW ↔ frequently says feelings HIGH); not emotional depth alone, not physical touch affection alone
 
 ${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
 
@@ -151,6 +157,8 @@ ${EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK}
 ${EXPANSION_10_SELF_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_11_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_12_SELF_SHADOW_SIGNAL_BLOCK}
 
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
@@ -314,7 +322,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -330,7 +338,7 @@ you MUST extract the relevant signal.
 Do NOT nullify structured relationship descriptions due to sparsity.
 
 SIGNAL RULES:
-- emotionalDepth = explicit vulnerability, emotional openness, naming feelings
+- emotionalDepth = explicit vulnerability, emotional openness, naming feelings — not how outwardly feelings are verbally expressed alone (→ emotionalExpression)
 - relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules
 - traditionalism = explicit desire for kids, marriage, traditional family structure — not practical religious ritual observance alone (kosher/Shabbat/דתי practice → religiousObservance)
 - lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher — not morning vs night sleep chronotype
@@ -351,6 +359,8 @@ SIGNAL RULES:
 - forgivenessStyle = desired partner letting-go vs holding grudges / rehashing past issues (not attachment closeness alone, not in-the-moment regulation alone)
 - stressResponse = desired partner pursue vs withdraw under stress (seek closeness HIGH ↔ handle alone LOW); not calm-reactivity alone, not attachment closeness alone
 - jealousySecurity = desired partner jealousy/possessiveness vs trust (HIGH = more jealous; wanting secure/trusting → LOW); not independence alone
+- listeningPresence = desired partner attention/presence when listening (distracted/interrupting LOW ↔ deeply present / makes them feel heard HIGH); not empathy/caring alone
+- emotionalExpression = desired partner outward verbal expression of feelings/affection (reserved/actions-not-words LOW ↔ frequently says feelings HIGH); not emotional depth alone, not physical touch alone
 
 ${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
 
@@ -359,6 +369,8 @@ ${EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK}
 ${EXPANSION_10_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_11_PARTNER_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_12_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 DIRECTION LOCK:
 For lifestylePace:
@@ -383,6 +395,7 @@ Examples:
 - "no drama" -> conflictStyle only if explicit conflict behavior
 - "accountable after fights" / "doesn't hold grudges" -> repairSkills / forgivenessStyle when explicit; do not dump into conflictStyle alone
 - "needs me close when stressed" / "jealous / needs check-ins" -> stressResponse / jealousySecurity when explicit; do not dump into attachmentSecurity or independence alone
+- "puts phone away / really listens" / "says I love you often / open about feelings" -> listeningPresence / emotionalExpression when explicit; do not dump into emotionalDepth alone
 - "open to kids later" -> traditionalism, NOT relationshipClarity
 
 MULTI-MAPPING:

@@ -55,6 +55,9 @@ export interface EnrichedSignals {
   /** Shadow Expansion-11 — from evaluationJson.self.signals when extracted. */
   stressResponse?: number | null;
   jealousySecurity?: number | null;
+  /** Shadow Expansion-12 — from evaluationJson.self.signals when extracted. */
+  listeningPresence?: number | null;
+  emotionalExpression?: number | null;
 }
 
 export function getSignal(
@@ -578,5 +581,31 @@ export const tensionRules: TensionRule[] = [
     penalty: 3,
     explain:
       'Both partners lean jealous/possessive — may amplify insecurity dynamics',
+  },
+  {
+    id: 'listening_presence_gap',
+    name: 'Listening presence gap (MED-HIGH)',
+    when: (a, b) => {
+      const aL = getSignal(a, 'listeningPresence');
+      const bL = getSignal(b, 'listeningPresence');
+      if (aL == null || bL == null) return false;
+      return (aL >= 8 && bL <= 3) || (bL >= 8 && aL <= 3);
+    },
+    penalty: 4,
+    explain:
+      'One partner is highly attentive, the other may seem distracted — mismatch in feeling heard',
+  },
+  {
+    id: 'emotional_expression_gap',
+    name: 'Emotional expression gap (MED — "unmet expression" risk)',
+    when: (a, b) => {
+      const aE = getSignal(a, 'emotionalExpression');
+      const bE = getSignal(b, 'emotionalExpression');
+      if (aE == null || bE == null) return false;
+      return (aE >= 8 && bE <= 3) || (bE >= 8 && aE <= 3);
+    },
+    penalty: 4,
+    explain:
+      'One partner expresses feelings openly and often, the other is more reserved — may feel unreciprocated',
   },
 ];

@@ -38,6 +38,8 @@ export const CHIP_EVIDENCE_KEYS = [
   'Letting go & moving forward',
   'Support under pressure',
   'Secure & trusting',
+  'Feels heard',
+  'Expressiveness match',
 ] as const;
 
 export type ChipEvidenceKey = (typeof CHIP_EVIDENCE_KEYS)[number];

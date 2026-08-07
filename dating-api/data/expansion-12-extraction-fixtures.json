@@ -1,0 +1,93 @@
+[
+  {
+    "id": "listening_high_en",
+    "aboutMe": "I always put my phone away and really listen when my partner talks.",
+    "signal": "listeningPresence",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "listening_low_en",
+    "aboutMe": "I get distracted easily in conversations and often interrupt.",
+    "signal": "listeningPresence",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "expression_high_en",
+    "aboutMe": "I say I love you multiple times a day and talk about my feelings openly.",
+    "signal": "emotionalExpression",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "expression_low_en",
+    "aboutMe": "I show love through actions, not words.",
+    "signal": "emotionalExpression",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "both_null_no_listening_expression_en",
+    "aboutMe": "I love hiking, cooking elaborate dinners, and quiet weekends with a book.",
+    "expectations": [
+      {
+        "signal": "listeningPresence",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "emotionalExpression",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "listening_high_he",
+    "aboutMe": "אני תמיד שם/ה את הטלפון בצד ומקשיב/ה באמת כשבן/בת הזוג מדבר/ת אליי.",
+    "signal": "listeningPresence",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "expression_high_he",
+    "aboutMe": "אני אומר/ת אני אוהב/ת אותך כמה פעמים ביום ומדבר/ת בפתיחות על הרגשות שלי.",
+    "signal": "emotionalExpression",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "expression_low_he",
+    "aboutMe": "אני מראה אהבה דרך מעשים, לא דרך מילים.",
+    "signal": "emotionalExpression",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "empathy_alone_listening_null",
+    "aboutMe": "I care deeply about my partner's feelings and try to be compassionate when they are upset.",
+    "expectations": [
+      {
+        "signal": "listeningPresence",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "depth_alone_expression_null",
+    "aboutMe": "I am introspective and comfortable sitting with deep emotions and vulnerability.",
+    "expectations": [
+      {
+        "signal": "emotionalExpression",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  }
+]

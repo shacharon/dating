@@ -1045,4 +1045,100 @@ describe('compute-friction', () => {
       ).toBe(false);
     });
   });
+
+  describe('Expansion-12 shadow tension rules', () => {
+    it('listening_presence_gap fires when listening levels diverge', () => {
+      const a: EnrichedSignals = { listeningPresence: 9 };
+      const b: EnrichedSignals = { listeningPresence: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find(
+        (t) => t.id === 'listening_presence_gap',
+      );
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(4);
+    });
+
+    it('listening_presence_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { listeningPresence: 2 };
+      const b: EnrichedSignals = { listeningPresence: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'listening_presence_gap'),
+      ).toBe(true);
+    });
+
+    it('listening_presence_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { listeningPresence: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'listening_presence_gap'),
+      ).toBe(false);
+    });
+
+    it('listening_presence_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { listeningPresence: 7 };
+      const b: EnrichedSignals = { listeningPresence: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'listening_presence_gap'),
+      ).toBe(false);
+    });
+
+    it('listening_presence_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { listeningPresence: 8 };
+      const b: EnrichedSignals = { listeningPresence: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'listening_presence_gap'),
+      ).toBe(true);
+    });
+
+    it('emotional_expression_gap fires when expression levels diverge', () => {
+      const a: EnrichedSignals = { emotionalExpression: 9 };
+      const b: EnrichedSignals = { emotionalExpression: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find(
+        (t) => t.id === 'emotional_expression_gap',
+      );
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(4);
+    });
+
+    it('emotional_expression_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { emotionalExpression: 2 };
+      const b: EnrichedSignals = { emotionalExpression: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'emotional_expression_gap'),
+      ).toBe(true);
+    });
+
+    it('emotional_expression_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { emotionalExpression: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'emotional_expression_gap'),
+      ).toBe(false);
+    });
+
+    it('emotional_expression_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { emotionalExpression: 7 };
+      const b: EnrichedSignals = { emotionalExpression: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'emotional_expression_gap'),
+      ).toBe(false);
+    });
+
+    it('emotional_expression_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { emotionalExpression: 8 };
+      const b: EnrichedSignals = { emotionalExpression: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'emotional_expression_gap'),
+      ).toBe(true);
+    });
+  });
 });

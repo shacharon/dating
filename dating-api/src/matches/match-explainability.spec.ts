@@ -279,6 +279,34 @@ describe('pickPositiveChips', () => {
     expect(chips).toContain('Secure & trusting');
   });
 
+  it('includes Expansion-12 Expressiveness match when breakdown has high emotionalExpression', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'emotionalExpression',
+        self: 8,
+        partner: 8,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Expressiveness match');
+  });
+
+  it('includes Expansion-12 Feels heard from synthetic both-high listening entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'listeningFeelsHeard',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Feels heard');
+  });
+
   it('emits interestOverlapTags (max 2 preferred) from sharedInterests', () => {
     const dto = buildMatchExplainability({
       compatibility: 70,
@@ -398,6 +426,15 @@ describe('buildMatchExplainability', () => {
       'Trust & space mismatch',
     );
     expect(TENSION_CHIP_BY_ID.both_high_jealousy).toBe('Shared jealousy risk');
+  });
+
+  it('maps Expansion-12 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.listening_presence_gap).toBe(
+      'Different listening styles',
+    );
+    expect(TENSION_CHIP_BY_ID.emotional_expression_gap).toBe(
+      'Different expression styles',
+    );
   });
 
   it('shows empathy_gap tension chip when friction >= 3', () => {
@@ -585,6 +622,28 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'both_high_jealousy', penalty: 3 }],
     });
     expect(dto.tensionChip).toBe('Shared jealousy risk');
+  });
+
+  it('shows Expansion-12 listening_presence_gap tension chip (Different listening styles)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'listening_presence_gap', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Different listening styles');
+  });
+
+  it('shows Expansion-12 emotional_expression_gap tension chip (Different expression styles)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'emotional_expression_gap', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Different expression styles');
   });
 
   it('shows education_level_gap tension chip when friction >= 3', () => {

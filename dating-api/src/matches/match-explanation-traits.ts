@@ -201,6 +201,16 @@ export const CHIP_TO_TRAIT: Record<
     evidence: "You're both secure and trusting in relationships",
     listPhrase: 'shared secure trusting stance',
   },
+  'Feels heard': {
+    group: 'How you communicate',
+    evidence: 'You both show up fully present and listen deeply',
+    listPhrase: 'both listen with presence',
+  },
+  'Expressiveness match': {
+    group: 'Emotional connection',
+    evidence: 'You express feelings and affection in similar ways',
+    listPhrase: 'compatible emotional expression',
+  },
 };
 
 /**
