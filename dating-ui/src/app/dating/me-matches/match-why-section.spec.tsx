@@ -471,3 +471,98 @@ describe('MatchWhySection Expansion-07 chips', () => {
     expect(screen.getByText('Casual vs committed intimacy')).toBeTruthy();
   });
 });
+
+describe('MatchWhySection Expansion-10 chips', () => {
+  it('EN — Conflict recovery shows evidence not raw chip label', () => {
+    const enCopy = getCopy('en');
+    const evidence =
+      enCopy.matches.list.browse.chipEvidence['Conflict recovery'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Conflict recovery'],
+          reasonShort: 'Strong repair alignment.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Conflict recovery')).toBeNull();
+  });
+
+  it('HE — Letting go & moving forward shows Hebrew evidence', () => {
+    const heCopy = getCopy('he');
+    const evidence =
+      heCopy.matches.list.browse.chipEvidence['Letting go & moving forward'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Letting go & moving forward'],
+          reasonShort: 'Aligned forgiveness pace.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={heCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Letting go & moving forward')).toBeNull();
+  });
+
+  it('includes Expansion-10 onboarding writing prompts in EN/HE/ES', () => {
+    expect(getCopy('en').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'When we disagree, I usually…',
+        'After a fight, I tend to…',
+      ]),
+    );
+    expect(getCopy('he').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'כשיש לנו חילוקי דעות, אני בדרך כלל...',
+        'אחרי ריב, אני נוטה...',
+      ]),
+    );
+    expect(getCopy('es').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'Cuando discrepamos, normalmente…',
+        'Después de una pelea, suelo…',
+      ]),
+    );
+  });
+
+  it('renders Expansion-10 tension chip from API as-is (English)', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Mixed fit on conflict recovery.',
+          tensionChip: 'Conflict recovery risk',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Conflict recovery risk')).toBeTruthy();
+  });
+
+  it('renders Expansion-10 Different repair styles tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Repair pace clash.',
+          tensionChip: 'Different repair styles',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Different repair styles')).toBeTruthy();
+  });
+});

@@ -15,6 +15,13 @@ import {
   EXPANSION_08_SHADOW_SIGNAL_KEYS,
 } from './expansion-08-signal-definitions';
 import {
+  EXPANSION_10_PROMOTION_CHIP_LABELS,
+  EXPANSION_10_PROMOTION_DOMAINS,
+  EXPANSION_10_PROMOTION_TIERS,
+  EXPANSION_10_PROMOTION_WEIGHTS,
+  EXPANSION_10_SHADOW_SIGNAL_KEYS,
+} from './expansion-10-signal-definitions';
+import {
   EXTRACTION_SIGNAL_KEYS,
   MAX_EVIDENCE_ITEMS,
   OFFICIAL_EXTRACTION_SIGNAL_KEYS,
@@ -83,8 +90,13 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS).toContain('physicalTypePreference');
     });
 
-    it('contains exactly 24 keys', () => {
-      expect(SHADOW_SIGNAL_KEYS.length).toBe(24);
+    it('includes Expansion-10 conflict recovery keys', () => {
+      expect(SHADOW_SIGNAL_KEYS).toContain('repairSkills');
+      expect(SHADOW_SIGNAL_KEYS).toContain('forgivenessStyle');
+    });
+
+    it('contains exactly 26 keys', () => {
+      expect(SHADOW_SIGNAL_KEYS.length).toBe(26);
     });
   });
 
@@ -113,6 +125,8 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS_SET.has('honestyIntegrity')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('chronotype')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('physicalTypePreference')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('repairSkills')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('forgivenessStyle')).toBe(true);
     });
 
     it('does not include official keys', () => {
@@ -132,11 +146,11 @@ describe('extracted-signals shape', () => {
       }
     });
 
-    it('total count equals 15 official + 24 shadow', () => {
+    it('total count equals 15 official + 26 shadow', () => {
       expect(EXTRACTION_SIGNAL_KEYS.length).toBe(
         OFFICIAL_EXTRACTION_SIGNAL_KEYS.length + SHADOW_SIGNAL_KEYS.length,
       );
-      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(39);
+      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(41);
     });
   });
 
@@ -147,8 +161,8 @@ describe('extracted-signals shape', () => {
       );
     });
 
-    it('equals 43 (15 official + 24 shadow + 4 buffer)', () => {
-      expect(MAX_EVIDENCE_ITEMS).toBe(43);
+    it('equals 45 (15 official + 26 shadow + 4 buffer)', () => {
+      expect(MAX_EVIDENCE_ITEMS).toBe(45);
     });
   });
 
@@ -287,7 +301,7 @@ describe('extracted-signals shape', () => {
     it('allows adventureNovelty on self domain (not legacy noveltyVsRoutine)', () => {
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain('adventureNovelty');
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).not.toContain('noveltyVsRoutine');
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(31);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(33);
     });
   });
 
@@ -320,8 +334,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(31);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(17);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(33);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(19);
     });
 
     it('exposes promotion-ready metadata for all five keys', () => {
@@ -377,8 +391,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(31);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(17);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(33);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(19);
     });
 
     it('exposes promotion-ready metadata for all four keys', () => {
@@ -409,6 +423,60 @@ describe('extracted-signals shape', () => {
       );
       expect(EXPANSION_08_PROMOTION_CHIP_LABELS.physicalTypePreference).toBe(
         'Physical type fit',
+      );
+    });
+  });
+
+  describe('Expansion-10 shadow mode (no scoring wire-up)', () => {
+    const expansion10Keys = ['repairSkills', 'forgivenessStyle'] as const;
+
+    it('keeps Expansion-10 keys out of official extraction', () => {
+      const official = new Set<string>(OFFICIAL_EXTRACTION_SIGNAL_KEYS);
+      for (const k of expansion10Keys) {
+        expect(official.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps Expansion-10 keys out of compatibility scoring keys', () => {
+      const scored = new Set<string>(COMPATIBILITY_SIGNAL_KEYS);
+      for (const k of expansion10Keys) {
+        expect(scored.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps conflictStyle official (not shadow) and Exp-10 distinct', () => {
+      expect(OFFICIAL_EXTRACTION_SIGNAL_KEYS).toContain('conflictStyle');
+      expect(SHADOW_SIGNAL_KEYS).not.toContain('conflictStyle');
+      expect(SHADOW_SIGNAL_KEYS).toContain('repairSkills');
+      expect(SHADOW_SIGNAL_KEYS).toContain('forgivenessStyle');
+    });
+
+    it('requires DOMAIN_ALLOWED membership on self + partner (Story 2)', () => {
+      for (const k of expansion10Keys) {
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
+      }
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(33);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(19);
+    });
+
+    it('exposes promotion-ready metadata for both keys', () => {
+      expect(EXPANSION_10_SHADOW_SIGNAL_KEYS).toEqual([...expansion10Keys]);
+      expect(EXPANSION_10_SHADOW_SIGNAL_KEYS.length).toBe(2);
+      expect(EXPANSION_10_PROMOTION_WEIGHTS.repairSkills).toBe(1.4);
+      expect(EXPANSION_10_PROMOTION_WEIGHTS.forgivenessStyle).toBe(1.3);
+      expect(EXPANSION_10_PROMOTION_TIERS.repairSkills).toBe(2);
+      expect(EXPANSION_10_PROMOTION_TIERS.forgivenessStyle).toBe(2);
+      expect(EXPANSION_10_PROMOTION_DOMAINS.repairSkills).toBe('communication');
+      expect(EXPANSION_10_PROMOTION_DOMAINS.forgivenessStyle).toBe(
+        'communication',
+      );
+      expect(EXPANSION_10_PROMOTION_CHIP_LABELS.repairSkills).toBe(
+        'Conflict recovery',
+      );
+      expect(EXPANSION_10_PROMOTION_CHIP_LABELS.forgivenessStyle).toBe(
+        'Letting go & moving forward',
       );
     });
   });

@@ -49,6 +49,9 @@ export interface EnrichedSignals {
   honestyIntegrity?: number | null;
   chronotype?: number | null;
   physicalTypePreference?: number | null;
+  /** Shadow Expansion-10 — from evaluationJson.self.signals when extracted. */
+  repairSkills?: number | null;
+  forgivenessStyle?: number | null;
 }
 
 export function getSignal(
@@ -494,5 +497,44 @@ export const tensionRules: TensionRule[] = [
     penalty: 3,
     explain:
       'One is a strong night owl, the other a strong early bird — daily rhythm may clash',
+  },
+  {
+    id: 'repair_skills_gap',
+    name: 'Repair skills gap (HIGH)',
+    when: (a, b) => {
+      const aR = getSignal(a, 'repairSkills');
+      const bR = getSignal(b, 'repairSkills');
+      if (aR == null || bR == null) return false;
+      return (aR >= 8 && bR <= 3) || (bR >= 8 && aR <= 3);
+    },
+    penalty: 5,
+    explain:
+      'One actively repairs after conflict, the other tends to withdraw or avoid resolution',
+  },
+  {
+    id: 'both_low_repair',
+    name: 'Both low repair skills (HIGH — Gottman "stonewalling" risk)',
+    when: (a, b) => {
+      const aR = getSignal(a, 'repairSkills');
+      const bR = getSignal(b, 'repairSkills');
+      if (aR == null || bR == null) return false;
+      return aR <= 3 && bR <= 3;
+    },
+    penalty: 6,
+    explain:
+      'Neither partner tends to repair after conflict — unresolved issues may accumulate',
+  },
+  {
+    id: 'forgiveness_style_gap',
+    name: 'Forgiveness style gap (MED)',
+    when: (a, b) => {
+      const aF = getSignal(a, 'forgivenessStyle');
+      const bF = getSignal(b, 'forgivenessStyle');
+      if (aF == null || bF == null) return false;
+      return (aF >= 8 && bF <= 3) || (bF >= 8 && aF <= 3);
+    },
+    penalty: 4,
+    explain:
+      'One lets go of conflict quickly, the other holds onto it longer — pacing after fights may clash',
   },
 ];

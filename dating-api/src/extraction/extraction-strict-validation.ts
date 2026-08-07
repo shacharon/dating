@@ -50,6 +50,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'honestyIntegrity',
     'chronotype',
     'physicalTypePreference',
+    'repairSkills',
+    'forgivenessStyle',
   ],
   relationship: [
     'emotionalDepth',
@@ -78,6 +80,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'honestyIntegrity',
     'chronotype',
     'physicalTypePreference',
+    'repairSkills',
+    'forgivenessStyle',
   ],
 };
 

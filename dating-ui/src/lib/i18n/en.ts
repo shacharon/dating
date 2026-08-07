@@ -188,6 +188,10 @@ export const enCopy: AppCopySchema = {
             "You both want a relationship without financial arrangements",
           "Religious practice":
             "Your level of religious practice is well-matched",
+          "Conflict recovery":
+            "You both know how to apologize and reconnect after disagreements",
+          "Letting go & moving forward":
+            "You both let go of conflict and move forward at a similar pace",
         },
         interestOverlap: {
           travel: "You both love travel",
@@ -512,6 +516,8 @@ export const enCopy: AppCopySchema = {
           "What kinds of conversations or shared activities help you feel connected to someone?",
           "What is something specific about your personality that friends notice quickly?",
           "What are you curious about or learning right now—work, hobbies, or everyday life?",
+          "When we disagree, I usually…",
+          "After a fight, I tend to…",
         ],
         examples: [
           "I work in product design and decompress by cooking elaborate dinners for friends. Weeknights I'm usually at home with a podcast and a sketchbook; weekends I hunt small galleries or try a new bakery. I'm calm in groups but light up when the talk gets thoughtful. Looking for people who like slow plans and don't need every night out to be loud.",

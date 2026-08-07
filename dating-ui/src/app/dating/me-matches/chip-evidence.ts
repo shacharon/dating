@@ -34,6 +34,8 @@ export const CHIP_EVIDENCE_KEYS = [
   'Financial support alignment',
   'Non-transactional match',
   'Religious practice',
+  'Conflict recovery',
+  'Letting go & moving forward',
 ] as const;
 
 export type ChipEvidenceKey = (typeof CHIP_EVIDENCE_KEYS)[number];

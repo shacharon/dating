@@ -33,6 +33,10 @@ import {
   EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK,
   EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK,
 } from './expansion-08-signal-definitions';
+import {
+  EXPANSION_10_PARTNER_SHADOW_SIGNAL_BLOCK,
+  EXPANSION_10_SELF_SHADOW_SIGNAL_BLOCK,
+} from './expansion-10-signal-definitions';
 import { EXPANSION_09_INTEREST_GUIDANCE_BLOCK } from './expansion-09-interest-guidance';
 import {
   buildExtractionPipelineTrace,
@@ -73,7 +77,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -90,8 +94,8 @@ EVIDENCE RULES:
 
 SIGNAL RULES:
 - emotionalDepth = explicit introspection, vulnerability, emotional self-awareness
-- attachmentSecurity = explicit closeness, fusion, anchor-like bond, inseparable emotional union
-- directness = explicit transparency, no secrets, clear communication — not honesty/integrity/"no games" as a core relationship value alone
+- attachmentSecurity = explicit closeness, fusion, anchor-like bond, inseparable emotional union — not specifically how grudges/resentment are handled post-conflict (→ forgivenessStyle)
+- directness = explicit transparency, no secrets, clear communication — not honesty/integrity/"no games" as a core relationship value alone, and not post-conflict ownership/apology alone (→ repairSkills)
 - independence = explicit autonomy vs fusion; shared-everything / merged-life language = low
 - socialBattery = explicit social-energy preference only
 - lifestylePace = explicit pace/rhythm (calm vs high-action busy life) — not home-vs-out nesting preference alone, not novelty-vs-routine preference, and not morning vs night sleep chronotype
@@ -99,12 +103,12 @@ SIGNAL RULES:
 - healthBodyConsciousness = explicit health/wellness values focus (caring about health — not how much they actually exercise/move)
 - spirituality = explicit spiritual/inner meaning orientation — not practical ritual observance level alone
 - intellectualCuriosity = explicit need for mental stimulation / ideas / deep learning with a partner (not merely "I'm smart" or listing books, and not formal degree/credential filters)
-- conflictStyle = explicit disagreement handling, repair, de-escalation
+- conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / de-escalating in the moment) — not post-conflict apology, ownership, or reconnection alone (→ repairSkills), and not grudge/forgiveness pacing alone (→ forgivenessStyle)
 - adventureNovelty = explicit novelty vs routine / new-experiences preference (not life tempo alone, not homebody preference, not travel hobby tag alone)
 - structureChaosTolerance = explicit order vs chaos preference
 - empathyCompassion = explicit care for partner's feelings, attunement, compassionate responses (not generic kindness)
 - vulnerabilityOpenness = explicit comfort sharing fears/struggles/authentic self (not merely "honest communication")
-- emotionalRegulation = explicit emotional steadiness vs reactivity under stress; calm recovery (not merely "I'm emotional")
+- emotionalRegulation = explicit emotional steadiness vs reactivity under stress; calm recovery in the moment (not merely "I'm emotional") — not letting go of grudges over time after conflict (→ forgivenessStyle)
 - physicalAffectionStyle = explicit touch/cuddling/PDA/closeness needs (not general attractiveness, not casual vs committed intimacy boundary)
 - humorPlayfulness = explicit need for banter, silliness, shared laughter, lightness in love (not merely "I'm funny" or generic "fun-loving")
 - creativeExpression = explicit need for creative outlets / making / self-expression through creation (not merely job title "artist" or hobby tag)
@@ -119,6 +123,8 @@ SIGNAL RULES:
 - honestyIntegrity = explicit honesty/integrity/"no games" value (not communication bluntness/directness alone); prefer null if unmentioned
 - chronotype = explicit morning vs night sleep/energy rhythm (not busy vs calm lifestyle pace alone)
 - physicalTypePreference = explicit body/build type specificity vs flexibility (not looks-importance alone); race/anatomy-only → null
+- repairSkills = explicit post-conflict apology / ownership / reconnection vs stonewalling or avoiding resolution (not during-conflict style alone, not bluntness alone)
+- forgivenessStyle = explicit letting-go vs holding grudges / rehashing past issues (not attachment closeness alone, not in-the-moment emotional regulation alone)
 
 ${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
 
@@ -135,6 +141,8 @@ ${EXPANSION_06_SELF_SHADOW_SIGNAL_BLOCK}
 ${EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_10_SELF_SHADOW_SIGNAL_BLOCK}
 
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
@@ -298,7 +306,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -321,7 +329,7 @@ SIGNAL RULES:
 - socialBattery = explicit social-energy cues only
 - physicalPriority = explicit looks, attraction, chemistry, appearance — not casual vs committed intimacy boundary, and not which body/build type preference (→ physicalTypePreference)
 - intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations — not formal degree/credential filter (→ educationLevel)
-- conflictStyle = explicit disagreement handling, repair, calm discussion, de-escalation
+- conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / calm discussion in the moment) — not post-conflict repair/apology alone (→ repairSkills), not forgiveness/grudge pacing alone (→ forgivenessStyle)
 - casualIntimacyIntent = desired partner's casual vs committed-only physical intimacy stance (not looks priority alone)
 - supportExchangeOrientation = desired openness to arrangement/money-in-relationship dynamics (not emotional support alone)
 - supportProviderOrientation = wanting a partner who GIVES ongoing financial support
@@ -331,10 +339,14 @@ SIGNAL RULES:
 - honestyIntegrity = desired partner honesty/integrity/"no games" emphasis (not bluntness alone); prefer null if unmentioned
 - chronotype = desired partner sleep/energy rhythm early bird vs night owl (not lifestyle pace alone)
 - physicalTypePreference = how specific body/build type preferences are for a partner (not looks-importance alone); race/anatomy-only → null
+- repairSkills = desired partner post-conflict apology / ownership / reconnection vs stonewalling or avoiding resolution (not during-conflict style alone)
+- forgivenessStyle = desired partner letting-go vs holding grudges / rehashing past issues (not attachment closeness alone, not in-the-moment regulation alone)
 
 ${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_10_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 DIRECTION LOCK:
 For lifestylePace:
@@ -357,6 +369,7 @@ Examples:
 - "growth", "accountability" -> NOT emotionalDepth
 - "quiet home" -> lifestylePace only
 - "no drama" -> conflictStyle only if explicit conflict behavior
+- "accountable after fights" / "doesn't hold grudges" -> repairSkills / forgivenessStyle when explicit; do not dump into conflictStyle alone
 - "open to kids later" -> traditionalism, NOT relationshipClarity
 
 MULTI-MAPPING:

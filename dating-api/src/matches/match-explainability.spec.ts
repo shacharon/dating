@@ -223,6 +223,34 @@ describe('pickPositiveChips', () => {
     expect(chips).toContain('Financial support alignment');
   });
 
+  it('includes Expansion-10 Conflict recovery when breakdown has high repairSkills', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'repairSkills',
+        self: 8,
+        partner: 8,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Conflict recovery');
+  });
+
+  it('includes Expansion-10 Letting go & moving forward when breakdown has high forgivenessStyle', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'forgivenessStyle',
+        self: 8,
+        partner: 8,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Letting go & moving forward');
+  });
+
   it('emits interestOverlapTags (max 2 preferred) from sharedInterests', () => {
     const dto = buildMatchExplainability({
       compatibility: 70,
@@ -324,6 +352,14 @@ describe('buildMatchExplainability', () => {
     expect(TENSION_CHIP_BY_ID.honesty_integrity_gap).toBe('Honesty values gap');
     expect(TENSION_CHIP_BY_ID.chronotype_clash).toBe('Morning vs night');
     expect(TENSION_CHIP_BY_ID.physical_type_specificity_clash).toBeUndefined();
+  });
+
+  it('maps Expansion-10 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.repair_skills_gap).toBe('Different repair styles');
+    expect(TENSION_CHIP_BY_ID.both_low_repair).toBe('Conflict recovery risk');
+    expect(TENSION_CHIP_BY_ID.forgiveness_style_gap).toBe(
+      'Different forgiveness pace',
+    );
   });
 
   it('shows empathy_gap tension chip when friction >= 3', () => {
@@ -445,6 +481,39 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'chronotype_clash', penalty: 3 }],
     });
     expect(dto.tensionChip).toBe('Morning vs night');
+  });
+
+  it('shows both_low_repair tension chip when friction >= 3', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 6,
+      breakdown: [],
+      tensionMatrix: [{ id: 'both_low_repair', penalty: 6 }],
+    });
+    expect(dto.tensionChip).toBe('Conflict recovery risk');
+  });
+
+  it('shows repair_skills_gap tension chip when friction >= 3', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 5,
+      breakdown: [],
+      tensionMatrix: [{ id: 'repair_skills_gap', penalty: 5 }],
+    });
+    expect(dto.tensionChip).toBe('Different repair styles');
+  });
+
+  it('shows forgiveness_style_gap tension chip when friction >= 3', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'forgiveness_style_gap', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Different forgiveness pace');
   });
 
   it('shows education_level_gap tension chip when friction >= 3', () => {

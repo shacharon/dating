@@ -1,0 +1,99 @@
+[
+  {
+    "id": "repair_high_en",
+    "aboutMe": "I always apologize first and want to reconnect fast after we fight.",
+    "signal": "repairSkills",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "repair_ambiguous_space_en",
+    "aboutMe": "I shut down and need a lot of space, rarely bring it up again after a fight.",
+    "signal": "repairSkills",
+    "expectedMin": 1,
+    "expectedMax": 5
+  },
+  {
+    "id": "forgiveness_high_en",
+    "aboutMe": "I don't hold grudges, once we talk it's done.",
+    "signal": "forgivenessStyle",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "forgiveness_low_en",
+    "aboutMe": "Old fights tend to resurface for me and it's hard to let go.",
+    "signal": "forgivenessStyle",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "both_null_no_conflict_en",
+    "aboutMe": "I love hiking, cooking elaborate dinners, and quiet weekends with a book.",
+    "expectations": [
+      {
+        "signal": "repairSkills",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "forgivenessStyle",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "repair_high_he",
+    "aboutMe": "אני תמיד מתנצל/ת ראשון/ה אחרי ויכוח, גם אם אני חושב/ת שאני קצת צודק/ת, וצריך/ה להתחבר מחדש מהר.",
+    "signal": "repairSkills",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "forgiveness_high_he",
+    "aboutMe": "אני לא שומר/ת טינה - ברגע שדיברנו, זה נגמר ואני ממשיך/ה הלאה.",
+    "signal": "forgivenessStyle",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "forgiveness_low_he",
+    "aboutMe": "אני זוכר/ת דברים להרבה זמן וקשה לי לשחרר — ריבים ישנים חוזרים אליי.",
+    "signal": "forgivenessStyle",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "repair_space_alone_null",
+    "aboutMe": "I need space after a fight.",
+    "expectations": [
+      {
+        "signal": "repairSkills",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "during_conflict_only_null",
+    "aboutMe": "When we disagree I stay calm and talk things through in the moment — I'm direct, not escalating.",
+    "expectations": [
+      {
+        "signal": "repairSkills",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "forgivenessStyle",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  }
+]

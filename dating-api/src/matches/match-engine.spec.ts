@@ -1182,6 +1182,219 @@ describe('Expansion-09 interest overlap E2E via compare', () => {
   });
 });
 
+type Expansion10ShadowKey = 'repairSkills' | 'forgivenessStyle';
+
+function makeProfileWithExpansion10Shadow(
+  id: string,
+  name: string,
+  official: Partial<Record<SignalKey, number>>,
+  shadow: Partial<Record<Expansion10ShadowKey, number | null>>,
+  relationshipFitScore = 50,
+  interestsTop3: string[] = [],
+): ProfileJsonPayload {
+  const signals = {
+    ...makeSignals(official),
+    ...shadow,
+  } as Record<string, number>;
+  return makeProfile(id, name, signals, relationshipFitScore, undefined, interestsTop3);
+}
+
+describe('Expansion-10 shadow E2E via compare', () => {
+  it('keeps Expansion-10 shadow keys out of COMPATIBILITY_SIGNAL_KEYS', () => {
+    expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+    for (const key of ['repairSkills', 'forgivenessStyle'] as const) {
+      expect(COMPATIBILITY_SIGNAL_KEYS as readonly string[]).not.toContain(key);
+    }
+  });
+
+  it('Expansion-10 keys are distinct from adjacent signals and interest tags', () => {
+    for (const key of ['repairSkills', 'forgivenessStyle'] as const) {
+      expect(INTEREST_CANONICAL_TAGS as readonly string[]).not.toContain(key);
+    }
+    expect('repairSkills').not.toBe('conflictStyle');
+    expect('repairSkills').not.toBe('directness');
+    expect('forgivenessStyle').not.toBe('emotionalRegulation');
+    expect('forgivenessStyle').not.toBe('attachmentSecurity');
+  });
+
+  it('repair_skills_gap surfaces Different repair styles', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 9 });
+    const b = makeProfileWithExpansion10Shadow('b', 'B', {}, { repairSkills: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different repair styles');
+    expect(result.tensionMatrix.some((t) => t.id === 'repair_skills_gap')).toBe(
+      true,
+    );
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('both_low_repair surfaces Conflict recovery risk without repair_skills_gap', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 2 });
+    const b = makeProfileWithExpansion10Shadow('b', 'B', {}, { repairSkills: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Conflict recovery risk');
+    expect(result.tensionMatrix.some((t) => t.id === 'both_low_repair')).toBe(
+      true,
+    );
+    expect(result.tensionMatrix.some((t) => t.id === 'repair_skills_gap')).toBe(
+      false,
+    );
+  });
+
+  it('forgiveness_style_gap surfaces Different forgiveness pace', () => {
+    const a = makeProfileWithExpansion10Shadow(
+      'a',
+      'A',
+      {},
+      { forgivenessStyle: 9 },
+    );
+    const b = makeProfileWithExpansion10Shadow(
+      'b',
+      'B',
+      {},
+      { forgivenessStyle: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different forgiveness pace');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'forgiveness_style_gap'),
+    ).toBe(true);
+  });
+
+  it('includes Conflict recovery positive chip when both repairSkills high', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 8 });
+    const b = makeProfileWithExpansion10Shadow('b', 'B', {}, { repairSkills: 8 });
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Conflict recovery');
+  });
+
+  it('includes Letting go & moving forward when both forgivenessStyle high', () => {
+    const a = makeProfileWithExpansion10Shadow(
+      'a',
+      'A',
+      {},
+      { forgivenessStyle: 8 },
+    );
+    const b = makeProfileWithExpansion10Shadow(
+      'b',
+      'B',
+      {},
+      { forgivenessStyle: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Letting go & moving forward',
+    );
+  });
+
+  it('excludes Expansion-10 shadow keys from alignments DTO', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 8 });
+    const b = makeProfileWithExpansion10Shadow('b', 'B', {}, { repairSkills: 8 });
+    const result = compare(a, b);
+    expect(
+      result.alignments.every(
+        (row) =>
+          row.key !== 'Conflict recovery' &&
+          row.key !== 'Letting go & moving forward' &&
+          !/repairSkills|forgivenessStyle/i.test(row.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('null shadow on one side skips repair tension rules', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 9 });
+    const b = makeProfileWithExpansion10Shadow(
+      'b',
+      'B',
+      {},
+      { repairSkills: null },
+    );
+    const result = compare(a, b);
+    expect(result.tensionMatrix.some((t) => t.id === 'repair_skills_gap')).toBe(
+      false,
+    );
+    expect(result.tensionMatrix.some((t) => t.id === 'both_low_repair')).toBe(
+      false,
+    );
+  });
+
+  it('compatibility unchanged when only Expansion-10 shadow signals differ', () => {
+    const highA = makeProfileWithExpansion10Shadow(
+      'a1',
+      'A1',
+      {},
+      { repairSkills: 8, forgivenessStyle: 8 },
+    );
+    const highB = makeProfileWithExpansion10Shadow(
+      'b1',
+      'B1',
+      {},
+      { repairSkills: 8, forgivenessStyle: 8 },
+    );
+    const gapA = makeProfileWithExpansion10Shadow(
+      'a2',
+      'A2',
+      {},
+      { repairSkills: 9, forgivenessStyle: 9 },
+    );
+    const gapB = makeProfileWithExpansion10Shadow(
+      'b2',
+      'B2',
+      {},
+      { repairSkills: 2, forgivenessStyle: 2 },
+    );
+    const aligned = compare(highA, highB);
+    const gapped = compare(gapA, gapB);
+    expect(aligned.compatibility).toBe(gapped.compatibility);
+  });
+
+  it('Expansion-07 non-regression: casual intimacy clash still surfaces', () => {
+    const a = makeProfileWithExpansion07Shadow(
+      'a',
+      'A',
+      {},
+      { casualIntimacyIntent: 9 },
+    );
+    const b = makeProfileWithExpansion07Shadow(
+      'b',
+      'B',
+      {},
+      { casualIntimacyIntent: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Casual vs committed intimacy',
+    );
+  });
+
+  it('Expansion-09 interest spot: shared biking/camping still overlap', () => {
+    const a = makeProfileWithExpansion10Shadow(
+      'a',
+      'A',
+      {},
+      {},
+      50,
+      ['biking', 'camping'],
+    );
+    const b = makeProfileWithExpansion10Shadow(
+      'b',
+      'B',
+      {},
+      {},
+      50,
+      ['biking', 'camping'],
+    );
+    const result = compare(a, b);
+    expect(result.explainability.interestOverlapTags).toEqual([
+      'biking',
+      'camping',
+    ]);
+    expect(result.explainability.interestOverlapTags!.length).toBeLessThanOrEqual(
+      2,
+    );
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

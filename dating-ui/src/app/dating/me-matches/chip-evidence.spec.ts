@@ -87,8 +87,18 @@ describe('chipToEvidence', () => {
       'Non-transactional match',
       'Religious practice',
     ] as const;
-    expect(CHIP_EVIDENCE_KEYS.length).toBe(29);
     for (const chip of EXPANSION_07_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
+  it('includes Expansion-10 conflict recovery chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_10_CHIPS = [
+      'Conflict recovery',
+      'Letting go & moving forward',
+    ] as const;
+    expect(CHIP_EVIDENCE_KEYS.length).toBe(31);
+    for (const chip of EXPANSION_10_CHIPS) {
       expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
     }
   });

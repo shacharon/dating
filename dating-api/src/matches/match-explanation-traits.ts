@@ -179,6 +179,18 @@ export const CHIP_TO_TRAIT: Record<
     evidence: 'Your level of religious practice is well-matched',
     listPhrase: 'matched religious practice',
   },
+  'Conflict recovery': {
+    group: 'How you communicate',
+    evidence:
+      'You both know how to apologize and reconnect after disagreements',
+    listPhrase: 'shared conflict recovery',
+  },
+  'Letting go & moving forward': {
+    group: 'How you communicate',
+    evidence:
+      'You both let go of conflict and move forward at a similar pace',
+    listPhrase: 'aligned forgiveness pace',
+  },
 };
 
 /**

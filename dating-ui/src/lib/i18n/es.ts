@@ -194,6 +194,10 @@ export const esCopy: AppCopySchema = {
             "Ambos quieren una relación sin acuerdos financieros",
           "Religious practice":
             "Su nivel de práctica religiosa es compatible",
+          "Conflict recovery":
+            "Ambos saben disculparse y reconectar después de un desacuerdo",
+          "Letting go & moving forward":
+            "Ambos dejan ir los conflictos y siguen adelante a un ritmo similar",
         },
         interestOverlap: {
           travel: "A ambos les gusta viajar",
@@ -519,6 +523,8 @@ export const esCopy: AppCopySchema = {
           "Que tipo de conversaciones o actividades compartidas te ayudan a sentir conexion?",
           "Que hay de concreto en tu personalidad que tus amigos notan rapido?",
           "De que tienes curiosidad o que estas aprendiendo ahora—trabajo, hobbies o el dia a dia?",
+          "Cuando discrepamos, normalmente…",
+          "Después de una pelea, suelo…",
         ],
         examples: [
           "Trabajo en diseno de producto y desconecto cocinando cenas elaboradas para amigos. Entre semana suelo estar en casa con un podcast y un cuaderno; los fines de semana busco galerias pequenas o una panaderia nueva. Soy calmado/a en grupos pero me animo cuando la charla es profunda. Busco personas que prefieran planes tranquilos y no necesiten que cada noche sea ruidosa.",

@@ -769,4 +769,140 @@ describe('compute-friction', () => {
       ).toBe(false);
     });
   });
+
+  describe('Expansion-10 shadow tension rules', () => {
+    it('repair_skills_gap fires when repair skills diverge', () => {
+      const a: EnrichedSignals = { repairSkills: 9 };
+      const b: EnrichedSignals = { repairSkills: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'repair_skills_gap');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(5);
+    });
+
+    it('repair_skills_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { repairSkills: 2 };
+      const b: EnrichedSignals = { repairSkills: 9 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'repair_skills_gap')).toBe(
+        true,
+      );
+    });
+
+    it('repair_skills_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { repairSkills: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'repair_skills_gap')).toBe(
+        false,
+      );
+    });
+
+    it('repair_skills_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { repairSkills: 7 };
+      const b: EnrichedSignals = { repairSkills: 4 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'repair_skills_gap')).toBe(
+        false,
+      );
+    });
+
+    it('repair_skills_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { repairSkills: 8 };
+      const b: EnrichedSignals = { repairSkills: 3 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'repair_skills_gap')).toBe(
+        true,
+      );
+    });
+
+    it('both_low_repair fires when both repair skills are low', () => {
+      const a: EnrichedSignals = { repairSkills: 2 };
+      const b: EnrichedSignals = { repairSkills: 3 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'both_low_repair');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(6);
+    });
+
+    it('both_low_repair fires at boundary (both <= 3)', () => {
+      const a: EnrichedSignals = { repairSkills: 3 };
+      const b: EnrichedSignals = { repairSkills: 3 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_low_repair')).toBe(true);
+    });
+
+    it('both_low_repair does not fire when either side is null', () => {
+      const a: EnrichedSignals = { repairSkills: 2 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_low_repair')).toBe(
+        false,
+      );
+    });
+
+    it('both_low_repair does not fire when one side is above low band', () => {
+      const a: EnrichedSignals = { repairSkills: 3 };
+      const b: EnrichedSignals = { repairSkills: 4 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_low_repair')).toBe(
+        false,
+      );
+    });
+
+    it('both_low_repair fires without repair_skills_gap when both are low', () => {
+      const a: EnrichedSignals = { repairSkills: 2 };
+      const b: EnrichedSignals = { repairSkills: 2 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_low_repair')).toBe(true);
+      expect(result.tensions.some((t) => t.id === 'repair_skills_gap')).toBe(
+        false,
+      );
+    });
+
+    it('forgiveness_style_gap fires when forgiveness pace diverges', () => {
+      const a: EnrichedSignals = { forgivenessStyle: 9 };
+      const b: EnrichedSignals = { forgivenessStyle: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'forgiveness_style_gap');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(4);
+    });
+
+    it('forgiveness_style_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { forgivenessStyle: 2 };
+      const b: EnrichedSignals = { forgivenessStyle: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'forgiveness_style_gap'),
+      ).toBe(true);
+    });
+
+    it('forgiveness_style_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { forgivenessStyle: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'forgiveness_style_gap'),
+      ).toBe(false);
+    });
+
+    it('forgiveness_style_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { forgivenessStyle: 7 };
+      const b: EnrichedSignals = { forgivenessStyle: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'forgiveness_style_gap'),
+      ).toBe(false);
+    });
+
+    it('forgiveness_style_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { forgivenessStyle: 8 };
+      const b: EnrichedSignals = { forgivenessStyle: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'forgiveness_style_gap'),
+      ).toBe(true);
+    });
+  });
 });

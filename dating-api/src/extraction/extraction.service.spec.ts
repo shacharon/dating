@@ -2185,6 +2185,212 @@ describe('ExtractionService behavior locks', () => {
     });
   });
 
+  describe('Expansion-10 shadow signals', () => {
+    it('extracts high repairSkills when LLM returns active-repair score', async () => {
+      // Semantic: "I always try to apologize first" / "אני תמיד מתנצל/ת ראשון/ה"
+      const text =
+        'I always try to apologize first after a fight, even if I think I am partly right.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { repairSkills: 9 },
+          [
+            {
+              signal: 'repairSkills',
+              quote: 'I always try to apologize first after a fight',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['repairSkills']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'repairSkills')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low repairSkills when LLM returns avoid-resolution score', async () => {
+      // Semantic: "I rarely admit I'm wrong"
+      const text = "I rarely admit I'm wrong after we argue.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { repairSkills: 2 },
+          [
+            {
+              signal: 'repairSkills',
+              quote: "I rarely admit I'm wrong",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['repairSkills']).toBe(2);
+    });
+
+    it('returns null for repairSkills when conflict aftermath is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, repairSkills: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['repairSkills']).toBeNull();
+    });
+
+    it('returns null for repairSkills when only "need space after a fight" alone', async () => {
+      // Healthy temporary cool-down ≠ automatically low repairSkills
+      const text = 'I need space after a fight.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', { repairSkills: null }, []),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['repairSkills']).toBeNull();
+    });
+
+    it('extracts high forgivenessStyle when LLM returns no-grudge score', async () => {
+      // Semantic: "I don't hold grudges" / "אני לא שומר/ת טינה"
+      const text =
+        "I don't hold grudges — once we talk it out, it's done.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { forgivenessStyle: 9 },
+          [
+            {
+              signal: 'forgivenessStyle',
+              quote: "I don't hold grudges — once we talk it out, it's done",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['forgivenessStyle']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'forgivenessStyle'),
+      ).toBe(true);
+    });
+
+    it('extracts low forgivenessStyle when LLM returns rehash score', async () => {
+      // Semantic: "Old fights tend to come back up"
+      const text =
+        'I remember things for a long time and old fights tend to come back up.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { forgivenessStyle: 2 },
+          [
+            {
+              signal: 'forgivenessStyle',
+              quote: 'old fights tend to come back up',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['forgivenessStyle']).toBe(2);
+    });
+
+    it('returns null for forgivenessStyle when grudges are unmentioned', async () => {
+      const text = 'I am ambitious and driven. I work hard and want something real.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, forgivenessStyle: null },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['forgivenessStyle']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-10 scores to null', async () => {
+      const text =
+        'I always try to apologize first after a fight and reconnect quickly.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { repairSkills: 11 },
+          [
+            {
+              signal: 'repairSkills',
+              quote: 'apologize first after a fight',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['repairSkills']).toBeNull();
+    });
+
+    it('extracts partner repairSkills when LLM returns desired-partner repair score', async () => {
+      const text =
+        'Looking for a partner who apologizes and reconnects after we fight.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { repairSkills: 8 },
+          [
+            {
+              signal: 'repairSkills',
+              quote: 'apologizes and reconnects after we fight',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['repairSkills']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'repairSkills')).toBe(
+        true,
+      );
+    });
+
+    it('extracts partner forgivenessStyle when LLM returns desired-partner let-go score', async () => {
+      const text =
+        'I want someone who lets go easily and does not hold grudges.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { forgivenessStyle: 8 },
+          [
+            {
+              signal: 'forgivenessStyle',
+              quote: 'lets go easily and does not hold grudges',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['forgivenessStyle']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'forgivenessStyle'),
+      ).toBe(true);
+    });
+  });
+
   describe('Expansion-09 interest tags', () => {
     it('preserves biking from mocked LLM interests', async () => {
       const text = 'I love cycling and mountain bike weekends.';

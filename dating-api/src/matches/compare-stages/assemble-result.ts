@@ -17,6 +17,7 @@ import { buildExpansion04ShadowBreakdown } from '../expansion-04-explainability'
 import { buildExpansion05ShadowBreakdown } from '../expansion-05-explainability';
 import { buildExpansion06ShadowBreakdown } from '../expansion-06-explainability';
 import { buildExpansion07ShadowBreakdown } from '../expansion-07-explainability';
+import { buildExpansion10ShadowBreakdown } from '../expansion-10-explainability';
 import { buildMatchExplainability } from '../match-explainability';
 import {
   ALIGNMENT_CHIP_MIN_PAIR_SCORE,
@@ -213,6 +214,7 @@ export function buildFinalResultDto(
     ...buildExpansion05ShadowBreakdown(signalsA, signalsB),
     ...buildExpansion06ShadowBreakdown(signalsA, signalsB),
     ...buildExpansion07ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion10ShadowBreakdown(signalsA, signalsB),
   ];
   const breakdownForChips = [
     ...(compatAB.breakdown ?? []),

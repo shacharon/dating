@@ -174,4 +174,25 @@ describe('buildMatchExplanationTraits', () => {
       CHIP_TO_TRAIT['Financial support alignment'].evidence,
     );
   });
+
+  it('maps Expansion-10 Conflict recovery chip', () => {
+    const traits = buildMatchExplanationTraits(['Conflict recovery'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('How you communicate');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Conflict recovery'].evidence,
+    );
+  });
+
+  it('maps Expansion-10 Letting go & moving forward chip', () => {
+    const traits = buildMatchExplanationTraits(
+      ['Letting go & moving forward'],
+      70,
+    );
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('How you communicate');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Letting go & moving forward'].evidence,
+    );
+  });
 });
