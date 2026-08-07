@@ -198,6 +198,9 @@ export const enCopy: AppCopySchema = {
           music: "You both love music",
           gym: "You both enjoy the gym",
           beach: "You both love the beach",
+          biking: "You both enjoy biking",
+          camping: "You both enjoy camping",
+          nature: "You both love nature",
         },
         modeB: {
           sublabel: "Why this is worth your time",

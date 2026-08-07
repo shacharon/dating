@@ -204,6 +204,9 @@ export const esCopy: AppCopySchema = {
           music: "A ambos les gusta la música",
           gym: "A ambos les gusta el gimnasio",
           beach: "A ambos les gusta la playa",
+          biking: "A ambos les gusta andar en bici",
+          camping: "A ambos les gusta acampar",
+          nature: "A ambos les encanta la naturaleza",
         },
         modeB: {
           sublabel: "Por que vale tu tiempo",

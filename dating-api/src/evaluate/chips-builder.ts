@@ -33,7 +33,9 @@ const MAX_CHIPS_PER_DOMAIN = 5;
 const INTEREST_LABELS: Record<string, string> = {
   art: 'Art & Culture',
   beach: 'Beach Life',
+  biking: 'Biking',
   books: 'Reading',
+  camping: 'Camping',
   cooking: 'Cooking',
   dancing: 'Dancing',
   football: 'Football',
@@ -43,6 +45,7 @@ const INTEREST_LABELS: Record<string, string> = {
   home_life: 'Home Comfort',
   movies: 'Movies',
   music: 'Music',
+  nature: 'Nature',
   nightlife: 'Nightlife',
   spirituality: 'Spirituality',
   travel: 'Travel',

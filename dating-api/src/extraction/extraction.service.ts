@@ -16,6 +16,7 @@ import {
   KEY_ALIASES,
   normalizeKeys,
   normalizeRawExtraction,
+  normalizeRawInterestTags,
 } from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
 import { EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-01-signal-definitions';
@@ -32,6 +33,7 @@ import {
   EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK,
   EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK,
 } from './expansion-08-signal-definitions';
+import { EXPANSION_09_INTEREST_GUIDANCE_BLOCK } from './expansion-09-interest-guidance';
 import {
   buildExtractionPipelineTrace,
   buildRawLlmPersistenceLogPayload,
@@ -66,10 +68,9 @@ CONCRETE TEXT EXAMPLES:
 - habits, routines, boundaries, emotional patterns, social preferences, conflict behavior, explicit relationship principles
 
 INTERESTS:
-- Extract only explicit hobbies/passions into interests: string[]
-- Do not infer
-- "I like nature" -> "Nature"
-- "I'm a runner" -> "Running"
+- Extract only explicit hobbies/passions into interests: string[] (pipeline maps to rawInterests)
+- Do not invent hobbies from vibe or generic personality language
+${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
 emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference
@@ -203,8 +204,9 @@ CONCRETE TEXT EXAMPLES:
 - boundaries, commitment rules, exclusivity, repair style, communication norms, family goals, home-life expectations
 
 INTERESTS:
-- Extract only explicit shared-bond or lifestyle interests into interests: string[]
-- Do not infer
+- Extract only explicit shared-bond or lifestyle interests into interests: string[] (pipeline maps to rawInterests)
+- Do not invent hobbies from vibe or generic personality language
+${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
 emotionalDepth, attachmentSecurity, relationshipClarity, traditionalism, spirituality, lifestylePace, socialBattery
@@ -291,8 +293,9 @@ CONCRETE TEXT EXAMPLES:
 - partner traits tied to behavior, communication, conflict, appearance, learning, family goals, home-life style
 
 INTERESTS:
-- Extract only explicit desired partner hobbies/interests into interests: string[]
-- Do not infer
+- Extract only explicit desired partner hobbies/interests into interests: string[] (pipeline maps to rawInterests)
+- Do not invent hobbies from vibe or generic personality language
+${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
 emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference
@@ -501,6 +504,8 @@ export class ExtractionService {
       .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
       .slice(0, MAX_EVIDENCE_ITEMS);
 
+    const rawInterests = normalizeRawInterestTags(data.rawInterests);
+
     return {
       domain: requestedDomain,
       signals,
@@ -508,6 +513,7 @@ export class ExtractionService {
       version: data.version ?? 'v1',
       confidence,
       notes: data.notes,
+      ...(rawInterests.length > 0 ? { rawInterests } : {}),
     };
   }
 

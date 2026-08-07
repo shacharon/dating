@@ -1077,6 +1077,111 @@ describe('Expansion-07 shadow E2E via compare', () => {
   });
 });
 
+describe('Expansion-09 interest overlap E2E via compare', () => {
+  it('emits shared biking and camping interestOverlapTags', () => {
+    const a = makeProfileWithExpansion07Shadow(
+      'a',
+      'A',
+      {},
+      {},
+      50,
+      ['biking', 'camping'],
+    );
+    const b = makeProfileWithExpansion07Shadow(
+      'b',
+      'B',
+      {},
+      {},
+      50,
+      ['biking', 'camping'],
+    );
+    const result = compare(a, b);
+    expect(result.explainability.interestOverlapTags).toEqual([
+      'biking',
+      'camping',
+    ]);
+    expect(result.explainability.interestOverlapTags!.length).toBeLessThanOrEqual(
+      2,
+    );
+  });
+
+  it('prefers nature over non-preferred gaming in interestOverlapTags', () => {
+    const a = makeProfileWithExpansion07Shadow(
+      'a',
+      'A',
+      {},
+      {},
+      50,
+      ['gaming', 'nature'],
+    );
+    const b = makeProfileWithExpansion07Shadow(
+      'b',
+      'B',
+      {},
+      {},
+      50,
+      ['gaming', 'nature'],
+    );
+    const result = compare(a, b);
+    expect(result.explainability.interestOverlapTags).toEqual([
+      'nature',
+      'gaming',
+    ]);
+    expect(result.explainability.interestOverlapTags!.length).toBeLessThanOrEqual(
+      2,
+    );
+  });
+
+  it('caps three Expansion-09 preferred shared tags at 2', () => {
+    const a = makeProfileWithExpansion07Shadow(
+      'a',
+      'A',
+      {},
+      {},
+      50,
+      ['biking', 'camping', 'nature'],
+    );
+    const b = makeProfileWithExpansion07Shadow(
+      'b',
+      'B',
+      {},
+      {},
+      50,
+      ['biking', 'camping', 'nature'],
+    );
+    const result = compare(a, b);
+    const tags = result.explainability.interestOverlapTags ?? [];
+    expect(tags).toHaveLength(2);
+    expect(['biking', 'camping', 'nature']).toEqual(
+      expect.arrayContaining(tags),
+    );
+  });
+
+  it('keeps Expansion-07 travel/books interest overlap regression', () => {
+    const a = makeProfileWithExpansion07Shadow(
+      'a',
+      'A',
+      {},
+      {},
+      50,
+      ['travel', 'books'],
+    );
+    const b = makeProfileWithExpansion07Shadow(
+      'b',
+      'B',
+      {},
+      {},
+      50,
+      ['travel', 'books'],
+    );
+    const result = compare(a, b);
+    expect(result.explainability.interestOverlapTags).toEqual([
+      'travel',
+      'books',
+    ]);
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

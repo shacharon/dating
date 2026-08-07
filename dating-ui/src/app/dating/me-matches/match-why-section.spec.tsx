@@ -1,9 +1,13 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { getCopy } from '@/lib/i18n';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
 import { MatchWhySection } from './match-why-section';
+
+afterEach(() => {
+  cleanup();
+});
 
 function baseMatch(
   explainability: MeMatchItemDto['explainability'],
@@ -398,6 +402,56 @@ describe('MatchWhySection Expansion-07 chips', () => {
     expect(screen.getByTestId('match-why-interest-chips')).toBeTruthy();
     expect(screen.getByText('You both love travel')).toBeTruthy();
     expect(screen.getByText('You both enjoy reading')).toBeTruthy();
+  });
+
+  it('renders Expansion-09 interest overlap chips with EN i18n', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Shared outdoor hobbies.',
+          interestOverlapTags: ['biking', 'camping'],
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByTestId('match-why-interest-chips')).toBeTruthy();
+    expect(screen.getByText('You both enjoy biking')).toBeTruthy();
+    expect(screen.getByText('You both enjoy camping')).toBeTruthy();
+  });
+
+  it('renders Expansion-09 nature interest overlap chip', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Shared nature love.',
+          interestOverlapTags: ['nature'],
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('You both love nature')).toBeTruthy();
+  });
+
+  it('exposes Expansion-09 interestOverlap keys in HE copy', () => {
+    const he = getCopy('he').matches.list.browse.interestOverlap;
+    expect(he.biking).toBe('שניכם נהנים מרכיבה על אופניים');
+    expect(he.camping).toBe('שניכם נהנים מקמפינג');
+    expect(he.nature).toBe('שניכם אוהבים טבע');
+  });
+
+  it('exposes Expansion-09 interestOverlap keys in ES copy', () => {
+    const es = getCopy('es').matches.list.browse.interestOverlap;
+    expect(es.biking).toBe('A ambos les gusta andar en bici');
+    expect(es.camping).toBe('A ambos les gusta acampar');
+    expect(es.nature).toBe('A ambos les encanta la naturaleza');
   });
 
   it('renders Expansion-07 tension chip from API as-is (English)', () => {

@@ -5,12 +5,56 @@
  * No semantic inference or policy-based modifications.
  */
 
+import { INTEREST_CANONICAL_TAG_SET } from './extracted-interests.interface';
 import {
   EXTRACTION_SIGNAL_KEYS,
   EXTRACTION_SIGNAL_KEYS_SET,
   type ExtractedSignals,
   type ExtractionDomain,
 } from './extracted-signals.interface';
+
+/** Max interest tags kept after allowlist cleanup (aligns with extraction-v2 schema). */
+export const MAX_RAW_INTERESTS = 10;
+
+/**
+ * Technical normalize of LLM interest strings → canonical allowlist ids.
+ * Case/underscore cleanup only — no synonym invent / no profile-text keyword matching.
+ */
+export function normalizeRawInterestTags(
+  raw: readonly unknown[] | undefined,
+): string[] {
+  if (!raw || raw.length === 0) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (typeof item !== 'string') continue;
+    const tag = item.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!tag || !INTEREST_CANONICAL_TAG_SET.has(tag)) continue;
+    if (seen.has(tag)) continue;
+    seen.add(tag);
+    out.push(tag);
+    if (out.length >= MAX_RAW_INTERESTS) break;
+  }
+  return out;
+}
+
+/** Pull interests/rawInterests string array from raw LLM JSON (pre-allowlist). */
+export function parseRawInterestArray(obj: Record<string, unknown>): string[] {
+  const preferred = obj.rawInterests;
+  const fallback = obj.interests;
+  const source = Array.isArray(preferred)
+    ? preferred
+    : Array.isArray(fallback)
+      ? fallback
+      : [];
+  const out: string[] = [];
+  for (const item of source) {
+    if (typeof item !== 'string') continue;
+    const t = item.trim();
+    if (t) out.push(t);
+  }
+  return out;
+}
 
 /** Alias -> official key. emotionalIntimacyPriority not mapped (lossy; skip for now). */
 export const KEY_ALIASES: Record<string, string> = {
@@ -94,6 +138,7 @@ export function normalizeRawExtraction(
     if (Number.isFinite(c)) confidence = Math.max(0, Math.min(1, c));
   }
   const notes = typeof obj.notes === 'string' ? obj.notes : undefined;
+  const rawInterests = parseRawInterestArray(obj);
 
   return {
     domain: domainStr,
@@ -102,6 +147,7 @@ export function normalizeRawExtraction(
     version: version as 'v1',
     confidence,
     notes,
+    ...(rawInterests.length > 0 ? { rawInterests } : {}),
   };
 }
 

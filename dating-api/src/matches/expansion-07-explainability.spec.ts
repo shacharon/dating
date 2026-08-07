@@ -1,5 +1,6 @@
 import {
   buildExpansion07ShadowBreakdown,
+  INTEREST_OVERLAP_CHIP_PREFERRED_TAGS,
   pickInterestOverlapTags,
   SHADOW_POSITIVE_CHIP_BY_SIGNAL,
 } from './expansion-07-explainability';
@@ -155,5 +156,32 @@ describe('pickInterestOverlapTags', () => {
 
   it('returns empty for no shared tags', () => {
     expect(pickInterestOverlapTags([])).toEqual([]);
+  });
+
+  it('prefers Expansion-09 biking over non-preferred gaming', () => {
+    expect(pickInterestOverlapTags(['gaming', 'biking'])).toEqual([
+      'biking',
+      'gaming',
+    ]);
+  });
+
+  it('picks two Expansion-09 preferred tags and caps at 2', () => {
+    expect(pickInterestOverlapTags(['camping', 'nature', 'gaming'])).toEqual([
+      'camping',
+      'nature',
+    ]);
+  });
+
+  it('caps three Expansion-09 preferred shared tags at 2', () => {
+    const picked = pickInterestOverlapTags(['biking', 'camping', 'nature']);
+    expect(picked).toEqual(['biking', 'camping']);
+    expect(picked.length).toBeLessThanOrEqual(2);
+  });
+
+  it('exposes Expansion-09 tags on INTEREST_OVERLAP_CHIP_PREFERRED_TAGS', () => {
+    expect(INTEREST_OVERLAP_CHIP_PREFERRED_TAGS).toHaveLength(11);
+    expect(INTEREST_OVERLAP_CHIP_PREFERRED_TAGS).toContain('biking');
+    expect(INTEREST_OVERLAP_CHIP_PREFERRED_TAGS).toContain('camping');
+    expect(INTEREST_OVERLAP_CHIP_PREFERRED_TAGS).toContain('nature');
   });
 });

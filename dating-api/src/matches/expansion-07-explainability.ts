@@ -49,7 +49,7 @@ export const SHADOW_SIGNAL_DOMAIN: Record<Expansion07ShadowChipKey, string> = {
   supportNonTransactional: 'relationship',
 };
 
-/** Preferred interest tags for overlap chips (Story 4 i18n coverage). */
+/** Preferred interest tags for overlap chips (i18n coverage). */
 export const INTEREST_OVERLAP_CHIP_PREFERRED_TAGS = [
   'books',
   'travel',
@@ -59,6 +59,9 @@ export const INTEREST_OVERLAP_CHIP_PREFERRED_TAGS = [
   'music',
   'gym',
   'beach',
+  'biking',
+  'camping',
+  'nature',
 ] as const;
 
 const PREFERRED_TAG_SET = new Set<string>(INTEREST_OVERLAP_CHIP_PREFERRED_TAGS);

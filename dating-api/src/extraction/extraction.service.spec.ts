@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { LLMRouterService } from '../llm/llm-router.service';
-import { EXTRACTION_SIGNAL_KEYS } from './extracted-signals.interface';
+import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
+import {
+  EXTRACTION_SIGNAL_KEYS,
+  SHADOW_SIGNAL_KEYS,
+} from './extracted-signals.interface';
 import { DOMAIN_ALLOWED_SIGNAL_KEYS } from './extraction-strict-validation';
 import { ExtractionService } from './extraction.service';
 import { coveragePercent } from '../engine/coverage';
@@ -21,11 +25,13 @@ function mockExtractionResponse(
   domain: string,
   signals: Record<string, number | null>,
   evidence: Array<{ signal: string; quote: string; reason?: string; note?: string }>,
+  interests?: string[],
 ) {
   return {
     value: {
       domain,
       signals,
+      ...(interests !== undefined ? { interests } : {}),
       evidence: evidence.map((e) => ({
         ...e,
         reason: e.reason ?? DEFAULT_MOCK_EVIDENCE_REASON,
@@ -2176,6 +2182,144 @@ describe('ExtractionService behavior locks', () => {
       expect(
         result.evidence.some((e) => e.signal === 'physicalTypePreference'),
       ).toBe(true);
+    });
+  });
+
+  describe('Expansion-09 interest tags', () => {
+    it('preserves biking from mocked LLM interests', async () => {
+      const text = 'I love cycling and mountain bike weekends.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], ['biking']),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['biking']);
+    });
+
+    it('preserves camping from mocked LLM interests', async () => {
+      const text = 'We do camping trips and sleep in a tent under the stars.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], ['camping']),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['camping']);
+    });
+
+    it('preserves nature as lowercase canonical tag', async () => {
+      const text = 'I love nature, forests, and wildlife.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], ['nature']),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['nature']);
+      expect(result.rawInterests).not.toContain('Nature');
+    });
+
+    it('allows coexistence of hiking, camping, and nature', async () => {
+      const text =
+        'I hike on weekends, go camping overnight, and love nature broadly.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {},
+          [],
+          ['hiking', 'camping', 'nature'],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['hiking', 'camping', 'nature']);
+    });
+
+    it('preserves biking for Hebrew אופניים fixture (mocked LLM)', async () => {
+      const text = 'אני אוהב אופניים בסופי שבוע.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], ['biking']),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['biking']);
+    });
+
+    it('preserves camping for Hebrew קמפינג fixture (mocked LLM)', async () => {
+      const text = 'אנחנו יוצאים לקמפינג כמה פעמים בשנה.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], ['camping']),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['camping']);
+    });
+
+    it('preserves nature for Hebrew אוהב טבע fixture (mocked LLM)', async () => {
+      const text = 'אני אוהב טבע, יערות וחיות בר.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], ['nature']),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['nature']);
+    });
+
+    it('case-normalizes Nature and drops non-canonical Running', async () => {
+      const text = 'I like nature and running.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {},
+          [],
+          ['Nature', 'Running', 'biking'],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toEqual(['nature', 'biking']);
+    });
+
+    it('omits rawInterests when LLM returns empty interests', async () => {
+      const text = 'Looking for something real with a kind partner.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], []),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.rawInterests).toBeUndefined();
+    });
+
+    it('includes Expansion-09 interest guidance in the system prompt', async () => {
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse('self', {}, [], []),
+      );
+
+      await service.extract('self', 'I love biking and camping in nature.');
+
+      const call = llmCompleteJSON.mock.calls[0][0] as { system: string };
+      expect(call.system).toContain('INTEREST TAG RULES');
+      expect(call.system).toContain('biking');
+      expect(call.system).toContain('camping');
+      expect(call.system).toContain('nature');
+      expect(call.system).not.toContain('-> "Nature"');
+      expect(call.system).not.toContain('-> "Running"');
+    });
+
+    it('does not treat Expansion-09 tags as scored or shadow signals', () => {
+      const scored = new Set<string>(COMPATIBILITY_SIGNAL_KEYS);
+      const shadow = new Set<string>(SHADOW_SIGNAL_KEYS);
+      for (const tag of ['biking', 'camping', 'nature'] as const) {
+        expect(scored.has(tag)).toBe(false);
+        expect(shadow.has(tag)).toBe(false);
+      }
     });
   });
 });

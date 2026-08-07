@@ -13,7 +13,9 @@ export type { ExtractionDomain } from './extracted-signals.interface';
 export const INTEREST_CANONICAL_TAGS = [
   'art',
   'beach',
+  'biking',
   'books',
+  'camping',
   'cooking',
   'dancing',
   'football',
@@ -23,6 +25,7 @@ export const INTEREST_CANONICAL_TAGS = [
   'home_life',
   'movies',
   'music',
+  'nature',
   'nightlife',
   'spirituality',
   'travel',

@@ -236,6 +236,19 @@ describe('pickPositiveChips', () => {
     expect(dto.sharedInterestNote).toBeDefined();
   });
 
+  it('emits Expansion-09 interestOverlapTags when shared includes biking/camping', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 70,
+      finalScore: 70,
+      friction: 0,
+      breakdown: [],
+      tensionMatrix: [],
+      sharedInterests: ['biking', 'camping', 'gaming'],
+    });
+    expect(dto.interestOverlapTags).toEqual(['biking', 'camping']);
+    expect(dto.interestOverlapTags!.length).toBeLessThanOrEqual(2);
+  });
+
   it('Phase 1 EQ: high shadow breakdown yields chips from multiple domains including connection', () => {
     const breakdown: BreakdownEntry[] = [
       { key: 'empathyCompassion', self: 8, partner: 8, gap: 0, pairScore: 10 },

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "en-biking-camping",
+    "aboutMe": "I love biking and camping",
+    "expectedTags": ["biking", "camping"]
+  },
+  {
+    "id": "en-nature-walks",
+    "aboutMe": "Nature walks and forests",
+    "expectedTagsAnyOf": [["nature"], ["hiking"], ["nature", "hiking"]]
+  },
+  {
+    "id": "he-biking-camping",
+    "aboutMe": "אוהב אופניים וקמפינג",
+    "expectedTags": ["biking", "camping"]
+  },
+  {
+    "id": "en-existing-hobbies",
+    "aboutMe": "I love gaming, cooking, movies, travel, and dancing",
+    "expectedTags": ["gaming", "cooking", "movies", "travel", "dancing"]
+  }
+]
