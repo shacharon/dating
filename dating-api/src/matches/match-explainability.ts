@@ -6,6 +6,42 @@
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
 import type { SignalKey } from '../compatibility/compatibility-score';
 import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
+import {
+  isExpansion01ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_01,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_01,
+} from './expansion-01-explainability';
+import {
+  isExpansion02ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_02,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_02,
+} from './expansion-02-explainability';
+import {
+  isExpansion03ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_03,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_03,
+} from './expansion-03-explainability';
+import {
+  isExpansion04ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_04,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_04,
+} from './expansion-04-explainability';
+import {
+  isExpansion05ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_05,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_05,
+} from './expansion-05-explainability';
+import {
+  isExpansion06ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_06,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_06,
+} from './expansion-06-explainability';
+import {
+  isExpansion07ShadowChipKey,
+  pickInterestOverlapTags,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_07,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_07,
+} from './expansion-07-explainability';
 
 export interface MatchExplainabilityDto {
   positiveChips: string[];
@@ -14,6 +50,8 @@ export interface MatchExplainabilityDto {
   reasonShort: string;
   /** Present when both profiles share at least one interest tag. */
   sharedInterestNote?: string;
+  /** Up to 2 shared interest tags for distinct overlap chips (canonical preferred). */
+  interestOverlapTags?: string[];
 }
 
 export interface MatchExplainabilityInput {
@@ -87,10 +125,76 @@ export const TENSION_CHIP_BY_ID: Record<string, string> = {
   financial_mindset_mismatch: 'Different money mindset',
   status_orientation_mismatch: 'Different status focus',
   physical_priority_mismatch: 'Different physical priority',
+  empathy_gap: 'Empathy mismatch',
+  vulnerability_mismatch: 'Openness vs walls',
+  emotional_volatility_gap: 'Emotional steadiness gap',
+  affection_needs_gap: 'Different affection needs',
+  humor_mismatch: 'Playfulness mismatch',
+  intellectual_gap: 'Different mental stimulation needs',
+  creative_mismatch: 'Creative drive mismatch',
+  activity_level_gap: 'Different activity levels',
+  domestic_out_mismatch: 'Home vs out mismatch',
+  novelty_routine_clash: 'Novelty vs routine',
+  casual_intimacy_clash: 'Casual vs committed intimacy',
+  support_exchange_mismatch: 'Arrangement vs romance',
+  support_both_provider: 'Both want to provide',
+  support_both_recipient: 'Both seek support',
+  religious_observance_gap: 'Religious practice gap',
 };
 
 function isSignalKey(k: string): k is SignalKey {
   return (COMPATIBILITY_SIGNAL_KEYS as readonly string[]).includes(k);
+}
+
+function isExplainabilityChipKey(key: string): boolean {
+  return (
+    isSignalKey(key) ||
+    isExpansion01ShadowChipKey(key) ||
+    isExpansion02ShadowChipKey(key) ||
+    isExpansion03ShadowChipKey(key) ||
+    isExpansion04ShadowChipKey(key) ||
+    isExpansion05ShadowChipKey(key) ||
+    isExpansion06ShadowChipKey(key) ||
+    isExpansion07ShadowChipKey(key)
+  );
+}
+
+function chipLabelForKey(key: string): string | undefined {
+  if (isSignalKey(key)) return POSITIVE_CHIP_BY_SIGNAL[key];
+  if (isExpansion01ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_01[key];
+  }
+  if (isExpansion02ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_02[key];
+  }
+  if (isExpansion03ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_03[key];
+  }
+  if (isExpansion04ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_04[key];
+  }
+  if (isExpansion05ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_05[key];
+  }
+  if (isExpansion06ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_06[key];
+  }
+  if (isExpansion07ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_07[key];
+  }
+  return undefined;
+}
+
+function domainForKey(key: string): string {
+  if (isSignalKey(key)) return SIGNAL_DOMAIN[key];
+  if (isExpansion01ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_01[key];
+  if (isExpansion02ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_02[key];
+  if (isExpansion03ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_03[key];
+  if (isExpansion04ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_04[key];
+  if (isExpansion05ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_05[key];
+  if (isExpansion06ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_06[key];
+  if (isExpansion07ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_07[key];
+  return 'unknown';
 }
 
 function compareBreakdownEntry(a: BreakdownEntry, b: BreakdownEntry): number {
@@ -109,7 +213,7 @@ const POSITIVE_TIERS: TierPredicate[] = [
 
 /** Best (lowest) tier index for which this entry qualifies, or -1 if none. */
 function tierIndexForEntry(e: BreakdownEntry): number {
-  if (!isSignalKey(e.key)) return -1;
+  if (!isExplainabilityChipKey(e.key)) return -1;
   for (let i = 0; i < POSITIVE_TIERS.length; i++) {
     if (POSITIVE_TIERS[i](e)) return i;
   }
@@ -122,7 +226,7 @@ function baseCompositeScore(tierIdx: number, pairScore: number): number {
 }
 
 interface ScoredLabelCandidate {
-  key: SignalKey;
+  key: string;
   label: string;
   domain: string;
   composite: number;
@@ -137,8 +241,9 @@ function buildLabelCandidates(
     const ti = tierIndexForEntry(e);
     if (ti < 0) continue;
     const key = e.key;
-    const label = POSITIVE_CHIP_BY_SIGNAL[key];
-    const domain = SIGNAL_DOMAIN[key];
+    const label = chipLabelForKey(key);
+    if (!label) continue;
+    const domain = domainForKey(key);
     const composite = baseCompositeScore(ti, e.pairScore);
     const prev = bestByLabel.get(label);
     if (
@@ -163,6 +268,9 @@ function buildLabelCandidates(
  * so one family (e.g. ambition + money + social) does not crowd out mixed domains when
  * scores are close.
  */
+/** Max positive chips shown in match explainability (chip picker). */
+export const MAX_POSITIVE_CHIPS = 5;
+
 export function pickPositiveChips(breakdown: BreakdownEntry[]): string[] {
   const candidates = buildLabelCandidates(breakdown);
   if (candidates.length === 0) return [];
@@ -170,7 +278,7 @@ export function pickPositiveChips(breakdown: BreakdownEntry[]): string[] {
   const selected: ScoredLabelCandidate[] = [];
   const domainCounts = new Map<string, number>();
 
-  while (selected.length < 3 && candidates.length > 0) {
+  while (selected.length < MAX_POSITIVE_CHIPS && candidates.length > 0) {
     let bestI = 0;
     let bestAdj = -Infinity;
     for (let i = 0; i < candidates.length; i++) {
@@ -211,7 +319,8 @@ function joinChips(chips: string[]): string {
   if (chips.length === 0) return '';
   if (chips.length === 1) return chips[0];
   if (chips.length === 2) return `${chips[0]} and ${chips[1]}`;
-  return `${chips[0]}, ${chips[1]}, and ${chips[2]}`;
+  const head = chips.slice(0, -1).join(', ');
+  return `${head}, and ${chips[chips.length - 1]}`;
 }
 
 /** Stable fingerprint for template rotation (no randomness). */
@@ -516,10 +625,16 @@ export function buildMatchExplainability(
   const sharedInterestNote = buildSharedInterestNote(
     input.sharedInterests ?? [],
   );
+  const interestOverlapTags = pickInterestOverlapTags(
+    input.sharedInterests ?? [],
+  );
   return {
     positiveChips,
     ...(tensionChip !== undefined ? { tensionChip } : {}),
     reasonShort,
     ...(sharedInterestNote !== undefined ? { sharedInterestNote } : {}),
+    ...(interestOverlapTags.length > 0
+      ? { interestOverlapTags }
+      : {}),
   };
 }

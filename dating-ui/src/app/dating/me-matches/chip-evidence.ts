@@ -19,6 +19,21 @@ export const CHIP_EVIDENCE_KEYS = [
   'Physical chemistry',
   'Lifestyle & status',
   'Conflict approach',
+  'Understanding & care',
+  'Authentic openness',
+  'Emotional balance',
+  'Affection rhythm match',
+  'Shared playfulness',
+  'Mental stimulation',
+  'Creative expression',
+  'Activity level match',
+  'Home/out balance',
+  'Adventure & novelty',
+  'Intimacy expectations',
+  'Support & arrangement style',
+  'Financial support alignment',
+  'Non-transactional match',
+  'Religious practice',
 ] as const;
 
 export type ChipEvidenceKey = (typeof CHIP_EVIDENCE_KEYS)[number];

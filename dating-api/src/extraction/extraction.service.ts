@@ -18,6 +18,16 @@ import {
   normalizeRawExtraction,
 } from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
+import { EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-01-signal-definitions';
+import { EXPANSION_02_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-02-signal-definitions';
+import { EXPANSION_03_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-03-signal-definitions';
+import { EXPANSION_04_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-04-signal-definitions';
+import { EXPANSION_05_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-05-signal-definitions';
+import { EXPANSION_06_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-06-signal-definitions';
+import {
+  EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK,
+  EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK,
+} from './expansion-07-signal-definitions';
 import {
   buildExtractionPipelineTrace,
   buildRawLlmPersistenceLogPayload,
@@ -58,7 +68,7 @@ INTERESTS:
 - "I'm a runner" -> "Running"
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, noveltyVsRoutine, structureChaosTolerance
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -79,14 +89,41 @@ SIGNAL RULES:
 - directness = explicit transparency, no secrets, clear communication
 - independence = explicit autonomy vs fusion; shared-everything / merged-life language = low
 - socialBattery = explicit social-energy preference only
-- lifestylePace = explicit pace/rhythm (calm vs high-action)
+- lifestylePace = explicit pace/rhythm (calm vs high-action busy life) — not home-vs-out nesting preference alone, and not novelty-vs-routine preference
 - ambition = explicit goals, drive
-- healthBodyConsciousness = explicit health/fitness focus
-- spirituality = explicit spiritual/religious orientation
-- intellectualCuriosity = explicit learning/ideas
+- healthBodyConsciousness = explicit health/wellness values focus (caring about health — not how much they actually exercise/move)
+- spirituality = explicit spiritual/inner meaning orientation — not practical ritual observance level alone
+- intellectualCuriosity = explicit need for mental stimulation / ideas / deep learning with a partner (not merely "I'm smart" or listing books)
 - conflictStyle = explicit disagreement handling, repair, de-escalation
-- noveltyVsRoutine = explicit novelty vs routine preference
+- adventureNovelty = explicit novelty vs routine / new-experiences preference (not life tempo alone, not homebody preference, not travel hobby tag alone)
 - structureChaosTolerance = explicit order vs chaos preference
+- empathyCompassion = explicit care for partner's feelings, attunement, compassionate responses (not generic kindness)
+- vulnerabilityOpenness = explicit comfort sharing fears/struggles/authentic self (not merely "honest communication")
+- emotionalRegulation = explicit emotional steadiness vs reactivity under stress; calm recovery (not merely "I'm emotional")
+- physicalAffectionStyle = explicit touch/cuddling/PDA/closeness needs (not general attractiveness, not casual vs committed intimacy boundary)
+- humorPlayfulness = explicit need for banter, silliness, shared laughter, lightness in love (not merely "I'm funny" or generic "fun-loving")
+- creativeExpression = explicit need for creative outlets / making / self-expression through creation (not merely job title "artist" or hobby tag)
+- physicalActivityLevel = explicit daily athletic/activity behavior / how much they move (not merely wellness values or "I care about fitness")
+- domesticComfort = explicit homebody vs always-out preference for evenings/weekends (not social energy intro/extro, not calm vs busy pace alone)
+- casualIntimacyIntent = explicit casual vs committed-only physical intimacy stance (not looks priority, not affection/touch needs alone, not commitment-labels alone)
+- supportExchangeOrientation = explicit openness to arrangement/money-in-relationship dynamics (not save/spend philosophy, not emotional support alone)
+- supportProviderOrientation = explicit desire to give ongoing financial support (not occasional date generosity alone)
+- supportRecipientOrientation = explicit desire to receive ongoing financial support (not emotional support alone)
+- religiousObservance = explicit practical religious practice level (not inner spirituality alone, not traditional family-structure alone)
+
+${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_02_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_03_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_04_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_05_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_06_SELF_SHADOW_SIGNAL_BLOCK}
+
+${EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK}
 
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
@@ -248,7 +285,7 @@ INTERESTS:
 - Do not infer
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -266,12 +303,19 @@ Do NOT nullify structured relationship descriptions due to sparsity.
 SIGNAL RULES:
 - emotionalDepth = explicit vulnerability, emotional openness, naming feelings
 - relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules
-- traditionalism = explicit desire for kids, marriage, religion, traditional family
+- traditionalism = explicit desire for kids, marriage, traditional family structure — not practical religious ritual observance alone (kosher/Shabbat/דתי practice → religiousObservance)
 - lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher
 - socialBattery = explicit social-energy cues only
-- physicalPriority = explicit looks, attraction, chemistry, appearance
+- physicalPriority = explicit looks, attraction, chemistry, appearance — not casual vs committed intimacy boundary
 - intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations
 - conflictStyle = explicit disagreement handling, repair, calm discussion, de-escalation
+- casualIntimacyIntent = desired partner's casual vs committed-only physical intimacy stance (not looks priority alone)
+- supportExchangeOrientation = desired openness to arrangement/money-in-relationship dynamics (not emotional support alone)
+- supportProviderOrientation = wanting a partner who GIVES ongoing financial support
+- supportRecipientOrientation = wanting a partner who RECEIVES / expects ongoing financial support
+- religiousObservance = desired partner's practical religious practice level (not marriage/kids traditionalism alone)
+
+${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 DIRECTION LOCK:
 For lifestylePace:
@@ -281,7 +325,8 @@ Never reverse this direction.
 
 FAMILY LANGUAGE RULE:
 Kids, family, marriage, traditional future -> traditionalism only.
-Do NOT map these phrases to relationshipClarity unless the quote is explicitly about rules, labels, boundaries, exclusivity, or transparency.
+Practical religious ritual (kosher, Shabbat, prayer, דתי practice level) -> religiousObservance.
+Do NOT map family/kids phrases to relationshipClarity unless the quote is explicitly about rules, labels, boundaries, exclusivity, or transparency.
 
 PHYSICAL GUARD:
 Do NOT infer physicalPriority from warmth, stability, emotional language, or family language.

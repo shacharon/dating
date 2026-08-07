@@ -32,14 +32,52 @@ export const OFFICIAL_EXTRACTION_SIGNAL_KEYS = [
 
 /** Shadow signals: extracted and stored but NOT wired into compatibility, friction, or finalScore. */
 export const SHADOW_SIGNAL_KEYS = [
+  /** Expansion-04 — Intellectual & Creative (already shadow; Story 2 refines relationship-need framing). */
   'intellectualCuriosity',
-  'noveltyVsRoutine',
+  /**
+   * Expansion-06 — Adventure & Novelty (shadow until Phase 2 promote).
+   * Formerly `noveltyVsRoutine` (legacy alias maps into this key).
+   * Novelty-seeking vs familiar/routine preference — NOT lifestylePace (tempo)
+   * and NOT domesticComfort (home vs out) or travel interest tags (binary).
+   */
+  'adventureNovelty',
   'structureChaosTolerance',
   /** Phase A expansion — not yet wired to chips, traits, or scoring. */
   'emotionalAvailability',
   'emotionalSafety',
   'commitmentIntentDepth',
   'practicalLifeReadiness',
+  /** Expansion-01 — Empathy & Vulnerability (shadow until Phase 1 promote). */
+  'empathyCompassion',
+  'vulnerabilityOpenness',
+  /** Expansion-02 — Emotional Regulation & Physical Affection (shadow until Phase 1 promote). */
+  'emotionalRegulation',
+  'physicalAffectionStyle',
+  /** Expansion-03 — Humor & Playfulness (shadow until Phase 1 promote). */
+  'humorPlayfulness',
+  /** Expansion-04 — Intellectual & Creative Expression (shadow until Phase 2 promote). */
+  'creativeExpression',
+  /**
+   * Expansion-05 — Physical Activity & Domestic Comfort (shadow until Phase 2 promote).
+   * physicalActivityLevel: daily athletic/activity behavior — NOT healthBodyConsciousness (wellness values)
+   *   and NOT physicalPriority (looks importance).
+   * domesticComfort: homebody vs always-out preference — NOT socialBattery (intro/extro energy)
+   *   and NOT lifestylePace (busy vs calm rhythm).
+   */
+  'physicalActivityLevel',
+  'domesticComfort',
+  /**
+   * Expansion-07 — Profile Gap Signals (shadow until promote).
+   * casualIntimacyIntent: casual/hookup vs committed-only intimacy — NOT physicalPriority / relationshipClarity alone.
+   * supportExchangeOrientation: arrangement/money-in-relationship openness — NOT financialMindset.
+   * supportProviderOrientation / supportRecipientOrientation: give vs receive direction — NOT exchange alone.
+   * religiousObservance: practical practice (kosher/Shabbat/etc.) — NOT spirituality / traditionalism alone.
+   */
+  'casualIntimacyIntent',
+  'supportExchangeOrientation',
+  'supportProviderOrientation',
+  'supportRecipientOrientation',
+  'religiousObservance',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -57,8 +95,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 7 shadow. */
-export const MAX_EVIDENCE_ITEMS = 26;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 20 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 39;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

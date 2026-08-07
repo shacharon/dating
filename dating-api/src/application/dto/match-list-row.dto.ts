@@ -11,6 +11,8 @@ export interface MatchExplainabilityRowDto {
   positiveChips: string[];
   tensionChip?: string;
   reasonShort: string;
+  sharedInterestNote?: string;
+  interestOverlapTags?: string[];
 }
 
 /** One row in a match list response. */

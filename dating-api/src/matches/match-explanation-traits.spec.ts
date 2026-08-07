@@ -80,4 +80,98 @@ describe('buildMatchExplanationTraits', () => {
     expect(traits[0].label).toBe('Conflict approach');
     expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Conflict approach'].evidence);
   });
+
+  it('maps Expansion-01 Understanding & care chip', () => {
+    const traits = buildMatchExplanationTraits(['Understanding & care'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Emotional connection');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Understanding & care'].evidence,
+    );
+  });
+
+  it('maps Expansion-02 Emotional balance chip', () => {
+    const traits = buildMatchExplanationTraits(['Emotional balance'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Emotional connection');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Emotional balance'].evidence);
+  });
+
+  it('maps Expansion-02 Affection rhythm match chip', () => {
+    const traits = buildMatchExplanationTraits(['Affection rhythm match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Physical connection');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Affection rhythm match'].evidence,
+    );
+  });
+
+  it('maps Expansion-03 Shared playfulness chip', () => {
+    const traits = buildMatchExplanationTraits(['Shared playfulness'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Connection & play');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Shared playfulness'].evidence);
+  });
+
+  it('maps Expansion-04 Mental stimulation chip', () => {
+    const traits = buildMatchExplanationTraits(['Mental stimulation'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Ideas & growth');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Mental stimulation'].evidence,
+    );
+  });
+
+  it('maps Expansion-04 Creative expression chip', () => {
+    const traits = buildMatchExplanationTraits(['Creative expression'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Creativity & making');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Creative expression'].evidence,
+    );
+  });
+
+  it('maps Expansion-05 Activity level match chip', () => {
+    const traits = buildMatchExplanationTraits(['Activity level match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Lifestyle match');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Activity level match'].evidence,
+    );
+  });
+
+  it('maps Expansion-05 Home/out balance chip', () => {
+    const traits = buildMatchExplanationTraits(['Home/out balance'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Lifestyle match');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Home/out balance'].evidence);
+  });
+
+  it('maps Expansion-06 Adventure & novelty chip', () => {
+    const traits = buildMatchExplanationTraits(['Adventure & novelty'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Lifestyle match');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Adventure & novelty'].evidence,
+    );
+  });
+
+  it('maps Expansion-07 profile-gap chips', () => {
+    const traits = buildMatchExplanationTraits(
+      [
+        'Intimacy expectations',
+        'Support & arrangement style',
+        'Financial support alignment',
+        'Non-transactional match',
+        'Religious practice',
+      ],
+      70,
+    );
+    expect(traits).toHaveLength(5);
+    expect(traits[0].group).toBe('Physical connection');
+    expect(traits[4].group).toBe('Values match');
+    expect(traits[2].evidence).toBe(
+      CHIP_TO_TRAIT['Financial support alignment'].evidence,
+    );
+  });
 });

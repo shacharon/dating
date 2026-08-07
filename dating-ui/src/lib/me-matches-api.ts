@@ -40,6 +40,8 @@ export interface MatchExplainabilityDto {
   reasonShort: string;
   /** Present when both profiles share at least one interest tag. */
   sharedInterestNote?: string;
+  /** Up to 2 shared interest tags for distinct overlap chips. */
+  interestOverlapTags?: string[];
 }
 
 /** User-facing takeaway from the match engine. Null when evaluation is missing. */

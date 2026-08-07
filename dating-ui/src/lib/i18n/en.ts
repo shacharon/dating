@@ -158,6 +158,46 @@ export const enCopy: AppCopySchema = {
             "You're aligned on lifestyle and social positioning",
           "Conflict approach":
             "You handle disagreement in compatible ways — conflict is less likely to derail you",
+          "Understanding & care":
+            "You both lead with empathy and genuine care for each other's feelings",
+          "Authentic openness":
+            "You're both comfortable being real and showing vulnerability",
+          "Emotional balance":
+            "You both handle emotions in balanced, non-reactive ways",
+          "Affection rhythm match":
+            "Your needs for touch and physical closeness align well",
+          "Shared playfulness":
+            "You bring out lightness and laughter in each other",
+          "Mental stimulation":
+            "You both value ideas, learning, and intellectual growth",
+          "Creative expression":
+            "You both value creativity and making things",
+          "Activity level match":
+            "Your physical activity levels and fitness priorities align",
+          "Home/out balance":
+            "You're aligned on spending time at home vs going out",
+          "Adventure & novelty":
+            "You're both excited by new experiences and variety",
+          "Intimacy expectations":
+            "You're aligned on what physical intimacy means in your connection",
+          "Support & arrangement style":
+            "You share similar expectations about support and relationship structure",
+          "Financial support alignment":
+            "You're aligned on financial support in the relationship",
+          "Non-transactional match":
+            "You both want a relationship without financial arrangements",
+          "Religious practice":
+            "Your level of religious practice is well-matched",
+        },
+        interestOverlap: {
+          travel: "You both love travel",
+          books: "You both enjoy reading",
+          hiking: "You both enjoy hiking",
+          movies: "You both love movies",
+          cooking: "You both enjoy cooking",
+          music: "You both love music",
+          gym: "You both enjoy the gym",
+          beach: "You both love the beach",
         },
         modeB: {
           sublabel: "Why this is worth your time",

@@ -137,6 +137,8 @@ export type AppCopySchema = {
          * (e.g. "Ambition alignment" → localized sentence).
          */
         chipEvidence: ChipEvidenceMap;
+        /** Shared interest overlap chip copy keyed by canonical tag. */
+        interestOverlap: Record<string, string>;
         /** Mode B ready-again copy (Sprint 44 Story 3). */
         modeB: {
           sublabel: string;

@@ -10,6 +10,13 @@ import type { CapsCalibrationState } from '../calibration-policy';
 import type { CoverageConfidenceState, MatchInfoFlag } from '../coverage-policy';
 import { applyDirectionalDisplayCalibration } from '../display-policy';
 import type { FrictionAndPenaltiesState } from '../friction-policy';
+import { buildExpansion01ShadowBreakdown } from '../expansion-01-explainability';
+import { buildExpansion02ShadowBreakdown } from '../expansion-02-explainability';
+import { buildExpansion03ShadowBreakdown } from '../expansion-03-explainability';
+import { buildExpansion04ShadowBreakdown } from '../expansion-04-explainability';
+import { buildExpansion05ShadowBreakdown } from '../expansion-05-explainability';
+import { buildExpansion06ShadowBreakdown } from '../expansion-06-explainability';
+import { buildExpansion07ShadowBreakdown } from '../expansion-07-explainability';
 import { buildMatchExplainability } from '../match-explainability';
 import {
   ALIGNMENT_CHIP_MIN_PAIR_SCORE,
@@ -196,11 +203,27 @@ export function buildFinalResultDto(
     coveragePercentValue,
   );
 
+  const signalsA = profileA.evaluation?.self?.signals ?? {};
+  const signalsB = profileB.evaluation?.self?.signals ?? {};
+  const shadowBreakdown = [
+    ...buildExpansion01ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion02ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion03ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion04ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion05ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion06ShadowBreakdown(signalsA, signalsB),
+    ...buildExpansion07ShadowBreakdown(signalsA, signalsB),
+  ];
+  const breakdownForChips = [
+    ...(compatAB.breakdown ?? []),
+    ...shadowBreakdown,
+  ];
+
   const explainability = buildMatchExplainability({
     compatibility: compatibilityValue,
     finalScore: finalScoreClamped,
     friction,
-    breakdown: compatAB.breakdown ?? [],
+    breakdown: breakdownForChips,
     tensionMatrix,
     sharedInterests,
   });

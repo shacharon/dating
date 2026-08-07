@@ -164,6 +164,46 @@ export const esCopy: AppCopySchema = {
             "Estan alineados en estilo de vida y posicionamiento social",
           "Conflict approach":
             "Manejan el desacuerdo de formas compatibles — es menos probable que el conflicto los descarrile",
+          "Understanding & care":
+            "Ambos lideran con empatía y genuino cuidado por los sentimientos del otro",
+          "Authentic openness":
+            "Ambos están cómodos siendo reales y mostrando vulnerabilidad",
+          "Emotional balance":
+            "Ambos manejan las emociones de forma equilibrada y no reactiva",
+          "Affection rhythm match":
+            "Sus necesidades de tacto y cercanía física están alineadas",
+          "Shared playfulness":
+            "Se traen ligereza y risas mutuamente",
+          "Mental stimulation":
+            "Ambos valoran ideas, aprendizaje y crecimiento intelectual",
+          "Creative expression":
+            "Ambos valoran la creatividad y crear cosas",
+          "Activity level match":
+            "Sus niveles de actividad física y prioridades de fitness están alineados",
+          "Home/out balance":
+            "Están alineados en pasar tiempo en casa vs salir",
+          "Adventure & novelty":
+            "Ambos se emocionan con nuevas experiencias y variedad",
+          "Intimacy expectations":
+            "Están alineados sobre lo que significa la intimidad física",
+          "Support & arrangement style":
+            "Comparten expectativas similares sobre apoyo y estructura",
+          "Financial support alignment":
+            "Están alineados sobre el apoyo financiero en la relación",
+          "Non-transactional match":
+            "Ambos quieren una relación sin acuerdos financieros",
+          "Religious practice":
+            "Su nivel de práctica religiosa es compatible",
+        },
+        interestOverlap: {
+          travel: "A ambos les gusta viajar",
+          books: "A ambos les gusta leer",
+          hiking: "A ambos les gusta hacer senderismo",
+          movies: "A ambos les gustan las películas",
+          cooking: "A ambos les gusta cocinar",
+          music: "A ambos les gusta la música",
+          gym: "A ambos les gusta el gimnasio",
+          beach: "A ambos les gusta la playa",
         },
         modeB: {
           sublabel: "Por que vale tu tiempo",

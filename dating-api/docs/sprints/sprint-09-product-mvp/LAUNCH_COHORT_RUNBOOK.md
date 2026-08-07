@@ -2,9 +2,12 @@
 
 **Sprint:** 9 — Story 6  
 **Audience:** Ops / product launch  
-**Last updated:** 2026-06-06  
+**Last updated:** 2026-08-07  
 
 Use this checklist when opening a new city or cohort. Adjust targets after the first baseline week.
+
+**Seed profiles (browse-only, no fake chat):** see [GO_LIVE_SEED_PROFILES.md](../../ops/GO_LIVE_SEED_PROFILES.md).  
+**Overall readiness snapshot:** [GO_LIVE_STATUS.md](../../ops/GO_LIVE_STATUS.md).
 
 ---
 

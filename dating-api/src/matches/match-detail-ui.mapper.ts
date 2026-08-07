@@ -91,14 +91,14 @@ function effectiveExplainability(m: MatchRecordDto) {
 }
 
 /**
- * 2–3 short lines for "Why this works", from existing explainability / shortReason only.
+ * Up to 5 short lines for "Why this works", from existing explainability / shortReason only.
  */
 function buildExpandedExplainability(m: MatchRecordDto): string[] {
   const expl = effectiveExplainability(m);
   const out: string[] = [];
 
   if (expl?.positiveChips?.length) {
-    for (const c of expl.positiveChips.slice(0, 3)) {
+    for (const c of expl.positiveChips.slice(0, 5)) {
       out.push(c);
     }
   }
@@ -109,7 +109,7 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
       .map((s) => s.trim())
       .filter(Boolean);
     for (const p of parts) {
-      if (out.length >= 3) break;
+      if (out.length >= 5) break;
       const line = p.endsWith('.') ? p : `${p}.`;
       if (!out.includes(line)) out.push(line);
     }
@@ -129,7 +129,7 @@ function buildExpandedExplainability(m: MatchRecordDto): string[] {
     if (!out.includes(line)) out.push(line);
   }
 
-  return out.slice(0, 3);
+  return out.slice(0, 5);
 }
 
 export function mapMatchRecordToDetailUi(

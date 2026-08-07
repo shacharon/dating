@@ -475,8 +475,8 @@ describe('ExtractionService', () => {
     }
 
     const covPercent = coveragePercent(overlapping, totalSignals);
-    // With 18 signals (14 official + 4 shadow), threshold adjusted from 30% to 23%
-    expect(covPercent).toBeGreaterThanOrEqual(23);
+    // With 35 signals (15 official + 20 shadow), 5 overlapping ≈ 14%
+    expect(covPercent).toBeGreaterThanOrEqual(14);
   });
 });
 
@@ -730,8 +730,9 @@ describe('ExtractionService behavior locks', () => {
 
       const result = await service.extract('self', text);
 
-      expect(result.signals['noveltyVsRoutine']).toBe(9);
-      expect(result.evidence.some(e => e.signal === 'noveltyVsRoutine')).toBe(true);
+      // Expansion-06 Story 1: noveltyVsRoutine aliases → adventureNovelty
+      expect(result.signals['adventureNovelty']).toBe(9);
+      expect(result.evidence.some(e => e.signal === 'adventureNovelty')).toBe(true);
     });
 
     it('should extract structureChaosTolerance when order/organization cues are present', async () => {
@@ -771,9 +772,9 @@ describe('ExtractionService behavior locks', () => {
       const result = await service.extract('self', text);
 
       expect(result.signals['conflictStyle']).toBe(5);
-      expect(result.signals['noveltyVsRoutine']).toBe(8);
+      expect(result.signals['adventureNovelty']).toBe(8);
       expect(result.signals['structureChaosTolerance']).toBe(6);
-      expect(result.evidence.filter(e => ['conflictStyle', 'noveltyVsRoutine', 'structureChaosTolerance'].includes(e.signal)).length).toBe(3);
+      expect(result.evidence.filter(e => ['conflictStyle', 'adventureNovelty', 'structureChaosTolerance'].includes(e.signal)).length).toBe(3);
     });
 
     it('should return null for SIGNAL3 signals when no relevant cues exist', async () => {
@@ -792,8 +793,1100 @@ describe('ExtractionService behavior locks', () => {
       const result = await service.extract('self', text);
 
       expect(result.signals['conflictStyle']).toBeNull();
-      expect(result.signals['noveltyVsRoutine']).toBeNull();
+      expect(result.signals['adventureNovelty']).toBeNull();
       expect(result.signals['structureChaosTolerance']).toBeNull();
+    });
+  });
+
+  describe('Expansion-01 shadow signals', () => {
+    it('extracts high empathyCompassion when LLM returns attuned score', async () => {
+      const text =
+        "Understanding how my partner feels is the foundation for me. I notice when they need space vs comfort.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { empathyCompassion: 8, emotionalDepth: 6 },
+          [
+            {
+              signal: 'empathyCompassion',
+              quote: 'Understanding how my partner feels is the foundation for me',
+            },
+            { signal: 'emotionalDepth', quote: 'foundation for me' },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['empathyCompassion']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'empathyCompassion')).toBe(true);
+    });
+
+    it('extracts low empathyCompassion when LLM returns logic-focused score', async () => {
+      const text =
+        "I approach relationships logically and don't analyze emotions much.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { empathyCompassion: 2 },
+          [
+            {
+              signal: 'empathyCompassion',
+              quote: "don't analyze emotions much",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['empathyCompassion']).toBe(2);
+    });
+
+    it('extracts high vulnerabilityOpenness when LLM returns open score', async () => {
+      const text =
+        'I share my fears and struggles with partners I trust deeply.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { vulnerabilityOpenness: 8, emotionalDepth: 7 },
+          [
+            {
+              signal: 'vulnerabilityOpenness',
+              quote: 'share my fears and struggles with partners I trust deeply',
+            },
+            { signal: 'emotionalDepth', quote: 'trust deeply' },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['vulnerabilityOpenness']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'vulnerabilityOpenness')).toBe(true);
+    });
+
+    it('extracts low vulnerabilityOpenness when LLM returns guarded score', async () => {
+      const text =
+        'I keep my personal struggles private and handle things myself.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { vulnerabilityOpenness: 2 },
+          [
+            {
+              signal: 'vulnerabilityOpenness',
+              quote: 'keep my personal struggles private',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['vulnerabilityOpenness']).toBe(2);
+    });
+
+    it('returns null for Expansion-01 signals when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            ambition: 8,
+            empathyCompassion: null,
+            vulnerabilityOpenness: null,
+          },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['empathyCompassion']).toBeNull();
+      expect(result.signals['vulnerabilityOpenness']).toBeNull();
+    });
+
+    it('strips out-of-range empathyCompassion to null via validateAndClean', async () => {
+      const text = 'I care deeply about how my partner feels emotionally.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { empathyCompassion: 11 },
+          [
+            {
+              signal: 'empathyCompassion',
+              quote: 'care deeply about how my partner feels emotionally',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['empathyCompassion']).toBeNull();
+    });
+  });
+
+  describe('Expansion-02 shadow signals', () => {
+    it('extracts high emotionalRegulation when LLM returns steady score', async () => {
+      const text =
+        'I stay calm under pressure and take time to process before reacting when stressed.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { emotionalRegulation: 8, conflictStyle: 7 },
+          [
+            {
+              signal: 'emotionalRegulation',
+              quote: 'stay calm under pressure and take time to process before reacting',
+            },
+            { signal: 'conflictStyle', quote: 'before reacting when stressed' },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalRegulation']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'emotionalRegulation')).toBe(true);
+    });
+
+    it('extracts low emotionalRegulation when LLM returns reactive score', async () => {
+      const text =
+        'When I get upset I blow up and need a long time to calm down.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { emotionalRegulation: 2 },
+          [
+            {
+              signal: 'emotionalRegulation',
+              quote: 'When I get upset I blow up',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalRegulation']).toBe(2);
+    });
+
+    it('extracts high physicalAffectionStyle when LLM returns touch-focused score', async () => {
+      const text =
+        'Physical touch and cuddling every day is how I feel connected in a relationship.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalAffectionStyle: 8, attachmentSecurity: 6 },
+          [
+            {
+              signal: 'physicalAffectionStyle',
+              quote: 'Physical touch and cuddling every day is how I feel connected',
+            },
+            { signal: 'attachmentSecurity', quote: 'feel connected in a relationship' },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalAffectionStyle']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'physicalAffectionStyle')).toBe(true);
+    });
+
+    it('extracts low physicalAffectionStyle when LLM returns minimal-touch score', async () => {
+      const text =
+        'I prefer minimal physical affection and need plenty of personal space.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalAffectionStyle: 2, independence: 7 },
+          [
+            {
+              signal: 'physicalAffectionStyle',
+              quote: 'prefer minimal physical affection',
+            },
+            { signal: 'independence', quote: 'need plenty of personal space' },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalAffectionStyle']).toBe(2);
+    });
+
+    it('returns null for Expansion-02 signals when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            ambition: 8,
+            emotionalRegulation: null,
+            physicalAffectionStyle: null,
+          },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalRegulation']).toBeNull();
+      expect(result.signals['physicalAffectionStyle']).toBeNull();
+    });
+
+    it('strips out-of-range emotionalRegulation to null via validateAndClean', async () => {
+      const text = 'I rarely react emotionally and stay balanced when things get hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { emotionalRegulation: 11 },
+          [
+            {
+              signal: 'emotionalRegulation',
+              quote: 'rarely react emotionally and stay balanced when things get hard',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['emotionalRegulation']).toBeNull();
+    });
+  });
+
+  describe('Expansion-03 shadow signals', () => {
+    it('extracts high humorPlayfulness when LLM returns playfulness-focused score', async () => {
+      const text =
+        'I want someone I can be silly with after a long day — banter and inside jokes keep us close.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { humorPlayfulness: 8, attachmentSecurity: 6 },
+          [
+            {
+              signal: 'humorPlayfulness',
+              quote: 'someone I can be silly with after a long day',
+            },
+            {
+              signal: 'attachmentSecurity',
+              quote: 'banter and inside jokes keep us close',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['humorPlayfulness']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'humorPlayfulness')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low humorPlayfulness when LLM returns serious-tone score', async () => {
+      const text =
+        'I prefer deep conversations over joking around — playfulness is not really my thing.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { humorPlayfulness: 2, emotionalDepth: 7 },
+          [
+            {
+              signal: 'humorPlayfulness',
+              quote: 'playfulness is not really my thing',
+            },
+            {
+              signal: 'emotionalDepth',
+              quote: 'prefer deep conversations over joking around',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['humorPlayfulness']).toBe(2);
+    });
+
+    it('returns null for humorPlayfulness when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            ambition: 8,
+            humorPlayfulness: null,
+          },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['humorPlayfulness']).toBeNull();
+    });
+
+    it('strips out-of-range humorPlayfulness to null via validateAndClean', async () => {
+      const text =
+        'Life is heavy enough — I need lightness and laughter in love every day.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { humorPlayfulness: 11 },
+          [
+            {
+              signal: 'humorPlayfulness',
+              quote: 'need lightness and laughter in love every day',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['humorPlayfulness']).toBeNull();
+    });
+  });
+
+  describe('Expansion-04 shadow signals', () => {
+    it('extracts high intellectualCuriosity when LLM returns relationship-need score', async () => {
+      // Semantic: need for mental stimulation with a partner (not merely "I'm smart")
+      const text =
+        'I need regular deep conversations and learning together — intellectual connection keeps us close.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { intellectualCuriosity: 8, emotionalDepth: 6 },
+          [
+            {
+              signal: 'intellectualCuriosity',
+              quote: 'need regular deep conversations and learning together',
+            },
+            {
+              signal: 'emotionalDepth',
+              quote: 'intellectual connection keeps us close',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['intellectualCuriosity']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'intellectualCuriosity'),
+      ).toBe(true);
+    });
+
+    it('extracts low intellectualCuriosity when LLM returns low mental-stimulation need', async () => {
+      const text =
+        'I prefer light conversation — deep ideas and learning together are not important to me in love.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { intellectualCuriosity: 2 },
+          [
+            {
+              signal: 'intellectualCuriosity',
+              quote: 'deep ideas and learning together are not important',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['intellectualCuriosity']).toBe(2);
+    });
+
+    it('extracts high creativeExpression when LLM returns creativity-as-identity score', async () => {
+      // Semantic: need for creative outlets — not merely job title "artist"
+      const text =
+        'Making art is core to who I am — I need space and respect for creative time every week.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { creativeExpression: 8, independence: 6 },
+          [
+            {
+              signal: 'creativeExpression',
+              quote: 'Making art is core to who I am',
+            },
+            {
+              signal: 'independence',
+              quote: 'need space and respect for creative time',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['creativeExpression']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'creativeExpression'),
+      ).toBe(true);
+    });
+
+    it('extracts low creativeExpression when LLM returns minimal-creative score', async () => {
+      const text =
+        'I am not interested in creative pursuits — art and making things are not part of my life.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { creativeExpression: 2 },
+          [
+            {
+              signal: 'creativeExpression',
+              quote: 'not interested in creative pursuits',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['creativeExpression']).toBe(2);
+    });
+
+    it('returns null for creativeExpression when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            ambition: 8,
+            creativeExpression: null,
+          },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['creativeExpression']).toBeNull();
+    });
+
+    it('strips out-of-range creativeExpression to null via validateAndClean', async () => {
+      const text =
+        'Creativity is my core identity — I need daily time to make and create.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { creativeExpression: 11 },
+          [
+            {
+              signal: 'creativeExpression',
+              quote: 'Creativity is my core identity',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['creativeExpression']).toBeNull();
+    });
+  });
+
+  describe('Expansion-05 shadow signals', () => {
+    it('extracts high physicalActivityLevel when LLM returns athletic-behavior score', async () => {
+      // Semantic: daily athletic/activity behavior — not merely wellness values
+      const text =
+        'I train hard most days — fitness and sports are a regular part of my life.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalActivityLevel: 8, healthBodyConsciousness: 6 },
+          [
+            {
+              signal: 'physicalActivityLevel',
+              quote: 'I train hard most days',
+            },
+            {
+              signal: 'healthBodyConsciousness',
+              quote: 'fitness and sports are a regular part',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalActivityLevel']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'physicalActivityLevel'),
+      ).toBe(true);
+    });
+
+    it('extracts low physicalActivityLevel when LLM returns sedentary score', async () => {
+      const text =
+        'I prefer minimal movement — sedentary evenings on the couch suit me fine.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalActivityLevel: 2 },
+          [
+            {
+              signal: 'physicalActivityLevel',
+              quote: 'prefer minimal movement',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalActivityLevel']).toBe(2);
+    });
+
+    it('extracts high domesticComfort when LLM returns homebody score', async () => {
+      // Semantic: home vs out preference — not socialBattery intro/extro
+      const text =
+        'I love cozy nights in on weekends — home is my comfort zone and I rarely want to go out.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { domesticComfort: 8, lifestylePace: 5 },
+          [
+            {
+              signal: 'domesticComfort',
+              quote: 'love cozy nights in on weekends',
+            },
+            {
+              signal: 'lifestylePace',
+              quote: 'home is my comfort zone',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['domesticComfort']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'domesticComfort'),
+      ).toBe(true);
+    });
+
+    it('extracts low domesticComfort when LLM returns always-out score', async () => {
+      const text =
+        'I get restless at home — I always want to be out and rarely enjoy staying in.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { domesticComfort: 2 },
+          [
+            {
+              signal: 'domesticComfort',
+              quote: 'always want to be out',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['domesticComfort']).toBe(2);
+    });
+
+    it('returns null for Expansion-05 keys when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            ambition: 8,
+            physicalActivityLevel: null,
+            domesticComfort: null,
+          },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalActivityLevel']).toBeNull();
+      expect(result.signals['domesticComfort']).toBeNull();
+    });
+
+    it('strips out-of-range physicalActivityLevel to null via validateAndClean', async () => {
+      const text =
+        'Activity is central to my identity — I am highly athletic every day.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { physicalActivityLevel: 11 },
+          [
+            {
+              signal: 'physicalActivityLevel',
+              quote: 'Activity is central to my identity',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['physicalActivityLevel']).toBeNull();
+    });
+  });
+
+  describe('Expansion-06 shadow signals', () => {
+    it('extracts high adventureNovelty when LLM returns novelty-seeker score', async () => {
+      // Semantic: "I love trying new places and hate doing the same thing twice"
+      const text =
+        'I love trying new places and hate doing the same thing twice. Spontaneous trips keep me alive.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { adventureNovelty: 9, lifestylePace: 5 },
+          [
+            {
+              signal: 'adventureNovelty',
+              quote: 'love trying new places and hate doing the same thing twice',
+            },
+            {
+              signal: 'lifestylePace',
+              quote: 'Spontaneous trips keep me alive',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['adventureNovelty']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'adventureNovelty'),
+      ).toBe(true);
+    });
+
+    it('extracts low adventureNovelty when LLM returns routine-preference score', async () => {
+      // Semantic: "I'm a creature of habit" / prefer familiar places
+      const text =
+        'I am a creature of habit. I prefer the places and routines I know.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { adventureNovelty: 2 },
+          [
+            {
+              signal: 'adventureNovelty',
+              quote: 'creature of habit',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['adventureNovelty']).toBe(2);
+    });
+
+    it('aliases legacy noveltyVsRoutine LLM output into adventureNovelty', async () => {
+      const text =
+        'I love spontaneity and trying new things. Always up for an adventure.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { noveltyVsRoutine: 8 },
+          [
+            {
+              signal: 'noveltyVsRoutine',
+              quote: 'love spontaneity and trying new things',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['adventureNovelty']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'adventureNovelty'),
+      ).toBe(true);
+    });
+
+    it('returns null for adventureNovelty when no relevant cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            ambition: 8,
+            adventureNovelty: null,
+          },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['adventureNovelty']).toBeNull();
+    });
+
+    it('strips out-of-range adventureNovelty to null via validateAndClean', async () => {
+      const text =
+        'Spontaneous trips and new experiences keep me alive — I need constant variety.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { adventureNovelty: 11 },
+          [
+            {
+              signal: 'adventureNovelty',
+              quote: 'new experiences keep me alive',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['adventureNovelty']).toBeNull();
+    });
+  });
+
+  describe('Expansion-07 shadow signals', () => {
+    it('extracts high casualIntimacyIntent when LLM returns hookup-oriented score', async () => {
+      // Semantic: "Looking for fun, hookups, no strings attached"
+      const text =
+        'Looking for fun, hookups, no strings attached. Physical chemistry first.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { casualIntimacyIntent: 9 },
+          [
+            {
+              signal: 'casualIntimacyIntent',
+              quote: 'Looking for fun, hookups, no strings attached',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['casualIntimacyIntent']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'casualIntimacyIntent'),
+      ).toBe(true);
+    });
+
+    it('extracts low casualIntimacyIntent when LLM returns committed-only score', async () => {
+      // Semantic: "I only get physical when there's real emotional connection"
+      const text =
+        "I only get physical when there's real emotional connection. Looking for a partner, not a fling.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { casualIntimacyIntent: 2 },
+          [
+            {
+              signal: 'casualIntimacyIntent',
+              quote: "I only get physical when there's real emotional connection",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['casualIntimacyIntent']).toBe(2);
+    });
+
+    it('returns null for casualIntimacyIntent when no intimacy-boundary cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard and want something real.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, casualIntimacyIntent: null },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['casualIntimacyIntent']).toBeNull();
+    });
+
+    it('extracts high supportExchangeOrientation when LLM returns arrangement score', async () => {
+      // Semantic: "Looking for a mutually beneficial arrangement"
+      const text =
+        'Looking for a mutually beneficial arrangement with clear expectations.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { supportExchangeOrientation: 9 },
+          [
+            {
+              signal: 'supportExchangeOrientation',
+              quote: 'mutually beneficial arrangement',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportExchangeOrientation']).toBe(9);
+    });
+
+    it('extracts low supportExchangeOrientation when LLM returns non-transactional score', async () => {
+      // Semantic: "Money shouldn't be part of dating"
+      const text =
+        "Money shouldn't be part of dating. I want an equal partnership, not an arrangement.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { supportExchangeOrientation: 2 },
+          [
+            {
+              signal: 'supportExchangeOrientation',
+              quote: "Money shouldn't be part of dating",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportExchangeOrientation']).toBe(2);
+    });
+
+    it('extracts Profile-C style support set (high exchange+provider, low recipient)', async () => {
+      // Semantic: "Happy to give you support — $1000 a month"
+      const text =
+        'Happy to give you support and enjoy — $1000 a month. Looking for companionship.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          {
+            supportExchangeOrientation: 9,
+            supportProviderOrientation: 9,
+            supportRecipientOrientation: 2,
+          },
+          [
+            {
+              signal: 'supportExchangeOrientation',
+              quote: 'Happy to give you support and enjoy — $1000 a month',
+            },
+            {
+              signal: 'supportProviderOrientation',
+              quote: '$1000 a month',
+            },
+            {
+              signal: 'supportRecipientOrientation',
+              quote: 'Happy to give you support',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportExchangeOrientation']).toBe(9);
+      expect(result.signals['supportProviderOrientation']).toBe(9);
+      expect(result.signals['supportRecipientOrientation']).toBe(2);
+    });
+
+    it('extracts high supportProviderOrientation when LLM returns provider score', async () => {
+      const text =
+        "I'm looking for someone I can take care of financially as the provider.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { supportProviderOrientation: 8 },
+          [
+            {
+              signal: 'supportProviderOrientation',
+              quote: 'take care of financially as the provider',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportProviderOrientation']).toBe(8);
+    });
+
+    it('extracts low supportProviderOrientation when LLM returns equal-split score', async () => {
+      const text =
+        "Equal partnership — we both contribute. I don't want to be someone's wallet.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { supportProviderOrientation: 2 },
+          [
+            {
+              signal: 'supportProviderOrientation',
+              quote: "don't want to be someone's wallet",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportProviderOrientation']).toBe(2);
+    });
+
+    it('extracts high supportRecipientOrientation when LLM returns seeking-support score', async () => {
+      const text =
+        'Looking for someone who can support me financially on an ongoing basis.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { supportRecipientOrientation: 8 },
+          [
+            {
+              signal: 'supportRecipientOrientation',
+              quote: 'someone who can support me financially',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportRecipientOrientation']).toBe(8);
+    });
+
+    it('extracts low supportRecipientOrientation when LLM returns independence score', async () => {
+      const text =
+        "I support myself — don't need a provider. I want an equal partner, not a sponsor.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { supportRecipientOrientation: 2 },
+          [
+            {
+              signal: 'supportRecipientOrientation',
+              quote: "don't need a provider",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['supportRecipientOrientation']).toBe(2);
+    });
+
+    it('extracts high religiousObservance when LLM returns practice-focused score', async () => {
+      // Semantic: "I keep kosher, Shabbat observant, looking for same"
+      const text =
+        'I keep kosher, Shabbat observant, looking for same. Practice is non-negotiable.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { religiousObservance: 9 },
+          [
+            {
+              signal: 'religiousObservance',
+              quote: 'I keep kosher, Shabbat observant',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['religiousObservance']).toBe(9);
+    });
+
+    it('extracts low religiousObservance when LLM returns secular score', async () => {
+      // Semantic: "Spiritual but not observant" / cultural only
+      const text =
+        'Jewish by culture, not practice. Spiritual but not observant.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { religiousObservance: 2, spirituality: 7 },
+          [
+            {
+              signal: 'religiousObservance',
+              quote: 'Jewish by culture, not practice',
+            },
+            {
+              signal: 'spirituality',
+              quote: 'Spiritual but not observant',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['religiousObservance']).toBe(2);
+    });
+
+    it('returns null for religiousObservance when no practice cues exist', async () => {
+      const text = 'I am ambitious and driven. I work hard.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, religiousObservance: null },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['religiousObservance']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-07 signal to null via validateAndClean', async () => {
+      const text =
+        'I keep kosher and Shabbat — religious practice is central to my life.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { religiousObservance: 11 },
+          [
+            {
+              signal: 'religiousObservance',
+              quote: 'religious practice is central to my life',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['religiousObservance']).toBeNull();
+    });
+
+    it('extracts partner religiousObservance when LLM returns desired-partner practice score', async () => {
+      // Semantic: looking for a religious / observant partner
+      const text =
+        'Looking for a religious partner who keeps kosher and Shabbat.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { religiousObservance: 8 },
+          [
+            {
+              signal: 'religiousObservance',
+              quote: 'religious partner who keeps kosher and Shabbat',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['religiousObservance']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'religiousObservance'),
+      ).toBe(true);
     });
   });
 });

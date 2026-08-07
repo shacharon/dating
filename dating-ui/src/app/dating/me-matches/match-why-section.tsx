@@ -30,6 +30,8 @@ export function MatchWhySection({
   const body = matchBrowseWhyBody(match);
   const chips = match.explainability?.positiveChips?.filter(Boolean) ?? [];
   const tension = match.explainability?.tensionChip?.trim();
+  const interestTags =
+    match.explainability?.interestOverlapTags?.filter(Boolean) ?? [];
   const score = match.matchScore;
   const toggleLabel =
     whyToggleOverride ??
@@ -85,6 +87,21 @@ export function MatchWhySection({
                 ) : null}
               </ul>
             )}
+            {interestTags.length > 0 ? (
+              <ul
+                className="flex flex-wrap gap-2"
+                data-testid="match-why-interest-chips"
+              >
+                {interestTags.map((tag) => (
+                  <li
+                    key={tag}
+                    className="rounded-full border border-sky-200 bg-sky-50/80 px-2.5 py-1 text-xs font-medium text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+                  >
+                    {browse.interestOverlap[tag] ?? `You both enjoy ${tag}`}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <Link
               href={`/dating/me-matches/${match.id}`}
               scroll={false}

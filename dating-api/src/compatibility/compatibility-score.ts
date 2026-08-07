@@ -119,7 +119,7 @@ export interface HardMismatch {
 }
 
 export interface BreakdownEntry {
-  key: SignalKey;
+  key: string;
   self: number;
   partner: number;
   gap: number;
@@ -151,6 +151,11 @@ function pairScoreFromValues(a: number, b: number): number {
   const normalizedGap = Math.min(1, Math.max(0, gap / 10));
   const pairScore = 10 * Math.pow(1 - normalizedGap, 2);
   return Math.min(10, Math.max(0, pairScore));
+}
+
+/** Pair similarity 0–10; same formula as compatibility breakdown (display/scoring parity). */
+export function computePairScore(a: number, b: number): number {
+  return pairScoreFromValues(a, b);
 }
 
 /**

@@ -61,6 +61,38 @@ describe('chipToEvidence', () => {
     }
   });
 
+  it('includes all 10 expansion product chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_PRODUCT_CHIPS = [
+      'Understanding & care',
+      'Authentic openness',
+      'Emotional balance',
+      'Affection rhythm match',
+      'Shared playfulness',
+      'Mental stimulation',
+      'Creative expression',
+      'Activity level match',
+      'Home/out balance',
+      'Adventure & novelty',
+    ] as const;
+    for (const chip of EXPANSION_PRODUCT_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
+  it('includes Expansion-07 profile-gap chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_07_CHIPS = [
+      'Intimacy expectations',
+      'Support & arrangement style',
+      'Financial support alignment',
+      'Non-transactional match',
+      'Religious practice',
+    ] as const;
+    expect(CHIP_EVIDENCE_KEYS.length).toBe(29);
+    for (const chip of EXPANSION_07_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
   it('avoids generic jargon in English evidence strings', () => {
     const evidence = chipToEvidence('Ambition alignment', enMap);
     expect(evidence.toLowerCase()).not.toContain('alignment');

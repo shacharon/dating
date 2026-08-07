@@ -19,6 +19,8 @@ export const KEY_ALIASES: Record<string, string> = {
   materialAmbition: 'financialMindset',
   partnerObjectificationRisk: 'physicalPriority',
   instrumentalRelationshipView: 'statusOrientation',
+  /** Expansion-06 — legacy shadow key renamed to adventureNovelty. */
+  noveltyVsRoutine: 'adventureNovelty',
 };
 
 export interface NormalizeKeysTelemetry {

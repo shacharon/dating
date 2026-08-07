@@ -99,6 +99,86 @@ export const CHIP_TO_TRAIT: Record<
       'You handle disagreement in compatible ways — conflict is less likely to derail you.',
     listPhrase: 'handling disagreement well',
   },
+  'Understanding & care': {
+    group: 'Emotional connection',
+    evidence:
+      "You both lead with empathy and genuine care for each other's feelings",
+    listPhrase: 'empathy and care for each other',
+  },
+  'Authentic openness': {
+    group: 'Emotional connection',
+    evidence: "You're both comfortable being real and showing vulnerability",
+    listPhrase: 'authentic openness together',
+  },
+  'Emotional balance': {
+    group: 'Emotional connection',
+    evidence: 'You both handle emotions in balanced, non-reactive ways',
+    listPhrase: 'balanced emotional handling together',
+  },
+  'Affection rhythm match': {
+    group: 'Physical connection',
+    evidence: 'Your needs for touch and physical closeness align well',
+    listPhrase: 'aligned touch and closeness needs',
+  },
+  'Shared playfulness': {
+    group: 'Connection & play',
+    evidence: 'You bring out lightness and laughter in each other',
+    listPhrase: 'lightness and laughter together',
+  },
+  'Mental stimulation': {
+    group: 'Ideas & growth',
+    evidence: 'You both value ideas, learning, and intellectual growth',
+    listPhrase: 'shared intellectual growth',
+  },
+  'Creative expression': {
+    group: 'Creativity & making',
+    evidence: 'You both value creativity and making things',
+    listPhrase: 'shared creative expression',
+  },
+  'Activity level match': {
+    group: 'Lifestyle match',
+    evidence:
+      'Your physical activity levels and fitness priorities align',
+    listPhrase: 'aligned activity levels',
+  },
+  'Home/out balance': {
+    group: 'Lifestyle match',
+    evidence: "You're aligned on spending time at home vs going out",
+    listPhrase: 'aligned home vs out preferences',
+  },
+  'Adventure & novelty': {
+    group: 'Lifestyle match',
+    evidence: "You're both excited by new experiences and variety",
+    listPhrase: 'shared adventure and novelty',
+  },
+  'Intimacy expectations': {
+    group: 'Physical connection',
+    evidence:
+      "You're aligned on what physical intimacy means in your connection",
+    listPhrase: 'aligned intimacy expectations',
+  },
+  'Support & arrangement style': {
+    group: 'Relationship structure',
+    evidence:
+      'You share similar expectations about support and relationship structure',
+    listPhrase: 'similar support expectations',
+  },
+  'Financial support alignment': {
+    group: 'Relationship structure',
+    evidence: "You're aligned on financial support in the relationship",
+    listPhrase: 'aligned financial support',
+  },
+  'Non-transactional match': {
+    group: 'Relationship structure',
+    evidence:
+      'You both want a relationship without financial arrangements',
+    listPhrase: 'non-transactional relationship',
+  },
+  'Religious practice': {
+    group: 'Values match',
+    evidence: 'Your level of religious practice is well-matched',
+    listPhrase: 'matched religious practice',
+  },
 };
 
 /**
