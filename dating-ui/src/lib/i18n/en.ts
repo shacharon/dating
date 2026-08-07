@@ -192,6 +192,10 @@ export const enCopy: AppCopySchema = {
             "You both know how to apologize and reconnect after disagreements",
           "Letting go & moving forward":
             "You both let go of conflict and move forward at a similar pace",
+          "Support under pressure":
+            "You handle stress in compatible ways",
+          "Secure & trusting":
+            "You're both secure and trusting in relationships",
         },
         interestOverlap: {
           travel: "You both love travel",
@@ -518,6 +522,8 @@ export const enCopy: AppCopySchema = {
           "What are you curious about or learning right now—work, hobbies, or everyday life?",
           "When we disagree, I usually…",
           "After a fight, I tend to…",
+          "When I'm stressed, I need my partner to…",
+          "Do you get jealous easily? What helps you feel secure?",
         ],
         examples: [
           "I work in product design and decompress by cooking elaborate dinners for friends. Weeknights I'm usually at home with a podcast and a sketchbook; weekends I hunt small galleries or try a new bakery. I'm calm in groups but light up when the talk gets thoughtful. Looking for people who like slow plans and don't need every night out to be loud.",

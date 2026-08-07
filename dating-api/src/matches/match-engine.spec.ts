@@ -1395,6 +1395,221 @@ describe('Expansion-10 shadow E2E via compare', () => {
   });
 });
 
+type Expansion11ShadowKey = 'stressResponse' | 'jealousySecurity';
+
+function makeProfileWithExpansion11Shadow(
+  id: string,
+  name: string,
+  official: Partial<Record<SignalKey, number>>,
+  shadow: Partial<Record<Expansion11ShadowKey, number | null>>,
+  relationshipFitScore = 50,
+  interestsTop3: string[] = [],
+): ProfileJsonPayload {
+  const signals = {
+    ...makeSignals(official),
+    ...shadow,
+  } as Record<string, number>;
+  return makeProfile(id, name, signals, relationshipFitScore, undefined, interestsTop3);
+}
+
+describe('Expansion-11 shadow E2E via compare', () => {
+  it('keeps Expansion-11 shadow keys out of COMPATIBILITY_SIGNAL_KEYS', () => {
+    expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+    for (const key of ['stressResponse', 'jealousySecurity'] as const) {
+      expect(COMPATIBILITY_SIGNAL_KEYS as readonly string[]).not.toContain(key);
+    }
+  });
+
+  it('Expansion-11 keys are distinct from adjacent signals and interest tags', () => {
+    for (const key of ['stressResponse', 'jealousySecurity'] as const) {
+      expect(INTEREST_CANONICAL_TAGS as readonly string[]).not.toContain(key);
+    }
+    expect('stressResponse').not.toBe('attachmentSecurity');
+    expect('stressResponse').not.toBe('emotionalRegulation');
+    expect('jealousySecurity').not.toBe('independence');
+    expect('jealousySecurity').not.toBe('attachmentSecurity');
+    expect('stressResponse').not.toBe('repairSkills');
+    expect('jealousySecurity').not.toBe('repairSkills');
+  });
+
+  it('stress_response_clash surfaces Pursue vs withdraw under stress', () => {
+    const a = makeProfileWithExpansion11Shadow('a', 'A', {}, { stressResponse: 9 });
+    const b = makeProfileWithExpansion11Shadow('b', 'B', {}, { stressResponse: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Pursue vs withdraw under stress',
+    );
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'stress_response_clash'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('jealousy_security_gap surfaces Trust & space mismatch', () => {
+    const a = makeProfileWithExpansion11Shadow(
+      'a',
+      'A',
+      {},
+      { jealousySecurity: 9 },
+    );
+    const b = makeProfileWithExpansion11Shadow(
+      'b',
+      'B',
+      {},
+      { jealousySecurity: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Trust & space mismatch');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'jealousy_security_gap'),
+    ).toBe(true);
+  });
+
+  it('both_high_jealousy surfaces Shared jealousy risk without jealousy_security_gap', () => {
+    const a = makeProfileWithExpansion11Shadow(
+      'a',
+      'A',
+      {},
+      { jealousySecurity: 9 },
+    );
+    const b = makeProfileWithExpansion11Shadow(
+      'b',
+      'B',
+      {},
+      { jealousySecurity: 9 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Shared jealousy risk');
+    expect(result.tensionMatrix.some((t) => t.id === 'both_high_jealousy')).toBe(
+      true,
+    );
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'jealousy_security_gap'),
+    ).toBe(false);
+    expect(result.explainability.positiveChips).not.toContain(
+      'Secure & trusting',
+    );
+  });
+
+  it('includes Support under pressure when both stressResponse high', () => {
+    const a = makeProfileWithExpansion11Shadow('a', 'A', {}, { stressResponse: 8 });
+    const b = makeProfileWithExpansion11Shadow('b', 'B', {}, { stressResponse: 8 });
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Support under pressure',
+    );
+  });
+
+  it('includes Secure & trusting when both jealousySecurity low', () => {
+    const a = makeProfileWithExpansion11Shadow(
+      'a',
+      'A',
+      {},
+      { jealousySecurity: 2 },
+    );
+    const b = makeProfileWithExpansion11Shadow(
+      'b',
+      'B',
+      {},
+      { jealousySecurity: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Secure & trusting');
+  });
+
+  it('excludes Expansion-11 shadow keys from alignments DTO', () => {
+    const a = makeProfileWithExpansion11Shadow('a', 'A', {}, { stressResponse: 8 });
+    const b = makeProfileWithExpansion11Shadow('b', 'B', {}, { stressResponse: 8 });
+    const result = compare(a, b);
+    expect(
+      result.alignments.every(
+        (row) =>
+          row.key !== 'Support under pressure' &&
+          row.key !== 'Secure & trusting' &&
+          !/stressResponse|jealousySecurity/i.test(row.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('null shadow on one side skips stress_response_clash', () => {
+    const a = makeProfileWithExpansion11Shadow('a', 'A', {}, { stressResponse: 9 });
+    const b = makeProfileWithExpansion11Shadow(
+      'b',
+      'B',
+      {},
+      { stressResponse: null },
+    );
+    const result = compare(a, b);
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'stress_response_clash'),
+    ).toBe(false);
+  });
+
+  it('compatibility unchanged when only Expansion-11 shadow signals differ', () => {
+    const highA = makeProfileWithExpansion11Shadow(
+      'a1',
+      'A1',
+      {},
+      { stressResponse: 8, jealousySecurity: 8 },
+    );
+    const highB = makeProfileWithExpansion11Shadow(
+      'b1',
+      'B1',
+      {},
+      { stressResponse: 8, jealousySecurity: 8 },
+    );
+    const gapA = makeProfileWithExpansion11Shadow(
+      'a2',
+      'A2',
+      {},
+      { stressResponse: 9, jealousySecurity: 9 },
+    );
+    const gapB = makeProfileWithExpansion11Shadow(
+      'b2',
+      'B2',
+      {},
+      { stressResponse: 2, jealousySecurity: 2 },
+    );
+    const aligned = compare(highA, highB);
+    const gapped = compare(gapA, gapB);
+    expect(aligned.compatibility).toBe(gapped.compatibility);
+  });
+
+  it('Expansion-10 non-regression: Different repair styles still surfaces', () => {
+    const a = makeProfileWithExpansion10Shadow('a', 'A', {}, { repairSkills: 9 });
+    const b = makeProfileWithExpansion10Shadow('b', 'B', {}, { repairSkills: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different repair styles');
+  });
+
+  it('Expansion-09 interest spot: shared biking/camping still overlap', () => {
+    const a = makeProfileWithExpansion11Shadow(
+      'a',
+      'A',
+      {},
+      {},
+      50,
+      ['biking', 'camping'],
+    );
+    const b = makeProfileWithExpansion11Shadow(
+      'b',
+      'B',
+      {},
+      {},
+      50,
+      ['biking', 'camping'],
+    );
+    const result = compare(a, b);
+    expect(result.explainability.interestOverlapTags).toEqual([
+      'biking',
+      'camping',
+    ]);
+    expect(result.explainability.interestOverlapTags!.length).toBeLessThanOrEqual(
+      2,
+    );
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

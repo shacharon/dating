@@ -97,8 +97,18 @@ describe('chipToEvidence', () => {
       'Conflict recovery',
       'Letting go & moving forward',
     ] as const;
-    expect(CHIP_EVIDENCE_KEYS.length).toBe(31);
     for (const chip of EXPANSION_10_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
+  it('includes Expansion-11 stress & security chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_11_CHIPS = [
+      'Support under pressure',
+      'Secure & trusting',
+    ] as const;
+    expect(CHIP_EVIDENCE_KEYS.length).toBe(33);
+    for (const chip of EXPANSION_11_CHIPS) {
       expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
     }
   });

@@ -251,6 +251,34 @@ describe('pickPositiveChips', () => {
     expect(chips).toContain('Letting go & moving forward');
   });
 
+  it('includes Expansion-11 Support under pressure when breakdown has high stressResponse', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'stressResponse',
+        self: 8,
+        partner: 8,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Support under pressure');
+  });
+
+  it('includes Expansion-11 Secure & trusting from synthetic both-low jealousy entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'jealousySecureTrusting',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Secure & trusting');
+  });
+
   it('emits interestOverlapTags (max 2 preferred) from sharedInterests', () => {
     const dto = buildMatchExplainability({
       compatibility: 70,
@@ -360,6 +388,16 @@ describe('buildMatchExplainability', () => {
     expect(TENSION_CHIP_BY_ID.forgiveness_style_gap).toBe(
       'Different forgiveness pace',
     );
+  });
+
+  it('maps Expansion-11 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.stress_response_clash).toBe(
+      'Pursue vs withdraw under stress',
+    );
+    expect(TENSION_CHIP_BY_ID.jealousy_security_gap).toBe(
+      'Trust & space mismatch',
+    );
+    expect(TENSION_CHIP_BY_ID.both_high_jealousy).toBe('Shared jealousy risk');
   });
 
   it('shows empathy_gap tension chip when friction >= 3', () => {
@@ -514,6 +552,39 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'forgiveness_style_gap', penalty: 4 }],
     });
     expect(dto.tensionChip).toBe('Different forgiveness pace');
+  });
+
+  it('shows Expansion-11 stress_response_clash tension chip (Pursue vs withdraw under stress)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 5,
+      breakdown: [],
+      tensionMatrix: [{ id: 'stress_response_clash', penalty: 5 }],
+    });
+    expect(dto.tensionChip).toBe('Pursue vs withdraw under stress');
+  });
+
+  it('shows Expansion-11 jealousy_security_gap tension chip (Trust & space mismatch)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 5,
+      breakdown: [],
+      tensionMatrix: [{ id: 'jealousy_security_gap', penalty: 5 }],
+    });
+    expect(dto.tensionChip).toBe('Trust & space mismatch');
+  });
+
+  it('shows Expansion-11 both_high_jealousy tension chip (Shared jealousy risk)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 3,
+      breakdown: [],
+      tensionMatrix: [{ id: 'both_high_jealousy', penalty: 3 }],
+    });
+    expect(dto.tensionChip).toBe('Shared jealousy risk');
   });
 
   it('shows education_level_gap tension chip when friction >= 3', () => {

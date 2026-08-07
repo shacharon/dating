@@ -195,4 +195,25 @@ describe('buildMatchExplanationTraits', () => {
       CHIP_TO_TRAIT['Letting go & moving forward'].evidence,
     );
   });
+
+  it('maps Expansion-11 Support under pressure chip', () => {
+    const traits = buildMatchExplanationTraits(
+      ['Support under pressure'],
+      70,
+    );
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Emotional connection');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Support under pressure'].evidence,
+    );
+  });
+
+  it('maps Expansion-11 Secure & trusting chip', () => {
+    const traits = buildMatchExplanationTraits(['Secure & trusting'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Emotional connection');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Secure & trusting'].evidence,
+    );
+  });
 });

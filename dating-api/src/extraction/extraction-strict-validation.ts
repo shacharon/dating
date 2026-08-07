@@ -52,6 +52,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'physicalTypePreference',
     'repairSkills',
     'forgivenessStyle',
+    'stressResponse',
+    'jealousySecurity',
   ],
   relationship: [
     'emotionalDepth',
@@ -82,6 +84,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'physicalTypePreference',
     'repairSkills',
     'forgivenessStyle',
+    'stressResponse',
+    'jealousySecurity',
   ],
 };
 

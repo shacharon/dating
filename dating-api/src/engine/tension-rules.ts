@@ -52,6 +52,9 @@ export interface EnrichedSignals {
   /** Shadow Expansion-10 — from evaluationJson.self.signals when extracted. */
   repairSkills?: number | null;
   forgivenessStyle?: number | null;
+  /** Shadow Expansion-11 — from evaluationJson.self.signals when extracted. */
+  stressResponse?: number | null;
+  jealousySecurity?: number | null;
 }
 
 export function getSignal(
@@ -536,5 +539,44 @@ export const tensionRules: TensionRule[] = [
     penalty: 4,
     explain:
       'One lets go of conflict quickly, the other holds onto it longer — pacing after fights may clash',
+  },
+  {
+    id: 'stress_response_clash',
+    name: 'Pursue vs withdraw under stress (HIGH — classic pursuer-distancer)',
+    when: (a, b) => {
+      const aS = getSignal(a, 'stressResponse');
+      const bS = getSignal(b, 'stressResponse');
+      if (aS == null || bS == null) return false;
+      return (aS >= 8 && bS <= 3) || (bS >= 8 && aS <= 3);
+    },
+    penalty: 5,
+    explain:
+      'One seeks closeness under stress, the other needs space — can create a pursue/withdraw cycle',
+  },
+  {
+    id: 'jealousy_security_gap',
+    name: 'Jealousy vs independence clash (MED-HIGH)',
+    when: (a, b) => {
+      const aJ = getSignal(a, 'jealousySecurity');
+      const bJ = getSignal(b, 'jealousySecurity');
+      if (aJ == null || bJ == null) return false;
+      return (aJ >= 8 && bJ <= 3) || (bJ >= 8 && aJ <= 3);
+    },
+    penalty: 5,
+    explain:
+      'One tends toward jealousy/reassurance-seeking, the other values high independence and trust without check-ins',
+  },
+  {
+    id: 'both_high_jealousy',
+    name: 'Both high jealousy (MED)',
+    when: (a, b) => {
+      const aJ = getSignal(a, 'jealousySecurity');
+      const bJ = getSignal(b, 'jealousySecurity');
+      if (aJ == null || bJ == null) return false;
+      return aJ >= 8 && bJ >= 8;
+    },
+    penalty: 3,
+    explain:
+      'Both partners lean jealous/possessive — may amplify insecurity dynamics',
   },
 ];

@@ -97,6 +97,13 @@ export const SHADOW_SIGNAL_KEYS = [
    */
   'repairSkills',
   'forgivenessStyle',
+  /**
+   * Expansion-11 — Stress & Security (shadow until promote).
+   * stressResponse: pursue vs withdraw under stress — NOT attachmentSecurity / emotionalRegulation alone.
+   * jealousySecurity: jealousy/possessiveness vs trust (high = more jealous) — NOT independence / attachmentSecurity alone.
+   */
+  'stressResponse',
+  'jealousySecurity',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -114,8 +121,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 26 shadow + 4 buffer. */
-export const MAX_EVIDENCE_ITEMS = 45;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 28 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 47;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

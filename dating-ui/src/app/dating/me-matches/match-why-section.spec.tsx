@@ -566,3 +566,98 @@ describe('MatchWhySection Expansion-10 chips', () => {
     expect(screen.getByText('Different repair styles')).toBeTruthy();
   });
 });
+
+describe('MatchWhySection Expansion-11 chips', () => {
+  it('EN — Support under pressure shows evidence not raw chip label', () => {
+    const enCopy = getCopy('en');
+    const evidence =
+      enCopy.matches.list.browse.chipEvidence['Support under pressure'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Support under pressure'],
+          reasonShort: 'Compatible stress styles.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Support under pressure')).toBeNull();
+  });
+
+  it('HE — Secure & trusting shows Hebrew evidence', () => {
+    const heCopy = getCopy('he');
+    const evidence =
+      heCopy.matches.list.browse.chipEvidence['Secure & trusting'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Secure & trusting'],
+          reasonShort: 'Shared secure stance.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={heCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Secure & trusting')).toBeNull();
+  });
+
+  it('includes Expansion-11 onboarding writing prompts in EN/HE/ES', () => {
+    expect(getCopy('en').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        "When I'm stressed, I need my partner to…",
+        'Do you get jealous easily? What helps you feel secure?',
+      ]),
+    );
+    expect(getCopy('he').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'כשאני לחוץ/ה, אני צריך/ה שבן/בת הזוג...',
+        'את/ה מתקנא/ת בקלות? מה עוזר לך להרגיש בטוח/ה?',
+      ]),
+    );
+    expect(getCopy('es').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'Cuando estoy estresado/a, necesito que mi pareja…',
+        '¿Te pones celoso/a fácilmente? ¿Qué te ayuda a sentirte seguro/a?',
+      ]),
+    );
+  });
+
+  it('renders Expansion-11 tension chip from API as-is (English)', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Mixed fit under stress.',
+          tensionChip: 'Pursue vs withdraw under stress',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Pursue vs withdraw under stress')).toBeTruthy();
+  });
+
+  it('renders Expansion-11 Shared jealousy risk tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Shared jealousy risk.',
+          tensionChip: 'Shared jealousy risk',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Shared jealousy risk')).toBeTruthy();
+  });
+});

@@ -2391,6 +2391,200 @@ describe('ExtractionService behavior locks', () => {
     });
   });
 
+  describe('Expansion-11 shadow signals', () => {
+    it('extracts high stressResponse when LLM returns seek-closeness score', async () => {
+      // Semantic: "When I'm stressed I need my partner close" / Hebrew stress closeness
+      const text =
+        "When I'm stressed I need my partner close, I don't want to be alone.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { stressResponse: 9 },
+          [
+            {
+              signal: 'stressResponse',
+              quote: "When I'm stressed I need my partner close",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['stressResponse']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'stressResponse')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low stressResponse when LLM returns withdraw score', async () => {
+      // Semantic: "I handle stress better alone"
+      const text = 'I need space to process on my own before I can talk.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { stressResponse: 2 },
+          [
+            {
+              signal: 'stressResponse',
+              quote: 'I need space to process on my own',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['stressResponse']).toBe(2);
+    });
+
+    it('returns null for stressResponse when stress-time behavior is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, stressResponse: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['stressResponse']).toBeNull();
+    });
+
+    it('extracts high jealousySecurity when LLM returns jealous score', async () => {
+      // Semantic: "I get jealous easily" / "אני מתקנא בקלות" — HIGH = more jealous
+      const text =
+        'I get jealous easily and need to know where you are.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { jealousySecurity: 9 },
+          [
+            {
+              signal: 'jealousySecurity',
+              quote: 'I get jealous easily and need to know where you are',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['jealousySecurity']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'jealousySecurity'),
+      ).toBe(true);
+    });
+
+    it('extracts low jealousySecurity when LLM returns secure/trusting score', async () => {
+      // Semantic: "I fully trust my partner, no jealousy" — LOW = secure
+      const text =
+        "I fully trust my partner and don't get jealous.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { jealousySecurity: 2 },
+          [
+            {
+              signal: 'jealousySecurity',
+              quote: "I fully trust my partner and don't get jealous",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['jealousySecurity']).toBe(2);
+    });
+
+    it('returns null for jealousySecurity when jealousy/trust is unmentioned', async () => {
+      const text = 'I am ambitious and driven. I work hard and want something real.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, jealousySecurity: null },
+          [{ signal: 'ambition', quote: 'ambitious and driven' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['jealousySecurity']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-11 scores to null', async () => {
+      const text =
+        "When I'm stressed I need my partner close and I don't want to be alone.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { stressResponse: 11 },
+          [
+            {
+              signal: 'stressResponse',
+              quote: "When I'm stressed I need my partner close",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['stressResponse']).toBeNull();
+    });
+
+    it('extracts partner stressResponse when LLM returns desired-partner stress score', async () => {
+      const text =
+        'Looking for a partner who wants closeness when stressed, not distance.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { stressResponse: 8 },
+          [
+            {
+              signal: 'stressResponse',
+              quote: 'wants closeness when stressed',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['stressResponse']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'stressResponse')).toBe(
+        true,
+      );
+    });
+
+    it('extracts partner jealousySecurity when LLM returns desired-partner jealousy score', async () => {
+      const text =
+        'I want a partner who gets jealous easily and needs check-ins.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { jealousySecurity: 8 },
+          [
+            {
+              signal: 'jealousySecurity',
+              quote: 'gets jealous easily and needs check-ins',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['jealousySecurity']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'jealousySecurity'),
+      ).toBe(true);
+    });
+  });
+
   describe('Expansion-09 interest tags', () => {
     it('preserves biking from mocked LLM interests', async () => {
       const text = 'I love cycling and mountain bike weekends.';

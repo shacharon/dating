@@ -1,0 +1,93 @@
+[
+  {
+    "id": "stress_high_en",
+    "aboutMe": "When I'm stressed I need my partner close, I don't want to be alone.",
+    "signal": "stressResponse",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "stress_low_en",
+    "aboutMe": "I need alone time to process before talking when I'm stressed.",
+    "signal": "stressResponse",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "jealousy_high_en",
+    "aboutMe": "I get jealous easily and need to know where you are.",
+    "signal": "jealousySecurity",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "jealousy_low_en",
+    "aboutMe": "I fully trust my partner and don't get jealous.",
+    "signal": "jealousySecurity",
+    "expectedMin": 1,
+    "expectedMax": 3
+  },
+  {
+    "id": "both_null_no_stress_jealousy_en",
+    "aboutMe": "I love hiking, cooking elaborate dinners, and quiet weekends with a book.",
+    "expectations": [
+      {
+        "signal": "stressResponse",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "jealousySecurity",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "stress_high_he",
+    "aboutMe": "כשאני לחוץ/ה אני צריך/ה שבן/בת הזוג יהיה/תהיה קרוב/ה אליי — אני לא רוצה להיות לבד בלחץ.",
+    "signal": "stressResponse",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "jealousy_high_he",
+    "aboutMe": "אני מתקנא/ת בקלות וצריך/ה לדעת איפה את/ה נמצא/ת.",
+    "signal": "jealousySecurity",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "jealousy_low_he",
+    "aboutMe": "אני סומך/ת לגמרי על בן/בת הזוג ולא מקנא/ה.",
+    "signal": "jealousySecurity",
+    "expectedMin": 1,
+    "expectedMax": 3
+  },
+  {
+    "id": "independence_alone_jealousy_null",
+    "aboutMe": "I value my independence and need plenty of personal space in a relationship.",
+    "expectations": [
+      {
+        "signal": "jealousySecurity",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "calm_under_stress_alone_stress_null",
+    "aboutMe": "I stay calm under stress and recover quickly without drama.",
+    "expectations": [
+      {
+        "signal": "stressResponse",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  }
+]

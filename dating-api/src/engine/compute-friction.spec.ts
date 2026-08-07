@@ -905,4 +905,144 @@ describe('compute-friction', () => {
       ).toBe(true);
     });
   });
+
+  describe('Expansion-11 shadow tension rules', () => {
+    it('stress_response_clash fires when stress directions diverge', () => {
+      const a: EnrichedSignals = { stressResponse: 9 };
+      const b: EnrichedSignals = { stressResponse: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'stress_response_clash');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(5);
+    });
+
+    it('stress_response_clash fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { stressResponse: 2 };
+      const b: EnrichedSignals = { stressResponse: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'stress_response_clash'),
+      ).toBe(true);
+    });
+
+    it('stress_response_clash does not fire when either side is null', () => {
+      const a: EnrichedSignals = { stressResponse: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'stress_response_clash'),
+      ).toBe(false);
+    });
+
+    it('stress_response_clash does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { stressResponse: 7 };
+      const b: EnrichedSignals = { stressResponse: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'stress_response_clash'),
+      ).toBe(false);
+    });
+
+    it('stress_response_clash fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { stressResponse: 8 };
+      const b: EnrichedSignals = { stressResponse: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'stress_response_clash'),
+      ).toBe(true);
+    });
+
+    it('jealousy_security_gap fires when jealousy levels diverge', () => {
+      const a: EnrichedSignals = { jealousySecurity: 9 };
+      const b: EnrichedSignals = { jealousySecurity: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'jealousy_security_gap');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(5);
+    });
+
+    it('jealousy_security_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { jealousySecurity: 2 };
+      const b: EnrichedSignals = { jealousySecurity: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'jealousy_security_gap'),
+      ).toBe(true);
+    });
+
+    it('jealousy_security_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { jealousySecurity: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'jealousy_security_gap'),
+      ).toBe(false);
+    });
+
+    it('jealousy_security_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { jealousySecurity: 7 };
+      const b: EnrichedSignals = { jealousySecurity: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'jealousy_security_gap'),
+      ).toBe(false);
+    });
+
+    it('jealousy_security_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { jealousySecurity: 8 };
+      const b: EnrichedSignals = { jealousySecurity: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'jealousy_security_gap'),
+      ).toBe(true);
+    });
+
+    it('both_high_jealousy fires when both jealousy scores are high', () => {
+      const a: EnrichedSignals = { jealousySecurity: 8 };
+      const b: EnrichedSignals = { jealousySecurity: 9 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'both_high_jealousy');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(3);
+    });
+
+    it('both_high_jealousy fires at boundary (both >= 8)', () => {
+      const a: EnrichedSignals = { jealousySecurity: 8 };
+      const b: EnrichedSignals = { jealousySecurity: 8 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_high_jealousy')).toBe(
+        true,
+      );
+    });
+
+    it('both_high_jealousy does not fire when either side is null', () => {
+      const a: EnrichedSignals = { jealousySecurity: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_high_jealousy')).toBe(
+        false,
+      );
+    });
+
+    it('both_high_jealousy does not fire when one side is below high band', () => {
+      const a: EnrichedSignals = { jealousySecurity: 8 };
+      const b: EnrichedSignals = { jealousySecurity: 7 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_high_jealousy')).toBe(
+        false,
+      );
+    });
+
+    it('both_high_jealousy fires without jealousy_security_gap when both are high', () => {
+      const a: EnrichedSignals = { jealousySecurity: 9 };
+      const b: EnrichedSignals = { jealousySecurity: 9 };
+      const result = computeFriction(a, b);
+      expect(result.tensions.some((t) => t.id === 'both_high_jealousy')).toBe(
+        true,
+      );
+      expect(
+        result.tensions.some((t) => t.id === 'jealousy_security_gap'),
+      ).toBe(false);
+    });
+  });
 });

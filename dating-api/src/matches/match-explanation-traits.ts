@@ -191,6 +191,16 @@ export const CHIP_TO_TRAIT: Record<
       'You both let go of conflict and move forward at a similar pace',
     listPhrase: 'aligned forgiveness pace',
   },
+  'Support under pressure': {
+    group: 'Emotional connection',
+    evidence: 'You handle stress in compatible ways',
+    listPhrase: 'compatible stress support styles',
+  },
+  'Secure & trusting': {
+    group: 'Emotional connection',
+    evidence: "You're both secure and trusting in relationships",
+    listPhrase: 'shared secure trusting stance',
+  },
 };
 
 /**
