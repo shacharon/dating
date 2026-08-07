@@ -1141,4 +1141,110 @@ describe('compute-friction', () => {
       ).toBe(true);
     });
   });
+
+  describe('Expansion-13 shadow tension rules', () => {
+    it('growth_mindset_gap fires when growth levels diverge', () => {
+      const a: EnrichedSignals = { growthMindset: 9 };
+      const b: EnrichedSignals = { growthMindset: 2 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find((t) => t.id === 'growth_mindset_gap');
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(4);
+    });
+
+    it('growth_mindset_gap fires when high/low is reversed', () => {
+      const a: EnrichedSignals = { growthMindset: 2 };
+      const b: EnrichedSignals = { growthMindset: 9 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'growth_mindset_gap'),
+      ).toBe(true);
+    });
+
+    it('growth_mindset_gap does not fire when either side is null', () => {
+      const a: EnrichedSignals = { growthMindset: 9 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'growth_mindset_gap'),
+      ).toBe(false);
+    });
+
+    it('growth_mindset_gap does not fire below directional threshold', () => {
+      const a: EnrichedSignals = { growthMindset: 7 };
+      const b: EnrichedSignals = { growthMindset: 4 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'growth_mindset_gap'),
+      ).toBe(false);
+    });
+
+    it('growth_mindset_gap fires at low-band boundary (<= 3)', () => {
+      const a: EnrichedSignals = { growthMindset: 8 };
+      const b: EnrichedSignals = { growthMindset: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'growth_mindset_gap'),
+      ).toBe(true);
+    });
+
+    it('both_low_self_awareness fires when both are low', () => {
+      const a: EnrichedSignals = { selfAwareness: 2 };
+      const b: EnrichedSignals = { selfAwareness: 3 };
+      const result = computeFriction(a, b);
+      const rule = result.tensions.find(
+        (t) => t.id === 'both_low_self_awareness',
+      );
+      expect(rule).toBeDefined();
+      expect(rule!.penalty).toBe(3);
+    });
+
+    it('both_low_self_awareness does not fire when either side is null', () => {
+      const a: EnrichedSignals = { selfAwareness: 2 };
+      const b: EnrichedSignals = {};
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'both_low_self_awareness'),
+      ).toBe(false);
+    });
+
+    it('both_low_self_awareness does not fire when only one is low', () => {
+      const a: EnrichedSignals = { selfAwareness: 2 };
+      const b: EnrichedSignals = { selfAwareness: 5 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'both_low_self_awareness'),
+      ).toBe(false);
+    });
+
+    it('both_low_self_awareness does not fire when both are mid', () => {
+      const a: EnrichedSignals = { selfAwareness: 5 };
+      const b: EnrichedSignals = { selfAwareness: 5 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'both_low_self_awareness'),
+      ).toBe(false);
+    });
+
+    it('both_low_self_awareness fires at boundary (both <= 3)', () => {
+      const a: EnrichedSignals = { selfAwareness: 3 };
+      const b: EnrichedSignals = { selfAwareness: 3 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'both_low_self_awareness'),
+      ).toBe(true);
+    });
+
+    it('does not invent self_awareness_gap for high vs low', () => {
+      const a: EnrichedSignals = { selfAwareness: 9 };
+      const b: EnrichedSignals = { selfAwareness: 2 };
+      const result = computeFriction(a, b);
+      expect(
+        result.tensions.some((t) => t.id === 'self_awareness_gap'),
+      ).toBe(false);
+      expect(
+        result.tensions.some((t) => t.id === 'both_low_self_awareness'),
+      ).toBe(false);
+    });
+  });
 });

@@ -1139,6 +1139,8 @@
 **Signals:** `growthMindset`, `selfAwareness`  
 **Doc:** `docs/sprints/sprint-expansion-13-growth-self-awareness/README.md`
 
+**This repo (as of 2026-08-08):** Expansion-13 is **Complete (5/5)** at the engineering gate (shadow). **No** scoring promote. See `handoffs/STORY_05_testing_validation/agent-3-pm.md`.
+
 ```text
 --agent 0 expansion 13 story 1
 ```

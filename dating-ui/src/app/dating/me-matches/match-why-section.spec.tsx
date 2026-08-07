@@ -755,3 +755,97 @@ describe('MatchWhySection Expansion-12 chips', () => {
     expect(screen.getByText('Different expression styles')).toBeTruthy();
   });
 });
+
+describe('MatchWhySection Expansion-13 chips', () => {
+  it('EN — Grows together shows evidence not raw chip label', () => {
+    const enCopy = getCopy('en');
+    const evidence = enCopy.matches.list.browse.chipEvidence['Grows together'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Grows together'],
+          reasonShort: 'Both value growth.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Grows together')).toBeNull();
+  });
+
+  it('HE — Self-awareness match shows Hebrew evidence', () => {
+    const heCopy = getCopy('he');
+    const evidence =
+      heCopy.matches.list.browse.chipEvidence['Self-awareness match'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Self-awareness match'],
+          reasonShort: 'Shared self-insight.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={heCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Self-awareness match')).toBeNull();
+  });
+
+  it('includes Expansion-13 onboarding writing prompts in EN/HE/ES', () => {
+    expect(getCopy('en').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'A time I changed my mind about something important…',
+        "One thing I'm working on about myself…",
+      ]),
+    );
+    expect(getCopy('he').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'פעם ששיניתי את דעתי בנושא חשוב...',
+        'דבר אחד שאני עובד/ת עליו בעצמי...',
+      ]),
+    );
+    expect(getCopy('es').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'Una vez que cambié de opinión sobre algo importante…',
+        'Una cosa en la que estoy trabajando sobre mí…',
+      ]),
+    );
+  });
+
+  it('renders Expansion-13 Different growth pace tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Growth pace mismatch.',
+          tensionChip: 'Different growth pace',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Different growth pace')).toBeTruthy();
+  });
+
+  it('renders Expansion-13 Self-insight gap tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Shared self-insight risk.',
+          tensionChip: 'Self-insight gap',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Self-insight gap')).toBeTruthy();
+  });
+});

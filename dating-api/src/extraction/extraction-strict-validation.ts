@@ -56,6 +56,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'jealousySecurity',
     'listeningPresence',
     'emotionalExpression',
+    'growthMindset',
+    'selfAwareness',
   ],
   relationship: [
     'emotionalDepth',
@@ -90,6 +92,8 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'jealousySecurity',
     'listeningPresence',
     'emotionalExpression',
+    'growthMindset',
+    'selfAwareness',
   ],
 };
 

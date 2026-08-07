@@ -57,6 +57,11 @@ import {
   SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_12,
   SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_12,
 } from './expansion-12-explainability';
+import {
+  isExpansion13ShadowChipKey,
+  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_13,
+  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_13,
+} from './expansion-13-explainability';
 
 export interface MatchExplainabilityDto {
   positiveChips: string[];
@@ -166,6 +171,8 @@ export const TENSION_CHIP_BY_ID: Record<string, string> = {
   both_high_jealousy: 'Shared jealousy risk',
   listening_presence_gap: 'Different listening styles',
   emotional_expression_gap: 'Different expression styles',
+  growth_mindset_gap: 'Different growth pace',
+  both_low_self_awareness: 'Self-insight gap',
 };
 
 function isSignalKey(k: string): k is SignalKey {
@@ -184,7 +191,8 @@ function isExplainabilityChipKey(key: string): boolean {
     isExpansion07ShadowChipKey(key) ||
     isExpansion10ShadowChipKey(key) ||
     isExpansion11ShadowChipKey(key) ||
-    isExpansion12ShadowChipKey(key)
+    isExpansion12ShadowChipKey(key) ||
+    isExpansion13ShadowChipKey(key)
   );
 }
 
@@ -220,6 +228,9 @@ function chipLabelForKey(key: string): string | undefined {
   if (isExpansion12ShadowChipKey(key)) {
     return SHADOW_POSITIVE_CHIP_BY_SIGNAL_12[key];
   }
+  if (isExpansion13ShadowChipKey(key)) {
+    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_13[key];
+  }
   return undefined;
 }
 
@@ -235,6 +246,7 @@ function domainForKey(key: string): string {
   if (isExpansion10ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_10[key];
   if (isExpansion11ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_11[key];
   if (isExpansion12ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_12[key];
+  if (isExpansion13ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_13[key];
   return 'unknown';
 }
 

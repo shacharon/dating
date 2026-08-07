@@ -1833,6 +1833,258 @@ describe('Expansion-12 shadow E2E via compare', () => {
   });
 });
 
+type Expansion13ShadowKey = 'growthMindset' | 'selfAwareness';
+
+function makeProfileWithExpansion13Shadow(
+  id: string,
+  name: string,
+  official: Partial<Record<SignalKey, number>>,
+  shadow: Partial<Record<Expansion13ShadowKey, number | null>>,
+  relationshipFitScore = 50,
+  interestsTop3: string[] = [],
+): ProfileJsonPayload {
+  const signals = {
+    ...makeSignals(official),
+    ...shadow,
+  } as Record<string, number>;
+  return makeProfile(id, name, signals, relationshipFitScore, undefined, interestsTop3);
+}
+
+describe('Expansion-13 shadow E2E via compare', () => {
+  it('keeps Expansion-13 shadow keys out of COMPATIBILITY_SIGNAL_KEYS', () => {
+    expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+    for (const key of ['growthMindset', 'selfAwareness'] as const) {
+      expect(COMPATIBILITY_SIGNAL_KEYS as readonly string[]).not.toContain(key);
+    }
+  });
+
+  it('Expansion-13 keys are distinct from adjacent signals and interest tags', () => {
+    for (const key of ['growthMindset', 'selfAwareness'] as const) {
+      expect(INTEREST_CANONICAL_TAGS as readonly string[]).not.toContain(key);
+    }
+    expect('growthMindset').not.toBe('vulnerabilityOpenness');
+    expect('growthMindset').not.toBe('directness');
+    expect('selfAwareness').not.toBe('emotionalRegulation');
+    expect('selfAwareness').not.toBe('empathyCompassion');
+  });
+
+  it('growth_mindset_gap surfaces Different growth pace', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { growthMindset: 9 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { growthMindset: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different growth pace');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'growth_mindset_gap'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('both_low_self_awareness surfaces Self-insight gap', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { selfAwareness: 2 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { selfAwareness: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Self-insight gap');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'both_low_self_awareness'),
+    ).toBe(true);
+  });
+
+  it('includes Grows together when both growthMindset high', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { growthMindset: 8 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { growthMindset: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Grows together');
+  });
+
+  it('includes Self-awareness match when both selfAwareness high', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { selfAwareness: 8 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { selfAwareness: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Self-awareness match',
+    );
+  });
+
+  it('does not include Grows together when both growthMindset low', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { growthMindset: 2 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { growthMindset: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain('Grows together');
+  });
+
+  it('does not include Self-awareness match when both selfAwareness low', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { selfAwareness: 2 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { selfAwareness: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain(
+      'Self-awareness match',
+    );
+  });
+
+  it('excludes Expansion-13 shadow keys from alignments DTO', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { growthMindset: 8 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { growthMindset: 8 },
+    );
+    const result = compare(a, b);
+    expect(
+      result.alignments.every(
+        (row) =>
+          row.key !== 'Grows together' &&
+          row.key !== 'Self-awareness match' &&
+          row.key !== 'Openness to growth' &&
+          row.key !== 'Self-awareness' &&
+          !/growthMindset|selfAwareness/i.test(row.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('null shadow on one side skips growth_mindset_gap', () => {
+    const a = makeProfileWithExpansion13Shadow(
+      'a',
+      'A',
+      {},
+      { growthMindset: 9 },
+    );
+    const b = makeProfileWithExpansion13Shadow(
+      'b',
+      'B',
+      {},
+      { growthMindset: null },
+    );
+    const result = compare(a, b);
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'growth_mindset_gap'),
+    ).toBe(false);
+  });
+
+  it('compatibility unchanged when only Expansion-13 shadow signals differ', () => {
+    const highA = makeProfileWithExpansion13Shadow(
+      'a1',
+      'A1',
+      {},
+      { growthMindset: 8, selfAwareness: 8 },
+    );
+    const highB = makeProfileWithExpansion13Shadow(
+      'b1',
+      'B1',
+      {},
+      { growthMindset: 8, selfAwareness: 8 },
+    );
+    const gapA = makeProfileWithExpansion13Shadow(
+      'a2',
+      'A2',
+      {},
+      { growthMindset: 9, selfAwareness: 9 },
+    );
+    const gapB = makeProfileWithExpansion13Shadow(
+      'b2',
+      'B2',
+      {},
+      { growthMindset: 2, selfAwareness: 2 },
+    );
+    const aligned = compare(highA, highB);
+    const gapped = compare(gapA, gapB);
+    expect(aligned.compatibility).toBe(gapped.compatibility);
+  });
+
+  it('Expansion-12 non-regression: Different listening styles still surfaces', () => {
+    const a = makeProfileWithExpansion12Shadow(
+      'a',
+      'A',
+      {},
+      { listeningPresence: 9 },
+    );
+    const b = makeProfileWithExpansion12Shadow(
+      'b',
+      'B',
+      {},
+      { listeningPresence: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Different listening styles',
+    );
+  });
+
+  it('Expansion-11 non-regression: Pursue vs withdraw under stress still surfaces', () => {
+    const a = makeProfileWithExpansion11Shadow('a', 'A', {}, { stressResponse: 9 });
+    const b = makeProfileWithExpansion11Shadow('b', 'B', {}, { stressResponse: 2 });
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Pursue vs withdraw under stress',
+    );
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

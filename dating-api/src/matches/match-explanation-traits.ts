@@ -211,6 +211,16 @@ export const CHIP_TO_TRAIT: Record<
     evidence: 'You express feelings and affection in similar ways',
     listPhrase: 'compatible emotional expression',
   },
+  'Grows together': {
+    group: 'Ideas & growth',
+    evidence: 'You both value feedback and growing as partners',
+    listPhrase: 'both value growth and feedback',
+  },
+  'Self-awareness match': {
+    group: 'Ideas & growth',
+    evidence: 'You both have clear insight into your own patterns',
+    listPhrase: 'shared self-insight',
+  },
 };
 
 /**

@@ -2778,6 +2778,197 @@ describe('ExtractionService behavior locks', () => {
     });
   });
 
+  describe('Expansion-13 shadow signals', () => {
+    it('extracts high growthMindset when LLM returns strongly growth-oriented score', async () => {
+      // Semantic: "I'm always working on becoming a better partner" / Hebrew always-working
+      const text = "I'm always working on becoming a better partner.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { growthMindset: 9 },
+          [
+            {
+              signal: 'growthMindset',
+              quote: "I'm always working on becoming a better partner",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['growthMindset']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'growthMindset')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low growthMindset when LLM returns defensive/fixed score', async () => {
+      // Semantic: "I am who I am, I'm not going to change"
+      const text = "I am who I am, I'm not going to change.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { growthMindset: 2 },
+          [
+            {
+              signal: 'growthMindset',
+              quote: "I am who I am, I'm not going to change",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['growthMindset']).toBe(2);
+    });
+
+    it('returns null for growthMindset when change/feedback stance is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, growthMindset: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['growthMindset']).toBeNull();
+    });
+
+    it('extracts high selfAwareness when LLM returns deep-insight score', async () => {
+      // Semantic: "I know I shut down when criticized, so I try to pause" / Hebrew defensive-when-criticized
+      const text =
+        'I know I tend to shut down when I feel criticized, so I try to pause first.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { selfAwareness: 9 },
+          [
+            {
+              signal: 'selfAwareness',
+              quote: 'I know I tend to shut down when I feel criticized',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['selfAwareness']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'selfAwareness')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low selfAwareness when LLM returns little-insight score', async () => {
+      // Semantic: "I don't know why I react the way I do"
+      const text = "I don't know why I react the way I do.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { selfAwareness: 2 },
+          [
+            {
+              signal: 'selfAwareness',
+              quote: "I don't know why I react the way I do",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['selfAwareness']).toBe(2);
+    });
+
+    it('returns null for selfAwareness when self-reflective language is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, selfAwareness: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['selfAwareness']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-13 scores to null', async () => {
+      const text = "I'm always working on becoming a better partner.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { growthMindset: 11 },
+          [
+            {
+              signal: 'growthMindset',
+              quote: "I'm always working on becoming a better partner",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['growthMindset']).toBeNull();
+    });
+
+    it('extracts partner growthMindset when LLM returns desired-partner growth score', async () => {
+      const text =
+        'I want a partner who welcomes feedback and works on themselves.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { growthMindset: 8 },
+          [
+            {
+              signal: 'growthMindset',
+              quote: 'welcomes feedback and works on themselves',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['growthMindset']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'growthMindset')).toBe(
+        true,
+      );
+    });
+
+    it('extracts partner selfAwareness when LLM returns desired-partner insight score', async () => {
+      const text =
+        'I want a partner who knows their own patterns and can name their triggers.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { selfAwareness: 8 },
+          [
+            {
+              signal: 'selfAwareness',
+              quote: 'knows their own patterns and can name their triggers',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['selfAwareness']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'selfAwareness')).toBe(
+        true,
+      );
+    });
+  });
+
   describe('Expansion-09 interest tags', () => {
     it('preserves biking from mocked LLM interests', async () => {
       const text = 'I love cycling and mountain bike weekends.';

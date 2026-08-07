@@ -117,8 +117,18 @@ describe('chipToEvidence', () => {
       'Feels heard',
       'Expressiveness match',
     ] as const;
-    expect(CHIP_EVIDENCE_KEYS.length).toBe(35);
     for (const chip of EXPANSION_12_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
+  it('includes Expansion-13 growth & self-awareness chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_13_CHIPS = [
+      'Grows together',
+      'Self-awareness match',
+    ] as const;
+    expect(CHIP_EVIDENCE_KEYS.length).toBe(37);
+    for (const chip of EXPANSION_13_CHIPS) {
       expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
     }
   });

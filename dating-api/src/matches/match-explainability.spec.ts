@@ -307,6 +307,34 @@ describe('pickPositiveChips', () => {
     expect(chips).toContain('Feels heard');
   });
 
+  it('includes Expansion-13 Grows together from synthetic both-high growth entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'growthGrowsTogether',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Grows together');
+  });
+
+  it('includes Expansion-13 Self-awareness match from synthetic both-high awareness entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'selfAwarenessMatch',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Self-awareness match');
+  });
+
   it('emits interestOverlapTags (max 2 preferred) from sharedInterests', () => {
     const dto = buildMatchExplainability({
       compatibility: 70,
@@ -435,6 +463,11 @@ describe('buildMatchExplainability', () => {
     expect(TENSION_CHIP_BY_ID.emotional_expression_gap).toBe(
       'Different expression styles',
     );
+  });
+
+  it('maps Expansion-13 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.growth_mindset_gap).toBe('Different growth pace');
+    expect(TENSION_CHIP_BY_ID.both_low_self_awareness).toBe('Self-insight gap');
   });
 
   it('shows empathy_gap tension chip when friction >= 3', () => {
@@ -644,6 +677,28 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'emotional_expression_gap', penalty: 4 }],
     });
     expect(dto.tensionChip).toBe('Different expression styles');
+  });
+
+  it('shows Expansion-13 growth_mindset_gap tension chip (Different growth pace)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'growth_mindset_gap', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Different growth pace');
+  });
+
+  it('shows Expansion-13 both_low_self_awareness tension chip (Self-insight gap)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 3,
+      breakdown: [],
+      tensionMatrix: [{ id: 'both_low_self_awareness', penalty: 3 }],
+    });
+    expect(dto.tensionChip).toBe('Self-insight gap');
   });
 
   it('shows education_level_gap tension chip when friction >= 3', () => {

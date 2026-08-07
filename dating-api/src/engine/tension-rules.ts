@@ -58,6 +58,9 @@ export interface EnrichedSignals {
   /** Shadow Expansion-12 — from evaluationJson.self.signals when extracted. */
   listeningPresence?: number | null;
   emotionalExpression?: number | null;
+  /** Shadow Expansion-13 — from evaluationJson.self.signals when extracted. */
+  growthMindset?: number | null;
+  selfAwareness?: number | null;
 }
 
 export function getSignal(
@@ -607,5 +610,31 @@ export const tensionRules: TensionRule[] = [
     penalty: 4,
     explain:
       'One partner expresses feelings openly and often, the other is more reserved — may feel unreciprocated',
+  },
+  {
+    id: 'growth_mindset_gap',
+    name: 'Growth mindset gap (MED)',
+    when: (a, b) => {
+      const aG = getSignal(a, 'growthMindset');
+      const bG = getSignal(b, 'growthMindset');
+      if (aG == null || bG == null) return false;
+      return (aG >= 8 && bG <= 3) || (bG >= 8 && aG <= 3);
+    },
+    penalty: 4,
+    explain:
+      'One is highly open to feedback and change, the other more fixed — growth pace may differ',
+  },
+  {
+    id: 'both_low_self_awareness',
+    name: 'Both low self-awareness (MED)',
+    when: (a, b) => {
+      const aS = getSignal(a, 'selfAwareness');
+      const bS = getSignal(b, 'selfAwareness');
+      if (aS == null || bS == null) return false;
+      return aS <= 3 && bS <= 3;
+    },
+    penalty: 3,
+    explain:
+      'Neither partner shows strong self-insight — patterns may be harder to name and resolve together',
   },
 ];

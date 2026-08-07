@@ -200,6 +200,10 @@ export const enCopy: AppCopySchema = {
             "You both show up fully present and listen deeply",
           "Expressiveness match":
             "You express feelings and affection in similar ways",
+          "Grows together":
+            "You both value feedback and growing as partners",
+          "Self-awareness match":
+            "You both have clear insight into your own patterns",
         },
         interestOverlap: {
           travel: "You both love travel",
@@ -530,6 +534,8 @@ export const enCopy: AppCopySchema = {
           "Do you get jealous easily? What helps you feel secure?",
           "I feel most loved when my partner…",
           "A partner really listens to me when they…",
+          "A time I changed my mind about something important…",
+          "One thing I'm working on about myself…",
         ],
         examples: [
           "I work in product design and decompress by cooking elaborate dinners for friends. Weeknights I'm usually at home with a podcast and a sketchbook; weekends I hunt small galleries or try a new bakery. I'm calm in groups but light up when the talk gets thoughtful. Looking for people who like slow plans and don't need every night out to be loud.",

@@ -111,6 +111,13 @@ export const SHADOW_SIGNAL_KEYS = [
    */
   'listeningPresence',
   'emotionalExpression',
+  /**
+   * Expansion-13 — Growth & Self-Awareness (shadow until promote).
+   * growthMindset: openness to feedback/change — NOT vulnerabilityOpenness / directness alone.
+   * selfAwareness: insight into own patterns/triggers — NOT emotionalRegulation / empathyCompassion alone.
+   */
+  'growthMindset',
+  'selfAwareness',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -128,8 +135,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 30 shadow + 4 buffer. */
-export const MAX_EVIDENCE_ITEMS = 49;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 32 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 51;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

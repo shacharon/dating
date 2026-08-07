@@ -40,6 +40,8 @@ export const CHIP_EVIDENCE_KEYS = [
   'Secure & trusting',
   'Feels heard',
   'Expressiveness match',
+  'Grows together',
+  'Self-awareness match',
 ] as const;
 
 export type ChipEvidenceKey = (typeof CHIP_EVIDENCE_KEYS)[number];

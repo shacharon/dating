@@ -232,4 +232,20 @@ describe('buildMatchExplanationTraits', () => {
       CHIP_TO_TRAIT['Expressiveness match'].evidence,
     );
   });
+
+  it('maps Expansion-13 Grows together chip', () => {
+    const traits = buildMatchExplanationTraits(['Grows together'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Ideas & growth');
+    expect(traits[0].evidence).toBe(CHIP_TO_TRAIT['Grows together'].evidence);
+  });
+
+  it('maps Expansion-13 Self-awareness match chip', () => {
+    const traits = buildMatchExplanationTraits(['Self-awareness match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Ideas & growth');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Self-awareness match'].evidence,
+    );
+  });
 });

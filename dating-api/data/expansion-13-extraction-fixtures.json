@@ -1,0 +1,105 @@
+[
+  {
+    "id": "growth_high_en",
+    "aboutMe": "I'm always working on becoming better, I welcome feedback",
+    "signal": "growthMindset",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "growth_low_en",
+    "aboutMe": "I am who I am, not going to change",
+    "signal": "growthMindset",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "awareness_high_en",
+    "aboutMe": "I know I shut down when criticized, so I try to pause",
+    "signal": "selfAwareness",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "awareness_low_en",
+    "aboutMe": "I don't know why I react the way I do. I rarely notice my own patterns or triggers until someone else points them out.",
+    "signal": "selfAwareness",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "both_null_no_growth_awareness_en",
+    "aboutMe": "I love hiking, cooking elaborate dinners, and quiet weekends with a book.",
+    "expectations": [
+      {
+        "signal": "growthMindset",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "selfAwareness",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "growth_high_he",
+    "aboutMe": "אני תמיד עובד/ת על להיות בן/בת זוג טוב/ה יותר ומקבל/ת משוב גם כשקשה.",
+    "signal": "growthMindset",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "awareness_high_he",
+    "aboutMe": "אני יודע/ת שאני נוטה להתגונן כשמבקרים אותי, אז אני מנסה לעצור רגע.",
+    "signal": "selfAwareness",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "growth_low_he",
+    "aboutMe": "אני מי שאני, אני לא הולך/ת להשתנות.",
+    "signal": "growthMindset",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "vulnerability_alone_growth_null",
+    "aboutMe": "I am comfortable sharing my fears and struggles and letting my partner see the real me.",
+    "expectations": [
+      {
+        "signal": "growthMindset",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "regulation_alone_awareness_null",
+    "aboutMe": "I stay calm under stress and recover quickly when emotions spike in the moment.",
+    "expectations": [
+      {
+        "signal": "selfAwareness",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "empathy_alone_awareness_null",
+    "aboutMe": "I care deeply about my partner's feelings and try to be compassionate when they are upset.",
+    "expectations": [
+      {
+        "signal": "selfAwareness",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  }
+]
