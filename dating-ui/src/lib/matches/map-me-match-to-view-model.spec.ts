@@ -75,7 +75,7 @@ describe('mapMeMatchItemToViewModel', () => {
     expect(vm.tier).toBe('GOOD');
     expect(vm.viewerAction).toBe('LIKE');
     expect(vm.why).toEqual({
-      positiveChips: ['Ambition alignment'],
+      positiveChips: ['ambition_alignment'],
       tensionChip: 'Pace',
       reasonShort: 'Shared drive',
       sharedInterestNote: 'Both like hiking',

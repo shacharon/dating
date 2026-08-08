@@ -32,7 +32,7 @@ describe('MatchWhySection Expansion-01 chips', () => {
   it('EN — Understanding & care shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Understanding & care'];
+      enCopy.matches.list.browse.chipEvidence.understanding_and_care;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -51,7 +51,7 @@ describe('MatchWhySection Expansion-01 chips', () => {
   it('HE — Authentic openness shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Authentic openness'];
+      heCopy.matches.list.browse.chipEvidence.authentic_openness;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -88,7 +88,7 @@ describe('MatchWhySection Expansion-01 chips', () => {
 describe('MatchWhySection Expansion-02 chips', () => {
   it('EN — Emotional balance shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
-    const evidence = enCopy.matches.list.browse.chipEvidence['Emotional balance'];
+    const evidence = enCopy.matches.list.browse.chipEvidence.emotional_balance;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -107,7 +107,7 @@ describe('MatchWhySection Expansion-02 chips', () => {
   it('HE — Affection rhythm match shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Affection rhythm match'];
+      heCopy.matches.list.browse.chipEvidence.affection_rhythm_match;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -144,7 +144,7 @@ describe('MatchWhySection Expansion-02 chips', () => {
 describe('MatchWhySection Expansion-03 chips', () => {
   it('EN — Shared playfulness shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
-    const evidence = enCopy.matches.list.browse.chipEvidence['Shared playfulness'];
+    const evidence = enCopy.matches.list.browse.chipEvidence.shared_playfulness;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -163,7 +163,7 @@ describe('MatchWhySection Expansion-03 chips', () => {
   it('HE — Shared playfulness shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Shared playfulness'];
+      heCopy.matches.list.browse.chipEvidence.shared_playfulness;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -200,7 +200,7 @@ describe('MatchWhySection Expansion-03 chips', () => {
 describe('MatchWhySection Expansion-04 chips', () => {
   it('EN — Mental stimulation shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
-    const evidence = enCopy.matches.list.browse.chipEvidence['Mental stimulation'];
+    const evidence = enCopy.matches.list.browse.chipEvidence.mental_stimulation;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -219,7 +219,7 @@ describe('MatchWhySection Expansion-04 chips', () => {
   it('HE — Creative expression shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Creative expression'];
+      heCopy.matches.list.browse.chipEvidence.creative_expression;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -257,7 +257,7 @@ describe('MatchWhySection Expansion-05 chips', () => {
   it('EN — Activity level match shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Activity level match'];
+      enCopy.matches.list.browse.chipEvidence.activity_level_match;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -276,7 +276,7 @@ describe('MatchWhySection Expansion-05 chips', () => {
   it('HE — Home/out balance shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Home/out balance'];
+      heCopy.matches.list.browse.chipEvidence.home_out_balance;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -314,7 +314,7 @@ describe('MatchWhySection Expansion-06 chips', () => {
   it('EN — Adventure & novelty shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Adventure & novelty'];
+      enCopy.matches.list.browse.chipEvidence.adventure_and_novelty;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -333,7 +333,7 @@ describe('MatchWhySection Expansion-06 chips', () => {
   it('HE — Adventure & novelty shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Adventure & novelty'];
+      heCopy.matches.list.browse.chipEvidence.adventure_and_novelty;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -371,7 +371,7 @@ describe('MatchWhySection Expansion-07 chips', () => {
   it('EN — Intimacy expectations shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Intimacy expectations'];
+      enCopy.matches.list.browse.chipEvidence.intimacy_expectations;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -478,7 +478,7 @@ describe('MatchWhySection Expansion-10 chips', () => {
   it('EN — Conflict recovery shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Conflict recovery'];
+      enCopy.matches.list.browse.chipEvidence.conflict_recovery;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -497,7 +497,7 @@ describe('MatchWhySection Expansion-10 chips', () => {
   it('HE — Letting go & moving forward shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Letting go & moving forward'];
+      heCopy.matches.list.browse.chipEvidence.letting_go_and_moving_forward;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -573,7 +573,7 @@ describe('MatchWhySection Expansion-11 chips', () => {
   it('EN — Support under pressure shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Support under pressure'];
+      enCopy.matches.list.browse.chipEvidence.support_under_pressure;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -592,7 +592,7 @@ describe('MatchWhySection Expansion-11 chips', () => {
   it('HE — Secure & trusting shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Secure & trusting'];
+      heCopy.matches.list.browse.chipEvidence.secure_and_trusting;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -667,7 +667,7 @@ describe('MatchWhySection Expansion-11 chips', () => {
 describe('MatchWhySection Expansion-12 chips', () => {
   it('EN — Feels heard shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
-    const evidence = enCopy.matches.list.browse.chipEvidence['Feels heard'];
+    const evidence = enCopy.matches.list.browse.chipEvidence.feels_heard;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -686,7 +686,7 @@ describe('MatchWhySection Expansion-12 chips', () => {
   it('HE — Expressiveness match shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Expressiveness match'];
+      heCopy.matches.list.browse.chipEvidence.expressiveness_match;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -761,7 +761,7 @@ describe('MatchWhySection Expansion-12 chips', () => {
 describe('MatchWhySection Expansion-13 chips', () => {
   it('EN — Grows together shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
-    const evidence = enCopy.matches.list.browse.chipEvidence['Grows together'];
+    const evidence = enCopy.matches.list.browse.chipEvidence.grows_together;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -780,7 +780,7 @@ describe('MatchWhySection Expansion-13 chips', () => {
   it('HE — Self-awareness match shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Self-awareness match'];
+      heCopy.matches.list.browse.chipEvidence.self_awareness_match;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -855,7 +855,7 @@ describe('MatchWhySection Expansion-13 chips', () => {
 describe('MatchWhySection Expansion-14 chips', () => {
   it('EN — Patience match shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
-    const evidence = enCopy.matches.list.browse.chipEvidence['Patience match'];
+    const evidence = enCopy.matches.list.browse.chipEvidence.patience_match;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -874,7 +874,7 @@ describe('MatchWhySection Expansion-14 chips', () => {
   it('HE — Pace of closeness shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Pace of closeness'];
+      heCopy.matches.list.browse.chipEvidence.pace_of_closeness;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -893,9 +893,7 @@ describe('MatchWhySection Expansion-14 chips', () => {
   it('EN — Aligned on relationship structure shows evidence', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence[
-        'Aligned on relationship structure'
-      ];
+      enCopy.matches.list.browse.chipEvidence.aligned_on_relationship_structure;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -991,7 +989,7 @@ describe('MatchWhySection Expansion-15 chips', () => {
   it('EN — Family style match shows evidence not raw chip label', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Family style match'];
+      enCopy.matches.list.browse.chipEvidence.family_style_match;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -1010,7 +1008,7 @@ describe('MatchWhySection Expansion-15 chips', () => {
   it('HE — Friends & couple balance shows Hebrew evidence', () => {
     const heCopy = getCopy('he');
     const evidence =
-      heCopy.matches.list.browse.chipEvidence['Friends & couple balance'];
+      heCopy.matches.list.browse.chipEvidence.friends_and_couple_balance;
     render(
       <MatchWhySection
         match={baseMatch({
@@ -1029,7 +1027,7 @@ describe('MatchWhySection Expansion-15 chips', () => {
   it('EN — Recharge style match shows evidence', () => {
     const enCopy = getCopy('en');
     const evidence =
-      enCopy.matches.list.browse.chipEvidence['Recharge style match'];
+      enCopy.matches.list.browse.chipEvidence.recharge_style_match;
     render(
       <MatchWhySection
         match={baseMatch({

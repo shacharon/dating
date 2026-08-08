@@ -123,87 +123,87 @@ export const heCopy: AppCopySchema = {
         hookEmpty: "יש קצת במשותף — כדאי לפתוח ולראות",
         viewProfile: "צפייה בפרופיל",
         chipEvidence: {
-          "Ambition alignment": "הדרייב והשאיפות שלכם תואמים היטב",
-          "Social rhythm": "רמות האנרגיה החברתית שלכם תואמות",
-          "Wellness focus": "בריאות וגוף חשובים לשניכם",
-          "Emotional depth":
+          ambition_alignment: "הדרייב והשאיפות שלכם תואמים היטב",
+          social_rhythm: "רמות האנרגיה החברתית שלכם תואמות",
+          wellness_focus: "בריאות וגוף חשובים לשניכם",
+          emotional_depth:
             "שניכם מעריכים עומק ונוכחות רגשית במערכת יחסים",
-          "Secure attachment":
+          secure_attachment:
             "יש לכם גישה דומה לקרבה ולזמינות רגשית",
-          "Direct communication":
+          direct_communication:
             "שניכם ישירים — וזה מפחית אי־הבנות",
-          "Independence fit":
+          independence_fit:
             "הצורך שלכם במרחב וביחד תואם זה לזה",
-          "Shared values":
+          shared_values:
             "יש לכם בסיס משותף בערכים שמעצבים את היומיום",
-          "Money mindset": "הגישה שלכם לכסף ולביטחון תואמת",
-          "Relationship expectations":
+          money_mindset: "הגישה שלכם לכסף ולביטחון תואמת",
+          relationship_expectations:
             "שניכם מחפשים משהו דומה באיך שמערכת יחסים עובדת",
-          "Lifestyle pace":
+          lifestyle_pace:
             "אתם נעים בקצב דומה — איך שמארגנים את היום תואם",
-          "Physical chemistry":
+          physical_chemistry:
             "יש סימנים חזקים והדדיים למשיכה פיזית",
-          "Lifestyle & status":
+          lifestyle_and_status:
             "אתם מיושרים באורח חיים ובמיצוב חברתי",
-          "Conflict approach":
+          conflict_approach:
             "אתם מתמודדים עם מחלוקות בדרכים תואמות — פחות סיכוי שקונפליקט ידרדר אתכם",
-          "Understanding & care":
+          understanding_and_care:
             "שניכם מובילים באמפתיה ובדאגה אמיתית לרגשות של השני",
-          "Authentic openness":
+          authentic_openness:
             "שניכם נוחים להיות אמיתיים ולהראות פגיעות",
-          "Emotional balance":
+          emotional_balance:
             "שניכם מתמודדים עם רגשות בצורה מאוזנת ולא תגובתית",
-          "Affection rhythm match":
+          affection_rhythm_match:
             "הצורך שלכם במגע ובקרבה פיזית מתאים",
-          "Shared playfulness":
+          shared_playfulness:
             "אתם מביאים קלילות וצחוק אחד לשני",
-          "Mental stimulation":
+          mental_stimulation:
             "שניכם מעריכים רעיונות, למידה וצמיחה אינטלקטואלית",
-          "Creative expression":
+          creative_expression:
             "שניכם מעריכים יצירתיות ויצירה",
-          "Activity level match":
+          activity_level_match:
             "רמות הפעילות הגופנית והעדפות הכושר שלכם מתאימות",
-          "Home/out balance":
+          home_out_balance:
             "אתם מיושרים על זמן בבית מול יציאה",
-          "Adventure & novelty":
+          adventure_and_novelty:
             "שניכם מתרגשים מחוויות חדשות וגיוון",
-          "Intimacy expectations":
+          intimacy_expectations:
             "אתם מסונכרנים לגבי מה אינטימיות פיזית אומרת ביניכם",
-          "Support & arrangement style":
+          support_and_arrangement_style:
             "יש לכם ציפיות דומות לגבי תמיכה ומבנה היחסים",
-          "Financial support alignment":
+          financial_support_alignment:
             "אתם מסונכרנים לגבי תמיכה כלכלית ביחסים",
-          "Non-transactional match":
+          non_transactional_match:
             "שניכם רוצים קשר ללא הסדרים כלכליים",
-          "Religious practice":
+          religious_practice:
             "רמת הדתיות והשמירה על המצוות שלכם מתאימה",
-          "Conflict recovery":
+          conflict_recovery:
             "שניכם יודעים להתנצל ולהתחבר מחדש אחרי ויכוחים",
-          "Letting go & moving forward":
+          letting_go_and_moving_forward:
             "שניכם משחררים קונפליקטים וממשיכים הלאה בקצב דומה",
-          "Support under pressure":
+          support_under_pressure:
             "אתם מתמודדים עם לחץ בדרכים תואמות",
-          "Secure & trusting":
+          secure_and_trusting:
             "שניכם בטוחים ונותנים אמון במערכת יחסים",
-          "Feels heard":
+          feels_heard:
             "שניכם נוכחים לגמרי ומקשיבים לעומק",
-          "Expressiveness match":
+          expressiveness_match:
             "שניכם מבטאים רגשות וחיבה בדרכים דומות",
-          "Grows together":
+          grows_together:
             "שניכם מעריכים משוב וצמיחה כבני זוג",
-          "Self-awareness match":
+          self_awareness_match:
             "לשניכם יש תובנה ברורה לגבי הדפוסים שלכם",
-          "Patience match":
+          patience_match:
             "שניכם סבלניים ומקבלים את הייחודיות של השני",
-          "Pace of closeness":
+          pace_of_closeness:
             "אתם מתקדמים לקרבה בקצב דומה",
-          "Aligned on relationship structure":
+          aligned_on_relationship_structure:
             "אתם מסונכרנים לגבי המשמעות של בלעדיות עבורכם",
-          "Family style match":
+          family_style_match:
             "יש לכם תחושה דומה של קרבה משפחתית וגבולות",
-          "Friends & couple balance":
+          friends_and_couple_balance:
             "אתם מאזנים בין חברים לזמן זוגי בצורה דומה",
-          "Recharge style match":
+          recharge_style_match:
             "יש לכם צורך דומה בזמן לבד להיטען מחדש",
         },
         interestOverlap: {

@@ -134,88 +134,88 @@ export const enCopy: AppCopySchema = {
         hookEmpty: "A little in common — open to see more",
         viewProfile: "View profile",
         chipEvidence: {
-          "Ambition alignment": "Your drive and ambition are well-matched",
-          "Social rhythm": "Your social energy levels are well-matched",
-          "Wellness focus": "Health and physicality matter to both of you",
-          "Emotional depth":
+          ambition_alignment: "Your drive and ambition are well-matched",
+          social_rhythm: "Your social energy levels are well-matched",
+          wellness_focus: "Health and physicality matter to both of you",
+          emotional_depth:
             "You both value depth and emotional presence in a relationship",
-          "Secure attachment":
+          secure_attachment:
             "You share a similar approach to closeness and emotional availability",
-          "Direct communication":
+          direct_communication:
             "You're both direct, which reduces misread signals",
-          "Independence fit":
+          independence_fit:
             "Your need for space and togetherness is mutually compatible",
-          "Shared values":
+          shared_values:
             "You share meaningful common ground on values that shape daily life",
-          "Money mindset":
+          money_mindset:
             "Your approach to finances and security is compatible",
-          "Relationship expectations":
+          relationship_expectations:
             "You're both looking for something similar in how a relationship works",
-          "Lifestyle pace":
+          lifestyle_pace:
             "You move at a similar pace — how you structure your days aligns",
-          "Physical chemistry":
+          physical_chemistry:
             "Physical attraction signals are strong and mutual",
-          "Lifestyle & status":
+          lifestyle_and_status:
             "You're aligned on lifestyle and social positioning",
-          "Conflict approach":
+          conflict_approach:
             "You handle disagreement in compatible ways — conflict is less likely to derail you",
-          "Understanding & care":
+          understanding_and_care:
             "You both lead with empathy and genuine care for each other's feelings",
-          "Authentic openness":
+          authentic_openness:
             "You're both comfortable being real and showing vulnerability",
-          "Emotional balance":
+          emotional_balance:
             "You both handle emotions in balanced, non-reactive ways",
-          "Affection rhythm match":
+          affection_rhythm_match:
             "Your needs for touch and physical closeness align well",
-          "Shared playfulness":
+          shared_playfulness:
             "You bring out lightness and laughter in each other",
-          "Mental stimulation":
+          mental_stimulation:
             "You both value ideas, learning, and intellectual growth",
-          "Creative expression":
+          creative_expression:
             "You both value creativity and making things",
-          "Activity level match":
+          activity_level_match:
             "Your physical activity levels and fitness priorities align",
-          "Home/out balance":
+          home_out_balance:
             "You're aligned on spending time at home vs going out",
-          "Adventure & novelty":
+          adventure_and_novelty:
             "You're both excited by new experiences and variety",
-          "Intimacy expectations":
+          intimacy_expectations:
             "You're aligned on what physical intimacy means in your connection",
-          "Support & arrangement style":
+          support_and_arrangement_style:
             "You share similar expectations about support and relationship structure",
-          "Financial support alignment":
+          financial_support_alignment:
             "You're aligned on financial support in the relationship",
-          "Non-transactional match":
+          non_transactional_match:
             "You both want a relationship without financial arrangements",
-          "Religious practice":
+          religious_practice:
             "Your level of religious practice is well-matched",
-          "Conflict recovery":
+          conflict_recovery:
             "You both know how to apologize and reconnect after disagreements",
-          "Letting go & moving forward":
+          letting_go_and_moving_forward:
             "You both let go of conflict and move forward at a similar pace",
-          "Support under pressure":
+          support_under_pressure:
             "You handle stress in compatible ways",
-          "Secure & trusting":
+          secure_and_trusting:
             "You're both secure and trusting in relationships",
-          "Feels heard":
+          feels_heard:
             "You both show up fully present and listen deeply",
-          "Expressiveness match":
+          expressiveness_match:
             "You express feelings and affection in similar ways",
-          "Grows together":
+          grows_together:
             "You both value feedback and growing as partners",
-          "Self-awareness match":
+          self_awareness_match:
             "You both have clear insight into your own patterns",
-          "Patience match":
+          patience_match:
             "You're both patient and accepting of each other's quirks",
-          "Pace of closeness":
+          pace_of_closeness:
             "You move toward closeness at a similar pace",
-          "Aligned on relationship structure":
+          aligned_on_relationship_structure:
             "You're aligned on what exclusivity means to you",
-          "Family style match":
+          family_style_match:
             "You have a similar sense of family closeness and boundaries",
-          "Friends & couple balance":
+          friends_and_couple_balance:
             "You balance friends and couple time in a similar way",
-          "Recharge style match":
+          recharge_style_match:
             "You have a similar need for alone time to recharge",
         },
         interestOverlap: {

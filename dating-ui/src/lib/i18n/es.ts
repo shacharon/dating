@@ -137,91 +137,91 @@ export const esCopy: AppCopySchema = {
         hookEmpty: "Algo en comun — abre para ver mas",
         viewProfile: "Ver perfil",
         chipEvidence: {
-          "Ambition alignment":
+          ambition_alignment:
             "Su impulso y ambicion estan bien alineados",
-          "Social rhythm":
+          social_rhythm:
             "Sus niveles de energia social estan bien alineados",
-          "Wellness focus":
+          wellness_focus:
             "La salud y el cuerpo les importan a ambos",
-          "Emotional depth":
+          emotional_depth:
             "Ambos valoran la profundidad y la presencia emocional en una relacion",
-          "Secure attachment":
+          secure_attachment:
             "Comparten un enfoque similar hacia la cercania y la disponibilidad emocional",
-          "Direct communication":
+          direct_communication:
             "Ambos son directos, lo que reduce malentendidos",
-          "Independence fit":
+          independence_fit:
             "Su necesidad de espacio y de estar juntos es mutuamente compatible",
-          "Shared values":
+          shared_values:
             "Comparten terreno comun en valores que dan forma al dia a dia",
-          "Money mindset":
+          money_mindset:
             "Su enfoque hacia el dinero y la seguridad es compatible",
-          "Relationship expectations":
+          relationship_expectations:
             "Ambos buscan algo similar en como funciona una relacion",
-          "Lifestyle pace":
+          lifestyle_pace:
             "Se mueven a un ritmo similar — la forma en que organizan el dia coincide",
-          "Physical chemistry":
+          physical_chemistry:
             "Las senales de atraccion fisica son fuertes y mutuas",
-          "Lifestyle & status":
+          lifestyle_and_status:
             "Estan alineados en estilo de vida y posicionamiento social",
-          "Conflict approach":
+          conflict_approach:
             "Manejan el desacuerdo de formas compatibles — es menos probable que el conflicto los descarrile",
-          "Understanding & care":
+          understanding_and_care:
             "Ambos lideran con empatía y genuino cuidado por los sentimientos del otro",
-          "Authentic openness":
+          authentic_openness:
             "Ambos están cómodos siendo reales y mostrando vulnerabilidad",
-          "Emotional balance":
+          emotional_balance:
             "Ambos manejan las emociones de forma equilibrada y no reactiva",
-          "Affection rhythm match":
+          affection_rhythm_match:
             "Sus necesidades de tacto y cercanía física están alineadas",
-          "Shared playfulness":
+          shared_playfulness:
             "Se traen ligereza y risas mutuamente",
-          "Mental stimulation":
+          mental_stimulation:
             "Ambos valoran ideas, aprendizaje y crecimiento intelectual",
-          "Creative expression":
+          creative_expression:
             "Ambos valoran la creatividad y crear cosas",
-          "Activity level match":
+          activity_level_match:
             "Sus niveles de actividad física y prioridades de fitness están alineados",
-          "Home/out balance":
+          home_out_balance:
             "Están alineados en pasar tiempo en casa vs salir",
-          "Adventure & novelty":
+          adventure_and_novelty:
             "Ambos se emocionan con nuevas experiencias y variedad",
-          "Intimacy expectations":
+          intimacy_expectations:
             "Están alineados sobre lo que significa la intimidad física",
-          "Support & arrangement style":
+          support_and_arrangement_style:
             "Comparten expectativas similares sobre apoyo y estructura",
-          "Financial support alignment":
+          financial_support_alignment:
             "Están alineados sobre el apoyo financiero en la relación",
-          "Non-transactional match":
+          non_transactional_match:
             "Ambos quieren una relación sin acuerdos financieros",
-          "Religious practice":
+          religious_practice:
             "Su nivel de práctica religiosa es compatible",
-          "Conflict recovery":
+          conflict_recovery:
             "Ambos saben disculparse y reconectar después de un desacuerdo",
-          "Letting go & moving forward":
+          letting_go_and_moving_forward:
             "Ambos dejan ir los conflictos y siguen adelante a un ritmo similar",
-          "Support under pressure":
+          support_under_pressure:
             "Manejan el estrés de forma compatible",
-          "Secure & trusting":
+          secure_and_trusting:
             "Ambos son seguros y confiados en la relación",
-          "Feels heard":
+          feels_heard:
             "Ambos están presentes y escuchan profundamente",
-          "Expressiveness match":
+          expressiveness_match:
             "Expresan sentimientos y afecto de forma similar",
-          "Grows together":
+          grows_together:
             "Ambos valoran el feedback y crecer como pareja",
-          "Self-awareness match":
+          self_awareness_match:
             "Ambos tienen buena comprensión de sus propios patrones",
-          "Patience match":
+          patience_match:
             "Ambos son pacientes y aceptan las diferencias del otro",
-          "Pace of closeness":
+          pace_of_closeness:
             "Avanzan hacia la cercanía a un ritmo similar",
-          "Aligned on relationship structure":
+          aligned_on_relationship_structure:
             "Están alineados sobre lo que significa la exclusividad",
-          "Family style match":
+          family_style_match:
             "Tienen una sensación similar de cercanía familiar y límites",
-          "Friends & couple balance":
+          friends_and_couple_balance:
             "Equilibran el tiempo con amigos y en pareja de forma similar",
-          "Recharge style match":
+          recharge_style_match:
             "Tienen una necesidad similar de tiempo a solas para recargar energías",
         },
         interestOverlap: {

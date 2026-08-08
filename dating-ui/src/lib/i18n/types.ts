@@ -1,4 +1,4 @@
-import type { ChipEvidenceMap } from "@/app/dating/me-matches/chip-evidence";
+import type { ChipEvidenceMap } from "@/lib/matches/chip-evidence";
 
 export const SUPPORTED_LOCALES = ["en", "es", "he"] as const;
 
@@ -134,8 +134,8 @@ export type AppCopySchema = {
         hookEmpty: string;
         viewProfile: string;
         /**
-         * Human evidence strings keyed by English API chip labels
-         * (e.g. "Ambition alignment" → localized sentence).
+         * Human evidence strings keyed by stable chip codes
+         * (e.g. ambition_alignment → localized sentence).
          */
         chipEvidence: ChipEvidenceMap;
         /** Shared interest overlap chip copy keyed by canonical tag. */

@@ -11,6 +11,7 @@ import type {
   MeMatchItemDto,
   MeMatchesListDto,
 } from '@/lib/me-matches-api';
+import { resolveChipEvidenceCode } from '@/lib/matches/chip-evidence';
 import type {
   GroupedPriorityMatchesVM,
   MatchDetailVM,
@@ -58,7 +59,7 @@ function mapWhy(dto: MatchExplainabilityDto | null): MatchWhyVM | null {
   if (!dto) return null;
   const tension = dto.tensionChip?.trim() || null;
   return {
-    positiveChips: dto.positiveChips ?? [],
+    positiveChips: (dto.positiveChips ?? []).map(resolveChipEvidenceCode),
     tensionChip: tension,
     reasonShort: dto.reasonShort ?? '',
     sharedInterestNote: dto.sharedInterestNote ?? null,
