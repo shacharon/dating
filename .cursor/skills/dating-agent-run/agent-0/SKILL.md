@@ -35,4 +35,8 @@ Write: `dating-api/docs/sprints/<sprint>/handoffs/<story>/agent-0-architect.md`
 
 Template: [../handoff-template.md](../handoff-template.md)
 
+## Git (handoffs are local only)
+
+Handoff files are in `.gitignore` and stay local. No git commit needed for Agent 0.
+
 **Next (user runs manually):** `--agent 1 story <m>`

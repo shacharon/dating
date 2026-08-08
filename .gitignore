@@ -7,6 +7,11 @@
 *.bak
 *.bak-*
 
+# Agent handoffs (local only, not committed) — sprint folders only
+dating-api/docs/sprints/**/handoffs/
+dating-ui/docs/sprints/**/handoffs/
+docs/sprints/**/handoffs/
+
 # Dependencies + Vitest / Vite cache (repo root or packages)
 node_modules/
 **/.vite/

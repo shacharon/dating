@@ -17,15 +17,58 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 --agent <n> sprint <s> story <m>
 ```
 
+### Core pipeline (always sequential)
+
 | Agent | Step skill | Role skill | Handoff |
 |-------|------------|------------|---------|
+| **-1** | [agent--1/SKILL.md](./agent--1/SKILL.md) | [dating-preflight](../dating-preflight/SKILL.md) | `agent--1-preflight.md` |
 | **0** | [agent-0/SKILL.md](./agent-0/SKILL.md) | [dating-architect](../dating-architect/SKILL.md) | `agent-0-architect.md` |
 | **1** | [agent-1/SKILL.md](./agent-1/SKILL.md) | [dating-senior-dev](../dating-senior-dev/SKILL.md) | `agent-1-dev.md` |
 | **2** | [agent-2/SKILL.md](./agent-2/SKILL.md) | [dating-code-review](../dating-code-review/SKILL.md) | `agent-2-cr.md` |
-| **4** | [agent-4/SKILL.md](./agent-4/SKILL.md) | [dating-e2e-tester](../dating-e2e-tester/SKILL.md) | `agent-4-e2e.md` |
 | **3** | [agent-3/SKILL.md](./agent-3/SKILL.md) | [dating-pm-contractor](../dating-pm-contractor/SKILL.md) | `agent-3-pm.md` |
 
-**Run order is 0 → 1 → 2 → 4 → 3** (agent numbers are stable command tokens, not run order — 4 was added later and slots in before 3). **Agent 4 only applies** to stories touching eligibility, preference dimensions, ranking, or the matches endpoints; otherwise skip it and go straight from `--agent 2` to `--agent 3`.
+### Optional agents (conditional insertion)
+
+| Agent | When to use | Step skill | Role skill | Handoff |
+|-------|-------------|------------|------------|---------|
+| **2.5** | Security-sensitive (auth, PII, payments) | [agent-2.5/SKILL.md](./agent-2.5/SKILL.md) | [dating-security-review](../dating-security-review/SKILL.md) | `agent-2.5-security.md` |
+| **3.5** | Frontend changes (UI/UX) | [agent-3.5/SKILL.md](./agent-3.5/SKILL.md) | [dating-ux-review](../dating-ux-review/SKILL.md) | `agent-3.5-ux.md` |
+| **4** | Eligibility/preference/ranking changes | [agent-4/SKILL.md](./agent-4/SKILL.md) | [dating-e2e-tester](../dating-e2e-tester/SKILL.md) | `agent-4-e2e.md` |
+| **5** | Post-production verification (1-3 days after deploy) | [agent-5/SKILL.md](./agent-5/SKILL.md) | [dating-post-deploy](../dating-post-deploy/SKILL.md) | `agent-5-postdeploy.md` |
+
+### Full run order examples
+
+**Simple feature (no security/UI/E2E):**
+```
+-1 → 0 → 1 → 2 → 3 [deploy] → 5
+```
+
+**Security-sensitive feature (auth change):**
+```
+-1 → 0 → 1 → 2 → 2.5 → 3 [deploy] → 5
+```
+
+**Frontend feature:**
+```
+-1 → 0 → 1 → 2 → 3.5 → 3 [deploy] → 5
+```
+
+**Matching engine change:**
+```
+-1 → 0 → 1 → 2 → 4 → 3 [deploy] → 5
+```
+
+**Complex feature (security + UI + matching):**
+```
+-1 → 0 → 1 → 2 → 2.5 → 3.5 → 4 → 3 [deploy] → 5
+```
+
+**Feedback loops:**
+- If Agent 1 discovers design is unworkable: `--agent 0 sprint <s> story <m> --revision`
+- If Agent 2 finds major issues: sends back to Agent 1
+- If Agent 2.5 finds critical security: sends back to Agent 1
+- If Agent 3.5 finds critical UX: sends back to Agent 1
+- If Agent 4 finds bugs: sends back to Agent 1
 
 **Examples:** `--agent 0 sprint 2 story 1` · `--agent 1 sprint 2 story 1` · `--agent 0 sprint 1 STORY_01_like` · `--agent 4 sprint 16 story 1`
 
@@ -38,7 +81,8 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 3. Read the **role skill** linked from that step spec.
 4. Resolve story + epic + required prior handoffs.
 5. Do the step. Write handoff using [handoff-template.md](./handoff-template.md).
-6. Reply with handoff path + suggested next command.
+6. **Git commit + push** implementation/tests/fixes if agent is 1, 2, 2.5, 3.5, or 3 (see agent SKILLs for exact commands). **Handoffs are local only** (in `.gitignore`) and not committed.
+7. Reply with handoff path + suggested next command.
 
 **Do not auto-chain.** Wait for the user to invoke the next agent.
 
@@ -67,13 +111,31 @@ Create if missing when writing.
 
 | Agent | Required before start |
 |-------|----------------------|
-| 0 | none |
+| -1 | none |
+| 0 | `agent--1-preflight.md` (verdict = "ready") |
 | 1 | `agent-0-architect.md` |
 | 2 | `agent-1-dev.md` |
-| 4 | `agent-2-cr.md` (skip entirely if story doesn't touch matching engine — see below) |
-| 3 | `agent-2-cr.md`, plus `agent-4-e2e.md` if agent 4 was applicable |
+| 2.5 | `agent-2-cr.md` (security-sensitive only) |
+| 3.5 | `agent-2-cr.md` (or `agent-2.5-security.md` if it exists) |
+| 4 | `agent-2-cr.md` (or latest review agent) — skip if story doesn't touch matching engine |
+| 3 | All applicable agent handoffs (2, and optionally 2.5, 3.5, 4 based on story type) |
+| 5 | `agent-3-pm.md` (status = Done) + deployed to production |
 
 If missing → stop, tell user which `--agent` to run first.
+
+### Feedback loops (revision/escalation)
+
+**Agent 0 revision** (design unworkable):
+```text
+--agent 0 sprint <s> story <m> --revision
+```
+Creates `agent-0-architect-rev2.md` (or rev3, rev4...). Agent 1 restarts from latest revision.
+
+**Agent 1/2/2.5/3.5 rejects to Agent 1:**
+No special command — Agent 1 fixes issues and updates `agent-1-dev.md` with "Revision 2" section.
+
+**Agent 4 finds bugs:**
+Sends back to `--agent 1` (not Agent 2 — implementation bug, not review gap).
 
 ---
 
@@ -119,5 +181,21 @@ Stories touching **eligibility**, **preference dimensions**, or **ranking order*
 
 **Summary:** ...
 
-**Next (when you're ready):** `--agent <next> sprint <s> story <m>` (next in run order 0 → 1 → 2 → 4 → 3, skipping 4 when not applicable — not simply `<n>+1`)
+**Next (when you're ready):** `--agent <next> sprint <s> story <m>`
+
+(Or if ready for autorun: `--autorun sprint <s> story <m> --start-from <next>`)
+```
+
+If agent verdict is "blocked" or "rejected":
+
+```markdown
+## Blocked: --agent <n> sprint <s> story <m>
+
+**Handoff:** `dating-api/docs/sprints/.../agent-<n>-....md`
+
+**Issue:** [describe blocker]
+
+**Fix needed:** [what must be done]
+
+**Next:** `--agent <fix-agent> sprint <s> story <m>` (usually Agent 0 --revision or Agent 1 to fix)
 ```

@@ -38,4 +38,31 @@ Template: [../handoff-template.md](../handoff-template.md)
 
 Include: final status (Done | Blocked), DoD summary, what's deferred.
 
-**Next story (when user is ready):** `--agent 0 story <m+1>`
+## Git commit + push (mandatory)
+
+After writing handoff and updating story status:
+
+```bash
+# Stage story status updates only (handoffs are in .gitignore)
+git add dating-api/docs/sprints/<sprint>/README.md
+git add dating-api/docs/sprints/<sprint>/STORY_*.md
+
+# Commit
+git commit -m "chore: close sprint <s> story <m>
+
+Agent 3 (PM)
+Status: [Done|Blocked]
+DoD: [summary]
+
+Ready for: [deploy to staging|blocked on X]
+"
+
+# Push (triggers PR ready for review)
+git push
+```
+
+**Note:** Handoffs are local only (in `.gitignore`). Only commit story status updates (README.md, STORY_*.md).
+
+If status is **Done**, the feature branch is now ready for PR/merge.
+
+**Next story (when user is ready):** `--agent -1 story <m+1>` (V2) or `--agent 0 story <m+1>` (V1)

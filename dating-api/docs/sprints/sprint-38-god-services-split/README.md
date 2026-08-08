@@ -61,5 +61,10 @@ Follow-up (not this sprint): break Worker→MeProfile via analysis ports + Modul
 
 | Next | Focus |
 |------|--------|
-| **39** | [Repository + scale hardening](../sprint-39-repo-and-scale/README.md) |
-| **40** | [Match engine stages + txn/query ops](../sprint-40-match-engine-stages/README.md) |
+| **45 (before Story 03 preferred)** | [Orchestration foundations](../sprint-45-orchestration-foundations/README.md) — characterization + typed errors + DTO edge |
+| **39** | [Repository + scale hardening](../sprint-39-repo-and-scale/README.md) — Done |
+| **40** | [Match engine stages + txn/query ops](../sprint-40-match-engine-stages/README.md) — Done |
+| **46** | [PairMatchPolicy + admin + dedupe](../sprint-46-pair-match-policy/README.md) |
+| **47** | [Matches UI contracts](../sprint-47-matches-ui-contracts/README.md) |
+
+**Story 03 agent order:** 0 → 1 → 2 → **4** → 3 (Agent 4 required — ranking / matches endpoints).

@@ -36,4 +36,29 @@ Template: [../handoff-template.md](../handoff-template.md)
 
 Include: files changed, how to run migration/dev server, **browser Network smoke** (pass/deferred), deferred gaps.
 
+## Git commit + push (mandatory)
+
+After writing handoff:
+
+```bash
+# Stage implementation files only (handoffs are in .gitignore)
+git add dating-api/src dating-api/prisma dating-ui/src
+# Or specific files if needed
+
+# Commit with story reference
+git commit -m "feat: implement sprint <s> story <m>
+
+Agent 1 (dev)
+- [bullet list of changes]
+
+Story: <story-slug>
+Sprint: <sprint-slug>
+"
+
+# Push to feature branch (create if needed)
+git push -u origin feature/sprint-<s>-story-<m>
+```
+
+**Note:** Handoffs are local only (in `.gitignore`). Only commit implementation code.
+
 **Next (user runs manually):** `--agent 2 story <m>`

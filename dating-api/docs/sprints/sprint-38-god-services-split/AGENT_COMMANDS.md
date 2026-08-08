@@ -59,9 +59,10 @@ Story: `STORY_02_remove_circular_deps.md`
 
 ---
 
-## Story 3 — Split MeMatchesService
+## Story 3 — Split MeMatchesService (Agent 4 required)
 
-Story: `STORY_03_split_me_matches_service.md`
+Story: `STORY_03_split_me_matches_service.md`  
+**Preferred before start:** Sprint 45 Done (foundations).
 
 ```text
 --agent 0 sprint 38 story 3
@@ -73,6 +74,10 @@ Story: `STORY_03_split_me_matches_service.md`
 
 ```text
 --agent 2 sprint 38 story 3
+```
+
+```text
+--agent 4 sprint 38 story 3
 ```
 
 ```text

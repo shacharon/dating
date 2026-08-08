@@ -1,6 +1,6 @@
 # Sprint 45 — Orchestration Foundations (P0)
 
-**Status:** In progress (Story 01 Done)  
+**Status:** Done  
 **Depends on:** None (can start anytime; preferred before Sprint 38 Story 03)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Plan:** Option A foundations — characterization tests, typed domain errors, me-matches DTO boundary  
@@ -25,8 +25,8 @@ Lock behavior and contracts **before** splitting `MeMatchesService` (Sprint 38 S
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [Characterization tests](./STORY_01_characterization_tests.md) | P0 | 1d | Done |
-| 02 | [Typed domain errors](./STORY_02_typed_domain_errors.md) | P0 | 1d | Planned |
-| 03 | [Me-matches DTO boundary](./STORY_03_me_matches_dto_boundary.md) | P0 | 1–1.5d | Planned |
+| 02 | [Typed domain errors](./STORY_02_typed_domain_errors.md) | P0 | 1d | Done |
+| 03 | [Me-matches DTO boundary](./STORY_03_me_matches_dto_boundary.md) | P0 | 1–1.5d | Done |
 
 **Order:** 01 → 02 → 03 (agents: `--agent 0..3 sprint 45 story N`). Agent 4 **not** required (no ranking/eligibility behavior change).
 

@@ -38,4 +38,28 @@ Template: [../handoff-template.md](../handoff-template.md)
 
 Include: baseline spec status (green/red), new scenarios added + file paths, full test run output, bugs found (→ agent 1) vs. none.
 
+## Git commit + push (mandatory)
+
+After writing handoff (and E2E scenarios if added):
+
+```bash
+# Stage E2E scenarios only (handoffs are in .gitignore)
+git add dating-api/src/me-profile/*e2e*.spec.ts
+# Or specific E2E test files if new scenarios added
+
+# Commit (only if new scenarios were added)
+git commit -m "test(e2e): verify sprint <s> story <m>
+
+Agent 4 (E2E tester)
+- Baselines: [X/3 green]
+- New scenarios: [list]
+- Verdict: [pass|blocked]
+"
+
+# Push (only if there are new E2E scenarios)
+git push
+```
+
+**Note:** Handoffs are local only (in `.gitignore`). Only commit if new E2E scenarios were added. If baselines just passed with no new code, no git commit needed.
+
 **Next (user runs manually):** `--agent 3 story <m>` — or `--agent 1 story <m>` if E2E found a real bug

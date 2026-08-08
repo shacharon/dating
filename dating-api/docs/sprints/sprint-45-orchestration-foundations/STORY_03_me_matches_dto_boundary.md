@@ -1,6 +1,6 @@
 # Story 03 — Me-matches DTO boundary (API vs engine)
 
-**Sprint 45 · Status: Planned**  
+**Sprint 45 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1–1.5 days  
 **Dependencies:** Stories 01–02 preferred  
@@ -33,9 +33,9 @@ List/detail assembly mixes transport DTOs with engine vocabulary (`matchScore`, 
 
 ## Acceptance criteria
 
-- [ ] Dedicated DTO/mapper modules exist; god service (or future collaborators) call them
-- [ ] Characterization / HTTP specs prove wire parity (unless explicit versioned change)
-- [ ] Architect handoff lists public vs internal fields
+- [x] Dedicated DTO/mapper modules exist; god service (or future collaborators) call them
+- [x] Characterization / HTTP specs prove wire parity (unless explicit versioned change)
+- [x] Architect handoff lists public vs internal fields
 
 ## Suggested commit
 

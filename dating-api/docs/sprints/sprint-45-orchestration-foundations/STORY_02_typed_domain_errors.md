@@ -1,6 +1,6 @@
 # Story 02 — Typed domain errors (match / me path)
 
-**Sprint 45 · Status: Planned**  
+**Sprint 45 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** Story 01 preferred (tests catch mapping mistakes)  
@@ -33,10 +33,10 @@ Introduce typed domain errors for the me-matches / readiness path (pattern: `Mes
 
 ## Acceptance criteria
 
-- [ ] Domain errors exist; filter maps them
-- [ ] me-matches path no longer throws Nest HTTP exceptions for the migrated cases
-- [ ] Clients still see equivalent status + error code semantics
-- [ ] Specs green
+- [x] Domain errors exist; filter maps them
+- [x] me-matches path no longer throws Nest HTTP exceptions for the migrated cases
+- [x] Clients still see equivalent status + error code semantics
+- [x] Specs green
 
 ## Suggested commit
 

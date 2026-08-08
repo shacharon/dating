@@ -37,4 +37,30 @@ Template: [../handoff-template.md](../handoff-template.md)
 
 Include: verdict (approved | fixed), test paths, commands + results, **runtime verification** (browser Network or API socket integration), remaining issues.
 
+## Git commit + push (mandatory)
+
+After writing handoff:
+
+```bash
+# Stage tests and fixes only (handoffs are in .gitignore)
+git add dating-api/src/**/*.spec.ts dating-ui/src/**/*.spec.tsx
+# Or specific test files
+
+# Commit
+git commit -m "test: add tests for sprint <s> story <m>
+
+Agent 2 (code review)
+- Tests added: [list spec files]
+- Issues fixed: [list if any]
+- Verdict: [approved|needs-fixes]
+
+[Test results]
+"
+
+# Push to same feature branch
+git push
+```
+
+**Note:** Handoffs are local only (in `.gitignore`). Only commit tests and code fixes.
+
 **Next (user runs manually):** `--agent 4 story <m>` if this story touches eligibility/preference/ranking, else `--agent 3 story <m>` — or `--agent 1 story <m>` if major fixes needed

@@ -1,0 +1,99 @@
+# Sprint 47 — All Commands (Copy-Paste)
+
+## Story 1 — UI match view-models
+
+```text
+--agent -1 sprint 47 story 1
+```
+
+```text
+--agent 0 sprint 47 story 1
+```
+
+```text
+--agent 1 sprint 47 story 1
+```
+
+```text
+--agent 2 sprint 47 story 1
+```
+
+```text
+--agent 3.5 sprint 47 story 1
+```
+
+```text
+--agent 3 sprint 47 story 1
+```
+
+---
+
+## Story 2 — Matches React Query
+
+```text
+--agent -1 sprint 47 story 2
+```
+
+```text
+--agent 0 sprint 47 story 2
+```
+
+```text
+--agent 1 sprint 47 story 2
+```
+
+```text
+--agent 2 sprint 47 story 2
+```
+
+```text
+--agent 3.5 sprint 47 story 2
+```
+
+```text
+--agent 3 sprint 47 story 2
+```
+
+---
+
+## Story 3 — Chip-evidence enum
+
+```text
+--agent -1 sprint 47 story 3
+```
+
+```text
+--agent 0 sprint 47 story 3
+```
+
+```text
+--agent 1 sprint 47 story 3
+```
+
+```text
+--agent 2 sprint 47 story 3
+```
+
+```text
+--agent 3.5 sprint 47 story 3
+```
+
+```text
+--agent 3 sprint 47 story 3
+```
+
+---
+
+## After Deploy to Production (1-3 days later)
+
+```text
+--agent 5 sprint 47 story 1
+```
+
+```text
+--agent 5 sprint 47 story 2
+```
+
+```text
+--agent 5 sprint 47 story 3
+```
