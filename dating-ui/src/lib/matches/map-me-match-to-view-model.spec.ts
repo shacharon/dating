@@ -89,6 +89,29 @@ describe('mapMeMatchItemToViewModel', () => {
     expect(vm.hardBlock).toBeNull();
   });
 
+  it('normalizes why.positiveChips from English, codes, and unknown', () => {
+    const vm = mapMeMatchItemToViewModel(
+      baseItem({
+        explainability: {
+          positiveChips: [
+            'Ambition alignment',
+            'shared_playfulness',
+            '  Wellness focus  ',
+            'Totally Unknown Chip',
+          ],
+          reasonShort: 'Mix',
+        },
+      }),
+    );
+
+    expect(vm.why?.positiveChips).toEqual([
+      'ambition_alignment',
+      'shared_playfulness',
+      'wellness_focus',
+      'Totally Unknown Chip',
+    ]);
+  });
+
   it('maps hardBlock reasons with flattened quotes', () => {
     const vm = mapMeMatchItemToViewModel(
       baseItem({

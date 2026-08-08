@@ -3,6 +3,7 @@ import { getCopy } from '@/lib/i18n';
 import {
   CHIP_EVIDENCE_CODES,
   CHIP_EVIDENCE_KEYS,
+  CHIP_EVIDENCE_LEGACY_LABEL_TO_CODE,
   chipToEvidence,
   resolveChipEvidenceCode,
 } from '@/lib/matches/chip-evidence';
@@ -20,6 +21,15 @@ describe('resolveChipEvidenceCode', () => {
     );
   });
 
+  it('trims whitespace before resolving', () => {
+    expect(resolveChipEvidenceCode('  Ambition alignment  ')).toBe(
+      'ambition_alignment',
+    );
+    expect(resolveChipEvidenceCode('  ambition_alignment  ')).toBe(
+      'ambition_alignment',
+    );
+  });
+
   it('passes through already-stable codes', () => {
     expect(resolveChipEvidenceCode('ambition_alignment')).toBe(
       'ambition_alignment',
@@ -28,6 +38,19 @@ describe('resolveChipEvidenceCode', () => {
 
   it('passes through unknown strings', () => {
     expect(resolveChipEvidenceCode('Unknown chip')).toBe('Unknown chip');
+  });
+
+  it('maps every legacy label to a known code (bijective coverage)', () => {
+    const codesFromLegacy = Object.values(CHIP_EVIDENCE_LEGACY_LABEL_TO_CODE);
+    expect(new Set(codesFromLegacy).size).toBe(CHIP_EVIDENCE_CODES.length);
+    expect(codesFromLegacy.sort()).toEqual([...CHIP_EVIDENCE_CODES].sort());
+    for (const [label, code] of Object.entries(
+      CHIP_EVIDENCE_LEGACY_LABEL_TO_CODE,
+    )) {
+      expect(resolveChipEvidenceCode(label)).toBe(code);
+      expect(CHIP_EVIDENCE_CODES).toContain(code);
+      expect(label.includes('_')).toBe(false);
+    }
   });
 });
 
@@ -186,13 +209,13 @@ describe('chipToEvidence', () => {
     expect(evidence.toLowerCase()).not.toContain('alignment');
   });
 
-  it('i18n maps do not use English titles as keys', () => {
+  it('i18n maps do not use English titles as keys and match code set exactly', () => {
     for (const locale of ['en', 'he', 'es'] as const) {
       const keys = Object.keys(
         getCopy(locale).matches.list.browse.chipEvidence,
       );
       expect(keys.some((k) => k.includes(' '))).toBe(false);
-      expect(keys).toEqual(expect.arrayContaining([...CHIP_EVIDENCE_CODES]));
+      expect(keys.sort()).toEqual([...CHIP_EVIDENCE_CODES].sort());
     }
   });
 });
