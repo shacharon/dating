@@ -13,7 +13,7 @@ export function muteExpiryLockTtlSeconds(intervalMs: number): number {
   return Math.max(60, Math.floor((intervalMs / 1000) * 0.9));
 }
 
-/** Break-glass: treat Redis unavailable as leadership acquired. */
+/** Break-glass only: treat Redis unavailable as leadership acquired. Must stay unset in prod. */
 export function isCronLeaderFailOpen(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {

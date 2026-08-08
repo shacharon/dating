@@ -15,9 +15,29 @@ Photo SLA enforcer + mute-expiry cron must not run on every API replica. Introdu
 
 ## Acceptance criteria
 
-- [ ] Under 2+ processes, only one successful tick per interval (documented test)
-- [ ] Lock loss / Redis down behavior documented
-- [ ] Agent 2.5 reviews lock semantics
+- [x] Under 2+ processes, only one successful tick per interval (documented test)
+- [x] Lock loss / Redis down behavior documented
+- [x] Agent 2.5 reviews lock semantics
+
+## Lock loss / Redis-down behavior (ops)
+
+| Situation | Behavior |
+|-----------|----------|
+| `REDIS_URL` unset | Lock → `acquired` (local/single-node still ticks) |
+| Redis up, key held | `not_acquired` → skip tick |
+| Redis configured but down / SET error | `unavailable` → **skip** (fail-closed) |
+| `CRON_LEADER_FAIL_OPEN=1` + unavailable | Run tick (break-glass; **must not** be default in prod) |
+| TTL expires | Next interval can acquire (photo-SLA TTL 55m &lt; 1h) |
+
+**Dual-process proof (unit):** `redis-cache.service.spec.ts` — first `tryAcquireCronLock` → `acquired`, second → `not_acquired` (SET NX).
+
+**Monitor:** `CRON_LEADER_SKIPPED` / `CRON_LEADER_UNAVAILABLE` rates.
+
+## Security notes (Agent 2.5)
+
+- No HTTP/auth surface; lock keys are constants; values are `{ at, pid, host }` (no user PII).
+- Fail-closed default reduces stampede of SLA auto-approves / capacity emails / mute clears.
+- Residual: Redis write access can hold/deny locks until TTL; keep Redis private. Multi-replica **requires** `REDIS_URL`.
 
 ## Suggested commit
 
