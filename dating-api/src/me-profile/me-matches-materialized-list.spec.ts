@@ -1,4 +1,3 @@
-import type { UserProfileStatus } from '@prisma/client';
 import {
   encodeMatchListCursor,
   MATCH_LIST_CACHE_VERSION,
@@ -6,8 +5,10 @@ import {
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import * as matchEngine from '../matches/match-engine';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
+import { MatchListInvalidCursorError } from './me-matches.errors';
 import { MeMatchesService, matchListRankAfterCursorWhere } from './me-matches.service';
 import { MATCH_LIST_MATERIALIZED_ENV } from './match-list-materialized-flag';
+import type { UserProfileStatus } from '@prisma/client';
 
 const S_ANALYZED = 'ANALYZED' as UserProfileStatus;
 const S_DRAFT = 'DRAFT' as UserProfileStatus;
@@ -340,12 +341,17 @@ describe('MeMatchesService materialized list', () => {
     expect(cache.get).not.toHaveBeenCalled();
   });
 
-  it('invalid cursor throws BadRequestException', async () => {
+  it('invalid cursor throws MatchListInvalidCursorError', async () => {
     await expect(
       service.list(viewerUserId, { limit: 20, cursor: '!!!' }),
-    ).rejects.toMatchObject({
-      response: expect.objectContaining({ error: 'invalid_cursor' }),
-    });
+    ).rejects.toBeInstanceOf(MatchListInvalidCursorError);
+    try {
+      await service.list(viewerUserId, { limit: 20, cursor: '!!!' });
+    } catch (e) {
+      expect((e as MatchListInvalidCursorError).httpBody).toMatchObject({
+        error: 'invalid_cursor',
+      });
+    }
   });
 
   /**

@@ -1,6 +1,6 @@
 # Story 01 — Characterization tests for MeMatches list/detail
 
-**Sprint 45 · Status: Planned**  
+**Sprint 45 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Dependencies:** None  
@@ -32,9 +32,9 @@ Add/extend automated characterization coverage around `MeMatchesService.list()` 
 
 ## Acceptance criteria
 
-- [ ] Characterization cases listed in handoff + covered by green tests
-- [ ] `npm test` (relevant me-matches suites) green
-- [ ] No production behavior change
+- [x] Characterization cases listed in handoff + covered by green tests
+- [x] `npm test` (relevant me-matches suites) green
+- [x] No production behavior change
 
 ## Suggested commit
 

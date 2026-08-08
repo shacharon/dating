@@ -56,6 +56,24 @@ export const ErrorCodes = {
   ME_MATCHES_LIST_OK: 'ME_MATCHES_LIST_OK',
   /** Me matches: GET /me/matches — viewer profile not ready for matching (not found or not ANALYZED) */
   ME_MATCHES_LIST_NOT_READY: 'ME_MATCHES_LIST_NOT_READY',
+  /** Sprint 45 Story 2 — invalid match list cursor */
+  ME_MATCHES_INVALID_CURSOR: 'ME_MATCHES_INVALID_CURSOR',
+  /** Sprint 45 Story 2 — detail/assertVisible viewer not ready (404) */
+  ME_MATCHES_VIEWER_NOT_READY: 'ME_MATCHES_VIEWER_NOT_READY',
+  /** Sprint 45 Story 2 — opaque candidate not found / ineligible (404) */
+  ME_MATCHES_CANDIDATE_NOT_FOUND: 'ME_MATCHES_CANDIDATE_NOT_FOUND',
+  /** Sprint 45 Story 2 — detail missing evaluation (404 object body) */
+  ME_MATCHES_DETAIL_EVALUATION_NOT_FOUND: 'ME_MATCHES_DETAIL_EVALUATION_NOT_FOUND',
+  /** Sprint 45 Story 2 — list rebuild missing viewer evaluation (500) */
+  ME_MATCHES_LIST_VIEWER_EVALUATION_MISSING:
+    'ME_MATCHES_LIST_VIEWER_EVALUATION_MISSING',
+  /** Sprint 45 Story 2 — list rebuild missing candidate evaluation (500) */
+  ME_MATCHES_LIST_CANDIDATE_EVALUATION_MISSING:
+    'ME_MATCHES_LIST_CANDIDATE_EVALUATION_MISSING',
+  /** Sprint 45 Story 2 — match primary photo row missing */
+  ME_MATCHES_PHOTO_NOT_FOUND: 'ME_MATCHES_PHOTO_NOT_FOUND',
+  /** Sprint 45 Story 2 — match photo file missing from storage */
+  ME_MATCHES_PHOTO_FILE_NOT_FOUND: 'ME_MATCHES_PHOTO_FILE_NOT_FOUND',
   /** Me matches: GET /me/matches/:id — match detail returned */
   ME_MATCHES_DETAIL_OK: 'ME_MATCHES_DETAIL_OK',
   /** Sprint 22 — match narrative cache hit (no LLM) */

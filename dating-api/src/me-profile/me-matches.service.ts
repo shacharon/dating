@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   MatchActionType,
@@ -19,6 +13,16 @@ import {
 } from './me-profile-analysis.service';
 import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import { buildMatchCandidateSqlPrefilterWhere } from './me-matches-candidate-sql-prefilter';
+import {
+  MatchCandidateNotFoundError,
+  MatchDetailEvaluationNotFoundError,
+  MatchListCandidateEvaluationMissingError,
+  MatchListInvalidCursorError,
+  MatchListViewerEvaluationMissingError,
+  MatchPhotoFileNotFoundError,
+  MatchPhotoNotFoundError,
+  MatchViewerNotReadyError,
+} from './me-matches.errors';
 import {
   MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
   resolveMatchListCandidateCap,
@@ -588,10 +592,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         ? decodeMatchListCursor(query.cursor.trim())
         : null;
     if (query.cursor != null && query.cursor.trim() !== '' && cursor == null) {
-      throw new BadRequestException({
-        error: 'invalid_cursor',
-        message: 'Invalid match list cursor.',
-      });
+      throw new MatchListInvalidCursorError();
     }
 
     if (isMatchListMaterializedEnabled()) {
@@ -811,11 +812,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     );
     const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
     if (!viewerEval) {
-      throw new InternalServerErrorException({
-        error: 'viewer_evaluation_not_found',
-        message:
-          'Profile is marked analyzed but no UserProfileEvaluation row exists. Re-run analysis.',
-      });
+      throw new MatchListViewerEvaluationMissingError();
     }
 
     return {
@@ -995,11 +992,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     // Latest evaluation only (ORDER BY createdAt DESC LIMIT 1) — required for scoring.
     const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
     if (!viewerEval) {
-      throw new InternalServerErrorException({
-        error: 'viewer_evaluation_not_found',
-        message:
-          'Profile is marked analyzed but no UserProfileEvaluation row exists. Re-run analysis.',
-      });
+      throw new MatchListViewerEvaluationMissingError();
     }
     const {
       preference: viewerPreference,
@@ -1186,10 +1179,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
       const candidateEval = latestEvalByProfile.get(row.id);
       if (!candidateEval) {
-        throw new InternalServerErrorException({
-          error: 'candidate_evaluation_not_found',
-          message: `Profile ${row.id} is analyzed but has no UserProfileEvaluation row.`,
-        });
+        throw new MatchListCandidateEvaluationMissingError(row.id);
       }
 
       const {
@@ -1502,7 +1492,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
   /**
    * Ensures the viewer can see the candidate on match detail/list rules.
-   * Throws `NotFoundException` when not visible (same semantics as getById).
+   * Throws domain not-found / viewer-not-ready errors (same HTTP semantics as getById).
    */
   async assertMatchCandidateVisible(
     viewerUserId: string,
@@ -1523,15 +1513,11 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     });
 
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
-      throw new NotFoundException(
-        'Your profile is not ready for matching. Complete your profile and run analysis first.',
-      );
+      throw new MatchViewerNotReadyError('not_analyzed');
     }
 
     if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
-      throw new NotFoundException(
-        'Your profile is not ready for matching. Add at least one photo first.',
-      );
+      throw new MatchViewerNotReadyError('no_photo');
     }
 
     const asOf = new Date();
@@ -1551,7 +1537,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       candidate.status !== STATUS_ANALYZED ||
       candidate.user?.deletedAt != null
     ) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     this.assertCandidateHasApprovedPhotosInRow(candidate);
@@ -1569,7 +1555,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     );
 
     if (!eligible) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
@@ -1578,10 +1564,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       candidate.id,
     );
     if (!viewerEval || !candidateEval) {
-      throw new NotFoundException({
-        error: 'evaluation_not_found',
-        message: 'No analysis result available for this match.',
-      });
+      throw new MatchDetailEvaluationNotFoundError();
     }
 
     await this.assertViewerHasNotBlockedTarget(viewerUserId, candidate.userId);
@@ -1614,15 +1597,11 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     });
 
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
-      throw new NotFoundException(
-        'Your profile is not ready for matching. Complete your profile and run analysis first.',
-      );
+      throw new MatchViewerNotReadyError('not_analyzed');
     }
 
     if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
-      throw new NotFoundException(
-        'Your profile is not ready for matching. Add at least one photo first.',
-      );
+      throw new MatchViewerNotReadyError('no_photo');
     }
 
     const asOf = new Date();
@@ -1643,7 +1622,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       candidate.status !== STATUS_ANALYZED ||
       candidate.user?.deletedAt != null
     ) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     this.assertCandidateHasApprovedPhotosInRow(candidate);
@@ -1662,7 +1641,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
 
     // Return 404 even when the profile exists but is not eligible — do not leak existence.
     if (!eligible) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
@@ -1671,10 +1650,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       candidate.id,
     );
     if (!viewerEval || !candidateEval) {
-      throw new NotFoundException({
-        error: 'evaluation_not_found',
-        message: 'No analysis result available for this match.',
-      });
+      throw new MatchDetailEvaluationNotFoundError();
     }
 
     await this.assertViewerHasNotBlockedTarget(userId, candidate.userId);
@@ -1754,7 +1730,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           hasActiveMutual: mutual != null,
         })
       ) {
-        throw new NotFoundException('Match not found.');
+        throw new MatchCandidateNotFoundError();
       }
       const viewerTextFields = {
         aboutMe: viewerCoreDetail.aboutMe,
@@ -1772,7 +1748,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         },
       );
       if (hardBlocked === undefined) {
-        throw new NotFoundException('Match not found.');
+        throw new MatchCandidateNotFoundError();
       }
     }
 
@@ -1995,7 +1971,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       },
     });
     if (!candidate || candidate.user?.deletedAt != null) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     const mutual = await this.mutualMatches.findActiveByUserPair(
@@ -2011,15 +1987,15 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       include: { preference: true },
     });
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     if (candidate.status !== STATUS_ANALYZED) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     const viewerBridge = buildProductProfileMatchingBridge(
@@ -2039,11 +2015,11 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       candidateBridge.selfGender,
     );
     if (!eligible) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     if (!(await candidateHasApprovedPhoto(this.prisma, candidate.id))) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
 
     await this.assertViewerHasNotBlockedTarget(userId, candidate.userId);
@@ -2089,7 +2065,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     photos?: ReadonlyArray<unknown>;
   }): void {
     if ((candidate.photos ?? []).length < 1) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
   }
 
@@ -2107,17 +2083,11 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       select: { mimeType: true, storageKey: true },
     });
     if (!photo) {
-      throw new NotFoundException({
-        error: 'photo_not_found',
-        message: 'Photo was not found for this match.',
-      });
+      throw new MatchPhotoNotFoundError();
     }
     const content = await this.photoStorage.read(photo.storageKey);
     if (!content) {
-      throw new NotFoundException({
-        error: 'photo_file_not_found',
-        message: 'Photo file is missing from storage.',
-      });
+      throw new MatchPhotoFileNotFoundError();
     }
     return { contentType: photo.mimeType, content };
   }
@@ -2133,7 +2103,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       select: { action: true },
     });
     if (row?.action === MatchActionType.BLOCK) {
-      throw new NotFoundException('Match not found.');
+      throw new MatchCandidateNotFoundError();
     }
   }
 

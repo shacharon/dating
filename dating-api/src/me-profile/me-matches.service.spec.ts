@@ -1,7 +1,11 @@
 import {
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+  MatchCandidateNotFoundError,
+  MatchDetailEvaluationNotFoundError,
+  MatchListCandidateEvaluationMissingError,
+  MatchListInvalidCursorError,
+  MatchListViewerEvaluationMissingError,
+  MatchViewerNotReadyError,
+} from './me-matches.errors';
 import type { UserProfileStatus } from '@prisma/client';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import { MATCH_LIST_CACHE_VERSION } from '../cache/match-list-cache';
@@ -429,7 +433,7 @@ describe('MeMatchesService', () => {
       });
     });
 
-    it('list() throws InternalServerErrorException when viewer has no UserProfileEvaluation row', async () => {
+    it('list() throws MatchListViewerEvaluationMissingError when viewer has no UserProfileEvaluation row', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
         makeProfileRow({
           id: viewerProfileId,
@@ -442,11 +446,11 @@ describe('MeMatchesService', () => {
       prisma.userProfile.findMany.mockResolvedValue([]);
 
       await expect(service.list(viewerUserId)).rejects.toBeInstanceOf(
-        InternalServerErrorException,
+        MatchListViewerEvaluationMissingError,
       );
     });
 
-    it('list() throws InternalServerErrorException when a candidate has no UserProfileEvaluation row', async () => {
+    it('list() throws MatchListCandidateEvaluationMissingError when a candidate has no UserProfileEvaluation row', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
         makeProfileRow({
           id: viewerProfileId,
@@ -476,7 +480,7 @@ describe('MeMatchesService', () => {
       });
 
       await expect(service.list(viewerUserId)).rejects.toBeInstanceOf(
-        InternalServerErrorException,
+        MatchListCandidateEvaluationMissingError,
       );
     });
 
@@ -1356,7 +1360,7 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
 
     it('returns 200 + hardBlocked when Liked hard-FAIL', async () => {
@@ -1727,25 +1731,25 @@ describe('MeMatchesService', () => {
   // ─── getById() ────────────────────────────────────────────────────────────
 
   describe('getById()', () => {
-    it('throws NotFoundException when viewer has no UserProfile', async () => {
+    it('throws MatchViewerNotReadyError when viewer has no UserProfile', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(null);
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchViewerNotReadyError);
     });
 
-    it('throws NotFoundException when viewer profile is not ANALYZED', async () => {
+    it('throws MatchViewerNotReadyError when viewer profile is not ANALYZED', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
         makeProfileRow({ id: viewerProfileId, userId: viewerUserId, status: S_DRAFT }),
       );
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchViewerNotReadyError);
     });
 
-    it('throws NotFoundException when viewer has no approved photo', async () => {
+    it('throws MatchViewerNotReadyError when viewer has no approved photo', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
         makeProfileRow({
           id: viewerProfileId,
@@ -1758,10 +1762,10 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchViewerNotReadyError);
     });
 
-    it('throws NotFoundException when candidate profile does not exist', async () => {
+    it('throws MatchCandidateNotFoundError when candidate profile does not exist', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({ id: viewerProfileId, userId: viewerUserId, gender: 'MALE' }),
@@ -1770,10 +1774,10 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
 
-    it('throws NotFoundException when candidate fails gender filter (no info leak)', async () => {
+    it('throws MatchCandidateNotFoundError when candidate fails gender filter (no info leak)', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -1790,10 +1794,10 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
 
-    it('throws NotFoundException when candidate has no approved photos (no info leak)', async () => {
+    it('throws MatchCandidateNotFoundError when candidate has no approved photos (no info leak)', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -1815,7 +1819,7 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toThrow('Match not found.');
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
 
     it('returns match detail when candidate is eligible', async () => {
@@ -1869,7 +1873,7 @@ describe('MeMatchesService', () => {
       expect(result.nickname).toBe('River');
     });
 
-    it('throws NotFoundException when viewer blocked the candidate', async () => {
+    it('throws MatchCandidateNotFoundError when viewer blocked the candidate', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -1891,7 +1895,7 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.getById(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
 
     it('includes evaluationSummary from display.summary when evaluation exists', async () => {
@@ -1922,7 +1926,7 @@ describe('MeMatchesService', () => {
       expect(result.evaluationSummary).toBe('Thoughtful and grounded.');
     });
 
-    it('throws NotFoundException when no UserProfileEvaluation row exists for viewer or candidate', async () => {
+    it('throws MatchDetailEvaluationNotFoundError when no UserProfileEvaluation row exists for viewer or candidate', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -1944,7 +1948,7 @@ describe('MeMatchesService', () => {
       prisma.userProfileEvaluation.findFirst.mockResolvedValue(null);
 
       await expect(service.getById(viewerUserId, candidateProfileId)).rejects.toBeInstanceOf(
-        NotFoundException,
+        MatchDetailEvaluationNotFoundError,
       );
     });
 
@@ -2356,22 +2360,22 @@ describe('MeMatchesService', () => {
       );
     }
 
-    it('throws NotFoundException when viewer has no approved photo (non-mutual)', async () => {
+    it('throws MatchCandidateNotFoundError when viewer has no approved photo (non-mutual)', async () => {
       mockBrowsePhotoFileAccess({ viewerPhotoCount: 0 });
 
       await expect(
         service.getPrimaryPhotoFileById(viewerUserId, candidateProfileId, photoId),
-      ).rejects.toThrow('Match not found.');
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
 
       expect(prisma.userProfilePhoto.findFirst).not.toHaveBeenCalled();
     });
 
-    it('throws NotFoundException when candidate has no approved photo (non-mutual)', async () => {
+    it('throws MatchCandidateNotFoundError when candidate has no approved photo (non-mutual)', async () => {
       mockBrowsePhotoFileAccess({ candidatePhotoCount: 0 });
 
       await expect(
         service.getPrimaryPhotoFileById(viewerUserId, candidateProfileId, photoId),
-      ).rejects.toThrow('Match not found.');
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
 
       expect(prisma.userProfilePhoto.findFirst).not.toHaveBeenCalled();
     });
@@ -2398,7 +2402,7 @@ describe('MeMatchesService', () => {
   });
 
   describe('assertMatchCandidateVisible()', () => {
-    it('throws NotFoundException when viewer has no approved photo', async () => {
+    it('throws MatchViewerNotReadyError when viewer has no approved photo', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(
         makeProfileRow({
           id: viewerProfileId,
@@ -2411,10 +2415,10 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchViewerNotReadyError);
     });
 
-    it('throws NotFoundException when viewer blocked the candidate', async () => {
+    it('throws MatchCandidateNotFoundError when viewer blocked the candidate', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -2436,10 +2440,10 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
 
-    it('throws NotFoundException when candidate has no approved photos', async () => {
+    it('throws MatchCandidateNotFoundError when candidate has no approved photos', async () => {
       prisma.userProfile.findUnique
         .mockResolvedValueOnce(
           makeProfileRow({
@@ -2461,7 +2465,7 @@ describe('MeMatchesService', () => {
 
       await expect(
         service.assertMatchCandidateVisible(viewerUserId, candidateProfileId),
-      ).rejects.toThrow('Match not found.');
+      ).rejects.toBeInstanceOf(MatchCandidateNotFoundError);
     });
   });
 
@@ -3265,12 +3269,18 @@ describe('MeMatchesService', () => {
    * Prefer strengthening existing cases (L1–L5, L7, L11–L12, D1–D2, D4) over duplicating here.
    */
   describe('Sprint 45 Story 1 — characterization (do not drift)', () => {
-    it('L6: list() invalid cursor throws BadRequestException with error=invalid_cursor', async () => {
+    it('L6: list() invalid cursor throws MatchListInvalidCursorError', async () => {
       await expect(
         service.list(viewerUserId, { limit: 20, cursor: '!!!' }),
-      ).rejects.toMatchObject({
-        response: expect.objectContaining({ error: 'invalid_cursor' }),
-      });
+      ).rejects.toBeInstanceOf(MatchListInvalidCursorError);
+      try {
+        await service.list(viewerUserId, { limit: 20, cursor: '!!!' });
+      } catch (e) {
+        expect(e).toBeInstanceOf(MatchListInvalidCursorError);
+        expect((e as MatchListInvalidCursorError).httpBody).toMatchObject({
+          error: 'invalid_cursor',
+        });
+      }
     });
 
     it('D3: getById() ready detail locks required fields and never leaks userId/about*', async () => {
