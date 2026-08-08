@@ -163,7 +163,7 @@ export default function MeMatchesPageClient() {
               <button
                 type="button"
                 data-testid="matches-refresh-analysis"
-                className="mt-3 rounded-lg bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50 dark:bg-amber-700 dark:hover:bg-amber-600"
+                className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50 dark:bg-amber-700 dark:hover:bg-amber-600"
                 disabled={refreshBusy}
                 onClick={() => void handleRefreshAnalysis()}
               >
@@ -224,7 +224,10 @@ export default function MeMatchesPageClient() {
               data-testid="matches-infinite-sentinel"
             />
             {loadingMore && (
-              <p className="py-2 text-center text-xs text-zinc-400">
+              <p
+                className="py-2 text-center text-xs text-zinc-400"
+                role="status"
+              >
                 {copy.common.loading}
               </p>
             )}
