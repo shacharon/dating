@@ -3,6 +3,10 @@ import type { ContentViolationService } from '../content-moderation/content-viol
 import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import {
+  CRON_LOCK_MUTE_EXPIRY,
+  muteExpiryLockTtlSeconds,
+} from './cron-leader.lock';
+import {
   MuteExpiryEnforcer,
   resolveMuteExpiryIntervalMs,
   CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT,
@@ -46,10 +50,13 @@ describe('MuteExpiryEnforcer', () => {
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
 
   const prev = process.env.CONTENT_MUTE_EXPIRY_INTERVAL_MS;
+  const prevFailOpen = process.env.CRON_LEADER_FAIL_OPEN;
 
   afterEach(() => {
     if (prev === undefined) delete process.env.CONTENT_MUTE_EXPIRY_INTERVAL_MS;
     else process.env.CONTENT_MUTE_EXPIRY_INTERVAL_MS = prev;
+    if (prevFailOpen === undefined) delete process.env.CRON_LEADER_FAIL_OPEN;
+    else process.env.CRON_LEADER_FAIL_OPEN = prevFailOpen;
     jest.clearAllMocks();
     (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
   });
@@ -76,11 +83,22 @@ describe('MuteExpiryEnforcer', () => {
   });
 
   it('tick calls clearExpiredMutes when lock acquired', async () => {
-    process.env.CONTENT_MUTE_EXPIRY_INTERVAL_MS = '0';
+    process.env.CONTENT_MUTE_EXPIRY_INTERVAL_MS = String(
+      CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT,
+    );
     const enforcer = makeEnforcer();
     const n = await enforcer.tick();
     expect(n).toBe(2);
     expect(violations.clearExpiredMutes).toHaveBeenCalledTimes(1);
+    expect(cache.tryAcquireCronLock).toHaveBeenCalledWith(
+      CRON_LOCK_MUTE_EXPIRY,
+      muteExpiryLockTtlSeconds(CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT),
+      expect.objectContaining({
+        pid: process.pid,
+        at: expect.any(String),
+        host: expect.any(String),
+      }),
+    );
     expect(obs.trace).toHaveBeenCalledWith(
       'mute-expiry cron leader acquired',
       ErrorCodes.CRON_LEADER_ACQUIRED,
@@ -107,6 +125,14 @@ describe('MuteExpiryEnforcer', () => {
       expect.stringContaining('skipped'),
       ErrorCodes.CRON_LEADER_UNAVAILABLE,
     );
+  });
+
+  it('runs when lock unavailable but CRON_LEADER_FAIL_OPEN=1', async () => {
+    process.env.CRON_LEADER_FAIL_OPEN = '1';
+    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    const enforcer = makeEnforcer();
+    await expect(enforcer.tick()).resolves.toBe(2);
+    expect(violations.clearExpiredMutes).toHaveBeenCalledTimes(1);
   });
 
   it('re-entrancy skips overlapping tick', async () => {

@@ -1,3 +1,5 @@
+import { hostname } from 'os';
+
 /**
  * Cross-process cron leader lock keys / TTLs (Sprint 48 Story 3).
  * Specs simulating two processes: first tryAcquireCronLock → acquired,
@@ -39,11 +41,9 @@ export function cronLockDebugValue(): {
   pid: number;
   host: string;
 } {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const os = require('os') as { hostname: () => string };
   return {
     at: new Date().toISOString(),
     pid: process.pid,
-    host: os.hostname(),
+    host: hostname(),
   };
 }

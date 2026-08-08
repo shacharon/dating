@@ -4,6 +4,10 @@ import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoModerationService } from '../photo-storage/photo-moderation.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import {
+  CRON_LOCK_PHOTO_SLA,
+  PHOTO_SLA_LOCK_TTL_SECONDS,
+} from './cron-leader.lock';
 import { PhotoSlaEnforcer } from './photo-sla.cron';
 
 describe('PhotoSlaEnforcer', () => {
@@ -36,6 +40,7 @@ describe('PhotoSlaEnforcer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
+    setEnv('CRON_LEADER_FAIL_OPEN', undefined);
     setEnv('NSFW_FLAG_THRESHOLD', '50');
     setEnv('PHOTO_MODERATION_SLA_LOW_HOURS', '6');
     setEnv('PHOTO_MODERATION_SLA_MAX_HOURS', '24');
@@ -79,6 +84,55 @@ describe('PhotoSlaEnforcer', () => {
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('skipped'),
       ErrorCodes.CRON_LEADER_UNAVAILABLE,
+    );
+  });
+
+  it('runs when lock unavailable but CRON_LEADER_FAIL_OPEN=1', async () => {
+    setEnv('CRON_LEADER_FAIL_OPEN', '1');
+    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    prisma.userProfilePhoto.findMany = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    await expect(enforcer.runHourly()).resolves.toEqual({
+      autoApproved: 0,
+      flaggedStuck: 0,
+    });
+    expect(prisma.userProfilePhoto.findMany).toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      'photo-sla cron leader acquired',
+      ErrorCodes.CRON_LEADER_ACQUIRED,
+    );
+    setEnv('CRON_LEADER_FAIL_OPEN', undefined);
+  });
+
+  it('does not fail-open when lock not_acquired even with CRON_LEADER_FAIL_OPEN', async () => {
+    setEnv('CRON_LEADER_FAIL_OPEN', '1');
+    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    await expect(enforcer.runHourly()).resolves.toEqual({
+      autoApproved: 0,
+      flaggedStuck: 0,
+    });
+    expect(prisma.userProfilePhoto.findMany).not.toHaveBeenCalled();
+    setEnv('CRON_LEADER_FAIL_OPEN', undefined);
+  });
+
+  it('acquires lock with photo-sla key and 3300s TTL', async () => {
+    prisma.userProfilePhoto.findMany = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    await enforcer.runHourly();
+    expect(cache.tryAcquireCronLock).toHaveBeenCalledWith(
+      CRON_LOCK_PHOTO_SLA,
+      PHOTO_SLA_LOCK_TTL_SECONDS,
+      expect.objectContaining({
+        pid: process.pid,
+        at: expect.any(String),
+        host: expect.any(String),
+      }),
     );
   });
 

@@ -142,6 +142,14 @@ describe('RedisCacheService', () => {
       expect(opMs).not.toHaveBeenCalled();
     });
 
+    it('returns acquired when REDIS_URL is whitespace-only', async () => {
+      process.env.REDIS_URL = '   ';
+      const svc = new RedisCacheService();
+      expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
+        'acquired',
+      );
+    });
+
     it('only one of two acquire attempts succeeds when Redis NX rejects second', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const svc = new RedisCacheService();
@@ -161,6 +169,11 @@ describe('RedisCacheService', () => {
       );
       expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
         'not_acquired',
+      );
+      expect(client.set).toHaveBeenCalledWith(
+        'cron:lock:photo-sla',
+        expect.any(String),
+        { NX: true, EX: 60 },
       );
       expect(opMs).toHaveBeenCalledWith('cronLock', expect.any(Number));
       expect(opMs).toHaveBeenCalledTimes(2);
