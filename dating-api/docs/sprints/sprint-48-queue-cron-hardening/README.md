@@ -1,6 +1,6 @@
 # Sprint 48 — Queue & Cron Hardening (P0)
 
-**Status:** In Progress (Story 01 Done)  
+**Status:** In Progress (Stories 01–02 Done)  
 **Depends on:** Option A late track recommended (38.3 Done); can start after multi-instance pain is confirmed  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -28,7 +28,7 @@ Make workers and crons safe under multiple API replicas:
 | # | Story | Priority | Effort | Status | Extra agents |
 |---|-------|----------|--------|--------|--------------|
 | 01 | [Stable jobIds + analysis finally](./STORY_01_jobids_and_analysis_finally.md) | P0 | 1.5d | **Done** | 5 |
-| 02 | [Queue concurrency + metrics](./STORY_02_queue_concurrency_metrics.md) | P0 | 1d | Planned | 5 |
+| 02 | [Queue concurrency + metrics](./STORY_02_queue_concurrency_metrics.md) | P0 | 1d | **Done** | 5 |
 | 03 | [Cron leader lock](./STORY_03_cron_leader_lock.md) | P0 | 1.5d | Planned | 2.5, 5 |
 
 **Order:** 01 → 02 → 03.
