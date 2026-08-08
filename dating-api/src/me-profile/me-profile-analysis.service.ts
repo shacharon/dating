@@ -23,7 +23,9 @@ const STATUS_FAILED = 'FAILED' as UserProfileStatus;
  */
 export const EVALUATION_VERSION = 'v1';
 
-/** Outcome of {@link MeProfileAnalysisService.runForUser} (Sprint 48 Story 1). */
+/** Outcome of {@link MeProfileAnalysisService.runForUser} (Sprint 48 Story 1).
+ * `success` also covers already-ANALYZED (idempotent Bull retry after side-effect failure).
+ */
 export type ProfileAnalysisRunOutcome =
   | { status: 'success' }
   | { status: 'skipped' }
@@ -361,9 +363,25 @@ export class MeProfileAnalysisService {
     });
 
     // Guard: skip if profile was concurrently moved away from SUBMITTED.
-    if (!profile || (profile.status as string) !== STATUS_SUBMITTED) {
+    // Already ANALYZED → treat as success so Bull retries after a prior attempt
+    // that finished analysis but failed cache/rank side effects still enqueue rebuild.
+    if (!profile) {
       this.obs.trace(
-        `me profile analysis skipped: not in SUBMITTED state userId=${userId} status=${profile?.status ?? 'none'}`,
+        `me profile analysis skipped: not in SUBMITTED state userId=${userId} status=none`,
+        ErrorCodes.ME_PROFILE_ANALYSIS_SKIPPED,
+      );
+      return { status: 'skipped' };
+    }
+    if ((profile.status as string) === STATUS_ANALYZED) {
+      this.obs.trace(
+        `me profile analysis already ANALYZED userId=${userId} profileId=${profile.id}`,
+        ErrorCodes.ME_PROFILE_ANALYSIS_SKIPPED,
+      );
+      return { status: 'success' };
+    }
+    if ((profile.status as string) !== STATUS_SUBMITTED) {
+      this.obs.trace(
+        `me profile analysis skipped: not in SUBMITTED state userId=${userId} status=${profile.status}`,
         ErrorCodes.ME_PROFILE_ANALYSIS_SKIPPED,
       );
       return { status: 'skipped' };

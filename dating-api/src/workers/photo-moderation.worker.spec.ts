@@ -79,4 +79,29 @@ describe('PhotoModerationQueueService', () => {
       ErrorCodes.QUEUE_PHOTO_MODERATION_INLINE,
     );
   });
+
+  it('returns skipped:blank for blank photoId', async () => {
+    expect(await service.enqueueOrRunInline('  ')).toBe('skipped:blank');
+  });
+
+  it('rethrows non-coalesce Bull errors', async () => {
+    const add = jest.fn().mockRejectedValue(new Error('Redis connection lost'));
+    (
+      service as unknown as {
+        queue: { add: jest.Mock };
+        bullEnabled: boolean;
+      }
+    ).queue = { add };
+    (service as unknown as { bullEnabled: boolean }).bullEnabled = true;
+
+    await expect(service.enqueueOrRunInline('photo_4')).rejects.toThrow(
+      'Redis connection lost',
+    );
+  });
+});
+
+describe('photoModerationJobId', () => {
+  it('formats photo-mod:{photoId}', () => {
+    expect(photoModerationJobId('p1')).toBe('photo-mod:p1');
+  });
 });

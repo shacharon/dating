@@ -141,11 +141,70 @@ describe('ProfileAnalysisQueueService', () => {
     );
   });
 
+  it('enqueues with stable jobId', async () => {
+    const jobId = profileAnalysisJobId('user_f');
+    const add = jest.fn().mockResolvedValue({ id: jobId });
+    (
+      service as unknown as {
+        queue: { add: jest.Mock };
+        bullEnabled: boolean;
+      }
+    ).queue = { add };
+    (service as unknown as { bullEnabled: boolean }).bullEnabled = true;
+
+    const result = await service.enqueueOrRunInline({
+      userId: 'user_f',
+      profileId: 'prof_f',
+    });
+
+    expect(result).toBe(jobId);
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('enqueued'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_ENQUEUED,
+    );
+  });
+
+  it('rethrows non-coalesce Bull errors', async () => {
+    const add = jest.fn().mockRejectedValue(new Error('Redis connection lost'));
+    (
+      service as unknown as {
+        queue: { add: jest.Mock };
+        bullEnabled: boolean;
+      }
+    ).queue = { add };
+    (service as unknown as { bullEnabled: boolean }).bullEnabled = true;
+
+    await expect(
+      service.enqueueOrRunInline({
+        userId: 'user_g',
+        profileId: 'prof_g',
+      }),
+    ).rejects.toThrow('Redis connection lost');
+  });
+
+  it('inline when Bull disabled', async () => {
+    const result = await service.enqueueOrRunInline({
+      userId: 'user_h',
+      profileId: 'prof_h',
+    });
+    expect(result).toBe('inline:prof_h');
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('inline'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_INLINE,
+    );
+  });
+
   it('returns skipped:blank for blank userId', async () => {
     const result = await service.enqueueOrRunInline({
       userId: '   ',
       profileId: 'prof_blank',
     });
     expect(result).toBe('skipped:blank');
+  });
+});
+
+describe('profileAnalysisJobId', () => {
+  it('formats analysis:{userId}', () => {
+    expect(profileAnalysisJobId('u1')).toBe('analysis:u1');
   });
 });

@@ -104,7 +104,7 @@ describe('MeProfileAnalysisService', () => {
     );
   });
 
-  it.each([UserProfileStatus.DRAFT, S.ANALYZING, S.ANALYZED, S.FAILED])(
+  it.each([UserProfileStatus.DRAFT, S.ANALYZING, S.FAILED])(
     'skips when profile status is %s (not SUBMITTED)',
     async (status) => {
       prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status });
@@ -121,6 +121,24 @@ describe('MeProfileAnalysisService', () => {
       );
     },
   );
+
+  it('returns success without re-running LLM when already ANALYZED (Bull side-effect retry)', async () => {
+    prisma.userProfile.findUnique.mockResolvedValue({
+      ...baseRow,
+      status: S.ANALYZED,
+    });
+
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'success',
+    });
+
+    expect(prisma.userProfile.update).not.toHaveBeenCalled();
+    expect(evaluate.evaluateBatch).not.toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('already ANALYZED'),
+      'ME_PROFILE_ANALYSIS_SKIPPED',
+    );
+  });
 
   it('transitions SUBMITTED → ANALYZING → ANALYZED on success', async () => {
     const now = new Date('2026-04-15T12:00:00.000Z');
