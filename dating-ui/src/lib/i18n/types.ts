@@ -92,6 +92,7 @@ export type AppCopySchema = {
       refreshStarted: string;
       refreshFailed: string;
       loadFailed: string;
+      tryAgain: string;
       photoGate: {
         title: string;
         body: string;

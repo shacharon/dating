@@ -86,6 +86,7 @@ export const esCopy: AppCopySchema = {
         "Actualizacion iniciada — las puntuaciones se actualizaran al completar el analisis.",
       refreshFailed: "Error al actualizar",
       loadFailed: "No se pudieron cargar las coincidencias",
+      tryAgain: "Intentar de nuevo",
       photoGate: {
         title: "Agrega una foto para ver coincidencias",
         body: "Necesitas al menos una foto aprobada antes de poder ver personas aqui.",

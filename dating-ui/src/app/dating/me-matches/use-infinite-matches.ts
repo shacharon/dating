@@ -21,7 +21,10 @@ export type UseInfiniteMatchesResult = {
   matches: MatchListItemVM[];
   loading: boolean;
   loadingMore: boolean;
+  /** Initial / hard failure — no usable list pages. */
   error: string | null;
+  /** Next-page failure — keep showing already-loaded matches. */
+  loadMoreError: string | null;
   hasMore: boolean;
   loadMore: () => Promise<void>;
   reload: () => Promise<void>;
@@ -61,6 +64,7 @@ export function useInfiniteMatches(
     error: queryError,
     isPending,
     isFetchingNextPage,
+    isFetchNextPageError,
     hasNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
@@ -133,12 +137,17 @@ export function useInfiniteMatches(
     [loadMore],
   );
 
-  const error =
+  const errorMessage =
     queryError instanceof Error
       ? queryError.message
       : queryError
         ? loadFailedMessage
         : null;
+
+  const hasCachedPages = Boolean(data?.pages.length);
+  const error = errorMessage && !hasCachedPages ? errorMessage : null;
+  const loadMoreError =
+    isFetchNextPageError && errorMessage ? errorMessage : null;
 
   return {
     data: listData,
@@ -146,6 +155,7 @@ export function useInfiniteMatches(
     loading: isPending,
     loadingMore: isFetchingNextPage,
     error,
+    loadMoreError,
     hasMore: Boolean(hasNextPage),
     loadMore,
     reload,

@@ -43,6 +43,8 @@ export default function MeMatchesPageClient() {
     loading,
     loadingMore,
     error,
+    loadMoreError,
+    loadMore,
     reload,
     sentinelRef,
   } = useInfiniteMatches(listCopy.loadFailed);
@@ -145,6 +147,16 @@ export default function MeMatchesPageClient() {
             role="alert"
           >
             {error}
+            <button
+              type="button"
+              data-testid="matches-load-try-again"
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline"
+              onClick={() => {
+                void reload();
+              }}
+            >
+              {listCopy.tryAgain}
+            </button>
           </div>
         )}
 
@@ -230,6 +242,25 @@ export default function MeMatchesPageClient() {
               >
                 {copy.common.loading}
               </p>
+            )}
+            {loadMoreError && (
+              <div
+                className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+                role="alert"
+                data-testid="matches-load-more-error"
+              >
+                {loadMoreError}
+                <button
+                  type="button"
+                  data-testid="matches-load-more-try-again"
+                  className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline"
+                  onClick={() => {
+                    void loadMore();
+                  }}
+                >
+                  {listCopy.tryAgain}
+                </button>
+              </div>
             )}
           </div>
         )}

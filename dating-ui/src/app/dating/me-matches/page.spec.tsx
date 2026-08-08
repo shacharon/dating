@@ -148,6 +148,35 @@ describe('MeMatchesPage (empty list)', () => {
   });
 });
 
+describe('MeMatchesPage (load error)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows try again and reloads on click', async () => {
+    fetchMyMatches
+      .mockRejectedValueOnce(new Error('Failed to load matches'))
+      .mockResolvedValueOnce({
+        status: 'ready',
+        matches: [],
+      });
+
+    const { unmount } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('matches-load-try-again')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('matches-load-try-again'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
+    });
+    expect(fetchMyMatches.mock.calls.length).toBeGreaterThanOrEqual(2);
+    unmount();
+  });
+});
+
 describe('MeMatchesPage (not_ready photo gate)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

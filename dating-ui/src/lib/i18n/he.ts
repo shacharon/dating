@@ -76,6 +76,7 @@ export const heCopy: AppCopySchema = {
       refreshStarted: "הרענון התחיל — הציונים יתעדכנו עם סיום הניתוח.",
       refreshFailed: "הרענון נכשל",
       loadFailed: "לא ניתן לטעון התאמות",
+      tryAgain: "נסו שוב",
       photoGate: {
         title: "הוסיפו תמונה כדי לראות התאמות",
         body: "נדרשת לפחות תמונה מאושרת אחת לפני שנוכל להציג אנשים כאן.",

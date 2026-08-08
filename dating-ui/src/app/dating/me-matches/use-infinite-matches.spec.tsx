@@ -224,7 +224,37 @@ describe('useInfiniteMatches (RQ)', () => {
     });
 
     expect(result.current.error).toBe('boom');
+    expect(result.current.loadMoreError).toBeNull();
     expect(result.current.matches).toEqual([]);
+  });
+
+  it('keeps loaded matches when next page fails', async () => {
+    fetchMyMatches
+      .mockResolvedValueOnce({
+        status: 'ready',
+        matches: [{ ...baseItem, id: 'prof-1' }],
+        nextCursor: 'cursor-2',
+        hasMore: true,
+      })
+      .mockRejectedValueOnce(new Error('page 2 failed'));
+
+    const { result } = renderInfinite();
+
+    await waitFor(() => {
+      expect(result.current.hasMore).toBe(true);
+      expect(result.current.matches).toHaveLength(1);
+    });
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    await waitFor(() => {
+      expect(result.current.loadMoreError).toBe('page 2 failed');
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.matches.map((m) => m.id)).toEqual(['prof-1']);
   });
 
   it('reload invalidates the matches list query key', async () => {
