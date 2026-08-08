@@ -5,6 +5,12 @@ import type { MeMatchesService } from '../me-profile/me-matches.service';
 import type { MatchListRankQueuePort } from './match-list-rank.ports';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { ErrorCodes } from '../logging/error-codes';
+import { recordQueueEvent } from '../observability/custom-metrics';
+
+jest.mock('../observability/custom-metrics', () => ({
+  recordProfileAnalysisDurationMs: jest.fn(),
+  recordQueueEvent: jest.fn(),
+}));
 
 describe('ProfileAnalysisQueueService', () => {
   const analysis = {
@@ -108,6 +114,7 @@ describe('ProfileAnalysisQueueService', () => {
       ErrorCodes.QUEUE_PROFILE_ANALYSIS_RUN_FAILED,
       expect.any(Error),
     );
+    expect(recordQueueEvent).toHaveBeenCalledWith('profile-analysis', 'failed');
   });
 
   it('coalesces when Bull rejects duplicate jobId', async () => {
@@ -121,9 +128,7 @@ describe('ProfileAnalysisQueueService', () => {
         bullEnabled: boolean;
       }
     ).queue = { add };
-    (
-      service as unknown as { bullEnabled: boolean }
-    ).bullEnabled = true;
+    (service as unknown as { bullEnabled: boolean }).bullEnabled = true;
 
     const result = await service.enqueueOrRunInline({
       userId: 'user_e',
@@ -131,9 +136,9 @@ describe('ProfileAnalysisQueueService', () => {
     });
 
     expect(result).toBe(jobId);
-    expect(add).toHaveBeenCalledWith(
-      { userId: 'user_e', profileId: 'prof_e' },
-      expect.objectContaining({ jobId }),
+    expect(recordQueueEvent).toHaveBeenCalledWith(
+      'profile-analysis',
+      'coalesced',
     );
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('coalesced'),
@@ -158,13 +163,17 @@ describe('ProfileAnalysisQueueService', () => {
     });
 
     expect(result).toBe(jobId);
+    expect(recordQueueEvent).toHaveBeenCalledWith(
+      'profile-analysis',
+      'enqueued',
+    );
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('enqueued'),
       ErrorCodes.QUEUE_PROFILE_ANALYSIS_ENQUEUED,
     );
   });
 
-  it('rethrows non-coalesce Bull errors', async () => {
+  it('rethrows non-coalesce Bull errors with ENQUEUE_FAILED', async () => {
     const add = jest.fn().mockRejectedValue(new Error('Redis connection lost'));
     (
       service as unknown as {
@@ -180,6 +189,13 @@ describe('ProfileAnalysisQueueService', () => {
         profileId: 'prof_g',
       }),
     ).rejects.toThrow('Redis connection lost');
+
+    expect(obs.error).toHaveBeenCalledWith(
+      expect.stringContaining('enqueue failed'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_ENQUEUE_FAILED,
+      expect.any(Error),
+    );
+    expect(recordQueueEvent).toHaveBeenCalledWith('profile-analysis', 'failed');
   });
 
   it('inline when Bull disabled', async () => {
@@ -188,6 +204,7 @@ describe('ProfileAnalysisQueueService', () => {
       profileId: 'prof_h',
     });
     expect(result).toBe('inline:prof_h');
+    expect(recordQueueEvent).toHaveBeenCalledWith('profile-analysis', 'inline');
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('inline'),
       ErrorCodes.QUEUE_PROFILE_ANALYSIS_INLINE,
@@ -200,6 +217,7 @@ describe('ProfileAnalysisQueueService', () => {
       profileId: 'prof_blank',
     });
     expect(result).toBe('skipped:blank');
+    expect(recordQueueEvent).not.toHaveBeenCalled();
   });
 });
 

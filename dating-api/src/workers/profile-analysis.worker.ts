@@ -7,7 +7,10 @@ import {
 import { MeMatchesService } from '../me-profile/me-matches.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { recordProfileAnalysisDurationMs } from '../observability/custom-metrics';
+import {
+  recordProfileAnalysisDurationMs,
+  recordQueueEvent,
+} from '../observability/custom-metrics';
 import {
   PROFILE_ANALYSIS_QUEUE,
   profileAnalysisJobId,
@@ -17,6 +20,10 @@ import {
   MATCH_LIST_RANK_QUEUE_PORT,
   type MatchListRankQueuePort,
 } from './match-list-rank.ports';
+import {
+  PROFILE_ANALYSIS_QUEUE_CONCURRENCY_ENV,
+  resolveQueueConcurrency,
+} from './queue-concurrency';
 
 /**
  * Bull-backed profile analysis queue. When REDIS_URL is unset or Bull fails to
@@ -38,15 +45,27 @@ export class ProfileAnalysisQueueService
     private readonly obs: StructuredObservabilityService,
   ) {}
 
+  private markDegraded(reason: string): void {
+    this.logger.warn(reason);
+    this.obs.trace(
+      'profile-analysis Bull queue degraded (inline mode)',
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_DEGRADED,
+    );
+    recordQueueEvent('profile-analysis', 'degraded');
+  }
+
   async onModuleInit(): Promise<void> {
     const url = process.env.REDIS_URL?.trim();
     if (!url) {
-      this.logger.warn(
+      this.markDegraded(
         'REDIS_URL unset — profile-analysis Bull queue disabled (inline degraded mode)',
       );
       return;
     }
     try {
+      const concurrency = resolveQueueConcurrency(
+        PROFILE_ANALYSIS_QUEUE_CONCURRENCY_ENV,
+      );
       const queue = new Queue<ProfileAnalysisJobData>(
         PROFILE_ANALYSIS_QUEUE,
         url,
@@ -62,20 +81,22 @@ export class ProfileAnalysisQueueService
       queue.on('error', (err) => {
         this.logger.warn(`profile-analysis queue error: ${err.message}`);
       });
-      queue.process(async (job) => {
+      queue.process(concurrency, async (job) => {
         await this.runJob(job.data);
       });
       this.queue = queue;
       this.bullEnabled = true;
-      this.logger.log('profile-analysis Bull queue ready');
+      this.logger.log(
+        `profile-analysis Bull queue ready concurrency=${concurrency}`,
+      );
     } catch (err) {
-      this.logger.warn(
+      this.queue = null;
+      this.bullEnabled = false;
+      this.markDegraded(
         `Bull queue init failed — inline degraded mode: ${
           err instanceof Error ? err.message : String(err)
         }`,
       );
-      this.queue = null;
-      this.bullEnabled = false;
     }
   }
 
@@ -108,6 +129,7 @@ export class ProfileAnalysisQueueService
         ErrorCodes.QUEUE_PROFILE_ANALYSIS_RUN_FAILED,
         e,
       );
+      recordQueueEvent('profile-analysis', 'failed');
       throw e;
     } finally {
       recordProfileAnalysisDurationMs(Date.now() - started);
@@ -158,6 +180,7 @@ export class ProfileAnalysisQueueService
           `profile-analysis enqueued jobId=${jobId}`,
           ErrorCodes.QUEUE_PROFILE_ANALYSIS_ENQUEUED,
         );
+        recordQueueEvent('profile-analysis', 'enqueued');
         return String(job.id);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -166,8 +189,15 @@ export class ProfileAnalysisQueueService
             `profile-analysis coalesced jobId=${jobId}`,
             ErrorCodes.QUEUE_PROFILE_ANALYSIS_COALESCED,
           );
+          recordQueueEvent('profile-analysis', 'coalesced');
           return jobId;
         }
+        this.obs.error(
+          `profile-analysis enqueue failed jobId=${jobId}`,
+          ErrorCodes.QUEUE_PROFILE_ANALYSIS_ENQUEUE_FAILED,
+          err,
+        );
+        recordQueueEvent('profile-analysis', 'failed');
         throw err;
       }
     }
@@ -176,7 +206,14 @@ export class ProfileAnalysisQueueService
       `profile-analysis inline jobId=${inlineId}`,
       ErrorCodes.QUEUE_PROFILE_ANALYSIS_INLINE,
     );
+    recordQueueEvent('profile-analysis', 'inline');
     void this.runJob(payload).catch((e: unknown) => {
+      this.obs.error(
+        `inline profile analysis failed profileId=${payload.profileId}`,
+        ErrorCodes.QUEUE_PROFILE_ANALYSIS_RUN_FAILED,
+        e,
+      );
+      recordQueueEvent('profile-analysis', 'failed');
       this.logger.error(
         `inline profile analysis failed profileId=${payload.profileId}: ${
           e instanceof Error ? e.message : String(e)

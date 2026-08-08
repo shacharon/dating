@@ -3,6 +3,11 @@ import { photoModerationJobId } from './photo-moderation.queue';
 import type { PhotoModerationService } from '../photo-storage/photo-moderation.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { ErrorCodes } from '../logging/error-codes';
+import { recordQueueEvent } from '../observability/custom-metrics';
+
+jest.mock('../observability/custom-metrics', () => ({
+  recordQueueEvent: jest.fn(),
+}));
 
 describe('PhotoModerationQueueService', () => {
   const moderation = {
@@ -32,16 +37,14 @@ describe('PhotoModerationQueueService', () => {
         bullEnabled: boolean;
       }
     ).queue = { add };
-    (
-      service as unknown as { bullEnabled: boolean }
-    ).bullEnabled = true;
+    (service as unknown as { bullEnabled: boolean }).bullEnabled = true;
 
     const result = await service.enqueueOrRunInline('photo_1');
 
     expect(result).toBe(jobId);
-    expect(add).toHaveBeenCalledWith(
-      { photoId: 'photo_1' },
-      expect.objectContaining({ jobId }),
+    expect(recordQueueEvent).toHaveBeenCalledWith(
+      'photo-moderation',
+      'coalesced',
     );
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('coalesced'),
@@ -58,13 +61,15 @@ describe('PhotoModerationQueueService', () => {
         bullEnabled: boolean;
       }
     ).queue = { add };
-    (
-      service as unknown as { bullEnabled: boolean }
-    ).bullEnabled = true;
+    (service as unknown as { bullEnabled: boolean }).bullEnabled = true;
 
     const result = await service.enqueueOrRunInline('photo_2');
 
     expect(result).toBe(jobId);
+    expect(recordQueueEvent).toHaveBeenCalledWith(
+      'photo-moderation',
+      'enqueued',
+    );
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('enqueued'),
       ErrorCodes.QUEUE_PHOTO_MODERATION_ENQUEUED,
@@ -74,6 +79,7 @@ describe('PhotoModerationQueueService', () => {
   it('inline when Bull disabled', async () => {
     const result = await service.enqueueOrRunInline('photo_3');
     expect(result).toBe('inline:photo_3');
+    expect(recordQueueEvent).toHaveBeenCalledWith('photo-moderation', 'inline');
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('inline'),
       ErrorCodes.QUEUE_PHOTO_MODERATION_INLINE,
@@ -82,9 +88,10 @@ describe('PhotoModerationQueueService', () => {
 
   it('returns skipped:blank for blank photoId', async () => {
     expect(await service.enqueueOrRunInline('  ')).toBe('skipped:blank');
+    expect(recordQueueEvent).not.toHaveBeenCalled();
   });
 
-  it('rethrows non-coalesce Bull errors', async () => {
+  it('rethrows non-coalesce Bull errors with ENQUEUE_FAILED', async () => {
     const add = jest.fn().mockRejectedValue(new Error('Redis connection lost'));
     (
       service as unknown as {
@@ -97,6 +104,12 @@ describe('PhotoModerationQueueService', () => {
     await expect(service.enqueueOrRunInline('photo_4')).rejects.toThrow(
       'Redis connection lost',
     );
+    expect(obs.error).toHaveBeenCalledWith(
+      expect.stringContaining('enqueue failed'),
+      ErrorCodes.QUEUE_PHOTO_MODERATION_ENQUEUE_FAILED,
+      expect.any(Error),
+    );
+    expect(recordQueueEvent).toHaveBeenCalledWith('photo-moderation', 'failed');
   });
 });
 

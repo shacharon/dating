@@ -125,3 +125,20 @@ export function recordPrismaSlowQueryMs(
 ): void {
   emit('db.prisma.query_ms', ms, [`severity:${severity}`]);
 }
+
+/** Sprint 48 Story 2 — Bull queue event counters. */
+export type QueueMetricName = 'profile-analysis' | 'photo-moderation';
+
+export type QueueMetricEvent =
+  | 'enqueued'
+  | 'coalesced'
+  | 'inline'
+  | 'failed'
+  | 'degraded';
+
+export function recordQueueEvent(
+  queue: QueueMetricName,
+  event: QueueMetricEvent,
+): void {
+  emit('queue.event', 1, [`queue:${queue}`, `event:${event}`]);
+}
