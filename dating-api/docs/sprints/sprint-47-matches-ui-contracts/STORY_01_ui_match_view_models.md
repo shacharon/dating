@@ -1,6 +1,6 @@
 # Story 01 — UI match / profile view-models
 
-**Sprint 47 · Status: Planned**  
+**Sprint 47 · Status: Done**  
 **Priority:** P1  
 **Estimated effort:** 1.5–2 days  
 **Dependencies:** Sprint 45 Story 03 (server DTO boundary)  
@@ -32,9 +32,20 @@ Fat API modules re-encode scores, priority tiers, HG fields, teasers. Sprint 45 
 
 ## Acceptance criteria
 
-- [ ] View-model module exists; primary match UI uses it
-- [ ] No unexplained UI behavior change
-- [ ] Specs green
+- [x] View-model module exists; primary match UI uses it
+- [x] No unexplained UI behavior change
+- [x] Specs green
+
+## Definition of Done
+
+- [x] UI view-models + mappers (`dating-ui/src/lib/matches/`)
+- [x] Browse/detail consumers on VMs (not raw list/detail DTOs)
+- [x] Transport `me-matches-api.ts` remains thin
+- [x] Tests green (mapper + match UI suites; Agent 2)
+- [x] UX review approved (Agent 3.5)
+- [x] Schema / API: N/A
+- [x] Agent 4: N/A (UI-only)
+- [ ] Agent 5 post-deploy: after production (1–3 days)
 
 ## Suggested commit
 
