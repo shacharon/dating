@@ -207,13 +207,8 @@ export class ProfileAnalysisQueueService
       ErrorCodes.QUEUE_PROFILE_ANALYSIS_INLINE,
     );
     recordQueueEvent('profile-analysis', 'inline');
+    // runJob already emits RUN_FAILED + queue.event failed before rethrowing
     void this.runJob(payload).catch((e: unknown) => {
-      this.obs.error(
-        `inline profile analysis failed profileId=${payload.profileId}`,
-        ErrorCodes.QUEUE_PROFILE_ANALYSIS_RUN_FAILED,
-        e,
-      );
-      recordQueueEvent('profile-analysis', 'failed');
       this.logger.error(
         `inline profile analysis failed profileId=${payload.profileId}: ${
           e instanceof Error ? e.message : String(e)

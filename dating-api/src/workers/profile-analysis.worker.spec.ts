@@ -219,6 +219,26 @@ describe('ProfileAnalysisQueueService', () => {
     expect(result).toBe('skipped:blank');
     expect(recordQueueEvent).not.toHaveBeenCalled();
   });
+
+  it('marks degraded when REDIS_URL unset on init', async () => {
+    const prev = process.env.REDIS_URL;
+    delete process.env.REDIS_URL;
+    try {
+      await service.onModuleInit();
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('degraded'),
+        ErrorCodes.QUEUE_PROFILE_ANALYSIS_DEGRADED,
+      );
+      expect(recordQueueEvent).toHaveBeenCalledWith(
+        'profile-analysis',
+        'degraded',
+      );
+      expect(service.isBullEnabled()).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env.REDIS_URL;
+      else process.env.REDIS_URL = prev;
+    }
+  });
 });
 
 describe('profileAnalysisJobId', () => {

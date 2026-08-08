@@ -32,4 +32,20 @@ describe('resolveQueueConcurrency', () => {
       }),
     ).toBe(3);
   });
+
+  it('floors fractional values', () => {
+    expect(
+      resolveQueueConcurrency(PROFILE_ANALYSIS_QUEUE_CONCURRENCY_ENV, 1, {
+        [PROFILE_ANALYSIS_QUEUE_CONCURRENCY_ENV]: '2.9',
+      }),
+    ).toBe(2);
+  });
+
+  it('treats whitespace-only as default', () => {
+    expect(
+      resolveQueueConcurrency(PHOTO_MODERATION_QUEUE_CONCURRENCY_ENV, 1, {
+        [PHOTO_MODERATION_QUEUE_CONCURRENCY_ENV]: '   ',
+      }),
+    ).toBe(1);
+  });
 });

@@ -111,6 +111,43 @@ describe('PhotoModerationQueueService', () => {
     );
     expect(recordQueueEvent).toHaveBeenCalledWith('photo-moderation', 'failed');
   });
+
+  it('marks degraded when REDIS_URL unset on init', async () => {
+    const prev = process.env.REDIS_URL;
+    delete process.env.REDIS_URL;
+    try {
+      await service.onModuleInit();
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('degraded'),
+        ErrorCodes.QUEUE_PHOTO_MODERATION_DEGRADED,
+      );
+      expect(recordQueueEvent).toHaveBeenCalledWith(
+        'photo-moderation',
+        'degraded',
+      );
+    } finally {
+      if (prev === undefined) delete process.env.REDIS_URL;
+      else process.env.REDIS_URL = prev;
+    }
+  });
+
+  it('records failed when inline processPendingPhoto rejects', async () => {
+    (moderation.processPendingPhoto as jest.Mock).mockRejectedValueOnce(
+      new Error('moderation boom'),
+    );
+
+    const result = await service.enqueueOrRunInline('photo_inline_fail');
+    expect(result).toBe('inline:photo_inline_fail');
+
+    await new Promise((r) => setImmediate(r));
+
+    expect(obs.error).toHaveBeenCalledWith(
+      expect.stringContaining('inline photo moderation failed'),
+      ErrorCodes.QUEUE_PHOTO_MODERATION_RUN_FAILED,
+      expect.any(Error),
+    );
+    expect(recordQueueEvent).toHaveBeenCalledWith('photo-moderation', 'failed');
+  });
 });
 
 describe('photoModerationJobId', () => {
