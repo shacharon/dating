@@ -44,7 +44,7 @@ export function recordCacheMiss(): void {
   emit('cache.hit_rate', 0, ['result:miss']);
 }
 
-export type CacheOp = 'get' | 'set' | 'del' | 'setNx';
+export type CacheOp = 'get' | 'set' | 'del' | 'setNx' | 'cronLock';
 
 export type CacheDegradedReason = 'error' | 'unavailable';
 

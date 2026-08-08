@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { UserProfilePhotoStatus } from '@prisma/client';
+import { RedisCacheService } from '../cache/redis-cache.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import {
@@ -12,6 +13,12 @@ import {
   type PhotoModerationResultJson,
 } from '../photo-storage/photo-moderation.types';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  CRON_LOCK_PHOTO_SLA,
+  PHOTO_SLA_LOCK_TTL_SECONDS,
+  cronLockDebugValue,
+  shouldRunCronTick,
+} from './cron-leader.lock';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -29,6 +36,7 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly moderation: PhotoModerationService,
     private readonly obs: StructuredObservabilityService,
+    private readonly cache: RedisCacheService,
   ) {
     this.thresholds = loadPhotoModerationThresholds();
   }
@@ -60,6 +68,24 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     }
     this.running = true;
     try {
+      const lock = await this.cache.tryAcquireCronLock(
+        CRON_LOCK_PHOTO_SLA,
+        PHOTO_SLA_LOCK_TTL_SECONDS,
+        cronLockDebugValue(),
+      );
+      if (!shouldRunCronTick(lock)) {
+        this.obs.trace(
+          `photo-sla cron skipped lock=${lock}`,
+          lock === 'unavailable'
+            ? ErrorCodes.CRON_LEADER_UNAVAILABLE
+            : ErrorCodes.CRON_LEADER_SKIPPED,
+        );
+        return { autoApproved: 0, flaggedStuck: 0 };
+      }
+      this.obs.trace(
+        'photo-sla cron leader acquired',
+        ErrorCodes.CRON_LEADER_ACQUIRED,
+      );
       const flaggedStuck = await this.flagStuckPending();
       const autoApproved = await this.slaAutoApprove();
       await this.maybeAlertCapacity(autoApproved);

@@ -129,4 +129,76 @@ describe('RedisCacheService', () => {
       expect(degraded).toHaveBeenCalledWith('setNx', 'error');
     });
   });
+
+  describe('tryAcquireCronLock', () => {
+    it('returns acquired when REDIS_URL unset (no Redis contact)', async () => {
+      delete process.env.REDIS_URL;
+      const svc = new RedisCacheService();
+      await svc.onModuleInit();
+      const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
+      expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 3300)).toBe(
+        'acquired',
+      );
+      expect(opMs).not.toHaveBeenCalled();
+    });
+
+    it('only one of two acquire attempts succeeds when Redis NX rejects second', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const svc = new RedisCacheService();
+      const client: MockRedisClient = {
+        get: jest.fn(),
+        set: jest
+          .fn()
+          .mockResolvedValueOnce('OK')
+          .mockResolvedValueOnce(null),
+        del: jest.fn(),
+      };
+      attachClient(svc, client);
+      const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
+
+      expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
+        'acquired',
+      );
+      expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
+        'not_acquired',
+      );
+      expect(opMs).toHaveBeenCalledWith('cronLock', expect.any(Number));
+      expect(opMs).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns unavailable when REDIS_URL set but client down', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const svc = new RedisCacheService();
+      // Simulate configured-but-down without connecting a real client.
+      const internal = svc as unknown as {
+        client: MockRedisClient | null;
+        available: boolean;
+      };
+      internal.client = null;
+      internal.available = false;
+      const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
+      expect(await svc.tryAcquireCronLock('cron:lock:mute-expiry', 810)).toBe(
+        'unavailable',
+      );
+      expect(degraded).toHaveBeenCalledWith('cronLock', 'unavailable');
+    });
+
+    it('returns unavailable on SET error (fail-closed, unlike setNx)', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const svc = new RedisCacheService();
+      const client: MockRedisClient = {
+        get: jest.fn(),
+        set: jest.fn().mockRejectedValue(new Error('boom')),
+        del: jest.fn(),
+      };
+      attachClient(svc, client);
+      const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
+
+      expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
+        'unavailable',
+      );
+      expect(degraded).toHaveBeenCalledWith('cronLock', 'error');
+      expect(await svc.setNx('k', {}, 10)).toBe(true);
+    });
+  });
 });

@@ -1,4 +1,6 @@
 import { UserProfilePhotoStatus } from '@prisma/client';
+import type { RedisCacheService } from '../cache/redis-cache.service';
+import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoModerationService } from '../photo-storage/photo-moderation.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +19,10 @@ describe('PhotoSlaEnforcer', () => {
 
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
 
+  const cache = {
+    tryAcquireCronLock: jest.fn().mockResolvedValue('acquired'),
+  } as unknown as RedisCacheService;
+
   const prevEnv: Record<string, string | undefined> = {};
 
   function setEnv(key: string, value: string | undefined) {
@@ -29,13 +35,14 @@ describe('PhotoSlaEnforcer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
     setEnv('NSFW_FLAG_THRESHOLD', '50');
     setEnv('PHOTO_MODERATION_SLA_LOW_HOURS', '6');
     setEnv('PHOTO_MODERATION_SLA_MAX_HOURS', '24');
     setEnv('PHOTO_MODERATION_SLA_LOW_CONFIDENCE', '60');
     setEnv('PHOTO_MODERATION_SLA_ALERT_PER_DAY', '20');
     setEnv('PHOTO_MODERATION_ML_STUCK_MINUTES', '15');
-    enforcer = new PhotoSlaEnforcer(prisma, moderation, obs);
+    enforcer = new PhotoSlaEnforcer(prisma, moderation, obs, cache);
   });
 
   afterAll(() => {
@@ -48,6 +55,32 @@ describe('PhotoSlaEnforcer', () => {
   function hoursAgo(h: number): Date {
     return new Date(Date.now() - h * 60 * 60 * 1000);
   }
+
+  it('skips work when lock not_acquired', async () => {
+    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    await expect(enforcer.runHourly()).resolves.toEqual({
+      autoApproved: 0,
+      flaggedStuck: 0,
+    });
+    expect(prisma.userProfilePhoto.findMany).not.toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('skipped'),
+      ErrorCodes.CRON_LEADER_SKIPPED,
+    );
+  });
+
+  it('skips work when lock unavailable', async () => {
+    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    await expect(enforcer.runHourly()).resolves.toEqual({
+      autoApproved: 0,
+      flaggedStuck: 0,
+    });
+    expect(prisma.userProfilePhoto.findMany).not.toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('skipped'),
+      ErrorCodes.CRON_LEADER_UNAVAILABLE,
+    );
+  });
 
   it('Rule A: auto-approves NSFW mid-band low confidence after 6h', async () => {
     prisma.userProfilePhoto.findMany = jest
@@ -71,6 +104,10 @@ describe('PhotoSlaEnforcer', () => {
 
     const res = await enforcer.runHourly();
     expect(res.autoApproved).toBe(1);
+    expect(obs.trace).toHaveBeenCalledWith(
+      'photo-sla cron leader acquired',
+      ErrorCodes.CRON_LEADER_ACQUIRED,
+    );
     expect(moderation.applyOutcome).toHaveBeenCalledWith(
       'photo_nsfw',
       'prof_1',

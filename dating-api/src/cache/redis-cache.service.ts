@@ -174,4 +174,42 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
       return true;
     }
   }
+
+  /**
+   * Cron leader election (Sprint 48 Story 3).
+   * - REDIS_URL unset → 'acquired' (single-process local).
+   * - Redis up → SET NX EX; 'OK' → acquired, else not_acquired.
+   * - REDIS_URL set but client down / error → 'unavailable' (fail-closed).
+   * Does **not** reuse setNx fail-open semantics.
+   */
+  async tryAcquireCronLock(
+    key: string,
+    ttlSeconds: number,
+    value?: unknown,
+  ): Promise<'acquired' | 'not_acquired' | 'unavailable'> {
+    const urlConfigured = Boolean(process.env.REDIS_URL?.trim());
+    if (!urlConfigured) {
+      return 'acquired';
+    }
+    if (!this.client || !this.available) {
+      this.logDegraded('cronLock', 'unavailable');
+      return 'unavailable';
+    }
+    const started = Date.now();
+    try {
+      const payload =
+        value !== undefined
+          ? value
+          : { at: new Date().toISOString(), pid: process.pid };
+      const result = await this.client.set(key, JSON.stringify(payload), {
+        NX: true,
+        EX: ttlSeconds,
+      });
+      recordCacheOpMs('cronLock', Date.now() - started);
+      return result === 'OK' ? 'acquired' : 'not_acquired';
+    } catch (err) {
+      this.logDegraded('cronLock', 'error', err);
+      return 'unavailable';
+    }
+  }
 }

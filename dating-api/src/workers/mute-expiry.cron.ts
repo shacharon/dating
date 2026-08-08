@@ -4,7 +4,16 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { RedisCacheService } from '../cache/redis-cache.service';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
+import { ErrorCodes } from '../logging/error-codes';
+import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import {
+  CRON_LOCK_MUTE_EXPIRY,
+  cronLockDebugValue,
+  muteExpiryLockTtlSeconds,
+  shouldRunCronTick,
+} from './cron-leader.lock';
 
 export const CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT = 15 * 60 * 1000;
 
@@ -43,7 +52,11 @@ export class MuteExpiryEnforcer implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
 
-  constructor(private readonly violations: ContentViolationService) {}
+  constructor(
+    private readonly violations: ContentViolationService,
+    private readonly cache: RedisCacheService,
+    private readonly obs: StructuredObservabilityService,
+  ) {}
 
   onModuleInit(): void {
     const intervalMs = resolveMuteExpiryIntervalMs();
@@ -81,6 +94,26 @@ export class MuteExpiryEnforcer implements OnModuleInit, OnModuleDestroy {
     }
     this.running = true;
     try {
+      const intervalMs =
+        resolveMuteExpiryIntervalMs() ?? CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT;
+      const lock = await this.cache.tryAcquireCronLock(
+        CRON_LOCK_MUTE_EXPIRY,
+        muteExpiryLockTtlSeconds(intervalMs),
+        cronLockDebugValue(),
+      );
+      if (!shouldRunCronTick(lock)) {
+        this.obs.trace(
+          `mute-expiry cron skipped lock=${lock}`,
+          lock === 'unavailable'
+            ? ErrorCodes.CRON_LEADER_UNAVAILABLE
+            : ErrorCodes.CRON_LEADER_SKIPPED,
+        );
+        return 0;
+      }
+      this.obs.trace(
+        'mute-expiry cron leader acquired',
+        ErrorCodes.CRON_LEADER_ACQUIRED,
+      );
       return await this.violations.clearExpiredMutes();
     } finally {
       this.running = false;
