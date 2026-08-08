@@ -166,6 +166,58 @@ describe('MatchesService.compare', () => {
       expect(result.match.compatibility).toBeDefined();
     }
   });
+
+  it('delegates compare hub to AdminPairMatchEvaluator', async () => {
+    const profilesPrisma = { loadMatchPairRuntimeBundle: jest.fn() };
+    const evaluator = makeAdminPairMatchEvaluator();
+    const evaluateSpy = jest.spyOn(evaluator, 'evaluateCompare');
+    const service = new MatchesService(
+      profilesPrisma as never,
+      makePrismaMock() as never,
+      makeHgPairSnapshotTelemetryMock() as never,
+      makeConfigMock() as never,
+      evaluator,
+    );
+    const bundle = makeRuntimeBundle(
+      makeProfile('a', 'A', { ambition: 8 }),
+      makeProfile('b', 'B', { ambition: 7 }),
+    );
+    profilesPrisma.loadMatchPairRuntimeBundle.mockResolvedValue(bundle);
+
+    await service.compare({ aId: 'a', bId: 'b' });
+
+    expect(evaluateSpy).toHaveBeenCalledTimes(1);
+    expect(evaluateSpy).toHaveBeenCalledWith({
+      rowA: bundle.rowA,
+      rowB: bundle.rowB,
+      profileA: bundle.profileA,
+      profileB: bundle.profileB,
+    });
+  });
+
+  it('READY finalScore matches PairMatchPolicy score before HG-first retry', async () => {
+    const profilesPrisma = { loadMatchPairRuntimeBundle: jest.fn() };
+    const policy = new HgGateLegacyRankPolicy();
+    const service = createMatchesService(profilesPrisma);
+    const profileA = makeProfile('a', 'A', { ambition: 8 });
+    const profileB = makeProfile('b', 'B', { ambition: 7 });
+    const bundle = makeRuntimeBundle(profileA, profileB);
+    profilesPrisma.loadMatchPairRuntimeBundle.mockResolvedValue(bundle);
+
+    const evaluated = policy.evaluate({
+      viewerHgRow: bundle.rowA,
+      candidateHgRow: bundle.rowB,
+      viewerEnginePayload: profileA,
+      candidateEnginePayload: profileB,
+    });
+    const result = await service.compare({ aId: 'a', bId: 'b' });
+
+    expect(result.status).toBe('READY');
+    expect(evaluated.score.scoreGuarded).toBe(false);
+    if (result.status === 'READY') {
+      expect(result.match.finalScore).toBe(evaluated.score.matchScore);
+    }
+  });
 });
 
 describe('MatchesService.compareHgDiagnostic', () => {

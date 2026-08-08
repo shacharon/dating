@@ -12,9 +12,9 @@ import { compareWithStatus } from './match-engine';
 import {
   directionsMutualHardPass,
   profileWithNeutralSelfSignalsFallback,
+  type HolyGrailPairDirections,
 } from './compare-hg-first-helpers';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import type { HolyGrailPairDirections } from './compare-hg-first-helpers';
 
 export type AdminPairCompareInput = {
   readonly rowA: ChildrenUnsureProfileRow;

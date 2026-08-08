@@ -117,4 +117,29 @@ describe('AdminPairMatchEvaluator', () => {
     // policy + DTO recovery only — no neutral retry
     expect(compareSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('does not retry when mutual hard eligibility is not PASS', () => {
+    jest.spyOn(holyGrailPair, 'evaluateHolyGrailPairDirections').mockReturnValue({
+      aToB: direction('PASS'),
+      bToA: direction('FAIL'),
+    });
+    const guard = {
+      status: 'INSUFFICIENT_DATA' as const,
+      message: 'empty',
+      finalScore: null,
+    };
+    const compareSpy = jest
+      .spyOn(matchEngine, 'compareWithStatus')
+      .mockReturnValue(guard as never);
+
+    const out = evaluator.evaluateCompare({
+      rowA,
+      rowB,
+      profileA,
+      profileB,
+    });
+
+    expect(out.result).toMatchObject(guard);
+    expect(compareSpy).toHaveBeenCalledTimes(2);
+  });
 });
