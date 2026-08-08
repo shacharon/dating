@@ -3,7 +3,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { MeMatchDetailDto } from './me-matches.service';
+import type { MeMatchDetailDto } from './dto/me-matches-response.dto';
 import { buildMatchQualityAuditJson } from './match-quality-audit';
 import type { PrismaService } from '../prisma/prisma.service';
 

@@ -1,3 +1,11 @@
+/**
+ * Query params for `GET /api/v1/me/matches`.
+ *
+ * Transport-only (`cursor`, `limit`). Response assembly lives in
+ * `me-matches-response.mapper.ts` / `dto/me-matches-response.dto.ts`.
+ * Invalid cursors are thrown as domain `MatchListInvalidCursorError` from
+ * `MeMatchesService.list` after decode — this module only parses `limit`.
+ */
 import { BadRequestException } from '@nestjs/common';
 
 export const DEFAULT_MATCH_LIST_LIMIT = 20;

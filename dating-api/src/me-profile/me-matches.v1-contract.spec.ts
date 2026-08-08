@@ -39,6 +39,7 @@ function makeProfileRow(overrides: {
   gender?: string | null;
   desiredPartnerGenders?: unknown;
   updatedAt?: Date;
+  datingChapter?: string | null;
 }) {
   return {
     id: overrides.id,
@@ -47,6 +48,7 @@ function makeProfileRow(overrides: {
     nickname: null as string | null,
     status: S_ANALYZED,
     birthDate: new Date('1990-06-15T00:00:00.000Z'),
+    datingChapter: overrides.datingChapter ?? 'first_chapter',
     gender: (overrides.gender ?? null) as string | null,
     desiredPartnerGenders: overrides.desiredPartnerGenders ?? null,
     city: 'TLV',

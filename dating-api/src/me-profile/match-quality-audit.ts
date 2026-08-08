@@ -7,7 +7,8 @@
  */
 
 import { NotFoundException } from '@nestjs/common';
-import type { MeMatchDetailDto, MeMatchesService } from './me-matches.service';
+import type { MeMatchDetailDto } from './dto/me-matches-response.dto';
+import type { MeMatchesService } from './me-matches.service';
 import { latestEvaluationForProfile } from './me-profile-analysis.service';
 import {
   buildMeMatchesParticipantReadModel,

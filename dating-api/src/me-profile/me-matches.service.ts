@@ -34,8 +34,19 @@ import {
   MATCH_LIST_RANK_PERSIST_TX,
 } from './match-list-rank-persist.constants';
 import { toStoredMatchListScore } from './match-list-rank-score';
-import { toPriorityFields } from './match-priority';
 import { isMatchListMaterializedEnabled } from './match-list-materialized-flag';
+import {
+  rebaseMeMatchListItemScore,
+  toMeMatchDetail,
+  toMeMatchListItem,
+  toMeMatchesListNotReady,
+  toMeMatchesListReady,
+} from './me-matches-response.mapper';
+import type {
+  MeMatchDetailDto,
+  MeMatchItemDto,
+  MeMatchesListResponseDto,
+} from './dto/me-matches-response.dto';
 import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
@@ -131,12 +142,6 @@ import {
   MatchNarrativeGenerator,
   buildMatchNarrativeFactPack,
 } from '../matches/match-narrative';
-import {
-  buildDefaultMatchTeaser,
-  resolveTeaserMode,
-  withTeaserScore,
-  type MatchTeaserDto,
-} from '../matches/match-teaser';
 
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
@@ -174,47 +179,13 @@ export function matchListRankAfterCursorWhere(
   };
 }
 
-// ─── DTOs ─────────────────────────────────────────────────────────────────────
+// ─── Response DTOs (Sprint 45 Story 3) ───────────────────────────────────────
 
-export interface MeMatchItemDto {
-  /** `UserProfile.id` of the candidate. */
-  id: string;
-  /** Public display name chosen by the candidate; null when unset. */
-  nickname: string | null;
-  gender: string | null;
-  ageYears: number | null;
-  locationLabel: string | null;
-  analyzedAt: string | null;
-  /** True when at least one `UserProfileEvaluation` row exists for this candidate. */
-  hasEvaluation: boolean;
-  /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
-  matchScore: number | null;
-  /**
-   * Sprint 41 — same as `matchScore` when finite; null when unscored.
-   * Presentation alias for triage UI (no algorithm change).
-   */
-  priorityScore: number | null;
-  /** Sprint 41 — HIGH ≥85, GOOD ≥70, OTHER otherwise (incl. null score). */
-  priorityTier: 'HIGH' | 'GOOD' | 'OTHER';
-  /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
-  profileAnalysisStale?: boolean;
-  primaryPhotoUrl: string | null;
-  approvedPhotoCount: number;
-  explainability: MatchExplainabilityDto | null;
-  recommendation: MatchRecommendationDto | null;
-  /**
-   * Sprint 44 — mode-aware teaser copy for browse cards.
-   * Mode from viewer datingChapter / age proxy (Story 5).
-   */
-  teaser: MatchTeaserDto;
-  /** Viewer's action toward this candidate's user, if any. */
-  yourAction: 'LIKE' | 'PASS' | 'BLOCK' | null;
-  /**
-   * Present when this candidate is hard-ineligible but “existing” for the viewer
-   * (LIKE and/or ACTIVE MutualMatch). Absent for eligible matches.
-   */
-  hardBlocked?: HardBlockedDto;
-}
+export type {
+  MeMatchItemDto,
+  MeMatchDetailDto,
+  MeMatchesListResponseDto,
+} from './dto/me-matches-response.dto';
 
 /** Sprint 31 — thin rows for MatchListRank persistence (Story 2). */
 export type MatchListRankSnapshot = {
@@ -226,88 +197,6 @@ export type MatchListRankSnapshot = {
     hardBlocked: boolean;
   }>;
 };
-
-export interface MeMatchesListResponseDto {
-  status: 'ready' | 'not_ready';
-  /**
-   * Present when `status = 'not_ready'`.
-   * - `no_profile` — viewer has never created a product profile.
-   * - `not_analyzed` — profile exists but has not completed analysis yet.
-   * - `no_photo` — profile is analyzed but viewer has no approved photo.
-   */
-  reason?: 'no_profile' | 'not_analyzed' | 'no_photo';
-  /** Present when `status = 'ready'`. */
-  viewerProfileId?: string;
-  viewerGender?: string | null;
-  viewerAcceptedPartnerGenders?: string[] | null;
-  /**
-   * Present when `status = 'ready'`. True when the viewer's profile was saved after
-   * their latest `UserProfileEvaluation` (`UserProfile.updatedAt > evaluation.createdAt`).
-   */
-  viewerProfileAnalysisStale?: boolean;
-  /**
-   * Photo-eligible analyzed candidates (≥1 APPROVED photo), before gender / HG / block filters.
-   * Present when `status = 'ready'`.
-   */
-  totalCandidatesBeforeFilter?: number;
-  /**
-   * Analyzed candidates excluded because they have zero APPROVED photos.
-   * Present when `status = 'ready'`.
-   */
-  filteredNoPhotoCandidates?: number;
-  matches?: MeMatchItemDto[];
-  /** Opaque cursor for the next page (ranked list). Null when no more pages. */
-  nextCursor?: string | null;
-  /** True when more ranked matches exist after this page. */
-  hasMore?: boolean;
-  /**
-   * Sprint 39 — set when rebuild scoring hit MATCH_LIST_REBUILD_BUDGET_MS.
-   * List GET paths do not set this.
-   */
-  budgetExceeded?: boolean;
-}
-
-export interface MeMatchDetailDto {
-  /** `UserProfile.id` of the candidate. */
-  id: string;
-  /** Public display name chosen by the candidate; null when unset. */
-  nickname: string | null;
-  gender: string | null;
-  ageYears: number | null;
-  locationLabel: string | null;
-  analyzedAt: string | null;
-  hasEvaluation: boolean;
-  /**
-   * Curated analysis headline from the candidate’s read model (`evaluationDisplaySummary`).
-   * Parsed only inside `me-profile-engine.mapper` from the latest stored evaluation blob.
-   * Raw text fields (aboutMe / aboutPartner / aboutRelationship) are never exposed.
-   */
-  evaluationSummary: string | null;
-  /** Engine final score (0–100). Null when either profile lacks a valid evaluation. */
-  matchScore: number | null;
-  /** True when profile text changed after latest analysis (profile.updatedAt > evaluation.createdAt). */
-  profileAnalysisStale?: boolean;
-  /** Deterministic compatibility traits from `explainability.positiveChips` (detail only). */
-  matchExplanationTraits?: MatchExplanationTrait[];
-  primaryPhotoUrl: string | null;
-  approvedPhotoCount: number;
-  explainability: MatchExplainabilityDto | null;
-  recommendation: MatchRecommendationDto | null;
-  /**
-   * Sprint 44 — mode-aware teaser copy (same builder as list; default first_chapter).
-   */
-  teaser: MatchTeaserDto;
-  /**
-   * Sprint 22 — grounded long-form "why you match" narrative (detail only).
-   * Omitted on compare guards / unscored pairs. List DTO never includes this.
-   */
-  matchNarrative?: string;
-  /**
-   * Present when this candidate is hard-ineligible but “existing” for the viewer
-   * (LIKE and/or ACTIVE MutualMatch). Absent for eligible matches.
-   */
-  hardBlocked?: HardBlockedDto;
-}
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 
@@ -640,12 +529,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
     const gate = await this.resolveViewerListGate(userId);
     if (gate.status === 'not_ready') {
       recordMatchListLoadTimeMs(Date.now() - started);
-      return {
-        status: 'not_ready',
-        reason: gate.reason,
-        nextCursor: null,
-        hasMore: false,
-      };
+      return toMeMatchesListNotReady(gate.reason);
     }
 
     const rankRows = await this.fetchMatchListRankPage(userId, cursor, limit + 1);
@@ -654,8 +538,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         await this.maybeEnqueueListEmpty(userId);
       }
       recordMatchListLoadTimeMs(Date.now() - started);
-      return {
-        status: 'ready',
+      return toMeMatchesListReady({
         viewerProfileId: gate.viewerProfileId,
         viewerGender: gate.viewerGender,
         viewerAcceptedPartnerGenders: gate.viewerAcceptedPartnerGenders,
@@ -663,7 +546,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         matches: [],
         nextCursor: null,
         hasMore: false,
-      };
+      });
     }
 
     const hasMore = rankRows.length > limit;
@@ -690,7 +573,6 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       datingChapter: gate.viewerDatingChapter,
       ageYears: gate.viewerAgeYears,
     };
-    const viewerMode = resolveTeaserMode(viewerTeaserCtx);
     // Materialized `MatchListRank.matchScore` is list source of truth for score/tier
     // (hydrate may re-compare for explainability). Unscored ranks use -1.
     for (const rank of pageRanks) {
@@ -700,23 +582,9 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         Number.isFinite(rank.matchScore) && rank.matchScore >= 0
           ? rank.matchScore
           : item.matchScore;
-      const priority = toPriorityFields(matchScore);
-      const teaserFacts = {
-        score: matchScore,
-        priorityTier: priority.priorityTier,
-        explainability: item.explainability,
-        recommendation: item.recommendation,
-      };
-      matches.push({
-        ...item,
-        matchScore,
-        ...priority,
-        // Rebuild when missing or mode drifted (chapter change / age proxy vs old cache).
-        teaser:
-          item.teaser && item.teaser.mode === viewerMode
-            ? withTeaserScore(item.teaser, matchScore)
-            : buildDefaultMatchTeaser(teaserFacts, viewerTeaserCtx),
-      });
+      matches.push(
+        rebaseMeMatchListItemScore(item, matchScore, viewerTeaserCtx),
+      );
     }
 
     const lastRank = pageRanks[pageRanks.length - 1]!;
@@ -745,8 +613,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       ErrorCodes.ME_MATCHES_LIST_OK,
     );
 
-    return {
-      status: 'ready',
+    return toMeMatchesListReady({
       viewerProfileId: gate.viewerProfileId,
       viewerGender: gate.viewerGender,
       viewerAcceptedPartnerGenders: gate.viewerAcceptedPartnerGenders,
@@ -754,7 +621,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       matches,
       nextCursor,
       hasMore,
-    };
+    });
   }
 
   private async resolveViewerListGate(userId: string): Promise<
@@ -1303,44 +1170,38 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       const primaryStorageKey =
         approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ?? null;
 
-      const priority = toPriorityFields(matchScore);
-      matches.push({
-        id: row.id,
-        nickname: row.nickname?.trim() ? row.nickname.trim() : null,
-        gender: candidateBridge.selfGender,
-        ageYears: candidateBridge.derivedSelfAgeYears,
-        locationLabel: candidateBridge.location.locationLabel,
-        analyzedAt: row.analyzedAt?.toISOString() ?? null,
-        hasEvaluation: row._count.evaluations > 0,
-        matchScore,
-        ...priority,
-        profileAnalysisStale: row.updatedAt > candidateEval.createdAt,
-        primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
-          profileId: row.id,
-          photoId: primaryPhotoId,
-          storageKey: primaryStorageKey,
-        }),
-        approvedPhotoCount: approvedPhotos.length,
-        explainability,
-        recommendation,
-        teaser: buildDefaultMatchTeaser(
-          {
-            score: matchScore,
-            priorityTier: priority.priorityTier,
+      matches.push(
+        toMeMatchListItem({
+          id: row.id,
+          nickname: row.nickname ?? null,
+          gender: candidateBridge.selfGender,
+          ageYears: candidateBridge.derivedSelfAgeYears,
+          locationLabel: candidateBridge.location.locationLabel,
+          analyzedAt: row.analyzedAt ?? null,
+          hasEvaluation: row._count.evaluations > 0,
+          profileAnalysisStale: row.updatedAt > candidateEval.createdAt,
+          primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
+            profileId: row.id,
+            photoId: primaryPhotoId,
+            storageKey: primaryStorageKey,
+          }),
+          approvedPhotoCount: approvedPhotos.length,
+          yourAction: matchActionToYourAction(
+            actionByTargetUserId.get(row.userId) ?? null,
+          ),
+          score: {
+            matchScore,
             explainability,
             recommendation,
+          },
+          teaser: {
+            datingChapter: viewer.datingChapter,
+            viewerAgeYears: viewerBridge.derivedSelfAgeYears,
             viewerPayload: viewerRead.enginePayload,
             candidatePayload: candidateRead.enginePayload,
           },
-          {
-            datingChapter: viewer.datingChapter,
-            ageYears: viewerBridge.derivedSelfAgeYears,
-          },
-        ),
-        yourAction: matchActionToYourAction(
-          actionByTargetUserId.get(row.userId) ?? null,
-        ),
-      });
+        }),
+      );
     }
 
     if (pendingHardBlocks.length > 0) {
@@ -1374,48 +1235,40 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         const primaryStorageKey =
           approvedPhotos.find((p) => p.id === primaryPhotoId)?.storageKey ??
           null;
-        const priority = toPriorityFields(pending.matchScore);
-        matches.push({
-          id: pending.row.id,
-          nickname: pending.row.nickname?.trim()
-            ? pending.row.nickname.trim()
-            : null,
-          gender: pending.candidateBridge.selfGender,
-          ageYears: pending.candidateBridge.derivedSelfAgeYears,
-          locationLabel: pending.candidateBridge.location.locationLabel,
-          analyzedAt: pending.row.analyzedAt?.toISOString() ?? null,
-          hasEvaluation: pending.row._count.evaluations > 0,
-          matchScore: pending.matchScore,
-          ...priority,
-          profileAnalysisStale:
-            pending.row.updatedAt > pending.candidateEval.createdAt,
-          primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
-            profileId: pending.row.id,
-            photoId: primaryPhotoId,
-            storageKey: primaryStorageKey,
-          }),
-          approvedPhotoCount: approvedPhotos.length,
-          explainability: pending.explainability,
-          recommendation: pending.recommendation,
-          teaser: buildDefaultMatchTeaser(
-            {
-              score: pending.matchScore,
-              priorityTier: priority.priorityTier,
+        matches.push(
+          toMeMatchListItem({
+            id: pending.row.id,
+            nickname: pending.row.nickname ?? null,
+            gender: pending.candidateBridge.selfGender,
+            ageYears: pending.candidateBridge.derivedSelfAgeYears,
+            locationLabel: pending.candidateBridge.location.locationLabel,
+            analyzedAt: pending.row.analyzedAt ?? null,
+            hasEvaluation: pending.row._count.evaluations > 0,
+            profileAnalysisStale:
+              pending.row.updatedAt > pending.candidateEval.createdAt,
+            primaryPhotoUrl: resolveMatchPrimaryPhotoUrl({
+              profileId: pending.row.id,
+              photoId: primaryPhotoId,
+              storageKey: primaryStorageKey,
+            }),
+            approvedPhotoCount: approvedPhotos.length,
+            yourAction: matchActionToYourAction(
+              actionByTargetUserId.get(pending.row.userId) ?? null,
+            ),
+            hardBlocked,
+            score: {
+              matchScore: pending.matchScore,
               explainability: pending.explainability,
               recommendation: pending.recommendation,
+            },
+            teaser: {
+              datingChapter: viewer.datingChapter,
+              viewerAgeYears: viewerBridge.derivedSelfAgeYears,
               viewerPayload: viewerRead.enginePayload,
               candidatePayload: pending.candidatePayload,
             },
-            {
-              datingChapter: viewer.datingChapter,
-              ageYears: viewerBridge.derivedSelfAgeYears,
-            },
-          ),
-          yourAction: matchActionToYourAction(
-            actionByTargetUserId.get(pending.row.userId) ?? null,
-          ),
-          hardBlocked,
-        });
+          }),
+        );
       }
     }
 
@@ -1469,8 +1322,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       });
     }
 
-    return {
-      status: 'ready',
+    return toMeMatchesListReady({
       viewerProfileId: viewer.id,
       viewerGender: viewerBridge.selfGender,
       viewerAcceptedPartnerGenders: viewerBridge.acceptedPartnerGenders
@@ -1485,7 +1337,7 @@ export class MeMatchesService implements MatchListRankRebuildPort {
           }),
       matches,
       ...(budgetExceeded ? { budgetExceeded: true } : {}),
-    };
+    });
   }
 
   // ─── assertMatchCandidateVisible ───────────────────────────────────────────
@@ -1800,17 +1652,15 @@ export class MeMatchesService implements MatchListRankRebuildPort {
       ErrorCodes.ME_MATCHES_DETAIL_OK,
     );
 
-    const priority = toPriorityFields(matchScore);
-    return {
+    return toMeMatchDetail({
       id: candidate.id,
-      nickname: candidate.nickname?.trim() ? candidate.nickname.trim() : null,
+      nickname: candidate.nickname ?? null,
       gender: candidateBridge.selfGender,
       ageYears: candidateBridge.derivedSelfAgeYears,
       locationLabel: candidateBridge.location.locationLabel,
-      analyzedAt: candidate.analyzedAt?.toISOString() ?? null,
+      analyzedAt: candidate.analyzedAt ?? null,
       hasEvaluation: candidate._count.evaluations > 0,
       evaluationSummary,
-      matchScore,
       profileAnalysisStale: candidate.updatedAt > candidateEval.createdAt,
       ...(matchExplanationTraits !== undefined && {
         matchExplanationTraits,
@@ -1827,25 +1677,20 @@ export class MeMatchesService implements MatchListRankRebuildPort {
         });
       })(),
       approvedPhotoCount: (candidate.photos ?? []).length,
-      explainability,
-      recommendation,
-      teaser: buildDefaultMatchTeaser(
-        {
-          score: matchScore,
-          priorityTier: priority.priorityTier,
-          explainability,
-          recommendation,
-          viewerPayload: viewerRead.enginePayload,
-          candidatePayload: candidateRead.enginePayload,
-        },
-        {
-          datingChapter: viewer.datingChapter,
-          ageYears: viewerBridge.derivedSelfAgeYears,
-        },
-      ),
+      score: {
+        matchScore,
+        explainability,
+        recommendation,
+      },
+      teaser: {
+        datingChapter: viewer.datingChapter,
+        viewerAgeYears: viewerBridge.derivedSelfAgeYears,
+        viewerPayload: viewerRead.enginePayload,
+        candidatePayload: candidateRead.enginePayload,
+      },
       ...(matchNarrative !== undefined ? { matchNarrative } : {}),
       ...(hardBlocked !== undefined ? { hardBlocked } : {}),
-    };
+    });
   }
 
   /**
