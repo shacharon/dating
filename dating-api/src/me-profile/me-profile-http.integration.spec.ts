@@ -2060,6 +2060,18 @@ describe('me profile HTTP (integration)', () => {
       expect(res.body.filteredNoPhotoCandidates).toBe(0);
     });
 
+    it('returns 400 invalid_cursor when cursor is not decodable', async () => {
+      const raw = await loginAndCookie();
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/me/matches')
+        .query({ cursor: '!!!' })
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .expect(400);
+
+      expect(res.body).toMatchObject({ error: 'invalid_cursor' });
+    });
+
     it('returns 200 ready — gender-mismatched candidate excluded', async () => {
       const raw = await loginAndCookie();
       mockListEvaluations();

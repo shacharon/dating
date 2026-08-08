@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import type { UserProfileStatus } from '@prisma/client';
 import {
   encodeMatchListCursor,
@@ -11,6 +10,7 @@ import { MeMatchesService, matchListRankAfterCursorWhere } from './me-matches.se
 import { MATCH_LIST_MATERIALIZED_ENV } from './match-list-materialized-flag';
 
 const S_ANALYZED = 'ANALYZED' as UserProfileStatus;
+const S_DRAFT = 'DRAFT' as UserProfileStatus;
 
 function makePref(profileId: string, genders: string[] = ['FEMALE']) {
   return {
@@ -261,6 +261,8 @@ describe('MeMatchesService materialized list', () => {
     const first = await service.list(viewerUserId);
     expect(first.status).toBe('ready');
     expect(first.matches).toEqual([]);
+    expect(first.nextCursor).toBeNull();
+    expect(first.hasMore).toBe(false);
     expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
       viewerUserId,
       'list_empty',
@@ -341,6 +343,52 @@ describe('MeMatchesService materialized list', () => {
   it('invalid cursor throws BadRequestException', async () => {
     await expect(
       service.list(viewerUserId, { limit: 20, cursor: '!!!' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ error: 'invalid_cursor' }),
+    });
+  });
+
+  /**
+   * Sprint 45 Story 1 — materialized-path gaps for do-not-drift matrix (L4).
+   * L8–L10 + L6 covered by existing flag/empty/invalid-cursor tests above.
+   */
+  describe('Sprint 45 Story 1 — characterization (do not drift)', () => {
+    it('L4: not_ready(not_analyzed) skips rank query and enqueue', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue({
+        ...makeViewer(viewerUserId, viewerProfileId),
+        status: S_DRAFT,
+      });
+
+      const result = await service.list(viewerUserId);
+
+      expect(result).toEqual({
+        status: 'not_ready',
+        reason: 'not_analyzed',
+        nextCursor: null,
+        hasMore: false,
+      });
+      expect(prisma.matchListRank.findMany).not.toHaveBeenCalled();
+      expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+      expect(cache.get).not.toHaveBeenCalled();
+    });
+
+    it('L4: not_ready(no_photo) skips rank query and enqueue', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeViewer(viewerUserId, viewerProfileId),
+      );
+      prisma.userProfilePhoto.count.mockResolvedValue(0);
+
+      const result = await service.list(viewerUserId);
+
+      expect(result).toEqual({
+        status: 'not_ready',
+        reason: 'no_photo',
+        nextCursor: null,
+        hasMore: false,
+      });
+      expect(prisma.matchListRank.findMany).not.toHaveBeenCalled();
+      expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+      expect(cache.get).not.toHaveBeenCalled();
+    });
   });
 });

@@ -55,6 +55,8 @@ function makeProfileRow(overrides: {
   aboutPartner?: string | null;
   aboutRelationship?: string | null;
   updatedAt?: Date;
+  birthDate?: Date;
+  datingChapter?: string | null;
   /** Joined `UserProfilePreference` row (Phase F: HG prefs live here only). */
   preference?: ReturnType<typeof makePrefRow> | null;
   photos?: Array<{ id: string; isPrimary: boolean }>;
@@ -65,7 +67,8 @@ function makeProfileRow(overrides: {
     name: `Profile ${overrides.id}`,
     nickname: overrides.nickname ?? null,
     status: overrides.status ?? S_ANALYZED,
-    birthDate: new Date('1990-06-15T00:00:00.000Z'),
+    birthDate: overrides.birthDate ?? new Date('1990-06-15T00:00:00.000Z'),
+    datingChapter: overrides.datingChapter ?? null,
     gender: (overrides.gender ?? null) as string | null,
     desiredPartnerGenders: overrides.desiredPartnerGenders ?? null,
     city: 'TLV',
@@ -244,6 +247,8 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('not_ready');
       expect(result.reason).toBe('no_profile');
+      expect(result.nextCursor).toBeNull();
+      expect(result.hasMore).toBe(false);
       expect(narrativeGenerate).not.toHaveBeenCalled();
     });
 
@@ -256,6 +261,8 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('not_ready');
       expect(result.reason).toBe('not_analyzed');
+      expect(result.nextCursor).toBeNull();
+      expect(result.hasMore).toBe(false);
     });
 
     it('returns not_ready(no_photo) when viewer is ANALYZED but has no approved photos', async () => {
@@ -273,6 +280,8 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('not_ready');
       expect(result.reason).toBe('no_photo');
+      expect(result.nextCursor).toBeNull();
+      expect(result.hasMore).toBe(false);
       expect(analytics.track).toHaveBeenCalledWith(
         viewerUserId,
         ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED,
@@ -301,6 +310,8 @@ describe('MeMatchesService', () => {
 
       expect(result.status).toBe('ready');
       expect(result.matches).toHaveLength(0);
+      expect(result.nextCursor).toBeNull();
+      expect(result.hasMore).toBe(false);
       expect(result.totalCandidatesBeforeFilter).toBe(0);
     });
 
@@ -2513,6 +2524,7 @@ describe('MeMatchesService', () => {
           userId: viewerUserId,
           gender: 'MALE',
           desiredPartnerGenders: ['FEMALE'],
+          datingChapter: 'first_chapter',
         }),
       );
       prisma.userProfileEvaluation.findFirst.mockResolvedValue(viewerEvalRow);
@@ -3245,6 +3257,80 @@ describe('MeMatchesService', () => {
         }),
       );
       cmp.mockRestore();
+    });
+  });
+
+  /**
+   * Sprint 45 Story 1 — locked outcomes for Sprint 38.3 extract-then-delegate.
+   * Prefer strengthening existing cases (L1–L5, L7, L11–L12, D1–D2, D4) over duplicating here.
+   */
+  describe('Sprint 45 Story 1 — characterization (do not drift)', () => {
+    it('L6: list() invalid cursor throws BadRequestException with error=invalid_cursor', async () => {
+      await expect(
+        service.list(viewerUserId, { limit: 20, cursor: '!!!' }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({ error: 'invalid_cursor' }),
+      });
+    });
+
+    it('D3: getById() ready detail locks required fields and never leaks userId/about*', async () => {
+      prisma.userProfile.findUnique
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: viewerProfileId,
+            userId: viewerUserId,
+            gender: 'MALE',
+            desiredPartnerGenders: ['FEMALE'],
+            aboutMe: 'viewer secret about me',
+            datingChapter: 'first_chapter',
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeProfileRow({
+            id: candidateProfileId,
+            userId: 'user_cand',
+            gender: 'FEMALE',
+            desiredPartnerGenders: ['MALE'],
+            nickname: 'River',
+            aboutMe: 'candidate secret about me',
+            aboutPartner: 'candidate about partner',
+            aboutRelationship: 'candidate about relationship',
+            photos: [{ id: 'photo_primary', isPrimary: true }],
+          }),
+        );
+
+      const result = await service.getById(viewerUserId, candidateProfileId);
+
+      for (const key of [
+        'id',
+        'nickname',
+        'gender',
+        'ageYears',
+        'locationLabel',
+        'analyzedAt',
+        'hasEvaluation',
+        'evaluationSummary',
+        'matchScore',
+        'primaryPhotoUrl',
+        'approvedPhotoCount',
+        'explainability',
+        'recommendation',
+        'teaser',
+      ] as const) {
+        expect(result).toHaveProperty(key);
+      }
+      expect(result.id).toBe(candidateProfileId);
+      expect(result.nickname).toBe('River');
+      expect(result.gender).toBe('FEMALE');
+      expect(typeof result.approvedPhotoCount).toBe('number');
+      expect(result.teaser).toEqual(expect.objectContaining({ showScore: expect.any(Boolean) }));
+      expect(result).not.toHaveProperty('userId');
+      expect(result).not.toHaveProperty('aboutMe');
+      expect(result).not.toHaveProperty('aboutPartner');
+      expect(result).not.toHaveProperty('aboutRelationship');
+      expect(
+        Object.prototype.hasOwnProperty.call(result, 'evaluationJson'),
+      ).toBe(false);
     });
   });
 });
