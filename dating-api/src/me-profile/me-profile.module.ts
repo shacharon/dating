@@ -41,6 +41,7 @@ import { ProfilePreferenceService } from './profile/profile-preference.service';
 import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
 import { USER_PROFILE_REPOSITORY } from './repositories/user-profile.repository';
 import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
+import { MatchingPolicyModule } from '../matching-policy/matching-policy.module';
 
 /**
  * Product me-profile module.
@@ -62,6 +63,7 @@ import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
     NotificationsModule,
     forwardRef(() => WorkerModule),
     ContentModerationModule,
+    MatchingPolicyModule,
   ],
   controllers: [MeProfileController],
   providers: [

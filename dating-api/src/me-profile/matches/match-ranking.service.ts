@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { MutualMatchStatus } from '@prisma/client';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
@@ -42,7 +42,6 @@ import type {
 } from '../dto/me-matches-response.dto';
 import { buildProductProfileMatchingBridge } from '../user-profile-matching-bridge.contract';
 import { countApprovedPhotosForProfile } from '../me-profile-photo-gate';
-import { evaluateHolyGrailPairDirections } from '../../matches/holy-grail-pair-directions';
 import {
   accumulateHolyGrailDimensionOutcomeCounts,
   emptyHolyGrailDimensionOutcomeCounts,
@@ -63,10 +62,9 @@ import {
 } from '../../holy-grail-matching/dealbreaker-signals-text.extract';
 import { getCachedDealbreakerHardDisabledTags } from '../../holy-grail-matching/dealbreaker-guardrails';
 import {
-  compareWithStatus,
-  type MatchExplainabilityDto,
-  type MatchRecommendationDto,
-} from '../../matches/match-engine';
+  PAIR_MATCH_POLICY,
+  type PairMatchPolicy,
+} from '../../matching-policy/pair-match-policy';
 import { MatchEligibilityService } from './match-eligibility.service';
 import { MatchListQueryService } from './match-list-query.service';
 import {
@@ -89,6 +87,7 @@ export class MatchRankingService {
     private readonly analytics: AnalyticsService,
     private readonly query: MatchListQueryService,
     private readonly eligibility: MatchEligibilityService,
+    @Inject(PAIR_MATCH_POLICY) private readonly pairMatchPolicy: PairMatchPolicy,
   ) {}
 
   async buildMatchListRankSnapshot(
@@ -472,12 +471,14 @@ export class MatchRankingService {
         );
       }
 
-      // HG Layer-3 hard-eligibility gate: exclude only when both rows carry structured
-      // HG data AND either direction is an explicit FAIL. Missing HG data → PASS (lenient).
-      const hgDirections = evaluateHolyGrailPairDirections(
-        viewerRead.hg.row,
-        candidateRead.hg.row,
-      );
+      // HG gate + legacy rank via PairMatchPolicy (admit/omit stays on eligibility).
+      const evaluated = this.pairMatchPolicy.evaluate({
+        viewerHgRow: viewerRead.hg.row,
+        candidateHgRow: candidateRead.hg.row,
+        viewerEnginePayload: viewerRead.enginePayload,
+        candidateEnginePayload: candidateRead.enginePayload,
+      });
+      const hgDirections = evaluated.gate.hgDirections;
       if (hgDirections !== null) {
         accumulateHolyGrailDimensionOutcomeCounts(
           hgDimensionOutcomeCounts,
@@ -497,9 +498,7 @@ export class MatchRankingService {
         );
       }
 
-      const isHgHardFail = this.eligibility.isHgPairHardFail(hgDirections);
-
-      if (isHgHardFail) {
+      if (evaluated.gate.isHardFail) {
         const yourAction = matchActionToYourAction(
           actionByTargetUserId.get(row.userId) ?? null,
         );
@@ -513,18 +512,7 @@ export class MatchRankingService {
           continue;
         }
         // Defer hardBlocked DTO until about* batch fetch (list select omits free-text).
-        let matchScore: number | null = null;
-        let explainability: MatchExplainabilityDto | null = null;
-        let recommendation: MatchRecommendationDto | null = null;
-        const result = compareWithStatus(
-          viewerRead.enginePayload,
-          candidateRead.enginePayload,
-        );
-        if (!('status' in result)) {
-          matchScore = result.finalScore;
-          explainability = result.explainability;
-          recommendation = result.recommendation;
-        }
+        const { matchScore, explainability, recommendation } = evaluated.score;
         pendingHardBlocks.push({
           row,
           candidateEval,
@@ -542,20 +530,8 @@ export class MatchRankingService {
         continue;
       }
 
-      let matchScore: number | null = null;
-      let explainability: MatchExplainabilityDto | null = null;
-      let recommendation: MatchRecommendationDto | null = null;
+      const { matchScore, explainability, recommendation } = evaluated.score;
       const approvedPhotos = row.photos ?? [];
-
-      const result = compareWithStatus(
-        viewerRead.enginePayload,
-        candidateRead.enginePayload,
-      );
-      if (!('status' in result)) {
-        matchScore = result.finalScore;
-        explainability = result.explainability;
-        recommendation = result.recommendation;
-      }
 
       const primaryPhotoId = pickApprovedPrimaryPhotoId(approvedPhotos);
       const primaryStorageKey =

@@ -22,7 +22,6 @@ import {
   candidateHasApprovedPhoto,
   viewerHasApprovedPhoto,
 } from '../me-profile-photo-gate';
-import { evaluateHolyGrailPairDirections } from '../../matches/holy-grail-pair-directions';
 import {
   extractDealbreakerSignalsFromFreeText,
   extractSelfFactHintsFromFreeText,
@@ -33,10 +32,9 @@ import {
   type MatchExplanationTrait,
 } from '../../matches/match-explanation-traits';
 import {
-  compareWithStatus,
-  type MatchExplainabilityDto,
-  type MatchRecommendationDto,
-} from '../../matches/match-engine';
+  PAIR_MATCH_POLICY,
+  type PairMatchPolicy,
+} from '../../matching-policy/pair-match-policy';
 import {
   MatchNarrativeCacheService,
   MatchNarrativeGenerator,
@@ -63,6 +61,7 @@ export class MatchDetailService {
     private readonly matchNarrativeCache: MatchNarrativeCacheService,
     private readonly query: MatchListQueryService,
     private readonly eligibility: MatchEligibilityService,
+    @Inject(PAIR_MATCH_POLICY) private readonly pairMatchPolicy: PairMatchPolicy,
   ) {}
 
   async getById(
@@ -187,14 +186,16 @@ export class MatchDetailService {
       );
     }
 
-    // HG Layer-3 hard-eligibility gate (same policy as list).
-    const hgDirections = evaluateHolyGrailPairDirections(
-      viewerRead.hg.row,
-      candidateRead.hg.row,
-    );
+    // HG gate + legacy rank via PairMatchPolicy (same contract as list).
+    const evaluated = this.pairMatchPolicy.evaluate({
+      viewerHgRow: viewerRead.hg.row,
+      candidateHgRow: candidateRead.hg.row,
+      viewerEnginePayload: viewerRead.enginePayload,
+      candidateEnginePayload: candidateRead.enginePayload,
+    });
 
     let hardBlocked: HardBlockedDto | undefined;
-    if (this.eligibility.isHgPairHardFail(hgDirections)) {
+    if (evaluated.gate.isHardFail) {
       const [actionRow, mutual] = await Promise.all([
         this.prisma.matchAction.findUnique({
           where: {
@@ -222,7 +223,7 @@ export class MatchDetailService {
         aboutRelationship: viewerCoreDetail.aboutRelationship,
       };
       hardBlocked = this.eligibility.buildHardBlockedDto(
-        hgDirections!,
+        evaluated.gate.hgDirections!,
         extractDealbreakerSignalsFromFreeText(viewerTextFields).signals,
         extractSelfFactHintsFromFreeText(viewerTextFields),
         {
@@ -238,23 +239,18 @@ export class MatchDetailService {
 
     const evaluationSummary = candidateRead.evaluationDisplaySummary;
 
-    let matchScore: number | null = null;
-    let explainability: MatchExplainabilityDto | null = null;
-    let recommendation: MatchRecommendationDto | null = null;
-
-    const result = compareWithStatus(
-      viewerRead.enginePayload,
-      candidateRead.enginePayload,
-    );
+    const { matchScore, explainability, recommendation } = evaluated.score;
     let matchExplanationTraits: MatchExplanationTrait[] | undefined;
     let matchNarrative: string | undefined;
-    if (!('status' in result)) {
-      matchScore = result.finalScore;
-      explainability = result.explainability;
-      recommendation = result.recommendation;
+    if (
+      !evaluated.score.scoreGuarded &&
+      matchScore != null &&
+      explainability != null &&
+      recommendation != null
+    ) {
       const built = buildMatchExplanationTraits(
-        result.explainability.positiveChips,
-        result.finalScore,
+        explainability.positiveChips,
+        matchScore,
       );
       matchExplanationTraits = built.length > 0 ? built : undefined;
       matchNarrative = await resolveMatchNarrative(
@@ -268,9 +264,9 @@ export class MatchDetailService {
           candidateProfileId: candidate.id,
           viewerEvaluationId: viewerEval.id,
           candidateEvaluationId: candidateEval.id,
-          finalScore: result.finalScore,
-          explainability: result.explainability,
-          recommendation: result.recommendation,
+          finalScore: matchScore,
+          explainability,
+          recommendation,
           traits: matchExplanationTraits,
           viewerAbout: {
             aboutMe: viewerCoreDetail.aboutMe,

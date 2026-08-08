@@ -187,6 +187,98 @@ export class EligibilityTestHarness {
   private readonly matchActions = new Map<string, Record<string, unknown>>();
   /** Key: `${userId1}:${userId2}` (sorted pair) */
   private readonly mutualMatches = new Map<string, Record<string, unknown>>();
+  /** Key: `${viewerUserId}:${candidateProfileId}` — Sprint 46 / 38.3 materialized list. */
+  private readonly matchListRanks = new Map<
+    string,
+    {
+      viewerUserId: string;
+      candidateProfileId: string;
+      matchScore: number;
+      hardBlocked: boolean;
+      builtAt: Date;
+    }
+  >();
+
+  private matchListRankKey(viewerUserId: string, candidateProfileId: string): string {
+    return `${viewerUserId}:${candidateProfileId}`;
+  }
+
+  private filterMatchListRanks(where?: {
+    viewerUserId?: string;
+    candidateProfileId?: string | { notIn?: string[] };
+    hardBlocked?: boolean;
+    matchScore?: number | { lt?: number };
+    OR?: Array<Record<string, unknown>>;
+  }): Array<{
+    viewerUserId: string;
+    candidateProfileId: string;
+    matchScore: number;
+    hardBlocked: boolean;
+    builtAt: Date;
+  }> {
+    let rows = [...this.matchListRanks.values()];
+    if (!where) return rows;
+    if (where.viewerUserId !== undefined) {
+      rows = rows.filter((r) => r.viewerUserId === where.viewerUserId);
+    }
+    if (typeof where.candidateProfileId === 'string') {
+      rows = rows.filter((r) => r.candidateProfileId === where.candidateProfileId);
+    } else if (where.candidateProfileId?.notIn) {
+      const excluded = new Set(where.candidateProfileId.notIn);
+      rows = rows.filter((r) => !excluded.has(r.candidateProfileId));
+    }
+    if (where.hardBlocked !== undefined) {
+      rows = rows.filter((r) => r.hardBlocked === where.hardBlocked);
+    }
+    if (typeof where.matchScore === 'number') {
+      rows = rows.filter((r) => r.matchScore === where.matchScore);
+    } else if (
+      where.matchScore &&
+      typeof where.matchScore === 'object' &&
+      where.matchScore.lt !== undefined
+    ) {
+      const lt = where.matchScore.lt;
+      rows = rows.filter((r) => r.matchScore < lt);
+    }
+    if (where.OR && where.OR.length > 0) {
+      rows = rows.filter((r) =>
+        where.OR!.some((clause) => {
+          if (clause['hardBlocked'] !== undefined && r.hardBlocked !== clause['hardBlocked']) {
+            return false;
+          }
+          const score = clause['matchScore'];
+          if (typeof score === 'number' && r.matchScore !== score) return false;
+          if (
+            score &&
+            typeof score === 'object' &&
+            'lt' in (score as object) &&
+            typeof (score as { lt?: number }).lt === 'number' &&
+            !(r.matchScore < (score as { lt: number }).lt)
+          ) {
+            return false;
+          }
+          const cand = clause['candidateProfileId'];
+          if (
+            typeof cand === 'string' &&
+            r.candidateProfileId !== cand
+          ) {
+            return false;
+          }
+          if (
+            cand &&
+            typeof cand === 'object' &&
+            'gt' in (cand as object) &&
+            typeof (cand as { gt?: string }).gt === 'string' &&
+            !(r.candidateProfileId > (cand as { gt: string }).gt)
+          ) {
+            return false;
+          }
+          return true;
+        }),
+      );
+    }
+    return rows;
+  }
 
   private readonly verifyIdToken = jest.fn();
 
@@ -285,6 +377,155 @@ export class EligibilityTestHarness {
       return rows;
     }),
     matchNarrativeCache: this.narrativeCachePrisma.matchNarrativeCache,
+    matchListRank: {
+      findMany: jest.fn(
+        async ({
+          where,
+          orderBy,
+          take,
+          select,
+        }: {
+          where?: {
+            viewerUserId?: string;
+            OR?: Array<Record<string, unknown>>;
+          };
+          orderBy?: Array<Record<string, 'asc' | 'desc'>>;
+          take?: number;
+          select?: Record<string, boolean>;
+        } = {}) => {
+          let rows = this.filterMatchListRanks(where);
+          if (orderBy?.length) {
+            rows = [...rows].sort((a, b) => {
+              for (const clause of orderBy) {
+                const key = Object.keys(clause)[0] as
+                  | 'hardBlocked'
+                  | 'matchScore'
+                  | 'candidateProfileId';
+                const dir = clause[key];
+                const av = a[key];
+                const bv = b[key];
+                if (av === bv) continue;
+                if (typeof av === 'boolean' && typeof bv === 'boolean') {
+                  const cmp = Number(av) - Number(bv);
+                  return dir === 'desc' ? -cmp : cmp;
+                }
+                if (typeof av === 'number' && typeof bv === 'number') {
+                  return dir === 'desc' ? bv - av : av - bv;
+                }
+                const cmp = String(av) < String(bv) ? -1 : 1;
+                return dir === 'desc' ? -cmp : cmp;
+              }
+              return 0;
+            });
+          }
+          if (take !== undefined) rows = rows.slice(0, take);
+          if (!select) return rows;
+          return rows.map((r) => {
+            const out: Record<string, unknown> = {};
+            for (const [k, on] of Object.entries(select)) {
+              if (on) out[k] = r[k as keyof typeof r];
+            }
+            return out;
+          });
+        },
+      ),
+      count: jest.fn(async ({ where }: { where?: { viewerUserId?: string } } = {}) => {
+        return this.filterMatchListRanks(where).length;
+      }),
+      deleteMany: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: {
+            viewerUserId?: string;
+            candidateProfileId?: string | { notIn?: string[] };
+          };
+        } = {}) => {
+          const toDelete = this.filterMatchListRanks(where);
+          for (const row of toDelete) {
+            this.matchListRanks.delete(
+              this.matchListRankKey(row.viewerUserId, row.candidateProfileId),
+            );
+          }
+          return { count: toDelete.length };
+        },
+      ),
+      upsert: jest.fn(
+        async ({
+          where,
+          create,
+          update,
+        }: {
+          where: {
+            viewerUserId_candidateProfileId: {
+              viewerUserId: string;
+              candidateProfileId: string;
+            };
+          };
+          create: {
+            viewerUserId: string;
+            candidateProfileId: string;
+            matchScore: number;
+            hardBlocked: boolean;
+            builtAt: Date;
+          };
+          update: {
+            matchScore: number;
+            hardBlocked: boolean;
+            builtAt: Date;
+          };
+        }) => {
+          const { viewerUserId, candidateProfileId } =
+            where.viewerUserId_candidateProfileId;
+          const key = this.matchListRankKey(viewerUserId, candidateProfileId);
+          const existing = this.matchListRanks.get(key);
+          if (existing) {
+            const next = {
+              ...existing,
+              matchScore: update.matchScore,
+              hardBlocked: update.hardBlocked,
+              builtAt: update.builtAt,
+            };
+            this.matchListRanks.set(key, next);
+            return next;
+          }
+          const created = { ...create };
+          this.matchListRanks.set(key, created);
+          return created;
+        },
+      ),
+      createMany: jest.fn(
+        async ({
+          data,
+        }: {
+          data: Array<{
+            viewerUserId: string;
+            candidateProfileId: string;
+            matchScore: number;
+            hardBlocked: boolean;
+            builtAt?: Date;
+          }>;
+        }) => {
+          let count = 0;
+          for (const row of data) {
+            const key = this.matchListRankKey(
+              row.viewerUserId,
+              row.candidateProfileId,
+            );
+            if (this.matchListRanks.has(key)) continue;
+            this.matchListRanks.set(key, {
+              viewerUserId: row.viewerUserId,
+              candidateProfileId: row.candidateProfileId,
+              matchScore: row.matchScore,
+              hardBlocked: row.hardBlocked,
+              builtAt: row.builtAt ?? new Date(),
+            });
+            count += 1;
+          }
+          return { count };
+        },
+      ),
+    },
     userSession: {
       create: jest.fn(async ({ data }: { data: { expiresAt: Date } }) => ({
         id: `sess_${Date.now()}_${Math.random()}`,

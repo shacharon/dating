@@ -6,6 +6,7 @@ import type { RedisCacheService } from '../cache/redis-cache.service';
 import type { MatchListRankQueuePort } from '../workers/match-list-rank.ports';
 import type { MatchNarrativeCacheService } from '../matches/match-narrative';
 import type { MatchNarrativeGenerator } from '../matches/match-narrative';
+import { HgGateLegacyRankPolicy } from '../matching-policy/hg-gate-legacy-rank.policy';
 import type { MutualMatchesService } from './mutual-matches.service';
 import { MeMatchesService } from './me-matches.service';
 import { MatchListQueryService } from './matches/match-list-query.service';
@@ -44,12 +45,14 @@ export function createMeMatchesServiceForTest(
     deps.obs,
     query,
   );
+  const pairMatchPolicy = new HgGateLegacyRankPolicy();
   const ranking = new MatchRankingService(
     deps.prisma,
     deps.obs,
     deps.analytics,
     query,
     eligibility,
+    pairMatchPolicy,
   );
   const cacheSvc = new MatchListCacheService(
     deps.prisma,
@@ -69,6 +72,7 @@ export function createMeMatchesServiceForTest(
     deps.matchNarrativeCache,
     query,
     eligibility,
+    pairMatchPolicy,
   );
   return new MeMatchesService(
     deps.obs,

@@ -191,6 +191,18 @@ describe('Two-user new-model E2E flow (integration)', () => {
   // ── Session registry (rawToken → hash → userId) ──
   const sessionMap = new Map<string, { userId: string; hash: string }>();
 
+  // ── MatchListRank (materialized list) in-memory store ──
+  type MatchListRankRow = {
+    viewerUserId: string;
+    candidateProfileId: string;
+    matchScore: number;
+    hardBlocked: boolean;
+    builtAt: Date;
+  };
+  const matchListRanks = new Map<string, MatchListRankRow>();
+  const matchListRankKey = (viewerUserId: string, candidateProfileId: string) =>
+    `${viewerUserId}:${candidateProfileId}`;
+
   // ── Prisma mock: new-model tables functional, legacy tables locked ──
   const narrativeCachePrisma = createMatchNarrativeCachePrismaMock();
   const matchNarrativeGeneratorStub = createMatchNarrativeGeneratorStub();
@@ -223,6 +235,170 @@ describe('Two-user new-model E2E flow (integration)', () => {
     }),
     // ── New-model tables ──────────────────────────────────────────────
     matchNarrativeCache: narrativeCachePrisma.matchNarrativeCache,
+    matchListRank: {
+      findMany: jest.fn(
+        async ({
+          where,
+          orderBy,
+          take,
+          select,
+        }: {
+          where?: { viewerUserId?: string; OR?: Array<Record<string, unknown>> };
+          orderBy?: Array<Record<string, 'asc' | 'desc'>>;
+          take?: number;
+          select?: Record<string, boolean>;
+        } = {}) => {
+          let rows = [...matchListRanks.values()];
+          if (where?.viewerUserId) {
+            rows = rows.filter((r) => r.viewerUserId === where.viewerUserId);
+          }
+          if (where?.OR?.length) {
+            rows = rows.filter((r) =>
+              where.OR!.some((clause) => {
+                if (
+                  clause['hardBlocked'] !== undefined &&
+                  r.hardBlocked !== clause['hardBlocked']
+                ) {
+                  return false;
+                }
+                const score = clause['matchScore'];
+                if (typeof score === 'number' && r.matchScore !== score) {
+                  return false;
+                }
+                if (
+                  score &&
+                  typeof score === 'object' &&
+                  typeof (score as { lt?: number }).lt === 'number' &&
+                  !(r.matchScore < (score as { lt: number }).lt)
+                ) {
+                  return false;
+                }
+                const cand = clause['candidateProfileId'];
+                if (typeof cand === 'string' && r.candidateProfileId !== cand) {
+                  return false;
+                }
+                if (
+                  cand &&
+                  typeof cand === 'object' &&
+                  typeof (cand as { gt?: string }).gt === 'string' &&
+                  !(r.candidateProfileId > (cand as { gt: string }).gt)
+                ) {
+                  return false;
+                }
+                return true;
+              }),
+            );
+          }
+          if (orderBy?.length) {
+            rows = [...rows].sort((a, b) => {
+              for (const clause of orderBy) {
+                const key = Object.keys(clause)[0] as keyof MatchListRankRow;
+                const dir = clause[key as string];
+                const av = a[key];
+                const bv = b[key];
+                if (av === bv) continue;
+                if (typeof av === 'boolean' && typeof bv === 'boolean') {
+                  const cmp = Number(av) - Number(bv);
+                  return dir === 'desc' ? -cmp : cmp;
+                }
+                if (typeof av === 'number' && typeof bv === 'number') {
+                  return dir === 'desc' ? bv - av : av - bv;
+                }
+                const cmp = String(av) < String(bv) ? -1 : 1;
+                return dir === 'desc' ? -cmp : cmp;
+              }
+              return 0;
+            });
+          }
+          if (take !== undefined) rows = rows.slice(0, take);
+          if (!select) return rows;
+          return rows.map((r) => {
+            const out: Record<string, unknown> = {};
+            for (const [k, on] of Object.entries(select)) {
+              if (on) out[k] = r[k as keyof MatchListRankRow];
+            }
+            return out;
+          });
+        },
+      ),
+      count: jest.fn(
+        async ({ where }: { where?: { viewerUserId?: string } } = {}) => {
+          let rows = [...matchListRanks.values()];
+          if (where?.viewerUserId) {
+            rows = rows.filter((r) => r.viewerUserId === where.viewerUserId);
+          }
+          return rows.length;
+        },
+      ),
+      deleteMany: jest.fn(
+        async ({
+          where,
+        }: {
+          where?: {
+            viewerUserId?: string;
+            candidateProfileId?: { notIn?: string[] };
+          };
+        } = {}) => {
+          let deleted = 0;
+          for (const [key, row] of [...matchListRanks.entries()]) {
+            if (where?.viewerUserId && row.viewerUserId !== where.viewerUserId) {
+              continue;
+            }
+            if (where?.candidateProfileId?.notIn) {
+              if (where.candidateProfileId.notIn.includes(row.candidateProfileId)) {
+                continue;
+              }
+            }
+            matchListRanks.delete(key);
+            deleted += 1;
+          }
+          return { count: deleted };
+        },
+      ),
+      upsert: jest.fn(
+        async ({
+          where,
+          create,
+          update,
+        }: {
+          where: {
+            viewerUserId_candidateProfileId: {
+              viewerUserId: string;
+              candidateProfileId: string;
+            };
+          };
+          create: MatchListRankRow;
+          update: Pick<MatchListRankRow, 'matchScore' | 'hardBlocked' | 'builtAt'>;
+        }) => {
+          const { viewerUserId, candidateProfileId } =
+            where.viewerUserId_candidateProfileId;
+          const key = matchListRankKey(viewerUserId, candidateProfileId);
+          const existing = matchListRanks.get(key);
+          if (existing) {
+            const next = { ...existing, ...update };
+            matchListRanks.set(key, next);
+            return next;
+          }
+          matchListRanks.set(key, { ...create });
+          return create;
+        },
+      ),
+      createMany: jest.fn(
+        async ({ data }: { data: MatchListRankRow[] }) => {
+          let count = 0;
+          for (const row of data) {
+            const key = matchListRankKey(row.viewerUserId, row.candidateProfileId);
+            if (matchListRanks.has(key)) continue;
+            matchListRanks.set(key, {
+              ...row,
+              builtAt: row.builtAt ?? new Date(),
+            });
+            count += 1;
+          }
+          return { count };
+        },
+      ),
+    },
     userSession: {
       create: jest.fn(),
       findUnique: jest.fn(),

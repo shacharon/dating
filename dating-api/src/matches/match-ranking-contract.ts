@@ -20,6 +20,7 @@
  * demoting legacy `finalScore` to secondary explainability; out of scope until product specifies HG sort keys.
  */
 
+/** Product pair eval (HG gate + legacy score) goes through `PairMatchPolicy` / `HgGateLegacyRankPolicy`. */
 export const MATCH_RANKING_CONTRACT = 'HG_GATE_LEGACY_RANK_V1' as const;
 
 export type MatchRankingContractId = typeof MATCH_RANKING_CONTRACT;
