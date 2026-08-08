@@ -67,9 +67,8 @@ export function useMatchActions({
       previousActionRef.current = currentAction;
 
       try {
-        let result: MatchActionDto;
         if (action === 'LIKE') {
-          result = await likeMatch(matchId);
+          const result: MatchActionDto = await likeMatch(matchId);
           setCurrentAction('LIKE');
           setLastAction({ type: 'LIKE', timestamp: Date.now() });
 
@@ -77,12 +76,12 @@ export function useMatchActions({
             onMutualMatch?.(result.conversationId);
           }
         } else if (action === 'PASS') {
-          result = await passMatch(matchId);
+          await passMatch(matchId);
           const actionState = await fetchMatchAction(matchId);
           setCurrentAction(actionState.action);
           setLastAction({ type: 'PASS', timestamp: Date.now() });
         } else {
-          result = await blockMatch(matchId);
+          await blockMatch(matchId);
           setCurrentAction('BLOCK');
           setLastAction({ type: 'BLOCK', timestamp: Date.now() });
         }

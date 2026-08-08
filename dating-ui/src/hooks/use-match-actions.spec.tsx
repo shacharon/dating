@@ -149,12 +149,13 @@ describe('useMatchActions', () => {
     vi.mocked(api.passMatch).mockResolvedValue(mockActionResult);
     vi.mocked(api.fetchMatchAction).mockResolvedValue(mockActionState);
 
-    const { result } = renderActions(() =>
+    const { result, client } = renderActions(() =>
       useMatchActions({
         matchId: mockMatchId,
         onActionSuccess: mockOnActionSuccess,
       }),
     );
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
 
     await act(async () => {
       await result.current.pass();
@@ -164,6 +165,9 @@ describe('useMatchActions', () => {
     expect(api.fetchMatchAction).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBe('PASS');
     expect(mockOnActionSuccess).toHaveBeenCalledWith('PASS');
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.me.matches.list,
+    });
   });
 
   it('should handle block action successfully', async () => {
@@ -180,12 +184,13 @@ describe('useMatchActions', () => {
 
     vi.mocked(api.blockMatch).mockResolvedValue(mockResult);
 
-    const { result } = renderActions(() =>
+    const { result, client } = renderActions(() =>
       useMatchActions({
         matchId: mockMatchId,
         onActionSuccess: mockOnActionSuccess,
       }),
     );
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
 
     await act(async () => {
       await result.current.block();
@@ -194,6 +199,9 @@ describe('useMatchActions', () => {
     expect(api.blockMatch).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBe('BLOCK');
     expect(mockOnActionSuccess).toHaveBeenCalledWith('BLOCK');
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.me.matches.list,
+    });
   });
 
   it('should handle undo action successfully', async () => {
@@ -206,9 +214,10 @@ describe('useMatchActions', () => {
     vi.mocked(api.undoMatchAction).mockResolvedValue(undefined);
     vi.mocked(api.fetchMatchAction).mockResolvedValue(mockActionState);
 
-    const { result } = renderActions(() =>
+    const { result, client } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
     );
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
 
     expect(result.current.currentAction).toBe('LIKE');
     expect(result.current.canUndo).toBe(true);
@@ -221,6 +230,25 @@ describe('useMatchActions', () => {
     expect(api.fetchMatchAction).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBeNull();
     expect(result.current.lastAction).toBeNull();
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.me.matches.list,
+    });
+  });
+
+  it('does not invalidate matches list when like fails', async () => {
+    vi.mocked(api.likeMatch).mockRejectedValue(new Error('Network error'));
+
+    const { result, client } = renderActions(() =>
+      useMatchActions({ matchId: mockMatchId }),
+    );
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+
+    await act(async () => {
+      await result.current.like();
+    });
+
+    expect(result.current.error).toBe('Network error');
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
   it('should not allow undo for BLOCK action', async () => {
