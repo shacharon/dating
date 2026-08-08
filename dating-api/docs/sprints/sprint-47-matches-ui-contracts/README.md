@@ -1,6 +1,6 @@
 # Sprint 47 — Matches UI Contracts (Berlin) (P1)
 
-**Status:** In Progress (Story 01 Done)  
+**Status:** In Progress (Stories 01–02 Done)  
 **Depends on:** Sprint 45 Done (DTO boundary) · Sprint 46 recommended (stable policy) · Sprint 38.3 Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Repos:** `dating-ui` primary; `dating-api` only if contract enum/shared types need a tiny additive change  
@@ -25,7 +25,7 @@ Align the UI with the post-refactor API edge:
 | # | Story | Priority | Effort | Status |
 |---|-------|----------|--------|--------|
 | 01 | [UI match view-models](./STORY_01_ui_match_view_models.md) | P1 | 1.5–2d | **Done** |
-| 02 | [Matches list React Query](./STORY_02_matches_react_query.md) | P1 | 1–1.5d | Planned |
+| 02 | [Matches list React Query](./STORY_02_matches_react_query.md) | P1 | 1–1.5d | **Done** |
 | 03 | [Chip-evidence enum contract](./STORY_03_chip_evidence_enum.md) | P1 | 1d | Planned |
 
 **Order:** 01 → 02 → 03.
