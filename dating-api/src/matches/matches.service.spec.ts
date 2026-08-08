@@ -3,6 +3,8 @@ import { MatchesService } from './matches.service';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 import * as HolyGrailPairDirections from './holy-grail-pair-directions';
+import { AdminPairMatchEvaluator } from './admin-pair-match.evaluator';
+import { HgGateLegacyRankPolicy } from '../matching-policy/hg-gate-legacy-rank.policy';
 
 function makeProfile(
   id: string,
@@ -75,6 +77,10 @@ function makeConfigMock() {
   return { get: jest.fn().mockReturnValue(undefined) };
 }
 
+function makeAdminPairMatchEvaluator() {
+  return new AdminPairMatchEvaluator(new HgGateLegacyRankPolicy());
+}
+
 function stubHgRow(id: string): ChildrenUnsureProfileRow {
   return {
     id,
@@ -93,17 +99,24 @@ function makeRuntimeBundle(a: ProfileJsonPayload, b: ProfileJsonPayload) {
   };
 }
 
+function createMatchesService(
+  profilesPrisma: { loadMatchPairRuntimeBundle: jest.Mock },
+  prisma: object = makePrismaMock(),
+) {
+  return new MatchesService(
+    profilesPrisma as never,
+    prisma as never,
+    makeHgPairSnapshotTelemetryMock() as never,
+    makeConfigMock() as never,
+    makeAdminPairMatchEvaluator(),
+  );
+}
+
 describe('MatchesService.compare', () => {
   it('returns INSUFFICIENT_DATA when self signals are empty on one side and HG directions unavailable', async () => {
     const hgSpy = jest.spyOn(HolyGrailPairDirections, 'evaluateHolyGrailPairDirections').mockReturnValue(null);
     const profilesPrisma = { loadMatchPairRuntimeBundle: jest.fn() };
-    const prisma = makePrismaMock();
-    const service = new MatchesService(
-      profilesPrisma as never,
-      prisma as never,
-      makeHgPairSnapshotTelemetryMock() as never,
-      makeConfigMock() as never,
-    );
+    const service = createMatchesService(profilesPrisma);
 
     profilesPrisma.loadMatchPairRuntimeBundle.mockResolvedValue(
       makeRuntimeBundle(makeProfile('a', 'A', {}), makeProfile('b', 'B', { ambition: 8 })),
@@ -123,13 +136,7 @@ describe('MatchesService.compare', () => {
 
   it('returns NOT_ANALYZED when evaluationStatus is not DONE', async () => {
     const profilesPrisma = { loadMatchPairRuntimeBundle: jest.fn() };
-    const prisma = makePrismaMock();
-    const service = new MatchesService(
-      profilesPrisma as never,
-      prisma as never,
-      makeHgPairSnapshotTelemetryMock() as never,
-      makeConfigMock() as never,
-    );
+    const service = createMatchesService(profilesPrisma);
 
     profilesPrisma.loadMatchPairRuntimeBundle.mockResolvedValue(
       makeRuntimeBundle(
@@ -145,13 +152,7 @@ describe('MatchesService.compare', () => {
 
   it('returns READY when both profiles are analyzed and V2 rows exist', async () => {
     const profilesPrisma = { loadMatchPairRuntimeBundle: jest.fn() };
-    const prisma = makePrismaMock();
-    const service = new MatchesService(
-      profilesPrisma as never,
-      prisma as never,
-      makeHgPairSnapshotTelemetryMock() as never,
-      makeConfigMock() as never,
-    );
+    const service = createMatchesService(profilesPrisma);
 
     profilesPrisma.loadMatchPairRuntimeBundle.mockResolvedValue(
       makeRuntimeBundle(makeProfile('a', 'A', { ambition: 8 }), makeProfile('b', 'B', { ambition: 7 })),
@@ -169,16 +170,10 @@ describe('MatchesService.compare', () => {
 
 describe('MatchesService.compareHgDiagnostic', () => {
   it('throws NotFound when one profile id is missing', async () => {
-    const prisma = {};
     const profilesPrisma = {
       loadMatchPairRuntimeBundle: jest.fn().mockResolvedValue(null),
     };
-    const service = new MatchesService(
-      profilesPrisma as never,
-      prisma as never,
-      makeHgPairSnapshotTelemetryMock() as never,
-      makeConfigMock() as never,
-    );
+    const service = createMatchesService(profilesPrisma, {});
 
     await expect(service.compareHgDiagnostic({ aId: 'a', bId: 'b' })).rejects.toThrow(NotFoundException);
   });

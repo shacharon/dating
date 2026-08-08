@@ -3,16 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type { MatchPairRuntimeBundle } from '../profiles/profiles-prisma.service';
 import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
-import { compareWithStatus } from './match-engine';
 import { resolveEngineFinalScore } from './match-score.util';
-import type {
-  CompareGuardFailureResultDto,
-  CompareResultDto,
-} from './match-engine';
-import {
-  directionsMutualHardPass,
-  profileWithNeutralSelfSignalsFallback,
-} from './compare-hg-first-helpers';
+import type { CompareResultDto } from './match-engine';
 import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
 import type {
   ChildrenUnsureDirectionsDto,
@@ -25,6 +17,7 @@ import {
   buildMatchListItems,
   buildMatchRecordsFromProfiles,
 } from './matches-list.pipeline';
+import { AdminPairMatchEvaluator } from './admin-pair-match.evaluator';
 import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 import { loadChildrenUnsureProfileRowMap } from './match-detail-children-unsure';
 import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
@@ -48,7 +41,6 @@ import {
   computeShadowHgVsLegacyMetricsFromListItems,
   type ShadowHgVsLegacyMetricsReport,
 } from './shadow-hg-vs-legacy-metrics';
-
 export type { CompareResultDto } from './match-engine';
 export type { MatchListItemDto } from './match.types';
 
@@ -131,6 +123,7 @@ export class MatchesService {
     private readonly prisma: PrismaService,
     private readonly hgPairSnapshotTelemetry: HolyGrailPairSnapshotTelemetryService,
     private readonly config: ConfigService,
+    private readonly adminPairMatchEvaluator: AdminPairMatchEvaluator,
   ) {}
 
   /**
@@ -273,11 +266,6 @@ export class MatchesService {
     const aId = profileA.id;
     const bId = profileB.id;
 
-    const hgDirections = evaluateHolyGrailPairDirections(
-      bundle.rowA,
-      bundle.rowB,
-    );
-
     // Slice 2: stop ProfileExtractionV2 runtime reads.
     // Keep canonical scalar defaults identical to the previous "row missing" behavior.
     const v2Scalars = {
@@ -297,31 +285,13 @@ export class MatchesService {
     void canonicalClarityA;
     void canonicalClarityB;
 
-    let result: CompareResultDto | CompareGuardFailureResultDto =
-      compareWithStatus(profileA, profileB);
-
-    if (
-      'status' in result &&
-      result.status === 'INSUFFICIENT_DATA' &&
-      hgDirections &&
-      directionsMutualHardPass(hgDirections)
-    ) {
-      const aP = profileWithNeutralSelfSignalsFallback(profileA);
-      const bP = profileWithNeutralSelfSignalsFallback(profileB);
-      const retry = compareWithStatus(aP, bP);
-      if (!('status' in retry)) {
-        result = retry;
-        if (result.debug) {
-          result.debug = {
-            ...result.debug,
-            provenance: [
-              ...(result.debug.provenance ?? []),
-              'HG_FIRST_NEUTRAL_SIGNAL_LEGACY_FALLBACK',
-            ],
-          };
-        }
-      }
-    }
+    // Gate + baseline score via PairMatchPolicy; HG-first retry stays in evaluator.
+    const { result } = this.adminPairMatchEvaluator.evaluateCompare({
+      rowA: bundle.rowA,
+      rowB: bundle.rowB,
+      profileA,
+      profileB,
+    });
 
     const matchId = toCanonicalMatchId(aId, bId);
     if ('status' in result && result.status === 'NOT_ANALYZED') {
