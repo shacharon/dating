@@ -61,6 +61,9 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'patienceTolerance',
     'intimacyPacing',
     'monogamyAlignment',
+    'familyEnmeshment',
+    'friendCoupleBalance',
+    'aloneTimeNeed',
   ],
   relationship: [
     'emotionalDepth',
@@ -100,6 +103,9 @@ export const DOMAIN_ALLOWED_SIGNAL_KEYS: Record<
     'patienceTolerance',
     'intimacyPacing',
     'monogamyAlignment',
+    'familyEnmeshment',
+    'friendCoupleBalance',
+    'aloneTimeNeed',
   ],
 };
 

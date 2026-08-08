@@ -274,4 +274,34 @@ describe('buildMatchExplanationTraits', () => {
       CHIP_TO_TRAIT['Aligned on relationship structure'].evidence,
     );
   });
+
+  it('maps Expansion-15 Family style match chip', () => {
+    const traits = buildMatchExplanationTraits(['Family style match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Relationship structure');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Family style match'].evidence,
+    );
+  });
+
+  it('maps Expansion-15 Friends & couple balance chip', () => {
+    const traits = buildMatchExplanationTraits(
+      ['Friends & couple balance'],
+      70,
+    );
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Lifestyle match');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Friends & couple balance'].evidence,
+    );
+  });
+
+  it('maps Expansion-15 Recharge style match chip', () => {
+    const traits = buildMatchExplanationTraits(['Recharge style match'], 70);
+    expect(traits).toHaveLength(1);
+    expect(traits[0].group).toBe('Lifestyle match');
+    expect(traits[0].evidence).toBe(
+      CHIP_TO_TRAIT['Recharge style match'].evidence,
+    );
+  });
 });

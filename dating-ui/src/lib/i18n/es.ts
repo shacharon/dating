@@ -216,6 +216,12 @@ export const esCopy: AppCopySchema = {
             "Avanzan hacia la cercanía a un ritmo similar",
           "Aligned on relationship structure":
             "Están alineados sobre lo que significa la exclusividad",
+          "Family style match":
+            "Tienen una sensación similar de cercanía familiar y límites",
+          "Friends & couple balance":
+            "Equilibran el tiempo con amigos y en pareja de forma similar",
+          "Recharge style match":
+            "Tienen una necesidad similar de tiempo a solas para recargar energías",
         },
         interestOverlap: {
           travel: "A ambos les gusta viajar",
@@ -552,6 +558,9 @@ export const esCopy: AppCopySchema = {
           "Algo de mi pareja que pondría a prueba mi paciencia, y cómo lo manejaría…",
           "¿Qué tan rápido te gusta avanzar emocional/físicamente en una relación nueva?",
           "¿Qué significa para ti una relación exclusiva?",
+          "¿Cuánto se involucra tu familia en tus decisiones del día a día?",
+          "Un gran fin de semana para mí equilibra amigos, tiempo a solas y tiempo juntos así…",
+          "¿Cómo recargas energías después de una semana larga?",
         ],
         examples: [
           "Trabajo en diseno de producto y desconecto cocinando cenas elaboradas para amigos. Entre semana suelo estar en casa con un podcast y un cuaderno; los fines de semana busco galerias pequenas o una panaderia nueva. Soy calmado/a en grupos pero me animo cuando la charla es profunda. Busco personas que prefieran planes tranquilos y no necesiten que cada noche sea ruidosa.",

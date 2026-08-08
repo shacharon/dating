@@ -237,6 +237,22 @@ export const CHIP_TO_TRAIT: Record<
     evidence: "You're aligned on what exclusivity means to you",
     listPhrase: 'aligned on exclusivity / structure',
   },
+  'Family style match': {
+    group: 'Relationship structure',
+    evidence:
+      'You have a similar sense of family closeness and boundaries',
+    listPhrase: 'similar family closeness / boundaries',
+  },
+  'Friends & couple balance': {
+    group: 'Lifestyle match',
+    evidence: 'You balance friends and couple time in a similar way',
+    listPhrase: 'similar friends vs couple balance',
+  },
+  'Recharge style match': {
+    group: 'Lifestyle match',
+    evidence: 'You have a similar need for alone time to recharge',
+    listPhrase: 'similar alone-time / recharge needs',
+  },
 };
 
 /**

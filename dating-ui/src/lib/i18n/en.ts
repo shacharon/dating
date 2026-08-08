@@ -210,6 +210,12 @@ export const enCopy: AppCopySchema = {
             "You move toward closeness at a similar pace",
           "Aligned on relationship structure":
             "You're aligned on what exclusivity means to you",
+          "Family style match":
+            "You have a similar sense of family closeness and boundaries",
+          "Friends & couple balance":
+            "You balance friends and couple time in a similar way",
+          "Recharge style match":
+            "You have a similar need for alone time to recharge",
         },
         interestOverlap: {
           travel: "You both love travel",
@@ -545,6 +551,9 @@ export const enCopy: AppCopySchema = {
           "Something about my partner that would test my patience, and how I'd handle it…",
           "How fast do you like to move emotionally/physically in a new relationship?",
           "What does an exclusive relationship mean to you?",
+          "How involved is your family in your day-to-day decisions?",
+          "A great weekend for me balances friends, alone time, and us time like…",
+          "How do you recharge after a long week?",
         ],
         examples: [
           "I work in product design and decompress by cooking elaborate dinners for friends. Weeknights I'm usually at home with a podcast and a sketchbook; weekends I hunt small galleries or try a new bakery. I'm calm in groups but light up when the talk gets thoughtful. Looking for people who like slow plans and don't need every night out to be loud.",

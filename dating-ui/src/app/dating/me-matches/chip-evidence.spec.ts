@@ -138,8 +138,19 @@ describe('chipToEvidence', () => {
       'Pace of closeness',
       'Aligned on relationship structure',
     ] as const;
-    expect(CHIP_EVIDENCE_KEYS.length).toBe(40);
     for (const chip of EXPANSION_14_CHIPS) {
+      expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
+    }
+  });
+
+  it('includes Expansion-15 family & social ecosystem chips in CHIP_EVIDENCE_KEYS', () => {
+    const EXPANSION_15_CHIPS = [
+      'Family style match',
+      'Friends & couple balance',
+      'Recharge style match',
+    ] as const;
+    expect(CHIP_EVIDENCE_KEYS.length).toBe(43);
+    for (const chip of EXPANSION_15_CHIPS) {
       expect(CHIP_EVIDENCE_KEYS as readonly string[]).toContain(chip);
     }
   });

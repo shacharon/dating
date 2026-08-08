@@ -1,0 +1,125 @@
+[
+  {
+    "id": "family_high_en",
+    "aboutMe": "My family is very involved, we talk daily and they weigh in on decisions",
+    "signal": "familyEnmeshment",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "family_low_en",
+    "aboutMe": "I keep sharp boundaries with my family of origin. They are not involved in my day-to-day decisions at all — I decide everything myself and rarely consult them.",
+    "signal": "familyEnmeshment",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "friend_couple_high_en",
+    "aboutMe": "I like most of my free time to be with my partner",
+    "signal": "friendCoupleBalance",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "friend_couple_low_en",
+    "aboutMe": "My friends come first — even in a relationship I keep lots of independent friend nights and would never drop my friend group for couple-centric weekends.",
+    "signal": "friendCoupleBalance",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "alone_high_en",
+    "aboutMe": "I need my own space and time to recharge",
+    "signal": "aloneTimeNeed",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "alone_low_en",
+    "aboutMe": "I almost never need alone time. I prefer constant togetherness with my partner — evenings, weekends, everything side by side.",
+    "signal": "aloneTimeNeed",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "all_null_silence_en",
+    "aboutMe": "I work in product design and enjoy cooking elaborate dinners for friends on weekends.",
+    "expectations": [
+      {
+        "signal": "familyEnmeshment",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "friendCoupleBalance",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      },
+      {
+        "signal": "aloneTimeNeed",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "family_high_he",
+    "aboutMe": "המשפחה שלי מאוד מעורבת בחיים שלי, מדברים כל יום והם משפיעים על החלטות גדולות",
+    "signal": "familyEnmeshment",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "friend_couple_low_he",
+    "aboutMe": "אני חברים-קודם: עדיפות גבוהה לחברים על פני זמן זוגי. שומר/ת על חיי חברה עצמאיים ולא מצמצמ/ת את החבורה בשביל זוגיות צמודה",
+    "signal": "friendCoupleBalance",
+    "expectedMin": 1,
+    "expectedMax": 4
+  },
+  {
+    "id": "alone_high_he",
+    "aboutMe": "אני צריך/ה את המרחב והזמן שלי כדי להיטען מחדש, גם בתוך זוגיות",
+    "signal": "aloneTimeNeed",
+    "expectedMin": 7,
+    "expectedMax": 10
+  },
+  {
+    "id": "traditionalism_alone_family_null",
+    "aboutMe": "I want marriage and kids someday as a life path — traditional relationship milestones matter — but I am not talking about how involved my parents are in daily decisions.",
+    "expectations": [
+      {
+        "signal": "familyEnmeshment",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "social_battery_alone_friend_couple_null",
+    "aboutMe": "I'm an introvert with limited social energy — after parties I need quiet recovery time, but that is about energy capacity not friends vs partner priority.",
+    "expectations": [
+      {
+        "signal": "friendCoupleBalance",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  },
+  {
+    "id": "independence_alone_alone_time_null",
+    "aboutMe": "I make my own career and life decisions autonomously — I value independence in how I run my life, not specifically solo recharge evenings.",
+    "expectations": [
+      {
+        "signal": "aloneTimeNeed",
+        "expectedMin": 1,
+        "expectedMax": 10,
+        "allowNull": true
+      }
+    ]
+  }
+]

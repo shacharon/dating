@@ -45,6 +45,9 @@ export const CHIP_EVIDENCE_KEYS = [
   'Patience match',
   'Pace of closeness',
   'Aligned on relationship structure',
+  'Family style match',
+  'Friends & couple balance',
+  'Recharge style match',
 ] as const;
 
 export type ChipEvidenceKey = (typeof CHIP_EVIDENCE_KEYS)[number];

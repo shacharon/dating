@@ -127,6 +127,15 @@ export const SHADOW_SIGNAL_KEYS = [
   'patienceTolerance',
   'intimacyPacing',
   'monogamyAlignment',
+  /**
+   * Expansion-15 — Family & Social Ecosystem (shadow until promote).
+   * familyEnmeshment: family-of-origin involvement/boundaries — NOT traditionalism alone.
+   * friendCoupleBalance: friends-first (low) ↔ couple-centric (high) — NOT socialBattery alone.
+   * aloneTimeNeed: solo recharge need — NOT independence alone.
+   */
+  'familyEnmeshment',
+  'friendCoupleBalance',
+  'aloneTimeNeed',
 ] as const;
 
 /** Set of shadow keys for O(1) lookup (e.g. never drop these in signal-count cap). */
@@ -144,8 +153,8 @@ export const EXTRACTION_SIGNAL_KEYS_SET = new Set<string>(
   EXTRACTION_SIGNAL_KEYS,
 );
 
-/** Max number of evidence items kept in extraction output. Allows room for 15 official + 35 shadow + 4 buffer. */
-export const MAX_EVIDENCE_ITEMS = 54;
+/** Max number of evidence items kept in extraction output. Allows room for 15 official + 38 shadow + 4 buffer. */
+export const MAX_EVIDENCE_ITEMS = 57;
 
 /** Count of non-null values in a signals record. Same as Object.values(signals).filter((v) => v != null).length. */
 export function countNonNullSignals(

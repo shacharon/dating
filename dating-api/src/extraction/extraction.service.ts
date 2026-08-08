@@ -53,6 +53,10 @@ import {
   EXPANSION_14_PARTNER_SHADOW_SIGNAL_BLOCK,
   EXPANSION_14_SELF_SHADOW_SIGNAL_BLOCK,
 } from './expansion-14-signal-definitions';
+import {
+  EXPANSION_15_PARTNER_SHADOW_SIGNAL_BLOCK,
+  EXPANSION_15_SELF_SHADOW_SIGNAL_BLOCK,
+} from './expansion-15-signal-definitions';
 import { EXPANSION_09_INTEREST_GUIDANCE_BLOCK } from './expansion-09-interest-guidance';
 import {
   buildExtractionPipelineTrace,
@@ -93,7 +97,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment
+emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment, familyEnmeshment, friendCoupleBalance, aloneTimeNeed
 
 RELATIONSHIP-AS-SELF RULE:
 If the text states relationship principles as personal needs, values, or rules, treat them as self-description.
@@ -112,8 +116,8 @@ SIGNAL RULES:
 - emotionalDepth = explicit introspection, vulnerability, emotional self-awareness — not how outwardly feelings are verbally expressed (→ emotionalExpression)
 - attachmentSecurity = explicit closeness, fusion, anchor-like bond, inseparable emotional union — not specifically how grudges/resentment are handled post-conflict (→ forgivenessStyle), not pursue/withdraw under stress alone (→ stressResponse), and not jealousy/possessiveness alone (→ jealousySecurity)
 - directness = explicit transparency, no secrets, clear communication — not honesty/integrity/"no games" as a core relationship value alone, and not post-conflict ownership/apology alone (→ repairSkills), and not how they receive / listen / give attention alone (→ listeningPresence), and not receptivity to feedback / willingness to change alone (→ growthMindset)
-- independence = explicit autonomy vs fusion; shared-everything / merged-life language = low — not jealousy/trust/possessiveness alone (→ jealousySecurity)
-- socialBattery = explicit social-energy preference only
+- independence = explicit autonomy vs fusion; shared-everything / merged-life language = low — not jealousy/trust/possessiveness alone (→ jealousySecurity), and not specifically the need for solo recharge / alone time alone (→ aloneTimeNeed)
+- socialBattery = explicit social-energy preference only — not friends-vs-couple time allocation alone (→ friendCoupleBalance)
 - lifestylePace = explicit pace/rhythm (calm vs high-action busy life) — not home-vs-out nesting preference alone, not novelty-vs-routine preference, and not morning vs night sleep chronotype
 - ambition = explicit goals, drive — not formal education/credential preference alone
 - healthBodyConsciousness = explicit health/wellness values focus (caring about health — not how much they actually exercise/move)
@@ -150,6 +154,9 @@ SIGNAL RULES:
 - patienceTolerance = explicit day-to-day tolerance for partner flaws/quirks/differences (highly critical LOW ↔ very patient/accepting HIGH); not during-conflict fight style alone, not own emotional regulation alone
 - intimacyPacing = explicit preferred speed toward emotional/physical closeness (very slow LOW ↔ moves fast HIGH); not casual-vs-committed intimacy type alone
 - monogamyAlignment = explicit exclusive-vs-open/poly structure expectation (strict mono LOW ↔ open/poly HIGH — do not invert); not labels/boundaries/dating-approach clarity alone
+- familyEnmeshment = explicit family-of-origin involvement in daily decisions/boundaries (very independent LOW ↔ highly enmeshed HIGH); not marriage/kids traditionalism alone
+- friendCoupleBalance = explicit friends-first vs couple-centric time allocation (friends-first LOW ↔ couple-centric HIGH — do not invert); not social-energy intro/extro alone
+- aloneTimeNeed = explicit need for solo recharge time (rarely needs alone time LOW ↔ strong solo need HIGH); not general independence/autonomy alone, not socialBattery alone
 
 ${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
 
@@ -177,6 +184,8 @@ ${EXPANSION_13_SELF_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_14_SELF_SHADOW_SIGNAL_BLOCK}
 
+${EXPANSION_15_SELF_SHADOW_SIGNAL_BLOCK}
+
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
 Reject signals derived only from:
@@ -185,6 +194,7 @@ Reject signals derived only from:
 - job or logistics
 Only accept signals tied to clear behavior, pattern, preference, or personal rule.
 - "nobody's perfect / little habits bother me" / "I take things slow" / "exclusive only" / "poly / open relationship" -> patienceTolerance / intimacyPacing / monogamyAlignment when explicit; do not dump into conflictStyle, casualIntimacyIntent, or relationshipClarity alone
+- "family weighs in on decisions" / "friend group is my identity" / "need space to recharge" -> familyEnmeshment / friendCoupleBalance / aloneTimeNeed when explicit; do not dump into traditionalism, socialBattery, or independence alone
 
 LOGISTICS GUARD:
 Do NOT derive signals from work, travel, or schedule unless explicit personal preference is stated.
@@ -340,7 +350,7 @@ INTERESTS:
 ${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
 
 ALLOWED KEYS:
-emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment
+emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment, familyEnmeshment, friendCoupleBalance, aloneTimeNeed
 
 EVIDENCE RULES:
 - Every non-null signal must have:
@@ -358,9 +368,9 @@ Do NOT nullify structured relationship descriptions due to sparsity.
 SIGNAL RULES:
 - emotionalDepth = explicit vulnerability, emotional openness, naming feelings — not how outwardly feelings are verbally expressed alone (→ emotionalExpression)
 - relationshipClarity = explicit desire for boundaries, labels, exclusivity, transparency, commitment rules — not exclusive-vs-open/poly structure alone (→ monogamyAlignment)
-- traditionalism = explicit desire for kids, marriage, traditional family structure — not practical religious ritual observance alone (kosher/Shabbat/דתי practice → religiousObservance)
+- traditionalism = explicit desire for kids, marriage, traditional family structure — not practical religious ritual observance alone (kosher/Shabbat/דתי practice → religiousObservance), and not day-to-day family-of-origin involvement/boundaries alone (→ familyEnmeshment)
 - lifestylePace = quiet/calm/home-centered = lower; adventurous/high-action = higher — not morning vs night sleep chronotype
-- socialBattery = explicit social-energy cues only
+- socialBattery = explicit social-energy cues only — not friends-vs-couple time allocation alone (→ friendCoupleBalance)
 - physicalPriority = explicit looks, attraction, chemistry, appearance — not casual vs committed intimacy boundary, and not which body/build type preference (→ physicalTypePreference)
 - intellectualCuriosity = explicit learning, books, ideas, curiosity, deep conversations — not formal degree/credential filter (→ educationLevel)
 - conflictStyle = explicit disagreement handling DURING conflict (direct / avoidant / escalating / calm discussion in the moment) — not post-conflict repair/apology alone (→ repairSkills), not forgiveness/grudge pacing alone (→ forgivenessStyle), and not day-to-day patience for quirks/flaws alone (→ patienceTolerance)
@@ -384,6 +394,9 @@ SIGNAL RULES:
 - patienceTolerance = desired partner day-to-day tolerance for flaws/quirks/differences (highly critical LOW ↔ very patient/accepting HIGH); not during-conflict fight style alone
 - intimacyPacing = desired partner speed toward emotional/physical closeness (very slow LOW ↔ moves fast HIGH); not casual-vs-committed intimacy type alone
 - monogamyAlignment = desired partner exclusive-vs-open/poly structure expectation (strict mono LOW ↔ open/poly HIGH — do not invert); not labels/boundaries/dating-approach clarity alone
+- familyEnmeshment = desired partner family-of-origin involvement in daily decisions/boundaries (very independent LOW ↔ highly enmeshed HIGH); not marriage/kids traditionalism alone
+- friendCoupleBalance = desired partner friends-first vs couple-centric time allocation (friends-first LOW ↔ couple-centric HIGH — do not invert); not social-energy intro/extro alone
+- aloneTimeNeed = desired partner need for solo recharge time (rarely needs alone time LOW ↔ strong solo need HIGH); not general autonomy/fusion alone, not socialBattery alone
 
 ${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
 
@@ -399,6 +412,8 @@ ${EXPANSION_13_PARTNER_SHADOW_SIGNAL_BLOCK}
 
 ${EXPANSION_14_PARTNER_SHADOW_SIGNAL_BLOCK}
 
+${EXPANSION_15_PARTNER_SHADOW_SIGNAL_BLOCK}
+
 DIRECTION LOCK:
 For lifestylePace:
 - calm, quiet, slow, peaceful, home-centered, low-drama -> LOWER scores
@@ -409,6 +424,7 @@ FAMILY LANGUAGE RULE:
 Kids, family, marriage, traditional future -> traditionalism only.
 Practical religious ritual (kosher, Shabbat, prayer, דתי practice level) -> religiousObservance.
 Do NOT map family/kids phrases to relationshipClarity unless the quote is explicitly about rules, labels, boundaries, exclusivity, or transparency.
+Day-to-day family-of-origin involvement / boundaries (not marriage/kids path alone) -> familyEnmeshment when explicit.
 
 PHYSICAL GUARD:
 Do NOT infer physicalPriority from warmth, stability, emotional language, or family language.
@@ -425,6 +441,7 @@ Examples:
 - "puts phone away / really listens" / "says I love you often / open about feelings" -> listeningPresence / emotionalExpression when explicit; do not dump into emotionalDepth alone
 - "welcomes feedback / always working on being a better partner" / "I know I shut down when criticized" -> growthMindset / selfAwareness when explicit; do not dump into vulnerability or regulation alone
 - "patient with quirks" / "moves fast / takes it slow" / "exclusive only" / "open / poly" -> patienceTolerance / intimacyPacing / monogamyAlignment when explicit; do not dump into conflictStyle, casualIntimacyIntent, or relationshipClarity alone
+- "family involved in decisions" / "friends first vs couple time" / "needs alone time to recharge" -> familyEnmeshment / friendCoupleBalance / aloneTimeNeed when explicit; do not dump into traditionalism or socialBattery alone
 - "open to kids later" -> traditionalism, NOT relationshipClarity
 
 MULTI-MAPPING:

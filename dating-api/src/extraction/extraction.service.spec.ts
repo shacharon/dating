@@ -3245,6 +3245,286 @@ describe('ExtractionService behavior locks', () => {
     });
   });
 
+  describe('Expansion-15 shadow signals', () => {
+    it('extracts high familyEnmeshment when LLM returns highly-enmeshed score', async () => {
+      // Semantic: "My family is very involved… they weigh in on big decisions" / Hebrew involved
+      const text =
+        'My family is very involved in my life, we talk every day and they weigh in on big decisions.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { familyEnmeshment: 9 },
+          [
+            {
+              signal: 'familyEnmeshment',
+              quote:
+                'My family is very involved in my life, we talk every day and they weigh in on big decisions',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['familyEnmeshment']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'familyEnmeshment'),
+      ).toBe(true);
+    });
+
+    it('extracts low familyEnmeshment when LLM returns independent-from-family score', async () => {
+      // Semantic: "I make my own decisions, family isn't very involved"
+      const text = "I make my own decisions, family isn't very involved.";
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { familyEnmeshment: 2 },
+          [
+            {
+              signal: 'familyEnmeshment',
+              quote: "I make my own decisions, family isn't very involved",
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['familyEnmeshment']).toBe(2);
+    });
+
+    it('returns null for familyEnmeshment when family involvement is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, familyEnmeshment: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['familyEnmeshment']).toBeNull();
+    });
+
+    it('extracts high friendCoupleBalance when LLM returns couple-centric score', async () => {
+      // Semantic: couple-centric HIGH (do not invert) — "most free time with partner"
+      const text = 'I like most of my free time to be with my partner.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { friendCoupleBalance: 9 },
+          [
+            {
+              signal: 'friendCoupleBalance',
+              quote: 'most of my free time to be with my partner',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['friendCoupleBalance']).toBe(9);
+      expect(
+        result.evidence.some((e) => e.signal === 'friendCoupleBalance'),
+      ).toBe(true);
+    });
+
+    it('extracts low friendCoupleBalance when LLM returns friends-first score', async () => {
+      // Semantic: friends-first LOW — "friend group is a huge part of my identity"
+      const text =
+        'My friend group is a huge part of my life and identity.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { friendCoupleBalance: 2 },
+          [
+            {
+              signal: 'friendCoupleBalance',
+              quote: 'My friend group is a huge part of my life and identity',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['friendCoupleBalance']).toBe(2);
+    });
+
+    it('returns null for friendCoupleBalance when friend/couple balance is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, friendCoupleBalance: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['friendCoupleBalance']).toBeNull();
+    });
+
+    it('extracts high aloneTimeNeed when LLM returns strong-solo-recharge score', async () => {
+      // Semantic: "I need my own space and time to recharge" / Hebrew alone-space
+      const text =
+        'I need my own space and time to recharge, even in a relationship.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { aloneTimeNeed: 9 },
+          [
+            {
+              signal: 'aloneTimeNeed',
+              quote:
+                'I need my own space and time to recharge, even in a relationship',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['aloneTimeNeed']).toBe(9);
+      expect(result.evidence.some((e) => e.signal === 'aloneTimeNeed')).toBe(
+        true,
+      );
+    });
+
+    it('extracts low aloneTimeNeed when LLM returns togetherness-preference score', async () => {
+      // Semantic: "I want to spend as much time together as possible"
+      const text = 'I want to spend as much time together as possible.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { aloneTimeNeed: 2 },
+          [
+            {
+              signal: 'aloneTimeNeed',
+              quote: 'spend as much time together as possible',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['aloneTimeNeed']).toBe(2);
+    });
+
+    it('returns null for aloneTimeNeed when alone-time preference is unmentioned', async () => {
+      const text = 'I am ambitious and love deep conversations about ideas.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { ambition: 8, aloneTimeNeed: null },
+          [{ signal: 'ambition', quote: 'ambitious' }],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['aloneTimeNeed']).toBeNull();
+    });
+
+    it('strips out-of-range Expansion-15 scores to null', async () => {
+      const text = 'My family is very involved in my life.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'self',
+          { familyEnmeshment: 11 },
+          [
+            {
+              signal: 'familyEnmeshment',
+              quote: 'My family is very involved in my life',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('self', text);
+
+      expect(result.signals['familyEnmeshment']).toBeNull();
+    });
+
+    it('extracts partner familyEnmeshment when LLM returns desired-partner family score', async () => {
+      const text =
+        'I want a partner whose family is not deeply involved in daily decisions.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { familyEnmeshment: 8 },
+          [
+            {
+              signal: 'familyEnmeshment',
+              quote: 'family is not deeply involved in daily decisions',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['familyEnmeshment']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'familyEnmeshment'),
+      ).toBe(true);
+    });
+
+    it('extracts partner friendCoupleBalance when LLM returns desired-partner balance score', async () => {
+      // HIGH = couple-centric polarity (do not invert); smoke score 8
+      const text =
+        'I want a partner who prioritizes couple time over friend groups.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { friendCoupleBalance: 8 },
+          [
+            {
+              signal: 'friendCoupleBalance',
+              quote: 'prioritizes couple time over friend groups',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['friendCoupleBalance']).toBe(8);
+      expect(
+        result.evidence.some((e) => e.signal === 'friendCoupleBalance'),
+      ).toBe(true);
+    });
+
+    it('extracts partner aloneTimeNeed when LLM returns desired-partner alone-time score', async () => {
+      const text =
+        'I want a partner who needs their own space to recharge regularly.';
+      llmCompleteJSON.mockResolvedValue(
+        mockExtractionResponse(
+          'partner',
+          { aloneTimeNeed: 8 },
+          [
+            {
+              signal: 'aloneTimeNeed',
+              quote: 'needs their own space to recharge regularly',
+            },
+          ],
+        ),
+      );
+
+      const result = await service.extract('partner', text);
+
+      expect(result.signals['aloneTimeNeed']).toBe(8);
+      expect(result.evidence.some((e) => e.signal === 'aloneTimeNeed')).toBe(
+        true,
+      );
+    });
+  });
+
   describe('Expansion-09 interest tags', () => {
     it('preserves biking from mocked LLM interests', async () => {
       const text = 'I love cycling and mountain bike weekends.';

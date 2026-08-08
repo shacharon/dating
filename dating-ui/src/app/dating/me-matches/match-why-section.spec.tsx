@@ -984,3 +984,137 @@ describe('MatchWhySection Expansion-14 chips', () => {
     expect(screen.getByText('Different pace to closeness')).toBeTruthy();
   });
 });
+
+describe('MatchWhySection Expansion-15 chips', () => {
+  it('EN — Family style match shows evidence not raw chip label', () => {
+    const enCopy = getCopy('en');
+    const evidence =
+      enCopy.matches.list.browse.chipEvidence['Family style match'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Family style match'],
+          reasonShort: 'Similar family style.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Family style match')).toBeNull();
+  });
+
+  it('HE — Friends & couple balance shows Hebrew evidence', () => {
+    const heCopy = getCopy('he');
+    const evidence =
+      heCopy.matches.list.browse.chipEvidence['Friends & couple balance'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Friends & couple balance'],
+          reasonShort: 'Similar friends/couple balance.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={heCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Friends & couple balance')).toBeNull();
+  });
+
+  it('EN — Recharge style match shows evidence', () => {
+    const enCopy = getCopy('en');
+    const evidence =
+      enCopy.matches.list.browse.chipEvidence['Recharge style match'];
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: ['Recharge style match'],
+          reasonShort: 'Similar recharge needs.',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText(evidence)).toBeTruthy();
+    expect(screen.queryByText('Recharge style match')).toBeNull();
+  });
+
+  it('includes Expansion-15 onboarding writing prompts in EN/HE/ES', () => {
+    expect(getCopy('en').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'How involved is your family in your day-to-day decisions?',
+        'A great weekend for me balances friends, alone time, and us time like…',
+        'How do you recharge after a long week?',
+      ]),
+    );
+    expect(getCopy('he').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        'כמה המשפחה שלך מעורבת בהחלטות היומיומיות שלך?',
+        'סוף שבוע מושלם בשבילי מאזן בין חברים, זמן לבד וזמן ביחד ב...',
+        'איך את/ה נטען/ת מחדש אחרי שבוע ארוך?',
+      ]),
+    );
+    expect(getCopy('es').onboarding.writingPrompts.aboutMe.questions).toEqual(
+      expect.arrayContaining([
+        '¿Cuánto se involucra tu familia en tus decisiones del día a día?',
+        'Un gran fin de semana para mí equilibra amigos, tiempo a solas y tiempo juntos así…',
+        '¿Cómo recargas energías después de una semana larga?',
+      ]),
+    );
+  });
+
+  it('renders Expansion-15 Family involvement gap tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Family gap.',
+          tensionChip: 'Family involvement gap',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Family involvement gap')).toBeTruthy();
+  });
+
+  it('renders Expansion-15 Friends vs couple time tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Friends vs couple.',
+          tensionChip: 'Friends vs couple time',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Friends vs couple time')).toBeTruthy();
+  });
+
+  it('renders Expansion-15 Different alone-time needs tension chip as-is', () => {
+    const enCopy = getCopy('en');
+    render(
+      <MatchWhySection
+        match={baseMatch({
+          positiveChips: [],
+          reasonShort: 'Alone-time gap.',
+          tensionChip: 'Different alone-time needs',
+        })}
+        open
+        onOpenChange={() => {}}
+        listCopy={enCopy.matches.list}
+      />,
+    );
+    expect(screen.getByText('Different alone-time needs')).toBeTruthy();
+  });
+});

@@ -50,6 +50,13 @@ import {
   EXPANSION_14_SHADOW_SIGNAL_KEYS,
 } from './expansion-14-signal-definitions';
 import {
+  EXPANSION_15_PROMOTION_CHIP_LABELS,
+  EXPANSION_15_PROMOTION_DOMAINS,
+  EXPANSION_15_PROMOTION_TIERS,
+  EXPANSION_15_PROMOTION_WEIGHTS,
+  EXPANSION_15_SHADOW_SIGNAL_KEYS,
+} from './expansion-15-signal-definitions';
+import {
   EXTRACTION_SIGNAL_KEYS,
   MAX_EVIDENCE_ITEMS,
   OFFICIAL_EXTRACTION_SIGNAL_KEYS,
@@ -144,8 +151,14 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS).toContain('monogamyAlignment');
     });
 
-    it('contains exactly 35 keys', () => {
-      expect(SHADOW_SIGNAL_KEYS.length).toBe(35);
+    it('includes Expansion-15 family & social ecosystem keys', () => {
+      expect(SHADOW_SIGNAL_KEYS).toContain('familyEnmeshment');
+      expect(SHADOW_SIGNAL_KEYS).toContain('friendCoupleBalance');
+      expect(SHADOW_SIGNAL_KEYS).toContain('aloneTimeNeed');
+    });
+
+    it('contains exactly 38 keys', () => {
+      expect(SHADOW_SIGNAL_KEYS.length).toBe(38);
     });
   });
 
@@ -185,6 +198,9 @@ describe('extracted-signals shape', () => {
       expect(SHADOW_SIGNAL_KEYS_SET.has('patienceTolerance')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('intimacyPacing')).toBe(true);
       expect(SHADOW_SIGNAL_KEYS_SET.has('monogamyAlignment')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('familyEnmeshment')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('friendCoupleBalance')).toBe(true);
+      expect(SHADOW_SIGNAL_KEYS_SET.has('aloneTimeNeed')).toBe(true);
     });
 
     it('does not include official keys', () => {
@@ -204,11 +220,11 @@ describe('extracted-signals shape', () => {
       }
     });
 
-    it('total count equals 15 official + 35 shadow', () => {
+    it('total count equals 15 official + 38 shadow', () => {
       expect(EXTRACTION_SIGNAL_KEYS.length).toBe(
         OFFICIAL_EXTRACTION_SIGNAL_KEYS.length + SHADOW_SIGNAL_KEYS.length,
       );
-      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(50);
+      expect(EXTRACTION_SIGNAL_KEYS.length).toBe(53);
     });
   });
 
@@ -219,8 +235,8 @@ describe('extracted-signals shape', () => {
       );
     });
 
-    it('equals 54 (15 official + 35 shadow + 4 buffer)', () => {
-      expect(MAX_EVIDENCE_ITEMS).toBe(54);
+    it('equals 57 (15 official + 38 shadow + 4 buffer)', () => {
+      expect(MAX_EVIDENCE_ITEMS).toBe(57);
     });
   });
 
@@ -359,7 +375,7 @@ describe('extracted-signals shape', () => {
     it('allows adventureNovelty on self domain (not legacy noveltyVsRoutine)', () => {
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain('adventureNovelty');
       expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).not.toContain('noveltyVsRoutine');
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
     });
   });
 
@@ -392,8 +408,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
 
     it('exposes promotion-ready metadata for all five keys', () => {
@@ -449,8 +465,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
 
     it('exposes promotion-ready metadata for all four keys', () => {
@@ -515,8 +531,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
 
     it('exposes promotion-ready metadata for both keys', () => {
@@ -588,8 +604,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
   });
 
@@ -651,8 +667,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
   });
 
@@ -707,8 +723,8 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
   });
 
@@ -778,8 +794,77 @@ describe('extracted-signals shape', () => {
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
         expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
       }
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(42);
-      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(28);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
+    });
+  });
+
+  describe('Expansion-15 shadow mode (no scoring wire-up)', () => {
+    const expansion15Keys = [
+      'familyEnmeshment',
+      'friendCoupleBalance',
+      'aloneTimeNeed',
+    ] as const;
+
+    it('keeps Expansion-15 keys out of official extraction', () => {
+      const official = new Set<string>(OFFICIAL_EXTRACTION_SIGNAL_KEYS);
+      for (const k of expansion15Keys) {
+        expect(official.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps Expansion-15 keys out of compatibility scoring keys', () => {
+      const scored = new Set<string>(COMPATIBILITY_SIGNAL_KEYS);
+      for (const k of expansion15Keys) {
+        expect(scored.has(k)).toBe(false);
+      }
+    });
+
+    it('keeps adjacent keys distinct and Exp-14 still shadow', () => {
+      expect(OFFICIAL_EXTRACTION_SIGNAL_KEYS).toContain('traditionalism');
+      expect(OFFICIAL_EXTRACTION_SIGNAL_KEYS).toContain('socialBattery');
+      expect(OFFICIAL_EXTRACTION_SIGNAL_KEYS).toContain('independence');
+      expect(SHADOW_SIGNAL_KEYS).toContain('patienceTolerance');
+      expect(SHADOW_SIGNAL_KEYS).toContain('intimacyPacing');
+      expect(SHADOW_SIGNAL_KEYS).toContain('monogamyAlignment');
+      expect(SHADOW_SIGNAL_KEYS).toContain('familyEnmeshment');
+      expect(SHADOW_SIGNAL_KEYS).toContain('friendCoupleBalance');
+      expect(SHADOW_SIGNAL_KEYS).toContain('aloneTimeNeed');
+    });
+
+    it('exposes promotion-ready metadata for all three keys', () => {
+      expect(EXPANSION_15_SHADOW_SIGNAL_KEYS).toEqual([...expansion15Keys]);
+      expect(EXPANSION_15_SHADOW_SIGNAL_KEYS.length).toBe(3);
+      expect(EXPANSION_15_PROMOTION_WEIGHTS.familyEnmeshment).toBe(1.2);
+      expect(EXPANSION_15_PROMOTION_WEIGHTS.friendCoupleBalance).toBe(1.1);
+      expect(EXPANSION_15_PROMOTION_WEIGHTS.aloneTimeNeed).toBe(1.2);
+      expect(EXPANSION_15_PROMOTION_TIERS.familyEnmeshment).toBe(2);
+      expect(EXPANSION_15_PROMOTION_TIERS.friendCoupleBalance).toBe(3);
+      expect(EXPANSION_15_PROMOTION_TIERS.aloneTimeNeed).toBe(2);
+      expect(EXPANSION_15_PROMOTION_DOMAINS.familyEnmeshment).toBe(
+        'relationship',
+      );
+      expect(EXPANSION_15_PROMOTION_DOMAINS.friendCoupleBalance).toBe('social');
+      expect(EXPANSION_15_PROMOTION_DOMAINS.aloneTimeNeed).toBe('social');
+      expect(EXPANSION_15_PROMOTION_CHIP_LABELS.familyEnmeshment).toBe(
+        'Family closeness',
+      );
+      expect(EXPANSION_15_PROMOTION_CHIP_LABELS.friendCoupleBalance).toBe(
+        'Friends & couple balance',
+      );
+      expect(EXPANSION_15_PROMOTION_CHIP_LABELS.aloneTimeNeed).toBe(
+        'Alone time needs',
+      );
+    });
+
+    it('requires DOMAIN_ALLOWED membership on self + partner (Story 2)', () => {
+      for (const k of expansion15Keys) {
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner).toContain(k);
+        expect(DOMAIN_ALLOWED_SIGNAL_KEYS.relationship).not.toContain(k);
+      }
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.self.length).toBe(45);
+      expect(DOMAIN_ALLOWED_SIGNAL_KEYS.partner.length).toBe(31);
     });
   });
 });

@@ -2451,6 +2451,374 @@ describe('Expansion-14 shadow E2E via compare', () => {
   });
 });
 
+type Expansion15ShadowKey =
+  | 'familyEnmeshment'
+  | 'friendCoupleBalance'
+  | 'aloneTimeNeed';
+
+function makeProfileWithExpansion15Shadow(
+  id: string,
+  name: string,
+  official: Partial<Record<SignalKey, number>>,
+  shadow: Partial<Record<Expansion15ShadowKey, number | null>>,
+  relationshipFitScore = 50,
+  interestsTop3: string[] = [],
+): ProfileJsonPayload {
+  const signals = {
+    ...makeSignals(official),
+    ...shadow,
+  } as Record<string, number>;
+  return makeProfile(id, name, signals, relationshipFitScore, undefined, interestsTop3);
+}
+
+describe('Expansion-15 shadow E2E via compare', () => {
+  it('keeps Expansion-15 shadow keys out of COMPATIBILITY_SIGNAL_KEYS', () => {
+    expect(COMPATIBILITY_SIGNAL_KEYS.length).toBe(15);
+    for (const key of [
+      'familyEnmeshment',
+      'friendCoupleBalance',
+      'aloneTimeNeed',
+    ] as const) {
+      expect(COMPATIBILITY_SIGNAL_KEYS as readonly string[]).not.toContain(key);
+    }
+  });
+
+  it('Expansion-15 keys are distinct from adjacent signals and interest tags', () => {
+    for (const key of [
+      'familyEnmeshment',
+      'friendCoupleBalance',
+      'aloneTimeNeed',
+    ] as const) {
+      expect(INTEREST_CANONICAL_TAGS as readonly string[]).not.toContain(key);
+    }
+    expect('familyEnmeshment').not.toBe('traditionalism');
+    expect('friendCoupleBalance').not.toBe('socialBattery');
+    expect('aloneTimeNeed').not.toBe('independence');
+  });
+
+  it('family_enmeshment_gap surfaces Family involvement gap', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 9 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Family involvement gap');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'family_enmeshment_gap'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(4);
+  });
+
+  it('friend_couple_balance_gap surfaces Friends vs couple time', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { friendCoupleBalance: 9 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { friendCoupleBalance: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Friends vs couple time');
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'friend_couple_balance_gap'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('alone_time_need_gap surfaces Different alone-time needs', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { aloneTimeNeed: 9 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { aloneTimeNeed: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe(
+      'Different alone-time needs',
+    );
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'alone_time_need_gap'),
+    ).toBe(true);
+    expect(result.friction).toBeGreaterThanOrEqual(3);
+  });
+
+  it('includes Family style match when both familyEnmeshment high', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 8 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Family style match');
+  });
+
+  it('includes Family style match when both familyEnmeshment low', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 2 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain('Family style match');
+  });
+
+  it('includes Friends & couple balance when both couple-centric', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { friendCoupleBalance: 8 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { friendCoupleBalance: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Friends & couple balance',
+    );
+  });
+
+  it('includes Friends & couple balance when both friends-first', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { friendCoupleBalance: 2 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { friendCoupleBalance: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Friends & couple balance',
+    );
+  });
+
+  it('includes Recharge style match when both aloneTimeNeed high', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { aloneTimeNeed: 8 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { aloneTimeNeed: 8 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Recharge style match',
+    );
+  });
+
+  it('includes Recharge style match when both aloneTimeNeed low', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { aloneTimeNeed: 2 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { aloneTimeNeed: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).toContain(
+      'Recharge style match',
+    );
+  });
+
+  it('does not include Family style match on family tension pair', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 9 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain(
+      'Family style match',
+    );
+  });
+
+  it('does not include Family style match for mid/mid (not dual-band)', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 5 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: 5 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.positiveChips).not.toContain(
+      'Family style match',
+    );
+  });
+
+  it('excludes Expansion-15 shadow keys from alignments DTO', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 8 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: 8 },
+    );
+    const result = compare(a, b);
+    expect(
+      result.alignments.every(
+        (row) =>
+          row.key !== 'Family style match' &&
+          row.key !== 'Friends & couple balance' &&
+          row.key !== 'Recharge style match' &&
+          row.key !== 'Family closeness' &&
+          row.key !== 'Alone time needs' &&
+          !/familyEnmeshment|friendCoupleBalance|aloneTimeNeed/i.test(row.key),
+      ),
+    ).toBe(true);
+  });
+
+  it('null shadow on one side skips family_enmeshment_gap', () => {
+    const a = makeProfileWithExpansion15Shadow(
+      'a',
+      'A',
+      {},
+      { familyEnmeshment: 9 },
+    );
+    const b = makeProfileWithExpansion15Shadow(
+      'b',
+      'B',
+      {},
+      { familyEnmeshment: null },
+    );
+    const result = compare(a, b);
+    expect(
+      result.tensionMatrix.some((t) => t.id === 'family_enmeshment_gap'),
+    ).toBe(false);
+  });
+
+  it('compatibility unchanged when only Expansion-15 shadow signals differ', () => {
+    const highA = makeProfileWithExpansion15Shadow(
+      'a1',
+      'A1',
+      {},
+      {
+        familyEnmeshment: 8,
+        friendCoupleBalance: 8,
+        aloneTimeNeed: 8,
+      },
+    );
+    const highB = makeProfileWithExpansion15Shadow(
+      'b1',
+      'B1',
+      {},
+      {
+        familyEnmeshment: 8,
+        friendCoupleBalance: 8,
+        aloneTimeNeed: 8,
+      },
+    );
+    const gapA = makeProfileWithExpansion15Shadow(
+      'a2',
+      'A2',
+      {},
+      {
+        familyEnmeshment: 9,
+        friendCoupleBalance: 9,
+        aloneTimeNeed: 9,
+      },
+    );
+    const gapB = makeProfileWithExpansion15Shadow(
+      'b2',
+      'B2',
+      {},
+      {
+        familyEnmeshment: 2,
+        friendCoupleBalance: 2,
+        aloneTimeNeed: 2,
+      },
+    );
+    const aligned = compare(highA, highB);
+    const gapped = compare(gapA, gapB);
+    expect(aligned.compatibility).toBe(gapped.compatibility);
+  });
+
+  it('Expansion-14 non-regression: Different tolerance levels still surfaces', () => {
+    const a = makeProfileWithExpansion14Shadow(
+      'a',
+      'A',
+      {},
+      { patienceTolerance: 9 },
+    );
+    const b = makeProfileWithExpansion14Shadow(
+      'b',
+      'B',
+      {},
+      { patienceTolerance: 2 },
+    );
+    const result = compare(a, b);
+    expect(result.explainability.tensionChip).toBe('Different tolerance levels');
+  });
+});
+
 describe('match-engine compare', () => {
   afterEach(() => {
     jest.restoreAllMocks();

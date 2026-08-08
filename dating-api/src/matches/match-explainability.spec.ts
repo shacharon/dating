@@ -377,6 +377,48 @@ describe('pickPositiveChips', () => {
     expect(chips).toContain('Aligned on relationship structure');
   });
 
+  it('includes Expansion-15 Family style match from synthetic family entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'familyStyleMatch',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Family style match');
+  });
+
+  it('includes Expansion-15 Friends & couple balance from synthetic friendCouple entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'friendCoupleAligned',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Friends & couple balance');
+  });
+
+  it('includes Expansion-15 Recharge style match from synthetic aloneTime entry', () => {
+    const breakdown: BreakdownEntry[] = [
+      {
+        key: 'rechargeStyleMatch',
+        self: 9,
+        partner: 9,
+        gap: 0,
+        pairScore: 10,
+      },
+    ];
+    const chips = pickPositiveChips(breakdown);
+    expect(chips).toContain('Recharge style match');
+  });
+
   it('emits interestOverlapTags (max 2 preferred) from sharedInterests', () => {
     const dto = buildMatchExplainability({
       compatibility: 70,
@@ -521,6 +563,18 @@ describe('buildMatchExplainability', () => {
     );
     expect(TENSION_CHIP_BY_ID.monogamy_alignment_mismatch).toBe(
       'Relationship structure mismatch',
+    );
+  });
+
+  it('maps Expansion-15 tension rule ids to chip labels', () => {
+    expect(TENSION_CHIP_BY_ID.family_enmeshment_gap).toBe(
+      'Family involvement gap',
+    );
+    expect(TENSION_CHIP_BY_ID.friend_couple_balance_gap).toBe(
+      'Friends vs couple time',
+    );
+    expect(TENSION_CHIP_BY_ID.alone_time_need_gap).toBe(
+      'Different alone-time needs',
     );
   });
 
@@ -786,6 +840,39 @@ describe('buildMatchExplainability', () => {
       tensionMatrix: [{ id: 'monogamy_alignment_mismatch', penalty: 8 }],
     });
     expect(dto.tensionChip).toBe('Relationship structure mismatch');
+  });
+
+  it('shows Expansion-15 family_enmeshment_gap tension chip (Family involvement gap)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 4,
+      breakdown: [],
+      tensionMatrix: [{ id: 'family_enmeshment_gap', penalty: 4 }],
+    });
+    expect(dto.tensionChip).toBe('Family involvement gap');
+  });
+
+  it('shows Expansion-15 friend_couple_balance_gap tension chip (Friends vs couple time)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 3,
+      breakdown: [],
+      tensionMatrix: [{ id: 'friend_couple_balance_gap', penalty: 3 }],
+    });
+    expect(dto.tensionChip).toBe('Friends vs couple time');
+  });
+
+  it('shows Expansion-15 alone_time_need_gap tension chip (Different alone-time needs)', () => {
+    const dto = buildMatchExplainability({
+      compatibility: 55,
+      finalScore: 55,
+      friction: 3,
+      breakdown: [],
+      tensionMatrix: [{ id: 'alone_time_need_gap', penalty: 3 }],
+    });
+    expect(dto.tensionChip).toBe('Different alone-time needs');
   });
 
   it('shows education_level_gap tension chip when friction >= 3', () => {

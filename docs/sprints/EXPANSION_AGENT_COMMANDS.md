@@ -1318,6 +1318,8 @@
 **Doc:** `docs/sprints/sprint-expansion-15-family-social-ecosystem/README.md`  
 **Final sprint of Phase 6 — includes full rollout gate for all 14 relationship-psychology signals.**
 
+**This repo (as of 2026-08-08):** Expansion-15 is **Complete (5/5)** at the engineering gate (shadow). Phase 6 engineering closed in shadow — **no** scoring promote / “Enable all 14”. See `handoffs/STORY_05_testing_validation/agent-3-pm.md`.
+
 ```text
 --agent 0 expansion 15 story 1
 ```

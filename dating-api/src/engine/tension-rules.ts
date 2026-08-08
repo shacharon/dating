@@ -65,6 +65,10 @@ export interface EnrichedSignals {
   patienceTolerance?: number | null;
   intimacyPacing?: number | null;
   monogamyAlignment?: number | null;
+  /** Shadow Expansion-15 — from evaluationJson.self.signals when extracted. */
+  familyEnmeshment?: number | null;
+  friendCoupleBalance?: number | null;
+  aloneTimeNeed?: number | null;
 }
 
 export function getSignal(
@@ -679,5 +683,44 @@ export const tensionRules: TensionRule[] = [
     penalty: 8,
     explain:
       'One expects strict exclusivity, the other seeks an open/non-monogamous structure',
+  },
+  {
+    id: 'family_enmeshment_gap',
+    name: 'Family enmeshment gap (MED-HIGH)',
+    when: (a, b) => {
+      const aF = getSignal(a, 'familyEnmeshment');
+      const bF = getSignal(b, 'familyEnmeshment');
+      if (aF == null || bF == null) return false;
+      return (aF >= 8 && bF <= 3) || (bF >= 8 && aF <= 3);
+    },
+    penalty: 4,
+    explain:
+      'One is very close/involved with family decisions, the other more independent — boundary expectations may clash',
+  },
+  {
+    id: 'friend_couple_balance_gap',
+    name: 'Friend vs couple time gap (MED)',
+    when: (a, b) => {
+      const aB = getSignal(a, 'friendCoupleBalance');
+      const bB = getSignal(b, 'friendCoupleBalance');
+      if (aB == null || bB == null) return false;
+      return (aB >= 8 && bB <= 3) || (bB >= 8 && aB <= 3);
+    },
+    penalty: 3,
+    explain:
+      'One prioritizes couple time heavily, the other prioritizes friends — time allocation may cause friction',
+  },
+  {
+    id: 'alone_time_need_gap',
+    name: 'Alone time need gap (MED)',
+    when: (a, b) => {
+      const aA = getSignal(a, 'aloneTimeNeed');
+      const bA = getSignal(b, 'aloneTimeNeed');
+      if (aA == null || bA == null) return false;
+      return (aA >= 8 && bA <= 3) || (bA >= 8 && aA <= 3);
+    },
+    penalty: 3,
+    explain:
+      'One needs significant solo recharge time, the other prefers constant togetherness',
   },
 ];
