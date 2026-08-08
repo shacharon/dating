@@ -21,6 +21,11 @@ import { MeConversationsService } from './me-conversations.service';
 import { MeMatchActionsService } from './me-match-actions.service';
 import { MeMatchFeedbackService } from './me-match-feedback.service';
 import { MeMatchesService } from './me-matches.service';
+import { MatchListQueryService } from './matches/match-list-query.service';
+import { MatchEligibilityService } from './matches/match-eligibility.service';
+import { MatchRankingService } from './matches/match-ranking.service';
+import { MatchListCacheService } from './matches/match-list-cache.service';
+import { MatchDetailService } from './matches/match-detail.service';
 import { MutualMatchesService } from './mutual-matches.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { MeProfileMatchesService } from './me-profile-matches.service';
@@ -73,6 +78,11 @@ import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
     ProfileQualityService,
     MeProfileAnalysisService,
     MeProfileMatchesService,
+    MatchListQueryService,
+    MatchEligibilityService,
+    MatchRankingService,
+    MatchListCacheService,
+    MatchDetailService,
     MeMatchesService,
     {
       provide: MATCH_LIST_RANK_REBUILD_PORT,

@@ -11,6 +11,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
 import * as matchEngine from '../matches/match-engine';
 import { MeMatchesService } from './me-matches.service';
+import { createMeMatchesServiceForTest } from './me-matches.test-harness';
 
 const S_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
@@ -93,29 +94,38 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
   });
 
   describe('MeMatchesService read-model import policy (V1)', () => {
-    const serviceSrc = fs.readFileSync(
-      path.join(__dirname, 'me-matches.service.ts'),
-      'utf8',
-    );
+    const scoringSrc = [
+      fs.readFileSync(path.join(__dirname, 'me-matches.service.ts'), 'utf8'),
+      fs.readFileSync(
+        path.join(__dirname, 'matches/match-ranking.service.ts'),
+        'utf8',
+      ),
+      fs.readFileSync(
+        path.join(__dirname, 'matches/match-detail.service.ts'),
+        'utf8',
+      ),
+    ].join('\n');
 
     it('does not import low-level mapper builders', () => {
-      expect(serviceSrc).not.toContain('buildProfilePayloadFromNewModel');
-      expect(serviceSrc).not.toContain('buildChildrenUnsureRowFromNewModel');
+      expect(scoringSrc).not.toContain('buildProfilePayloadFromNewModel');
+      expect(scoringSrc).not.toContain('buildChildrenUnsureRowFromNewModel');
     });
 
     it('does not reference evaluationJson identifier in the service module', () => {
-      expect(serviceSrc).not.toMatch(/\bevaluationJson\b/);
+      expect(scoringSrc).not.toMatch(/\bevaluationJson\b/);
     });
 
     it('imports only buildMeMatchesParticipantReadModel from me-profile-engine.mapper', () => {
-      const importLine = serviceSrc
+      const importLines = scoringSrc
         .split('\n')
-        .find((l) => l.includes("from './me-profile-engine.mapper'"));
-      expect(importLine).toBeDefined();
-      expect(importLine).toContain('buildMeMatchesParticipantReadModel');
-      expect(importLine!.split('{')[1]?.split('}')[0]?.trim()).toBe(
-        'buildMeMatchesParticipantReadModel',
-      );
+        .filter((l) => l.includes("from '../me-profile-engine.mapper'") || l.includes("from './me-profile-engine.mapper'"));
+      expect(importLines.length).toBeGreaterThan(0);
+      for (const importLine of importLines) {
+        expect(importLine).toContain('buildMeMatchesParticipantReadModel');
+        expect(importLine.split('{')[1]?.split('}')[0]?.trim()).toBe(
+          'buildMeMatchesParticipantReadModel',
+        );
+      }
     });
   });
 
@@ -190,22 +200,22 @@ describe('MATCH_ENGINE_V1_CONTRACT (docs + runtime shape)', () => {
       const photoStorage = { read: jest.fn() };
       const mutualMatches = { findActiveByUserPair: jest.fn().mockResolvedValue(null) };
       const analytics = { track: jest.fn() } as unknown as AnalyticsService;
-      service = new MeMatchesService(
-        prisma as unknown as PrismaService,
-        obs as unknown as StructuredObservabilityService,
-        photoStorage as never,
-        mutualMatches as never,
+      service = createMeMatchesServiceForTest({
+        prisma: prisma as unknown as PrismaService,
+        obs: obs as unknown as StructuredObservabilityService,
+        photoStorage: photoStorage as never,
+        mutualMatches: mutualMatches as never,
         analytics,
-        {
+        cache: {
           get: jest.fn().mockResolvedValue(null),
           set: jest.fn(),
           del: jest.fn(),
           setNx: jest.fn().mockResolvedValue(true),
         } as never,
-        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
-        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
-        { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
-      );
+        matchNarrativeGenerator: { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        matchNarrativeCache: { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        matchListRankQueue: { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
+      });
     });
 
     it('list match rows do not include evaluationSummary or matchExplanationTraits', async () => {

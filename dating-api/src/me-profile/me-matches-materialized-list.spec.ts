@@ -7,6 +7,8 @@ import * as matchEngine from '../matches/match-engine';
 import * as holyGrailPair from '../matches/holy-grail-pair-directions';
 import { MatchListInvalidCursorError } from './me-matches.errors';
 import { MeMatchesService, matchListRankAfterCursorWhere } from './me-matches.service';
+import { createMeMatchesServiceForTest } from './me-matches.test-harness';
+import { MatchRankingService } from './matches/match-ranking.service';
 import { MATCH_LIST_MATERIALIZED_ENV } from './match-list-materialized-flag';
 import type { UserProfileStatus } from '@prisma/client';
 
@@ -179,17 +181,17 @@ describe('MeMatchesService materialized list', () => {
     };
     analytics = { track: jest.fn() };
 
-    service = new MeMatchesService(
-      prisma as never,
-      { trace: jest.fn(), error: jest.fn() } as never,
-      {} as never,
-      { findActiveByUserPair: jest.fn() } as never,
-      analytics as never,
-      cache as never,
-      { generate: jest.fn() } as never,
-      { find: jest.fn(), upsert: jest.fn() } as never,
-      matchListRankQueue as never,
-    );
+    service = createMeMatchesServiceForTest({
+      prisma: prisma as never,
+      obs: { trace: jest.fn(), error: jest.fn() } as never,
+      photoStorage: {} as never,
+      mutualMatches: { findActiveByUserPair: jest.fn() } as never,
+      analytics: analytics as never,
+      cache: cache as never,
+      matchNarrativeGenerator: { generate: jest.fn() } as never,
+      matchNarrativeCache: { find: jest.fn(), upsert: jest.fn() } as never,
+      matchListRankQueue: matchListRankQueue as never,
+    });
 
     jest.spyOn(holyGrailPair, 'evaluateHolyGrailPairDirections').mockReturnValue(null);
     jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
@@ -199,7 +201,7 @@ describe('MeMatchesService materialized list', () => {
     } as never);
 
     buildSpy = jest.spyOn(
-      service as unknown as { buildFullRankedList: (...a: unknown[]) => unknown },
+      MatchRankingService.prototype,
       'buildFullRankedList',
     );
   });

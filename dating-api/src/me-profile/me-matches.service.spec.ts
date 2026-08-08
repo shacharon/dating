@@ -18,6 +18,8 @@ import * as customMetrics from '../observability/custom-metrics';
 import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import * as MeProfileEngineMapper from './me-profile-engine.mapper';
 import { MeMatchesService } from './me-matches.service';
+import { createMeMatchesServiceForTest } from './me-matches.test-harness';
+import { resolveMatchNarrative } from './matches/match-detail-narrative';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 
 const S_ANALYZED = 'ANALYZED' as UserProfileStatus;
@@ -220,17 +222,20 @@ describe('MeMatchesService', () => {
     matchListRankQueue = {
       enqueueRebuild: jest.fn().mockResolvedValue('inline:u'),
     };
-    service = new MeMatchesService(
-      prisma as unknown as PrismaService,
-      obs as unknown as StructuredObservabilityService,
-      photoStorage as never,
-      mutualMatches as never,
-      analytics as unknown as AnalyticsService,
-      cache as never,
-      { generate: narrativeGenerate } as never,
-      { find: narrativeCacheFind, upsert: narrativeCacheUpsert } as never,
-      matchListRankQueue as never,
-    );
+    service = createMeMatchesServiceForTest({
+      prisma: prisma as unknown as PrismaService,
+      obs: obs as unknown as StructuredObservabilityService,
+      photoStorage: photoStorage as never,
+      mutualMatches: mutualMatches as never,
+      analytics: analytics as unknown as AnalyticsService,
+      cache: cache as never,
+      matchNarrativeGenerator: { generate: narrativeGenerate } as never,
+      matchNarrativeCache: {
+        find: narrativeCacheFind,
+        upsert: narrativeCacheUpsert,
+      } as never,
+      matchListRankQueue: matchListRankQueue as never,
+    });
   });
 
   afterEach(() => {
@@ -2226,16 +2231,29 @@ describe('MeMatchesService', () => {
       },
     };
 
+    const runNarrative = (args: typeof baseArgs) =>
+      resolveMatchNarrative(
+        {
+          obs: obs as unknown as StructuredObservabilityService,
+          matchNarrativeGenerator: { generate: narrativeGenerate } as never,
+          matchNarrativeCache: {
+            find: narrativeCacheFind,
+            upsert: narrativeCacheUpsert,
+          } as never,
+        },
+        args as never,
+      );
+
     it('cache hit skips generator', async () => {
       narrativeCacheFind.mockResolvedValue('hit text');
-      const text = await (service as any).resolveMatchNarrative(baseArgs);
+      const text = await runNarrative(baseArgs);
       expect(text).toBe('hit text');
       expect(narrativeGenerate).not.toHaveBeenCalled();
     });
 
     it('evaluation id change uses new cache key (miss → generate)', async () => {
       narrativeCacheFind.mockResolvedValue(null);
-      await (service as any).resolveMatchNarrative({
+      await runNarrative({
         ...baseArgs,
         candidateEvaluationId: 'eval_c2',
       });
@@ -2247,7 +2265,7 @@ describe('MeMatchesService', () => {
 
     it('cache read throw is treated as miss', async () => {
       narrativeCacheFind.mockRejectedValue(new Error('db down'));
-      const text = await (service as any).resolveMatchNarrative(baseArgs);
+      const text = await runNarrative(baseArgs);
       expect(text).toBe('Generated narrative prose.');
       expect(narrativeGenerate).toHaveBeenCalledTimes(1);
     });
@@ -2259,7 +2277,7 @@ describe('MeMatchesService', () => {
         promptVersion: 'v1',
       });
       narrativeCacheUpsert.mockRejectedValue(new Error('upsert boom'));
-      const text = await (service as any).resolveMatchNarrative({
+      const text = await runNarrative({
         viewerProfileId,
         candidateProfileId,
         viewerEvaluationId: 'eval_v1',
@@ -2272,6 +2290,7 @@ describe('MeMatchesService', () => {
         recommendation: {
           primaryTakeaway: 'Take',
           suggestedNextAction: 'Next',
+          caution: null,
         },
       });
       expect(text).toBe('LLM prose survives store fail.');
@@ -2288,7 +2307,7 @@ describe('MeMatchesService', () => {
         promptVersion: 'v4',
       });
       narrativeCacheUpsert.mockClear();
-      const text = await (service as any).resolveMatchNarrative(baseArgs);
+      const text = await runNarrative(baseArgs);
       expect(text).toBe('Structured fallback without chip soup.');
       expect(narrativeCacheUpsert).not.toHaveBeenCalled();
     });
@@ -2699,17 +2718,17 @@ describe('MeMatchesService', () => {
         return rows;
       });
 
-      const isolatedSvc = new MeMatchesService(
-        newModelOnlyPrisma as unknown as PrismaService,
-        obs as unknown as StructuredObservabilityService,
-        photoStorage as never,
-        mutualMatches as never,
-        { track: jest.fn() } as unknown as AnalyticsService,
-        { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
-        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
-        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
-      { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
-      );
+      const isolatedSvc = createMeMatchesServiceForTest({
+        prisma: newModelOnlyPrisma as unknown as PrismaService,
+        obs: obs as unknown as StructuredObservabilityService,
+        photoStorage: photoStorage as never,
+        mutualMatches: mutualMatches as never,
+        analytics: { track: jest.fn() } as unknown as AnalyticsService,
+        cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), setNx: jest.fn().mockResolvedValue(true) } as never,
+        matchNarrativeGenerator: { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        matchNarrativeCache: { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        matchListRankQueue: { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
+      });
 
       const result = await isolatedSvc.list(viewerUserId);
 
@@ -2733,17 +2752,17 @@ describe('MeMatchesService', () => {
         },
       };
 
-      const isolatedSvc = new MeMatchesService(
-        newModelOnlyPrisma as unknown as PrismaService,
-        obs as unknown as StructuredObservabilityService,
-        photoStorage as never,
-        mutualMatches as never,
-        { track: jest.fn() } as unknown as AnalyticsService,
-        { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
-        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
-        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
-      { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
-      );
+      const isolatedSvc = createMeMatchesServiceForTest({
+        prisma: newModelOnlyPrisma as unknown as PrismaService,
+        obs: obs as unknown as StructuredObservabilityService,
+        photoStorage: photoStorage as never,
+        mutualMatches: mutualMatches as never,
+        analytics: { track: jest.fn() } as unknown as AnalyticsService,
+        cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), setNx: jest.fn().mockResolvedValue(true) } as never,
+        matchNarrativeGenerator: { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        matchNarrativeCache: { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        matchListRankQueue: { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
+      });
 
       const result = await isolatedSvc.list(viewerUserId);
       expect(result.status).toBe('not_ready');
@@ -2777,17 +2796,17 @@ describe('MeMatchesService', () => {
         },
       };
 
-      const isolatedSvc = new MeMatchesService(
-        newModelOnlyPrisma as unknown as PrismaService,
-        obs as unknown as StructuredObservabilityService,
-        photoStorage as never,
-        mutualMatches as never,
-        { track: jest.fn() } as unknown as AnalyticsService,
-        { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() } as never,
-        { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
-        { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
-      { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
-      );
+      const isolatedSvc = createMeMatchesServiceForTest({
+        prisma: newModelOnlyPrisma as unknown as PrismaService,
+        obs: obs as unknown as StructuredObservabilityService,
+        photoStorage: photoStorage as never,
+        mutualMatches: mutualMatches as never,
+        analytics: { track: jest.fn() } as unknown as AnalyticsService,
+        cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), setNx: jest.fn().mockResolvedValue(true) } as never,
+        matchNarrativeGenerator: { generate: jest.fn().mockResolvedValue({ narrative: 'n', source: 'fallback', promptVersion: 'v1' }) } as never,
+        matchNarrativeCache: { find: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue(undefined) } as never,
+        matchListRankQueue: { enqueueRebuild: jest.fn().mockResolvedValue('inline:u') } as never,
+      });
 
       const detail = await isolatedSvc.getById(viewerUserId, candidateProfileId);
 

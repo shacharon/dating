@@ -1,5 +1,6 @@
 import { MeMatchesService } from './me-matches.service';
 import type { MatchListRankSnapshot } from './me-matches.service';
+import { createMeMatchesServiceForTest } from './me-matches.test-harness';
 import { MATCH_LIST_RANK_PERSIST_CHUNK } from './match-list-rank-persist.constants';
 
 describe('MeMatchesService MatchListRank persist', () => {
@@ -10,17 +11,17 @@ describe('MeMatchesService MatchListRank persist', () => {
     };
     $transaction: jest.Mock;
   }) {
-    return new MeMatchesService(
-      prisma as never,
-      { trace: jest.fn() } as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      { del: jest.fn().mockResolvedValue(undefined) } as never,
-      {} as never,
-      {} as never,
-      { enqueueRebuild: jest.fn() } as never,
-    );
+    return createMeMatchesServiceForTest({
+      prisma: prisma as never,
+      obs: { trace: jest.fn() } as never,
+      photoStorage: {} as never,
+      mutualMatches: {} as never,
+      analytics: { track: jest.fn() } as never,
+      cache: { del: jest.fn().mockResolvedValue(undefined), get: jest.fn(), set: jest.fn(), setNx: jest.fn() } as never,
+      matchNarrativeGenerator: {} as never,
+      matchNarrativeCache: {} as never,
+      matchListRankQueue: { enqueueRebuild: jest.fn() } as never,
+    });
   }
 
   it('not_ready clears all ranks for viewer', async () => {
@@ -162,18 +163,18 @@ describe('MeMatchesService MatchListRank persist', () => {
       matchListRank: { deleteMany: jest.fn(), upsert: jest.fn() },
       $transaction: jest.fn(),
     };
-    const cache = { del: jest.fn().mockResolvedValue(undefined) };
-    const svc = new MeMatchesService(
-      prisma as never,
-      { trace: jest.fn() } as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      cache as never,
-      {} as never,
-      {} as never,
-      { enqueueRebuild: jest.fn() } as never,
-    );
+    const cache = { del: jest.fn().mockResolvedValue(undefined), get: jest.fn(), set: jest.fn(), setNx: jest.fn() };
+    const svc = createMeMatchesServiceForTest({
+      prisma: prisma as never,
+      obs: { trace: jest.fn() } as never,
+      photoStorage: {} as never,
+      mutualMatches: {} as never,
+      analytics: { track: jest.fn() } as never,
+      cache: cache as never,
+      matchNarrativeGenerator: {} as never,
+      matchNarrativeCache: {} as never,
+      matchListRankQueue: { enqueueRebuild: jest.fn() } as never,
+    });
     jest.spyOn(svc, 'buildMatchListRankSnapshot').mockResolvedValue({
       status: 'budget_exceeded',
       rows: [],
