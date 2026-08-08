@@ -6,5 +6,8 @@ export const queryKeys = {
       unreadTotal: ['me', 'conversations', 'unread-total'] as const,
       list: ['me', 'conversations', 'list'] as const,
     },
+    matches: {
+      list: ['me', 'matches', 'list'] as const,
+    },
   },
 };

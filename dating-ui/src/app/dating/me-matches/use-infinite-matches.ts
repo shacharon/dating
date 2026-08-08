@@ -1,13 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  useInfiniteQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { fetchMyMatches } from '@/lib/me-matches-api';
 import { mapMeMatchesListToViewModel } from '@/lib/matches/map-me-match-to-view-model';
 import type {
   MatchListItemVM,
   MatchListPageVM,
 } from '@/lib/matches/match-view-models';
+import { queryKeys } from '@/lib/query-keys';
 
 const PAGE_LIMIT = 20;
 
@@ -23,94 +28,89 @@ export type UseInfiniteMatchesResult = {
   sentinelRef: (node: HTMLElement | null) => void;
 };
 
+function dedupeMatchesById(items: MatchListItemVM[]): MatchListItemVM[] {
+  const seen = new Set<string>();
+  const out: MatchListItemVM[] = [];
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}
+
+function resolveListEnvelope(
+  pages: MatchListPageVM[] | undefined,
+): MatchListPageVM | null {
+  if (!pages?.length) return null;
+  const ready = pages.find((p) => p.status === 'ready');
+  return ready ?? pages[0] ?? null;
+}
+
 export function useInfiniteMatches(
   loadFailedMessage: string,
 ): UseInfiniteMatchesResult {
   const router = useRouter();
   const routerRef = useRef(router);
   routerRef.current = router;
-  const [data, setData] = useState<MatchListPageVM | null>(null);
-  const [matches, setMatches] = useState<MatchListItemVM[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const loadingMoreRef = useRef(false);
+  const queryClient = useQueryClient();
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const dto = await fetchMyMatches({ limit: PAGE_LIMIT });
-      const page = mapMeMatchesListToViewModel(dto);
-      if (page.status === 'not_ready') {
-        // Stay on Matches for photo gate — show an in-page empty state instead of a silent redirect.
-        if (page.reason === 'no_photo') {
-          setData(page);
-          setMatches([]);
-          setNextCursor(null);
-          setHasMore(false);
-          return;
-        }
-        if (page.reason === 'no_profile') routerRef.current.replace('/onboarding');
-        else routerRef.current.replace('/profile?tab=analysis');
-        return;
-      }
-      setData(page);
-      setMatches(page.matches);
-      setNextCursor(page.nextCursor);
-      setHasMore(page.hasMore);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : loadFailedMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadFailedMessage]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const loadMore = useCallback(async () => {
-    if (!hasMore || !nextCursor || loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    try {
+  const {
+    data,
+    error: queryError,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: queryKeys.me.matches.list,
+    queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
       const dto = await fetchMyMatches({
-        cursor: nextCursor,
+        cursor: pageParam,
         limit: PAGE_LIMIT,
       });
-      const page = mapMeMatchesListToViewModel(dto);
-      if (page.status !== 'ready') return;
-      const incoming = page.matches;
-      setMatches((prev) => {
-        const seen = new Set(prev.map((m) => m.id));
-        const merged = [...prev];
-        for (const m of incoming) {
-          if (!seen.has(m.id)) merged.push(m);
-        }
-        return merged;
-      });
-      setNextCursor(page.nextCursor);
-      setHasMore(page.hasMore);
-      setData((prev) =>
-        prev && prev.status === 'ready'
-          ? {
-              ...prev,
-              ...page,
-              matches: prev.matches,
-            }
-          : page,
-      );
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : loadFailedMessage);
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
+      return mapMeMatchesListToViewModel(dto);
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: MatchListPageVM) =>
+      last.status === 'ready' && last.hasMore && last.nextCursor
+        ? last.nextCursor
+        : undefined,
+  });
+
+  const firstPage = data?.pages[0];
+
+  useEffect(() => {
+    if (!firstPage || firstPage.status !== 'not_ready') return;
+    if (firstPage.reason === 'no_photo') return;
+    if (firstPage.reason === 'no_profile') {
+      routerRef.current.replace('/onboarding');
+      return;
     }
-  }, [hasMore, nextCursor, loadFailedMessage]);
+    routerRef.current.replace('/profile?tab=analysis');
+  }, [firstPage]);
+
+  const listData = resolveListEnvelope(data?.pages);
+  const matches =
+    listData?.status === 'ready'
+      ? dedupeMatchesById(
+          (data?.pages ?? []).flatMap((page) =>
+            page.status === 'ready' ? page.matches : [],
+          ),
+        )
+      : [];
+
+  const loadMore = useCallback(async () => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    await fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const reload = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.me.matches.list,
+    });
+  }, [queryClient]);
 
   const sentinelRef = useCallback(
     (node: HTMLElement | null) => {
@@ -133,13 +133,20 @@ export function useInfiniteMatches(
     [loadMore],
   );
 
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : queryError
+        ? loadFailedMessage
+        : null;
+
   return {
-    data,
+    data: listData,
     matches,
-    loading,
-    loadingMore,
+    loading: isPending,
+    loadingMore: isFetchingNextPage,
     error,
-    hasMore,
+    hasMore: Boolean(hasNextPage),
     loadMore,
     reload,
     sentinelRef,

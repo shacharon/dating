@@ -1,9 +1,29 @@
+/** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMatchActions } from './use-match-actions';
 import * as api from '@/lib/me-matches-api';
+import { queryKeys } from '@/lib/query-keys';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
 vi.mock('@/lib/me-matches-api');
+
+function renderActions(
+  callback: () => ReturnType<typeof useMatchActions>,
+  client = createTestQueryClient(),
+) {
+  return {
+    client,
+    ...renderHook(callback, {
+      wrapper: ({ children }) => (
+        <QueryClientTestProvider client={client}>{children}</QueryClientTestProvider>
+      ),
+    }),
+  };
+}
 
 describe('useMatchActions', () => {
   const mockMatchId = 'match-123';
@@ -15,7 +35,7 @@ describe('useMatchActions', () => {
   });
 
   it('should initialize with default state', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId }),
     );
 
@@ -27,7 +47,7 @@ describe('useMatchActions', () => {
   });
 
   it('should initialize with initial action', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
     );
 
@@ -49,15 +69,16 @@ describe('useMatchActions', () => {
 
     vi.mocked(api.likeMatch).mockResolvedValue(mockResult);
 
-    const { result } = renderHook(() =>
+    const { result, client } = renderActions(() =>
       useMatchActions({
         matchId: mockMatchId,
         onActionSuccess: mockOnActionSuccess,
       }),
     );
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
 
     act(() => {
-      result.current.like();
+      void result.current.like();
     });
 
     expect(result.current.actionLoading).toBe(true);
@@ -73,6 +94,9 @@ describe('useMatchActions', () => {
     });
     expect(mockOnActionSuccess).toHaveBeenCalledWith('LIKE');
     expect(result.current.error).toBeNull();
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.me.matches.list,
+    });
   });
 
   it('should trigger mutual match callback on mutual match', async () => {
@@ -89,7 +113,7 @@ describe('useMatchActions', () => {
 
     vi.mocked(api.likeMatch).mockResolvedValue(mockResult);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({
         matchId: mockMatchId,
         onMutualMatch: mockOnMutualMatch,
@@ -125,7 +149,7 @@ describe('useMatchActions', () => {
     vi.mocked(api.passMatch).mockResolvedValue(mockActionResult);
     vi.mocked(api.fetchMatchAction).mockResolvedValue(mockActionState);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({
         matchId: mockMatchId,
         onActionSuccess: mockOnActionSuccess,
@@ -156,7 +180,7 @@ describe('useMatchActions', () => {
 
     vi.mocked(api.blockMatch).mockResolvedValue(mockResult);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({
         matchId: mockMatchId,
         onActionSuccess: mockOnActionSuccess,
@@ -182,7 +206,7 @@ describe('useMatchActions', () => {
     vi.mocked(api.undoMatchAction).mockResolvedValue(undefined);
     vi.mocked(api.fetchMatchAction).mockResolvedValue(mockActionState);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
     );
 
@@ -200,7 +224,7 @@ describe('useMatchActions', () => {
   });
 
   it('should not allow undo for BLOCK action', async () => {
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId, initialAction: 'BLOCK' }),
     );
 
@@ -217,7 +241,7 @@ describe('useMatchActions', () => {
     const mockError = new Error('Network error');
     vi.mocked(api.likeMatch).mockRejectedValue(mockError);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId }),
     );
 
@@ -233,7 +257,7 @@ describe('useMatchActions', () => {
     const mockError = new Error('Network error');
     vi.mocked(api.passMatch).mockRejectedValue(mockError);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId }),
     );
 
@@ -249,7 +273,7 @@ describe('useMatchActions', () => {
     const mockError = new Error('Cannot undo');
     vi.mocked(api.undoMatchAction).mockRejectedValue(mockError);
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
     );
 
@@ -268,25 +292,25 @@ describe('useMatchActions', () => {
       () => new Promise((resolve) => setTimeout(resolve, 100)),
     );
 
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId }),
     );
 
     act(() => {
-      result.current.like();
+      void result.current.like();
     });
 
     expect(result.current.actionLoading).toBe(true);
 
     act(() => {
-      result.current.pass();
+      void result.current.pass();
     });
 
     expect(api.passMatch).not.toHaveBeenCalled();
   });
 
   it('should not allow action if current action exists', async () => {
-    const { result } = renderHook(() =>
+    const { result } = renderActions(() =>
       useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
     );
 

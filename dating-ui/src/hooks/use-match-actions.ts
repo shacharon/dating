@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   likeMatch,
   passMatch,
@@ -7,6 +8,7 @@ import {
   fetchMatchAction,
   type MatchActionDto,
 } from '@/lib/me-matches-api';
+import { queryKeys } from '@/lib/query-keys';
 
 type ActionType = 'LIKE' | 'PASS' | 'BLOCK';
 type YourAction = ActionType | null;
@@ -42,12 +44,19 @@ export function useMatchActions({
   onMutualMatch,
   onActionSuccess,
 }: UseMatchActionsOptions): UseMatchActionsReturn {
+  const queryClient = useQueryClient();
   const [currentAction, setCurrentAction] = useState<YourAction>(initialAction);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<LastActionRecord | null>(null);
-  
+
   const previousActionRef = useRef<YourAction>(null);
+
+  const invalidateMatchesList = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.me.matches.list,
+    });
+  }, [queryClient]);
 
   const recordAction = useCallback(
     async (action: ActionType, errorMessage: string): Promise<void> => {
@@ -78,6 +87,7 @@ export function useMatchActions({
           setLastAction({ type: 'BLOCK', timestamp: Date.now() });
         }
 
+        await invalidateMatchesList();
         onActionSuccess?.(action);
       } catch (e: unknown) {
         setCurrentAction(previousActionRef.current);
@@ -86,7 +96,14 @@ export function useMatchActions({
         setActionLoading(false);
       }
     },
-    [matchId, actionLoading, currentAction, onMutualMatch, onActionSuccess],
+    [
+      matchId,
+      actionLoading,
+      currentAction,
+      onMutualMatch,
+      onActionSuccess,
+      invalidateMatchesList,
+    ],
   );
 
   const like = useCallback(async () => {
@@ -115,13 +132,14 @@ export function useMatchActions({
       const actionState = await fetchMatchAction(matchId);
       setCurrentAction(actionState.action);
       setLastAction(null);
+      await invalidateMatchesList();
     } catch (e: unknown) {
       setCurrentAction(previousActionRef.current);
       setError(e instanceof Error ? e.message : 'Could not undo action.');
     } finally {
       setActionLoading(false);
     }
-  }, [matchId, actionLoading, currentAction]);
+  }, [matchId, actionLoading, currentAction, invalidateMatchesList]);
 
   const canUndo =
     currentAction != null &&

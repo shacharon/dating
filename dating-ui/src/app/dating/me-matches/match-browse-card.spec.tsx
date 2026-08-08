@@ -53,6 +53,10 @@ vi.mock('@/components/match-photo', () => ({
 }));
 
 import { MatchBrowseCard } from './match-browse-card';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
 const matchDto = {
   id: 'prof-1',
@@ -94,6 +98,14 @@ function vm(
   return mapMeMatchItemToViewModel({ ...matchDto, ...overrides });
 }
 
+function renderCard(ui: React.ReactElement) {
+  return render(
+    <QueryClientTestProvider client={createTestQueryClient()}>
+      {ui}
+    </QueryClientTestProvider>,
+  );
+}
+
 describe('MatchBrowseCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,7 +116,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('renders photo-first region, collapsed why, and like/pass', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -133,7 +145,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('expands why and emits analytics with explanation_expanded true', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -189,7 +201,7 @@ describe('MatchBrowseCard', () => {
       conversationId: null,
     });
 
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -210,7 +222,7 @@ describe('MatchBrowseCard', () => {
 
   it('keeps photo h-[70vh] with long hook and Why closed (no layout steal)', () => {
     const longHook = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ');
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -242,7 +254,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('keeps small corner score badge (not Mode B hero)', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -264,7 +276,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('hides score badge when teaser.showScore is false', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -289,7 +301,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('hook uses dark-mode text token; card exposes teaser mode', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -311,7 +323,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B shows score hero + claim, hides corner badge', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -368,7 +380,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B empty claim uses i18n fallback; emits ready_again analytics', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -405,7 +417,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B omits score hero when matchScore is null', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -434,7 +446,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B hides score hero when teaser.showScore is false', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -461,7 +473,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode A does not render Mode B teaser block', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -483,7 +495,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode C shows hybrid lines, hides corner badge and Mode B hero', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -545,7 +557,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode C empty lines uses i18n fallback; emits new_chapter analytics', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
@@ -583,7 +595,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode C one-line teaser does not invent line2', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={vm({
