@@ -23,6 +23,12 @@ const STATUS_FAILED = 'FAILED' as UserProfileStatus;
  */
 export const EVALUATION_VERSION = 'v1';
 
+/** Outcome of {@link MeProfileAnalysisService.runForUser} (Sprint 48 Story 1). */
+export type ProfileAnalysisRunOutcome =
+  | { status: 'success' }
+  | { status: 'skipped' }
+  | { status: 'failed' };
+
 /**
  * Canonical signal keys extracted from `EvaluateBatchResult` into `UserProfileSignal` rows.
  *
@@ -349,7 +355,7 @@ export class MeProfileAnalysisService {
     private readonly obs: StructuredObservabilityService,
   ) {}
 
-  async runForUser(userId: string): Promise<void> {
+  async runForUser(userId: string): Promise<ProfileAnalysisRunOutcome> {
     const profile = await this.prisma.userProfile.findUnique({
       where: { userId },
     });
@@ -360,7 +366,7 @@ export class MeProfileAnalysisService {
         `me profile analysis skipped: not in SUBMITTED state userId=${userId} status=${profile?.status ?? 'none'}`,
         ErrorCodes.ME_PROFILE_ANALYSIS_SKIPPED,
       );
-      return;
+      return { status: 'skipped' };
     }
 
     // Transition to ANALYZING.
@@ -375,7 +381,7 @@ export class MeProfileAnalysisService {
         ErrorCodes.ME_PROFILE_ANALYSIS_FAILED,
         e,
       );
-      return;
+      return { status: 'failed' };
     }
 
     this.obs.trace(
@@ -424,6 +430,7 @@ export class MeProfileAnalysisService {
         `me profile analysis complete profileId=${profile.id}`,
         ErrorCodes.ME_PROFILE_ANALYSIS_SUCCESS,
       );
+      return { status: 'success' };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
 
@@ -444,6 +451,7 @@ export class MeProfileAnalysisService {
         ErrorCodes.ME_PROFILE_ANALYSIS_FAILED,
         e,
       );
+      return { status: 'failed' };
     }
   }
 }

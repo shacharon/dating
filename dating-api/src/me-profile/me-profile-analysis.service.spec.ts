@@ -92,7 +92,9 @@ describe('MeProfileAnalysisService', () => {
   it('skips when profile is not found', async () => {
     prisma.userProfile.findUnique.mockResolvedValue(null);
 
-    await service.runForUser(userId);
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'skipped',
+    });
 
     expect(prisma.userProfile.update).not.toHaveBeenCalled();
     expect(evaluate.evaluateBatch).not.toHaveBeenCalled();
@@ -107,7 +109,9 @@ describe('MeProfileAnalysisService', () => {
     async (status) => {
       prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status });
 
-      await service.runForUser(userId);
+      await expect(service.runForUser(userId)).resolves.toEqual({
+        status: 'skipped',
+      });
 
       expect(prisma.userProfile.update).not.toHaveBeenCalled();
       expect(evaluate.evaluateBatch).not.toHaveBeenCalled();
@@ -126,7 +130,9 @@ describe('MeProfileAnalysisService', () => {
     prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status: S.SUBMITTED });
     evaluate.evaluateBatch.mockResolvedValue({ ok: true, result: fakeResult } as never);
 
-    await service.runForUser(userId);
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'success',
+    });
 
     // First update (direct call): ANALYZING
     expect(prisma.userProfile.update).toHaveBeenNthCalledWith(1, {
@@ -183,7 +189,9 @@ describe('MeProfileAnalysisService', () => {
     const boom = new Error('LLM timeout');
     evaluate.evaluateBatch.mockRejectedValue(boom);
 
-    await service.runForUser(userId);
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'failed',
+    });
 
     // First update (direct): ANALYZING
     expect(prisma.userProfile.update).toHaveBeenNthCalledWith(1, {
@@ -229,7 +237,9 @@ describe('MeProfileAnalysisService', () => {
     const dbErr = new Error('DB connection lost');
     prisma.userProfile.update.mockRejectedValue(dbErr);
 
-    await service.runForUser(userId);
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'failed',
+    });
 
     expect(evaluate.evaluateBatch).not.toHaveBeenCalled();
     expect(prisma.userProfileEvaluation.create).not.toHaveBeenCalled();
@@ -254,7 +264,9 @@ describe('MeProfileAnalysisService', () => {
     const txErr = new Error('transaction failed');
     prisma.$transaction.mockRejectedValueOnce(txErr);
 
-    await service.runForUser(userId);
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'failed',
+    });
 
     expect(evaluate.evaluateBatch).toHaveBeenCalledTimes(1);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
@@ -295,7 +307,9 @@ describe('MeProfileAnalysisService', () => {
       .mockResolvedValueOnce({})
       .mockRejectedValueOnce(new Error('db down'));
 
-    await expect(service.runForUser(userId)).resolves.toBeUndefined();
+    await expect(service.runForUser(userId)).resolves.toEqual({
+      status: 'failed',
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -584,7 +598,9 @@ describe('MeProfileAnalysisService', () => {
         result: { self: {}, partner: {}, relationship: {} },
       } as never);
 
-      await expect(service.runForUser(userId)).resolves.toBeUndefined();
+      await expect(service.runForUser(userId)).resolves.toEqual({
+        status: 'success',
+      });
 
       expect(prisma.userProfile.update).toHaveBeenCalled();
       expect(prisma.$transaction).toHaveBeenCalled();
@@ -598,7 +614,9 @@ describe('MeProfileAnalysisService', () => {
       });
       evaluate.evaluateBatch.mockRejectedValue(new Error('LLM failure'));
 
-      await expect(service.runForUser(userId)).resolves.toBeUndefined();
+      await expect(service.runForUser(userId)).resolves.toEqual({
+        status: 'failed',
+      });
 
       expect(prisma.userProfile.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ status: S.FAILED }) }),

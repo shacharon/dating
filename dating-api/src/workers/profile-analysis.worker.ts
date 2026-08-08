@@ -1,10 +1,16 @@
 import { Injectable, Inject, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Queue from 'bull';
-import { MeProfileAnalysisService } from '../me-profile/me-profile-analysis.service';
+import {
+  MeProfileAnalysisService,
+  type ProfileAnalysisRunOutcome,
+} from '../me-profile/me-profile-analysis.service';
 import { MeMatchesService } from '../me-profile/me-matches.service';
+import { ErrorCodes } from '../logging/error-codes';
+import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { recordProfileAnalysisDurationMs } from '../observability/custom-metrics';
 import {
   PROFILE_ANALYSIS_QUEUE,
+  profileAnalysisJobId,
   type ProfileAnalysisJobData,
 } from './profile-analysis.queue';
 import {
@@ -29,6 +35,7 @@ export class ProfileAnalysisQueueService
     private readonly meMatches: MeMatchesService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
+    private readonly obs: StructuredObservabilityService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -92,34 +99,86 @@ export class ProfileAnalysisQueueService
     this.logger.log(
       `profile-analysis job start userId=${data.userId} profileId=${data.profileId}`,
     );
+    let outcome: ProfileAnalysisRunOutcome;
     try {
-      await this.analysis.runForUser(data.userId);
+      outcome = await this.analysis.runForUser(data.userId);
+    } catch (e: unknown) {
+      this.obs.error(
+        `profile-analysis run threw userId=${data.userId}`,
+        ErrorCodes.QUEUE_PROFILE_ANALYSIS_RUN_FAILED,
+        e,
+      );
+      throw e;
     } finally {
       recordProfileAnalysisDurationMs(Date.now() - started);
+    }
+
+    if (outcome.status === 'success') {
       await this.meMatches.invalidateMatchListCache(data.userId);
       await this.matchListRankQueue.enqueueRebuild(
         data.userId,
         'analysis_complete',
       );
+      this.obs.trace(
+        `profile-analysis rank side-effects ok userId=${data.userId}`,
+        ErrorCodes.QUEUE_PROFILE_ANALYSIS_RANK_ENQUEUED,
+      );
+      return;
     }
+
+    this.obs.trace(
+      `profile-analysis rank side-effects skipped userId=${data.userId} outcome=${outcome.status}`,
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_RANK_SKIPPED,
+    );
   }
 
   /**
    * Enqueue analysis or run inline when Bull is unavailable.
-   * @returns Bull job id or `inline:{profileId}`
+   * @returns Bull job id, coalesced jobId, `inline:{profileId}`, or `skipped:blank`
    */
   async enqueueOrRunInline(data: ProfileAnalysisJobData): Promise<string> {
-    if (this.queue && this.bullEnabled) {
-      const job = await this.queue.add(data, {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 60_000 },
-      });
-      return String(job.id);
+    const userId = data.userId?.trim() ?? '';
+    if (!userId) {
+      this.logger.warn('profile-analysis enqueue skipped: blank userId');
+      return 'skipped:blank';
     }
-    const inlineId = `inline:${data.profileId}`;
-    void this.runJob(data).catch((e: unknown) => {
+    const payload: ProfileAnalysisJobData = {
+      userId,
+      profileId: data.profileId,
+    };
+    if (this.queue && this.bullEnabled) {
+      const jobId = profileAnalysisJobId(userId);
+      try {
+        const job = await this.queue.add(payload, {
+          jobId,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 60_000 },
+        });
+        this.obs.trace(
+          `profile-analysis enqueued jobId=${jobId}`,
+          ErrorCodes.QUEUE_PROFILE_ANALYSIS_ENQUEUED,
+        );
+        return String(job.id);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/already exists|Job.*exists/i.test(msg)) {
+          this.obs.trace(
+            `profile-analysis coalesced jobId=${jobId}`,
+            ErrorCodes.QUEUE_PROFILE_ANALYSIS_COALESCED,
+          );
+          return jobId;
+        }
+        throw err;
+      }
+    }
+    const inlineId = `inline:${payload.profileId}`;
+    this.obs.trace(
+      `profile-analysis inline jobId=${inlineId}`,
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_INLINE,
+    );
+    void this.runJob(payload).catch((e: unknown) => {
       this.logger.error(
-        `inline profile analysis failed profileId=${data.profileId}: ${
+        `inline profile analysis failed profileId=${payload.profileId}: ${
           e instanceof Error ? e.message : String(e)
         }`,
       );

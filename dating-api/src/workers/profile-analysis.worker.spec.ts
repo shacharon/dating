@@ -1,11 +1,14 @@
 import { ProfileAnalysisQueueService } from './profile-analysis.worker';
+import { profileAnalysisJobId } from './profile-analysis.queue';
 import type { MeProfileAnalysisService } from '../me-profile/me-profile-analysis.service';
 import type { MeMatchesService } from '../me-profile/me-matches.service';
 import type { MatchListRankQueuePort } from './match-list-rank.ports';
+import type { StructuredObservabilityService } from '../logging/structured-observability.service';
+import { ErrorCodes } from '../logging/error-codes';
 
-describe('ProfileAnalysisQueueService match list rank enqueue', () => {
+describe('ProfileAnalysisQueueService', () => {
   const analysis = {
-    runForUser: jest.fn().mockResolvedValue(undefined),
+    runForUser: jest.fn(),
   } as unknown as MeProfileAnalysisService;
 
   const meMatches = {
@@ -16,50 +19,133 @@ describe('ProfileAnalysisQueueService match list rank enqueue', () => {
     enqueueRebuild: jest.fn().mockResolvedValue('inline:user'),
   } as unknown as MatchListRankQueuePort;
 
+  const obs = {
+    trace: jest.fn(),
+    error: jest.fn(),
+  } as unknown as StructuredObservabilityService;
+
   let service: ProfileAnalysisQueueService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (analysis.runForUser as jest.Mock).mockResolvedValue({ status: 'success' });
     service = new ProfileAnalysisQueueService(
       analysis,
       meMatches,
       matchListRankQueue,
+      obs,
     );
   });
 
-  it('runJob finally enqueues analysis_complete rebuild', async () => {
+  async function runJob(data: {
+    userId: string;
+    profileId: string;
+  }): Promise<void> {
     await (
       service as unknown as {
-        runJob: (data: { userId: string; profileId: string }) => Promise<void>;
+        runJob: (d: { userId: string; profileId: string }) => Promise<void>;
       }
-    ).runJob({ userId: 'user_a', profileId: 'prof_a' });
+    ).runJob(data);
+  }
+
+  it('on success invalidates cache and enqueues analysis_complete rebuild', async () => {
+    await runJob({ userId: 'user_a', profileId: 'prof_a' });
 
     expect(meMatches.invalidateMatchListCache).toHaveBeenCalledWith('user_a');
     expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
       'user_a',
       'analysis_complete',
     );
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('rank side-effects ok'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_RANK_ENQUEUED,
+    );
   });
 
-  it('runJob enqueues analysis_complete even when analysis throws', async () => {
+  it('on failed outcome skips cache invalidate and rebuild', async () => {
+    (analysis.runForUser as jest.Mock).mockResolvedValueOnce({
+      status: 'failed',
+    });
+
+    await runJob({ userId: 'user_b', profileId: 'prof_b' });
+
+    expect(meMatches.invalidateMatchListCache).not.toHaveBeenCalled();
+    expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('outcome=failed'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_RANK_SKIPPED,
+    );
+  });
+
+  it('on skipped outcome skips cache invalidate and rebuild', async () => {
+    (analysis.runForUser as jest.Mock).mockResolvedValueOnce({
+      status: 'skipped',
+    });
+
+    await runJob({ userId: 'user_c', profileId: 'prof_c' });
+
+    expect(meMatches.invalidateMatchListCache).not.toHaveBeenCalled();
+    expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('outcome=skipped'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_RANK_SKIPPED,
+    );
+  });
+
+  it('on throw does not enqueue rebuild and rethrows', async () => {
     (analysis.runForUser as jest.Mock).mockRejectedValueOnce(
       new Error('analysis failed'),
     );
 
     await expect(
-      (
-        service as unknown as {
-          runJob: (data: {
-            userId: string;
-            profileId: string;
-          }) => Promise<void>;
-        }
-      ).runJob({ userId: 'user_b', profileId: 'prof_b' }),
+      runJob({ userId: 'user_d', profileId: 'prof_d' }),
     ).rejects.toThrow('analysis failed');
 
-    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
-      'user_b',
-      'analysis_complete',
+    expect(meMatches.invalidateMatchListCache).not.toHaveBeenCalled();
+    expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
+    expect(obs.error).toHaveBeenCalledWith(
+      expect.stringContaining('run threw'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_RUN_FAILED,
+      expect.any(Error),
     );
+  });
+
+  it('coalesces when Bull rejects duplicate jobId', async () => {
+    const jobId = profileAnalysisJobId('user_e');
+    const add = jest
+      .fn()
+      .mockRejectedValue(new Error(`Job ${jobId} already exists`));
+    (
+      service as unknown as {
+        queue: { add: jest.Mock };
+        bullEnabled: boolean;
+      }
+    ).queue = { add };
+    (
+      service as unknown as { bullEnabled: boolean }
+    ).bullEnabled = true;
+
+    const result = await service.enqueueOrRunInline({
+      userId: 'user_e',
+      profileId: 'prof_e',
+    });
+
+    expect(result).toBe(jobId);
+    expect(add).toHaveBeenCalledWith(
+      { userId: 'user_e', profileId: 'prof_e' },
+      expect.objectContaining({ jobId }),
+    );
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('coalesced'),
+      ErrorCodes.QUEUE_PROFILE_ANALYSIS_COALESCED,
+    );
+  });
+
+  it('returns skipped:blank for blank userId', async () => {
+    const result = await service.enqueueOrRunInline({
+      userId: '   ',
+      profileId: 'prof_blank',
+    });
+    expect(result).toBe('skipped:blank');
   });
 });

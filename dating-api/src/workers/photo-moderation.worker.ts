@@ -1,8 +1,11 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Queue from 'bull';
+import { ErrorCodes } from '../logging/error-codes';
+import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PhotoModerationService } from '../photo-storage/photo-moderation.service';
 import {
   PHOTO_MODERATION_QUEUE,
+  photoModerationJobId,
   type PhotoModerationJobData,
 } from './photo-moderation.queue';
 
@@ -18,7 +21,10 @@ export class PhotoModerationQueueService
   private queue: Queue.Queue<PhotoModerationJobData> | null = null;
   private bullEnabled = false;
 
-  constructor(private readonly moderation: PhotoModerationService) {}
+  constructor(
+    private readonly moderation: PhotoModerationService,
+    private readonly obs: StructuredObservabilityService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     const url = process.env.REDIS_URL?.trim();
@@ -69,20 +75,47 @@ export class PhotoModerationQueueService
   }
 
   async enqueueOrRunInline(photoId: string): Promise<string> {
-    if (this.queue && this.bullEnabled) {
-      const job = await this.queue.add(
-        { photoId },
-        {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 30_000 },
-        },
-      );
-      return String(job.id);
+    const id = photoId?.trim() ?? '';
+    if (!id) {
+      this.logger.warn('photo-moderation enqueue skipped: blank photoId');
+      return 'skipped:blank';
     }
-    const inlineId = `inline:${photoId}`;
-    void this.moderation.processPendingPhoto(photoId).catch((e: unknown) => {
+    if (this.queue && this.bullEnabled) {
+      const jobId = photoModerationJobId(id);
+      try {
+        const job = await this.queue.add(
+          { photoId: id },
+          {
+            jobId,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 30_000 },
+          },
+        );
+        this.obs.trace(
+          `photo-moderation enqueued jobId=${jobId}`,
+          ErrorCodes.QUEUE_PHOTO_MODERATION_ENQUEUED,
+        );
+        return String(job.id);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/already exists|Job.*exists/i.test(msg)) {
+          this.obs.trace(
+            `photo-moderation coalesced jobId=${jobId}`,
+            ErrorCodes.QUEUE_PHOTO_MODERATION_COALESCED,
+          );
+          return jobId;
+        }
+        throw err;
+      }
+    }
+    const inlineId = `inline:${id}`;
+    this.obs.trace(
+      `photo-moderation inline jobId=${inlineId}`,
+      ErrorCodes.QUEUE_PHOTO_MODERATION_INLINE,
+    );
+    void this.moderation.processPendingPhoto(id).catch((e: unknown) => {
       this.logger.error(
-        `inline photo moderation failed photoId=${photoId}: ${
+        `inline photo moderation failed photoId=${id}: ${
           e instanceof Error ? e.message : String(e)
         }`,
       );
