@@ -126,6 +126,79 @@ describe('mapMeMatchItemToViewModel', () => {
     );
     expect(vm.score).toBe(80);
   });
+
+  it('falls back to priorityScore when matchScore is null', () => {
+    const vm = mapMeMatchItemToViewModel(
+      baseItem({ matchScore: null, priorityScore: 77, priorityTier: undefined }),
+    );
+    expect(vm.score).toBe(77);
+    expect(vm.tier).toBe('GOOD');
+  });
+
+  it('treats NaN scores as null and defaults tier to OTHER', () => {
+    const vm = mapMeMatchItemToViewModel(
+      baseItem({
+        matchScore: Number.NaN,
+        priorityScore: Number.NaN,
+        priorityTier: undefined,
+      }),
+    );
+    expect(vm.score).toBeNull();
+    expect(vm.tier).toBe('OTHER');
+  });
+
+  it('trims tensionChip and drops whitespace-only', () => {
+    expect(
+      mapMeMatchItemToViewModel(
+        baseItem({
+          explainability: {
+            positiveChips: [],
+            reasonShort: 'r',
+            tensionChip: '  Pace  ',
+          },
+        }),
+      ).why?.tensionChip,
+    ).toBe('Pace');
+
+    expect(
+      mapMeMatchItemToViewModel(
+        baseItem({
+          explainability: {
+            positiveChips: [],
+            reasonShort: 'r',
+            tensionChip: '   ',
+          },
+        }),
+      ).why?.tensionChip,
+    ).toBeNull();
+  });
+
+  it('defaults approvedPhotoCount and maps absent teaser to null', () => {
+    const vm = mapMeMatchItemToViewModel(
+      baseItem({ approvedPhotoCount: undefined, teaser: undefined }),
+    );
+    expect(vm.approvedPhotoCount).toBe(0);
+    expect(vm.teaser).toBeNull();
+  });
+
+  it('ignores invalid priorityTier and derives from score', () => {
+    const vm = mapMeMatchItemToViewModel(
+      baseItem({
+        matchScore: 90,
+        priorityTier: 'NOPE' as MeMatchItemDto['priorityTier'],
+      }),
+    );
+    expect(vm.tier).toBe('HIGH');
+  });
+
+  it('maps empty hardBlock reasons without throwing', () => {
+    const vm = mapMeMatchItemToViewModel(
+      baseItem({
+        hardBlocked: { disabled: true, reasons: [] },
+      }),
+    );
+    expect(vm.hardBlock).toEqual({ disabled: true, reasons: [] });
+  });
 });
 
 describe('mapMeMatchDetailToViewModel', () => {
@@ -161,6 +234,25 @@ describe('mapMeMatchDetailToViewModel', () => {
     expect('tier' in vm).toBe(false);
     expect('viewerAction' in vm).toBe(false);
   });
+
+  it('normalizes missing traits/narrative', () => {
+    const vm = mapMeMatchDetailToViewModel({
+      id: 'p3',
+      nickname: null,
+      gender: null,
+      ageYears: null,
+      locationLabel: null,
+      analyzedAt: null,
+      hasEvaluation: false,
+      evaluationSummary: null,
+      matchScore: null,
+      explainability: null,
+      recommendation: null,
+    });
+    expect(vm.traits).toEqual([]);
+    expect(vm.narrative).toBeNull();
+    expect(vm.summary).toBeNull();
+  });
 });
 
 describe('mapMeMatchesListToViewModel', () => {
@@ -175,6 +267,12 @@ describe('mapMeMatchesListToViewModel', () => {
       nextCursor: null,
       hasMore: false,
     });
+  });
+
+  it('defaults missing not_ready reason to no_profile', () => {
+    expect(
+      mapMeMatchesListToViewModel({ status: 'not_ready' }),
+    ).toMatchObject({ status: 'not_ready', reason: 'no_profile' });
   });
 
   it('maps ready envelope and items', () => {
@@ -199,6 +297,18 @@ describe('mapMeMatchesListToViewModel', () => {
     expect(vm.filteredNoPhotoCandidates).toBe(2);
     expect(vm.matches).toHaveLength(1);
     expect(vm.matches[0]?.tier).toBe('HIGH');
+  });
+
+  it('coerces missing matches to empty array', () => {
+    const vm = mapMeMatchesListToViewModel({
+      status: 'ready',
+      viewerProfileId: 'v1',
+    });
+    expect(vm.status).toBe('ready');
+    if (vm.status !== 'ready') return;
+    expect(vm.matches).toEqual([]);
+    expect(vm.hasMore).toBe(false);
+    expect(vm.nextCursor).toBeNull();
   });
 });
 

@@ -56,9 +56,10 @@ export function resolveMatchTier(input: {
 
 function mapWhy(dto: MatchExplainabilityDto | null): MatchWhyVM | null {
   if (!dto) return null;
+  const tension = dto.tensionChip?.trim() || null;
   return {
     positiveChips: dto.positiveChips ?? [],
-    tensionChip: dto.tensionChip?.trim() ? dto.tensionChip : null,
+    tensionChip: tension,
     reasonShort: dto.reasonShort ?? '',
     sharedInterestNote: dto.sharedInterestNote ?? null,
     interestOverlapTags: dto.interestOverlapTags ?? [],
