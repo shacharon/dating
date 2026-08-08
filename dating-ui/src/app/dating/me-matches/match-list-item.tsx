@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 import { MatchPhoto } from '@/components/match-photo';
-import { type MeMatchItemDto } from '@/lib/me-matches-api';
+import type {
+  MatchListItemVM,
+  MatchViewerAction,
+} from '@/lib/matches/match-view-models';
 import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n';
 import {
@@ -15,7 +18,7 @@ import { markMatchesScrollForRestore } from './me-matches-scroll';
 type ListCopy = AppCopySchema['matches']['list'];
 
 function matchActionBadge(
-  action: NonNullable<MeMatchItemDto['yourAction']>,
+  action: MatchViewerAction,
   copy: ListCopy['actionBadge'],
 ) {
   switch (action) {
@@ -34,19 +37,19 @@ export function MatchListItem({
   locale,
   listCopy,
 }: {
-  match: MeMatchItemDto;
+  match: MatchListItemVM;
   index: number;
   locale: AppLocale;
   listCopy: ListCopy;
 }) {
-  const hardBlocked = m.hardBlocked;
+  const hardBlocked = m.hardBlock;
   const secondary = matchListSecondaryMeta(m);
   const sharedNote = hardBlocked
     ? null
-    : formatSharedInterestNote(m.explainability?.sharedInterestNote);
+    : formatSharedInterestNote(m.why?.sharedInterestNote);
   const actionBadge =
-    !hardBlocked && m.yourAction != null
-      ? matchActionBadge(m.yourAction, listCopy.actionBadge)
+    !hardBlocked && m.viewerAction != null
+      ? matchActionBadge(m.viewerAction, listCopy.actionBadge)
       : null;
   const firstHardReason = hardBlocked?.reasons[0];
   const formattedHardReason = firstHardReason
@@ -76,7 +79,7 @@ export function MatchListItem({
             <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
               {matchListPrimaryLabel(m)}
             </p>
-            {hardBlocked && m.yourAction === 'LIKE' && (
+            {hardBlocked && m.viewerAction === 'LIKE' && (
               <p className="text-xs text-zinc-600 dark:text-zinc-300">
                 {listCopy.hardBlocked.youLikedThisProfile}
               </p>
@@ -139,12 +142,12 @@ export function MatchListItem({
           </div>
           {!hardBlocked && (
             <div className="flex shrink-0 items-center gap-2 self-center">
-              {actionBadge && m.yourAction != null && (
+              {actionBadge && m.viewerAction != null && (
                 <span
                   className={
-                    m.yourAction === 'LIKE'
+                    m.viewerAction === 'LIKE'
                       ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                      : m.yourAction === 'PASS'
+                      : m.viewerAction === 'PASS'
                         ? 'rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
                         : 'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400'
                   }
@@ -153,9 +156,9 @@ export function MatchListItem({
                   {actionBadge.label}
                 </span>
               )}
-              {m.matchScore != null && (
+              {m.score != null && (
                 <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                  {m.matchScore}
+                  {m.score}
                 </span>
               )}
               <span className="text-zinc-400 dark:text-zinc-500" aria-hidden>

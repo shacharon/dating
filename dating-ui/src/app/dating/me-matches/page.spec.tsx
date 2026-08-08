@@ -594,13 +594,19 @@ describe('MeMatchesPage (yourAction badges)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('match-why-toggle')).toBeTruthy();
     });
-    expect(screen.getByTestId('match-why-panel').hasAttribute('hidden')).toBe(
-      true,
-    );
+    expect(
+      document
+        .querySelector('[data-testid="match-why-panel"]')
+        ?.hasAttribute('hidden'),
+    ).toBe(true);
     fireEvent.click(screen.getByTestId('match-why-toggle'));
-    expect(screen.getByTestId('match-why-panel').hasAttribute('hidden')).toBe(
-      false,
-    );
+    await waitFor(() => {
+      expect(
+        document
+          .querySelector('[data-testid="match-why-panel"]')
+          ?.hasAttribute('hidden'),
+      ).toBe(false);
+    });
     expect(screen.getByTestId('match-why-chips')).toBeTruthy();
     expect(
       screen.getByText(
@@ -818,12 +824,18 @@ describe('MeMatchesPage (priority sections)', () => {
     });
     expect(screen.queryByTestId('match-priority-section-high')).toBeNull();
     expect(
-      screen.getByTestId('match-priority-panel-good').hasAttribute('hidden'),
+      document
+        .querySelector('[data-testid="match-priority-panel-good"]')
+        ?.hasAttribute('hidden'),
     ).toBe(true);
     fireEvent.click(screen.getByTestId('match-priority-toggle-good'));
-    expect(
-      screen.getByTestId('match-priority-panel-good').hasAttribute('hidden'),
-    ).toBe(false);
+    await waitFor(() => {
+      expect(
+        document
+          .querySelector('[data-testid="match-priority-panel-good"]')
+          ?.hasAttribute('hidden'),
+      ).toBe(false);
+    });
     expect(screen.getByText('GoodOne')).toBeTruthy();
     expect(emitProductLog).toHaveBeenCalledWith(
       expect.objectContaining({

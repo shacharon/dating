@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { MeMatchDetailDto } from '@/lib/me-matches-api';
+import type { MatchDetailVM } from '@/lib/matches/match-view-models';
 import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 import {
   resolveDetailProse,
@@ -10,7 +10,7 @@ import {
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 
 type Props = {
-  data: MeMatchDetailDto;
+  data: MatchDetailVM;
   locale: AppLocale;
   detailCopy: AppCopySchema['matches']['detail'];
   /** Rendered after shared interests, before caution (preserves prior layout). */
@@ -27,9 +27,7 @@ export function MatchDetailContent({
   feedbackSlot,
 }: Props) {
   const prose = resolveDetailProse(data);
-  const sharedNote = formatSharedInterestNote(
-    data.explainability?.sharedInterestNote,
-  );
+  const sharedNote = formatSharedInterestNote(data.why?.sharedInterestNote);
 
   return (
     <div className="space-y-5 px-6 py-5 text-sm">

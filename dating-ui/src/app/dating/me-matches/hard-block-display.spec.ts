@@ -4,7 +4,7 @@ import {
   formatHardBlockReasonMessage,
   type HardBlockReasonCopy,
 } from './hard-block-display';
-import type { HardBlockReasonDto } from '@/lib/me-matches-api';
+import type { MatchHardBlockReasonVM } from '@/lib/matches/match-view-models';
 
 const copy: HardBlockReasonCopy = {
   smokingExcludedViewerToThem:
@@ -34,15 +34,13 @@ const copy: HardBlockReasonCopy = {
 
 describe('formatHardBlockReason', () => {
   it('uses direct smoking copy as primary and quotes as evidence', () => {
-    const reason: HardBlockReasonDto = {
+    const reason: MatchHardBlockReasonVM = {
       code: 'DB_SMOKING_EXCLUDED_TRAIT_PRESENT',
       dimension: 'smoking',
       direction: 'viewer_to_them',
       message: 'English fallback',
-      evidence: {
-        viewerQuote: "I don't want smokers",
-        counterpartyQuote: 'I smoke',
-      },
+      viewerQuote: "I don't want smokers",
+      counterpartyQuote: 'I smoke',
     };
     const formatted = formatHardBlockReason(reason, copy);
     expect(formatted.primary).toBe(
@@ -55,11 +53,13 @@ describe('formatHardBlockReason', () => {
   });
 
   it('falls back to API message for unknown codes', () => {
-    const reason: HardBlockReasonDto = {
+    const reason: MatchHardBlockReasonVM = {
       code: 'SOME_UNKNOWN_CODE',
       dimension: 'mystery',
       direction: 'viewer_to_them',
       message: 'Their age is outside your preferred age range.',
+      viewerQuote: null,
+      counterpartyQuote: null,
     };
     expect(formatHardBlockReason(reason, copy).primary).toBe(
       'Their age is outside your preferred age range.',
@@ -67,15 +67,13 @@ describe('formatHardBlockReason', () => {
   });
 
   it('formats them_to_viewer smoking exclude', () => {
-    const reason: HardBlockReasonDto = {
+    const reason: MatchHardBlockReasonVM = {
       code: 'DB_SMOKING_EXCLUDED_TRAIT_PRESENT',
       dimension: 'smoking',
       direction: 'them_to_viewer',
       message: 'fallback',
-      evidence: {
-        viewerQuote: 'I smoke',
-        counterpartyQuote: 'Non-smokers only',
-      },
+      viewerQuote: 'I smoke',
+      counterpartyQuote: 'Non-smokers only',
     };
     const formatted = formatHardBlockReason(reason, copy);
     expect(formatted.primary).toBe(
@@ -85,11 +83,13 @@ describe('formatHardBlockReason', () => {
   });
 
   it('formats AGE without evidence', () => {
-    const reason: HardBlockReasonDto = {
+    const reason: MatchHardBlockReasonVM = {
       code: 'AGE_BELOW_MIN',
       dimension: 'AGE',
       direction: 'viewer_to_them',
       message: 'fallback',
+      viewerQuote: null,
+      counterpartyQuote: null,
     };
     const formatted = formatHardBlockReason(reason, copy);
     expect(formatted.primary).toBe(

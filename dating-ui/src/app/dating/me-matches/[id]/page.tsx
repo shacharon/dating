@@ -7,8 +7,9 @@ import {
   fetchMatchAction,
   fetchMatchFeedback,
   fetchMyMatchById,
-  type MeMatchDetailDto,
 } from '@/lib/me-matches-api';
+import { mapMeMatchDetailToViewModel } from '@/lib/matches/map-me-match-to-view-model';
+import type { MatchDetailVM } from '@/lib/matches/match-view-models';
 import { useAppLocale } from '@/lib/i18n';
 import { useMatchActions } from '@/hooks/use-match-actions';
 import { useMatchFeedback } from '@/hooks/use-match-feedback';
@@ -26,7 +27,7 @@ export default function MeMatchDetailPage() {
   const { locale, copy } = useAppLocale();
   const detailCopy = copy.matches.detail;
   const feedbackCopy = copy.launch.matchDetail.feedback;
-  const [data, setData] = useState<MeMatchDetailDto | null>(null);
+  const [data, setData] = useState<MatchDetailVM | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
@@ -74,7 +75,7 @@ export default function MeMatchDetailPage() {
     Promise.all([fetchMyMatchById(id), fetchMatchAction(id), fetchMatchFeedback(id)])
       .then(([dto, actionState, feedbackState]) => {
         if (cancelled) return;
-        setData(dto);
+        setData(mapMeMatchDetailToViewModel(dto));
         setCurrentAction(actionState.action);
         setMutualMatch(actionState.mutualMatch);
         setConversationId(actionState.conversationId);
@@ -92,7 +93,7 @@ export default function MeMatchDetailPage() {
     };
   }, [id, setCurrentAction, setFeedbackSentiment, detailCopy.loadFailed]);
 
-  const isHardBlocked = data?.hardBlocked != null;
+  const isHardBlocked = data?.hardBlock != null;
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -124,9 +125,9 @@ export default function MeMatchDetailPage() {
         {!loading && !error && data && (
           <article className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
             <MatchDetailHeader data={data} detailCopy={detailCopy} />
-            {data.hardBlocked && (
+            {data.hardBlock && (
               <MatchDetailHardBlock
-                hardBlocked={data.hardBlocked}
+                hardBlock={data.hardBlock}
                 currentAction={currentAction}
                 detailCopy={detailCopy}
               />

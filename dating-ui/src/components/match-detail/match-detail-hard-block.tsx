@@ -1,19 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import type { HardBlockedDto } from '@/lib/me-matches-api';
+import type { MatchHardBlockVM } from '@/lib/matches/match-view-models';
 import { formatHardBlockReason } from '@/app/dating/me-matches/hard-block-display';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {
-  hardBlocked: HardBlockedDto;
+  hardBlock: MatchHardBlockVM;
   currentAction: 'LIKE' | 'PASS' | 'BLOCK' | null;
   detailCopy: AppCopySchema['matches']['detail'];
 };
 
 /** Amber banner when the match is hard-blocked from further actions. */
 export function MatchDetailHardBlock({
-  hardBlocked,
+  hardBlock,
   currentAction,
   detailCopy,
 }: Props) {
@@ -36,7 +36,7 @@ export function MatchDetailHardBlock({
         {detailCopy.hardBlocked.reasonsHeading}
       </p>
       <ul className="mt-1 space-y-2">
-        {hardBlocked.reasons.map((r) => {
+        {hardBlock.reasons.map((r) => {
           const formatted = formatHardBlockReason(r, detailCopy.hardBlocked);
           return (
             <li

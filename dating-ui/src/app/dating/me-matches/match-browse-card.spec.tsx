@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { enCopy } from '@/lib/i18n/en';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import { mapMeMatchItemToViewModel } from '@/lib/matches/map-me-match-to-view-model';
 
 const { likeMatch, passMatch, emitProductLog } = vi.hoisted(() => ({
   likeMatch: vi.fn(),
@@ -53,7 +54,7 @@ vi.mock('@/components/match-photo', () => ({
 
 import { MatchBrowseCard } from './match-browse-card';
 
-const match = {
+const matchDto = {
   id: 'prof-1',
   nickname: 'Sara',
   gender: 'FEMALE',
@@ -84,6 +85,14 @@ const match = {
   },
   yourAction: null,
 } satisfies MeMatchItemDto;
+
+const match = mapMeMatchItemToViewModel(matchDto);
+
+function vm(
+  overrides: Partial<MeMatchItemDto> = {},
+): ReturnType<typeof mapMeMatchItemToViewModel> {
+  return mapMeMatchItemToViewModel({ ...matchDto, ...overrides });
+}
 
 describe('MatchBrowseCard', () => {
   beforeEach(() => {
@@ -204,15 +213,14 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             teaser: {
               mode: 'first_chapter',
               lines: [longHook],
               showScore: true,
               score: 87,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -259,10 +267,15 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
-            teaser: { ...match.teaser!, showScore: false },
-          }}
+          match={vm({
+            teaser: {
+              mode: 'first_chapter',
+              lines: matchDto.teaser.lines,
+              showScore: false,
+              score: 87,
+              askHint: 'ask about Japan',
+            },
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -301,8 +314,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: 92,
             teaser: {
               mode: 'ready_again',
@@ -311,7 +323,7 @@ describe('MatchBrowseCard', () => {
               showScore: true,
               score: 92,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -359,8 +371,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: 88,
             teaser: {
               mode: 'ready_again',
@@ -368,7 +379,7 @@ describe('MatchBrowseCard', () => {
               showScore: true,
               score: 88,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -397,8 +408,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: null,
             teaser: {
               mode: 'ready_again',
@@ -407,7 +417,7 @@ describe('MatchBrowseCard', () => {
               showScore: true,
               score: null,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -427,8 +437,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: 92,
             teaser: {
               mode: 'ready_again',
@@ -437,7 +446,7 @@ describe('MatchBrowseCard', () => {
               showScore: false,
               score: 92,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -477,8 +486,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: 88,
             teaser: {
               mode: 'new_chapter',
@@ -489,7 +497,7 @@ describe('MatchBrowseCard', () => {
               showScore: true,
               score: 88,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -540,8 +548,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: 88,
             teaser: {
               mode: 'new_chapter',
@@ -549,7 +556,7 @@ describe('MatchBrowseCard', () => {
               showScore: true,
               score: 88,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}
@@ -579,8 +586,7 @@ describe('MatchBrowseCard', () => {
     render(
       <ul>
         <MatchBrowseCard
-          match={{
-            ...match,
+          match={vm({
             matchScore: 88,
             teaser: {
               mode: 'new_chapter',
@@ -588,7 +594,7 @@ describe('MatchBrowseCard', () => {
               showScore: true,
               score: 88,
             },
-          }}
+          })}
           index={0}
           locale="en"
           listCopy={enCopy.matches.list}

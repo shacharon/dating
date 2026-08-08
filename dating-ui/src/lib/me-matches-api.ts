@@ -120,6 +120,8 @@ export interface MeMatchItemDto {
   teaser?: MatchTeaserDto;
   /** Relative path to primary photo file endpoint; null when absent. */
   primaryPhotoUrl?: string | null;
+  /** Approved photo count from wire (Sprint 45). */
+  approvedPhotoCount?: number;
   yourAction?: 'LIKE' | 'PASS' | 'BLOCK' | null;
   /** Present when hard-ineligible but already Liked / mutual with the viewer. */
   hardBlocked?: HardBlockedDto;
@@ -138,6 +140,8 @@ export interface MeMatchesListDto {
    */
   viewerProfileAnalysisStale?: boolean;
   totalCandidatesBeforeFilter?: number;
+  filteredNoPhotoCandidates?: number;
+  budgetExceeded?: boolean;
   matches?: MeMatchItemDto[];
   nextCursor?: string | null;
   hasMore?: boolean;
@@ -172,6 +176,8 @@ export interface MeMatchDetailDto {
   teaser?: MatchTeaserDto;
   /** Relative path to primary photo file endpoint; null when absent. */
   primaryPhotoUrl?: string | null;
+  /** Approved photo count from wire (Sprint 45). */
+  approvedPhotoCount?: number;
   /** Present when hard-ineligible but already Liked / mutual with the viewer. */
   hardBlocked?: HardBlockedDto;
 }

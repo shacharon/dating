@@ -1,4 +1,8 @@
-import type { MeMatchDetailDto, MeMatchItemDto, TeaserMode } from '@/lib/me-matches-api';
+import type {
+  MatchDetailVM,
+  MatchListItemVM,
+  MatchTeaserMode,
+} from '@/lib/matches/match-view-models';
 import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 
 /** QA preview override — client display only (Sprint 44 Story 3). */
@@ -17,7 +21,7 @@ export function formatBrowseAge(ageYears: number | null): string | null {
   return String(Math.trunc(ageYears));
 }
 
-export function matchBrowseLocation(m: MeMatchItemDto): string | null {
+export function matchBrowseLocation(m: MatchListItemVM): string | null {
   return usableLocationLabel(m.locationLabel);
 }
 
@@ -25,21 +29,21 @@ export function matchBrowseLocation(m: MeMatchItemDto): string | null {
  * One-liner under browse photo: takeaway → shared interests → first positive chip.
  * Kept for non–Mode-A interim and Why helpers.
  */
-export function matchBrowseOneLiner(m: MeMatchItemDto): string | null {
+export function matchBrowseOneLiner(m: MatchListItemVM): string | null {
   const takeaway = m.recommendation?.primaryTakeaway?.trim();
   if (takeaway) return takeaway;
 
-  const shared = formatSharedInterestNote(m.explainability?.sharedInterestNote);
+  const shared = formatSharedInterestNote(m.why?.sharedInterestNote);
   if (shared) return shared;
 
-  const chip = m.explainability?.positiveChips?.[0]?.trim();
+  const chip = m.why?.positiveChips?.[0]?.trim();
   if (chip) return chip;
 
   return null;
 }
 
 /** Read QA teaser-mode preview from localStorage (null when unset / SSR). */
-export function readTeaserModePreview(): TeaserMode | null {
+export function readTeaserModePreview(): MatchTeaserMode | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(TEASER_MODE_PREVIEW_STORAGE_KEY);
@@ -57,7 +61,7 @@ export function readTeaserModePreview(): TeaserMode | null {
 }
 
 /** Effective browse teaser mode (preview override wins). */
-export function resolveBrowseTeaserMode(m: MeMatchItemDto): TeaserMode {
+export function resolveBrowseTeaserMode(m: MatchListItemVM): MatchTeaserMode {
   const preview = readTeaserModePreview();
   if (
     preview === 'ready_again' ||
@@ -73,7 +77,7 @@ export function resolveBrowseTeaserMode(m: MeMatchItemDto): TeaserMode {
  * Mode A always-visible hook. Never invent facts — API teaser or i18n empty only.
  */
 export function resolveMatchBrowseHook(
-  m: MeMatchItemDto,
+  m: MatchListItemVM,
   hookEmpty: string,
 ): string {
   const mode = resolveBrowseTeaserMode(m);
@@ -89,7 +93,7 @@ export function resolveMatchBrowseHook(
  * Mode B life-goal claim. Prefer teaser.claim only — no hobby/takeaway fallback.
  */
 export function resolveMatchBrowseClaim(
-  m: MeMatchItemDto,
+  m: MatchListItemVM,
   claimEmpty: string,
 ): string {
   const claim = m.teaser?.claim?.trim();
@@ -106,7 +110,7 @@ export type BrowseHybridLines = { line1: string; line2: string | null };
  * Mode C hybrid teaser lines. Prefer teaser.lines only — no hook/claim/takeaway invent.
  */
 export function resolveMatchBrowseHybridLines(
-  m: MeMatchItemDto,
+  m: MatchListItemVM,
   linesEmpty: string,
 ): BrowseHybridLines {
   const lines = m.teaser?.lines ?? [];
@@ -118,10 +122,10 @@ export function resolveMatchBrowseHybridLines(
   return { line1, line2 };
 }
 
-export function matchBrowseWhyBody(m: MeMatchItemDto): string | null {
+export function matchBrowseWhyBody(m: MatchListItemVM): string | null {
   const takeaway = m.recommendation?.primaryTakeaway?.trim();
   if (takeaway) return takeaway;
-  const reason = m.explainability?.reasonShort?.trim();
+  const reason = m.why?.reasonShort?.trim();
   if (reason) return reason;
   return null;
 }
@@ -138,19 +142,19 @@ function matchMetaParts(
   ].filter((part): part is string => Boolean(part));
 }
 
-export function matchListPrimaryLabel(m: MeMatchItemDto): string {
+export function matchListPrimaryLabel(m: MatchListItemVM | MatchDetailVM): string {
   const nickname = m.nickname?.trim();
   if (nickname) return nickname;
   return matchMetaParts(m.gender, m.ageYears, m.locationLabel).join(' · ');
 }
 
-export function matchListSecondaryMeta(m: MeMatchItemDto): string | null {
+export function matchListSecondaryMeta(m: MatchListItemVM): string | null {
   if (!m.nickname?.trim()) return null;
   const meta = matchMetaParts(m.gender, m.ageYears, m.locationLabel).join(' · ');
   return meta || null;
 }
 
-export function matchDetailTitle(m: MeMatchDetailDto): string {
+export function matchDetailTitle(m: MatchDetailVM): string {
   const nickname = m.nickname?.trim();
   if (nickname) return nickname;
   return [
@@ -161,7 +165,7 @@ export function matchDetailTitle(m: MeMatchDetailDto): string {
     .join(', ');
 }
 
-export function matchDetailSubtitle(m: MeMatchDetailDto): string | null {
+export function matchDetailSubtitle(m: MatchDetailVM): string | null {
   if (m.nickname?.trim()) {
     const meta = matchMetaParts(m.gender, m.ageYears, m.locationLabel).join(' · ');
     return meta || null;

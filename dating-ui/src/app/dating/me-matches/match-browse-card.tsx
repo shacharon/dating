@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { MatchPhoto } from '@/components/match-photo';
-import type { MeMatchItemDto, TeaserMode } from '@/lib/me-matches-api';
+import type {
+  MatchListItemVM,
+  MatchTeaserMode,
+} from '@/lib/matches/match-view-models';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { emitProductLog } from '@/lib/observability/product-logger';
 import {
@@ -18,10 +21,9 @@ import {
 import { MatchBrowseActions } from './match-browse-actions';
 import { MatchWhySection } from './match-why-section';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
-import { resolvePriorityTier } from './match-priority';
 
 export type MatchBrowseCardProps = {
-  match: MeMatchItemDto;
+  match: MatchListItemVM;
   index: number;
   locale: AppLocale;
   listCopy: AppCopySchema['matches']['list'];
@@ -32,7 +34,7 @@ export type MatchBrowseCardProps = {
 function emitCardViewed(
   matchProfileId: string,
   explanation_expanded: boolean,
-  teaser_mode: TeaserMode,
+  teaser_mode: MatchTeaserMode,
 ): void {
   emitProductLog({
     level: 'trace',
@@ -74,9 +76,8 @@ export function MatchBrowseCard({
   const claim = resolveMatchBrowseClaim(m, modeBCopy.claimEmpty);
   const hybrid = resolveMatchBrowseHybridLines(m, modeCCopy.linesEmpty);
   const showAgeBesideName = Boolean(m.nickname?.trim() && age);
-  const tier = resolvePriorityTier(m);
-  const score =
-    m.matchScore != null && Number.isFinite(m.matchScore) ? m.matchScore : null;
+  const tier = m.tier;
+  const score = m.score;
   const showScoreHero =
     isModeB && score != null && m.teaser?.showScore !== false;
   const showScoreBadge =
@@ -249,7 +250,7 @@ export function MatchBrowseCard({
 
           <MatchBrowseActions
             matchId={m.id}
-            initialAction={m.yourAction}
+            initialAction={m.viewerAction}
             detailCopy={detailCopy}
             disabled={false}
             onMutualMatch={onMutualMatch}

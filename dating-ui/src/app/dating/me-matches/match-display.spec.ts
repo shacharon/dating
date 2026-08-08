@@ -12,9 +12,10 @@ import {
   formatBrowseAge,
   matchBrowseLocation,
 } from './match-display';
+import { mapMeMatchDetailToViewModel, mapMeMatchItemToViewModel } from '@/lib/matches/map-me-match-to-view-model';
 import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
 
-const baseItem = {
+const baseDto = {
   id: 'p1',
   nickname: 'toto',
   gender: 'FEMALE',
@@ -27,33 +28,39 @@ const baseItem = {
   recommendation: null,
 } satisfies MeMatchItemDto;
 
+const baseItem = () => mapMeMatchItemToViewModel(baseDto);
+
 describe('match-display location junk filter', () => {
   it('hides single-character location on list secondary meta', () => {
-    expect(matchListSecondaryMeta(baseItem)).toBe('FEMALE · 81y');
+    expect(matchListSecondaryMeta(baseItem())).toBe('FEMALE · 81y');
   });
 
   it('keeps real location labels', () => {
     expect(
-      matchListSecondaryMeta({ ...baseItem, locationLabel: 'Tel Aviv' }),
+      matchListSecondaryMeta(
+        mapMeMatchItemToViewModel({ ...baseDto, locationLabel: 'Tel Aviv' }),
+      ),
     ).toBe('FEMALE · 81y · Tel Aviv');
   });
 
   it('hides junk location on detail subtitle', () => {
-    const detail = {
-      ...baseItem,
+    const detail = mapMeMatchDetailToViewModel({
+      ...baseDto,
       evaluationSummary: null,
       locationLabel: 'e',
-    } satisfies MeMatchDetailDto;
+    } satisfies MeMatchDetailDto);
     expect(matchDetailSubtitle(detail)).toBe('FEMALE · 81y');
   });
 
   it('uses meta parts when nickname missing and location is junk', () => {
     expect(
-      matchListPrimaryLabel({
-        ...baseItem,
-        nickname: null,
-        locationLabel: 'e',
-      }),
+      matchListPrimaryLabel(
+        mapMeMatchItemToViewModel({
+          ...baseDto,
+          nickname: null,
+          locationLabel: 'e',
+        }),
+      ),
     ).toBe('FEMALE · 81y');
   });
 });
@@ -70,54 +77,62 @@ describe('match-display browse helpers', () => {
   it('formats plain age and hides junk location', () => {
     expect(formatBrowseAge(32)).toBe('32');
     expect(formatBrowseAge(null)).toBeNull();
-    expect(matchBrowseLocation(baseItem)).toBeNull();
+    expect(matchBrowseLocation(baseItem())).toBeNull();
     expect(
-      matchBrowseLocation({ ...baseItem, locationLabel: 'Tel Aviv' }),
+      matchBrowseLocation(
+        mapMeMatchItemToViewModel({ ...baseDto, locationLabel: 'Tel Aviv' }),
+      ),
     ).toBe('Tel Aviv');
   });
 
   it('prefers takeaway then shared note then first chip', () => {
     expect(
-      matchBrowseOneLiner({
-        ...baseItem,
-        recommendation: {
-          explainability: {
-            positiveChips: ['Chip'],
-            reasonShort: 'Short',
+      matchBrowseOneLiner(
+        mapMeMatchItemToViewModel({
+          ...baseDto,
+          recommendation: {
+            explainability: {
+              positiveChips: ['Chip'],
+              reasonShort: 'Short',
+            },
+            primaryTakeaway: 'Takeaway line',
+            suggestedNextAction: 'Next',
           },
-          primaryTakeaway: 'Takeaway line',
-          suggestedNextAction: 'Next',
-        },
-      }),
+        }),
+      ),
     ).toBe('Takeaway line');
 
     expect(
-      matchBrowseOneLiner({
-        ...baseItem,
-        explainability: {
-          positiveChips: ['Chip A'],
-          reasonShort: 'Short',
-          sharedInterestNote: 'You both enjoy hiking.',
-        },
-      }),
+      matchBrowseOneLiner(
+        mapMeMatchItemToViewModel({
+          ...baseDto,
+          explainability: {
+            positiveChips: ['Chip A'],
+            reasonShort: 'Short',
+            sharedInterestNote: 'You both enjoy hiking.',
+          },
+        }),
+      ),
     ).toMatch(/hiking/i);
 
     expect(
-      matchBrowseOneLiner({
-        ...baseItem,
-        explainability: {
-          positiveChips: ['Chip A'],
-          reasonShort: 'Short',
-        },
-      }),
+      matchBrowseOneLiner(
+        mapMeMatchItemToViewModel({
+          ...baseDto,
+          explainability: {
+            positiveChips: ['Chip A'],
+            reasonShort: 'Short',
+          },
+        }),
+      ),
     ).toBe('Chip A');
   });
 
   it('resolveMatchBrowseHook uses teaser line for first_chapter', () => {
     expect(
       resolveMatchBrowseHook(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           recommendation: {
             explainability: {
               positiveChips: ['Chip'],
@@ -132,7 +147,7 @@ describe('match-display browse helpers', () => {
             showScore: true,
             score: 80,
           },
-        },
+        }),
         'A little in common — open to see more',
       ),
     ).toBe('Both night owls · hiking + markets');
@@ -141,8 +156,8 @@ describe('match-display browse helpers', () => {
   it('resolveMatchBrowseHook falls back to hookEmpty when teaser blank', () => {
     expect(
       resolveMatchBrowseHook(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           recommendation: {
             explainability: {
               positiveChips: ['Chip'],
@@ -151,7 +166,7 @@ describe('match-display browse helpers', () => {
             primaryTakeaway: 'Should not appear for Mode A',
             suggestedNextAction: 'Next',
           },
-        },
+        }),
         'A little in common — open to see more',
       ),
     ).toBe('A little in common — open to see more');
@@ -160,8 +175,8 @@ describe('match-display browse helpers', () => {
   it('resolveMatchBrowseHook uses legacy one-liner for non–first_chapter modes', () => {
     expect(
       resolveMatchBrowseHook(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           recommendation: {
             explainability: {
               positiveChips: ['Chip'],
@@ -177,7 +192,7 @@ describe('match-display browse helpers', () => {
             showScore: true,
             score: 92,
           },
-        },
+        }),
         'A little in common — open to see more',
       ),
     ).toBe('Mode B legacy line');
@@ -186,8 +201,8 @@ describe('match-display browse helpers', () => {
   it('resolveMatchBrowseClaim prefers claim and strips quotes', () => {
     expect(
       resolveMatchBrowseClaim(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           teaser: {
             mode: 'ready_again',
             lines: [],
@@ -203,7 +218,7 @@ describe('match-display browse helpers', () => {
             primaryTakeaway: 'Hobby fluff should not win',
             suggestedNextAction: 'Next',
           },
-        },
+        }),
         'Strong life-goal fit — open for details',
       ),
     ).toBe('Both want something serious — kids already clear');
@@ -212,8 +227,8 @@ describe('match-display browse helpers', () => {
   it('resolveMatchBrowseClaim falls back to claimEmpty without inventing from takeaway', () => {
     expect(
       resolveMatchBrowseClaim(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           teaser: {
             mode: 'ready_again',
             lines: [],
@@ -228,7 +243,7 @@ describe('match-display browse helpers', () => {
             primaryTakeaway: 'Should not appear',
             suggestedNextAction: 'Next',
           },
-        },
+        }),
         'Strong life-goal fit — open for details',
       ),
     ).toBe('Strong life-goal fit — open for details');
@@ -237,15 +252,17 @@ describe('match-display browse helpers', () => {
   it('resolveBrowseTeaserMode honors localStorage preview', () => {
     localStorage.setItem(TEASER_MODE_PREVIEW_STORAGE_KEY, 'ready_again');
     expect(
-      resolveBrowseTeaserMode({
-        ...baseItem,
-        teaser: {
-          mode: 'first_chapter',
-          lines: ['hook'],
-          showScore: true,
-          score: 80,
-        },
-      }),
+      resolveBrowseTeaserMode(
+        mapMeMatchItemToViewModel({
+          ...baseDto,
+          teaser: {
+            mode: 'first_chapter',
+            lines: ['hook'],
+            showScore: true,
+            score: 80,
+          },
+        }),
+      ),
     ).toBe('ready_again');
     localStorage.removeItem(TEASER_MODE_PREVIEW_STORAGE_KEY);
   });
@@ -253,8 +270,8 @@ describe('match-display browse helpers', () => {
   it('resolveMatchBrowseHybridLines prefers lines and does not invent line2', () => {
     expect(
       resolveMatchBrowseHybridLines(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           teaser: {
             mode: 'new_chapter',
             lines: [
@@ -272,7 +289,7 @@ describe('match-display browse helpers', () => {
             primaryTakeaway: 'Should not appear',
             suggestedNextAction: 'Next',
           },
-        },
+        }),
         'Clear life-goal overlap — open to learn more',
       ),
     ).toEqual({
@@ -282,15 +299,15 @@ describe('match-display browse helpers', () => {
 
     expect(
       resolveMatchBrowseHybridLines(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           teaser: {
             mode: 'new_chapter',
             lines: ['88% · both want a real partnership'],
             showScore: true,
             score: 88,
           },
-        },
+        }),
         'Clear life-goal overlap — open to learn more',
       ),
     ).toEqual({
@@ -302,8 +319,8 @@ describe('match-display browse helpers', () => {
   it('resolveMatchBrowseHybridLines falls back to linesEmpty without takeaway invent', () => {
     expect(
       resolveMatchBrowseHybridLines(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           teaser: {
             mode: 'new_chapter',
             lines: [],
@@ -318,7 +335,7 @@ describe('match-display browse helpers', () => {
             primaryTakeaway: 'Should not appear',
             suggestedNextAction: 'Next',
           },
-        },
+        }),
         'Clear life-goal overlap — open to learn more',
       ),
     ).toEqual({
@@ -328,15 +345,15 @@ describe('match-display browse helpers', () => {
 
     expect(
       resolveMatchBrowseHybridLines(
-        {
-          ...baseItem,
+        mapMeMatchItemToViewModel({
+          ...baseDto,
           teaser: {
             mode: 'new_chapter',
             lines: ['   ', '  '],
             showScore: true,
             score: 88,
           },
-        },
+        }),
         'Clear life-goal overlap — open to learn more',
       ),
     ).toEqual({

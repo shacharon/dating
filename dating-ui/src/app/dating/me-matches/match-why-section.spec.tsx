@@ -3,6 +3,8 @@ import { afterEach, describe, it, expect } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { getCopy } from '@/lib/i18n';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import { mapMeMatchItemToViewModel } from '@/lib/matches/map-me-match-to-view-model';
+import type { MatchListItemVM } from '@/lib/matches/match-view-models';
 import { MatchWhySection } from './match-why-section';
 
 afterEach(() => {
@@ -11,8 +13,8 @@ afterEach(() => {
 
 function baseMatch(
   explainability: MeMatchItemDto['explainability'],
-): MeMatchItemDto {
-  return {
+): MatchListItemVM {
+  return mapMeMatchItemToViewModel({
     id: 'prof-expansion-01',
     nickname: 'Test',
     gender: 'FEMALE',
@@ -23,7 +25,7 @@ function baseMatch(
     matchScore: 82,
     explainability,
     recommendation: null,
-  };
+  });
 }
 
 describe('MatchWhySection Expansion-01 chips', () => {

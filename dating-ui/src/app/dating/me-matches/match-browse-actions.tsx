@@ -1,12 +1,12 @@
 'use client';
 
 import { useMatchActions } from '@/hooks/use-match-actions';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MatchViewerAction } from '@/lib/matches/match-view-models';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 export type MatchBrowseActionsProps = {
   matchId: string;
-  initialAction: MeMatchItemDto['yourAction'];
+  initialAction: MatchViewerAction | null;
   detailCopy: AppCopySchema['matches']['detail'];
   disabled: boolean;
   onMutualMatch: (conversationId: string) => void;
@@ -14,7 +14,7 @@ export type MatchBrowseActionsProps = {
 };
 
 function actionStatusMessage(
-  action: MeMatchItemDto['yourAction'],
+  action: MatchViewerAction | null,
   detailCopy: AppCopySchema['matches']['detail'],
 ): string | null {
   switch (action) {

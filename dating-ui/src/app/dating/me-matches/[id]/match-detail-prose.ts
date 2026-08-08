@@ -1,4 +1,4 @@
-import type { MeMatchDetailDto } from '@/lib/me-matches-api';
+import type { MatchDetailVM } from '@/lib/matches/match-view-models';
 
 export type MatchDetailProse =
   | { kind: 'narrative'; text: string }
@@ -6,12 +6,9 @@ export type MatchDetailProse =
 
 /** Prefer long-form narrative; fall back to primaryTakeaway only (never reasonShort). */
 export function resolveDetailProse(
-  data: Pick<
-    MeMatchDetailDto,
-    'matchNarrative' | 'recommendation' | 'explainability'
-  >,
+  data: Pick<MatchDetailVM, 'narrative' | 'recommendation'>,
 ): MatchDetailProse | null {
-  const narrative = data.matchNarrative?.trim();
+  const narrative = data.narrative?.trim();
   if (narrative) {
     return { kind: 'narrative', text: narrative };
   }

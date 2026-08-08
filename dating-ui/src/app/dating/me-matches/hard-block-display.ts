@@ -1,4 +1,4 @@
-import type { HardBlockReasonDto } from '@/lib/me-matches-api';
+import type { MatchHardBlockReasonVM } from '@/lib/matches/match-view-models';
 
 /** Shared hard-block copy for list + detail (primary lines + optional evidence). */
 export type HardBlockReasonCopy = {
@@ -33,7 +33,7 @@ function isSmokingDimension(dimension: string): boolean {
 }
 
 function primaryForReason(
-  reason: HardBlockReasonDto,
+  reason: MatchHardBlockReasonVM,
   copy: HardBlockReasonCopy,
 ): string | null {
   const { code, dimension, direction } = reason;
@@ -70,11 +70,11 @@ function primaryForReason(
 }
 
 function evidenceLine(
-  reason: HardBlockReasonDto,
+  reason: MatchHardBlockReasonVM,
   copy: HardBlockReasonCopy,
 ): string | null {
-  const vq = reason.evidence?.viewerQuote?.trim();
-  const cq = reason.evidence?.counterpartyQuote?.trim();
+  const vq = reason.viewerQuote?.trim();
+  const cq = reason.counterpartyQuote?.trim();
   if (vq && cq) return copy.evidenceBoth(vq, cq);
   if (vq) return copy.evidenceViewer(vq);
   if (cq) return copy.evidenceCounterparty(cq);
@@ -87,7 +87,7 @@ function evidenceLine(
  * Falls back to API `message` when code/dimension are unknown.
  */
 export function formatHardBlockReason(
-  reason: HardBlockReasonDto,
+  reason: MatchHardBlockReasonVM,
   copy: HardBlockReasonCopy,
 ): FormattedHardBlockReason {
   const primary = primaryForReason(reason, copy) ?? reason.message;
@@ -99,7 +99,7 @@ export function formatHardBlockReason(
 
 /** Single-line primary only (tests / simple call sites). */
 export function formatHardBlockReasonMessage(
-  reason: HardBlockReasonDto,
+  reason: MatchHardBlockReasonVM,
   copy: HardBlockReasonCopy,
 ): string {
   return formatHardBlockReason(reason, copy).primary;

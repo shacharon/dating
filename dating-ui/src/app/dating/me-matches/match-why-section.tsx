@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MatchListItemVM } from '@/lib/matches/match-view-models';
 import type { AppCopySchema } from '@/lib/i18n/types';
 import { matchBrowseWhyBody } from './match-display';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
 import { chipToEvidence } from './chip-evidence';
 
 export type MatchWhySectionProps = {
-  match: MeMatchItemDto;
+  match: MatchListItemVM;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   listCopy: AppCopySchema['matches']['list'];
@@ -17,7 +17,7 @@ export type MatchWhySectionProps = {
 };
 
 /**
- * Collapsed-by-default “why we matched” using list DTO fields only.
+ * Collapsed-by-default “why we matched” using list view-model fields only.
  */
 export function MatchWhySection({
   match,
@@ -28,11 +28,10 @@ export function MatchWhySection({
 }: MatchWhySectionProps) {
   const browse = listCopy.browse;
   const body = matchBrowseWhyBody(match);
-  const chips = match.explainability?.positiveChips?.filter(Boolean) ?? [];
-  const tension = match.explainability?.tensionChip?.trim();
-  const interestTags =
-    match.explainability?.interestOverlapTags?.filter(Boolean) ?? [];
-  const score = match.matchScore;
+  const chips = match.why?.positiveChips?.filter(Boolean) ?? [];
+  const tension = match.why?.tensionChip?.trim();
+  const interestTags = match.why?.interestOverlapTags?.filter(Boolean) ?? [];
+  const score = match.score;
   const toggleLabel =
     whyToggleOverride ??
     (score != null ? browse.whyToggleWithScore(score) : browse.whyToggle);

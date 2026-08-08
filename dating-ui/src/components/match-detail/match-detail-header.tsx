@@ -1,7 +1,7 @@
 'use client';
 
 import { MatchPhoto } from '@/components/match-photo';
-import type { MeMatchDetailDto } from '@/lib/me-matches-api';
+import type { MatchDetailVM } from '@/lib/matches/match-view-models';
 import {
   matchDetailSubtitle,
   matchDetailTitle,
@@ -9,7 +9,7 @@ import {
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {
-  data: MeMatchDetailDto;
+  data: MatchDetailVM;
   detailCopy: AppCopySchema['matches']['detail'];
 };
 

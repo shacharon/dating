@@ -5,21 +5,14 @@ import {
 } from './match-detail-prose';
 
 describe('resolveDetailProse', () => {
-  it('prefers matchNarrative over short takeaway', () => {
+  it('prefers narrative over short takeaway', () => {
     expect(
       resolveDetailProse({
-        matchNarrative: '  Long narrative about shared depth.  ',
+        narrative: '  Long narrative about shared depth.  ',
         recommendation: {
-          explainability: {
-            positiveChips: [],
-            reasonShort: 'Short',
-          },
           primaryTakeaway: 'Takeaway',
+          caution: null,
           suggestedNextAction: 'Next',
-        },
-        explainability: {
-          positiveChips: [],
-          reasonShort: 'Reason',
         },
       }),
     ).toEqual({
@@ -31,28 +24,19 @@ describe('resolveDetailProse', () => {
   it('falls back to primaryTakeaway only (never reasonShort)', () => {
     expect(
       resolveDetailProse({
+        narrative: null,
         recommendation: {
-          explainability: {
-            positiveChips: [],
-            reasonShort: 'Reason',
-          },
           primaryTakeaway: 'Takeaway',
+          caution: null,
           suggestedNextAction: 'Next',
-        },
-        explainability: {
-          positiveChips: [],
-          reasonShort: 'Reason',
         },
       }),
     ).toEqual({ kind: 'short', text: 'Takeaway' });
 
     expect(
       resolveDetailProse({
+        narrative: null,
         recommendation: null,
-        explainability: {
-          positiveChips: [],
-          reasonShort: 'You share real overlap on Ambition alignment',
-        },
       }),
     ).toBeNull();
   });
@@ -60,9 +44,8 @@ describe('resolveDetailProse', () => {
   it('returns null when nothing usable', () => {
     expect(
       resolveDetailProse({
-        matchNarrative: '   ',
+        narrative: '   ',
         recommendation: null,
-        explainability: null,
       }),
     ).toBeNull();
   });

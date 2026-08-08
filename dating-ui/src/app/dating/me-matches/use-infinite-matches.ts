@@ -2,17 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  fetchMyMatches,
-  type MeMatchItemDto,
-  type MeMatchesListDto,
-} from '@/lib/me-matches-api';
+import { fetchMyMatches } from '@/lib/me-matches-api';
+import { mapMeMatchesListToViewModel } from '@/lib/matches/map-me-match-to-view-model';
+import type {
+  MatchListItemVM,
+  MatchListPageVM,
+} from '@/lib/matches/match-view-models';
 
 const PAGE_LIMIT = 20;
 
 export type UseInfiniteMatchesResult = {
-  data: MeMatchesListDto | null;
-  matches: MeMatchItemDto[];
+  data: MatchListPageVM | null;
+  matches: MatchListItemVM[];
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
@@ -26,8 +27,10 @@ export function useInfiniteMatches(
   loadFailedMessage: string,
 ): UseInfiniteMatchesResult {
   const router = useRouter();
-  const [data, setData] = useState<MeMatchesListDto | null>(null);
-  const [matches, setMatches] = useState<MeMatchItemDto[]>([]);
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  const [data, setData] = useState<MatchListPageVM | null>(null);
+  const [matches, setMatches] = useState<MatchListItemVM[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -36,41 +39,35 @@ export function useInfiniteMatches(
   const loadingMoreRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const handleNotReadyRedirect = useCallback(
-    (dto: MeMatchesListDto) => {
-      if (dto.reason === 'no_profile') router.replace('/onboarding');
-      else router.replace('/profile?tab=analysis');
-    },
-    [router],
-  );
-
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const dto = await fetchMyMatches({ limit: PAGE_LIMIT });
-      if (dto.status === 'not_ready') {
+      const page = mapMeMatchesListToViewModel(dto);
+      if (page.status === 'not_ready') {
         // Stay on Matches for photo gate — show an in-page empty state instead of a silent redirect.
-        if (dto.reason === 'no_photo') {
-          setData(dto);
+        if (page.reason === 'no_photo') {
+          setData(page);
           setMatches([]);
           setNextCursor(null);
           setHasMore(false);
           return;
         }
-        handleNotReadyRedirect(dto);
+        if (page.reason === 'no_profile') routerRef.current.replace('/onboarding');
+        else routerRef.current.replace('/profile?tab=analysis');
         return;
       }
-      setData(dto);
-      setMatches(dto.matches ?? []);
-      setNextCursor(dto.nextCursor ?? null);
-      setHasMore(Boolean(dto.hasMore));
+      setData(page);
+      setMatches(page.matches);
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMore);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : loadFailedMessage);
     } finally {
       setLoading(false);
     }
-  }, [handleNotReadyRedirect, loadFailedMessage]);
+  }, [loadFailedMessage]);
 
   useEffect(() => {
     void reload();
@@ -85,8 +82,9 @@ export function useInfiniteMatches(
         cursor: nextCursor,
         limit: PAGE_LIMIT,
       });
-      if (dto.status !== 'ready') return;
-      const incoming = dto.matches ?? [];
+      const page = mapMeMatchesListToViewModel(dto);
+      if (page.status !== 'ready') return;
+      const incoming = page.matches;
       setMatches((prev) => {
         const seen = new Set(prev.map((m) => m.id));
         const merged = [...prev];
@@ -95,16 +93,16 @@ export function useInfiniteMatches(
         }
         return merged;
       });
-      setNextCursor(dto.nextCursor ?? null);
-      setHasMore(Boolean(dto.hasMore));
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMore);
       setData((prev) =>
-        prev
+        prev && prev.status === 'ready'
           ? {
               ...prev,
-              ...dto,
-              matches: undefined,
+              ...page,
+              matches: prev.matches,
             }
-          : dto,
+          : page,
       );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : loadFailedMessage);

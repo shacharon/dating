@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { MeMatchDetailDto } from '@/lib/me-matches-api';
+import type { MatchDetailVM } from '@/lib/matches/match-view-models';
 import { matchDetailTitle } from '@/app/dating/me-matches/match-display';
 
 const MatchCelebrationModal = dynamic(
@@ -25,7 +25,7 @@ type CelebrationData = {
 };
 
 type Props = {
-  data: MeMatchDetailDto;
+  data: MatchDetailVM;
   matchId: string;
   celebrationData: CelebrationData | null;
   reportOpen: boolean;

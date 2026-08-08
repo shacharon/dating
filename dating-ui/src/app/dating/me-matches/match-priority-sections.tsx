@@ -1,23 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type {
+  MatchListItemVM,
+  MatchPriorityTier,
+} from '@/lib/matches/match-view-models';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { emitProductLog } from '@/lib/observability/product-logger';
 import { MatchBrowseCard } from './match-browse-card';
-import {
-  groupMatchesByPriority,
-  type MatchPriorityTier,
-} from './match-priority';
+import { groupMatchesByPriority } from './match-priority';
 
 type Props = {
-  matches: MeMatchItemDto[];
+  matches: MatchListItemVM[];
   locale: AppLocale;
   listCopy: AppCopySchema['matches']['list'];
   detailCopy: AppCopySchema['matches']['detail'];
   onMutualMatch: (matchId: string, conversationId: string) => void;
   /** Render hard-blocked rows after priority sections. */
-  renderBlocked: (blocked: MeMatchItemDto[]) => ReactNode;
+  renderBlocked: (blocked: MatchListItemVM[]) => ReactNode;
 };
 
 function emitSectionEvent(
@@ -137,7 +137,7 @@ export function MatchPrioritySections({
 
   let browseIndex = 0;
 
-  const renderCards = (items: MeMatchItemDto[]) => (
+  const renderCards = (items: MatchListItemVM[]) => (
     <ul className="flex flex-col gap-6">
       {items.map((m) => {
         const index = browseIndex++;
