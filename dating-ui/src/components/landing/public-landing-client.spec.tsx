@@ -92,14 +92,30 @@ describe('PublicLandingClient i18n', () => {
     expect(main.getAttribute('lang')).toBe('en');
   });
 
-  it('renders stored Hebrew landing copy with RTL main', () => {
-    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-
-    render(<PublicLandingClient />);
+  it('renders SSR Hebrew initialLocale without waiting on storage', () => {
+    render(<PublicLandingClient initialLocale="he" />);
 
     expect(
       screen.getByRole('heading', { name: heCopy.landing.title }),
     ).toBeTruthy();
+    expect(screen.getByText(heCopy.landing.googleSignIn)).toBeTruthy();
+
+    const heading = screen.getByRole('heading', { name: heCopy.landing.title });
+    const main = heading.closest('main');
+    expect(main?.getAttribute('dir')).toBe('rtl');
+    expect(main?.getAttribute('lang')).toBe('he');
+  });
+
+  it('applies stored Hebrew after mount when SSR defaulted to English', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+
+    render(<PublicLandingClient initialLocale="en" />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: heCopy.landing.title }),
+      ).toBeTruthy();
+    });
     expect(screen.getByText(heCopy.landing.googleSignIn)).toBeTruthy();
 
     const heading = screen.getByRole('heading', { name: heCopy.landing.title });

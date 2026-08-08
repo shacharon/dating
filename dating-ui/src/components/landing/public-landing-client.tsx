@@ -6,10 +6,13 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   APP_LOCALE_CHANGE_EVENT,
   APP_LOCALE_STORAGE_KEY,
+  DEFAULT_LOCALE,
   getCopy,
   getLocaleDirection,
   getLocaleHtmlLang,
+  isSupportedLocale,
   readStoredLocale,
+  writeStoredLocale,
   type AppLocale,
 } from "@/lib/i18n";
 import {
@@ -45,14 +48,21 @@ function safeNextPath(raw: string | null): string {
 /**
  * Public entry: value-prop landing + Google CTA.
  * Session via `POST /api/v1/auth/google` + HttpOnly cookie.
+ *
+ * `initialLocale` must come from the server (`locale` cookie) so SSR markup
+ * matches the first client render. localStorage is applied only after mount.
  */
-export function PublicLandingClient() {
+export function PublicLandingClient({
+  initialLocale = DEFAULT_LOCALE,
+}: {
+  initialLocale?: AppLocale;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status, signInWithGoogleIdToken, lastError, clearLastError, refresh } =
     useAuth();
   const [signingIn, setSigningIn] = useState(false);
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const [locale, setLocale] = useState<AppLocale>(initialLocale);
 
   const copy = getCopy(locale).landing;
   const dir = getLocaleDirection(locale);
@@ -64,7 +74,17 @@ export function PublicLandingClient() {
   );
 
   useEffect(() => {
-    setLocale(readStoredLocale());
+    const raw = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+    if (raw && isSupportedLocale(raw)) {
+      if (raw !== initialLocale) {
+        setLocale(raw);
+        // localStorage ahead of cookie (e.g. pre-cookie installs) → align for next SSR
+        writeStoredLocale(raw);
+      }
+    } else {
+      // Seed storage from SSR cookie locale so client readers stay consistent
+      window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, initialLocale);
+    }
     const onLocaleChanged = (event: Event) => {
       const e = event as CustomEvent<AppLocale>;
       if (e.detail) {
@@ -84,7 +104,7 @@ export function PublicLandingClient() {
       window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [initialLocale]);
 
   useEffect(() => {
     if (status === "authenticated") {

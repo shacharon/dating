@@ -1,4 +1,5 @@
 import { PublicLandingClient } from "@/components/landing/public-landing-client";
+import { getServerLocale } from "@/lib/i18n/server-locale";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   description: "Dating app — sign in with Google",
 };
 
-export default function PublicLandingPage() {
+export default async function PublicLandingPage() {
+  const initialLocale = await getServerLocale();
+
   return (
     <Suspense
       fallback={
@@ -18,7 +21,7 @@ export default function PublicLandingPage() {
         </main>
       }
     >
-      <PublicLandingClient />
+      <PublicLandingClient initialLocale={initialLocale} />
     </Suspense>
   );
 }
