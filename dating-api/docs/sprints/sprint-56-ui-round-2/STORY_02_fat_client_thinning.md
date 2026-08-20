@@ -3,7 +3,7 @@
 **Sprint 56 · Done · P1 · ~2d · Depends: 01 helpful · Agent 3.5**
 
 **Status:** Done  
-**Tip:** `feature/sprint-56-story-2` @ close (impl `68969e3`, CR `dc44980`)
+**Tip:** `feature/sprint-56-story-2` @ `03049a9` (impl `68969e3`, CR `dc44980`)
 
 Extract data hooks from conversations-page-client, onboarding forms, admin content-violations. Presentational components stay dumb.
 
