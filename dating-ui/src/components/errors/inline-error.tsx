@@ -28,7 +28,7 @@ export function InlineError({
       {onRetry ? (
         <button
           type="button"
-          className="mt-3 block text-sm font-medium underline"
+          className="mt-3 block min-h-11 text-sm font-medium underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
           onClick={onRetry}
         >
           {retryLabel ?? 'Try again'}

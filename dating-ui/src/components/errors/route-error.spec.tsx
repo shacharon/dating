@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { RouteError } from './route-error';
 
 describe('RouteError', () => {
-  it('renders title, message, and non-purple retry', () => {
+  it('renders title, message, alert, and non-purple retry', () => {
     const onRetry = vi.fn();
     render(
       <RouteError
@@ -14,6 +14,7 @@ describe('RouteError', () => {
         onRetry={onRetry}
       />,
     );
+    expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Oops' })).toBeTruthy();
     expect(screen.getByText('Try later')).toBeTruthy();
     const btn = screen.getByRole('button', { name: 'Try again' });
