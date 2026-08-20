@@ -1,6 +1,6 @@
 # Sprint 51 — Expansion Registry / OCP (P1)
 
-**Status:** Planned  
+**Status:** In Progress (Story 01 Done)  
 **Depends on:** Sprint 50 helpful  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Repo:** `dating-api`  
@@ -16,8 +16,12 @@ Replace paste-into-`extraction.service` (expansions 01–N) with a single expans
 
 ## Stories
 
-| # | Story | Extra |
-|---|-------|-------|
-| 01 | [Expansion manifest design + wire prompts](./STORY_01_expansion_manifest.md) | — |
-| 02 | [Chip / explainability from registry](./STORY_02_explainability_registry.md) | 4 if chips affect product |
-| 03 | [Add-expansion playbook](./STORY_03_add_expansion_playbook.md) | — |
+| # | Story | Status | Extra |
+|---|-------|--------|-------|
+| 01 | [Expansion manifest design + wire prompts](./STORY_01_expansion_manifest.md) | **Done** | — |
+| 02 | [Chip / explainability from registry](./STORY_02_explainability_registry.md) | Planned | 4 if chips affect product |
+| 03 | [Add-expansion playbook](./STORY_03_add_expansion_playbook.md) | Planned | — |
+
+**Order:** 01 → 02 → 03.
+
+**Preferred merge tip (after Story 01):** `feature/sprint-51-story-1`
