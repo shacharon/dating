@@ -5,6 +5,7 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailProviderResolver } from './email-provider.resolver';
+import { escapeHtml } from './email-format.util';
 
 @Injectable()
 export class ReportOpsEmailService {
@@ -44,7 +45,12 @@ export class ReportOpsEmailService {
 
     try {
       const provider = this.providerResolver.resolve();
-      await provider.send({ to, subject, text, html: `<pre>${escapeHtml(text)}</pre>` });
+      await provider.send({
+        to,
+        subject,
+        text,
+        html: `<pre>${escapeHtml(text)}</pre>`,
+      });
       this.obs.trace(
         `report ops email sent reportId=${report.id} to=${to}`,
         ErrorCodes.USER_REPORT_OPS_EMAIL_OK,
@@ -61,11 +67,4 @@ export class ReportOpsEmailService {
       });
     }
   }
-}
-
-function escapeHtml(raw: string): string {
-  return raw
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }

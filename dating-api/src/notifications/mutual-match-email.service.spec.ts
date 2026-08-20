@@ -5,6 +5,7 @@ import type { EmailNotificationConfigService } from './email-notification-config
 import type { EmailNotificationService } from './email-notification.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { EmailRecipientHelper } from './email-recipient.helper';
 
 describe('MutualMatchEmailService', () => {
   const match: MutualMatch = {
@@ -40,7 +41,8 @@ describe('MutualMatchEmailService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MutualMatchEmailService(prisma, config, email, obs);
+    const recipients = new EmailRecipientHelper(prisma, obs);
+    service = new MutualMatchEmailService(recipients, config, email, obs);
   });
 
   function mockUsers(
@@ -116,7 +118,7 @@ describe('MutualMatchEmailService', () => {
 
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledTimes(1);
     expect(obs.trace).toHaveBeenCalledWith(
-      expect.stringContaining('user_a'),
+      'email mutual match skipped unsubscribed userId=user_a',
       ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
     );
   });

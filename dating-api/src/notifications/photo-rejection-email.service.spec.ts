@@ -2,6 +2,7 @@ import type { EmailNotificationConfigService } from './email-notification-config
 import type { EmailNotificationService } from './email-notification.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { EmailRecipientHelper } from './email-recipient.helper';
 import { PhotoRejectionEmailService } from './photo-rejection-email.service';
 
 describe('PhotoRejectionEmailService', () => {
@@ -26,11 +27,12 @@ describe('PhotoRejectionEmailService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new PhotoRejectionEmailService(prisma, config, email, obs);
+    const recipients = new EmailRecipientHelper(prisma, obs);
+    service = new PhotoRejectionEmailService(recipients, config, email, obs);
   });
 
   it('skips when email notifications disabled', async () => {
-    prisma.user.findUnique = jest.fn().mockResolvedValue({
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: 'u1',
       email: 'a@b.com',
       emailNotificationsEnabled: false,
@@ -43,11 +45,14 @@ describe('PhotoRejectionEmailService', () => {
     });
 
     expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
-    expect(obs.trace).toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      'email photo rejection skipped unsubscribed userId=u1',
+      expect.any(String),
+    );
   });
 
   it('sends friendly copy for rejection code', async () => {
-    prisma.user.findUnique = jest.fn().mockResolvedValue({
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: 'u1',
       email: 'a@b.com',
       emailNotificationsEnabled: true,

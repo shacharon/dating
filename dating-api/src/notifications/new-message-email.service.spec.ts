@@ -6,6 +6,7 @@ import type { MessageEmailDebounceService } from './message-email-debounce.servi
 import type { MessagingSocketRegistry } from '../messaging-realtime/messaging-socket-registry.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { EmailRecipientHelper } from './email-recipient.helper';
 
 describe('NewMessageEmailService', () => {
   const prisma = {
@@ -45,8 +46,9 @@ describe('NewMessageEmailService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    const recipients = new EmailRecipientHelper(prisma, obs);
     service = new NewMessageEmailService(
-      prisma,
+      recipients,
       config,
       socketRegistry,
       debounce,
@@ -92,7 +94,10 @@ describe('NewMessageEmailService', () => {
           };
         }
         return {
+          id: 'user_sender',
+          email: 's@example.com',
           displayName: 'Sender',
+          emailNotificationsEnabled: true,
           profile: { nickname: 'Sender' },
         };
       },
@@ -102,7 +107,7 @@ describe('NewMessageEmailService', () => {
 
     expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
-      expect.stringContaining('user_recipient'),
+      'email message skipped unsubscribed userId=user_recipient',
       ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
     );
   });
@@ -118,7 +123,10 @@ describe('NewMessageEmailService', () => {
           };
         }
         return {
+          id: 'user_sender',
+          email: 's@example.com',
           displayName: null,
+          emailNotificationsEnabled: true,
           profile: { nickname: 'SenderNick' },
         };
       },

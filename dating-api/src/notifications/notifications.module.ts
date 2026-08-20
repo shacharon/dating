@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailNotificationService } from './email-notification.service';
 import { EmailProviderResolver } from './email-provider.resolver';
+import { EmailRecipientHelper } from './email-recipient.helper';
 import { EmailUnsubscribeController } from './email-unsubscribe.controller';
 import { EmailUnsubscribeTokenService } from './email-unsubscribe-token.service';
 import { MessageEmailDebounceService } from './message-email-debounce.service';
@@ -31,6 +32,7 @@ import { ResendEmailProvider } from './resend-email.provider';
     EmailProviderResolver,
     EmailNotificationService,
     EmailUnsubscribeTokenService,
+    EmailRecipientHelper,
     MessageEmailDebounceService,
     MutualMatchEmailService,
     NewMessageEmailService,

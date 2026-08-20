@@ -2,23 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { MessagingSocketRegistry } from '../messaging-realtime/messaging-socket-registry.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailNotificationService } from './email-notification.service';
+import { displayLabel, escapeHtml } from './email-format.util';
+import { EmailRecipientHelper } from './email-recipient.helper';
 import { MessageEmailDebounceService } from './message-email-debounce.service';
-
-function displayLabel(nickname: string | null | undefined, displayName: string | null | undefined): string {
-  const n = nickname?.trim();
-  if (n) return n;
-  const d = displayName?.trim();
-  if (d) return d;
-  return 'Someone';
-}
 
 @Injectable()
 export class NewMessageEmailService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly recipients: EmailRecipientHelper,
     private readonly config: EmailNotificationConfigService,
     private readonly socketRegistry: MessagingSocketRegistry,
     private readonly debounce: MessageEmailDebounceService,
@@ -59,32 +52,21 @@ export class NewMessageEmailService {
       }
 
       const [recipient, sender] = await Promise.all([
-        this.prisma.user.findUnique({
-          where: { id: params.recipientUserId },
-          select: {
-            id: true,
-            email: true,
-            emailNotificationsEnabled: true,
-          },
-        }),
-        this.prisma.user.findUnique({
-          where: { id: params.senderUserId },
-          select: {
-            displayName: true,
-            profile: { select: { nickname: true } },
-          },
-        }),
+        this.recipients.loadRecipient(params.recipientUserId),
+        this.recipients.loadUserWithLabel(params.senderUserId),
       ]);
 
       if (!recipient?.email) {
         return;
       }
 
-      if (!recipient.emailNotificationsEnabled) {
-        this.obs.trace(
-          `email message skipped unsubscribed userId=${params.recipientUserId}`,
-          ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
-        );
+      if (
+        this.recipients.shouldSkipUnsubscribed({
+          userId: params.recipientUserId,
+          enabled: recipient.emailNotificationsEnabled,
+          emailKind: 'message',
+        })
+      ) {
         return;
       }
 
@@ -117,12 +99,4 @@ export class NewMessageEmailService {
       );
     }
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
