@@ -1,6 +1,9 @@
 /**
- * Stable application error codes for logs and client payloads where applicable.
+ * Stable application error codes for logs, domain errors, and Sentry tags.
  * Do not rename values — CloudWatch queries and dashboards depend on them.
+ *
+ * Client-facing auth JSON codes (`auth_error`) live in `AUTH_ERROR_CODES` —
+ * see docs/ops/ERROR_CODE_REGISTRIES.md.
  */
 export const ErrorCodes = {
   /** Google OIDC id-token login attempt started */
@@ -14,8 +17,6 @@ export const ErrorCodes = {
   /** {@link AuthGuard}: no valid session or user missing */
   AUTH_GUARD_UNAUTHORIZED: 'AUTH_GUARD_UNAUTHORIZED',
 
-  /** Me profile: session missing or invalid on /api/v1/me/* */
-  ME_PROFILE_UNAUTHORIZED: 'ME_PROFILE_UNAUTHORIZED',
   /** Me profile: GET when no row exists */
   ME_PROFILE_GET_NOT_FOUND: 'ME_PROFILE_GET_NOT_FOUND',
   /** Me profile: POST completed and row created */
@@ -124,9 +125,6 @@ export const ErrorCodes = {
   /** Sprint 3 Story 6 — message send rate limit exceeded. */
   ME_CONVERSATIONS_MESSAGE_RATE_LIMITED:
     'ME_CONVERSATIONS_MESSAGE_RATE_LIMITED',
-  /** Sprint 3 Story 6 — profanity placeholder detected (log only). */
-  ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED:
-    'ME_CONVERSATIONS_MESSAGE_PROFANITY_DETECTED',
 
   /** Sprint 4 Story 1 — messaging WebSocket connected. */
   MESSAGING_WS_CONNECT_OK: 'MESSAGING_WS_CONNECT_OK',
@@ -190,7 +188,6 @@ export const ErrorCodes = {
   REFERRAL_SIGNUP_ATTRIBUTED: 'REFERRAL_SIGNUP_ATTRIBUTED',
 
   /** Sprint 30 — content moderation (OpenAI Moderation API). */
-  CONTENT_MODERATION_CHECK: 'CONTENT_MODERATION_CHECK',
   CONTENT_MODERATION_FAIL_OPEN: 'CONTENT_MODERATION_FAIL_OPEN',
   CONTENT_MODERATION_FLAGGED: 'CONTENT_MODERATION_FLAGGED',
   CONTENT_MODERATION_DATING_POLICY: 'CONTENT_MODERATION_DATING_POLICY',

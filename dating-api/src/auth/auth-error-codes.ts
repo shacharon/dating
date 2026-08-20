@@ -1,4 +1,7 @@
-/** JSON field / query key for stable auth error codes (`403` bodies, etc.). */
+/**
+ * Client-facing auth error codes for JSON/query `auth_error` (e.g. 403 bodies).
+ * Distinct from server `ErrorCodes` — see docs/ops/ERROR_CODE_REGISTRIES.md.
+ */
 export const AUTH_ERROR_QUERY_PARAM = 'auth_error' as const;
 
 /**
