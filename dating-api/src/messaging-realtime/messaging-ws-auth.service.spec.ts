@@ -91,6 +91,26 @@ describe('MessagingWsAuthService', () => {
     });
   });
 
+  it('returns user_not_found when user is soft-deleted', async () => {
+    (sessions.validateSessionToken as jest.Mock).mockResolvedValue({
+      sessionId: 'sess_1',
+      userId: 'user_deleted',
+      expiresAt: new Date('2038-01-01T00:00:00.000Z'),
+    });
+    (users.findById as jest.Mock).mockResolvedValue({
+      id: 'user_deleted',
+      status: UserStatus.ACTIVE,
+      deletedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.validateHandshake(`${sessionCookieName}=${rawToken}`),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'user_not_found',
+    });
+  });
+
   it('returns user_disabled when user is not ACTIVE', async () => {
     (sessions.validateSessionToken as jest.Mock).mockResolvedValue({
       sessionId: 'sess_1',

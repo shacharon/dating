@@ -21,6 +21,7 @@ import {
   MESSAGING_EVENT_SUBSCRIBE_DENIED,
   MESSAGING_EVENT_SUBSCRIBE_OK,
   MESSAGING_WS_NAMESPACE,
+  sessionRoom,
   userRoom,
 } from './messaging-realtime.constants';
 import { WS_SESSION_REVALIDATE_MS } from './messaging-ws-inbound.constants';
@@ -98,6 +99,7 @@ export class MessagingGateway
     };
     client.data = data;
     await client.join(userRoom(result.userId));
+    await client.join(sessionRoom(result.sessionId));
     await this.socketRegistry.registerAsync(client);
     this.startSessionRevalidation(client);
 
@@ -234,8 +236,11 @@ export class MessagingGateway
 
     const timer = setInterval(() => {
       void (async () => {
-        const active = await this.wsSession.isSessionActive(data.sessionId);
-        if (!active) {
+        const allowed = await this.wsSession.isConnectionAllowed(
+          data.sessionId,
+          data.userId,
+        );
+        if (!allowed) {
           this.obs.trace(
             `messaging ws session invalid userId=${data.userId} sessionId=${data.sessionId} socketId=${client.id}`,
             ErrorCodes.MESSAGING_WS_SESSION_INVALIDATED,

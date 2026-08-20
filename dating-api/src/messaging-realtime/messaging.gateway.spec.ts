@@ -4,6 +4,7 @@ import {
   MESSAGING_EVENT_SUBSCRIBE_DENIED,
   MESSAGING_EVENT_SUBSCRIBE_OK,
   MESSAGING_WS_NAMESPACE,
+  sessionRoom,
   userRoom,
 } from './messaging-realtime.constants';
 import { WS_SESSION_REVALIDATE_MS } from './messaging-ws-inbound.constants';
@@ -62,6 +63,7 @@ describe('MessagingGateway', () => {
 
   const wsSession = {
     isSessionActive: jest.fn().mockResolvedValue(true),
+    isConnectionAllowed: jest.fn().mockResolvedValue(true),
   } as unknown as MessagingWsSessionService;
 
   const socketRegistry = {
@@ -106,7 +108,7 @@ describe('MessagingGateway', () => {
     expect(publisher.bindNamespaceServer).toHaveBeenCalledWith(ns);
   });
 
-  it('joins user room, registers socket, and logs connect on valid handshake', async () => {
+  it('joins user and session rooms, registers socket, and logs connect on valid handshake', async () => {
     (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
       ok: true,
       userId: 'user_a',
@@ -117,6 +119,7 @@ describe('MessagingGateway', () => {
     await gateway.handleConnection(client);
 
     expect(client.join).toHaveBeenCalledWith(userRoom('user_a'));
+    expect(client.join).toHaveBeenCalledWith(sessionRoom('sess_a'));
     expect(socketRegistry.registerAsync).toHaveBeenCalledWith(client);
     expect(client.disconnect).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
@@ -236,7 +239,7 @@ describe('MessagingGateway', () => {
       userId: 'user_a',
       sessionId: 'sess_a',
     });
-    (wsSession.isSessionActive as jest.Mock).mockResolvedValue(true);
+    (wsSession.isConnectionAllowed as jest.Mock).mockResolvedValue(true);
     const client = mockSocket('dating_session=token');
 
     await gateway.handleConnection(client);
@@ -259,7 +262,7 @@ describe('MessagingGateway', () => {
       userId: 'user_a',
       sessionId: 'sess_a',
     });
-    (wsSession.isSessionActive as jest.Mock).mockResolvedValue(false);
+    (wsSession.isConnectionAllowed as jest.Mock).mockResolvedValue(false);
     const client = mockSocket('dating_session=token');
 
     await gateway.handleConnection(client);

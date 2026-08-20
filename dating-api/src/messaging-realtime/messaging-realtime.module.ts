@@ -12,7 +12,6 @@ import { MessagingWsAuthService } from './messaging-ws-auth.service';
 import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 import { MessagingWsSessionService } from './messaging-ws-session.service';
 import { MessagingRealtimeHealthService } from './messaging-realtime-health.service';
-import { RealtimePublisher } from './realtime-publisher.service';
 
 @Module({
   imports: [
@@ -30,9 +29,8 @@ import { RealtimePublisher } from './realtime-publisher.service';
     MessagingWsAuthService,
     MessagingWsRateLimitService,
     MessagingWsSessionService,
-    RealtimePublisher,
     MessagingRealtimeHealthService,
   ],
-  exports: [RealtimePublisher, MessagingRealtimeHealthService],
+  exports: [MessagingSocketRegistryModule, MessagingRealtimeHealthService],
 })
 export class MessagingRealtimeModule {}

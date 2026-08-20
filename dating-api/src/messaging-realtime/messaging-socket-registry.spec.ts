@@ -99,6 +99,46 @@ describe('MessagingSocketRegistry', () => {
       expect(other.disconnect).not.toHaveBeenCalled();
       expect(registry.activeConnectionCount()).toBe(1);
     });
+
+    it('disconnectBySessionId invokes publisher then disconnects local sockets', async () => {
+      delete process.env.REDIS_URL;
+      const publisher = {
+        disconnectSessionSockets: jest.fn(),
+        disconnectUserSockets: jest.fn(),
+      };
+      const registry = new MessagingSocketRegistry(
+        undefined,
+        undefined,
+        publisher as never,
+      );
+      registry.resetForTests();
+      const a = mockSocket('sess_1', 'sock_a');
+      await registry.registerAsync(a);
+
+      await registry.disconnectBySessionId('sess_1');
+
+      expect(publisher.disconnectSessionSockets).toHaveBeenCalledWith('sess_1');
+      expect(a.disconnect).toHaveBeenCalledWith(true);
+    });
+
+    it('disconnectByUserId invokes publisher force-disconnect', async () => {
+      delete process.env.REDIS_URL;
+      const publisher = {
+        disconnectSessionSockets: jest.fn(),
+        disconnectUserSockets: jest.fn(),
+      };
+      const registry = new MessagingSocketRegistry(
+        undefined,
+        undefined,
+        publisher as never,
+      );
+      registry.resetForTests();
+      await registry.registerAsync(mockSocket('sess_1', 'sock_a', 'u1'));
+
+      await registry.disconnectByUserId('u1');
+
+      expect(publisher.disconnectUserSockets).toHaveBeenCalledWith('u1');
+    });
   });
 
   describe('cross-process via shared Redis mock', () => {

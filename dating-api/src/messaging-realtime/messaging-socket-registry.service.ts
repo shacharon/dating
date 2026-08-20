@@ -12,13 +12,11 @@ import {
   presenceSessionKey,
   presenceUserKey,
 } from './messaging-presence.keys';
+import type { RealtimePublisher } from './realtime-publisher.service';
 
 /**
  * Hybrid local socket index + Redis presence write-through (Sprint 49 Story 1).
- * - Local Maps: Socket handles for disconnect(true) on this node.
- * - Redis SETs: cross-process hasActiveConnection / logout clear.
- * - REDIS_URL unset → local Maps only.
- * - Redis configured but down → hasActiveConnection fail-open (false → send email).
+ * Story 3: force-disconnect via RealtimePublisher session/user rooms before local/Redis clear.
  */
 @Injectable()
 export class MessagingSocketRegistry {
@@ -29,6 +27,7 @@ export class MessagingSocketRegistry {
   constructor(
     @Optional() private readonly cache?: RedisCacheService,
     @Optional() private readonly obs?: StructuredObservabilityService,
+    @Optional() private readonly publisher?: RealtimePublisher,
   ) {}
 
   /** Sync local index only (tests / legacy). Prefer registerAsync in gateway. */
@@ -81,6 +80,8 @@ export class MessagingSocketRegistry {
   }
 
   async disconnectByUserId(userId: string): Promise<void> {
+    this.publisher?.disconnectUserSockets(userId);
+
     const redisIds = this.cache?.isAvailable()
       ? await this.cache.sMembers(presenceUserKey(userId))
       : null;
@@ -126,6 +127,8 @@ export class MessagingSocketRegistry {
   }
 
   async disconnectBySessionId(sessionId: string): Promise<void> {
+    this.publisher?.disconnectSessionSockets(sessionId);
+
     const redisIds = this.cache?.isAvailable()
       ? await this.cache.sMembers(presenceSessionKey(sessionId))
       : null;
