@@ -21,7 +21,8 @@ import {
 
 describe('expansion-explainability-manifest', () => {
   it('lists expansions in locked order (01–07, 10–15)', () => {
-    expect(EXPANSION_EXPLAINABILITY_MANIFEST.map((m) => m.id)).toEqual([
+    const ids = EXPANSION_EXPLAINABILITY_MANIFEST.map((m) => m.id);
+    expect(ids).toEqual([
       'expansion-01',
       'expansion-02',
       'expansion-03',
@@ -36,6 +37,8 @@ describe('expansion-explainability-manifest', () => {
       'expansion-14',
       'expansion-15',
     ]);
+    expect(ids).not.toContain('expansion-08');
+    expect(ids).not.toContain('expansion-09');
   });
 
   it('resolves Expansion-01 chip label and domain via helpers', () => {
@@ -45,6 +48,8 @@ describe('expansion-explainability-manifest', () => {
     );
     expect(expansionSignalDomainForKey('empathyCompassion')).toBe('emotional');
     expect(isRegisteredExpansionShadowChipKey('ambition')).toBe(false);
+    expect(expansionChipLabelForKey('notARealShadowKey')).toBeUndefined();
+    expect(expansionSignalDomainForKey('notARealShadowKey')).toBeUndefined();
   });
 
   it('buildAllExpansionShadowBreakdowns matches hand-spread of the same builders', () => {
