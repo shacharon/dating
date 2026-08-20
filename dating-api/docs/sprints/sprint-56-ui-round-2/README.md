@@ -23,7 +23,7 @@
 | # | Story | Extra | Status |
 |---|-------|-------|--------|
 | 01 | [Messaging hook split](./STORY_01_messaging_hook_split.md) | 3.5 | **Done** (`2973bfa`) |
-| 02 | [Fat client thinning](./STORY_02_fat_client_thinning.md) | 3.5 | Planned |
+| 02 | [Fat client thinning](./STORY_02_fat_client_thinning.md) | 3.5 | In progress (`feature/sprint-56-story-2`) |
 | 03 | [Auth cookie + locale + error primitives](./STORY_03_auth_locale_errors.md) | 2.5, 3.5 | Planned |
 | 04 | [Match display lib + admin RQ/specs](./STORY_04_match_lib_admin_rq.md) | 3.5 | Planned |
 
