@@ -83,4 +83,29 @@ describe('useAdminContentViolationsPage', () => {
     expect(result.current.error).toBe('Unblock reason is required.');
     prompt.mockRestore();
   });
+
+  it('clears local unblock error when filters change', async () => {
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('   ');
+    const { result } = renderHook(() => useAdminContentViolationsPage(), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.unblock('user_1');
+    });
+    expect(result.current.error).toBe('Unblock reason is required.');
+
+    await act(async () => {
+      result.current.setSurface('PROFILE');
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+    });
+    prompt.mockRestore();
+  });
 });

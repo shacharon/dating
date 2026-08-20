@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getAdminContentViolationStats,
   listAdminBlockedUsers,
@@ -36,6 +36,10 @@ export function useAdminContentViolationsPage() {
     }),
     [surface, category, action, userStatus, hasRecipient, userId],
   );
+
+  useEffect(() => {
+    setLocalError(null);
+  }, [listFilters]);
 
   const blockedQuery = useQuery({
     queryKey: queryKeys.admin.contentViolations.blocked,
