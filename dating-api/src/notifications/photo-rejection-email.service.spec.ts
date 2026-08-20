@@ -3,6 +3,8 @@ import type { EmailNotificationService } from './email-notification.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { EmailRecipientHelper } from './email-recipient.helper';
+import { REJECTION_REASON_USER_COPY_EN } from '../photo-storage/photo-moderation.types';
+import { buildPhotoRejectionEmail } from './email-templates';
 import { PhotoRejectionEmailService } from './photo-rejection-email.service';
 
 describe('PhotoRejectionEmailService', () => {
@@ -64,12 +66,17 @@ describe('PhotoRejectionEmailService', () => {
       rejectionReasonCode: 'explicit_content',
     });
 
+    const expected = buildPhotoRejectionEmail({
+      reason: REJECTION_REASON_USER_COPY_EN.explicit_content,
+      url: 'http://localhost:3000/dating/profile#profile-photos',
+    });
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'u1',
         to: 'a@b.com',
-        subject: 'Your photo was not approved',
-        textBody: expect.stringContaining('community guidelines'),
+        subject: expected.subject,
+        textBody: expected.textBody,
+        htmlBody: expected.htmlBody,
       }),
     );
   });

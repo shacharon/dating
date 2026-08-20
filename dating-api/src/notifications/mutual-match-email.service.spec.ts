@@ -6,6 +6,7 @@ import type { EmailNotificationService } from './email-notification.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildMutualMatchEmail } from './email-templates';
 
 describe('MutualMatchEmailService', () => {
   const match: MutualMatch = {
@@ -79,11 +80,17 @@ describe('MutualMatchEmailService', () => {
     await service.notifyNewMutualMatchBestEffort(match);
 
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledTimes(2);
+    const expectedA = buildMutualMatchEmail({
+      otherLabel: 'Bob',
+      url: 'http://localhost:3000/dating/conversations/mutual_1',
+    });
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_a',
         to: 'a@example.com',
-        subject: "It's a match on Piza!",
+        subject: expectedA.subject,
+        textBody: expectedA.textBody,
+        htmlBody: expectedA.htmlBody,
         okCode: ErrorCodes.EMAIL_MUTUAL_MATCH_SEND_OK,
       }),
     );

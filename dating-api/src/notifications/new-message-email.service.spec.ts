@@ -7,6 +7,7 @@ import type { MessagingSocketRegistry } from '../messaging-realtime/messaging-so
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildNewMessageEmail } from './email-templates';
 
 describe('NewMessageEmailService', () => {
   const prisma = {
@@ -134,12 +135,17 @@ describe('NewMessageEmailService', () => {
 
     await service.maybeNotifyBestEffort(baseParams);
 
+    const expected = buildNewMessageEmail({
+      senderLabel: 'SenderNick',
+      url: 'http://localhost:3000/dating/conversations/conv_1',
+    });
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_recipient',
         to: 'r@example.com',
-        subject: 'New message on Piza',
-        textBody: expect.stringContaining('SenderNick'),
+        subject: expected.subject,
+        textBody: expected.textBody,
+        htmlBody: expected.htmlBody,
         okCode: ErrorCodes.EMAIL_MESSAGE_SEND_OK,
       }),
     );

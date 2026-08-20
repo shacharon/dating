@@ -2,6 +2,7 @@ import type { UserReport } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import type { EmailNotificationConfigService } from './email-notification-config.service';
 import type { EmailNotificationService } from './email-notification.service';
+import { buildReportOpsEmail } from './email-templates';
 import { ReportOpsEmailService } from './report-ops-email.service';
 
 describe('ReportOpsEmailService', () => {
@@ -58,7 +59,9 @@ describe('ReportOpsEmailService', () => {
       }),
     );
     const arg = (email.sendOpsBestEffort as jest.Mock).mock.calls[0][0];
-    expect(arg.textBody).toContain('looks fishy');
-    expect(arg.htmlBody).toContain('looks fishy');
+    const expected = buildReportOpsEmail(report);
+    expect(arg.subject).toBe(expected.subject);
+    expect(arg.textBody).toBe(expected.textBody);
+    expect(arg.htmlBody).toBe(expected.htmlBody);
   });
 });
