@@ -7,6 +7,11 @@
 
 Improved 8-agent pipeline with pre-flight validation, security review, UI/UX audit, post-deploy verification, and feedback loops.
 
+## Engineering playbooks
+
+- [No-new-regex policy](./sprint-52-keyword-engine-freeze/NO_NEW_REGEX_POLICY.md) — where new signals go; do not grow frozen keyword dumps (Sprint 52)
+- LLM expansion playbook: `docs/sprints/ADD_EXPANSION_PLAYBOOK.md` (when Sprint 51 Story 03 is merged)
+
 ## Pipeline Agents
 
 ### Core Pipeline (Always Run)
