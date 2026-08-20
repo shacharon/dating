@@ -1,6 +1,13 @@
 # Story 02 — Redis email debounce + online-skip
 
-**Sprint 49 · Status: Planned · P0 · ~1d · Depends: Story 01 · Agent 2.5**
+**Sprint 49 · Status: Done**  
+**Priority:** P0  
+**Estimated effort:** 1 day  
+**Dependencies:** Story 01  
+**Repo:** `dating-api`  
+**Extra agents:** 2.5, 5 (post-deploy)
+
+---
 
 ## Objective
 
@@ -20,7 +27,9 @@ Move `MessageEmailDebounceService` off process-local Map to Redis. Wire online-s
 - [x] Claim after eligibility; `releaseClaim` on throw after claim
 - [x] Specs green (Agent 2: 16 passed)
 - [x] Agent 2.5 approved (Critical/High: 0)
-- [ ] Agent 3 PM close
+- [x] Agents 3.5 / 4: N/A
+- [x] Browser Network smoke: N/A (server-only debounce; no transport change)
+- [x] Agent 3 PM close
 - [ ] Agent 5 post-deploy (after production soak)
 
 ## Security notes (Agent 2.5)
@@ -36,6 +45,8 @@ Move `MessageEmailDebounceService` off process-local Map to Redis. Wire online-s
 - `56bd080` — feat(notifications): Redis-backed new-message email debounce
 - `e1266e6` — test: harden email debounce Redis claim coverage
 - `bd25a2b` — security: review sprint 49 story 2 email debounce
+- `12e8dbd` — security: document email debounce Redis privacy notes
+- (pending close) — chore: close sprint 49 story 2
 
 ## Suggested commit
 

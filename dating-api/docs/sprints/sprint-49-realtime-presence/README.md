@@ -1,6 +1,6 @@
 # Sprint 49 — Realtime Presence Fabric (P0)
 
-**Status:** In Progress (Story 01 Done)  
+**Status:** In Progress (Stories 01–02 Done)  
 **Depends on:** Sprint 48 recommended (Redis discipline); Redis required in multi-instance  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -23,7 +23,7 @@
 | # | Story | Extra agents | Status |
 |---|-------|--------------|--------|
 | 01 | [Redis presence](./STORY_01_redis_presence.md) | 2.5, 5 | **Done** |
-| 02 | [Email debounce + online-skip](./STORY_02_email_debounce_redis.md) | 2.5, 5 | Planned |
+| 02 | [Email debounce + online-skip](./STORY_02_email_debounce_redis.md) | 2.5, 5 | **Done** |
 | 03 | [WS deletedAt + revoke disconnect](./STORY_03_ws_auth_revoke.md) | 2.5, 5 | Planned |
 
 **Order:** 01 → 02 → 03.
