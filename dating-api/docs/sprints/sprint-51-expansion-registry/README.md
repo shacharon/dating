@@ -12,6 +12,8 @@
 
 Replace paste-into-`extraction.service` (expansions 01–N) with a single expansion **manifest/registry** that drives prompt blocks, chip/explainability builders, and promotion metadata.
 
+**Playbook:** [Add-expansion playbook](../ADD_EXPANSION_PLAYBOOK.md) — how to register Expansion-N without pasting into core services.
+
 ---
 
 ## Stories

@@ -3,8 +3,9 @@
  * and shadow breakdown builders (Sprint 51 Story 02).
  *
  * Sprint 51 paired registries — shared expansion ids.
- * Add Expansion-N: (1) prompt entry in extraction/expansion-manifest.ts
- *                  (2) explainability entry here when chips/breakdown exist.
+ * Add Expansion-N: see docs/sprints/ADD_EXPANSION_PLAYBOOK.md
+ *   (1) prompt entry in extraction/expansion-manifest.ts
+ *   (2) explainability entry here when chips/breakdown exist.
  *
  * Adding chips for a new expansion: new expansion-*-explainability.ts + one entry here.
  * Do not paste per-expansion imports into match-explainability / assemble-result.

@@ -3,9 +3,10 @@
  * blocks into extraction system prompts (Sprint 51 Story 01).
  *
  * Sprint 51 paired registries — shared expansion ids.
- * Add Expansion-N: (1) prompt entry here
- *                  (2) explainability entry in matches/expansion-explainability-manifest.ts
- *                      when chips/breakdown exist.
+ * Add Expansion-N: see docs/sprints/ADD_EXPANSION_PLAYBOOK.md
+ *   (1) prompt entry here
+ *   (2) explainability entry in matches/expansion-explainability-manifest.ts
+ *       when chips/breakdown exist.
  *
  * Adding a shadow expansion: new module file + one entry here.
  * Do not edit extraction.service.ts prompt splices for new expansions.
