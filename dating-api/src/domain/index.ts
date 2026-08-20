@@ -10,4 +10,3 @@ export * from './deriveContext';
 export * from './dealbreakers';
 export * from './relationshipBalance';
 export * from './repositories/user-profiles.repository';
-export * from './repositories/matches.repository';
