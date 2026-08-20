@@ -107,4 +107,35 @@ describe('useConversationListRealtime', () => {
     expect(next[0]?.unreadCount).toBe(0);
     expect(next[0]?.lastMessage?.text).toBe('mine');
   });
+
+  it('does not bump unread when conversation is active', () => {
+    mockGetActiveConversationId.mockReturnValue('conv-1');
+    const setOptimisticRows = vi.fn();
+
+    renderHook(() =>
+      useConversationListRealtime({
+        enabled: true,
+        sessionUserId: 'me',
+        queryRows,
+        setOptimisticRows,
+      }),
+    );
+
+    const opts = mockUseMessagingSocket.mock.calls.at(-1)?.[0];
+    opts?.onMessageNew({
+      id: 'm3',
+      conversationId: 'conv-1',
+      senderId: 'peer-1',
+      text: 'active',
+      createdAt: '2024-01-02T00:00:00Z',
+      status: 'SENT',
+    });
+
+    const updater = setOptimisticRows.mock.calls[0][0] as (
+      prev: ConversationListItemDto[] | null,
+    ) => ConversationListItemDto[];
+    const next = updater(null);
+    expect(next[0]?.unreadCount).toBe(0);
+    expect(next[0]?.lastMessage?.text).toBe('active');
+  });
 });

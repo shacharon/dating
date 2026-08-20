@@ -95,6 +95,25 @@ describe('useConversationMessages', () => {
     expect(result.current.messages).toEqual([]);
   });
 
+  it('uses i18n fallback when load rejects a non-Error', async () => {
+    mockFetchConversationMessages.mockRejectedValue('network');
+
+    const { result } = renderHook(() =>
+      useConversationMessages({
+        conversationId: 'conv-1',
+        enabled: true,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe(
+      enCopy.conversations.detail.loadMessagesFailed,
+    );
+  });
+
   it('should send message with optimistic UI', async () => {
     mockFetchConversationMessages.mockResolvedValue({
       messages: mockMessages,

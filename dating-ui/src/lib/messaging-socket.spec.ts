@@ -40,10 +40,30 @@ describe('getMessagingSocketOrigin', () => {
     expect(getMessagingSocketOrigin()).toBe('https://api.example.com');
   });
 
-  it('falls back to INTERNAL_API_URL on the server', () => {
+  it('uses window hostname when set (INTERNAL_API_URL is server-only fallback)', () => {
     delete process.env.NEXT_PUBLIC_API_URL;
     process.env.INTERNAL_API_URL = 'http://127.0.0.1:4000';
-    expect(getMessagingSocketOrigin()).toBe('http://127.0.0.1:4000');
+    // Browser/jsdom: cookie host alignment prefers UI hostname over INTERNAL.
+    expect(getMessagingSocketOrigin()).toBe(
+      `${window.location.protocol}//${window.location.hostname}:${process.env.NEXT_PUBLIC_API_PORT?.trim() || '3001'}`,
+    );
+  });
+
+  it('uses window hostname + API port when no explicit URL (cookie host alignment)', () => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    delete process.env.INTERNAL_API_URL;
+    const prevPort = process.env.NEXT_PUBLIC_API_PORT;
+    process.env.NEXT_PUBLIC_API_PORT = '3001';
+
+    expect(getMessagingSocketOrigin()).toBe(
+      `${window.location.protocol}//${window.location.hostname}:3001`,
+    );
+
+    if (prevPort === undefined) {
+      delete process.env.NEXT_PUBLIC_API_PORT;
+    } else {
+      process.env.NEXT_PUBLIC_API_PORT = prevPort;
+    }
   });
 });
 
