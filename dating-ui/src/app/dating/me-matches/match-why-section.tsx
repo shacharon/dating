@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
-import { matchBrowseWhyBody } from './match-display';
+import { matchBrowseWhyBody } from '@/lib/matches/match-display';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
 import { chipToEvidence } from './chip-evidence';
 

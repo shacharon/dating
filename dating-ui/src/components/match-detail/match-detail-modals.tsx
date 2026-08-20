@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import type { MeMatchDetailDto } from '@/lib/me-matches-api';
-import { matchDetailTitle } from '@/app/dating/me-matches/match-display';
+import { matchDetailTitle } from '@/lib/matches/match-display';
 
 const MatchCelebrationModal = dynamic(
   () =>

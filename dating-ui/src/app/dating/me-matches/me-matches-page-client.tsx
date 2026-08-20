@@ -16,7 +16,7 @@ import {
   applyMatchesScrollY,
   consumeMatchesScrollRestore,
 } from './me-matches-scroll';
-import { matchListPrimaryLabel } from './match-display';
+import { matchListPrimaryLabel } from '@/lib/matches/match-display';
 
 const MatchCelebrationModal = dynamic(
   () =>

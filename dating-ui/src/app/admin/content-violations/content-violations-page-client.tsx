@@ -3,6 +3,7 @@
 // Internal English-only — admin tools are not product-localized.
 import Link from 'next/link';
 import { useState } from 'react';
+import { InlineError } from '@/components/errors';
 import { useAdminContentViolationsPage } from '@/hooks/use-admin-content-violations';
 
 function StatCard({ label, value }: { label: string; value: number }) {
@@ -108,11 +109,7 @@ export default function AdminContentViolationsPageClient() {
       {loading ? (
         <p className="text-sm text-zinc-500">Loading…</p>
       ) : null}
-      {error ? (
-        <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <InlineError className="mb-4">{error}</InlineError> : null}
 
       <section className="mb-10">
         <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">

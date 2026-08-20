@@ -2,6 +2,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAdminContentViolationsPage } from './use-admin-content-violations';
 import * as api from '@/lib/admin-content-violations-api';
+import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
 vi.mock('@/lib/admin-content-violations-api');
 
@@ -11,6 +12,10 @@ const getAdminContentViolationStats = vi.mocked(
   api.getAdminContentViolationStats,
 );
 const unblockAdminContentUser = vi.mocked(api.unblockAdminContentUser);
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientTestProvider>{children}</QueryClientTestProvider>;
+}
 
 describe('useAdminContentViolationsPage', () => {
   beforeEach(() => {
@@ -32,7 +37,9 @@ describe('useAdminContentViolationsPage', () => {
   });
 
   it('loads blocked users, violations, and stats on mount', async () => {
-    const { result } = renderHook(() => useAdminContentViolationsPage());
+    const { result } = renderHook(() => useAdminContentViolationsPage(), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -47,20 +54,22 @@ describe('useAdminContentViolationsPage', () => {
   it('maps admin_forbidden to authorization error message', async () => {
     listAdminContentViolations.mockRejectedValue(new Error('admin_forbidden'));
 
-    const { result } = renderHook(() => useAdminContentViolationsPage());
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+    const { result } = renderHook(() => useAdminContentViolationsPage(), {
+      wrapper,
     });
 
-    expect(result.current.error).toBe(
-      'You are not authorized to view content violations.',
-    );
+    await waitFor(() => {
+      expect(result.current.error).toBe(
+        'You are not authorized to view content violations.',
+      );
+    });
   });
 
   it('requires unblock reason and does not call API when empty', async () => {
     const prompt = vi.spyOn(window, 'prompt').mockReturnValue('   ');
-    const { result } = renderHook(() => useAdminContentViolationsPage());
+    const { result } = renderHook(() => useAdminContentViolationsPage(), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

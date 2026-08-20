@@ -1,97 +1,145 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import {
   getAdminContentViolationStats,
   listAdminBlockedUsers,
   listAdminContentViolations,
   unblockAdminContentUser,
-  type AdminBlockedUserItem,
-  type AdminContentViolationListItem,
-  type AdminContentViolationStats,
 } from '@/lib/admin-content-violations-api';
+import { messageFromAdminFetchError } from '@/lib/admin-fetch-error';
+import { queryKeys } from '@/lib/query-keys';
 
-/** Admin content-violations page model (useState fetch — RQ is Story 04). */
+const FORBIDDEN = 'You are not authorized to view content violations.';
+const LOAD_FALLBACK = 'Failed to load violations';
+
+/** Admin content-violations page model (React Query). */
 export function useAdminContentViolationsPage() {
-  const [blockedUsers, setBlockedUsers] = useState<AdminBlockedUserItem[]>([]);
-  const [blockedTotal, setBlockedTotal] = useState(0);
-  const [rows, setRows] = useState<AdminContentViolationListItem[]>([]);
-  const [stats, setStats] = useState<AdminContentViolationStats | null>(null);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [surface, setSurface] = useState('');
   const [category, setCategory] = useState('');
   const [action, setAction] = useState('');
   const [userStatus, setUserStatus] = useState('');
   const [hasRecipient, setHasRecipient] = useState('');
   const [userId, setUserId] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [blocked, list, nextStats] = await Promise.all([
-        listAdminBlockedUsers({ limit: 50, offset: 0 }),
-        listAdminContentViolations({
-          surface: surface || undefined,
-          category: category || undefined,
-          action: action || undefined,
-          userStatus: userStatus || undefined,
-          hasRecipient: hasRecipient === '1' || undefined,
-          userId: userId.trim() || undefined,
-          limit: 50,
-          offset: 0,
+  const listFilters = useMemo(
+    () => ({
+      surface,
+      category,
+      action,
+      userStatus,
+      hasRecipient,
+      userId: userId.trim(),
+    }),
+    [surface, category, action, userStatus, hasRecipient, userId],
+  );
+
+  const blockedQuery = useQuery({
+    queryKey: queryKeys.admin.contentViolations.blocked,
+    queryFn: () => listAdminBlockedUsers({ limit: 50, offset: 0 }),
+  });
+
+  const listQuery = useQuery({
+    queryKey: queryKeys.admin.contentViolations.list(listFilters),
+    queryFn: () =>
+      listAdminContentViolations({
+        surface: listFilters.surface || undefined,
+        category: listFilters.category || undefined,
+        action: listFilters.action || undefined,
+        userStatus: listFilters.userStatus || undefined,
+        hasRecipient: listFilters.hasRecipient === '1' || undefined,
+        userId: listFilters.userId || undefined,
+        limit: 50,
+        offset: 0,
+      }),
+  });
+
+  const statsQuery = useQuery({
+    queryKey: queryKeys.admin.contentViolations.stats,
+    queryFn: () => getAdminContentViolationStats(),
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: ({
+      targetUserId,
+      reason,
+    }: {
+      targetUserId: string;
+      reason: string;
+    }) => unblockAdminContentUser(targetUserId, reason),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.admin.contentViolations.blocked,
         }),
-        getAdminContentViolationStats(),
+        queryClient.invalidateQueries({
+          queryKey: ['admin', 'content-violations', 'list'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.admin.contentViolations.stats,
+        }),
       ]);
-      setBlockedUsers(blocked.users);
-      setBlockedTotal(blocked.total);
-      setRows(list.violations);
-      setTotal(list.total);
-      setStats(nextStats);
-    } catch (e) {
-      if (e instanceof Error && e.message === 'admin_forbidden') {
-        setError('You are not authorized to view content violations.');
-      } else {
-        setError(e instanceof Error ? e.message : 'Failed to load violations');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [surface, category, action, userStatus, hasRecipient, userId]);
+    },
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const queryError =
+    blockedQuery.error ?? listQuery.error ?? statsQuery.error ?? null;
+  const mutationError = unblockMutation.error ?? null;
+  const error =
+    localError ??
+    (queryError
+      ? messageFromAdminFetchError(queryError, {
+          forbiddenMessage: FORBIDDEN,
+          fallbackMessage: LOAD_FALLBACK,
+        })
+      : null) ??
+    (mutationError
+      ? messageFromAdminFetchError(mutationError, {
+          forbiddenMessage: FORBIDDEN,
+          fallbackMessage: 'Unblock failed',
+        })
+      : null);
+
+  const loading =
+    blockedQuery.isLoading || listQuery.isLoading || statsQuery.isLoading;
 
   async function handleUnblock(targetUserId: string) {
     const reason = window.prompt('Reason for unblock (required):');
     if (reason == null) return;
     const trimmed = reason.trim();
     if (!trimmed) {
-      setError('Unblock reason is required.');
+      setLocalError('Unblock reason is required.');
       return;
     }
-    setBusyUserId(targetUserId);
-    setError(null);
+    setLocalError(null);
     try {
-      await unblockAdminContentUser(targetUserId, trimmed);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unblock failed');
-    } finally {
-      setBusyUserId(null);
+      await unblockMutation.mutateAsync({
+        targetUserId,
+        reason: trimmed,
+      });
+    } catch {
+      // error surfaced via mutationError
     }
   }
 
+  async function reload() {
+    setLocalError(null);
+    await Promise.all([
+      blockedQuery.refetch(),
+      listQuery.refetch(),
+      statsQuery.refetch(),
+    ]);
+  }
+
   return {
-    blockedUsers,
-    blockedTotal,
-    rows,
-    stats,
-    total,
+    blockedUsers: blockedQuery.data?.users ?? [],
+    blockedTotal: blockedQuery.data?.total ?? 0,
+    rows: listQuery.data?.violations ?? [],
+    stats: statsQuery.data ?? null,
+    total: listQuery.data?.total ?? 0,
     surface,
     setSurface,
     category,
@@ -106,8 +154,10 @@ export function useAdminContentViolationsPage() {
     setUserId,
     loading,
     error,
-    busyUserId,
-    reload: load,
+    busyUserId: unblockMutation.isPending
+      ? (unblockMutation.variables?.targetUserId ?? null)
+      : null,
+    reload,
     unblock: handleUnblock,
   };
 }
