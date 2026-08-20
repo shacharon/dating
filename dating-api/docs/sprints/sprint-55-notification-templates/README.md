@@ -5,7 +5,7 @@
 
 ## Goal
 
-Shared user-load + escapeHtml + displayLabel; ReportOps through common transactional sender.
+Shared user-load + escapeHtml + displayLabel; ReportOps through common ops sender (`sendOpsBestEffort`).
 
 ## Stories
 

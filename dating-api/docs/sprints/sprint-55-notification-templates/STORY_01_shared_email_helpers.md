@@ -12,5 +12,5 @@ Extract shared `displayLabel`, `escapeHtml`, user-load + unsubscribe skip used b
 - [x] `email-format.util.ts` (`escapeHtml` + `displayLabel` → `Someone`)
 - [x] `EmailRecipientHelper` load + unsubscribe skip
 - [x] Four email services wired; local duplicates removed
-- [x] ReportOps still uses provider resolver (Story 02 deferred)
+- [x] ReportOps used shared `escapeHtml` (provider bypass removed in Story 02)
 - [x] Specs + tsc green; Agents 2 approved; optional agents N/A
