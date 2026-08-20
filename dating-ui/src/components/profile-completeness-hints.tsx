@@ -7,43 +7,14 @@ import {
   basicsComplete,
   storyComplete,
 } from '@/lib/profile-completeness';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 
 export function ProfileCompletenessHints({ draft }: { draft: ProfileDraft }) {
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { copy: appCopy } = useAppLocale();
   const [hasApprovedPhoto, setHasApprovedPhoto] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const copy = getCopy(locale).profileCompleteness;
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
+  const copy = appCopy.profileCompleteness;
 
   useEffect(() => {
     let cancelled = false;

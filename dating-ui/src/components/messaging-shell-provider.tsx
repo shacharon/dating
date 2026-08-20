@@ -16,14 +16,7 @@ import {
   useConversationUnread,
 } from '@/contexts/conversation-unread-context';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  DEFAULT_LOCALE,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 import { type MessageDto } from '@/lib/conversations-api';
 import {
   shouldBumpUnreadForMessage,
@@ -55,7 +48,7 @@ function MessagingShellInner({
   const realtimeMode = getRealtimeMode();
   const { bumpFromMessage } = useConversationUnread();
   const [toast, setToast] = useState<ToastState>(null);
-  const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
+  const { copy } = useAppLocale();
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearDismissTimer = useCallback(() => {
@@ -102,32 +95,7 @@ function MessagingShellInner({
     onMessagesMerged: () => {},
   });
 
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
-
   useEffect(() => () => clearDismissTimer(), [clearDismissTimer]);
-
-  const copy = getCopy(locale);
 
   return (
     <>

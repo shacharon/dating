@@ -1,13 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 import { createUserReport } from '@/lib/report-user-api';
 import {
   USER_REPORT_REASON_VALUES,
@@ -30,7 +24,7 @@ export function ReportUserDialog({
   contextId: string;
   subjectLabel: string;
 }) {
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { copy } = useAppLocale();
   const [reason, setReason] = useState<UserReportReason>('HARASSMENT');
   const [details, setDetails] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -38,27 +32,7 @@ export function ReportUserDialog({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const copy = getCopy(locale);
   const ru = copy.reportUser;
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      setLocale(e.detail ?? readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
 
   useEffect(() => {
     if (!open) {

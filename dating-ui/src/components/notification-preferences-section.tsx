@@ -1,47 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  DEFAULT_LOCALE,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 import { patchNotificationPreferences } from '@/lib/notification-preferences-api';
 
 export function NotificationPreferencesSection() {
   const { user, refresh } = useAuth();
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { copy: appCopy } = useAppLocale();
   const [saving, setSaving] = useState<'inApp' | 'email' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const copy = getCopy(locale).profile.notifications;
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
+  const copy = appCopy.profile.notifications;
 
   if (!user) {
     return null;

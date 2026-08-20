@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
+import { InlineError } from '@/components/errors';
 import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text-field-help';
 import { useOnboardingTextsForm } from '@/hooks/use-onboarding-texts-form';
 
@@ -36,11 +37,7 @@ export function OnboardingTextsForm({
 
   return (
     <div className="space-y-6">
-      {m.loadError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {m.loadError}
-        </p>
-      ) : null}
+      {m.loadError ? <InlineError>{m.loadError}</InlineError> : null}
 
       {m.profileSyncing ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
@@ -169,16 +166,8 @@ export function OnboardingTextsForm({
           onDismiss={m.clearModeration}
         />
       ) : null}
-      {m.saveError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {m.saveError}
-        </p>
-      ) : null}
-      {m.finishError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {m.finishError}
-        </p>
-      ) : null}
+      {m.saveError ? <InlineError>{m.saveError}</InlineError> : null}
+      {m.finishError ? <InlineError>{m.finishError}</InlineError> : null}
     </div>
   );
 }

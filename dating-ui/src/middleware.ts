@@ -2,11 +2,9 @@ import { emitProductLog } from '@/lib/observability/product-logger';
 import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
 import { isAdminRouteBlocked } from '@/lib/admin-routes-gate';
 import { isInternalRouteBlocked } from '@/lib/internal-routes-gate';
+import { getSessionCookieName } from '@/lib/session-cookie';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-
-const SESSION_COOKIE =
-  process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME?.trim() || 'dating_session';
 
 function needsAuthSession(pathname: string): boolean {
   return (
@@ -44,7 +42,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  const token = request.cookies.get(getSessionCookieName())?.value;
   if (!token?.trim()) {
     const landing = new URL('/', request.url);
     landing.searchParams.set('next', `${pathname}${search}`);

@@ -1,6 +1,7 @@
 'use client';
 
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
+import { InlineError } from '@/components/errors';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { OnboardingBasicFields } from '@/components/onboarding-basic-fields';
 import { DatingChapterFields } from '@/components/dating-chapter-fields';
@@ -18,11 +19,7 @@ export function OnboardingBasicForm({
 
   return (
     <div className="space-y-6">
-      {m.loadError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {m.loadError}
-        </p>
-      ) : null}
+      {m.loadError ? <InlineError>{m.loadError}</InlineError> : null}
 
       {m.profileSyncing ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
@@ -124,11 +121,7 @@ export function OnboardingBasicForm({
           onDismiss={() => m.setModerationDetails(null)}
         />
       ) : null}
-      {m.saveError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {m.saveError}
-        </p>
-      ) : null}
+      {m.saveError ? <InlineError>{m.saveError}</InlineError> : null}
     </div>
   );
 }

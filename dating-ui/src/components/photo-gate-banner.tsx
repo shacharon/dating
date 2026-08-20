@@ -3,43 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { listMyProfilePhotos } from '@/lib/me-photos-api';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 
 export function PhotoGateBanner() {
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { copy: appCopy } = useAppLocale();
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const copy = getCopy(locale).photoGate;
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
+  const copy = appCopy.photoGate;
 
   useEffect(() => {
     let cancelled = false;

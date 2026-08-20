@@ -7,7 +7,14 @@ export function getSessionCookieName(): string {
   );
 }
 
-/** True when middleware would allow `/dating/*` (HttpOnly cookie visible only as presence in document.cookie). */
+/**
+ * Client-only presence check for the session cookie name in `document.cookie`.
+ *
+ * The real session token is HttpOnly — JS cannot read its value. This only
+ * detects that a cookie with the expected name is present (UX failsafe for
+ * landing/shell). Auth source of truth remains `GET /api/v1/auth/me` / `useAuth`.
+ * Cookie host must match the UI hostname (`localhost` ≠ `127.0.0.1`).
+ */
 export function hasSessionCookie(): boolean {
   if (typeof document === 'undefined') {
     return false;

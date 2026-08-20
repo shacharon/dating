@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ConversationListFilters } from '@/components/conversation-list-filters';
+import { InlineError } from '@/components/errors';
 import { useConversationsListPage } from '@/hooks/use-conversations-list-page';
 import { conversationPhotoSrc } from '@/lib/conversations-api';
 import {
@@ -63,19 +64,9 @@ export default function ConversationsPage() {
         )}
 
         {!loading && error && (
-          <div
-            className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
-            role="alert"
-          >
+          <InlineError onRetry={retry} retryLabel={listCopy.tryAgain}>
             {error}
-            <button
-              type="button"
-              className="mt-3 block text-sm font-medium underline"
-              onClick={retry}
-            >
-              {listCopy.tryAgain}
-            </button>
-          </div>
+          </InlineError>
         )}
 
         {!loading && !error && conversations.length === 0 && (

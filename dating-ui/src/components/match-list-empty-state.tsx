@@ -4,45 +4,16 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { fetchMyProfile } from '@/lib/me-profile-api';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 import { buildInviteUrl } from '@/lib/referral-attribution';
 
 export function MatchListEmptyState() {
   const { user } = useAuth();
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { copy: appCopy } = useAppLocale();
   const [place, setPlace] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
 
-  const copy = getCopy(locale).launch.emptyMatches;
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
+  const copy = appCopy.launch.emptyMatches;
 
   useEffect(() => {
     let cancelled = false;
