@@ -4,10 +4,14 @@ import { useConversationMessages } from './use-conversation-messages';
 import * as conversationsApi from '@/lib/conversations-api';
 import * as messagingSocket from '@/hooks/use-messaging-socket';
 import * as realtimeMode from '@/lib/realtime-mode';
+import { enCopy } from '@/lib/i18n/en';
 
 vi.mock('@/lib/conversations-api');
 vi.mock('@/hooks/use-messaging-socket');
 vi.mock('@/lib/realtime-mode');
+vi.mock('@/lib/i18n', () => ({
+  useAppLocale: () => ({ locale: 'en', copy: enCopy }),
+}));
 
 const mockFetchConversationMessages = vi.mocked(conversationsApi.fetchConversationMessages);
 const mockMarkConversationAsRead = vi.mocked(conversationsApi.markConversationAsRead);

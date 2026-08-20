@@ -104,9 +104,7 @@ export function ConversationMessageList({
             role="alert"
             data-testid="conversation-messages-error"
           >
-            {messagesError === 'Failed to load messages'
-              ? detailCopy.loadMessagesFailed
-              : messagesError}
+            {messagesError}
           </div>
         )}
 

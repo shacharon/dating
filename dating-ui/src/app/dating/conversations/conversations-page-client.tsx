@@ -6,15 +6,13 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { ConversationListFilters } from '@/components/conversation-list-filters';
 import { useAuth } from '@/contexts/auth-context';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
-import { useMessagingSocket } from '@/hooks/use-messaging-socket';
+import { useConversationListRealtime } from '@/hooks/messaging/use-conversation-list-realtime';
 import {
   conversationPhotoSrc,
   fetchMyConversations,
   type ConversationListItemDto,
   type ConversationListResponseDto,
-  type MessageDto,
 } from '@/lib/conversations-api';
-import { getActiveConversationId } from '@/lib/conversation-focus';
 import {
   CONVERSATION_LIST_CONTROLS_STORAGE_KEY,
   DEFAULT_CONVERSATION_LIST_CONTROLS,
@@ -23,7 +21,6 @@ import {
   type ConversationFilterType,
   type ConversationSortBy,
 } from '@/lib/conversation-list-controls';
-import { applyIncomingMessageToConversationList } from '@/lib/conversation-list-unread';
 import { useAppLocale } from '@/lib/i18n';
 import { queryKeys } from '@/lib/query-keys';
 import { getRealtimeMode } from '@/lib/realtime-mode';
@@ -161,26 +158,11 @@ export default function ConversationsPage() {
     });
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, reconcileFromList]);
 
-  const handleListMessageNew = useCallback(
-    (msg: MessageDto) => {
-      if (!user?.id) return;
-      const isOwn = msg.senderId === user.id;
-      const isActive = msg.conversationId === getActiveConversationId();
-      const bumpUnread = !isOwn && !isActive;
-      setOptimisticRows((prev) =>
-        applyIncomingMessageToConversationList(prev ?? queryRows, msg, {
-          bumpUnread,
-        }),
-      );
-    },
-    [user?.id, queryRows],
-  );
-
-  useMessagingSocket({
+  useConversationListRealtime({
     enabled: realtimeMode === 'ws',
-    onMessageNew: handleListMessageNew,
-    getLastMessageId: () => undefined,
-    onMessagesMerged: () => {},
+    sessionUserId: user?.id,
+    queryRows,
+    setOptimisticRows,
   });
 
   const loading = isPending;
