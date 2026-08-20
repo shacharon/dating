@@ -32,6 +32,7 @@ export class NewMessageEmailService {
     senderUserId: string;
     messageId: string;
   }): Promise<void> {
+    let claimed = false;
     try {
       if (params.recipientUserId === params.senderUserId) {
         return;
@@ -41,19 +42,6 @@ export class NewMessageEmailService {
         this.obs.trace(
           `email message skipped recipient online userId=${params.recipientUserId} conversationId=${params.conversationId}`,
           ErrorCodes.EMAIL_SKIPPED_RECIPIENT_ONLINE,
-        );
-        return;
-      }
-
-      if (
-        !this.debounce.shouldSend(
-          params.conversationId,
-          params.recipientUserId,
-        )
-      ) {
-        this.obs.trace(
-          `email message skipped debounced userId=${params.recipientUserId} conversationId=${params.conversationId}`,
-          ErrorCodes.EMAIL_SKIPPED_DEBOUNCED,
         );
         return;
       }
@@ -88,6 +76,21 @@ export class NewMessageEmailService {
         return;
       }
 
+      // Claim after eligibility so no-email / unsubscribed do not burn the window.
+      if (
+        !(await this.debounce.tryClaimSend(
+          params.conversationId,
+          params.recipientUserId,
+        ))
+      ) {
+        this.obs.trace(
+          `email message skipped debounced userId=${params.recipientUserId} conversationId=${params.conversationId}`,
+          ErrorCodes.EMAIL_SKIPPED_DEBOUNCED,
+        );
+        return;
+      }
+      claimed = true;
+
       const senderLabel = displayLabel(
         sender?.profile?.nickname,
         sender?.displayName,
@@ -107,9 +110,13 @@ export class NewMessageEmailService {
         failCode: ErrorCodes.EMAIL_MESSAGE_SEND_FAILED,
         skippedProviderCode: ErrorCodes.EMAIL_SKIPPED_PROVIDER_DISABLED,
       });
-
-      this.debounce.recordSent(params.conversationId, params.recipientUserId);
     } catch (err) {
+      if (claimed) {
+        await this.debounce.releaseClaim(
+          params.conversationId,
+          params.recipientUserId,
+        );
+      }
       this.obs.error(
         `email message notify failed conversationId=${params.conversationId} messageId=${params.messageId}`,
         ErrorCodes.EMAIL_MESSAGE_SEND_FAILED,

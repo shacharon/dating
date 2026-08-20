@@ -1,31 +1,101 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { RedisCacheService } from '../cache/redis-cache.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
+import {
+  emailMsgDebounceKey,
+  emailMsgDebounceTtlSeconds,
+} from './email-debounce.keys';
 
+/**
+ * Cross-process new-message email debounce (Sprint 49 Story 2).
+ * - REDIS_URL unset → in-memory Map (local/single-node).
+ * - Redis up → SET NX EX claim.
+ * - Redis configured but down → fail-open (allow send).
+ */
 @Injectable()
 export class MessageEmailDebounceService {
+  private readonly logger = new Logger(MessageEmailDebounceService.name);
   private readonly lastSentAt = new Map<string, number>();
 
-  constructor(private readonly config: EmailNotificationConfigService) {}
+  constructor(
+    private readonly config: EmailNotificationConfigService,
+    @Optional() private readonly cache?: RedisCacheService,
+  ) {}
 
-  shouldSend(conversationId: string, recipientUserId: string): boolean {
-    const key = this.key(conversationId, recipientUserId);
-    const last = this.lastSentAt.get(key);
-    if (last == null) {
+  /**
+   * Atomically claim the right to send one new-message email for this pair.
+   * true → caller may send; false → within debounce window (skip).
+   */
+  async tryClaimSend(
+    conversationId: string,
+    recipientUserId: string,
+  ): Promise<boolean> {
+    const mapKey = this.mapKey(conversationId, recipientUserId);
+    const ttlSeconds = emailMsgDebounceTtlSeconds(
+      this.config.messageDebounceMinutes,
+    );
+    const windowMs = ttlSeconds * 1000;
+
+    if (!this.redisConfigured()) {
+      return this.tryClaimLocal(mapKey, windowMs);
+    }
+
+    if (!this.cache?.isAvailable()) {
+      this.logger.warn(
+        'email debounce redis unavailable — fail-open allow send',
+      );
       return true;
     }
-    const windowMs = this.config.messageDebounceMinutes * 60 * 1000;
-    return Date.now() - last >= windowMs;
+
+    const redisKey = emailMsgDebounceKey(conversationId, recipientUserId);
+    return this.cache.setNx(
+      redisKey,
+      { at: new Date().toISOString() },
+      ttlSeconds,
+    );
   }
 
-  recordSent(conversationId: string, recipientUserId: string): void {
-    this.lastSentAt.set(this.key(conversationId, recipientUserId), Date.now());
+  /** Undo claim if send definitively did not happen (thrown before/during send). */
+  async releaseClaim(
+    conversationId: string,
+    recipientUserId: string,
+  ): Promise<void> {
+    const mapKey = this.mapKey(conversationId, recipientUserId);
+
+    if (!this.redisConfigured()) {
+      this.lastSentAt.delete(mapKey);
+      return;
+    }
+
+    if (!this.cache?.isAvailable()) {
+      return;
+    }
+
+    await this.cache.del(
+      emailMsgDebounceKey(conversationId, recipientUserId),
+    );
   }
 
+  /** Test-only. */
   resetForTests(): void {
     this.lastSentAt.clear();
   }
 
-  private key(conversationId: string, recipientUserId: string): string {
+  private redisConfigured(): boolean {
+    return Boolean(process.env.REDIS_URL?.trim());
+  }
+
+  private tryClaimLocal(mapKey: string, windowMs: number): boolean {
+    const last = this.lastSentAt.get(mapKey);
+    const now = Date.now();
+    if (last != null && now - last < windowMs) {
+      return false;
+    }
+    this.lastSentAt.set(mapKey, now);
+    return true;
+  }
+
+  private mapKey(conversationId: string, recipientUserId: string): string {
     return `${conversationId}:${recipientUserId}`;
   }
 }

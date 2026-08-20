@@ -21,8 +21,8 @@ describe('NewMessageEmailService', () => {
   } as unknown as MessagingSocketRegistry;
 
   const debounce = {
-    shouldSend: jest.fn(),
-    recordSent: jest.fn(),
+    tryClaimSend: jest.fn(),
+    releaseClaim: jest.fn(),
   } as unknown as MessageEmailDebounceService;
 
   const email = {
@@ -53,24 +53,41 @@ describe('NewMessageEmailService', () => {
       email,
       obs,
     );
-    (debounce.shouldSend as jest.Mock).mockReturnValue(true);
+    (debounce.tryClaimSend as jest.Mock).mockResolvedValue(true);
+    (debounce.releaseClaim as jest.Mock).mockResolvedValue(undefined);
     (socketRegistry.hasActiveConnection as jest.Mock).mockResolvedValue(false);
   });
 
-  it('skips when recipient has active WS connection', async () => {
+  it('skips when recipient has active WS connection (no debounce claim)', async () => {
     (socketRegistry.hasActiveConnection as jest.Mock).mockResolvedValue(true);
 
     await service.maybeNotifyBestEffort(baseParams);
 
     expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
+    expect(debounce.tryClaimSend).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('user_recipient'),
       ErrorCodes.EMAIL_SKIPPED_RECIPIENT_ONLINE,
     );
   });
 
-  it('skips when debounce window is active', async () => {
-    (debounce.shouldSend as jest.Mock).mockReturnValue(false);
+  it('skips when debounce claim fails', async () => {
+    (debounce.tryClaimSend as jest.Mock).mockResolvedValue(false);
+    (prisma.user.findUnique as jest.Mock).mockImplementation(
+      async ({ where }: { where: { id: string } }) => {
+        if (where.id === 'user_recipient') {
+          return {
+            id: 'user_recipient',
+            email: 'r@example.com',
+            emailNotificationsEnabled: true,
+          };
+        }
+        return {
+          displayName: 'Sender',
+          profile: { nickname: 'Sender' },
+        };
+      },
+    );
 
     await service.maybeNotifyBestEffort(baseParams);
 
@@ -81,7 +98,7 @@ describe('NewMessageEmailService', () => {
     );
   });
 
-  it('skips when recipient unsubscribed', async () => {
+  it('skips when recipient unsubscribed without claiming', async () => {
     (prisma.user.findUnique as jest.Mock).mockImplementation(
       async ({ where }: { where: { id: string } }) => {
         if (where.id === 'user_recipient') {
@@ -101,6 +118,7 @@ describe('NewMessageEmailService', () => {
     await service.maybeNotifyBestEffort(baseParams);
 
     expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
+    expect(debounce.tryClaimSend).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('user_recipient'),
       ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
@@ -126,6 +144,10 @@ describe('NewMessageEmailService', () => {
 
     await service.maybeNotifyBestEffort(baseParams);
 
+    expect(debounce.tryClaimSend).toHaveBeenCalledWith(
+      'conv_1',
+      'user_recipient',
+    );
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_recipient',
@@ -135,9 +157,35 @@ describe('NewMessageEmailService', () => {
         okCode: ErrorCodes.EMAIL_MESSAGE_SEND_OK,
       }),
     );
-    expect(debounce.recordSent).toHaveBeenCalledWith(
+    expect(debounce.releaseClaim).not.toHaveBeenCalled();
+  });
+
+  it('releases claim when send throws', async () => {
+    (prisma.user.findUnique as jest.Mock).mockImplementation(
+      async ({ where }: { where: { id: string } }) => {
+        if (where.id === 'user_recipient') {
+          return {
+            id: 'user_recipient',
+            email: 'r@example.com',
+            emailNotificationsEnabled: true,
+          };
+        }
+        return {
+          displayName: 'Sender',
+          profile: { nickname: 'Sender' },
+        };
+      },
+    );
+    (email.sendTransactionalBestEffort as jest.Mock).mockRejectedValue(
+      new Error('boom'),
+    );
+
+    await service.maybeNotifyBestEffort(baseParams);
+
+    expect(debounce.releaseClaim).toHaveBeenCalledWith(
       'conv_1',
       'user_recipient',
     );
+    expect(obs.error).toHaveBeenCalled();
   });
 });

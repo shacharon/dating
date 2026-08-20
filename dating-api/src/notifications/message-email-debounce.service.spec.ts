@@ -1,47 +1,115 @@
+import type { RedisCacheService } from '../cache/redis-cache.service';
 import { MessageEmailDebounceService } from './message-email-debounce.service';
 import type { EmailNotificationConfigService } from './email-notification-config.service';
+import { emailMsgDebounceKey } from './email-debounce.keys';
+
+function createSharedMemoryRedis(): RedisCacheService {
+  const keys = new Map<string, string>();
+
+  return {
+    isAvailable: () => true,
+    async setNx(key: string, value: unknown, _ttl: number) {
+      if (keys.has(key)) return false;
+      keys.set(key, JSON.stringify(value));
+      return true;
+    },
+    async del(key: string) {
+      keys.delete(key);
+    },
+  } as unknown as RedisCacheService;
+}
 
 describe('MessageEmailDebounceService', () => {
   const config = {
     messageDebounceMinutes: 15,
   } as EmailNotificationConfigService;
 
-  let service: MessageEmailDebounceService;
+  const prevRedis = process.env.REDIS_URL;
 
-  beforeEach(() => {
-    service = new MessageEmailDebounceService(config);
-    service.resetForTests();
+  afterEach(() => {
+    if (prevRedis === undefined) delete process.env.REDIS_URL;
+    else process.env.REDIS_URL = prevRedis;
   });
 
-  it('allows first send for a conversation recipient pair', () => {
-    expect(service.shouldSend('conv_1', 'user_recipient')).toBe(true);
+  describe('local (REDIS_URL unset)', () => {
+    let service: MessageEmailDebounceService;
+
+    beforeEach(() => {
+      delete process.env.REDIS_URL;
+      service = new MessageEmailDebounceService(config);
+      service.resetForTests();
+    });
+
+    it('allows first claim for a conversation recipient pair', async () => {
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(true);
+    });
+
+    it('blocks second claim within debounce window', async () => {
+      const now = Date.now();
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(true);
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(false);
+
+      jest.restoreAllMocks();
+    });
+
+    it('allows claim after debounce window expires', async () => {
+      const now = Date.now();
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(true);
+
+      jest.spyOn(Date, 'now').mockReturnValue(now + 15 * 60 * 1000 + 1);
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(true);
+
+      jest.restoreAllMocks();
+    });
+
+    it('tracks debounce independently per conversation and recipient', async () => {
+      expect(await service.tryClaimSend('conv_1', 'user_a')).toBe(true);
+      expect(await service.tryClaimSend('conv_1', 'user_b')).toBe(true);
+      expect(await service.tryClaimSend('conv_2', 'user_a')).toBe(true);
+    });
+
+    it('releaseClaim allows re-claim', async () => {
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(true);
+      await service.releaseClaim('conv_1', 'user_recipient');
+      expect(await service.tryClaimSend('conv_1', 'user_recipient')).toBe(true);
+    });
   });
 
-  it('blocks second send within debounce window', () => {
-    const now = Date.now();
-    jest.spyOn(Date, 'now').mockReturnValue(now);
+  describe('cross-process via shared Redis mock', () => {
+    it('second node cannot claim within window', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const redis = createSharedMemoryRedis();
+      const a = new MessageEmailDebounceService(config, redis);
+      const b = new MessageEmailDebounceService(config, redis);
 
-    service.recordSent('conv_1', 'user_recipient');
-    expect(service.shouldSend('conv_1', 'user_recipient')).toBe(false);
+      expect(await a.tryClaimSend('c1', 'u1')).toBe(true);
+      expect(await b.tryClaimSend('c1', 'u1')).toBe(false);
+      expect(emailMsgDebounceKey('c1', 'u1')).toBe('email:msgdebounce:c1:u1');
+    });
 
-    jest.restoreAllMocks();
-  });
+    it('releaseClaim on peer frees claim for other node', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const redis = createSharedMemoryRedis();
+      const a = new MessageEmailDebounceService(config, redis);
+      const b = new MessageEmailDebounceService(config, redis);
 
-  it('allows send after debounce window expires', () => {
-    const now = Date.now();
-    jest.spyOn(Date, 'now').mockReturnValue(now);
+      expect(await a.tryClaimSend('c1', 'u1')).toBe(true);
+      await a.releaseClaim('c1', 'u1');
+      expect(await b.tryClaimSend('c1', 'u1')).toBe(true);
+    });
 
-    service.recordSent('conv_1', 'user_recipient');
-
-    jest.spyOn(Date, 'now').mockReturnValue(now + 15 * 60 * 1000 + 1);
-    expect(service.shouldSend('conv_1', 'user_recipient')).toBe(true);
-
-    jest.restoreAllMocks();
-  });
-
-  it('tracks debounce independently per conversation and recipient', () => {
-    service.recordSent('conv_1', 'user_a');
-    expect(service.shouldSend('conv_1', 'user_b')).toBe(true);
-    expect(service.shouldSend('conv_2', 'user_a')).toBe(true);
+    it('fail-open: Redis unavailable allows send', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const redis = {
+        isAvailable: () => false,
+        setNx: jest.fn(),
+      } as unknown as RedisCacheService;
+      const service = new MessageEmailDebounceService(config, redis);
+      expect(await service.tryClaimSend('c1', 'u1')).toBe(true);
+      expect(redis.setNx).not.toHaveBeenCalled();
+    });
   });
 });
