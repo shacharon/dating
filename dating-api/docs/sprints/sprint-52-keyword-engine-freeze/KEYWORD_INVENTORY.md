@@ -2,6 +2,8 @@
 
 **Sprint 52 Story 01 · Ownership + overlap map**
 
+**Keyword dumps: FROZEN** — see [KEYWORD_ENGINE_FREEZE.md](./KEYWORD_ENGINE_FREEZE.md) (Sprint 52 Story 02). No new regex/phrases/allowlist ids in frozen files without RFC.
+
 Inventory for freeze / consolidate work. **Not** a redesign — documents where keyword/regex/allowlist systems live and how they overlap today.
 
 ---
@@ -57,7 +59,7 @@ Cell values: **Owns** = SoT emitter for that domain · **Also emits** = parallel
 - **Interests — three+ allowlists:** HG `INTEREST_TAGS` (e.g. `music`, `film`, `gaming`, `travel`) vs LLM `INTEREST_CANONICAL_TAGS` (19 tags: `hiking`, `movies`, `music`, …) vs enrichment `INTEREST_ALLOWLIST` / `interestsTop3` (overlapping words like `hiking`, `music`, `gaming`, `yoga`, `travel` but **different id sets and emitters**) vs evaluate `explicit-extended-lists` `interests` phrases.
 - **Lifestyle — dual/triple paths:** HG `LIFESTYLE_SIGNAL_TAGS` (e.g. `travel`, `gaming`, `reading`) vs evaluate `explicit-extended-lists` `lifestyleTraits` vs optional `extractionV2.lifestyleTraits` on the HG merge hub; enrichment also encodes lifestyle-ish closed enums (`dailyRhythm`, autonomy/pace) that are **not** the HG tag vocabulary.
 - **Conflict — dual representations:** enrichment `conflictStyleDetail` (closed string codes from regex) vs LLM official numeric `conflictStyle` in `EXTRACTION_SIGNAL_KEYS` — same product idea, different engines and types.
-- **No single SoT yet:** do not assume one allowlist wins until Story 02 (freeze vs taxonomy generation).
+- **No single SoT yet:** dumps are **frozen**; do not assume one allowlist wins until a future taxonomy story.
 
 ---
 
@@ -65,8 +67,8 @@ Cell values: **Owns** = SoT emitter for that domain · **Also emits** = parallel
 
 | Story | Owns |
 |-------|------|
-| [02 — Freeze or taxonomy](./STORY_02_freeze_or_taxonomy.md) | Freeze dumps or generate classifiers from one taxonomy; parity tests |
-| [03 — No-new-regex policy](./STORY_03_no_new_regex_policy.md) | Agent/PR policy: where new signals go |
+| [02 — Freeze or taxonomy](./STORY_02_freeze_or_taxonomy.md) | **Freeze shipped** (Story 02); taxonomy generation **deferred** to a follow-up epic |
+| [03 — No-new-regex policy](./STORY_03_no_new_regex_policy.md) | Agent/PR policy: where new signals go (on top of freeze) |
 
 This inventory does **not** resolve collisions, delete dead paths, or change extract behavior.
 
@@ -74,6 +76,6 @@ This inventory does **not** resolve collisions, delete dead paths, or change ext
 
 ## How to update this doc
 
-1. Add or change keywords only in the owning SoT module for that engine.
-2. Update the **ownership** row and **overlap matrix** cell(s) here in the same PR.
-3. Follow Story 03 no-new-regex policy once it lands (until then: do not add ad-hoc regex without inventory update + Story 02 direction).
+1. Do **not** add keywords to frozen files without RFC — see [KEYWORD_ENGINE_FREEZE.md](./KEYWORD_ENGINE_FREEZE.md).
+2. If an RFC lands, update the **ownership** row and **overlap matrix** cell(s) here in the same PR.
+3. Follow Story 03 no-new-regex policy once it lands (freeze remains in force until a taxonomy follow-up).

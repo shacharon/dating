@@ -9,7 +9,9 @@
  *
  * Sprint 52 keyword engine: hg-personality-text
  * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
- * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
+ * KEYWORD ENGINE FROZEN (Sprint 52 Story 02)
+ * See docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_ENGINE_FREEZE.md
+ * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
 export const PERSONALITY_TRAIT_TAGS = [

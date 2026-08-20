@@ -4,7 +4,9 @@
  *
  * Sprint 52 keyword engine: enrichment-v2
  * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
- * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
+ * KEYWORD ENGINE FROZEN (Sprint 52 Story 02)
+ * See docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_ENGINE_FREEZE.md
+ * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
 /** Mapper output before `sanitizeEnrichmentSignalsV1` (labels are intended to be canonical snake_case). */
