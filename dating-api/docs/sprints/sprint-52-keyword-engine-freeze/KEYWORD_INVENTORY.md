@@ -42,18 +42,20 @@ Cell values: **Owns** = SoT emitter for that domain · **Also emits** = parallel
 | Domain | `enrichment-v2` | `hg-dealbreaker-text` | `hg-lifestyle-text` | `hg-interest-text` | `hg-personality-text` | `llm-extraction` |
 |--------|-----------------|----------------------|---------------------|--------------------|----------------------|------------------|
 | Interests / hobbies tags | **Also emits** (`INTEREST_ALLOWLIST` → `interestsTop3`) | — | — | **Owns** (HG `INTEREST_TAGS` deterministic) | — | **Owns** (`INTEREST_CANONICAL_TAGS` LLM-first) |
-| Lifestyle tags | **Also emits** (enums that smell lifestyle: `dailyRhythm`, pace/autonomy-adjacent) | — | **Owns** (`LIFESTYLE_SIGNAL_TAGS`) | — | — | **Also emits** (`extractionV2.lifestyleTraits` when present on merge input) |
+| Lifestyle tags | **Also emits** (enums that smell lifestyle: `dailyRhythm`, pace/autonomy-adjacent) | — | **Owns** (`LIFESTYLE_SIGNAL_TAGS`) | — | — | **Also emits** (optional `extractionV2.lifestyleTraits` on HG merge; often populated alongside evaluate `extendedSignals`) |
 | Personality / trait tags | — | — | — | — | **Owns** (`PERSONALITY_TRAIT_TAGS`) | **Also emits** (numeric shadow/official signals that describe personality, not the HG tag set) |
 | Dealbreaker / hard-block free-text | — | **Owns** | — | — | — | — (structured prefs/facts elsewhere; not this regex extract) |
 | Enrichment closed enums (`dailyRhythm`, `kidsTimeline`, `conflictStyleDetail`, `relationshipPace`, `communicationMode`, `autonomyTogethernessDepth`, …) | **Owns** | — | — | — | — | — |
 | Compatibility / shadow **numeric** signals (`EXTRACTION_SIGNAL_KEYS`) | — | — | — | — | — | **Owns** |
 
+**Sibling regex surface (not a 7th engine this story):** `src/evaluate/explicit-extended-lists.ts` — deterministic phrase lists for `interests` / `lifestyleTraits` / `preferences` / `boundaries` / `values`, merged into `evaluate.service` `extendedSignals`. Overlaps interest/lifestyle domains with enrichment-v2 and HG extracts; Story 02 should decide freeze/taxonomy coverage for it.
+
 ---
 
 ## Known collisions
 
-- **Interests — three allowlists:** HG `INTEREST_TAGS` (e.g. `music`, `film`, `gaming`, `travel`) vs LLM `INTEREST_CANONICAL_TAGS` (19 tags: `hiking`, `movies`, `music`, …) vs enrichment `INTEREST_ALLOWLIST` / `interestsTop3` (overlapping words like `hiking`, `music`, `gaming`, `yoga`, `travel` but **different id sets and emitters**).
-- **Lifestyle — dual paths:** HG `LIFESTYLE_SIGNAL_TAGS` (e.g. `travel`, `gaming`, `reading`) vs optional LLM `extractionV2.lifestyleTraits` on the HG merge hub; enrichment also encodes lifestyle-ish closed enums (`dailyRhythm`, autonomy/pace) that are **not** the HG tag vocabulary.
+- **Interests — three+ allowlists:** HG `INTEREST_TAGS` (e.g. `music`, `film`, `gaming`, `travel`) vs LLM `INTEREST_CANONICAL_TAGS` (19 tags: `hiking`, `movies`, `music`, …) vs enrichment `INTEREST_ALLOWLIST` / `interestsTop3` (overlapping words like `hiking`, `music`, `gaming`, `yoga`, `travel` but **different id sets and emitters**) vs evaluate `explicit-extended-lists` `interests` phrases.
+- **Lifestyle — dual/triple paths:** HG `LIFESTYLE_SIGNAL_TAGS` (e.g. `travel`, `gaming`, `reading`) vs evaluate `explicit-extended-lists` `lifestyleTraits` vs optional `extractionV2.lifestyleTraits` on the HG merge hub; enrichment also encodes lifestyle-ish closed enums (`dailyRhythm`, autonomy/pace) that are **not** the HG tag vocabulary.
 - **Conflict — dual representations:** enrichment `conflictStyleDetail` (closed string codes from regex) vs LLM official numeric `conflictStyle` in `EXTRACTION_SIGNAL_KEYS` — same product idea, different engines and types.
 - **No single SoT yet:** do not assume one allowlist wins until Story 02 (freeze vs taxonomy generation).
 
