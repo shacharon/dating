@@ -1,6 +1,6 @@
 # Sprint 56 — UI Round 2 (beyond Sprint 47) (P1)
 
-**Status:** In progress (3/4)  
+**Status:** Done (4/4)  
 **Depends on:** Sprint 47 Done (or parallel after Story 01 view-models)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -25,8 +25,8 @@
 | 01 | [Messaging hook split](./STORY_01_messaging_hook_split.md) | 3.5 | **Done** (`2973bfa`) |
 | 02 | [Fat client thinning](./STORY_02_fat_client_thinning.md) | 3.5 | **Done** (`68969e3`) |
 | 03 | [Auth cookie + locale + error primitives](./STORY_03_auth_locale_errors.md) | 2.5, 3.5 | **Done** (`6724973`) |
-| 04 | [Match display lib + admin RQ/specs](./STORY_04_match_lib_admin_rq.md) | 3.5 | In progress (`feature/sprint-56-story-4`) |
+| 04 | [Match display lib + admin RQ/specs](./STORY_04_match_lib_admin_rq.md) | 3.5 | **Done** (`520e213`) |
 
-## Preferred merge tip (Story 03)
+## Preferred merge tip (Sprint 56 complete)
 
-`feature/sprint-56-story-3` @ close commit (stacks Stories 01–03).
+`feature/sprint-56-story-4` @ `520e213` (stacks Stories 01–04). Agent 5 deferred until merge/prod for Stories 02–04.
