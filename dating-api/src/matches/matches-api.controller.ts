@@ -1,3 +1,8 @@
+/**
+ * QUARANTINE (Sprint 53 Story 02) — LAB / ADMIN ONLY.
+ * Not a product HTTP surface. Product matches: /api/v1/me/*.
+ * See docs/ops/LEGACY_HTTP_QUARANTINE.md. Scheduled for deletion (not this PR).
+ */
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../admin/admin.guard';
 import { AuthGuard } from '../auth/auth.guard';
@@ -65,6 +70,9 @@ export interface MatchesApiItemDto {
 }
 
 /**
+ * @deprecated Lab/admin only (Sprint 53 Story 02). Not product HTTP.
+ * Product matches: `/api/v1/me/matches*`. See `docs/ops/LEGACY_HTTP_QUARANTINE.md`.
+ *
  * Admin-style match list. When `ENABLE_HG_LIST_ADMISSION_GATE=1`, `listFullWithHolyGrailRows` applies the same
  * membership filter as this list (`GET /api/matches`): rows **without** a valid HG diagnostic triple are **kept**; rows **with**
  * a valid triple are kept only when `hgMutualPass === true` (`hg-list-admission-gate.ts`). Production sort remains

@@ -3,6 +3,8 @@
 **Sprint 28 Story 2.** Routes that stay reachable **without** an admin session.  
 Legacy evaluate / matches / profiles / user-profiles / contradiction require `AuthGuard` + `AdminGuard` (`ADMIN_USER_IDS`) — see [ADMIN_ACCESS.md](./ADMIN_ACCESS.md).
 
+**Sprint 53 Story 02:** `POST /api/evaluate/*` and `GET /api/matches` are **lab-only (quarantined)** — see [LEGACY_HTTP_QUARANTINE.md](./LEGACY_HTTP_QUARANTINE.md). Product SoT remains `/api/v1/me/*`.
+
 ---
 
 ## Always open (no admin)
@@ -23,11 +25,11 @@ Admin product APIs remain: `/api/v1/admin/*` (`AuthGuard` + `AdminGuard`).
 
 | Area | Paths |
 |------|--------|
-| LLM evaluate | `POST /api/evaluate/*`, `POST /api/v1/profiles/evaluate` |
+| LLM evaluate | `POST /api/evaluate/*` (**lab-only / quarantined** — [LEGACY_HTTP_QUARANTINE.md](./LEGACY_HTTP_QUARANTINE.md)), `POST /api/v1/profiles/evaluate` |
 | Profile dumps | `GET /api/v1/profiles`, `GET /api/v1/profiles/:id` |
 | Legacy profile CRUD | `/api/v1/user-profiles` |
 | Legacy matches | `/api/v1/matches/*` (rebuild, compare, auto, detail, …) |
-| Engine list | `GET /api/matches` |
+| Engine list | `GET /api/matches` (**lab-only / quarantined** — [LEGACY_HTTP_QUARANTINE.md](./LEGACY_HTTP_QUARANTINE.md)) |
 | Contradiction | `POST /api/contradiction/detect` |
 
 Unauthenticated → **401**. Authenticated non-admin → **403** `{ error: 'admin_forbidden' }`.
