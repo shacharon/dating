@@ -100,10 +100,13 @@ describe('MessagingSocketRegistry', () => {
       expect(registry.activeConnectionCount()).toBe(1);
     });
 
-    it('disconnectBySessionId invokes publisher then disconnects local sockets', async () => {
+    it('disconnectBySessionId invokes publisher before local disconnect', async () => {
       delete process.env.REDIS_URL;
+      const callOrder: string[] = [];
       const publisher = {
-        disconnectSessionSockets: jest.fn(),
+        disconnectSessionSockets: jest.fn(() => {
+          callOrder.push('publisher');
+        }),
         disconnectUserSockets: jest.fn(),
       };
       const registry = new MessagingSocketRegistry(
@@ -113,12 +116,14 @@ describe('MessagingSocketRegistry', () => {
       );
       registry.resetForTests();
       const a = mockSocket('sess_1', 'sock_a');
+      (a.disconnect as jest.Mock).mockImplementation(() => {
+        callOrder.push('local');
+      });
       await registry.registerAsync(a);
 
       await registry.disconnectBySessionId('sess_1');
 
-      expect(publisher.disconnectSessionSockets).toHaveBeenCalledWith('sess_1');
-      expect(a.disconnect).toHaveBeenCalledWith(true);
+      expect(callOrder).toEqual(['publisher', 'local']);
     });
 
     it('disconnectByUserId invokes publisher force-disconnect', async () => {

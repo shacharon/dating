@@ -46,6 +46,18 @@ describe('RealtimePublisher', () => {
     expect(disconnectSockets).toHaveBeenCalledWith(true);
   });
 
+  it('disconnectSessionSockets no-ops on blank session id', () => {
+    const disconnectSockets = jest.fn();
+    const inn = jest.fn().mockReturnValue({ disconnectSockets });
+    const namespace = { in: inn } as unknown as import('socket.io').Namespace;
+
+    const publisher = new RealtimePublisher();
+    publisher.bindNamespaceServer(namespace);
+    publisher.disconnectSessionSockets('  ');
+
+    expect(inn).not.toHaveBeenCalled();
+  });
+
   it('disconnectUserSockets targets user room', () => {
     const disconnectSockets = jest.fn();
     const inn = jest.fn().mockReturnValue({ disconnectSockets });

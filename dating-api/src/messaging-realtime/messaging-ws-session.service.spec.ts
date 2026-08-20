@@ -74,6 +74,13 @@ describe('MessagingWsSessionService', () => {
       expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
 
+    it('returns false when userId is empty', async () => {
+      await expect(service.isConnectionAllowed('sess_1', '  ')).resolves.toBe(
+        false,
+      );
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
     it('returns false when user is soft-deleted', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         deletedAt: new Date('2026-01-01T00:00:00.000Z'),

@@ -250,6 +250,10 @@ describe('MessagingGateway', () => {
     await Promise.resolve();
 
     expect(socketRegistry.refreshPresence).toHaveBeenCalledWith(client);
+    expect(wsSession.isConnectionAllowed).toHaveBeenCalledWith(
+      'sess_a',
+      'user_a',
+    );
     expect(client.disconnect).not.toHaveBeenCalled();
 
     jest.useRealTimers();
