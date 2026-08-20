@@ -2,28 +2,12 @@
  * Ownership: MeMatchesService (façade) — characterization via MeMatchesService façade
  * (Sprint 50 Story 1). Do not rewire to call collaborators directly.
  */
-import {
-  MatchCandidateNotFoundError,
-  MatchDetailEvaluationNotFoundError,
-  MatchListCandidateEvaluationMissingError,
-  MatchListInvalidCursorError,
-  MatchListViewerEvaluationMissingError,
-  MatchViewerNotReadyError,
-} from './me-matches.errors';
-import { MATCH_LIST_CACHE_VERSION } from '../cache/match-list-cache';
-import { ErrorCodes } from '../logging/error-codes';
-import * as holyGrailPair from '../matches/holy-grail-pair-directions';
+import { MatchListInvalidCursorError } from './me-matches.errors';
 import * as matchEngine from '../matches/match-engine';
-import * as customMetrics from '../observability/custom-metrics';
-import { buildMeMatchesParticipantReadModel } from './me-profile-engine.mapper';
 import * as MeProfileEngineMapper from './me-profile-engine.mapper';
-import { resolveMatchNarrative } from './matches/match-detail-narrative';
-import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import {
-  makePrefRow,
   makeProfileRow,
   S_ANALYZED,
-  S_DRAFT,
   defaultLatestEval,
   setupMeMatchesUnitContext,
 } from './me-matches.spec-support';
