@@ -10,19 +10,7 @@ import type { CapsCalibrationState } from '../calibration-policy';
 import type { CoverageConfidenceState, MatchInfoFlag } from '../coverage-policy';
 import { applyDirectionalDisplayCalibration } from '../display-policy';
 import type { FrictionAndPenaltiesState } from '../friction-policy';
-import { buildExpansion01ShadowBreakdown } from '../expansion-01-explainability';
-import { buildExpansion02ShadowBreakdown } from '../expansion-02-explainability';
-import { buildExpansion03ShadowBreakdown } from '../expansion-03-explainability';
-import { buildExpansion04ShadowBreakdown } from '../expansion-04-explainability';
-import { buildExpansion05ShadowBreakdown } from '../expansion-05-explainability';
-import { buildExpansion06ShadowBreakdown } from '../expansion-06-explainability';
-import { buildExpansion07ShadowBreakdown } from '../expansion-07-explainability';
-import { buildExpansion10ShadowBreakdown } from '../expansion-10-explainability';
-import { buildExpansion11ShadowBreakdown } from '../expansion-11-explainability';
-import { buildExpansion12ShadowBreakdown } from '../expansion-12-explainability';
-import { buildExpansion13ShadowBreakdown } from '../expansion-13-explainability';
-import { buildExpansion14ShadowBreakdown } from '../expansion-14-explainability';
-import { buildExpansion15ShadowBreakdown } from '../expansion-15-explainability';
+import { buildAllExpansionShadowBreakdowns } from '../expansion-explainability-manifest';
 import { buildMatchExplainability } from '../match-explainability';
 import {
   ALIGNMENT_CHIP_MIN_PAIR_SCORE,
@@ -211,21 +199,10 @@ export function buildFinalResultDto(
 
   const signalsA = profileA.evaluation?.self?.signals ?? {};
   const signalsB = profileB.evaluation?.self?.signals ?? {};
-  const shadowBreakdown = [
-    ...buildExpansion01ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion02ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion03ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion04ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion05ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion06ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion07ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion10ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion11ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion12ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion13ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion14ShadowBreakdown(signalsA, signalsB),
-    ...buildExpansion15ShadowBreakdown(signalsA, signalsB),
-  ];
+  const shadowBreakdown = buildAllExpansionShadowBreakdowns(
+    signalsA,
+    signalsB,
+  );
   const breakdownForChips = [
     ...(compatAB.breakdown ?? []),
     ...shadowBreakdown,
