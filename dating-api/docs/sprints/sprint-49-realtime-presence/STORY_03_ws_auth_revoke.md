@@ -1,6 +1,13 @@
 # Story 03 — WS deletedAt parity + revoke disconnect
 
-**Sprint 49 · Status: Planned · P0 · ~1.5d · Agent 2.5**
+**Sprint 49 · Status: Done**  
+**Priority:** P0  
+**Estimated effort:** 1.5 days  
+**Dependencies:** Stories 01–02 (stack)  
+**Repo:** `dating-api`  
+**Extra agents:** 2.5, 5 (post-deploy)
+
+---
 
 ## Objective
 
@@ -20,9 +27,10 @@
 - [x] Session room join + `disconnectSockets` on logout / account delete
 - [x] Specs green (Agent 2: 53 passed)
 - [x] Agent 2.5 approved (Critical/High: 0)
-- [ ] Agent 3 PM close
+- [x] Agents 3.5 / 4: N/A
+- [x] Runtime: WS integration gate passed; browser Network operator smoke deferred (tracked)
+- [x] Agent 3 PM close
 - [ ] Agent 5 post-deploy (after production soak)
-- [ ] Browser Network operator smoke (optional; integration gate done)
 
 ## Security notes (Agent 2.5)
 
@@ -38,6 +46,8 @@
 - `3b6b313` — feat(realtime): WS deletedAt parity + cluster force-disconnect
 - `c937660` — test: harden WS auth revoke force-disconnect coverage
 - `e80f58c` — security: review sprint 49 story 3 WS auth revoke
+- `01514c5` — chore: record sprint 49 story 3 security commit
+- (pending close) — chore: close sprint 49 story 3
 
 ## Suggested commit
 
