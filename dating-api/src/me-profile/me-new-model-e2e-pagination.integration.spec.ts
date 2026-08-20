@@ -12,7 +12,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Match list cursor pagination (integration)', () => {
   const harness = new EligibilityTestHarness();

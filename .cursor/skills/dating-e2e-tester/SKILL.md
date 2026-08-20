@@ -24,7 +24,7 @@ If the story doesn't touch any of that, this role has nothing to do: say so expl
    - `dating-api/src/me-profile/me-new-model-e2e-eligibility.integration.spec.ts`
    - `dating-api/src/me-profile/me-new-model-e2e-ranking.integration.spec.ts`
    Unless the story explicitly, intentionally changes that behavior — and the dev/CR handoffs already say so. If a baseline assertion needs to change and nobody said so upstream, that's a **blocker**, not something to quietly fix.
-2. Every new eligibility/ranking behavior this story introduces has a corresponding scenario, added via `dating-api/src/me-profile/me-matches-eligibility-harness.ts` (extend it — do not hand-roll a new one-off harness), in one of the 3 files above or a new sibling `*-e2e-*.integration.spec.ts` file.
+2. Every new eligibility/ranking behavior this story introduces has a corresponding scenario, added via `dating-api/src/me-profile/me-matches-eligibility.spec-support.ts` (extend it — do not hand-roll a new one-off harness), in one of the 3 files above or a new sibling `*-e2e-*.integration.spec.ts` file.
 3. Full command run and its real output reported: `npx jest --no-coverage "integration.spec" --runInBand` (from `dating-api`).
 
 ## If E2E reveals a real bug

@@ -7,7 +7,7 @@
  * Story 2 dealbreaker eligibility scenarios stay in me-new-model-e2e-dealbreaker.integration.spec.ts
  * (unmodified). Baselines me-new-model-e2e*.integration.spec.ts also unmodified.
  *
- * Harness: `me-matches-eligibility-harness.ts`
+ * Harness: `me-matches-eligibility.spec-support.ts`
  *
  * Run:
  *   npx jest --no-coverage "me-new-model-e2e-dealbreaker-guardrails.integration" --runInBand
@@ -17,7 +17,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Holy Grail dealbreaker guardrails (Sprint 17 Story 3 integration)', () => {
   const harness = new EligibilityTestHarness();

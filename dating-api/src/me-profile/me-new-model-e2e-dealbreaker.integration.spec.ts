@@ -4,7 +4,7 @@
  * Proves classifier-derived HARD_EXCLUDE / HARD_REQUIRE gate `GET /api/v1/me/matches`
  * with NEVER_BLOCKS on silence (Option C — no ranking-order assertions).
  *
- * Harness: `me-matches-eligibility-harness.ts` (real Nest + HTTP, in-memory Prisma).
+ * Harness: `me-matches-eligibility.spec-support.ts` (real Nest + HTTP, in-memory Prisma).
  *
  * Run:
  *   npx jest --no-coverage "me-new-model-e2e-dealbreaker.integration" --runInBand
@@ -14,7 +14,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Holy Grail dealbreaker eligibility (Sprint 17 Story 2 integration)', () => {
   const harness = new EligibilityTestHarness();

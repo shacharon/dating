@@ -13,7 +13,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Photo moderation visibility (integration)', () => {
   const harness = new EligibilityTestHarness();

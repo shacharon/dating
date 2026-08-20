@@ -4,7 +4,7 @@
  * Proves Liked / mutual hard-FAIL candidates stay on `GET /api/v1/me/matches`
  * with `hardBlocked`, while new hard-FAIL candidates remain omitted.
  *
- * Harness: `me-matches-eligibility-harness.ts` (real Nest + HTTP, in-memory Prisma).
+ * Harness: `me-matches-eligibility.spec-support.ts` (real Nest + HTTP, in-memory Prisma).
  *
  * Run:
  *   npx jest --no-coverage "me-new-model-e2e-hard-block-existing.integration" --runInBand
@@ -14,7 +14,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Existing hard-block visibility (Sprint 18 Story 1 integration)', () => {
   const harness = new EligibilityTestHarness();
