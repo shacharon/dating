@@ -1,6 +1,10 @@
 /** Sprint 49 Story 1 — Redis messaging presence key helpers. */
 
-/** 1.5 × WS_SESSION_REVALIDATE_MS (60s) so keys outlive one missed refresh. */
+/**
+ * 1.5 × WS_SESSION_REVALIDATE_MS (60s) so keys outlive one missed refresh.
+ * Keys embed userId / sessionId / socketId (ids only — no email/name).
+ * sessionId is auth-sensitive: keep Redis private; do not log full session keys.
+ */
 export const PRESENCE_TTL_SECONDS = 90;
 
 export function presenceUserKey(userId: string): string {
