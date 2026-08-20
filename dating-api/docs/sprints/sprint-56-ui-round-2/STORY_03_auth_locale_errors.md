@@ -3,7 +3,7 @@
 **Sprint 56 · Done · P1 · ~1.5d · Agents 2.5 + 3.5**
 
 **Status:** Done  
-**Tip:** `feature/sprint-56-story-3` @ close (impl `6724973`, CR `36d5a14`, UX `0807461`)
+**Tip:** `feature/sprint-56-story-3` @ `b3b0df7` (impl `6724973`, CR `36d5a14`, UX `0807461`)
 
 Single session-cookie helper for middleware + client. Kill duplicate APP_LOCALE listeners (use `useAppLocale` only). Shared `InlineError` / `RouteError` (role=alert, i18n, product palette).
 
