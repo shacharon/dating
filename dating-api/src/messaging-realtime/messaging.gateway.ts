@@ -98,7 +98,7 @@ export class MessagingGateway
     };
     client.data = data;
     await client.join(userRoom(result.userId));
-    this.socketRegistry.register(client);
+    await this.socketRegistry.registerAsync(client);
     this.startSessionRevalidation(client);
 
     this.obs.trace(
@@ -114,9 +114,9 @@ export class MessagingGateway
     );
   }
 
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: Socket): Promise<void> {
     clearSessionCheckTimer(client);
-    this.socketRegistry.unregister(client);
+    await this.socketRegistry.unregisterAsync(client);
 
     const data = client.data as MessagingSocketData | undefined;
     const userId = data?.userId ?? 'unknown';
@@ -250,7 +250,9 @@ export class MessagingGateway
           );
           clearSessionCheckTimer(client);
           client.disconnect(true);
+          return;
         }
+        await this.socketRegistry.refreshPresence(client);
       })();
     }, WS_SESSION_REVALIDATE_MS);
 

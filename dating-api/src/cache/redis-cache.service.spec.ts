@@ -5,6 +5,11 @@ type MockRedisClient = {
   get: jest.Mock;
   set: jest.Mock;
   del: jest.Mock;
+  sAdd?: jest.Mock;
+  sRem?: jest.Mock;
+  sCard?: jest.Mock;
+  sMembers?: jest.Mock;
+  expire?: jest.Mock;
 };
 
 function attachClient(
@@ -127,6 +132,33 @@ describe('RedisCacheService', () => {
 
       expect(await svc.setNx('k', {}, 10)).toBe(true);
       expect(degraded).toHaveBeenCalledWith('setNx', 'error');
+    });
+
+    it('sAdd / sCard / sRem / setString support presence sets', async () => {
+      const svc = new RedisCacheService();
+      const client: MockRedisClient = {
+        get: jest.fn().mockResolvedValue('u1|s1'),
+        set: jest.fn().mockResolvedValue('OK'),
+        del: jest.fn(),
+        sAdd: jest.fn().mockResolvedValue(1),
+        sRem: jest.fn().mockResolvedValue(1),
+        sCard: jest.fn().mockResolvedValue(2),
+        sMembers: jest.fn().mockResolvedValue(['sockA']),
+        expire: jest.fn().mockResolvedValue(true),
+      };
+      attachClient(svc, client);
+      const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
+
+      expect(await svc.sAdd('ws:presence:user:u1', 'sockA', 90)).toBe(true);
+      expect(client.sAdd).toHaveBeenCalledWith('ws:presence:user:u1', 'sockA');
+      expect(client.expire).toHaveBeenCalledWith('ws:presence:user:u1', 90);
+      expect(await svc.sCard('ws:presence:user:u1')).toBe(2);
+      expect(await svc.sMembers('ws:presence:user:u1')).toEqual(['sockA']);
+      expect(await svc.sRem('ws:presence:user:u1', 'sockA')).toBe(true);
+      await svc.setString('ws:presence:meta:sockA', 'u1|s1', 90);
+      expect(await svc.getString('ws:presence:meta:sockA')).toBe('u1|s1');
+      expect(opMs).toHaveBeenCalledWith('sAdd', expect.any(Number));
+      expect(opMs).toHaveBeenCalledWith('sCard', expect.any(Number));
     });
   });
 });
