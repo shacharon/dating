@@ -46,7 +46,7 @@ Move `MessageEmailDebounceService` off process-local Map to Redis. Wire online-s
 - `e1266e6` — test: harden email debounce Redis claim coverage
 - `bd25a2b` — security: review sprint 49 story 2 email debounce
 - `12e8dbd` — security: document email debounce Redis privacy notes
-- (pending close) — chore: close sprint 49 story 2
+- `161125b` — chore: close sprint 49 story 2
 
 ## Suggested commit
 
