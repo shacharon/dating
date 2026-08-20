@@ -105,6 +105,12 @@ export const ErrorCodes = {
   ME_MATCHES_HG_DEALBREAKER_OUTCOMES: 'ME_MATCHES_HG_DEALBREAKER_OUTCOMES',
   /** Me conversations: GET /me/conversations — list returned */
   ME_CONVERSATIONS_LIST_OK: 'ME_CONVERSATIONS_LIST_OK',
+  /** Me conversations: invalid list cursor */
+  ME_CONVERSATIONS_INVALID_CURSOR: 'ME_CONVERSATIONS_INVALID_CURSOR',
+  /** Me conversations: conversation missing or not ACTIVE */
+  ME_CONVERSATIONS_NOT_FOUND: 'ME_CONVERSATIONS_NOT_FOUND',
+  /** Me conversations: session user is not a participant */
+  ME_CONVERSATIONS_FORBIDDEN: 'ME_CONVERSATIONS_FORBIDDEN',
   /** Me conversations: GET /me/conversations/:id — detail returned */
   ME_CONVERSATIONS_DETAIL_OK: 'ME_CONVERSATIONS_DETAIL_OK',
   /** Sprint 2 Story 5 — soft unmatch on conversation. */

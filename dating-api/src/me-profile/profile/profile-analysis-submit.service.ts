@@ -1,15 +1,8 @@
-import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ProfileGender, UserProfileStatus } from '@prisma/client';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import { ErrorCodes } from '../../logging/error-codes';
-import { markHttpExceptionObservabilityLogged } from '../../logging/observability-http.exception';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProfileAnalysisQueueService } from '../../workers/profile-analysis.worker';
@@ -21,6 +14,15 @@ import {
   type AnalysisStatusResponseDto,
 } from '../dto/analysis-status-response.dto';
 import { MeMatchesService } from '../me-matches.service';
+import {
+  MeProfileDomainError,
+  ProfileNotFoundForSubmitError,
+  ProfileSubmitGenderRequiredError,
+  ProfileSubmitInvalidStateError,
+  ProfileSubmitPersistenceFailedError,
+  ProfileSubmitPhotoRequiredError,
+  ProfileSubmitReloadFailedError,
+} from '../me-profile.errors';
 import {
   USER_PROFILE_REPOSITORY,
   type IUserProfileRepository,
@@ -54,60 +56,27 @@ export class ProfileAnalysisSubmitService {
     const existing = await this.profiles.findByUserId(userId);
 
     if (!existing) {
-      throw new NotFoundException({
-        error: 'profile_not_found',
-        message:
-          'No profile exists for this account. Use POST /api/v1/me/profile to create one.',
-      });
+      throw new ProfileNotFoundForSubmitError();
     }
 
     if (!SUBMITTABLE_STATUSES.has(existing.status as string)) {
-      this.obs.error(
-        `me profile submit rejected: invalid state ${existing.status} profileId=${existing.id}`,
-        ErrorCodes.ME_PROFILE_SUBMIT_INVALID_STATE,
-      );
-      const ex = new UnprocessableEntityException({
-        error: 'invalid_submit_state',
-        currentStatus: existing.status,
-        allowedStatuses: [...SUBMITTABLE_STATUSES],
-        message: `Profile cannot be submitted from status "${existing.status}". Allowed: ${[...SUBMITTABLE_STATUSES].join(', ')}.`,
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
+      throw new ProfileSubmitInvalidStateError(existing.status as string, [
+        ...SUBMITTABLE_STATUSES,
+      ]);
     }
 
     if (
       !existing.gender ||
       existing.gender === ProfileGender.PREFER_NOT_TO_SAY
     ) {
-      this.obs.error(
-        `me profile submit rejected: gender not chosen profileId=${existing.id}`,
-        ErrorCodes.ME_PROFILE_SUBMIT_INVALID_STATE,
-      );
-      const ex = new UnprocessableEntityException({
-        error: 'gender_required',
-        message:
-          'Choose a gender (other than prefer-not-to-say) before submitting the profile for analysis.',
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
+      throw new ProfileSubmitGenderRequiredError();
     }
 
     if (!(await viewerHasApprovedPhoto(this.prisma, existing.id))) {
-      this.obs.error(
-        `me profile submit rejected: no approved photo profileId=${existing.id}`,
-        ErrorCodes.ME_PROFILE_PHOTO_REQUIRED,
-      );
       this.analytics.track(userId, ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED, {
         surface: 'submit',
       });
-      const ex = new UnprocessableEntityException({
-        error: 'photo_required',
-        message:
-          'Upload at least one approved photo before submitting for analysis.',
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
+      throw new ProfileSubmitPhotoRequiredError();
     }
 
     try {
@@ -134,34 +103,17 @@ export class ProfileAnalysisSubmitService {
 
       const full = await this.profiles.findByUserIdWithPreference(userId);
       if (!full) {
-        const ex = new InternalServerErrorException({
-          message: 'Profile could not be loaded after submit',
-        });
-        markHttpExceptionObservabilityLogged(ex);
-        throw ex;
+        throw new ProfileSubmitReloadFailedError();
       }
       return {
         analysisJobId,
         profile: toResponse(full, full.preference),
       };
     } catch (e: unknown) {
-      if (
-        e instanceof NotFoundException ||
-        e instanceof UnprocessableEntityException ||
-        e instanceof InternalServerErrorException
-      ) {
+      if (e instanceof MeProfileDomainError) {
         throw e;
       }
-      this.obs.error(
-        'me profile submit persistence failed',
-        ErrorCodes.ME_PROFILE_SUBMIT_FAILED,
-        e,
-      );
-      const ex = new InternalServerErrorException({
-        message: 'Profile could not be submitted',
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
+      throw new ProfileSubmitPersistenceFailedError();
     }
   }
 

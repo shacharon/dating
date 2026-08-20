@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   MessageStatus,
   MutualMatchStatus,
@@ -19,6 +13,11 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import { PrismaService } from '../prisma/prisma.service';
 import type { MeConversationsListQuery } from './dto/me-conversations-list-query.dto';
 import { DEFAULT_CONVERSATION_LIST_LIMIT } from './dto/me-conversations-list-query.dto';
+import {
+  ConversationForbiddenError,
+  ConversationListInvalidCursorError,
+  ConversationNotFoundError,
+} from './me-conversations.errors';
 import {
   decodeConversationListCursor,
   paginateConversationList,
@@ -156,10 +155,7 @@ export class MeConversationsService {
         ? decodeConversationListCursor(query.cursor.trim())
         : null;
     if (query.cursor != null && query.cursor.trim() !== '' && cursor == null) {
-      throw new BadRequestException({
-        error: 'invalid_cursor',
-        message: 'Invalid conversation list cursor.',
-      });
+      throw new ConversationListInvalidCursorError();
     }
 
     const rows = await this.prisma.mutualMatch.findMany({
@@ -353,17 +349,11 @@ export class MeConversationsService {
     });
 
     if (!match || match.status !== MutualMatchStatus.ACTIVE) {
-      throw new NotFoundException({
-        error: 'conversation_not_found',
-        message: 'Conversation not found.',
-      });
+      throw new ConversationNotFoundError();
     }
 
     if (match.userId1 !== sessionUserId && match.userId2 !== sessionUserId) {
-      throw new ForbiddenException({
-        error: 'conversation_forbidden',
-        message: 'You do not have access to this conversation.',
-      });
+      throw new ConversationForbiddenError();
     }
 
     return {

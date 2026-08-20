@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConversationForbiddenError,
+  ConversationListInvalidCursorError,
+  ConversationNotFoundError,
+} from './me-conversations.errors';
 import { MessageStatus, MutualMatchStatus, ProfileGender } from '@prisma/client';
 import { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -489,12 +493,10 @@ describe('MeConversationsService', () => {
       expect(page2.nextCursor).toBeNull();
     });
 
-    it('throws BadRequestException for invalid cursor', async () => {
+    it('throws ConversationListInvalidCursorError for invalid cursor', async () => {
       await expect(
         service.list(sessionUserId, { limit: 20, cursor: '!!!' }),
-      ).rejects.toMatchObject({
-        response: expect.objectContaining({ error: 'invalid_cursor' }),
-      });
+      ).rejects.toBeInstanceOf(ConversationListInvalidCursorError);
       expect(prisma.mutualMatch.findMany).not.toHaveBeenCalled();
     });
   });
@@ -562,7 +564,7 @@ describe('MeConversationsService', () => {
       });
     });
 
-    it('throws NotFoundException when conversation is UNMATCHED', async () => {
+    it('throws ConversationNotFoundError when conversation is UNMATCHED', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         id: conversationId,
         userId1: otherUserIdA,
@@ -576,7 +578,7 @@ describe('MeConversationsService', () => {
           sessionUserId,
           conversationId,
         ),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
     });
   });
 
@@ -630,15 +632,15 @@ describe('MeConversationsService', () => {
       expect(obs.trace).toHaveBeenCalled();
     });
 
-    it('throws NotFoundException when conversation does not exist', async () => {
+    it('throws ConversationNotFoundError when conversation does not exist', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
         service.getById(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
     });
 
-    it('throws NotFoundException when conversation is UNMATCHED', async () => {
+    it('throws ConversationNotFoundError when conversation is UNMATCHED', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         ...activeMatch,
         status: MutualMatchStatus.UNMATCHED,
@@ -646,10 +648,10 @@ describe('MeConversationsService', () => {
 
       await expect(
         service.getById(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
     });
 
-    it('throws ForbiddenException when session user is not a participant', async () => {
+    it('throws ConversationForbiddenError when session user is not a participant', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         ...activeMatch,
         userId1: 'user_stranger',
@@ -658,7 +660,7 @@ describe('MeConversationsService', () => {
 
       await expect(
         service.getById(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).rejects.toBeInstanceOf(ConversationForbiddenError);
     });
 
     it('resolves other user as userId1 when session user is userId2', async () => {
@@ -758,7 +760,7 @@ describe('MeConversationsService', () => {
       jest.restoreAllMocks();
     });
 
-    it('throws NotFoundException when conversation is UNMATCHED', async () => {
+    it('throws ConversationNotFoundError when conversation is UNMATCHED', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         ...activeMatch,
         status: MutualMatchStatus.UNMATCHED,
@@ -766,11 +768,11 @@ describe('MeConversationsService', () => {
 
       await expect(
         service.markAsRead(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
       expect(prisma.mutualMatch.update).not.toHaveBeenCalled();
     });
 
-    it('throws ForbiddenException when session user is not a participant', async () => {
+    it('throws ConversationForbiddenError when session user is not a participant', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         ...activeMatch,
         userId1: 'user_stranger',
@@ -779,7 +781,7 @@ describe('MeConversationsService', () => {
 
       await expect(
         service.markAsRead(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).rejects.toBeInstanceOf(ConversationForbiddenError);
       expect(prisma.mutualMatch.update).not.toHaveBeenCalled();
     });
   });
@@ -921,17 +923,17 @@ describe('MeConversationsService', () => {
       expect(obs.trace).toHaveBeenCalled();
     });
 
-    it('throws NotFoundException when conversation does not exist', async () => {
+    it('throws ConversationNotFoundError when conversation does not exist', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
         service.unmatch(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
       expect(prisma.mutualMatch.update).not.toHaveBeenCalled();
       expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
     });
 
-    it('throws NotFoundException when conversation is already UNMATCHED', async () => {
+    it('throws ConversationNotFoundError when conversation is already UNMATCHED', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         ...activeMatch,
         status: MutualMatchStatus.UNMATCHED,
@@ -939,11 +941,11 @@ describe('MeConversationsService', () => {
 
       await expect(
         service.unmatch(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
       expect(prisma.mutualMatch.update).not.toHaveBeenCalled();
     });
 
-    it('throws ForbiddenException when session user is not a participant', async () => {
+    it('throws ConversationForbiddenError when session user is not a participant', async () => {
       (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
         ...activeMatch,
         userId1: 'user_stranger',
@@ -952,7 +954,7 @@ describe('MeConversationsService', () => {
 
       await expect(
         service.unmatch(sessionUserId, conversationId),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).rejects.toBeInstanceOf(ConversationForbiddenError);
       expect(prisma.mutualMatch.update).not.toHaveBeenCalled();
     });
   });
