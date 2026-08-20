@@ -47,7 +47,7 @@
 - `c937660` — test: harden WS auth revoke force-disconnect coverage
 - `e80f58c` — security: review sprint 49 story 3 WS auth revoke
 - `01514c5` — chore: record sprint 49 story 3 security commit
-- (pending close) — chore: close sprint 49 story 3
+- `93fc128` — chore: close sprint 49 story 3
 
 ## Suggested commit
 
