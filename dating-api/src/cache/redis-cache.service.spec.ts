@@ -160,5 +160,14 @@ describe('RedisCacheService', () => {
       expect(opMs).toHaveBeenCalledWith('sAdd', expect.any(Number));
       expect(opMs).toHaveBeenCalledWith('sCard', expect.any(Number));
     });
+
+    it('sAdd unavailable returns false without throwing', async () => {
+      delete process.env.REDIS_URL;
+      const svc = new RedisCacheService();
+      await svc.onModuleInit();
+      const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
+      expect(await svc.sAdd('ws:presence:user:u1', 'sock', 90)).toBe(false);
+      expect(degraded).toHaveBeenCalledWith('sAdd', 'unavailable');
+    });
   });
 });

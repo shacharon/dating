@@ -25,7 +25,6 @@ export class MessagingSocketRegistry {
   private readonly logger = new Logger(MessagingSocketRegistry.name);
   private readonly bySession = new Map<string, Set<Socket>>();
   private readonly byUserId = new Map<string, Set<Socket>>();
-  private readonly bySocketId = new Map<string, Socket>();
 
   constructor(
     @Optional() private readonly cache?: RedisCacheService,
@@ -99,7 +98,6 @@ export class MessagingSocketRegistry {
             }
           }
         }
-        this.bySocketId.delete(socket.id);
         socket.disconnect(true);
       }
       this.byUserId.delete(userId);
@@ -139,7 +137,6 @@ export class MessagingSocketRegistry {
         if (data?.userId) {
           this.removeFromUserMap(data.userId, socket);
         }
-        this.bySocketId.delete(socket.id);
         socket.disconnect(true);
       }
       this.bySession.delete(sessionId);
@@ -185,7 +182,6 @@ export class MessagingSocketRegistry {
   resetForTests(): void {
     this.bySession.clear();
     this.byUserId.clear();
-    this.bySocketId.clear();
   }
 
   private redisConfigured(): boolean {
@@ -209,7 +205,6 @@ export class MessagingSocketRegistry {
       this.bySession.set(data.sessionId, sessionSet);
     }
     sessionSet.add(client);
-    this.bySocketId.set(client.id, client);
 
     if (data.userId) {
       let userSet = this.byUserId.get(data.userId);
@@ -234,7 +229,6 @@ export class MessagingSocketRegistry {
         this.bySession.delete(data.sessionId);
       }
     }
-    this.bySocketId.delete(client.id);
 
     if (data.userId) {
       this.removeFromUserMap(data.userId, client);

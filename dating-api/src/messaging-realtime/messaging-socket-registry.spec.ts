@@ -131,6 +131,30 @@ describe('MessagingSocketRegistry', () => {
       expect(await nodeA.hasActiveConnection('u1')).toBe(false);
     });
 
+    it('disconnectByUserId clears Redis presence for remote peer', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const redis = createSharedMemoryRedis();
+      const nodeA = new MessagingSocketRegistry(redis);
+      const nodeB = new MessagingSocketRegistry(redis);
+      await nodeA.registerAsync(mockSocket('sess_1', 'sockA', 'u1'));
+
+      await nodeB.disconnectByUserId('u1');
+      expect(await nodeA.hasActiveConnection('u1')).toBe(false);
+      expect(await redis.sCard(presenceUserKey('u1'))).toBe(0);
+    });
+
+    it('refreshPresence re-writes Redis membership with TTL', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const redis = createSharedMemoryRedis();
+      const sAdd = jest.spyOn(redis, 'sAdd');
+      const registry = new MessagingSocketRegistry(redis);
+      const sock = mockSocket('sess_1', 'sockA', 'u1');
+      await registry.registerAsync(sock);
+      sAdd.mockClear();
+      await registry.refreshPresence(sock);
+      expect(sAdd).toHaveBeenCalled();
+    });
+
     it('fail-open: Redis unavailable returns false for hasActiveConnection', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = {

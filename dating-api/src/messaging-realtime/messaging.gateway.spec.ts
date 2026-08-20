@@ -229,6 +229,29 @@ describe('MessagingGateway', () => {
     );
   });
 
+  it('refreshes presence TTL when session revalidate succeeds', async () => {
+    jest.useFakeTimers();
+    (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
+      ok: true,
+      userId: 'user_a',
+      sessionId: 'sess_a',
+    });
+    (wsSession.isSessionActive as jest.Mock).mockResolvedValue(true);
+    const client = mockSocket('dating_session=token');
+
+    await gateway.handleConnection(client);
+    (socketRegistry.refreshPresence as jest.Mock).mockClear();
+
+    jest.advanceTimersByTime(WS_SESSION_REVALIDATE_MS);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(socketRegistry.refreshPresence).toHaveBeenCalledWith(client);
+    expect(client.disconnect).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
   it('disconnects when periodic session check fails', async () => {
     jest.useFakeTimers();
     (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
