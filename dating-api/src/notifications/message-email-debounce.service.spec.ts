@@ -82,10 +82,16 @@ describe('MessageEmailDebounceService', () => {
     it('second node cannot claim within window', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
+      const setNx = jest.spyOn(redis, 'setNx');
       const a = new MessageEmailDebounceService(config, redis);
       const b = new MessageEmailDebounceService(config, redis);
 
       expect(await a.tryClaimSend('c1', 'u1')).toBe(true);
+      expect(setNx).toHaveBeenCalledWith(
+        'email:msgdebounce:c1:u1',
+        expect.objectContaining({ at: expect.any(String) }),
+        900,
+      );
       expect(await b.tryClaimSend('c1', 'u1')).toBe(false);
       expect(emailMsgDebounceKey('c1', 'u1')).toBe('email:msgdebounce:c1:u1');
     });

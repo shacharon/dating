@@ -125,6 +125,29 @@ describe('NewMessageEmailService', () => {
     );
   });
 
+  it('skips when recipient has no email without claiming', async () => {
+    (prisma.user.findUnique as jest.Mock).mockImplementation(
+      async ({ where }: { where: { id: string } }) => {
+        if (where.id === 'user_recipient') {
+          return {
+            id: 'user_recipient',
+            email: null,
+            emailNotificationsEnabled: true,
+          };
+        }
+        return {
+          displayName: 'Sender',
+          profile: { nickname: 'Sender' },
+        };
+      },
+    );
+
+    await service.maybeNotifyBestEffort(baseParams);
+
+    expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
+    expect(debounce.tryClaimSend).not.toHaveBeenCalled();
+  });
+
   it('sends when recipient offline and subscribed', async () => {
     (prisma.user.findUnique as jest.Mock).mockImplementation(
       async ({ where }: { where: { id: string } }) => {
