@@ -4,8 +4,9 @@ import { StructuredObservabilityService } from '../logging/structured-observabil
 import { MessagingSocketRegistry } from '../messaging-realtime/messaging-socket-registry.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailNotificationService } from './email-notification.service';
-import { displayLabel, escapeHtml } from './email-format.util';
+import { displayLabel } from './email-format.util';
 import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildNewMessageEmail } from './email-templates';
 import { MessageEmailDebounceService } from './message-email-debounce.service';
 
 @Injectable()
@@ -75,9 +76,10 @@ export class NewMessageEmailService {
         sender?.displayName,
       );
       const url = `${this.config.appPublicUrl}/dating/conversations/${params.conversationId}`;
-      const subject = 'New message on Piza';
-      const textBody = `${senderLabel} sent you a message. Read it here: ${url}`;
-      const htmlBody = `<p><strong>${escapeHtml(senderLabel)}</strong> sent you a message.</p><p><a href="${url}">Read it here</a></p>`;
+      const { subject, textBody, htmlBody } = buildNewMessageEmail({
+        senderLabel,
+        url,
+      });
 
       await this.email.sendTransactionalBestEffort({
         userId: recipient.id,

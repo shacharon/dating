@@ -7,8 +7,8 @@ import {
 } from '../photo-storage/photo-moderation.types';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailNotificationService } from './email-notification.service';
-import { escapeHtml } from './email-format.util';
 import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildPhotoRejectionEmail } from './email-templates';
 
 @Injectable()
 export class PhotoRejectionEmailService {
@@ -40,9 +40,10 @@ export class PhotoRejectionEmailService {
 
       const reason = REJECTION_REASON_USER_COPY_EN[params.rejectionReasonCode];
       const url = `${this.config.appPublicUrl}/dating/profile#profile-photos`;
-      const subject = 'Your photo was not approved';
-      const textBody = `${reason}\n\nYou can upload a new photo here: ${url}`;
-      const htmlBody = `<p>${escapeHtml(reason)}</p><p><a href="${escapeHtml(url)}">Upload a new photo</a></p>`;
+      const { subject, textBody, htmlBody } = buildPhotoRejectionEmail({
+        reason,
+        url,
+      });
 
       await this.email.sendTransactionalBestEffort({
         userId: user.id,

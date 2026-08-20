@@ -4,8 +4,9 @@ import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailNotificationService } from './email-notification.service';
-import { displayLabel, escapeHtml } from './email-format.util';
+import { displayLabel } from './email-format.util';
 import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildMutualMatchEmail } from './email-templates';
 
 @Injectable()
 export class MutualMatchEmailService {
@@ -62,6 +63,10 @@ export class MutualMatchEmailService {
     otherLabel: string;
     url: string;
   }): Promise<void> {
+    if (!params.email?.trim()) {
+      return;
+    }
+
     if (
       this.recipients.shouldSkipUnsubscribed({
         userId: params.userId,
@@ -72,9 +77,10 @@ export class MutualMatchEmailService {
       return;
     }
 
-    const subject = "It's a match on Piza!";
-    const textBody = `You matched with ${params.otherLabel}. Start the conversation: ${params.url}`;
-    const htmlBody = `<p>You matched with <strong>${escapeHtml(params.otherLabel)}</strong>!</p><p><a href="${params.url}">Start the conversation</a></p>`;
+    const { subject, textBody, htmlBody } = buildMutualMatchEmail({
+      otherLabel: params.otherLabel,
+      url: params.url,
+    });
 
     await this.email.sendTransactionalBestEffort({
       userId: params.userId,

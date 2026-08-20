@@ -123,6 +123,35 @@ describe('MutualMatchEmailService', () => {
     );
   });
 
+  it('skips users with empty email without sending', async () => {
+    mockUsers(
+      {
+        id: 'user_a',
+        email: '   ',
+        displayName: 'Alice',
+        emailNotificationsEnabled: true,
+        profile: { nickname: 'Alice' },
+      },
+      {
+        id: 'user_b',
+        email: 'b@example.com',
+        displayName: 'Bob',
+        emailNotificationsEnabled: true,
+        profile: { nickname: 'Bob' },
+      },
+    );
+
+    await service.notifyNewMutualMatchBestEffort(match);
+
+    expect(email.sendTransactionalBestEffort).toHaveBeenCalledTimes(1);
+    expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user_b',
+        to: 'b@example.com',
+      }),
+    );
+  });
+
   it('does not include message body in email text', async () => {
     mockUsers(
       {
