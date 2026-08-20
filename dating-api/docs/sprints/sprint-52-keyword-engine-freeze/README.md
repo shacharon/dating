@@ -1,6 +1,6 @@
 # Sprint 52 — Keyword-Engine Freeze / Consolidate (P1)
 
-**Status:** In Progress (Story 01 Done; Story 02 freeze) · **Depends on:** 51 helpful · **Round:** 2  
+**Status:** In Progress (Stories 01–02 Done) · **Depends on:** 51 helpful · **Round:** 2  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)
 
 ## Goal
@@ -15,9 +15,9 @@ Inventory and freeze or consolidate `enrichment-v2.ts`, HG `*-text.extract.ts`, 
 | # | Story | Status |
 |---|-------|--------|
 | 01 | [Inventory + ownership map](./STORY_01_keyword_inventory.md) | **Done** |
-| 02 | [Freeze or generate from taxonomy](./STORY_02_freeze_or_taxonomy.md) | In Progress |
+| 02 | [Freeze or generate from taxonomy](./STORY_02_freeze_or_taxonomy.md) | **Done** |
 | 03 | [Guardrails / no-new-regex policy](./STORY_03_no_new_regex_policy.md) | Planned |
 
 **Order:** 01 → 02 → 03.
 
-**Preferred merge tip (after Story 01):** `feature/sprint-52-story-1`
+**Preferred merge tip (after Story 02):** `feature/sprint-52-story-2`
