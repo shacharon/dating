@@ -13,7 +13,9 @@
 
 1. Split `me-matches.service.spec.ts` (~3k) along collaborators (ranking / detail / eligibility / cache)
 2. Move `me-matches-eligibility-harness.ts` out of production `src/` (or into `test/` / `*.spec` support)
-3. Budget: no new mega-spec &gt; ~400 LOC without ownership note
+3. Budget: no new mega-spec &gt; ~400 LOC without ownership note — see [`SPEC_BUDGET.md`](../../SPEC_BUDGET.md)
+
+**Spec budget:** soft LOC / ownership rules live in [`dating-api/docs/SPEC_BUDGET.md`](../../SPEC_BUDGET.md) (warn-only: `npm run check:spec-budget`).
 
 **Non-goals:** Changing product behavior; PairMatchPolicy (46).
 
