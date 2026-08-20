@@ -37,7 +37,7 @@
 
 - `3b6b313` — feat(realtime): WS deletedAt parity + cluster force-disconnect
 - `c937660` — test: harden WS auth revoke force-disconnect coverage
-- (pending) — security: review sprint 49 story 3
+- `e80f58c` — security: review sprint 49 story 3 WS auth revoke
 
 ## Suggested commit
 
