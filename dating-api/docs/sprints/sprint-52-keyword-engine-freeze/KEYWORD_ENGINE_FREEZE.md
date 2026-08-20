@@ -88,4 +88,4 @@ A single shared taxonomy table that generates classifiers is **out of scope** fo
 
 - [KEYWORD_INVENTORY.md](./KEYWORD_INVENTORY.md)
 - Story 03 — no-new-regex agent/PR policy (planned)
-- [ADD_EXPANSION_PLAYBOOK.md](../ADD_EXPANSION_PLAYBOOK.md) — LLM expansion registration (Sprint 51)
+- LLM expansion registration: Sprint 51 `docs/sprints/ADD_EXPANSION_PLAYBOOK.md` (when that branch is merged; until then use expansion manifest headers under `src/extraction/` / `src/matches/`)
