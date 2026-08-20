@@ -1,4 +1,8 @@
-/** Sprint 49 Story 2 — Redis new-message email debounce keys. */
+/**
+ * Sprint 49 Story 2 — Redis new-message email debounce keys.
+ * Values are `{ at: ISO }` only (no email/name). Keys hold opaque ids.
+ * Keep Redis private (VPC / ElastiCache); do not expose REDIS_URL publicly.
+ */
 
 export function emailMsgDebounceKey(
   conversationId: string,
