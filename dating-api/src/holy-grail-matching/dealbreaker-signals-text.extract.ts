@@ -2,6 +2,10 @@
  * Deterministic dealbreaker/requirement classifier from free-text profile fields.
  * Partner-preference → DealbreakerSignal; first-person self-trait → SelfFactHint only.
  * No LLM, no network, sparse output, closed vocabulary.
+ *
+ * Sprint 52 keyword engine: hg-dealbreaker-text
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
  */
 
 import { applyDealbreakerGuardrails } from './dealbreaker-guardrails';

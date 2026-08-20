@@ -5,6 +5,10 @@
  *
  * v1: `music`, `film`
  * v2 additive: reading/books, sports, visual art, gaming, food, travel, photography, technology
+ *
+ * Sprint 52 keyword engine: hg-interest-text
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
  */
 
 /** Legacy v1 ids (prefix of full allowlist). */

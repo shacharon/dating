@@ -10,6 +10,10 @@
  * - loves friends, weekends with friends, social with friends → social_friends
  *
  * v2 additive: fitness, travel, food, nightlife, pets, reading, gaming (same extraction rules).
+ *
+ * Sprint 52 keyword engine: hg-lifestyle-text
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
  */
 
 export const LIFESTYLE_SIGNAL_TAGS = [

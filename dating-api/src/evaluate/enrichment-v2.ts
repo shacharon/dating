@@ -1,6 +1,10 @@
 /**
  * ENRICHMENT_V2 core + V3/V4 extensions (autonomyTogethernessDepth + interestsTop3 only).
  * Deterministic closed-code mapping only; emits snake_case enum strings; no scoring side effects.
+ *
+ * Sprint 52 keyword engine: enrichment-v2
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
  */
 
 /** Mapper output before `sanitizeEnrichmentSignalsV1` (labels are intended to be canonical snake_case). */

@@ -6,6 +6,10 @@
  * v1: humor_playful, honesty_integrity
  * v2 additive: kind_empathetic, ambitious_driven, calm_steady, curious_open_minded,
  *               loyal_committed, optimistic_positive, introverted_reflective, extroverted_social
+ *
+ * Sprint 52 keyword engine: hg-personality-text
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * Do not add ad-hoc regex/phrases without that inventory + Story 02/03 process.
  */
 
 export const PERSONALITY_TRAIT_TAGS = [
