@@ -7,6 +7,8 @@
 
 Delete unused POC in-memory repos; quarantine/retire LegacyBackend HTTP seams; document engine vs HG ownership after PairMatchPolicy.
 
+**Ownership map:** [`docs/ops/ENGINE_VS_HG_OWNERSHIP.md`](../../ops/ENGINE_VS_HG_OWNERSHIP.md)
+
 ## Stories
 
 | # | Story | Status |

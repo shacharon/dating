@@ -4,7 +4,7 @@
 
 They remain reachable only with `AuthGuard` + `AdminGuard` (`ADMIN_USER_IDS`) for lab/ops tooling. Do not wire product UI or me-profile clients to them.
 
-See also: [PUBLIC_HTTP_ALLOWLIST.md](./PUBLIC_HTTP_ALLOWLIST.md) · [ADMIN_ACCESS.md](./ADMIN_ACCESS.md)
+See also: [PUBLIC_HTTP_ALLOWLIST.md](./PUBLIC_HTTP_ALLOWLIST.md) · [ADMIN_ACCESS.md](./ADMIN_ACCESS.md) · [ENGINE_VS_HG_OWNERSHIP.md](./ENGINE_VS_HG_OWNERSHIP.md)
 
 ---
 
@@ -24,10 +24,10 @@ Code markers: file-top `QUARANTINE` banners + `@deprecated` on the controllers; 
 | Step | When | Action |
 |------|------|--------|
 | Now (Story 02) | Done | Lab-only markers + this doc — **routes not deleted** |
-| After Sprint 53 Story 03 | Ownership doc confirms engine/HG SoT | Reconfirm no product dependency |
+| Sprint 53 Story 03 | **Done (SoT reconfirmed)** | Ownership map: [ENGINE_VS_HG_OWNERSHIP.md](./ENGINE_VS_HG_OWNERSHIP.md) — no product dependency on these lab routes |
 | Follow-up | Operator-approved archaeology PR | Hard-delete controllers / unregister modules if still unused |
 
-**Do not delete in Story 02.** Earliest hard removal is a follow-up PR after Story 03 (or later), not this change set.
+**Do not delete in Story 02.** Earliest hard removal is a follow-up PR after Story 03 (or later), not this change set. Story 03 reconfirms SoT only — **routes still not deleted**.
 
 ---
 
