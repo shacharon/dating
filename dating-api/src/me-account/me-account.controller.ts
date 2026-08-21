@@ -41,7 +41,7 @@ export class MeAccountController {
     @Body() body: DeleteAccountDto,
   ): Promise<void> {
     await this.meAccount.deleteAccountForUser(user.id, body.confirmation);
-    this.socketRegistry.disconnectByUserId(user.id);
+    await this.socketRegistry.disconnectByUserId(user.id);
     await this.sessions.revokeAllSessionsForUser(user.id);
     res.clearCookie(
       this.cfg.sessionCookieName,

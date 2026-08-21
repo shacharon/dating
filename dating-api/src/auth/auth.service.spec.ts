@@ -22,7 +22,7 @@ describe('AuthService.logout', () => {
     } as unknown as SessionService;
 
     const socketRegistry = {
-      disconnectBySessionId: jest.fn(),
+      disconnectBySessionId: jest.fn().mockResolvedValue(undefined),
     } as unknown as MessagingSocketRegistry;
 
     const service = new AuthService(

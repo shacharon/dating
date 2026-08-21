@@ -54,11 +54,11 @@ describe('NewMessageEmailService', () => {
       obs,
     );
     (debounce.shouldSend as jest.Mock).mockReturnValue(true);
-    (socketRegistry.hasActiveConnection as jest.Mock).mockReturnValue(false);
+    (socketRegistry.hasActiveConnection as jest.Mock).mockResolvedValue(false);
   });
 
   it('skips when recipient has active WS connection', async () => {
-    (socketRegistry.hasActiveConnection as jest.Mock).mockReturnValue(true);
+    (socketRegistry.hasActiveConnection as jest.Mock).mockResolvedValue(true);
 
     await service.maybeNotifyBestEffort(baseParams);
 

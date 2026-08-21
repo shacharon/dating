@@ -142,7 +142,7 @@ export class AuthService {
           userId: validated.userId,
           sessionId: validated.sessionId,
         });
-        this.socketRegistry.disconnectBySessionId(validated.sessionId);
+        await this.socketRegistry.disconnectBySessionId(validated.sessionId);
       }
       await this.sessions.revokeSession({ rawToken: raw.trim() });
     }

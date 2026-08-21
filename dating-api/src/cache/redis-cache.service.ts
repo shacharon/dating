@@ -212,4 +212,106 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
       return 'unavailable';
     }
   }
+
+  /** Raw string SET EX (presence meta). No-op when Redis down. */
+  async setString(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<void> {
+    if (!this.client || !this.available) return;
+    const started = Date.now();
+    try {
+      await this.client.set(key, value, { EX: ttlSeconds });
+      recordCacheOpMs('set', Date.now() - started);
+    } catch (err) {
+      this.logDegraded('set', 'error', err);
+    }
+  }
+
+  /** Raw string GET. null on miss / Redis down / error. */
+  async getString(key: string): Promise<string | null> {
+    if (!this.client || !this.available) return null;
+    const started = Date.now();
+    try {
+      const raw = await this.client.get(key);
+      recordCacheOpMs('get', Date.now() - started);
+      return raw;
+    } catch (err) {
+      this.logDegraded('get', 'error', err);
+      return null;
+    }
+  }
+
+  /** SADD + EXPIRE. Returns false when Redis unavailable/error (fail-open callers). */
+  async sAdd(
+    key: string,
+    member: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    if (!this.client || !this.available) {
+      this.logDegraded('sAdd', 'unavailable');
+      return false;
+    }
+    const started = Date.now();
+    try {
+      await this.client.sAdd(key, member);
+      await this.client.expire(key, ttlSeconds);
+      recordCacheOpMs('sAdd', Date.now() - started);
+      return true;
+    } catch (err) {
+      this.logDegraded('sAdd', 'error', err);
+      return false;
+    }
+  }
+
+  async sRem(key: string, member: string): Promise<boolean> {
+    if (!this.client || !this.available) {
+      this.logDegraded('sRem', 'unavailable');
+      return false;
+    }
+    const started = Date.now();
+    try {
+      await this.client.sRem(key, member);
+      recordCacheOpMs('sRem', Date.now() - started);
+      return true;
+    } catch (err) {
+      this.logDegraded('sRem', 'error', err);
+      return false;
+    }
+  }
+
+  /** null = Redis unavailable / error. */
+  async sCard(key: string): Promise<number | null> {
+    if (!this.client || !this.available) {
+      this.logDegraded('sCard', 'unavailable');
+      return null;
+    }
+    const started = Date.now();
+    try {
+      const n = await this.client.sCard(key);
+      recordCacheOpMs('sCard', Date.now() - started);
+      return n;
+    } catch (err) {
+      this.logDegraded('sCard', 'error', err);
+      return null;
+    }
+  }
+
+  /** null = Redis unavailable / error. */
+  async sMembers(key: string): Promise<string[] | null> {
+    if (!this.client || !this.available) {
+      this.logDegraded('sMembers', 'unavailable');
+      return null;
+    }
+    const started = Date.now();
+    try {
+      const members = await this.client.sMembers(key);
+      recordCacheOpMs('sMembers', Date.now() - started);
+      return members;
+    } catch (err) {
+      this.logDegraded('sMembers', 'error', err);
+      return null;
+    }
+  }
 }

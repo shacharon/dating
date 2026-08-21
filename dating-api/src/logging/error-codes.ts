@@ -230,6 +230,11 @@ export const ErrorCodes = {
   /** Process-level (no HTTP request) */
   PROCESS_UNCAUGHT_EXCEPTION: 'PROCESS_UNCAUGHT_EXCEPTION',
   PROCESS_UNHANDLED_REJECTION: 'PROCESS_UNHANDLED_REJECTION',
+
+  /** Sprint 49 Story 1 — Redis messaging presence */
+  PRESENCE_REDIS_DEGRADED: 'PRESENCE_REDIS_DEGRADED',
+  PRESENCE_REGISTERED: 'PRESENCE_REGISTERED',
+  PRESENCE_CLEARED: 'PRESENCE_CLEARED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

@@ -37,7 +37,7 @@ export class NewMessageEmailService {
         return;
       }
 
-      if (this.socketRegistry.hasActiveConnection(params.recipientUserId)) {
+      if (await this.socketRegistry.hasActiveConnection(params.recipientUserId)) {
         this.obs.trace(
           `email message skipped recipient online userId=${params.recipientUserId} conversationId=${params.conversationId}`,
           ErrorCodes.EMAIL_SKIPPED_RECIPIENT_ONLINE,

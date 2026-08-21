@@ -66,7 +66,10 @@ describe('MessagingGateway', () => {
 
   const socketRegistry = {
     register: jest.fn(),
+    registerAsync: jest.fn().mockResolvedValue(undefined),
     unregister: jest.fn(),
+    unregisterAsync: jest.fn().mockResolvedValue(undefined),
+    refreshPresence: jest.fn().mockResolvedValue(undefined),
     activeConnectionCount: jest.fn().mockReturnValue(1),
     disconnectBySessionId: jest.fn(),
   } as unknown as MessagingSocketRegistry;
@@ -114,7 +117,7 @@ describe('MessagingGateway', () => {
     await gateway.handleConnection(client);
 
     expect(client.join).toHaveBeenCalledWith(userRoom('user_a'));
-    expect(socketRegistry.register).toHaveBeenCalledWith(client);
+    expect(socketRegistry.registerAsync).toHaveBeenCalledWith(client);
     expect(client.disconnect).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('user_a'),
@@ -226,6 +229,29 @@ describe('MessagingGateway', () => {
     );
   });
 
+  it('refreshes presence TTL when session revalidate succeeds', async () => {
+    jest.useFakeTimers();
+    (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
+      ok: true,
+      userId: 'user_a',
+      sessionId: 'sess_a',
+    });
+    (wsSession.isSessionActive as jest.Mock).mockResolvedValue(true);
+    const client = mockSocket('dating_session=token');
+
+    await gateway.handleConnection(client);
+    (socketRegistry.refreshPresence as jest.Mock).mockClear();
+
+    jest.advanceTimersByTime(WS_SESSION_REVALIDATE_MS);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(socketRegistry.refreshPresence).toHaveBeenCalledWith(client);
+    expect(client.disconnect).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
   it('disconnects when periodic session check fails', async () => {
     jest.useFakeTimers();
     (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
@@ -251,7 +277,7 @@ describe('MessagingGateway', () => {
     jest.useRealTimers();
   });
 
-  it('unregisters socket on disconnect', () => {
+  it('unregisters socket on disconnect', async () => {
     const client = mockSocket();
     client.data = {
       userId: 'user_b',
@@ -259,9 +285,9 @@ describe('MessagingGateway', () => {
       sessionCheckTimer: setInterval(() => {}, 60_000),
     };
 
-    gateway.handleDisconnect(client);
+    await gateway.handleDisconnect(client);
 
-    expect(socketRegistry.unregister).toHaveBeenCalledWith(client);
+    expect(socketRegistry.unregisterAsync).toHaveBeenCalledWith(client);
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringMatching(/user_b.*sess_b/),
       ErrorCodes.MESSAGING_WS_DISCONNECT_OK,
