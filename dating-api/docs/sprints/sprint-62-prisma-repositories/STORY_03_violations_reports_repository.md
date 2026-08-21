@@ -3,7 +3,7 @@
 **Sprint:** 62  
 **Effort:** 2 days  
 **Risk:** ⚡ LOW–MED  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -46,12 +46,23 @@ Keep **enforcement policy** (mute thresholds) in `ContentViolationService`; repo
 
 ## Success
 
-- [ ] Violation + report product services free of direct Prisma
-- [ ] Admin paths share adapters
-- [ ] Enforcement thresholds unchanged
+- [x] Violation + report product services free of direct Prisma
+- [x] Admin paths share adapters
+- [x] Enforcement thresholds unchanged
 
 ---
 
 ## Follow-up
 
 Story 04 — Profile photo repository.
+
+---
+
+## Shipped
+
+`feature/sprint-62-story-3` @ `82855c1` (close commit follows)
+
+- `d38cf24` — feat: violations + reports repositories
+- `82855c1` — test: guard violations + reports repository wiring
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)

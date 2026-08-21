@@ -36,7 +36,7 @@ Extract Prisma access behind domain repository ports for the hottest product pat
 |---|-------|--------|------|--------|
 | 01 | [Match repository port](./STORY_01_match_repository.md) | 3–4 days | ⚠️ MEDIUM | Done |
 | 02 | [Conversation / message repository](./STORY_02_conversation_repository.md) | 2–3 days | ⚠️ MEDIUM | Done |
-| 03 | [Violations + reports repository](./STORY_03_violations_reports_repository.md) | 2 days | ⚡ LOW–MED | Planned |
+| 03 | [Violations + reports repository](./STORY_03_violations_reports_repository.md) | 2 days | ⚡ LOW–MED | Done |
 | 04 | [Profile photo repository](./STORY_04_profile_photo_repository.md) | 2 days | ⚡ LOW–MED | Planned |
 
 **Order:** 01 → 02 → 03 → 04.
@@ -49,7 +49,7 @@ Extract Prisma access behind domain repository ports for the hottest product pat
 
 - [x] Match ranking / list / actions / detail use `MatchRepository` (or split query/command ports) — no new Prisma in those services *(Story 01)*
 - [x] Conversations + messages services use conversation/message repository *(Story 02)*
-- Content violations + reports (+ admin twins where practical) use repository ports
+- [x] Content violations + reports (+ admin twins where practical) use repository ports *(Story 03)*
 - Profile photo service uses photo repository (extend profile repo family, don’t invent parallel POC)
 - Soft target: **Prisma injectors ≤ ~15** (infra/session/users/admin leftovers OK for a later pass)
 - Characterization / existing integration specs green
