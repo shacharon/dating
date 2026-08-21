@@ -8,12 +8,15 @@ import { Prisma, UserProfilePhotoStatus } from '@prisma/client';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { PrismaService } from '../../prisma/prisma.service';
 import { PHOTO_STORAGE } from '../../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../../photo-storage/photo-storage.types';
 import { loadPhotoStorageConfig } from '../../photo-storage/photo-storage.config';
 import { PhotoModerationQueueService } from '../../workers/photo-moderation.worker';
 import type { MeProfilePhotoDto } from '../me-profile.dto';
+import {
+  PROFILE_PHOTO_REPOSITORY,
+  type IProfilePhotoRepository,
+} from '../repositories/profile-photo.repository';
 import { ProfileCrudService } from './profile-crud.service';
 import {
   ALLOWED_PHOTO_MIME_TYPES,
@@ -26,7 +29,8 @@ import {
 @Injectable()
 export class ProfilePhotoService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PROFILE_PHOTO_REPOSITORY)
+    private readonly photos: IProfilePhotoRepository,
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly analytics: AnalyticsService,
@@ -52,16 +56,13 @@ export class ProfilePhotoService {
   }): MeProfilePhotoDto {
     return {
       ...row,
-      moderationResultJson: row.moderationResultJson as unknown | null,
+      moderationResultJson: row.moderationResultJson,
     };
   }
 
   async listPhotosForUser(userId: string): Promise<MeProfilePhotoDto[]> {
     const profile = await this.crud.requireProfileForUser(userId);
-    const rows = await this.prisma.userProfilePhoto.findMany({
-      where: { profileId: profile.id },
-      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-    });
+    const rows = await this.photos.listForProfile(profile.id);
     return rows.map((r) => this.toPhotoDto(r));
   }
 
@@ -89,18 +90,16 @@ export class ProfilePhotoService {
     }
 
     const profile = await this.crud.requireProfileForUser(userId);
-    const existing = await this.prisma.userProfilePhoto.findMany({
-      where: { profileId: profile.id },
-      orderBy: [{ position: 'asc' }],
-      select: { id: true, position: true, status: true, isPrimary: true },
-    });
+    const existing = await this.photos.listLiteForProfile(profile.id);
     if (existing.length >= PHOTO_MAX_COUNT) {
       throw new UnprocessableEntityException({
         error: 'photo_limit_reached',
         message: `Max ${PHOTO_MAX_COUNT} photos per profile.`,
       });
     }
-    const approvedExists = existing.some((p) => p.status === UserProfilePhotoStatus.APPROVED);
+    const approvedExists = existing.some(
+      (p) => p.status === UserProfilePhotoStatus.APPROVED,
+    );
     const nextPosition = existing.length
       ? Math.max(...existing.map((p) => p.position)) + 1
       : 0;
@@ -126,19 +125,17 @@ export class ProfilePhotoService {
       (moderationDriver === 'rekognition' || moderationDriver === 'mock') &&
       status === UserProfilePhotoStatus.PENDING;
 
-    const created = await this.prisma.userProfilePhoto.create({
-      data: {
-        profileId: profile.id,
-        storageKey: 'pending://storage-key',
-        originalFileName: file.originalname || null,
-        mimeType: file.mimetype,
-        sizeBytes: file.size,
-        position: nextPosition,
-        status,
-        moderationProvider,
-        moderationResultJson,
-        isPrimary,
-      },
+    const created = await this.photos.create({
+      profileId: profile.id,
+      storageKey: 'pending://storage-key',
+      originalFileName: file.originalname || null,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      position: nextPosition,
+      status,
+      moderationProvider,
+      moderationResultJson,
+      isPrimary,
     });
 
     try {
@@ -149,18 +146,19 @@ export class ProfilePhotoService {
         originalFileName: file.originalname,
       });
       await this.photoStorage.save(storageKey, file.buffer);
-      const updated = await this.prisma.userProfilePhoto.update({
-        where: { id: created.id },
-        data: { storageKey },
-      });
+      const updated = await this.photos.updateStorageKey(
+        created.id,
+        storageKey,
+      );
       if (autoApprove && isPrimary) {
-        await this.prisma.userProfilePhoto.updateMany({
-          where: { profileId: profile.id, id: { not: created.id } },
-          data: { isPrimary: false },
-        });
+        await this.photos.clearPrimaryForProfileExcept(profile.id, created.id);
       }
       if (status === UserProfilePhotoStatus.PENDING) {
-        this.analytics.track(userId, ProductAnalyticsEvents.PHOTO_MODERATION_PENDING, {});
+        this.analytics.track(
+          userId,
+          ProductAnalyticsEvents.PHOTO_MODERATION_PENDING,
+          {},
+        );
       }
       if (enqueueMl) {
         void this.photoModerationQueue
@@ -169,9 +167,7 @@ export class ProfilePhotoService {
       }
       return this.toPhotoDto(updated);
     } catch (e) {
-      await this.prisma.userProfilePhoto
-        .delete({ where: { id: created.id } })
-        .catch(() => undefined);
+      await this.photos.deleteById(created.id).catch(() => undefined);
       throw e;
     }
   }
@@ -181,9 +177,7 @@ export class ProfilePhotoService {
     photoId: string,
   ): Promise<{ deleted: true }> {
     const profile = await this.crud.requireProfileForUser(userId);
-    const row = await this.prisma.userProfilePhoto.findFirst({
-      where: { id: photoId, profileId: profile.id },
-    });
+    const row = await this.photos.findByIdAndProfileId(photoId, profile.id);
     if (!row) {
       throw new NotFoundException({
         error: 'photo_not_found',
@@ -191,25 +185,13 @@ export class ProfilePhotoService {
       });
     }
 
-    await this.prisma.userProfilePhoto.delete({ where: { id: row.id } });
+    await this.photos.deleteById(row.id);
     await this.photoStorage.delete(row.storageKey).catch(() => undefined);
 
     if (row.isPrimary) {
-      const promote = await this.prisma.userProfilePhoto.findFirst({
-        where: { profileId: profile.id, status: UserProfilePhotoStatus.APPROVED },
-        orderBy: [{ position: 'asc' }],
-      });
+      const promote = await this.photos.findFirstApprovedByProfile(profile.id);
       if (promote) {
-        await this.prisma.$transaction(async (tx) => {
-          await tx.userProfilePhoto.updateMany({
-            where: { profileId: profile.id },
-            data: { isPrimary: false },
-          });
-          await tx.userProfilePhoto.update({
-            where: { id: promote.id },
-            data: { isPrimary: true },
-          });
-        });
+        await this.photos.setPrimaryExclusive(profile.id, promote.id);
       }
     }
     return { deleted: true };
@@ -220,9 +202,7 @@ export class ProfilePhotoService {
     photoId: string,
   ): Promise<MeProfilePhotoDto> {
     const profile = await this.crud.requireProfileForUser(userId);
-    const row = await this.prisma.userProfilePhoto.findFirst({
-      where: { id: photoId, profileId: profile.id },
-    });
+    const row = await this.photos.findByIdAndProfileId(photoId, profile.id);
     if (!row) {
       throw new NotFoundException({
         error: 'photo_not_found',
@@ -236,16 +216,7 @@ export class ProfilePhotoService {
       });
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.userProfilePhoto.updateMany({
-        where: { profileId: profile.id },
-        data: { isPrimary: false },
-      });
-      return tx.userProfilePhoto.update({
-        where: { id: row.id },
-        data: { isPrimary: true },
-      });
-    });
+    const updated = await this.photos.setPrimaryExclusive(profile.id, row.id);
     return this.toPhotoDto(updated);
   }
 
@@ -254,10 +225,10 @@ export class ProfilePhotoService {
     photoId: string,
   ): Promise<{ contentType: string; content: Buffer }> {
     const profile = await this.crud.requireProfileForUser(userId);
-    const row = await this.prisma.userProfilePhoto.findFirst({
-      where: { id: photoId, profileId: profile.id },
-      select: { id: true, profileId: true, storageKey: true, mimeType: true },
-    });
+    const row = await this.photos.findStorageMetaByIdAndProfileId(
+      photoId,
+      profile.id,
+    );
     if (!row) {
       throw new NotFoundException({
         error: 'photo_not_found',

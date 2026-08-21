@@ -2,16 +2,16 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { UserProfilePhotoStatus } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { PhotoRejectionEmailService } from '../notifications/photo-rejection-email.service';
+import {
+  PROFILE_PHOTO_REPOSITORY,
+  type IProfilePhotoRepository,
+} from '../me-profile/repositories/profile-photo.repository';
 import {
   loadPhotoModerationThresholds,
   type PhotoModerationThresholds,
 } from './photo-moderation.config';
-import {
-  REKOGNITION,
-  type RekognitionPort,
-} from './photo-moderation.ports';
+import { REKOGNITION, type RekognitionPort } from './photo-moderation.ports';
 import {
   maxMlConfidence,
   parseModerationResultJson,
@@ -31,7 +31,8 @@ export class PhotoModerationService {
   private readonly thresholds: PhotoModerationThresholds;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PROFILE_PHOTO_REPOSITORY)
+    private readonly photos: IProfilePhotoRepository,
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly rejectionEmail: PhotoRejectionEmailService,
@@ -120,7 +121,10 @@ export class PhotoModerationService {
       const mlConfidence = maxMlConfidence(labels);
 
       let faceCount: number | undefined;
-      if (this.thresholds.faceDetectionEnabled && this.rekognition.detectFaces) {
+      if (
+        this.thresholds.faceDetectionEnabled &&
+        this.rekognition.detectFaces
+      ) {
         const faces = await this.rekognition.detectFaces({
           Image: image,
         });
@@ -145,10 +149,7 @@ export class PhotoModerationService {
   }
 
   async processPendingPhoto(photoId: string): Promise<void> {
-    const row = await this.prisma.userProfilePhoto.findUnique({
-      where: { id: photoId },
-      include: { profile: { select: { userId: true } } },
-    });
+    const row = await this.photos.findByIdWithOwnerUserId(photoId);
     if (!row) return;
     if (row.status !== UserProfilePhotoStatus.PENDING) return;
 
@@ -184,17 +185,23 @@ export class PhotoModerationService {
       photoId: row.id,
       storageKey: row.storageKey,
     });
-    await this.applyOutcome(row.id, row.profileId, row.profile.userId, outcome, {
-      event:
-        outcome.status === 'APPROVED'
-          ? 'auto_approved'
-          : outcome.status === 'REJECTED'
-            ? 'auto_rejected'
-            : outcome.result.error
-              ? 'ml_error_flagged'
-              : 'flagged',
-      expectedStatuses: [UserProfilePhotoStatus.PENDING],
-    });
+    await this.applyOutcome(
+      row.id,
+      row.profileId,
+      row.profile.userId,
+      outcome,
+      {
+        event:
+          outcome.status === 'APPROVED'
+            ? 'auto_approved'
+            : outcome.status === 'REJECTED'
+              ? 'auto_rejected'
+              : outcome.result.error
+                ? 'ml_error_flagged'
+                : 'flagged',
+        expectedStatuses: [UserProfilePhotoStatus.PENDING],
+      },
+    );
   }
 
   /**
@@ -220,39 +227,24 @@ export class PhotoModerationService {
           ? UserProfilePhotoStatus.REJECTED
           : UserProfilePhotoStatus.FLAGGED_FOR_REVIEW;
 
-    const expected = audit.expectedStatuses;
-    const whereBase = expected?.length
-      ? { id: photoId, status: { in: expected } }
-      : { id: photoId };
-
     if (status === UserProfilePhotoStatus.APPROVED) {
-      const applied = await this.prisma.$transaction(async (tx) => {
-        const existingPrimary = await tx.userProfilePhoto.findFirst({
-          where: {
-            profileId,
-            status: UserProfilePhotoStatus.APPROVED,
-            isPrimary: true,
-          },
-          select: { id: true },
-        });
-        const updated = await tx.userProfilePhoto.updateMany({
-          where: whereBase,
-          data: {
-            status,
-            moderationProvider:
-              outcome.result.source === 'sla'
-                ? 'sla'
-                : outcome.result.source === 'manual'
-                  ? 'manual'
-                  : this.thresholds.moderationDriver === 'mock'
-                    ? 'mock'
-                    : 'rekognition',
-            moderationResultJson: outcome.result as object,
-            rejectionReason: null,
-            isPrimary: !existingPrimary,
-          },
-        });
-        return updated.count > 0;
+      const applied = await this.photos.conditionalApproveAndMaybeSetPrimary({
+        photoId,
+        profileId,
+        expectedStatuses: audit.expectedStatuses,
+        data: {
+          status,
+          moderationProvider:
+            outcome.result.source === 'sla'
+              ? 'sla'
+              : outcome.result.source === 'manual'
+                ? 'manual'
+                : this.thresholds.moderationDriver === 'mock'
+                  ? 'mock'
+                  : 'rekognition',
+          moderationResultJson: outcome.result as object,
+          rejectionReason: null,
+        },
       });
       if (!applied) {
         this.logger.warn(
@@ -261,8 +253,9 @@ export class PhotoModerationService {
         return false;
       }
     } else {
-      const updated = await this.prisma.userProfilePhoto.updateMany({
-        where: whereBase,
+      const applied = await this.photos.conditionalUpdateModeration({
+        photoId,
+        expectedStatuses: audit.expectedStatuses,
         data: {
           status,
           moderationProvider:
@@ -276,7 +269,7 @@ export class PhotoModerationService {
           isPrimary: false,
         },
       });
-      if (updated.count === 0) {
+      if (!applied) {
         this.logger.warn(
           `photo moderation apply skipped (race) photoId=${photoId} target=${status}`,
         );
@@ -294,7 +287,10 @@ export class PhotoModerationService {
       rejectionReasonCode: outcome.rejectionReasonCode,
     });
 
-    if (status === UserProfilePhotoStatus.REJECTED && outcome.rejectionReasonCode) {
+    if (
+      status === UserProfilePhotoStatus.REJECTED &&
+      outcome.rejectionReasonCode
+    ) {
       void this.rejectionEmail
         .sendBestEffort({
           userId,

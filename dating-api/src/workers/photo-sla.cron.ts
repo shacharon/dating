@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { UserProfilePhotoStatus } from '@prisma/client';
 import { CRON_LOCK, type CronLockPort } from '../cache/cache.ports';
 import { ErrorCodes } from '../logging/error-codes';
@@ -12,7 +18,10 @@ import {
   parseModerationResultJson,
   type PhotoModerationResultJson,
 } from '../photo-storage/photo-moderation.types';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  PROFILE_PHOTO_REPOSITORY,
+  type IProfilePhotoRepository,
+} from '../me-profile/repositories/profile-photo.repository';
 import {
   CRON_LOCK_PHOTO_SLA,
   PHOTO_SLA_LOCK_TTL_SECONDS,
@@ -33,7 +42,8 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
   private running = false;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PROFILE_PHOTO_REPOSITORY)
+    private readonly photos: IProfilePhotoRepository,
     private readonly moderation: PhotoModerationService,
     private readonly obs: StructuredObservabilityService,
     @Inject(CRON_LOCK) private readonly cronLock: CronLockPort,
@@ -99,13 +109,8 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     const cutoff = new Date(
       Date.now() - this.thresholds.mlStuckMinutes * 60_000,
     );
-    const stuck = await this.prisma.userProfilePhoto.findMany({
-      where: {
-        status: UserProfilePhotoStatus.PENDING,
-        moderationProvider: 'rekognition',
-        createdAt: { lt: cutoff },
-      },
-      include: { profile: { select: { userId: true } } },
+    const stuck = await this.photos.listStuckRekognitionPending({
+      cutoff,
       take: 100,
     });
 
@@ -172,12 +177,8 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     const lowCutoff = new Date(now - this.thresholds.slaLowHours * HOUR_MS);
     const maxCutoff = new Date(now - this.thresholds.slaMaxHours * HOUR_MS);
 
-    const flagged = await this.prisma.userProfilePhoto.findMany({
-      where: {
-        status: UserProfilePhotoStatus.FLAGGED_FOR_REVIEW,
-        createdAt: { lt: lowCutoff },
-      },
-      include: { profile: { select: { userId: true } } },
+    const flagged = await this.photos.listFlaggedOlderThan({
+      cutoff: lowCutoff,
       take: 200,
     });
 
@@ -227,13 +228,8 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     if (justApproved <= 0) return;
     const since = new Date(Date.now() - 24 * HOUR_MS);
     // Approximate: count SLA-approved photos updated in last 24h with source sla.
-    const recent = await this.prisma.userProfilePhoto.findMany({
-      where: {
-        status: UserProfilePhotoStatus.APPROVED,
-        moderationProvider: 'sla',
-        updatedAt: { gte: since },
-      },
-      select: { id: true },
+    const recent = await this.photos.listRecentSlaApprovals({
+      since,
       take: this.thresholds.slaAlertPerDay + 5,
     });
     if (recent.length > this.thresholds.slaAlertPerDay) {

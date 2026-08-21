@@ -1,4 +1,3 @@
-import { UserProfilePhotoStatus } from '@prisma/client';
 import {
   candidateHasApprovedPhoto,
   countApprovedPhotosForProfile,
@@ -10,43 +9,39 @@ describe('me-profile-photo-gate', () => {
 
   it('countApprovedPhotosForProfile queries APPROVED rows only', async () => {
     const count = jest.fn().mockResolvedValue(2);
-    const prisma = { userProfilePhoto: { count } };
+    const matches = { countApprovedPhotosForProfile: count };
 
     await expect(
-      countApprovedPhotosForProfile(prisma as never, profileId),
+      countApprovedPhotosForProfile(matches, profileId),
     ).resolves.toBe(2);
 
-    expect(count).toHaveBeenCalledWith({
-      where: { profileId, status: UserProfilePhotoStatus.APPROVED },
-    });
+    expect(count).toHaveBeenCalledWith(profileId);
   });
 
   it('viewerHasApprovedPhoto returns false when count is 0', async () => {
-    const prisma = {
-      userProfilePhoto: { count: jest.fn().mockResolvedValue(0) },
+    const matches = {
+      countApprovedPhotosForProfile: jest.fn().mockResolvedValue(0),
     };
-    await expect(
-      viewerHasApprovedPhoto(prisma as never, profileId),
-    ).resolves.toBe(false);
+    await expect(viewerHasApprovedPhoto(matches, profileId)).resolves.toBe(
+      false,
+    );
   });
 
   it('viewerHasApprovedPhoto returns true when count is at least 1', async () => {
-    const prisma = {
-      userProfilePhoto: { count: jest.fn().mockResolvedValue(1) },
+    const matches = {
+      countApprovedPhotosForProfile: jest.fn().mockResolvedValue(1),
     };
-    await expect(
-      viewerHasApprovedPhoto(prisma as never, profileId),
-    ).resolves.toBe(true);
+    await expect(viewerHasApprovedPhoto(matches, profileId)).resolves.toBe(
+      true,
+    );
   });
 
   it('candidateHasApprovedPhoto delegates to approved photo count', async () => {
     const count = jest.fn().mockResolvedValue(1);
-    const prisma = { userProfilePhoto: { count } };
-    await expect(
-      candidateHasApprovedPhoto(prisma as never, profileId),
-    ).resolves.toBe(true);
-    expect(count).toHaveBeenCalledWith({
-      where: { profileId, status: UserProfilePhotoStatus.APPROVED },
-    });
+    const matches = { countApprovedPhotosForProfile: count };
+    await expect(candidateHasApprovedPhoto(matches, profileId)).resolves.toBe(
+      true,
+    );
+    expect(count).toHaveBeenCalledWith(profileId);
   });
 });

@@ -1,7 +1,7 @@
 import { UserProfilePhotoStatus } from '@prisma/client';
 import type { PhotoRejectionEmailService } from '../notifications/photo-rejection-email.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { IProfilePhotoRepository } from '../me-profile/repositories/profile-photo.repository';
 import type { PhotoStorage } from './photo-storage.types';
 import {
   PhotoModerationService,
@@ -9,15 +9,11 @@ import {
 } from './photo-moderation.service';
 
 describe('PhotoModerationService', () => {
-  const prisma = {
-    userProfilePhoto: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      findFirst: jest.fn(),
-    },
-    $transaction: jest.fn(),
-  } as unknown as PrismaService;
+  const photos = {
+    findByIdWithOwnerUserId: jest.fn(),
+    conditionalApproveAndMaybeSetPrimary: jest.fn(),
+    conditionalUpdateModeration: jest.fn(),
+  };
 
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
   const photoStorage = {
@@ -52,7 +48,7 @@ describe('PhotoModerationService', () => {
     };
 
     service = new PhotoModerationService(
-      prisma,
+      photos as unknown as IProfilePhotoRepository,
       obs,
       photoStorage,
       rejectionEmail,
@@ -170,9 +166,7 @@ describe('PhotoModerationService', () => {
 
   describe('applyOutcome race guard', () => {
     it('skips when expectedStatuses do not match', async () => {
-      prisma.userProfilePhoto.updateMany = jest
-        .fn()
-        .mockResolvedValue({ count: 0 });
+      photos.conditionalUpdateModeration.mockResolvedValue(false);
 
       const applied = await service.applyOutcome(
         'photo_1',
@@ -193,9 +187,7 @@ describe('PhotoModerationService', () => {
     });
 
     it('sends rejection email once on ML auto-reject', async () => {
-      prisma.userProfilePhoto.updateMany = jest
-        .fn()
-        .mockResolvedValue({ count: 1 });
+      photos.conditionalUpdateModeration.mockResolvedValue(true);
 
       const applied = await service.applyOutcome(
         'photo_1',

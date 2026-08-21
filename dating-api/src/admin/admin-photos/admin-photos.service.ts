@@ -17,7 +17,10 @@ import {
 } from '../../photo-storage/photo-moderation.types';
 import { PHOTO_STORAGE } from '../../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../../photo-storage/photo-storage.types';
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  PROFILE_PHOTO_REPOSITORY,
+  type IProfilePhotoRepository,
+} from '../../me-profile/repositories/profile-photo.repository';
 import type {
   ListPendingPhotosResponseDto,
   PendingPhotoListItemDto,
@@ -40,7 +43,8 @@ function adminPhotoFileUrl(photoId: string): string {
 @Injectable()
 export class AdminPhotosService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PROFILE_PHOTO_REPOSITORY)
+    private readonly photos: IProfilePhotoRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     private readonly moderation: PhotoModerationService,
@@ -56,35 +60,20 @@ export class AdminPhotosService {
     let cursorRow: { id: string; createdAt: Date } | null = null;
 
     if (cursor?.trim()) {
-      const row = await this.prisma.userProfilePhoto.findUnique({
-        where: { id: cursor.trim() },
-        select: { id: true, createdAt: true, status: true },
-      });
+      const row = await this.photos.findByIdLite(cursor.trim());
       if (row && REVIEWABLE.includes(row.status)) {
         cursorRow = { id: row.id, createdAt: row.createdAt };
       }
     }
 
-    const rows = await this.prisma.userProfilePhoto.findMany({
-      where: {
-        status: { in: REVIEWABLE },
-        ...(cursorRow
-          ? {
-              OR: [
-                { createdAt: { gt: cursorRow.createdAt } },
-                {
-                  createdAt: cursorRow.createdAt,
-                  id: { gt: cursorRow.id },
-                },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    const rows = await this.photos.listReviewablePage({
       take: take + 1,
-      include: {
-        profile: { select: { userId: true } },
-      },
+      ...(cursorRow
+        ? {
+            cursorCreatedAt: cursorRow.createdAt,
+            cursorId: cursorRow.id,
+          }
+        : {}),
     });
 
     const page = rows.slice(0, take);
@@ -111,17 +100,14 @@ export class AdminPhotosService {
 
     return {
       items,
-      nextCursor: rows.length > take ? page[page.length - 1]!.id : null,
+      nextCursor: rows.length > take ? page[page.length - 1].id : null,
     };
   }
 
   async getPhotoFile(
     photoId: string,
   ): Promise<{ contentType: string; content: Buffer }> {
-    const row = await this.prisma.userProfilePhoto.findUnique({
-      where: { id: photoId },
-      select: { mimeType: true, storageKey: true },
-    });
+    const row = await this.photos.findStorageMetaById(photoId);
     if (!row) {
       throw new NotFoundException({
         error: 'photo_not_found',
@@ -143,10 +129,7 @@ export class AdminPhotosService {
     photoId: string,
     body: ModeratePhotoDto,
   ): Promise<ModeratePhotoResponseDto> {
-    const row = await this.prisma.userProfilePhoto.findUnique({
-      where: { id: photoId },
-      include: { profile: { select: { userId: true } } },
-    });
+    const row = await this.photos.findByIdWithOwnerUserId(photoId);
     if (!row) {
       throw new NotFoundException({
         error: 'photo_not_found',
@@ -172,7 +155,9 @@ export class AdminPhotosService {
           REJECTION_REASON_USER_COPY_EN.other
         : null;
     const rejectionReasonCode: RejectionReasonCode | undefined =
-      decision === 'reject' ? code ?? (freeText ? 'other' : 'other') : undefined;
+      decision === 'reject'
+        ? (code ?? (freeText ? 'other' : 'other'))
+        : undefined;
 
     const updated =
       body.decision === PhotoModerationDecision.APPROVE
@@ -195,9 +180,13 @@ export class AdminPhotosService {
       reviewerId: adminUserId,
       rejectionReasonCode,
     });
-    this.analytics.track(ownerUserId, ProductAnalyticsEvents.PHOTO_MODERATION_DECIDED, {
-      decision,
-    });
+    this.analytics.track(
+      ownerUserId,
+      ProductAnalyticsEvents.PHOTO_MODERATION_DECIDED,
+      {
+        decision,
+      },
+    );
 
     if (decision === 'reject' && rejectionReasonCode) {
       void this.rejectionEmail
@@ -225,32 +214,18 @@ export class AdminPhotosService {
     profileId: string,
     adminUserId: string,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const existingPrimary = await tx.userProfilePhoto.findFirst({
-        where: {
-          profileId,
-          status: UserProfilePhotoStatus.APPROVED,
-          isPrimary: true,
+    return this.photos.approveManualReview({
+      photoId,
+      profileId,
+      data: {
+        moderationProvider: 'manual',
+        moderationResultJson: {
+          source: 'manual',
+          decision: 'approved',
+          reviewedBy: adminUserId,
+          reviewedAt: new Date().toISOString(),
         },
-        select: { id: true },
-      });
-      const shouldPrimary = !existingPrimary;
-
-      return tx.userProfilePhoto.update({
-        where: { id: photoId },
-        data: {
-          status: UserProfilePhotoStatus.APPROVED,
-          moderationProvider: 'manual',
-          moderationResultJson: {
-            source: 'manual',
-            decision: 'approved',
-            reviewedBy: adminUserId,
-            reviewedAt: new Date().toISOString(),
-          },
-          rejectionReason: null,
-          isPrimary: shouldPrimary,
-        },
-      });
+      },
     });
   }
 
@@ -260,21 +235,16 @@ export class AdminPhotosService {
     rejectionReason: string | null,
     rejectionReasonCode: RejectionReasonCode,
   ) {
-    return this.prisma.userProfilePhoto.update({
-      where: { id: photoId },
-      data: {
-        status: UserProfilePhotoStatus.REJECTED,
-        moderationProvider: 'manual',
-        moderationResultJson: {
-          source: 'manual',
-          decision: 'rejected',
-          rejectionReasonCode,
-          reviewedBy: adminUserId,
-          reviewedAt: new Date().toISOString(),
-        },
-        rejectionReason,
-        isPrimary: false,
+    return this.photos.rejectManualReview(photoId, {
+      moderationProvider: 'manual',
+      moderationResultJson: {
+        source: 'manual',
+        decision: 'rejected',
+        rejectionReasonCode,
+        reviewedBy: adminUserId,
+        reviewedAt: new Date().toISOString(),
       },
+      rejectionReason,
     });
   }
 }

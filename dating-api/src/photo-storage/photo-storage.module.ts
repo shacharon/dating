@@ -12,16 +12,17 @@ import { LocalPhotoStorage } from './local-photo-storage.service';
 import { S3PhotoStorage } from './s3-photo-storage.service';
 import type { PhotoStorage } from './photo-storage.types';
 import { loadPhotoModerationThresholds } from './photo-moderation.config';
-import {
-  REKOGNITION,
-  type RekognitionPort,
-} from './photo-moderation.ports';
+import { REKOGNITION, type RekognitionPort } from './photo-moderation.ports';
+import { PrismaModule } from '../prisma/prisma.module';
+import { PROFILE_PHOTO_REPOSITORY } from '../me-profile/repositories/profile-photo.repository';
+import { PrismaProfilePhotoRepository } from '../me-profile/repositories/prisma-profile-photo.repository';
 
 export const PHOTO_STORAGE_CONFIG = Symbol('PHOTO_STORAGE_CONFIG');
 export const PHOTO_STORAGE = Symbol('PHOTO_STORAGE');
 
 @Global()
 @Module({
+  imports: [PrismaModule],
   providers: [
     {
       provide: PHOTO_STORAGE_CONFIG,
@@ -48,7 +49,16 @@ export const PHOTO_STORAGE = Symbol('PHOTO_STORAGE');
         };
       },
     },
+    {
+      provide: PROFILE_PHOTO_REPOSITORY,
+      useClass: PrismaProfilePhotoRepository,
+    },
   ],
-  exports: [PHOTO_STORAGE_CONFIG, PHOTO_STORAGE, REKOGNITION],
+  exports: [
+    PHOTO_STORAGE_CONFIG,
+    PHOTO_STORAGE,
+    REKOGNITION,
+    PROFILE_PHOTO_REPOSITORY,
+  ],
 })
 export class PhotoStorageModule {}

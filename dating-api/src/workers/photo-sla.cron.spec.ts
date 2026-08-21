@@ -3,7 +3,7 @@ import type { CronLockPort } from '../cache/cache.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoModerationService } from '../photo-storage/photo-moderation.service';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { IProfilePhotoRepository } from '../me-profile/repositories/profile-photo.repository';
 import {
   CRON_LOCK_PHOTO_SLA,
   PHOTO_SLA_LOCK_TTL_SECONDS,
@@ -11,11 +11,11 @@ import {
 import { PhotoSlaEnforcer } from './photo-sla.cron';
 
 describe('PhotoSlaEnforcer', () => {
-  const prisma = {
-    userProfilePhoto: {
-      findMany: jest.fn(),
-    },
-  } as unknown as PrismaService;
+  const photos = {
+    listStuckRekognitionPending: jest.fn(),
+    listFlaggedOlderThan: jest.fn(),
+    listRecentSlaApprovals: jest.fn(),
+  };
 
   const moderation = {
     applyOutcome: jest.fn().mockResolvedValue(true),
@@ -47,7 +47,12 @@ describe('PhotoSlaEnforcer', () => {
     setEnv('PHOTO_MODERATION_SLA_LOW_CONFIDENCE', '60');
     setEnv('PHOTO_MODERATION_SLA_ALERT_PER_DAY', '20');
     setEnv('PHOTO_MODERATION_ML_STUCK_MINUTES', '15');
-    enforcer = new PhotoSlaEnforcer(prisma, moderation, obs, cronLock);
+    enforcer = new PhotoSlaEnforcer(
+      photos as unknown as IProfilePhotoRepository,
+      moderation,
+      obs,
+      cronLock,
+    );
   });
 
   afterAll(() => {
@@ -62,12 +67,14 @@ describe('PhotoSlaEnforcer', () => {
   }
 
   it('skips work when lock not_acquired', async () => {
-    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue(
+      'not_acquired',
+    );
     await expect(enforcer.runHourly()).resolves.toEqual({
       autoApproved: 0,
       flaggedStuck: 0,
     });
-    expect(prisma.userProfilePhoto.findMany).not.toHaveBeenCalled();
+    expect(photos.listStuckRekognitionPending).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('skipped'),
       ErrorCodes.CRON_LEADER_SKIPPED,
@@ -80,7 +87,7 @@ describe('PhotoSlaEnforcer', () => {
       autoApproved: 0,
       flaggedStuck: 0,
     });
-    expect(prisma.userProfilePhoto.findMany).not.toHaveBeenCalled();
+    expect(photos.listStuckRekognitionPending).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('skipped'),
       ErrorCodes.CRON_LEADER_UNAVAILABLE,
@@ -90,16 +97,14 @@ describe('PhotoSlaEnforcer', () => {
   it('runs when lock unavailable but CRON_LEADER_FAIL_OPEN=1', async () => {
     setEnv('CRON_LEADER_FAIL_OPEN', '1');
     (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    photos.listStuckRekognitionPending.mockResolvedValue([]);
+    photos.listFlaggedOlderThan.mockResolvedValue([]);
+    photos.listRecentSlaApprovals.mockResolvedValue([]);
     await expect(enforcer.runHourly()).resolves.toEqual({
       autoApproved: 0,
       flaggedStuck: 0,
     });
-    expect(prisma.userProfilePhoto.findMany).toHaveBeenCalled();
+    expect(photos.listStuckRekognitionPending).toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       'photo-sla cron leader acquired',
       ErrorCodes.CRON_LEADER_ACQUIRED,
@@ -109,21 +114,21 @@ describe('PhotoSlaEnforcer', () => {
 
   it('does not fail-open when lock not_acquired even with CRON_LEADER_FAIL_OPEN', async () => {
     setEnv('CRON_LEADER_FAIL_OPEN', '1');
-    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue(
+      'not_acquired',
+    );
     await expect(enforcer.runHourly()).resolves.toEqual({
       autoApproved: 0,
       flaggedStuck: 0,
     });
-    expect(prisma.userProfilePhoto.findMany).not.toHaveBeenCalled();
+    expect(photos.listStuckRekognitionPending).not.toHaveBeenCalled();
     setEnv('CRON_LEADER_FAIL_OPEN', undefined);
   });
 
   it('acquires lock with photo-sla key and 3300s TTL', async () => {
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    photos.listStuckRekognitionPending.mockResolvedValue([]);
+    photos.listFlaggedOlderThan.mockResolvedValue([]);
+    photos.listRecentSlaApprovals.mockResolvedValue([]);
     await enforcer.runHourly();
     expect(cronLock.tryAcquireCronLock).toHaveBeenCalledWith(
       CRON_LOCK_PHOTO_SLA,
@@ -137,24 +142,22 @@ describe('PhotoSlaEnforcer', () => {
   });
 
   it('Rule A: auto-approves NSFW mid-band low confidence after 6h', async () => {
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([]) // stuck pending
-      .mockResolvedValueOnce([
-        {
-          id: 'photo_nsfw',
-          profileId: 'prof_1',
-          createdAt: hoursAgo(7),
-          moderationResultJson: {
-            source: 'ml',
-            decision: 'flagged',
-            mlConfidence: 55,
-            mlLabels: ['Suggestive'],
-          },
-          profile: { userId: 'user_1' },
+    photos.listStuckRekognitionPending.mockResolvedValue([]);
+    photos.listFlaggedOlderThan.mockResolvedValue([
+      {
+        id: 'photo_nsfw',
+        profileId: 'prof_1',
+        createdAt: hoursAgo(7),
+        moderationResultJson: {
+          source: 'ml',
+          decision: 'flagged',
+          mlConfidence: 55,
+          mlLabels: ['Suggestive'],
         },
-      ])
-      .mockResolvedValueOnce([]); // capacity count
+        profile: { userId: 'user_1' },
+      },
+    ] as never);
+    photos.listRecentSlaApprovals.mockResolvedValue([]);
 
     const res = await enforcer.runHourly();
     expect(res.autoApproved).toBe(1);
@@ -177,25 +180,23 @@ describe('PhotoSlaEnforcer', () => {
   });
 
   it('Rule A: does NOT auto-approve no_face flags (confidence 0)', async () => {
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 'photo_noface',
-          profileId: 'prof_1',
-          createdAt: hoursAgo(7),
-          moderationResultJson: {
-            source: 'ml',
-            decision: 'flagged',
-            mlConfidence: 0,
-            mlLabels: [],
-            rejectionReasonCode: 'no_face',
-            faceCount: 0,
-          },
-          profile: { userId: 'user_1' },
+    photos.listStuckRekognitionPending.mockResolvedValue([]);
+    photos.listFlaggedOlderThan.mockResolvedValue([
+      {
+        id: 'photo_noface',
+        profileId: 'prof_1',
+        createdAt: hoursAgo(7),
+        moderationResultJson: {
+          source: 'ml',
+          decision: 'flagged',
+          mlConfidence: 0,
+          mlLabels: [],
+          rejectionReasonCode: 'no_face',
+          faceCount: 0,
         },
-      ]);
+        profile: { userId: 'user_1' },
+      },
+    ] as never);
 
     const res = await enforcer.runHourly();
     expect(res.autoApproved).toBe(0);
@@ -203,46 +204,42 @@ describe('PhotoSlaEnforcer', () => {
   });
 
   it('Rule A: does NOT auto-approve ml_timeout error flags before 24h', async () => {
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 'photo_err',
-          profileId: 'prof_1',
-          createdAt: hoursAgo(7),
-          moderationResultJson: {
-            source: 'ml',
-            decision: 'flagged',
-            error: 'ml_timeout',
-          },
-          profile: { userId: 'user_1' },
+    photos.listStuckRekognitionPending.mockResolvedValue([]);
+    photos.listFlaggedOlderThan.mockResolvedValue([
+      {
+        id: 'photo_err',
+        profileId: 'prof_1',
+        createdAt: hoursAgo(7),
+        moderationResultJson: {
+          source: 'ml',
+          decision: 'flagged',
+          error: 'ml_timeout',
         },
-      ]);
+        profile: { userId: 'user_1' },
+      },
+    ] as never);
 
     const res = await enforcer.runHourly();
     expect(res.autoApproved).toBe(0);
   });
 
   it('Rule B: auto-approves any flagged photo after 24h including no_face', async () => {
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 'photo_old',
-          profileId: 'prof_1',
-          createdAt: hoursAgo(25),
-          moderationResultJson: {
-            source: 'ml',
-            decision: 'flagged',
-            mlConfidence: 0,
-            rejectionReasonCode: 'no_face',
-          },
-          profile: { userId: 'user_1' },
+    photos.listStuckRekognitionPending.mockResolvedValue([]);
+    photos.listFlaggedOlderThan.mockResolvedValue([
+      {
+        id: 'photo_old',
+        profileId: 'prof_1',
+        createdAt: hoursAgo(25),
+        moderationResultJson: {
+          source: 'ml',
+          decision: 'flagged',
+          mlConfidence: 0,
+          rejectionReasonCode: 'no_face',
         },
-      ])
-      .mockResolvedValueOnce([]);
+        profile: { userId: 'user_1' },
+      },
+    ] as never);
+    photos.listRecentSlaApprovals.mockResolvedValue([]);
 
     const res = await enforcer.runHourly();
     expect(res.autoApproved).toBe(1);
@@ -250,18 +247,16 @@ describe('PhotoSlaEnforcer', () => {
   });
 
   it('flags stuck PENDING rekognition jobs', async () => {
-    prisma.userProfilePhoto.findMany = jest
-      .fn()
-      .mockResolvedValueOnce([
-        {
-          id: 'photo_stuck',
-          profileId: 'prof_1',
-          createdAt: hoursAgo(1),
-          moderationResultJson: null,
-          profile: { userId: 'user_1' },
-        },
-      ])
-      .mockResolvedValueOnce([]);
+    photos.listStuckRekognitionPending.mockResolvedValue([
+      {
+        id: 'photo_stuck',
+        profileId: 'prof_1',
+        createdAt: hoursAgo(1),
+        moderationResultJson: null,
+        profile: { userId: 'user_1' },
+      },
+    ] as never);
+    photos.listFlaggedOlderThan.mockResolvedValue([]);
 
     const res = await enforcer.runHourly();
     expect(res.flaggedStuck).toBe(1);

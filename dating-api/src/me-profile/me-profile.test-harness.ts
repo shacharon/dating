@@ -14,6 +14,8 @@ import { ProfileCrudService } from './profile/profile-crud.service';
 import { ProfileModerationService } from './profile/profile-moderation.service';
 import { ProfilePhotoService } from './profile/profile-photo.service';
 import { ProfilePreferenceService } from './profile/profile-preference.service';
+import type { IProfilePhotoRepository } from './repositories/profile-photo.repository';
+import { PrismaProfilePhotoRepository } from './repositories/prisma-profile-photo.repository';
 import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
 import { PrismaMatchRepository } from './repositories/prisma-match.repository';
 import type { IUserProfileRepository } from './repositories/user-profile.repository';
@@ -32,6 +34,8 @@ export type MeProfileServiceTestDeps = {
   matchListRankQueue: MatchListRankQueuePort;
   /** Optional port double — when omitted, uses real PrismaUserProfileRepository over `prisma`. */
   userProfiles?: IUserProfileRepository;
+  /** Optional photo port double — when omitted, uses the Prisma adapter. */
+  profilePhotos?: IProfilePhotoRepository;
 };
 
 /**
@@ -59,7 +63,7 @@ export function createMeProfileServiceForTest(
     deps.analytics,
   );
   const photos = new ProfilePhotoService(
-    deps.prisma,
+    deps.profilePhotos ?? new PrismaProfilePhotoRepository(deps.prisma),
     deps.obs,
     deps.photoStorage,
     deps.analytics,

@@ -6,7 +6,7 @@ import type { StructuredObservabilityService } from '../../logging/structured-ob
 import type { PhotoRejectionEmailService } from '../../notifications/photo-rejection-email.service';
 import type { PhotoModerationService } from '../../photo-storage/photo-moderation.service';
 import type { PhotoStorage } from '../../photo-storage/photo-storage.types';
-import type { PrismaService } from '../../prisma/prisma.service';
+import type { IProfilePhotoRepository } from '../../me-profile/repositories/profile-photo.repository';
 import { AdminPhotosService } from './admin-photos.service';
 import { PhotoModerationDecision } from './dto/moderate-photo.dto';
 
@@ -18,29 +18,30 @@ describe('AdminPhotosService', () => {
   const analytics = { track: jest.fn() } as unknown as AnalyticsService;
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
   const moderation = {
-    extractMlFields: jest.fn().mockReturnValue({ mlConfidence: null, mlLabels: [] }),
+    extractMlFields: jest
+      .fn()
+      .mockReturnValue({ mlConfidence: null, mlLabels: [] }),
     logModerationEvent: jest.fn(),
   } as unknown as PhotoModerationService;
   const rejectionEmail = {
     sendBestEffort: jest.fn().mockResolvedValue(undefined),
   } as unknown as PhotoRejectionEmailService;
 
-  const prisma = {
-    userProfilePhoto: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-    },
-    $transaction: jest.fn(),
-  } as unknown as PrismaService;
+  const photos = {
+    findByIdLite: jest.fn(),
+    listReviewablePage: jest.fn(),
+    findStorageMetaById: jest.fn(),
+    findByIdWithOwnerUserId: jest.fn(),
+    approveManualReview: jest.fn(),
+    rejectManualReview: jest.fn(),
+  };
 
   let service: AdminPhotosService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     service = new AdminPhotosService(
-      prisma,
+      photos as unknown as IProfilePhotoRepository,
       obs,
       analytics,
       moderation,
@@ -50,7 +51,7 @@ describe('AdminPhotosService', () => {
   });
 
   it('lists pending photos FIFO', async () => {
-    prisma.userProfilePhoto.findMany = jest.fn().mockResolvedValue([
+    photos.listReviewablePage.mockResolvedValue([
       {
         id: 'photo_1',
         profileId: 'prof_1',
@@ -72,7 +73,7 @@ describe('AdminPhotosService', () => {
   });
 
   it('moderatePhoto rejects when not reviewable', async () => {
-    prisma.userProfilePhoto.findUnique = jest.fn().mockResolvedValue({
+    photos.findByIdWithOwnerUserId.mockResolvedValue({
       id: 'photo_1',
       status: UserProfilePhotoStatus.APPROVED,
       profileId: 'prof_1',
@@ -87,27 +88,20 @@ describe('AdminPhotosService', () => {
   });
 
   it('approve sets primary when none exists', async () => {
-    prisma.userProfilePhoto.findUnique = jest.fn().mockResolvedValue({
+    photos.findByIdWithOwnerUserId.mockResolvedValue({
       id: 'photo_1',
       status: UserProfilePhotoStatus.PENDING,
       profileId: 'prof_1',
       profile: { userId: 'user_1' },
     });
-    prisma.$transaction = jest.fn(async (fn) =>
-      fn({
-        userProfilePhoto: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          update: jest.fn().mockResolvedValue({
-            id: 'photo_1',
-            profileId: 'prof_1',
-            status: UserProfilePhotoStatus.APPROVED,
-            rejectionReason: null,
-            isPrimary: true,
-            updatedAt: new Date('2026-06-01T01:00:00.000Z'),
-          }),
-        },
-      }),
-    );
+    photos.approveManualReview.mockResolvedValue({
+      id: 'photo_1',
+      profileId: 'prof_1',
+      status: UserProfilePhotoStatus.APPROVED,
+      rejectionReason: null,
+      isPrimary: true,
+      updatedAt: new Date('2026-06-01T01:00:00.000Z'),
+    } as never);
 
     const res = await service.moderatePhoto('admin_1', 'photo_1', {
       decision: PhotoModerationDecision.APPROVE,
@@ -122,20 +116,20 @@ describe('AdminPhotosService', () => {
   });
 
   it('reject stores reason and tracks analytics', async () => {
-    prisma.userProfilePhoto.findUnique = jest.fn().mockResolvedValue({
+    photos.findByIdWithOwnerUserId.mockResolvedValue({
       id: 'photo_1',
       status: UserProfilePhotoStatus.FLAGGED_FOR_REVIEW,
       profileId: 'prof_1',
       profile: { userId: 'user_1' },
     });
-    prisma.userProfilePhoto.update = jest.fn().mockResolvedValue({
+    photos.rejectManualReview.mockResolvedValue({
       id: 'photo_1',
       profileId: 'prof_1',
       status: UserProfilePhotoStatus.REJECTED,
       rejectionReason: 'Blurry image',
       isPrimary: false,
       updatedAt: new Date('2026-06-01T01:00:00.000Z'),
-    });
+    } as never);
 
     const res = await service.moderatePhoto('admin_1', 'photo_1', {
       decision: PhotoModerationDecision.REJECT,
@@ -152,7 +146,7 @@ describe('AdminPhotosService', () => {
   });
 
   it('getPhotoFile throws when missing', async () => {
-    prisma.userProfilePhoto.findUnique = jest.fn().mockResolvedValue(null);
+    photos.findStorageMetaById.mockResolvedValue(null);
     await expect(service.getPhotoFile('missing')).rejects.toBeInstanceOf(
       NotFoundException,
     );
