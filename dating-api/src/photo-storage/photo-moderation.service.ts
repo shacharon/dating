@@ -1,11 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import {
-  DetectFacesCommand,
-  DetectModerationLabelsCommand,
-  RekognitionClient,
-  type DetectFacesCommandOutput,
-  type DetectModerationLabelsCommandOutput,
-} from '@aws-sdk/client-rekognition';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { UserProfilePhotoStatus } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
@@ -15,6 +8,10 @@ import {
   loadPhotoModerationThresholds,
   type PhotoModerationThresholds,
 } from './photo-moderation.config';
+import {
+  REKOGNITION,
+  type RekognitionPort,
+} from './photo-moderation.ports';
 import {
   maxMlConfidence,
   parseModerationResultJson,
@@ -26,42 +23,21 @@ import {
 import { PHOTO_STORAGE } from './photo-storage.module';
 import type { PhotoStorage } from './photo-storage.types';
 
-/** Injectable Rekognition surface for unit tests. */
-export type RekognitionPort = {
-  detectModerationLabels(
-    input: ConstructorParameters<typeof DetectModerationLabelsCommand>[0],
-  ): Promise<DetectModerationLabelsCommandOutput>;
-  detectFaces?(
-    input: ConstructorParameters<typeof DetectFacesCommand>[0],
-  ): Promise<DetectFacesCommandOutput>;
-};
+export type { RekognitionPort } from './photo-moderation.ports';
 
 @Injectable()
 export class PhotoModerationService {
   private readonly logger = new Logger(PhotoModerationService.name);
   private readonly thresholds: PhotoModerationThresholds;
-  private readonly rekognition: RekognitionPort;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly rejectionEmail: PhotoRejectionEmailService,
-    @Optional() rekognitionOverride?: RekognitionPort,
+    @Inject(REKOGNITION) private readonly rekognition: RekognitionPort,
   ) {
     this.thresholds = loadPhotoModerationThresholds();
-    this.rekognition =
-      rekognitionOverride ??
-      (() => {
-        const client = new RekognitionClient({
-          region: this.thresholds.awsRegion,
-        });
-        return {
-          detectModerationLabels: (input) =>
-            client.send(new DetectModerationLabelsCommand(input)),
-          detectFaces: (input) => client.send(new DetectFacesCommand(input)),
-        };
-      })();
   }
 
   getThresholds(): PhotoModerationThresholds {

@@ -1,12 +1,16 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
 import { ErrorCodes } from '../../logging/error-codes';
 import { markHttpExceptionObservabilityLogged } from '../../logging/observability-http.exception';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { OpenAIModerationClient } from '../../content-moderation/openai-moderation.client';
+import {
+  CONTENT_MODERATION,
+  type ContentModerationPort,
+} from '../../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../../content-moderation/content-violation.service';
 import {
   datingPolicySexualScoreMin,
@@ -24,7 +28,8 @@ import type { CreateMeProfileDto, PatchMeProfileDto } from '../me-profile.dto';
 export class ProfileModerationService {
   constructor(
     private readonly obs: StructuredObservabilityService,
-    private readonly moderation: OpenAIModerationClient,
+    @Inject(CONTENT_MODERATION)
+    private readonly moderation: ContentModerationPort,
     private readonly contentViolations: ContentViolationService,
   ) {}
 

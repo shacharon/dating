@@ -1,6 +1,6 @@
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { ContentViolationService } from '../content-moderation/content-violation.service';
-import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import type { ContentModerationPort } from '../content-moderation/content-moderation.ports';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -26,7 +26,7 @@ export type MeProfileServiceTestDeps = {
   analysisQueue: ProfileAnalysisQueueService;
   photoModerationQueue: PhotoModerationQueueService;
   meMatches: MeMatchesService;
-  moderation: OpenAIModerationClient;
+  moderation: ContentModerationPort;
   contentViolations: ContentViolationService;
   matchListRankQueue: MatchListRankQueuePort;
   /** Optional port double — when omitted, uses real PrismaUserProfileRepository over `prisma`. */

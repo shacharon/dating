@@ -16,7 +16,7 @@ import type { StructuredObservabilityService } from '../logging/structured-obser
 import type { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
 import type { NewMessageEmailService } from '../notifications/new-message-email.service';
-import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import type { ContentModerationPort } from '../content-moderation/content-moderation.ports';
 import type { ContentViolationService } from '../content-moderation/content-violation.service';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 
@@ -125,7 +125,7 @@ describe('MeConversationMessagesService', () => {
       realtime,
       newMessageEmail,
       analytics,
-      moderation as unknown as OpenAIModerationClient,
+      moderation as unknown as ContentModerationPort,
       contentViolations as unknown as ContentViolationService,
     );
     (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(

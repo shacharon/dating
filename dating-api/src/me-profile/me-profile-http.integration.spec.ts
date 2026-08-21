@@ -35,7 +35,7 @@ import {
 } from './match-narrative-test-stubs';
 import { MeProfileModule } from './me-profile.module';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
-import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { CONTENT_MODERATION } from '../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 
@@ -270,7 +270,7 @@ describe('me profile HTTP (integration)', () => {
       .useValue(photoStorageMock)
       .overrideProvider(MatchNarrativeGenerator)
       .useValue(matchNarrativeGeneratorStub)
-      .overrideProvider(OpenAIModerationClient)
+      .overrideProvider(CONTENT_MODERATION)
       .useValue(moderationClientMock)
       .overrideProvider(ContentViolationService)
       .useValue(contentViolationsMock)

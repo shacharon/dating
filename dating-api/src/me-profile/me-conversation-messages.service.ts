@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
 import { MessageStatus, type Prisma } from '@prisma/client';
@@ -13,7 +14,10 @@ import { hashConversationId } from '../analytics/hash-conversation-id';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import {
+  CONTENT_MODERATION,
+  type ContentModerationPort,
+} from '../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import { isContentModerationEnabled, datingPolicySexualScoreMin } from '../content-moderation/content-moderation.types';
 import {
@@ -51,7 +55,8 @@ export class MeConversationMessagesService {
     private readonly realtime: RealtimePublisher,
     private readonly newMessageEmail: NewMessageEmailService,
     private readonly analytics: AnalyticsService,
-    private readonly moderation: OpenAIModerationClient,
+    @Inject(CONTENT_MODERATION)
+    private readonly moderation: ContentModerationPort,
     private readonly contentViolations: ContentViolationService,
   ) {}
 

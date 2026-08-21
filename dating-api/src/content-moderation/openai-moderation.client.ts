@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { loadLLMConfig } from '../llm/llm.config';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
+import type { ContentModerationPort } from './content-moderation.ports';
 import {
   MODERATION_INPUT_MAX_CHARS,
   MODERATION_TIMEOUT_MS,
@@ -20,7 +21,7 @@ const emptyClean = (failOpen: boolean): ModerationResult => ({
 });
 
 @Injectable()
-export class OpenAIModerationClient {
+export class OpenAIModerationClient implements ContentModerationPort {
   private readonly apiKey: string;
 
   constructor(private readonly obs: StructuredObservabilityService) {

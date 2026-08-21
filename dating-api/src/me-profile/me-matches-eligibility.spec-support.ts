@@ -46,7 +46,7 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { MatchNarrativeGenerator } from '../matches/match-narrative';
-import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { CONTENT_MODERATION } from '../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
@@ -1028,7 +1028,7 @@ export class EligibilityTestHarness {
       // Sprint 22 — keep detail path off live OpenAI; exercise cache DI with in-memory mock.
       .overrideProvider(MatchNarrativeGenerator)
       .useValue(this.matchNarrativeGeneratorStub)
-      .overrideProvider(OpenAIModerationClient)
+      .overrideProvider(CONTENT_MODERATION)
       .useValue({
         checkContent: jest.fn().mockResolvedValue({
           flagged: false,

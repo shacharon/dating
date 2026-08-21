@@ -44,7 +44,7 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { MatchNarrativeGenerator } from '../matches/match-narrative';
-import { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import { CONTENT_MODERATION } from '../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
@@ -644,7 +644,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
       .overrideProvider(MeProfileValidationPipe).useValue({ transform: (v: unknown) => v })
       .overrideProvider(MatchNarrativeGenerator)
       .useValue(matchNarrativeGeneratorStub)
-      .overrideProvider(OpenAIModerationClient)
+      .overrideProvider(CONTENT_MODERATION)
       .useValue({
         checkContent: jest.fn().mockResolvedValue({
           flagged: false,

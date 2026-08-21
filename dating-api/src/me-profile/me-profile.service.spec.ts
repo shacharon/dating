@@ -27,7 +27,7 @@ import {
 } from './me-profile.errors';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
-import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
+import type { ContentModerationPort } from '../content-moderation/content-moderation.ports';
 import type { ContentViolationService } from '../content-moderation/content-violation.service';
 
 describe('MeProfileService', () => {
@@ -97,7 +97,7 @@ describe('MeProfileService', () => {
         enqueueOrRunInline: jest.fn().mockResolvedValue('photo_job_1'),
       } as never,
       meMatches: meMatches as never,
-      moderation: moderation as unknown as OpenAIModerationClient,
+      moderation: moderation as unknown as ContentModerationPort,
       contentViolations: contentViolations as unknown as ContentViolationService,
       matchListRankQueue: matchListRankQueue as never,
     });
