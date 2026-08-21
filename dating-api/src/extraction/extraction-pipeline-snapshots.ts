@@ -6,7 +6,6 @@
 import {
   EXTRACTION_SIGNAL_KEYS,
   EXTRACTION_SIGNAL_KEYS_SET,
-  MAX_EVIDENCE_ITEMS,
   type ExtractedSignals,
   type ExtractionDomain,
   type ExtractionEvidenceItem,
@@ -16,6 +15,7 @@ import {
   normalizeKeys,
   normalizeRawExtraction,
 } from './extraction-normalization';
+import { validateAndClean } from './extraction-output.cleaner';
 import {
   DOMAIN_ALLOWED_SIGNAL_KEYS,
   quoteContainsBannedMarkers,
@@ -24,50 +24,14 @@ import {
 } from './extraction-strict-validation';
 
 /**
- * Same logic as ExtractionService.validateAndClean without logging side effects.
+ * Audit mirror of production validateAndClean (no strip logging).
+ * Shares implementation with ExtractionService via extraction-output.cleaner.
  */
 export function validateAndCleanMirror(
   data: ExtractedSignals,
   requestedDomain: ExtractionDomain,
 ): ExtractedSignals {
-  const normalizedSignals = data.signals ?? {};
-
-  const signals: Record<string, number | null> = {};
-  for (const key of EXTRACTION_SIGNAL_KEYS) {
-    const value = normalizedSignals[key];
-    if (value === null || value === undefined) {
-      signals[key] = null;
-      continue;
-    }
-    const n = Number(value);
-    const rounded = Number.isFinite(n) ? Math.round(n) : NaN;
-    if (Number.isNaN(rounded) || rounded < 1 || rounded > 10) {
-      signals[key] = null;
-    } else {
-      signals[key] = rounded;
-    }
-  }
-
-  const confidence = data.confidence ?? 0.5;
-
-  const evidence = (data.evidence ?? [])
-    .map((item) => {
-      const s = String(item.signal).trim();
-      const officialSignal = KEY_ALIASES[s] ?? s;
-      const reason = typeof item.reason === 'string' ? item.reason : '';
-      return { ...item, signal: officialSignal, reason };
-    })
-    .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
-    .slice(0, MAX_EVIDENCE_ITEMS);
-
-  return {
-    domain: requestedDomain,
-    signals,
-    evidence,
-    version: data.version ?? 'v1',
-    confidence,
-    notes: data.notes,
-  };
+  return validateAndClean(data, requestedDomain);
 }
 
 export interface V1PipelineSnapshots {

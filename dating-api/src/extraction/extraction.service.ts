@@ -4,80 +4,30 @@ import { SimpleLogger } from '../logger/simple-logger.service';
 import { LLMRouterService } from '../llm/llm-router.service';
 import {
   EXTRACTION_SIGNAL_KEYS,
-  EXTRACTION_SIGNAL_KEYS_SET,
-  MAX_EVIDENCE_ITEMS,
   countNonNullSignals,
   type ExtractedSignals,
   type ExtractionDomain,
   type LLMUsageStats,
 } from './extracted-signals.interface';
-import {
-  KEY_ALIASES,
-  normalizeKeys,
-  normalizeRawExtraction,
-  normalizeRawInterestTags,
-} from './extraction-normalization';
+import { normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
 import { SYSTEM_PROMPT_HASH } from './extraction-prompt.builder';
 import {
   logEmptyModelTextIfNeeded,
   runFirstLlmExtractionCall,
 } from './extraction-llm.runner';
+import { validateAndClean } from './extraction-output.cleaner';
+import {
+  emptyUsage,
+  estimateCost,
+  mergeUsage,
+  parseOpenAIUsage,
+} from './extraction-usage';
 import {
   buildExtractionPipelineTrace,
   buildRawLlmPersistenceLogPayload,
   toExtractionSnapshot,
 } from './pipeline-trace';
-
-const GPT4O_MINI_INPUT_COST = 0.15 / 1_000_000;
-const GPT4O_MINI_OUTPUT_COST = 0.6 / 1_000_000;
-
-function estimateCost(promptTokens: number, completionTokens: number): number {
-  return (
-    promptTokens * GPT4O_MINI_INPUT_COST +
-    completionTokens * GPT4O_MINI_OUTPUT_COST
-  );
-}
-
-function parseOpenAIUsage(usage: unknown): {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-} {
-  const u =
-    usage && typeof usage === 'object'
-      ? (usage as Record<string, unknown>)
-      : {};
-  const promptTokens =
-    typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0;
-  const completionTokens =
-    typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
-  const totalTokens =
-    typeof u.total_tokens === 'number'
-      ? u.total_tokens
-      : promptTokens + completionTokens;
-  return { promptTokens, completionTokens, totalTokens };
-}
-
-function emptyUsage(): LLMUsageStats {
-  return {
-    promptTokens: 0,
-    completionTokens: 0,
-    totalTokens: 0,
-    estimatedCostUSD: 0,
-    durationMs: 0,
-  };
-}
-
-function mergeUsage(a: LLMUsageStats, b: LLMUsageStats): LLMUsageStats {
-  return {
-    promptTokens: a.promptTokens + b.promptTokens,
-    completionTokens: a.completionTokens + b.completionTokens,
-    totalTokens: a.totalTokens + b.totalTokens,
-    estimatedCostUSD: a.estimatedCostUSD + b.estimatedCostUSD,
-    durationMs: a.durationMs + b.durationMs,
-  };
-}
 
 @Injectable()
 export class ExtractionService {
@@ -85,68 +35,6 @@ export class ExtractionService {
     private readonly llm: LLMRouterService,
     private readonly logger: SimpleLogger,
   ) {}
-
-  /**
-   * Build output from allowlist only. Round to int, enforce 1–10 or null.
-   * Evidence filtered to official keys; alias rewritten to official.
-   *
-   * Technical cleanup only: no semantic inference or context-based modification.
-   */
-  private validateAndClean(
-    data: ExtractedSignals,
-    requestedDomain: ExtractionDomain,
-  ): ExtractedSignals {
-    const normalizedSignals = data.signals ?? {};
-
-    const signals: Record<string, number | null> = {};
-    for (const key of EXTRACTION_SIGNAL_KEYS) {
-      const value = normalizedSignals[key];
-      if (value === null || value === undefined) {
-        signals[key] = null;
-        continue;
-      }
-      const n = Number(value);
-      const rounded = Number.isFinite(n) ? Math.round(n) : NaN;
-      if (Number.isNaN(rounded) || rounded < 1 || rounded > 10) {
-        signals[key] = null;
-        this.logger.log(
-          JSON.stringify({
-            event: 'validateAndClean_stripped',
-            key,
-            value,
-            reason: Number.isNaN(rounded) ? 'nan' : 'outOfRange',
-          }),
-          ExtractionService.name,
-        );
-      } else {
-        signals[key] = rounded;
-      }
-    }
-
-    const confidence = data.confidence ?? 0.5;
-
-    const evidence = (data.evidence ?? [])
-      .map((item) => {
-        const s = String(item.signal).trim();
-        const officialSignal = KEY_ALIASES[s] ?? s;
-        const reason = typeof item.reason === 'string' ? item.reason : '';
-        return { ...item, signal: officialSignal, reason };
-      })
-      .filter((item) => EXTRACTION_SIGNAL_KEYS_SET.has(item.signal))
-      .slice(0, MAX_EVIDENCE_ITEMS);
-
-    const rawInterests = normalizeRawInterestTags(data.rawInterests);
-
-    return {
-      domain: requestedDomain,
-      signals,
-      evidence,
-      version: data.version ?? 'v1',
-      confidence,
-      notes: data.notes,
-      ...(rawInterests.length > 0 ? { rawInterests } : {}),
-    };
-  }
 
   /** Stage 1: Build request metadata (prompt, requestId, preview, start time, usage accumulator). */
   private buildRequestMetadata(
@@ -187,7 +75,6 @@ export class ExtractionService {
       accUsage,
     };
   }
-
 
   /** Stage 4: Normalize alias keys and log telemetry (technical mapping only). */
   private applyNormalizeAliasKeys(data: ExtractedSignals): ExtractedSignals {
@@ -334,7 +221,9 @@ export class ExtractionService {
       ExtractionService.name,
     );
     const afterAlias = this.applyNormalizeAliasKeys(normalized);
-    let cleaned = this.validateAndClean(afterAlias, domain);
+    let cleaned = validateAndClean(afterAlias, domain, (payload) =>
+      this.logger.log(JSON.stringify(payload), ExtractionService.name),
+    );
     const snapAfterClean = toExtractionSnapshot(cleaned);
     this.logger.log(
       JSON.stringify({
