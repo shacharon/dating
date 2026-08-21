@@ -1,4 +1,4 @@
-import type { RedisCacheService } from '../cache/redis-cache.service';
+import type { CronLockPort } from '../cache/cache.ports';
 import type { ContentViolationService } from '../content-moderation/content-violation.service';
 import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
@@ -43,9 +43,9 @@ describe('MuteExpiryEnforcer', () => {
     clearExpiredMutes: jest.fn().mockResolvedValue(2),
   } as unknown as ContentViolationService;
 
-  const cache = {
+  const cronLock = {
     tryAcquireCronLock: jest.fn().mockResolvedValue('acquired'),
-  } as unknown as RedisCacheService;
+  } as unknown as CronLockPort;
 
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
 
@@ -58,11 +58,11 @@ describe('MuteExpiryEnforcer', () => {
     if (prevFailOpen === undefined) delete process.env.CRON_LEADER_FAIL_OPEN;
     else process.env.CRON_LEADER_FAIL_OPEN = prevFailOpen;
     jest.clearAllMocks();
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
   });
 
   function makeEnforcer() {
-    return new MuteExpiryEnforcer(violations, cache, obs);
+    return new MuteExpiryEnforcer(violations, cronLock, obs);
   }
 
   it('does not start timer when disabled', () => {
@@ -90,7 +90,7 @@ describe('MuteExpiryEnforcer', () => {
     const n = await enforcer.tick();
     expect(n).toBe(2);
     expect(violations.clearExpiredMutes).toHaveBeenCalledTimes(1);
-    expect(cache.tryAcquireCronLock).toHaveBeenCalledWith(
+    expect(cronLock.tryAcquireCronLock).toHaveBeenCalledWith(
       CRON_LOCK_MUTE_EXPIRY,
       muteExpiryLockTtlSeconds(CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT),
       expect.objectContaining({
@@ -106,7 +106,7 @@ describe('MuteExpiryEnforcer', () => {
   });
 
   it('skips clearExpiredMutes when lock not_acquired', async () => {
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
     const enforcer = makeEnforcer();
     await expect(enforcer.tick()).resolves.toBe(0);
     expect(violations.clearExpiredMutes).not.toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe('MuteExpiryEnforcer', () => {
   });
 
   it('skips clearExpiredMutes when lock unavailable', async () => {
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
     const enforcer = makeEnforcer();
     await expect(enforcer.tick()).resolves.toBe(0);
     expect(violations.clearExpiredMutes).not.toHaveBeenCalled();
@@ -129,7 +129,7 @@ describe('MuteExpiryEnforcer', () => {
 
   it('runs when lock unavailable but CRON_LEADER_FAIL_OPEN=1', async () => {
     process.env.CRON_LEADER_FAIL_OPEN = '1';
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
     const enforcer = makeEnforcer();
     await expect(enforcer.tick()).resolves.toBe(2);
     expect(violations.clearExpiredMutes).toHaveBeenCalledTimes(1);

@@ -1,10 +1,11 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { RedisCacheService } from '../cache/redis-cache.service';
+import { CRON_LOCK, type CronLockPort } from '../cache/cache.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
@@ -54,7 +55,7 @@ export class MuteExpiryEnforcer implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly violations: ContentViolationService,
-    private readonly cache: RedisCacheService,
+    @Inject(CRON_LOCK) private readonly cronLock: CronLockPort,
     private readonly obs: StructuredObservabilityService,
   ) {}
 
@@ -96,7 +97,7 @@ export class MuteExpiryEnforcer implements OnModuleInit, OnModuleDestroy {
     try {
       const intervalMs =
         resolveMuteExpiryIntervalMs() ?? CONTENT_MUTE_EXPIRY_INTERVAL_MS_DEFAULT;
-      const lock = await this.cache.tryAcquireCronLock(
+      const lock = await this.cronLock.tryAcquireCronLock(
         CRON_LOCK_MUTE_EXPIRY,
         muteExpiryLockTtlSeconds(intervalMs),
         cronLockDebugValue(),

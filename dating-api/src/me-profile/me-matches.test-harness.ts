@@ -1,8 +1,8 @@
+import type { CacheKvPort } from '../cache/cache.ports';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
 import type { PrismaService } from '../prisma/prisma.service';
-import type { RedisCacheService } from '../cache/redis-cache.service';
 import type { MatchListRankQueuePort } from '../workers/match-list-rank.ports';
 import type { MatchNarrativeCacheService } from '../matches/match-narrative';
 import type { MatchNarrativeGenerator } from '../matches/match-narrative';
@@ -22,7 +22,7 @@ export type MeMatchesServiceTestDeps = {
   photoStorage: PhotoStorage;
   mutualMatches: MutualMatchesService;
   analytics: AnalyticsService;
-  cache: RedisCacheService;
+  cache: CacheKvPort;
   matchNarrativeGenerator: MatchNarrativeGenerator;
   matchNarrativeCache: MatchNarrativeCacheService;
   matchListRankQueue: MatchListRankQueuePort;

@@ -1,6 +1,11 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { Socket } from 'socket.io';
-import { RedisCacheService } from '../cache/redis-cache.service';
+import {
+  CACHE_SETS,
+  REDIS_CLIENT,
+  type CacheSetsPort,
+  type RedisClientHandle,
+} from '../cache/cache.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { MessagingSocketData } from './messaging-ws-auth.service';
@@ -25,7 +30,8 @@ export class MessagingSocketRegistry {
   private readonly byUserId = new Map<string, Set<Socket>>();
 
   constructor(
-    @Optional() private readonly cache?: RedisCacheService,
+    @Optional() @Inject(CACHE_SETS) private readonly cache?: CacheSetsPort,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redis?: RedisClientHandle,
     @Optional() private readonly obs?: StructuredObservabilityService,
     @Optional() private readonly publisher?: RealtimePublisher,
   ) {}
@@ -67,7 +73,7 @@ export class MessagingSocketRegistry {
     if (!this.redisConfigured()) {
       return this.hasLocalConnection(userId);
     }
-    if (!this.cache?.isAvailable()) {
+    if (!this.redis?.isAvailable()) {
       this.traceDegraded('unavailable');
       return false;
     }
@@ -82,7 +88,7 @@ export class MessagingSocketRegistry {
   async disconnectByUserId(userId: string): Promise<void> {
     this.publisher?.disconnectUserSockets(userId);
 
-    const redisIds = this.cache?.isAvailable()
+    const redisIds = this.redis?.isAvailable()
       ? await this.cache.sMembers(presenceUserKey(userId))
       : null;
 
@@ -116,7 +122,7 @@ export class MessagingSocketRegistry {
           await this.cache!.del(presenceMetaKey(socketId));
         }
       }
-    } else if (this.cache?.isAvailable()) {
+    } else if (this.redis?.isAvailable()) {
       await this.cache.del(presenceUserKey(userId));
     }
 
@@ -129,7 +135,7 @@ export class MessagingSocketRegistry {
   async disconnectBySessionId(sessionId: string): Promise<void> {
     this.publisher?.disconnectSessionSockets(sessionId);
 
-    const redisIds = this.cache?.isAvailable()
+    const redisIds = this.redis?.isAvailable()
       ? await this.cache.sMembers(presenceSessionKey(sessionId))
       : null;
 
@@ -157,7 +163,7 @@ export class MessagingSocketRegistry {
           await this.cache!.del(presenceMetaKey(socketId));
         }
       }
-    } else if (this.cache?.isAvailable()) {
+    } else if (this.redis?.isAvailable()) {
       await this.cache.del(presenceSessionKey(sessionId));
     }
 
@@ -169,7 +175,7 @@ export class MessagingSocketRegistry {
 
   /** Refresh Redis TTLs on session revalidate (silent). */
   async refreshPresence(client: Socket): Promise<void> {
-    if (!this.cache?.isAvailable()) return;
+    if (!this.redis?.isAvailable()) return;
     await this.writeRedisPresence(client);
   }
 
@@ -240,7 +246,7 @@ export class MessagingSocketRegistry {
 
   private async writeRedisPresence(client: Socket): Promise<boolean> {
     if (!this.redisConfigured()) return false;
-    if (!this.cache?.isAvailable()) {
+    if (!this.redis?.isAvailable()) {
       this.traceDegraded('unavailable');
       return false;
     }
@@ -272,7 +278,7 @@ export class MessagingSocketRegistry {
     userId: string,
     sessionId: string,
   ): Promise<void> {
-    if (!this.cache?.isAvailable()) return;
+    if (!this.redis?.isAvailable()) return;
     const userKey = presenceUserKey(userId);
     const sessionKey = presenceSessionKey(sessionId);
     await this.cache.sRem(userKey, socketId);

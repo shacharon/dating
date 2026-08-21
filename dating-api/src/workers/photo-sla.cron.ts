@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { UserProfilePhotoStatus } from '@prisma/client';
-import { RedisCacheService } from '../cache/redis-cache.service';
+import { CRON_LOCK, type CronLockPort } from '../cache/cache.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import {
@@ -36,7 +36,7 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly moderation: PhotoModerationService,
     private readonly obs: StructuredObservabilityService,
-    private readonly cache: RedisCacheService,
+    @Inject(CRON_LOCK) private readonly cronLock: CronLockPort,
   ) {
     this.thresholds = loadPhotoModerationThresholds();
   }
@@ -68,7 +68,7 @@ export class PhotoSlaEnforcer implements OnModuleInit, OnModuleDestroy {
     }
     this.running = true;
     try {
-      const lock = await this.cache.tryAcquireCronLock(
+      const lock = await this.cronLock.tryAcquireCronLock(
         CRON_LOCK_PHOTO_SLA,
         PHOTO_SLA_LOCK_TTL_SECONDS,
         cronLockDebugValue(),

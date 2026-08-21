@@ -1,5 +1,5 @@
 import { UserProfilePhotoStatus } from '@prisma/client';
-import type { RedisCacheService } from '../cache/redis-cache.service';
+import type { CronLockPort } from '../cache/cache.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoModerationService } from '../photo-storage/photo-moderation.service';
@@ -23,9 +23,9 @@ describe('PhotoSlaEnforcer', () => {
 
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
 
-  const cache = {
+  const cronLock = {
     tryAcquireCronLock: jest.fn().mockResolvedValue('acquired'),
-  } as unknown as RedisCacheService;
+  } as unknown as CronLockPort;
 
   const prevEnv: Record<string, string | undefined> = {};
 
@@ -39,7 +39,7 @@ describe('PhotoSlaEnforcer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('acquired');
     setEnv('CRON_LEADER_FAIL_OPEN', undefined);
     setEnv('NSFW_FLAG_THRESHOLD', '50');
     setEnv('PHOTO_MODERATION_SLA_LOW_HOURS', '6');
@@ -47,7 +47,7 @@ describe('PhotoSlaEnforcer', () => {
     setEnv('PHOTO_MODERATION_SLA_LOW_CONFIDENCE', '60');
     setEnv('PHOTO_MODERATION_SLA_ALERT_PER_DAY', '20');
     setEnv('PHOTO_MODERATION_ML_STUCK_MINUTES', '15');
-    enforcer = new PhotoSlaEnforcer(prisma, moderation, obs, cache);
+    enforcer = new PhotoSlaEnforcer(prisma, moderation, obs, cronLock);
   });
 
   afterAll(() => {
@@ -62,7 +62,7 @@ describe('PhotoSlaEnforcer', () => {
   }
 
   it('skips work when lock not_acquired', async () => {
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
     await expect(enforcer.runHourly()).resolves.toEqual({
       autoApproved: 0,
       flaggedStuck: 0,
@@ -75,7 +75,7 @@ describe('PhotoSlaEnforcer', () => {
   });
 
   it('skips work when lock unavailable', async () => {
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
     await expect(enforcer.runHourly()).resolves.toEqual({
       autoApproved: 0,
       flaggedStuck: 0,
@@ -89,7 +89,7 @@ describe('PhotoSlaEnforcer', () => {
 
   it('runs when lock unavailable but CRON_LEADER_FAIL_OPEN=1', async () => {
     setEnv('CRON_LEADER_FAIL_OPEN', '1');
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('unavailable');
     prisma.userProfilePhoto.findMany = jest
       .fn()
       .mockResolvedValueOnce([])
@@ -109,7 +109,7 @@ describe('PhotoSlaEnforcer', () => {
 
   it('does not fail-open when lock not_acquired even with CRON_LEADER_FAIL_OPEN', async () => {
     setEnv('CRON_LEADER_FAIL_OPEN', '1');
-    (cache.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
+    (cronLock.tryAcquireCronLock as jest.Mock).mockResolvedValue('not_acquired');
     await expect(enforcer.runHourly()).resolves.toEqual({
       autoApproved: 0,
       flaggedStuck: 0,
@@ -125,7 +125,7 @@ describe('PhotoSlaEnforcer', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
     await enforcer.runHourly();
-    expect(cache.tryAcquireCronLock).toHaveBeenCalledWith(
+    expect(cronLock.tryAcquireCronLock).toHaveBeenCalledWith(
       CRON_LOCK_PHOTO_SLA,
       PHOTO_SLA_LOCK_TTL_SECONDS,
       expect.objectContaining({

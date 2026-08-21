@@ -1,4 +1,4 @@
-import type { RedisCacheService } from '../cache/redis-cache.service';
+import type { CacheSetsPort, RedisClientHandle } from '../cache/cache.ports';
 import { MessagingSocketRegistry } from './messaging-socket-registry.service';
 import type { Socket } from 'socket.io';
 import {
@@ -18,13 +18,17 @@ function mockSocket(
   } as unknown as Socket;
 }
 
+type SharedMemoryRedis = CacheSetsPort & RedisClientHandle;
+
 /** In-memory Redis stand-in shared by two registry "nodes". */
-function createSharedMemoryRedis(): RedisCacheService {
+function createSharedMemoryRedis(): SharedMemoryRedis {
   const sets = new Map<string, Set<string>>();
   const strings = new Map<string, string>();
 
   return {
     isAvailable: () => true,
+    isUrlConfigured: () => true,
+    getClient: () => null,
     async sAdd(key: string, member: string, _ttl: number) {
       let set = sets.get(key);
       if (!set) {
@@ -54,7 +58,11 @@ function createSharedMemoryRedis(): RedisCacheService {
       sets.delete(key);
       strings.delete(key);
     },
-  } as unknown as RedisCacheService;
+  };
+}
+
+function registryWithRedis(redis: SharedMemoryRedis): MessagingSocketRegistry {
+  return new MessagingSocketRegistry(redis, redis);
 }
 
 describe('MessagingSocketRegistry', () => {
@@ -112,6 +120,7 @@ describe('MessagingSocketRegistry', () => {
       const registry = new MessagingSocketRegistry(
         undefined,
         undefined,
+        undefined,
         publisher as never,
       );
       registry.resetForTests();
@@ -135,6 +144,7 @@ describe('MessagingSocketRegistry', () => {
       const registry = new MessagingSocketRegistry(
         undefined,
         undefined,
+        undefined,
         publisher as never,
       );
       registry.resetForTests();
@@ -150,8 +160,8 @@ describe('MessagingSocketRegistry', () => {
     it('hasActiveConnection sees peer registry via shared Redis mock', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
-      const nodeA = new MessagingSocketRegistry(redis);
-      const nodeB = new MessagingSocketRegistry(redis);
+      const nodeA = registryWithRedis(redis);
+      const nodeB = registryWithRedis(redis);
       const sock = mockSocket('sess_1', 'sockA', 'u1');
 
       await nodeA.registerAsync(sock);
@@ -168,8 +178,8 @@ describe('MessagingSocketRegistry', () => {
     it('disconnectBySessionId clears Redis presence for remote peer', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
-      const nodeA = new MessagingSocketRegistry(redis);
-      const nodeB = new MessagingSocketRegistry(redis);
+      const nodeA = registryWithRedis(redis);
+      const nodeB = registryWithRedis(redis);
       await nodeA.registerAsync(mockSocket('sess_1', 'sockA', 'u1'));
 
       await nodeB.disconnectBySessionId('sess_1');
@@ -179,8 +189,8 @@ describe('MessagingSocketRegistry', () => {
     it('disconnectByUserId clears Redis presence for remote peer', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
-      const nodeA = new MessagingSocketRegistry(redis);
-      const nodeB = new MessagingSocketRegistry(redis);
+      const nodeA = registryWithRedis(redis);
+      const nodeB = registryWithRedis(redis);
       await nodeA.registerAsync(mockSocket('sess_1', 'sockA', 'u1'));
 
       await nodeB.disconnectByUserId('u1');
@@ -192,7 +202,7 @@ describe('MessagingSocketRegistry', () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
       const sAdd = jest.spyOn(redis, 'sAdd');
-      const registry = new MessagingSocketRegistry(redis);
+      const registry = registryWithRedis(redis);
       const sock = mockSocket('sess_1', 'sockA', 'u1');
       await registry.registerAsync(sock);
       sAdd.mockClear();
@@ -204,9 +214,11 @@ describe('MessagingSocketRegistry', () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = {
         isAvailable: () => false,
+        isUrlConfigured: () => true,
+        getClient: () => null,
         sCard: jest.fn(),
-      } as unknown as RedisCacheService;
-      const registry = new MessagingSocketRegistry(redis);
+      } as unknown as SharedMemoryRedis;
+      const registry = registryWithRedis(redis);
       await registry.registerAsync(mockSocket('s', 'id', 'u1'));
       expect(await registry.hasActiveConnection('u1')).toBe(false);
       expect(redis.sCard).not.toHaveBeenCalled();

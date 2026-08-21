@@ -1,59 +1,41 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { createClient, type RedisClientType } from 'redis';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   recordCacheDegraded,
   recordCacheOpMs,
   type CacheOp,
 } from '../observability/custom-metrics';
+import {
+  REDIS_CLIENT,
+  type CacheKvPort,
+  type CacheSetsPort,
+  type CronLockPort,
+  type RedisClientHandle,
+} from './cache.ports';
 
+/**
+ * Redis-backed adapter for cache ISP ports.
+ * @deprecated Prefer injecting CACHE_KV / CACHE_SETS / CRON_LOCK tokens.
+ */
 @Injectable()
-export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
+export class RedisCacheService
+  implements CacheKvPort, CacheSetsPort, CronLockPort
+{
   private readonly logger = new Logger(RedisCacheService.name);
-  private client: RedisClientType | null = null;
-  private available = false;
 
-  async onModuleInit(): Promise<void> {
-    const url = process.env.REDIS_URL?.trim();
-    if (!url) {
-      this.logger.warn('REDIS_URL unset — RedisCacheService disabled (fail-open to DB)');
-      return;
-    }
-    const client = createClient({ url });
-    client.on('error', (err) => {
-      this.logger.warn(`Redis cache client error: ${String(err)}`);
-    });
-    try {
-      await client.connect();
-      this.client = client as RedisClientType;
-      this.available = true;
-      this.logger.log('Redis cache connected');
-    } catch (err) {
-      this.logger.warn(
-        `Redis cache connect failed — fail-open to DB: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      try {
-        await client.quit();
-      } catch {
-        /* ignore */
-      }
-      this.client = null;
-      this.available = false;
-    }
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    if (!this.client) return;
-    try {
-      await this.client.quit();
-    } catch {
-      /* ignore */
-    }
-    this.client = null;
-    this.available = false;
-  }
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: RedisClientHandle,
+  ) {}
 
   isAvailable(): boolean {
-    return this.available && this.client != null;
+    return this.redis.isAvailable();
+  }
+
+  private get client() {
+    return this.redis.getClient();
+  }
+
+  private get available(): boolean {
+    return this.redis.isAvailable();
   }
 
   private logDegraded(
@@ -187,8 +169,7 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     ttlSeconds: number,
     value?: unknown,
   ): Promise<'acquired' | 'not_acquired' | 'unavailable'> {
-    const urlConfigured = Boolean(process.env.REDIS_URL?.trim());
-    if (!urlConfigured) {
+    if (!this.redis.isUrlConfigured()) {
       return 'acquired';
     }
     if (!this.client || !this.available) {

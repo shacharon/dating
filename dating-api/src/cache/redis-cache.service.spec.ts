@@ -1,4 +1,5 @@
 import { RedisCacheService } from './redis-cache.service';
+import type { RedisClientHandle } from './cache.ports';
 import * as customMetrics from '../observability/custom-metrics';
 
 type MockRedisClient = {
@@ -12,16 +13,24 @@ type MockRedisClient = {
   expire?: jest.Mock;
 };
 
-function attachClient(
-  svc: RedisCacheService,
-  client: MockRedisClient,
-): void {
-  const internal = svc as unknown as {
-    client: MockRedisClient | null;
-    available: boolean;
+function createSvc(opts: {
+  client?: MockRedisClient | null;
+  available?: boolean;
+  urlConfigured?: boolean;
+}): RedisCacheService {
+  const client = opts.client === undefined ? null : opts.client;
+  const available = opts.available ?? client != null;
+  const urlConfigured = opts.urlConfigured ?? false;
+  const handle: RedisClientHandle = {
+    getClient: () => (available && client != null ? (client as never) : null),
+    isAvailable: () => Boolean(available && client != null),
+    isUrlConfigured: () => urlConfigured,
   };
-  internal.client = client;
-  internal.available = true;
+  return new RedisCacheService(handle);
+}
+
+function attachAvailable(client: MockRedisClient, urlConfigured = true): RedisCacheService {
+  return createSvc({ client, available: true, urlConfigured });
 }
 
 describe('RedisCacheService', () => {
@@ -38,9 +47,11 @@ describe('RedisCacheService', () => {
 
   describe('unavailable', () => {
     it('get returns null without op_ms; setNx fail-opens with degraded unavailable', async () => {
-      delete process.env.REDIS_URL;
-      const svc = new RedisCacheService();
-      await svc.onModuleInit();
+      const svc = createSvc({
+        client: null,
+        available: false,
+        urlConfigured: false,
+      });
 
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
@@ -59,7 +70,6 @@ describe('RedisCacheService', () => {
 
   describe('available', () => {
     it('get miss and hit record cache.op_ms', async () => {
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest
           .fn()
@@ -68,7 +78,7 @@ describe('RedisCacheService', () => {
         set: jest.fn(),
         del: jest.fn(),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
 
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
@@ -81,13 +91,12 @@ describe('RedisCacheService', () => {
     });
 
     it('set / del / setNx record op_ms', async () => {
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest.fn(),
         set: jest.fn().mockResolvedValue('OK'),
         del: jest.fn().mockResolvedValue(1),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
 
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
 
@@ -103,13 +112,12 @@ describe('RedisCacheService', () => {
     });
 
     it('get error fail-opens null and records degraded error', async () => {
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest.fn().mockRejectedValue(new Error('boom')),
         set: jest.fn(),
         del: jest.fn(),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
 
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
@@ -120,13 +128,12 @@ describe('RedisCacheService', () => {
     });
 
     it('setNx error fail-opens true and records degraded error', async () => {
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest.fn(),
         set: jest.fn().mockRejectedValue(new Error('boom')),
         del: jest.fn(),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
 
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
 
@@ -135,7 +142,6 @@ describe('RedisCacheService', () => {
     });
 
     it('sAdd / sCard / sRem / setString support presence sets', async () => {
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest.fn().mockResolvedValue('u1|s1'),
         set: jest.fn().mockResolvedValue('OK'),
@@ -146,7 +152,7 @@ describe('RedisCacheService', () => {
         sMembers: jest.fn().mockResolvedValue(['sockA']),
         expire: jest.fn().mockResolvedValue(true),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
 
       expect(await svc.sAdd('ws:presence:user:u1', 'sockA', 90)).toBe(true);
@@ -162,9 +168,11 @@ describe('RedisCacheService', () => {
     });
 
     it('sAdd unavailable returns false without throwing', async () => {
-      delete process.env.REDIS_URL;
-      const svc = new RedisCacheService();
-      await svc.onModuleInit();
+      const svc = createSvc({
+        client: null,
+        available: false,
+        urlConfigured: false,
+      });
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
       expect(await svc.sAdd('ws:presence:user:u1', 'sock', 90)).toBe(false);
       expect(degraded).toHaveBeenCalledWith('sAdd', 'unavailable');
@@ -173,9 +181,11 @@ describe('RedisCacheService', () => {
 
   describe('tryAcquireCronLock', () => {
     it('returns acquired when REDIS_URL unset (no Redis contact)', async () => {
-      delete process.env.REDIS_URL;
-      const svc = new RedisCacheService();
-      await svc.onModuleInit();
+      const svc = createSvc({
+        client: null,
+        available: false,
+        urlConfigured: false,
+      });
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
       expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 3300)).toBe(
         'acquired',
@@ -184,16 +194,17 @@ describe('RedisCacheService', () => {
     });
 
     it('returns acquired when REDIS_URL is whitespace-only', async () => {
-      process.env.REDIS_URL = '   ';
-      const svc = new RedisCacheService();
+      const svc = createSvc({
+        client: null,
+        available: false,
+        urlConfigured: false,
+      });
       expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
         'acquired',
       );
     });
 
     it('only one of two acquire attempts succeeds when Redis NX rejects second', async () => {
-      process.env.REDIS_URL = 'redis://localhost:6379';
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest.fn(),
         set: jest
@@ -202,7 +213,7 @@ describe('RedisCacheService', () => {
           .mockResolvedValueOnce(null),
         del: jest.fn(),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
       const opMs = jest.spyOn(customMetrics, 'recordCacheOpMs');
 
       expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(
@@ -221,15 +232,11 @@ describe('RedisCacheService', () => {
     });
 
     it('returns unavailable when REDIS_URL set but client down', async () => {
-      process.env.REDIS_URL = 'redis://localhost:6379';
-      const svc = new RedisCacheService();
-      // Simulate configured-but-down without connecting a real client.
-      const internal = svc as unknown as {
-        client: MockRedisClient | null;
-        available: boolean;
-      };
-      internal.client = null;
-      internal.available = false;
+      const svc = createSvc({
+        client: null,
+        available: false,
+        urlConfigured: true,
+      });
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
       expect(await svc.tryAcquireCronLock('cron:lock:mute-expiry', 810)).toBe(
         'unavailable',
@@ -238,14 +245,12 @@ describe('RedisCacheService', () => {
     });
 
     it('returns unavailable on SET error (fail-closed, unlike setNx)', async () => {
-      process.env.REDIS_URL = 'redis://localhost:6379';
-      const svc = new RedisCacheService();
       const client: MockRedisClient = {
         get: jest.fn(),
         set: jest.fn().mockRejectedValue(new Error('boom')),
         del: jest.fn(),
       };
-      attachClient(svc, client);
+      const svc = attachAvailable(client);
       const degraded = jest.spyOn(customMetrics, 'recordCacheDegraded');
 
       expect(await svc.tryAcquireCronLock('cron:lock:photo-sla', 60)).toBe(

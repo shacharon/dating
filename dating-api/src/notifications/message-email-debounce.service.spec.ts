@@ -1,13 +1,21 @@
-import type { RedisCacheService } from '../cache/redis-cache.service';
+import type { CacheKvPort, RedisClientHandle } from '../cache/cache.ports';
 import { MessageEmailDebounceService } from './message-email-debounce.service';
 import type { EmailNotificationConfigService } from './email-notification-config.service';
 import { emailMsgDebounceKey } from './email-debounce.keys';
 
-function createSharedMemoryRedis(): RedisCacheService {
+type SharedMemoryRedis = CacheKvPort & RedisClientHandle;
+
+function createSharedMemoryRedis(): SharedMemoryRedis {
   const keys = new Map<string, string>();
 
   return {
     isAvailable: () => true,
+    isUrlConfigured: () => true,
+    getClient: () => null,
+    async get() {
+      return null;
+    },
+    async set() {},
     async setNx(key: string, value: unknown, _ttl: number) {
       if (keys.has(key)) return false;
       keys.set(key, JSON.stringify(value));
@@ -16,7 +24,14 @@ function createSharedMemoryRedis(): RedisCacheService {
     async del(key: string) {
       keys.delete(key);
     },
-  } as unknown as RedisCacheService;
+  };
+}
+
+function serviceWithRedis(
+  config: EmailNotificationConfigService,
+  redis: SharedMemoryRedis,
+): MessageEmailDebounceService {
+  return new MessageEmailDebounceService(config, redis, redis);
 }
 
 describe('MessageEmailDebounceService', () => {
@@ -83,8 +98,8 @@ describe('MessageEmailDebounceService', () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
       const setNx = jest.spyOn(redis, 'setNx');
-      const a = new MessageEmailDebounceService(config, redis);
-      const b = new MessageEmailDebounceService(config, redis);
+      const a = serviceWithRedis(config, redis);
+      const b = serviceWithRedis(config, redis);
 
       expect(await a.tryClaimSend('c1', 'u1')).toBe(true);
       expect(setNx).toHaveBeenCalledWith(
@@ -99,8 +114,8 @@ describe('MessageEmailDebounceService', () => {
     it('releaseClaim on peer frees claim for other node', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();
-      const a = new MessageEmailDebounceService(config, redis);
-      const b = new MessageEmailDebounceService(config, redis);
+      const a = serviceWithRedis(config, redis);
+      const b = serviceWithRedis(config, redis);
 
       expect(await a.tryClaimSend('c1', 'u1')).toBe(true);
       await a.releaseClaim('c1', 'u1');
@@ -111,9 +126,14 @@ describe('MessageEmailDebounceService', () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = {
         isAvailable: () => false,
+        isUrlConfigured: () => true,
+        getClient: () => null,
         setNx: jest.fn(),
-      } as unknown as RedisCacheService;
-      const service = new MessageEmailDebounceService(config, redis);
+        get: jest.fn(),
+        set: jest.fn(),
+        del: jest.fn(),
+      } as unknown as SharedMemoryRedis;
+      const service = serviceWithRedis(config, redis);
       expect(await service.tryClaimSend('c1', 'u1')).toBe(true);
       expect(redis.setNx).not.toHaveBeenCalled();
     });

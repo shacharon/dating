@@ -1,5 +1,10 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
-import { RedisCacheService } from '../cache/redis-cache.service';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  CACHE_KV,
+  REDIS_CLIENT,
+  type CacheKvPort,
+  type RedisClientHandle,
+} from '../cache/cache.ports';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import {
   emailMsgDebounceKey,
@@ -19,7 +24,8 @@ export class MessageEmailDebounceService {
 
   constructor(
     private readonly config: EmailNotificationConfigService,
-    @Optional() private readonly cache?: RedisCacheService,
+    @Optional() @Inject(CACHE_KV) private readonly cache?: CacheKvPort,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redis?: RedisClientHandle,
   ) {}
 
   /**
@@ -40,7 +46,7 @@ export class MessageEmailDebounceService {
       return this.tryClaimLocal(mapKey, windowMs);
     }
 
-    if (!this.cache?.isAvailable()) {
+    if (!this.redis?.isAvailable()) {
       this.logger.warn(
         'email debounce redis unavailable — fail-open allow send',
       );
@@ -48,7 +54,7 @@ export class MessageEmailDebounceService {
     }
 
     const redisKey = emailMsgDebounceKey(conversationId, recipientUserId);
-    return this.cache.setNx(
+    return this.cache!.setNx(
       redisKey,
       { at: new Date().toISOString() },
       ttlSeconds,
@@ -67,7 +73,7 @@ export class MessageEmailDebounceService {
       return;
     }
 
-    if (!this.cache?.isAvailable()) {
+    if (!this.redis?.isAvailable() || !this.cache) {
       return;
     }
 

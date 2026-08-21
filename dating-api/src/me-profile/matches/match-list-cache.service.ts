@@ -9,7 +9,7 @@ import {
   type MatchListCachePayload,
   type MatchListCursorPayload,
 } from '../../cache/match-list-cache';
-import { RedisCacheService } from '../../cache/redis-cache.service';
+import { CACHE_KV, type CacheKvPort } from '../../cache/cache.ports';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import {
   recordCacheHit,
@@ -35,7 +35,7 @@ export class MatchListCacheService {
     private readonly prisma: PrismaService,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
-    private readonly cache: RedisCacheService,
+    @Inject(CACHE_KV) private readonly cache: CacheKvPort,
     private readonly query: MatchListQueryService,
     private readonly ranking: MatchRankingService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
