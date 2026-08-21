@@ -45,9 +45,10 @@ Peel remaining high-value `PrismaService` injectors left after Sprint 62 (~10–
 
 ## Shipped
 
-`feature/sprint-63-story-3` @ `39f2c6d`
+`feature/sprint-63-story-3` @ `f034238`
 
 - `50eedb1` — feat: peel Prisma from analysis/feedback/matches/account
 - `39f2c6d` — test: guard prisma peel wiring + eval lookup (Agent 2)
+- `f034238` — chore: close sprint 63 story 3
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
