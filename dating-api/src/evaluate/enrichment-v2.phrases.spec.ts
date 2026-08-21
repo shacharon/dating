@@ -60,3 +60,58 @@ describe('mapEnrichmentV2FromText phrase fixtures', () => {
     ).toBe('interdependence');
   });
 });
+
+/** Sprint 57 Story 1 — seam locks for Story 02 split (no production behavior change). */
+describe('sprint-57 characterization', () => {
+  describe('interest hits (positive)', () => {
+    it('hobby cooking positive control → cooking', () => {
+      expect(mapEnrichmentV2FromText('I love cooking on weekends.').interestsTop3).toContain(
+        'cooking',
+      );
+    });
+  });
+
+  describe('negated phrases', () => {
+    it('never go silent + talk it through → process_together (not withdraws_shuts_down)', () => {
+      expect(
+        mapEnrichmentV2FromText(
+          'I never go silent when we argue; we talk it through calmly.',
+        ).conflictStyleDetail,
+      ).toBe('process_together');
+    });
+  });
+
+  describe('cooking-job false positives', () => {
+    it('line cook / kitchens / service season → no cooking interest', () => {
+      expect(
+        mapEnrichmentV2FromText(
+          'I am a line cook in kitchens during service season.',
+        ).interestsTop3,
+      ).not.toContain('cooking');
+    });
+
+    it('pastry cook / sous chef → no cooking interest', () => {
+      expect(
+        mapEnrichmentV2FromText('Worked as a pastry cook and sous chef for years.')
+          .interestsTop3,
+      ).not.toContain('cooking');
+    });
+  });
+
+  describe('fermentation / brewery windows', () => {
+    it('fermentation journals → fermentation', () => {
+      expect(
+        mapEnrichmentV2FromText('I keep fermentation journals every Sunday.')
+          .interestsTop3,
+      ).toContain('fermentation');
+    });
+
+    it('bare fermentation near brewery/yeast labs → no fermentation', () => {
+      expect(
+        mapEnrichmentV2FromText(
+          'I study fermentation at a brewery with yeast labs.',
+        ).interestsTop3,
+      ).not.toContain('fermentation');
+    });
+  });
+});
