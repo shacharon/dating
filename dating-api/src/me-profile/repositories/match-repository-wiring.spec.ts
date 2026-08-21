@@ -2,10 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * Sprint 62 Story 1 — match product services inject MATCH_REPOSITORY;
- * do not revive domain POC MatchesRepository under me-profile.
+ * Sprint 62 Story 1 / Sprint 63 Story 4 — match product services inject match
+ * repository tokens (facade or ISP facets); no PrismaService in Success paths.
  */
-describe('match repository wiring (sprint-62 story 1)', () => {
+describe('match repository wiring (sprint-62/63)', () => {
   const meProfileRoot = path.join(__dirname, '..');
 
   const successServices = [
@@ -18,24 +18,48 @@ describe('match repository wiring (sprint-62 story 1)', () => {
     path.join(meProfileRoot, 'mutual-matches.service.ts'),
   ];
 
-  it('Success services inject MATCH_REPOSITORY and not PrismaService', () => {
+  const matchRepoToken =
+    /MATCH_(?:QUERY_|ACTIONS_|RANK_)?REPOSITORY/;
+
+  it('Success services inject a match repository token and not PrismaService', () => {
     for (const file of successServices) {
       const src = fs.readFileSync(file, 'utf8');
-      expect(src).toContain('MATCH_REPOSITORY');
-      expect(src).toContain('@Inject(MATCH_REPOSITORY)');
+      expect(src).toMatch(matchRepoToken);
+      expect(src).toMatch(/@Inject\(MATCH_(?:QUERY_|ACTIONS_|RANK_)?REPOSITORY\)/);
       expect(src).not.toMatch(/from ['"].*prisma\/prisma\.service['"]/);
       expect(src).not.toMatch(/PrismaService/);
     }
   });
 
-  it('MeProfileModule registers MATCH_REPOSITORY via PrismaMatchRepository', () => {
+  it('MeProfileModule registers facade + facet tokens via PrismaMatchRepository', () => {
     const src = fs.readFileSync(
       path.join(meProfileRoot, 'me-profile.module.ts'),
       'utf8',
     );
     expect(src).toContain('MATCH_REPOSITORY');
+    expect(src).toContain('MATCH_QUERY_REPOSITORY');
+    expect(src).toContain('MATCH_ACTIONS_REPOSITORY');
+    expect(src).toContain('MATCH_RANK_REPOSITORY');
     expect(src).toContain('PrismaMatchRepository');
     expect(src).toContain('useClass: PrismaMatchRepository');
+    expect(src).toContain('useExisting: MATCH_REPOSITORY');
+  });
+
+  it('match port files do not expose Prisma UserProfileSelect / WhereInput', () => {
+    const portFiles = [
+      'match.repository.ts',
+      'match-query.repository.ts',
+      'match-actions.repository.ts',
+      'match-rank.repository.ts',
+    ];
+    for (const name of portFiles) {
+      const src = fs.readFileSync(
+        path.join(meProfileRoot, 'repositories', name),
+        'utf8',
+      );
+      expect(src).not.toMatch(/UserProfileSelect|UserProfileWhereInput|UserProfileOrderBy/);
+      expect(src).not.toMatch(/Prisma\.UserProfile/);
+    }
   });
 
   it('me-profile does not wire domain POC MatchesRepository', () => {
@@ -55,7 +79,6 @@ describe('match repository wiring (sprint-62 story 1)', () => {
           /MatchesRepository|InMemoryMatchesRepository/.test(text) &&
           !full.includes(`${path.sep}repositories${path.sep}match.repository`)
         ) {
-          // allow comments mentioning POC avoidance only if no import of domain matches.repository
           if (
             /from ['"].*domain\/repositories\/matches\.repository['"]/.test(
               text,

@@ -3,7 +3,7 @@ import * as path from 'node:path';
 
 /**
  * Sprint 62 Story 4 — photo consumers inject PROFILE_PHOTO_REPOSITORY;
- * token lives on PhotoStorageModule; MATCH_REPOSITORY photo gate methods stay.
+ * token lives on PhotoStorageModule; MATCH_QUERY photo gate methods stay.
  */
 describe('profile photo repository wiring (sprint-62 story 4)', () => {
   const srcRoot = path.join(__dirname, '..', '..');
@@ -55,9 +55,9 @@ describe('profile photo repository wiring (sprint-62 story 4)', () => {
     expect(mod).toContain('conditionalUpdateModeration');
   });
 
-  it('MATCH_REPOSITORY still owns photo gate methods (not folded into photo repo)', () => {
+  it('MATCH_QUERY_REPOSITORY still owns photo gate methods (not folded into photo repo)', () => {
     const match = fs.readFileSync(
-      path.join(meProfileRoot, 'repositories', 'match.repository.ts'),
+      path.join(meProfileRoot, 'repositories', 'match-query.repository.ts'),
       'utf8',
     );
     const photo = fs.readFileSync(

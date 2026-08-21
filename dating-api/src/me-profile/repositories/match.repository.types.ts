@@ -4,6 +4,11 @@ import type {
   Prisma,
   UserProfileEvaluation,
 } from '@prisma/client';
+import type { AcceptedPartnerGender } from '../../canonical/matching-canonical.types';
+import type {
+  CANDIDATE_SELECT_DETAIL,
+  CANDIDATE_SELECT_LIST,
+} from './match-candidate.selects';
 
 export type ViewerMatchContext = Prisma.UserProfileGetPayload<{
   include: {
@@ -20,6 +25,29 @@ export type ViewerMatchContext = Prisma.UserProfileGetPayload<{
 export type ViewerWithPreference = Prisma.UserProfileGetPayload<{
   include: { preference: true };
 }>;
+
+/** Slim list/page hydrate row (see CANDIDATE_SELECT_LIST). */
+export type MatchCandidateListRow = Prisma.UserProfileGetPayload<{
+  select: typeof CANDIDATE_SELECT_LIST;
+}>;
+
+/** Detail / visibility row (see CANDIDATE_SELECT_DETAIL). */
+export type MatchCandidateDetailRow = Prisma.UserProfileGetPayload<{
+  select: typeof CANDIDATE_SELECT_DETAIL;
+}>;
+
+/** Domain filter for photo-eligible candidate count/list (no Prisma where). */
+export type MatchListCandidateFilter = {
+  viewerUserId: string;
+  acceptedPartnerGenders: readonly AcceptedPartnerGender[] | null;
+  preference: {
+    partnerAgeMin: number | null;
+    partnerAgeMax: number | null;
+    maxDistanceKm: number | null;
+    acceptedPartnerGenders: readonly string[];
+  } | null;
+  asOf: Date;
+};
 
 export type CandidatePhotoAccessRow = Prisma.UserProfileGetPayload<{
   select: {

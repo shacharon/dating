@@ -1,5 +1,11 @@
 import type { RedisClientType } from 'redis';
 import {
+  FIXED_WINDOW_RATE_LIMIT_CONSUME_LUA,
+  RedisFixedWindowRateLimitStore,
+  type FixedWindowRateLimitStore,
+  type RateLimitRedisDegradedHandler,
+} from '../cache/rate-limit';
+import {
   MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
   MESSAGE_RATE_LIMIT_WINDOW_MS,
   httpMessageRateLimitRedisKey,
@@ -7,55 +13,39 @@ import {
 import { MessageRateLimitExceededError } from './conversation-message-rate-limit.error';
 import type { MessageRateLimitStore } from './conversation-message-rate-limit-store.interface';
 
-/** Fixed-window consume: returns 1 if allowed, 0 if limit exceeded. */
-export const HTTP_MESSAGE_RATE_LIMIT_CONSUME_LUA = `
-local c = tonumber(redis.call('GET', KEYS[1]) or '0')
-if c >= tonumber(ARGV[1]) then
-  return 0
-end
-c = redis.call('INCR', KEYS[1])
-if c == 1 then
-  redis.call('PEXPIRE', KEYS[1], ARGV[2])
-end
-return 1
-`;
+/** @deprecated Use FIXED_WINDOW_RATE_LIMIT_CONSUME_LUA — kept for existing specs. */
+export const HTTP_MESSAGE_RATE_LIMIT_CONSUME_LUA =
+  FIXED_WINDOW_RATE_LIMIT_CONSUME_LUA;
 
-export type MessageRateLimitRedisDegradedHandler = (ctx: {
-  userId: string;
-  err: unknown;
-}) => void;
+export type MessageRateLimitRedisDegradedHandler =
+  RateLimitRedisDegradedHandler;
 
 export class RedisMessageRateLimitStore implements MessageRateLimitStore {
-  constructor(
-    private readonly client: RedisClientType,
-    private readonly onDegraded: MessageRateLimitRedisDegradedHandler,
-  ) {}
+  private readonly inner: FixedWindowRateLimitStore;
 
-  async consumeSendSlot(sessionUserId: string): Promise<void> {
-    const key = httpMessageRateLimitRedisKey(sessionUserId);
-    try {
-      const result = await this.client.eval(HTTP_MESSAGE_RATE_LIMIT_CONSUME_LUA, {
-        keys: [key],
-        arguments: [
-          String(MESSAGE_RATE_LIMIT_MAX_PER_WINDOW),
-          String(MESSAGE_RATE_LIMIT_WINDOW_MS),
-        ],
-      });
-      if (Number(result) === 0) {
-        throw new MessageRateLimitExceededError();
-      }
-    } catch (e) {
-      if (e instanceof MessageRateLimitExceededError) {
-        throw e;
-      }
-      this.onDegraded({ userId: sessionUserId, err: e });
-    }
+  constructor(
+    client: RedisClientType,
+    onDegraded: MessageRateLimitRedisDegradedHandler,
+  ) {
+    this.inner = new RedisFixedWindowRateLimitStore(
+      client,
+      {
+        maxPerWindow: MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
+        windowMs: MESSAGE_RATE_LIMIT_WINDOW_MS,
+        redisKeyForUser: httpMessageRateLimitRedisKey,
+        redisKeyScanPattern: 'http:msg:ratelimit:*',
+      },
+      () => new MessageRateLimitExceededError(),
+      onDegraded,
+      (e) => e instanceof MessageRateLimitExceededError,
+    );
   }
 
-  async resetForTests(): Promise<void> {
-    const keys = await this.client.keys('http:msg:ratelimit:*');
-    if (keys.length > 0) {
-      await this.client.del(keys);
-    }
+  consumeSendSlot(sessionUserId: string): void | Promise<void> {
+    return this.inner.consume(sessionUserId);
+  }
+
+  resetForTests(): void | Promise<void> {
+    return this.inner.resetForTests();
   }
 }

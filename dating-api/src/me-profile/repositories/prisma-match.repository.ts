@@ -7,19 +7,29 @@ import {
 } from '@prisma/client';
 import type { MatchListCursorPayload } from '../../cache/match-list-cache';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY } from '../match-list-candidate-cap';
 import {
   MATCH_LIST_RANK_PERSIST_CHUNK,
   MATCH_LIST_RANK_PERSIST_TX,
 } from '../match-list-rank-persist.constants';
+import { buildMatchCandidateSqlPrefilterWhere } from '../me-matches-candidate-sql-prefilter';
 import { LATEST_EVAL_BATCH_SIZE } from '../me-profile-analysis.service';
 import { matchListRankAfterCursorWhere } from '../matches/match-list-cursor';
+import { STATUS_ANALYZED } from '../matches/match-list.helpers';
 import type { IMatchRepository } from './match.repository';
+import {
+  CANDIDATE_SELECT_DETAIL,
+  CANDIDATE_SELECT_LIST,
+} from './match-candidate.selects';
 import type {
   AboutTextRow,
   CandidatePhotoAccessRow,
   EvaluationRow,
   LatestEvaluationForMatchRow,
   MatchActionRow,
+  MatchCandidateDetailRow,
+  MatchCandidateListRow,
+  MatchListCandidateFilter,
   MutualMatchDetectResult,
   MutualMatchRow,
   RankPageRow,
@@ -61,39 +71,72 @@ export class PrismaMatchRepository implements IMatchRepository {
     });
   }
 
-  findCandidateProfileForDetail<T extends Prisma.UserProfileSelect>(
+  findCandidateProfileForDetail(
     candidateProfileId: string,
-    select: T,
-  ): Promise<Prisma.UserProfileGetPayload<{ select: T }> | null> {
+  ): Promise<MatchCandidateDetailRow | null> {
     return this.prisma.userProfile.findUnique({
       where: { id: candidateProfileId },
-      select,
+      select: CANDIDATE_SELECT_DETAIL,
     });
   }
 
-  findCandidateProfilesByIdsForList<T extends Prisma.UserProfileSelect>(
+  findCandidateProfilesByIdsForList(
     ids: string[],
-    select: T,
-  ): Promise<Array<Prisma.UserProfileGetPayload<{ select: T }>>> {
+  ): Promise<MatchCandidateListRow[]> {
     return this.prisma.userProfile.findMany({
       where: { id: { in: ids }, status: 'ANALYZED' },
-      select,
+      select: CANDIDATE_SELECT_LIST,
     });
   }
 
-  countCandidates(where: Prisma.UserProfileWhereInput): Promise<number> {
-    return this.prisma.userProfile.count({ where });
+  countAnalyzedCandidatesExcludingUser(viewerUserId: string): Promise<number> {
+    return this.prisma.userProfile.count({
+      where: this.matchCandidateBaseWhere(viewerUserId),
+    });
   }
 
-  listCandidates<T extends Prisma.UserProfileSelect>(args: {
-    where: Prisma.UserProfileWhereInput;
-    orderBy:
-      | Prisma.UserProfileOrderByWithRelationInput
-      | Prisma.UserProfileOrderByWithRelationInput[];
-    take: number;
-    select: T;
-  }): Promise<Array<Prisma.UserProfileGetPayload<{ select: T }>>> {
-    return this.prisma.userProfile.findMany(args);
+  countPhotoEligibleCandidates(
+    filter: MatchListCandidateFilter,
+  ): Promise<number> {
+    return this.prisma.userProfile.count({
+      where: this.matchCandidatePhotoEligibleWhere(filter),
+    });
+  }
+
+  listPhotoEligibleCandidates(
+    filter: MatchListCandidateFilter,
+    take: number,
+  ): Promise<MatchCandidateListRow[]> {
+    return this.prisma.userProfile.findMany({
+      where: this.matchCandidatePhotoEligibleWhere(filter),
+      orderBy: MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
+      take,
+      select: CANDIDATE_SELECT_LIST,
+    });
+  }
+
+  private matchCandidateBaseWhere(
+    viewerUserId: string,
+  ): Prisma.UserProfileWhereInput {
+    return {
+      userId: { not: viewerUserId },
+      status: STATUS_ANALYZED,
+      user: { deletedAt: null },
+    };
+  }
+
+  private matchCandidatePhotoEligibleWhere(
+    filter: MatchListCandidateFilter,
+  ): Prisma.UserProfileWhereInput {
+    return {
+      ...this.matchCandidateBaseWhere(filter.viewerUserId),
+      photos: { some: { status: UserProfilePhotoStatus.APPROVED } },
+      ...buildMatchCandidateSqlPrefilterWhere({
+        acceptedPartnerGenders: filter.acceptedPartnerGenders,
+        preference: filter.preference,
+        asOf: filter.asOf,
+      }),
+    };
   }
 
   findCandidateProfileForPhotoAccess(

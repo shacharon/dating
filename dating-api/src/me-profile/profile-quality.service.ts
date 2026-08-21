@@ -7,8 +7,8 @@ import {
 import { viewerHasApprovedPhoto } from './me-profile-photo-gate';
 import { MeProfileService } from './me-profile.service';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_QUERY_REPOSITORY,
+  type IMatchQueryRepository,
 } from './repositories/match.repository';
 
 export const PROFILE_QUALITY_STORY_MIN_CHARS = 50;
@@ -116,7 +116,7 @@ export function computeProfileQuality(
 @Injectable()
 export class ProfileQualityService {
   constructor(
-    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
+    @Inject(MATCH_QUERY_REPOSITORY) private readonly matches: IMatchQueryRepository,
     private readonly meProfile: MeProfileService,
   ) {}
 

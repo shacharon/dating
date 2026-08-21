@@ -23,23 +23,21 @@ import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
 } from '../user-profile-matching-bridge.contract';
-import { MatchListQueryService } from './match-list-query.service';
 import {
   STATUS_ANALYZED,
   assertCandidateHasApprovedPhotosInRow,
   partnerGenderSourceForMeMatchesRow,
 } from './match-list.helpers';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_QUERY_REPOSITORY,
+  type IMatchQueryRepository,
 } from '../repositories/match.repository';
 
 @Injectable()
 export class MatchEligibilityService {
   constructor(
-    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
+    @Inject(MATCH_QUERY_REPOSITORY) private readonly matches: IMatchQueryRepository,
     private readonly obs: StructuredObservabilityService,
-    private readonly query: MatchListQueryService,
   ) {}
 
   async assertMatchCandidateVisible(
@@ -66,7 +64,6 @@ export class MatchEligibilityService {
 
     const candidate = await this.matches.findCandidateProfileForDetail(
       candidateProfileId,
-      this.query.candidateSelectDetail,
     );
 
     if (

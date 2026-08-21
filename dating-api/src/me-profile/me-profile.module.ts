@@ -43,7 +43,12 @@ import { ProfilePreferenceService } from './profile/profile-preference.service';
 import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
 import { USER_PROFILE_REPOSITORY } from './repositories/user-profile.repository';
 import { PrismaMatchRepository } from './repositories/prisma-match.repository';
-import { MATCH_REPOSITORY } from './repositories/match.repository';
+import {
+  MATCH_ACTIONS_REPOSITORY,
+  MATCH_QUERY_REPOSITORY,
+  MATCH_RANK_REPOSITORY,
+  MATCH_REPOSITORY,
+} from './repositories/match.repository';
 import { PrismaConversationRepository } from './repositories/prisma-conversation.repository';
 import { CONVERSATION_REPOSITORY } from './repositories/conversation.repository';
 import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
@@ -85,6 +90,18 @@ import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedb
     {
       provide: MATCH_REPOSITORY,
       useClass: PrismaMatchRepository,
+    },
+    {
+      provide: MATCH_QUERY_REPOSITORY,
+      useExisting: MATCH_REPOSITORY,
+    },
+    {
+      provide: MATCH_ACTIONS_REPOSITORY,
+      useExisting: MATCH_REPOSITORY,
+    },
+    {
+      provide: MATCH_RANK_REPOSITORY,
+      useExisting: MATCH_REPOSITORY,
     },
     {
       provide: MATCH_FEEDBACK_REPOSITORY,

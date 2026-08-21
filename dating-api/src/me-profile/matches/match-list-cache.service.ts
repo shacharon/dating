@@ -28,14 +28,14 @@ import { listFromMaterializedRanks } from './match-list-materialized';
 import { MatchListQueryService } from './match-list-query.service';
 import { MatchRankingService } from './match-ranking.service';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_RANK_REPOSITORY,
+  type IMatchRankRepository,
 } from '../repositories/match.repository';
 
 @Injectable()
 export class MatchListCacheService {
   constructor(
-    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
+    @Inject(MATCH_RANK_REPOSITORY) private readonly matches: IMatchRankRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     @Inject(CACHE_KV) private readonly cache: CacheKvPort,

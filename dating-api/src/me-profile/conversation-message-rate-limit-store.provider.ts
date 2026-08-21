@@ -3,9 +3,18 @@ import {
   REDIS_CLIENT,
   type RedisClientHandle,
 } from '../cache/cache.ports';
+import {
+  MemoryFixedWindowRateLimitStore,
+  RedisFixedWindowRateLimitStore,
+  type FixedWindowRateLimitStore,
+} from '../cache/rate-limit';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { MemoryMessageRateLimitStore } from './conversation-message-rate-limit-memory.store';
-import { RedisMessageRateLimitStore } from './conversation-message-rate-limit-redis.store';
+import {
+  MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
+  MESSAGE_RATE_LIMIT_WINDOW_MS,
+  httpMessageRateLimitRedisKey,
+} from './conversation-message.constants';
+import { MessageRateLimitExceededError } from './conversation-message-rate-limit.error';
 import type { MessageRateLimitStore } from './conversation-message-rate-limit-store.interface';
 
 /**
@@ -16,7 +25,13 @@ import type { MessageRateLimitStore } from './conversation-message-rate-limit-st
 export class MessageRateLimitStoreProvider
   implements OnModuleInit, MessageRateLimitStore
 {
-  private inner: MessageRateLimitStore = new MemoryMessageRateLimitStore();
+  private inner: FixedWindowRateLimitStore = new MemoryFixedWindowRateLimitStore(
+    {
+      maxPerWindow: MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
+      windowMs: MESSAGE_RATE_LIMIT_WINDOW_MS,
+    },
+    () => new MessageRateLimitExceededError(),
+  );
   private usingRedis = false;
 
   constructor(
@@ -27,8 +42,15 @@ export class MessageRateLimitStoreProvider
   async onModuleInit(): Promise<void> {
     const client = this.redis.getClient();
     if (client && this.redis.isAvailable()) {
-      this.inner = new RedisMessageRateLimitStore(
+      this.inner = new RedisFixedWindowRateLimitStore(
         client,
+        {
+          maxPerWindow: MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
+          windowMs: MESSAGE_RATE_LIMIT_WINDOW_MS,
+          redisKeyForUser: httpMessageRateLimitRedisKey,
+          redisKeyScanPattern: 'http:msg:ratelimit:*',
+        },
+        () => new MessageRateLimitExceededError(),
         ({ userId, err }) => {
           this.logger.warn(
             JSON.stringify({
@@ -39,11 +61,18 @@ export class MessageRateLimitStoreProvider
             MessageRateLimitStoreProvider.name,
           );
         },
+        (e) => e instanceof MessageRateLimitExceededError,
       );
       this.usingRedis = true;
       return;
     }
-    this.inner = new MemoryMessageRateLimitStore();
+    this.inner = new MemoryFixedWindowRateLimitStore(
+      {
+        maxPerWindow: MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
+        windowMs: MESSAGE_RATE_LIMIT_WINDOW_MS,
+      },
+      () => new MessageRateLimitExceededError(),
+    );
     this.usingRedis = false;
     if (this.redis.isUrlConfigured()) {
       this.logger.warn(
@@ -61,7 +90,7 @@ export class MessageRateLimitStoreProvider
   }
 
   consumeSendSlot(sessionUserId: string): void | Promise<void> {
-    return this.inner.consumeSendSlot(sessionUserId);
+    return this.inner.consume(sessionUserId);
   }
 
   resetForTests(): void | Promise<void> {

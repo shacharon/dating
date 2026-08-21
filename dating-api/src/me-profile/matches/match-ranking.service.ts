@@ -13,7 +13,6 @@ import {
 import { resolveMatchPrimaryPhotoUrl } from '../../photo-storage/cdn-url';
 import { buildMeMatchesParticipantReadModel } from '../me-profile-engine.mapper';
 import {
-  MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
   resolveMatchListCandidateCap,
   resolveMatchListRebuildCandidateCap,
 } from '../match-list-candidate-cap';
@@ -56,7 +55,6 @@ import {
   type PairMatchPolicy,
 } from '../../matching-policy/pair-match-policy';
 import { MatchEligibilityService } from './match-eligibility.service';
-import { MatchListQueryService } from './match-list-query.service';
 import {
   appendPendingHardBlockMatches,
   type PendingHardBlockMatch,
@@ -69,17 +67,21 @@ import {
 } from './match-list.helpers';
 import type { MatchListRankSnapshot } from './match-list-rank.types';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_QUERY_REPOSITORY,
+  MATCH_RANK_REPOSITORY,
+  type IMatchQueryRepository,
+  type IMatchRankRepository,
 } from '../repositories/match.repository';
 
 @Injectable()
 export class MatchRankingService {
   constructor(
-    @Inject(MATCH_REPOSITORY) private readonly matchesRepository: IMatchRepository,
+    @Inject(MATCH_QUERY_REPOSITORY)
+    private readonly matchesRepository: IMatchQueryRepository,
+    @Inject(MATCH_RANK_REPOSITORY)
+    private readonly ranks: IMatchRankRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
-    private readonly query: MatchListQueryService,
     private readonly eligibility: MatchEligibilityService,
     @Inject(PAIR_MATCH_POLICY) private readonly pairMatchPolicy: PairMatchPolicy,
   ) {}
@@ -130,10 +132,10 @@ export class MatchRankingService {
     }
     if (snapshot.status === 'not_ready' || snapshot.rows.length === 0) {
       const rowsDeleted =
-        await this.matchesRepository.deleteAllRanksForViewer(viewerUserId);
+        await this.ranks.deleteAllRanksForViewer(viewerUserId);
       return { rowsWritten: 0, rowsDeleted };
     }
-    return this.matchesRepository.replaceRankSnapshot(
+    return this.ranks.replaceRankSnapshot(
       viewerUserId,
       snapshot.rows,
       new Date(),
@@ -261,10 +263,7 @@ export class MatchRankingService {
         };
       }
       const loaded =
-        await this.matchesRepository.findCandidateProfilesByIdsForList(
-          pageIds,
-          this.query.candidateSelectList,
-        );
+        await this.matchesRepository.findCandidateProfilesByIdsForList(pageIds);
       const byId = new Map(loaded.map((r) => [r.id, r]));
       candidateRows = pageIds
         .map((id) => byId.get(id))
@@ -273,24 +272,21 @@ export class MatchRankingService {
     } else {
       // Temporary hydrate cap until async match materialization (list: MATCH_LIST_CANDIDATE_CAP;
       // rebuild snapshot may override via options.candidateCap).
-      const listCandidateWhere = this.query.matchCandidatePhotoEligibleWhere(userId, {
+      const listFilter = {
+        viewerUserId: userId,
         acceptedPartnerGenders: viewerBridge.acceptedPartnerGenders,
         preference: viewer.preference ?? null,
         asOf,
-      });
+      };
       const [totalAnalyzed, eligible, rows] = await Promise.all([
-        this.matchesRepository.countCandidates(
-          this.query.matchCandidateBaseWhere(userId),
+        this.matchesRepository.countAnalyzedCandidatesExcludingUser(userId),
+        this.matchesRepository.countPhotoEligibleCandidates(listFilter),
+        // Viewer→cand gender/age may be SQL-prefiltered; reciprocal gender still
+        // evaluated in memory via reciprocalProductGenderEligibility below.
+        this.matchesRepository.listPhotoEligibleCandidates(
+          listFilter,
+          candidateCap,
         ),
-        this.matchesRepository.countCandidates(listCandidateWhere),
-        this.matchesRepository.listCandidates({
-          // Viewer→cand gender/age may be SQL-prefiltered; reciprocal gender still
-          // evaluated in memory via reciprocalProductGenderEligibility below.
-          where: listCandidateWhere,
-          orderBy: MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
-          take: candidateCap,
-          select: this.query.candidateSelectList,
-        }),
       ]);
       totalAnalyzedCandidates = totalAnalyzed;
       candidatesEligible = eligible;

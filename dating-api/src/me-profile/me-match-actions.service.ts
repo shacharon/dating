@@ -17,14 +17,15 @@ import {
   type MatchListRankQueuePort,
 } from '../workers/match-list-rank.ports';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_ACTIONS_REPOSITORY,
+  type IMatchActionsRepository,
 } from './repositories/match.repository';
 
 @Injectable()
 export class MeMatchActionsService {
   constructor(
-    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
+    @Inject(MATCH_ACTIONS_REPOSITORY)
+    private readonly matches: IMatchActionsRepository,
     private readonly meMatches: MeMatchesService,
     private readonly mutualMatchEmail: MutualMatchEmailService,
     private readonly analytics: AnalyticsService,

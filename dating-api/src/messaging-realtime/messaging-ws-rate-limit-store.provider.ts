@@ -3,9 +3,18 @@ import {
   REDIS_CLIENT,
   type RedisClientHandle,
 } from '../cache/cache.ports';
+import {
+  MemoryFixedWindowRateLimitStore,
+  RedisFixedWindowRateLimitStore,
+  type FixedWindowRateLimitStore,
+} from '../cache/rate-limit';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import { MemoryWsRateLimitStore } from './messaging-ws-rate-limit-memory.store';
-import { RedisWsRateLimitStore } from './messaging-ws-rate-limit-redis.store';
+import {
+  WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW,
+  WS_INBOUND_RATE_LIMIT_WINDOW_MS,
+  wsRateLimitRedisKey,
+} from './messaging-ws-inbound.constants';
+import { WsRateLimitExceededError } from './messaging-ws-rate-limit.error';
 import type { WsRateLimitStore } from './messaging-ws-rate-limit-store.interface';
 
 /**
@@ -16,7 +25,13 @@ import type { WsRateLimitStore } from './messaging-ws-rate-limit-store.interface
 export class WsRateLimitStoreProvider
   implements OnModuleInit, WsRateLimitStore
 {
-  private inner: WsRateLimitStore = new MemoryWsRateLimitStore();
+  private inner: FixedWindowRateLimitStore = new MemoryFixedWindowRateLimitStore(
+    {
+      maxPerWindow: WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW,
+      windowMs: WS_INBOUND_RATE_LIMIT_WINDOW_MS,
+    },
+    () => new WsRateLimitExceededError(),
+  );
   private usingRedis = false;
 
   constructor(
@@ -27,20 +42,37 @@ export class WsRateLimitStoreProvider
   async onModuleInit(): Promise<void> {
     const client = this.redis.getClient();
     if (client && this.redis.isAvailable()) {
-      this.inner = new RedisWsRateLimitStore(client, ({ userId, err }) => {
-        this.logger.warn(
-          JSON.stringify({
-            event: 'ws_rate_limit_redis_degraded',
-            userId,
-            message: err instanceof Error ? err.message : String(err),
-          }),
-          WsRateLimitStoreProvider.name,
-        );
-      });
+      this.inner = new RedisFixedWindowRateLimitStore(
+        client,
+        {
+          maxPerWindow: WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW,
+          windowMs: WS_INBOUND_RATE_LIMIT_WINDOW_MS,
+          redisKeyForUser: wsRateLimitRedisKey,
+          redisKeyScanPattern: 'ws:ratelimit:*',
+        },
+        () => new WsRateLimitExceededError(),
+        ({ userId, err }) => {
+          this.logger.warn(
+            JSON.stringify({
+              event: 'ws_rate_limit_redis_degraded',
+              userId,
+              message: err instanceof Error ? err.message : String(err),
+            }),
+            WsRateLimitStoreProvider.name,
+          );
+        },
+        (e) => e instanceof WsRateLimitExceededError,
+      );
       this.usingRedis = true;
       return;
     }
-    this.inner = new MemoryWsRateLimitStore();
+    this.inner = new MemoryFixedWindowRateLimitStore(
+      {
+        maxPerWindow: WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW,
+        windowMs: WS_INBOUND_RATE_LIMIT_WINDOW_MS,
+      },
+      () => new WsRateLimitExceededError(),
+    );
     this.usingRedis = false;
     if (this.redis.isUrlConfigured()) {
       this.logger.warn(
@@ -58,7 +90,7 @@ export class WsRateLimitStoreProvider
   }
 
   consumeInboundSlot(sessionUserId: string): void | Promise<void> {
-    return this.inner.consumeInboundSlot(sessionUserId);
+    return this.inner.consume(sessionUserId);
   }
 
   resetForTests(): void | Promise<void> {

@@ -39,20 +39,17 @@ export function createMeMatchesServiceForTest(
   const matches = new PrismaMatchRepository(deps.prisma);
   const query = new MatchListQueryService(
     matches,
+    matches,
     deps.obs,
     deps.analytics,
   );
-  const eligibility = new MatchEligibilityService(
-    matches,
-    deps.obs,
-    query,
-  );
+  const eligibility = new MatchEligibilityService(matches, deps.obs);
   const pairMatchPolicy = new HgGateLegacyRankPolicy();
   const ranking = new MatchRankingService(
     matches,
+    matches,
     deps.obs,
     deps.analytics,
-    query,
     eligibility,
     pairMatchPolicy,
   );
@@ -72,7 +69,6 @@ export function createMeMatchesServiceForTest(
     deps.mutualMatches,
     deps.matchNarrativeGenerator,
     deps.matchNarrativeCache,
-    query,
     eligibility,
     pairMatchPolicy,
   );

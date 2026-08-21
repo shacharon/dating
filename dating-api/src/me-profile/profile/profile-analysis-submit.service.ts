@@ -28,8 +28,8 @@ import {
 import type { MeProfileSubmitResponseDto } from './me-profile-submit.dto';
 import { SUBMITTABLE_STATUSES, toResponse } from './profile-write.helpers';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_QUERY_REPOSITORY,
+  type IMatchQueryRepository,
 } from '../repositories/match.repository';
 
 /**
@@ -41,7 +41,7 @@ export class ProfileAnalysisSubmitService {
   constructor(
     @Inject(USER_PROFILE_REPOSITORY)
     private readonly profiles: IUserProfileRepository,
-    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
+    @Inject(MATCH_QUERY_REPOSITORY) private readonly matches: IMatchQueryRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     private readonly analysisQueue: ProfileAnalysisQueueService,

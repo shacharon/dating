@@ -2,28 +2,23 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * Sprint 61 Story 2 — rate-limit services/providers must not own Redis createClient.
+ * Sprint 61 Story 2 / Sprint 63 Story 4 — rate-limit services/providers must not
+ * own Redis createClient; shared fixed-window lives under cache/rate-limit.
  */
-describe('rate-limit store DI wiring (sprint-61 story 2)', () => {
-  const roots = [
-    path.join(__dirname, '..', 'me-profile'),
-    path.join(__dirname, '..', 'messaging-realtime'),
-  ];
+describe('rate-limit store DI wiring (sprint-61/63)', () => {
+  const srcRoot = path.join(__dirname, '..');
+  const meProfile = path.join(srcRoot, 'me-profile');
+  const messaging = path.join(srcRoot, 'messaging-realtime');
+  const sharedRateLimit = path.join(__dirname, 'rate-limit');
 
   const serviceFiles = [
-    path.join(
-      roots[0],
-      'conversation-message-rate-limit.service.ts',
-    ),
-    path.join(roots[1], 'messaging-ws-rate-limit.service.ts'),
+    path.join(meProfile, 'conversation-message-rate-limit.service.ts'),
+    path.join(messaging, 'messaging-ws-rate-limit.service.ts'),
   ];
 
   const providerFiles = [
-    path.join(
-      roots[0],
-      'conversation-message-rate-limit-store.provider.ts',
-    ),
-    path.join(roots[1], 'messaging-ws-rate-limit-store.provider.ts'),
+    path.join(meProfile, 'conversation-message-rate-limit-store.provider.ts'),
+    path.join(messaging, 'messaging-ws-rate-limit-store.provider.ts'),
   ];
 
   it('rate-limit services contain no createClient / redis quit', () => {
@@ -46,20 +41,39 @@ describe('rate-limit store DI wiring (sprint-61 story 2)', () => {
     }
   });
 
+  it('shared cache/rate-limit stores exist and redis store has no createClient', () => {
+    expect(
+      fs.existsSync(
+        path.join(sharedRateLimit, 'memory-fixed-window-rate-limit.store.ts'),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(sharedRateLimit, 'redis-fixed-window-rate-limit.store.ts'),
+      ),
+    ).toBe(true);
+    const redisStore = fs.readFileSync(
+      path.join(sharedRateLimit, 'redis-fixed-window-rate-limit.store.ts'),
+      'utf8',
+    );
+    expect(redisStore).not.toMatch(/\bcreateClient\b/);
+    expect(redisStore).not.toMatch(/\.quit\s*\(/);
+  });
+
   it('modules register store tokens with useExisting', () => {
-    const meProfile = fs.readFileSync(
-      path.join(roots[0], 'me-profile.module.ts'),
+    const meProfileMod = fs.readFileSync(
+      path.join(meProfile, 'me-profile.module.ts'),
       'utf8',
     );
-    const messaging = fs.readFileSync(
-      path.join(roots[1], 'messaging-realtime.module.ts'),
+    const messagingMod = fs.readFileSync(
+      path.join(messaging, 'messaging-realtime.module.ts'),
       'utf8',
     );
-    expect(meProfile).toContain('MESSAGE_RATE_LIMIT_STORE');
-    expect(meProfile).toContain('MessageRateLimitStoreProvider');
-    expect(meProfile).toContain('useExisting: MessageRateLimitStoreProvider');
-    expect(messaging).toContain('WS_RATE_LIMIT_STORE');
-    expect(messaging).toContain('WsRateLimitStoreProvider');
-    expect(messaging).toContain('useExisting: WsRateLimitStoreProvider');
+    expect(meProfileMod).toContain('MESSAGE_RATE_LIMIT_STORE');
+    expect(meProfileMod).toContain('MessageRateLimitStoreProvider');
+    expect(meProfileMod).toContain('useExisting: MessageRateLimitStoreProvider');
+    expect(messagingMod).toContain('WS_RATE_LIMIT_STORE');
+    expect(messagingMod).toContain('WsRateLimitStoreProvider');
+    expect(messagingMod).toContain('useExisting: WsRateLimitStoreProvider');
   });
 });

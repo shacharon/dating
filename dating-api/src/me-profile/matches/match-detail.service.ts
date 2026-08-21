@@ -39,7 +39,6 @@ import {
 } from '../../matches/match-narrative';
 import { resolveMatchNarrative } from './match-detail-narrative';
 import { MatchEligibilityService } from './match-eligibility.service';
-import { MatchListQueryService } from './match-list-query.service';
 import {
   STATUS_ANALYZED,
   assertCandidateHasApprovedPhotosInRow,
@@ -48,20 +47,19 @@ import {
   pickApprovedPrimaryPhotoId,
 } from './match-list.helpers';
 import {
-  MATCH_REPOSITORY,
-  type IMatchRepository,
+  MATCH_QUERY_REPOSITORY,
+  type IMatchQueryRepository,
 } from '../repositories/match.repository';
 
 @Injectable()
 export class MatchDetailService {
   constructor(
-    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
+    @Inject(MATCH_QUERY_REPOSITORY) private readonly matches: IMatchQueryRepository,
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly mutualMatches: MutualMatchesService,
     private readonly matchNarrativeGenerator: MatchNarrativeGenerator,
     private readonly matchNarrativeCache: MatchNarrativeCacheService,
-    private readonly query: MatchListQueryService,
     private readonly eligibility: MatchEligibilityService,
     @Inject(PAIR_MATCH_POLICY) private readonly pairMatchPolicy: PairMatchPolicy,
   ) {}
@@ -91,7 +89,6 @@ export class MatchDetailService {
     // Load candidate by UserProfile.id — never by userId (no foreign-key exposure).
     const candidate = await this.matches.findCandidateProfileForDetail(
       candidateProfileId,
-      this.query.candidateSelectDetail,
     );
 
     if (

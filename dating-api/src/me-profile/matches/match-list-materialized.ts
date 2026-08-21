@@ -18,10 +18,10 @@ import {
 } from '../me-matches-response.mapper';
 import type { MatchListQueryService } from './match-list-query.service';
 import type { MatchRankingService } from './match-ranking.service';
-import type { IMatchRepository } from '../repositories/match.repository';
+import type { IMatchRankRepository } from '../repositories/match.repository';
 
 type MaterializedListDeps = {
-  matches: Pick<IMatchRepository, 'countRanksForViewer'>;
+  matches: Pick<IMatchRankRepository, 'countRanksForViewer'>;
   obs: StructuredObservabilityService;
   analytics: AnalyticsService;
   query: MatchListQueryService;
