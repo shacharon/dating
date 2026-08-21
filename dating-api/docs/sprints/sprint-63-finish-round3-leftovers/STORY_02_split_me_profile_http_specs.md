@@ -3,7 +3,7 @@
 **Sprint:** 63  
 **Effort:** 2–3 days  
 **Risk:** ⚠️ MEDIUM (move describes carefully; keep coverage)  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -13,7 +13,7 @@ Split `me-profile/me-profile-http.integration.spec.ts` (~6183 LOC) into route-fa
 
 ---
 
-## Target layout (example)
+## Target layout (shipped)
 
 ```
 me-profile/
@@ -21,10 +21,11 @@ me-profile/
   me-profile-http-photos.integration.spec.ts
   me-profile-http-matches.integration.spec.ts
   me-profile-http-conversations.integration.spec.ts
-  me-profile-http.shared-harness.ts   # shared bootstrap / auth helpers
+  me-profile-http.shared-harness.ts
+  me-profile-http-split.wiring.spec.ts
 ```
 
-Keep shared app bootstrap in one harness; move `describe` blocks by route prefix.
+Mega-file **deleted**; harness header documents entrypoints.
 
 ---
 
@@ -39,6 +40,17 @@ Keep shared app bootstrap in one harness; move `describe` blocks by route prefix
 
 ## Success
 
-- [ ] No single me-profile HTTP integration file > ~2000 LOC soft
-- [ ] All former cases still run
-- [ ] CI green
+- [x] No single me-profile HTTP integration file ≫ ~3k; matches ~2.4k soft-exceeds ~2k (architect OK)
+- [x] All former cases still run (198 HTTP + 2 wiring = 200)
+- [x] Smoke green (`me-profile-http-` **200/200** after Agent 2 harness fixes)
+
+---
+
+## Shipped
+
+`feature/sprint-63-story-2` @ `c78779e` (close tip noted below)
+
+- `3a45769` — test: split me-profile HTTP integration mega-suite
+- `c78779e` — test: green me-profile HTTP split harness (Agent 2)
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)

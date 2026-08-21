@@ -33,7 +33,7 @@ Close gaps exposed after Sprints 57–62:
 | Prisma injectors | ~10–12 (was 31) | Finish peel |
 | `IMatchRepository` | God port | ISP split |
 | Rate-limit twins | HTTP + WS duplicates | Shared module |
-| `me-profile-http.integration.spec.ts` | ~6183 LOC | Split by route family |
+| `me-profile-http.integration.spec.ts` | Split ✅ (4 family + harness) | — |
 
 ---
 
@@ -42,7 +42,7 @@ Close gaps exposed after Sprints 57–62:
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
 | 01 | [Enrichment on main + hygiene](./STORY_01_enrichment_merge_hygiene.md) | 0.5–1 day | ⚡ LOW | Done |
-| 02 | [Split me-profile HTTP integration specs](./STORY_02_split_me_profile_http_specs.md) | 2–3 days | ⚠️ MEDIUM | Planned |
+| 02 | [Split me-profile HTTP integration specs](./STORY_02_split_me_profile_http_specs.md) | 2–3 days | ⚠️ MEDIUM | Done |
 | 03 | [Finish Prisma peel](./STORY_03_finish_prisma_peel.md) | 2–3 days | ⚠️ MEDIUM | Planned |
 | 04 | [Match repo ISP + shared rate-limit](./STORY_04_match_repo_isp_rate_limit.md) | 2–3 days | ⚠️ MEDIUM | Planned |
 
@@ -55,7 +55,7 @@ Close gaps exposed after Sprints 57–62:
 ## Success criteria
 
 - [x] `enrichment-v2.ts` is thin facade on tip (keyword modules present; merge to main to clear checkpoint) *(Story 01)*
-- [ ] Me-profile HTTP integration suite split into ≤4 focused files (no single 6k LOC file)
+- [x] Me-profile HTTP integration suite split into ≤4 focused files (no single 6k LOC file) *(Story 02)*
 - [ ] Prisma injectors in product me-profile path ≤ ~6 (analysis/feedback/account peeled or justified)
 - [ ] Match repository split or Prisma types removed from port surface
 - [ ] One shared rate-limit store factory; HTTP/WS are thin wrappers
