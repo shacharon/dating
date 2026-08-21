@@ -3,7 +3,9 @@
 **Sprint:** 63  
 **Effort:** 2–3 days  
 **Risk:** ⚠️ MEDIUM  
-**Status:** Planned
+**Status:** Blocked  
+**Tip:** `feature/sprint-63-story-4` @ `c06c99d`  
+**Blocker:** Agent 4 baselines red (tip-level `MATCH_LIST_MATERIALIZED` / e2e harness — same on story-3). Fix → `--agent 1` then `--agent 4` then re-run `--agent 3`.
 
 ---
 
@@ -55,6 +57,6 @@ HTTP and WS services only supply key prefix + limits.
 
 ## Success
 
-- [ ] Match port no longer exposes Prisma select/where types
-- [ ] Rate-limit duplication reduced to thin wrappers
-- [ ] Specs for ranking, actions, message/WS rate-limit green
+- [x] Match port no longer exposes Prisma select/where types *(impl on tip — Agent 1/2)*
+- [x] Rate-limit duplication reduced to thin wrappers *(impl + CR factory wiring)*
+- [ ] Specs for ranking, actions, message/WS rate-limit green *(unit/wiring green; **E2E baselines red** — Agent 4 blocked)*

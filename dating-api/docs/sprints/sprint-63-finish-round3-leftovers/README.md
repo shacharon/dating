@@ -44,7 +44,7 @@ Close gaps exposed after Sprints 57–62:
 | 01 | [Enrichment on main + hygiene](./STORY_01_enrichment_merge_hygiene.md) | 0.5–1 day | ⚡ LOW | Done |
 | 02 | [Split me-profile HTTP integration specs](./STORY_02_split_me_profile_http_specs.md) | 2–3 days | ⚠️ MEDIUM | Done |
 | 03 | [Finish Prisma peel](./STORY_03_finish_prisma_peel.md) | 2–3 days | ⚠️ MEDIUM | Done |
-| 04 | [Match repo ISP + shared rate-limit](./STORY_04_match_repo_isp_rate_limit.md) | 2–3 days | ⚠️ MEDIUM | Planned |
+| 04 | [Match repo ISP + shared rate-limit](./STORY_04_match_repo_isp_rate_limit.md) | 2–3 days | ⚠️ MEDIUM | Blocked |
 
 **Order:** 01 → 02 → 03 → 04 (02 can start in parallel with 01).
 
@@ -57,9 +57,9 @@ Close gaps exposed after Sprints 57–62:
 - [x] `enrichment-v2.ts` is thin facade on tip (keyword modules present; merge to main to clear checkpoint) *(Story 01)*
 - [x] Me-profile HTTP integration suite split into ≤4 focused files (no single 6k LOC file) *(Story 02)*
 - [x] Prisma injectors in product me-profile path ≤ ~6 (analysis/feedback/account peeled or justified) *(Story 03 — four Success services at 0 Prisma injectors; infra/admin deferred)*
-- [ ] Match repository split or Prisma types removed from port surface
-- [ ] One shared rate-limit store factory; HTTP/WS are thin wrappers
-- [ ] Specs green
+- [~] Match repository split or Prisma types removed from port surface *(impl on tip; story Blocked on E2E)*
+- [~] One shared rate-limit store factory; HTTP/WS are thin wrappers *(impl on tip; story Blocked on E2E)*
+- [ ] Specs green *(Agent 4 baselines red on tip — same as story-3)*
 
 ---
 
