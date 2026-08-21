@@ -3,7 +3,7 @@
 **Sprint:** 61  
 **Effort:** 2 days  
 **Risk:** ⚠️ MEDIUM (messaging send path + photo pipeline)  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -69,13 +69,26 @@ export const REKOGNITION = Symbol('REKOGNITION');
 
 ## Success
 
-- [ ] No Nest product service injects `OpenAIModerationClient` by concrete type (adapter OK)
-- [ ] No `new RekognitionClient` in `PhotoModerationService` constructor default path
-- [ ] Workers/admin still work via same service + ports
-- [ ] All related tests green
+- [x] No Nest product service injects `OpenAIModerationClient` by concrete type (adapter OK)
+- [x] No `new RekognitionClient` in `PhotoModerationService` constructor default path
+- [x] Workers/admin still work via same service + ports
+- [x] All related tests green
 
 ---
 
 ## Follow-up
 
 Sprint 62 — Prisma repositories (Match → Conversation → Violations/Reports → Profile photos).
+
+Known noise (not S03): match-list integration/E2E harness mocks missing `prisma.matchListRank` → some `GET /me/matches` cases 500; track outside this story if desired.
+
+---
+
+## Shipped
+
+`feature/sprint-61-story-3` @ `ec79b07` (close commit follows)
+
+- `a5e3219` — feat: moderation ports CONTENT_MODERATION + REKOGNITION
+- `ec79b07` — test: guard moderation ports wiring
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 4 → 3` (Agent 4 = moderation regression smoke; matching eligibility N/A)

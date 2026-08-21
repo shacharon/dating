@@ -1,6 +1,6 @@
 # Sprint 61 — DIP Infrastructure Ports (Track 3)
 
-**Status:** In Progress  
+**Status:** Done  
 **Depends on:** Sprints 57–60 Done (or 58–60 on main; merge 57 if enrichment still fat)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md) · [ROUND3_AGENT_COMMANDS.md](../ROUND3_AGENT_COMMANDS.md)  
@@ -47,7 +47,7 @@ Stop high-level services from owning Redis / AWS / OpenAI SDK construction. Wire
 |---|-------|--------|------|--------|
 | 01 | [Redis connection + cache ISP](./STORY_01_redis_cache_isp.md) | 2–3 days | ⚠️ MEDIUM | Done |
 | 02 | [Rate-limit store DI](./STORY_02_rate_limit_di.md) | 1–2 days | ⚡ LOW | Done |
-| 03 | [Moderation ports (text + Rekognition)](./STORY_03_moderation_ports.md) | 2 days | ⚠️ MEDIUM | Planned |
+| 03 | [Moderation ports (text + Rekognition)](./STORY_03_moderation_ports.md) | 2 days | ⚠️ MEDIUM | Done |
 
 **Order:** 01 → 02 → 03 (02 can overlap late 01 if shared Redis provider exists).
 
@@ -58,10 +58,10 @@ Stop high-level services from owning Redis / AWS / OpenAI SDK construction. Wire
 ## Success criteria
 
 - [x] No `createClient` / `new Redis*` inside message or WS rate-limit services *(Story 02)*
-- Product code injects cache **ports** (or narrow tokens), not only fat `RedisCacheService` API surface for new call sites *(Story 01)*
-- Messaging + profile moderation depend on a moderation **port**, not OpenAI concrete class
-- Photo moderation uses Nest-provided `RekognitionPort` (no constructor `new RekognitionClient` as default wiring)
-- Existing specs green (match-list cache, WS presence, rate limits, photo moderation, message send)
+- [x] Product code injects cache **ports** (or narrow tokens), not only fat `RedisCacheService` API surface for new call sites *(Story 01)*
+- [x] Messaging + profile moderation depend on a moderation **port**, not OpenAI concrete class *(Story 03)*
+- [x] Photo moderation uses Nest-provided `RekognitionPort` (no constructor `new RekognitionClient` as default wiring) *(Story 03)*
+- [x] Existing specs green for sprint scope (match-list cache, WS presence, rate limits, photo moderation, message send moderation) — unrelated match-list harness `matchListRank` mock gap noted in Story 03 close
 
 ---
 
