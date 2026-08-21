@@ -5,6 +5,8 @@ import type { EmailNotificationConfigService } from './email-notification-config
 import type { EmailNotificationService } from './email-notification.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildMutualMatchEmail } from './email-templates';
 
 describe('MutualMatchEmailService', () => {
   const match: MutualMatch = {
@@ -40,7 +42,8 @@ describe('MutualMatchEmailService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MutualMatchEmailService(prisma, config, email, obs);
+    const recipients = new EmailRecipientHelper(prisma, obs);
+    service = new MutualMatchEmailService(recipients, config, email, obs);
   });
 
   function mockUsers(
@@ -77,11 +80,17 @@ describe('MutualMatchEmailService', () => {
     await service.notifyNewMutualMatchBestEffort(match);
 
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledTimes(2);
+    const expectedA = buildMutualMatchEmail({
+      otherLabel: 'Bob',
+      url: 'http://localhost:3000/dating/conversations/mutual_1',
+    });
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_a',
         to: 'a@example.com',
-        subject: "It's a match on Piza!",
+        subject: expectedA.subject,
+        textBody: expectedA.textBody,
+        htmlBody: expectedA.htmlBody,
         okCode: ErrorCodes.EMAIL_MUTUAL_MATCH_SEND_OK,
       }),
     );
@@ -116,8 +125,37 @@ describe('MutualMatchEmailService', () => {
 
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledTimes(1);
     expect(obs.trace).toHaveBeenCalledWith(
-      expect.stringContaining('user_a'),
+      'email mutual match skipped unsubscribed userId=user_a',
       ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
+    );
+  });
+
+  it('skips users with empty email without sending', async () => {
+    mockUsers(
+      {
+        id: 'user_a',
+        email: '   ',
+        displayName: 'Alice',
+        emailNotificationsEnabled: true,
+        profile: { nickname: 'Alice' },
+      },
+      {
+        id: 'user_b',
+        email: 'b@example.com',
+        displayName: 'Bob',
+        emailNotificationsEnabled: true,
+        profile: { nickname: 'Bob' },
+      },
+    );
+
+    await service.notifyNewMutualMatchBestEffort(match);
+
+    expect(email.sendTransactionalBestEffort).toHaveBeenCalledTimes(1);
+    expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user_b',
+        to: 'b@example.com',
+      }),
     );
   });
 

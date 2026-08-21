@@ -2,22 +2,16 @@ import { Injectable } from '@nestjs/common';
 import type { MutualMatch } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { EmailNotificationConfigService } from './email-notification-config.service';
 import { EmailNotificationService } from './email-notification.service';
-
-function displayLabel(nickname: string | null | undefined, displayName: string | null | undefined): string {
-  const n = nickname?.trim();
-  if (n) return n;
-  const d = displayName?.trim();
-  if (d) return d;
-  return 'someone';
-}
+import { displayLabel } from './email-format.util';
+import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildMutualMatchEmail } from './email-templates';
 
 @Injectable()
 export class MutualMatchEmailService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly recipients: EmailRecipientHelper,
     private readonly config: EmailNotificationConfigService,
     private readonly email: EmailNotificationService,
     private readonly obs: StructuredObservabilityService,
@@ -26,8 +20,8 @@ export class MutualMatchEmailService {
   async notifyNewMutualMatchBestEffort(match: MutualMatch): Promise<void> {
     try {
       const [user1, user2] = await Promise.all([
-        this.loadUser(match.userId1),
-        this.loadUser(match.userId2),
+        this.recipients.loadUserWithLabel(match.userId1),
+        this.recipients.loadUserWithLabel(match.userId2),
       ]);
       if (!user1 || !user2) {
         return;
@@ -69,17 +63,24 @@ export class MutualMatchEmailService {
     otherLabel: string;
     url: string;
   }): Promise<void> {
-    if (!params.enabled) {
-      this.obs.trace(
-        `email mutual match skipped unsubscribed userId=${params.userId}`,
-        ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
-      );
+    if (!params.email?.trim()) {
       return;
     }
 
-    const subject = "It's a match on Piza!";
-    const textBody = `You matched with ${params.otherLabel}. Start the conversation: ${params.url}`;
-    const htmlBody = `<p>You matched with <strong>${escapeHtml(params.otherLabel)}</strong>!</p><p><a href="${params.url}">Start the conversation</a></p>`;
+    if (
+      this.recipients.shouldSkipUnsubscribed({
+        userId: params.userId,
+        enabled: params.enabled,
+        emailKind: 'mutual match',
+      })
+    ) {
+      return;
+    }
+
+    const { subject, textBody, htmlBody } = buildMutualMatchEmail({
+      otherLabel: params.otherLabel,
+      url: params.url,
+    });
 
     await this.email.sendTransactionalBestEffort({
       userId: params.userId,
@@ -92,25 +93,4 @@ export class MutualMatchEmailService {
       skippedProviderCode: ErrorCodes.EMAIL_SKIPPED_PROVIDER_DISABLED,
     });
   }
-
-  private loadUser(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        emailNotificationsEnabled: true,
-        profile: { select: { nickname: true } },
-      },
-    });
-  }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

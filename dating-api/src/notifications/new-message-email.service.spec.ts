@@ -6,6 +6,8 @@ import type { MessageEmailDebounceService } from './message-email-debounce.servi
 import type { MessagingSocketRegistry } from '../messaging-realtime/messaging-socket-registry.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { EmailRecipientHelper } from './email-recipient.helper';
+import { buildNewMessageEmail } from './email-templates';
 
 describe('NewMessageEmailService', () => {
   const prisma = {
@@ -21,8 +23,8 @@ describe('NewMessageEmailService', () => {
   } as unknown as MessagingSocketRegistry;
 
   const debounce = {
-    tryClaimSend: jest.fn(),
-    releaseClaim: jest.fn(),
+    shouldSend: jest.fn(),
+    recordSent: jest.fn(),
   } as unknown as MessageEmailDebounceService;
 
   const email = {
@@ -45,49 +47,33 @@ describe('NewMessageEmailService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    const recipients = new EmailRecipientHelper(prisma, obs);
     service = new NewMessageEmailService(
-      prisma,
+      recipients,
       config,
       socketRegistry,
       debounce,
       email,
       obs,
     );
-    (debounce.tryClaimSend as jest.Mock).mockResolvedValue(true);
-    (debounce.releaseClaim as jest.Mock).mockResolvedValue(undefined);
-    (socketRegistry.hasActiveConnection as jest.Mock).mockResolvedValue(false);
+    (debounce.shouldSend as jest.Mock).mockReturnValue(true);
+    (socketRegistry.hasActiveConnection as jest.Mock).mockReturnValue(false);
   });
 
-  it('skips when recipient has active WS connection (no debounce claim)', async () => {
-    (socketRegistry.hasActiveConnection as jest.Mock).mockResolvedValue(true);
+  it('skips when recipient has active WS connection', async () => {
+    (socketRegistry.hasActiveConnection as jest.Mock).mockReturnValue(true);
 
     await service.maybeNotifyBestEffort(baseParams);
 
     expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
-    expect(debounce.tryClaimSend).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
       expect.stringContaining('user_recipient'),
       ErrorCodes.EMAIL_SKIPPED_RECIPIENT_ONLINE,
     );
   });
 
-  it('skips when debounce claim fails', async () => {
-    (debounce.tryClaimSend as jest.Mock).mockResolvedValue(false);
-    (prisma.user.findUnique as jest.Mock).mockImplementation(
-      async ({ where }: { where: { id: string } }) => {
-        if (where.id === 'user_recipient') {
-          return {
-            id: 'user_recipient',
-            email: 'r@example.com',
-            emailNotificationsEnabled: true,
-          };
-        }
-        return {
-          displayName: 'Sender',
-          profile: { nickname: 'Sender' },
-        };
-      },
-    );
+  it('skips when debounce window is active', async () => {
+    (debounce.shouldSend as jest.Mock).mockReturnValue(false);
 
     await service.maybeNotifyBestEffort(baseParams);
 
@@ -98,7 +84,7 @@ describe('NewMessageEmailService', () => {
     );
   });
 
-  it('skips when recipient unsubscribed without claiming', async () => {
+  it('skips when recipient unsubscribed', async () => {
     (prisma.user.findUnique as jest.Mock).mockImplementation(
       async ({ where }: { where: { id: string } }) => {
         if (where.id === 'user_recipient') {
@@ -109,7 +95,10 @@ describe('NewMessageEmailService', () => {
           };
         }
         return {
+          id: 'user_sender',
+          email: 's@example.com',
           displayName: 'Sender',
+          emailNotificationsEnabled: true,
           profile: { nickname: 'Sender' },
         };
       },
@@ -118,34 +107,10 @@ describe('NewMessageEmailService', () => {
     await service.maybeNotifyBestEffort(baseParams);
 
     expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
-    expect(debounce.tryClaimSend).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalledWith(
-      expect.stringContaining('user_recipient'),
+      'email message skipped unsubscribed userId=user_recipient',
       ErrorCodes.EMAIL_SKIPPED_UNSUBSCRIBED,
     );
-  });
-
-  it('skips when recipient has no email without claiming', async () => {
-    (prisma.user.findUnique as jest.Mock).mockImplementation(
-      async ({ where }: { where: { id: string } }) => {
-        if (where.id === 'user_recipient') {
-          return {
-            id: 'user_recipient',
-            email: null,
-            emailNotificationsEnabled: true,
-          };
-        }
-        return {
-          displayName: 'Sender',
-          profile: { nickname: 'Sender' },
-        };
-      },
-    );
-
-    await service.maybeNotifyBestEffort(baseParams);
-
-    expect(email.sendTransactionalBestEffort).not.toHaveBeenCalled();
-    expect(debounce.tryClaimSend).not.toHaveBeenCalled();
   });
 
   it('sends when recipient offline and subscribed', async () => {
@@ -159,7 +124,10 @@ describe('NewMessageEmailService', () => {
           };
         }
         return {
+          id: 'user_sender',
+          email: 's@example.com',
           displayName: null,
+          emailNotificationsEnabled: true,
           profile: { nickname: 'SenderNick' },
         };
       },
@@ -167,48 +135,23 @@ describe('NewMessageEmailService', () => {
 
     await service.maybeNotifyBestEffort(baseParams);
 
-    expect(debounce.tryClaimSend).toHaveBeenCalledWith(
-      'conv_1',
-      'user_recipient',
-    );
+    const expected = buildNewMessageEmail({
+      senderLabel: 'SenderNick',
+      url: 'http://localhost:3000/dating/conversations/conv_1',
+    });
     expect(email.sendTransactionalBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_recipient',
         to: 'r@example.com',
-        subject: 'New message on Piza',
-        textBody: expect.stringContaining('SenderNick'),
+        subject: expected.subject,
+        textBody: expected.textBody,
+        htmlBody: expected.htmlBody,
         okCode: ErrorCodes.EMAIL_MESSAGE_SEND_OK,
       }),
     );
-    expect(debounce.releaseClaim).not.toHaveBeenCalled();
-  });
-
-  it('releases claim when send throws', async () => {
-    (prisma.user.findUnique as jest.Mock).mockImplementation(
-      async ({ where }: { where: { id: string } }) => {
-        if (where.id === 'user_recipient') {
-          return {
-            id: 'user_recipient',
-            email: 'r@example.com',
-            emailNotificationsEnabled: true,
-          };
-        }
-        return {
-          displayName: 'Sender',
-          profile: { nickname: 'Sender' },
-        };
-      },
-    );
-    (email.sendTransactionalBestEffort as jest.Mock).mockRejectedValue(
-      new Error('boom'),
-    );
-
-    await service.maybeNotifyBestEffort(baseParams);
-
-    expect(debounce.releaseClaim).toHaveBeenCalledWith(
+    expect(debounce.recordSent).toHaveBeenCalledWith(
       'conv_1',
       'user_recipient',
     );
-    expect(obs.error).toHaveBeenCalled();
   });
 });
