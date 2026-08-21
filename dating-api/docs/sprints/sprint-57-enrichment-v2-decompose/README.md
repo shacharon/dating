@@ -1,6 +1,6 @@
 # Sprint 57 — Enrichment-v2 Keyword Engine Decomposition (P0)
 
-**Status:** In Progress (Story 01 Done)  
+**Status:** In Progress (Stories 01–02 Done)  
 **Depends on:** Sprint 52 (keyword freeze / inventory) Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -24,7 +24,7 @@ Respect Sprint 52 freeze: **no new regex / phrases / allowlist ids** unless RFC 
 | # | Story | Status |
 |---|-------|--------|
 | 01 | [Characterization + seam map](./STORY_01_characterization_seam_map.md) | **Done** |
-| 02 | [Split interest / rhythm / conflict mappers](./STORY_02_split_keyword_modules.md) | Planned |
+| 02 | [Split interest / rhythm / conflict mappers](./STORY_02_split_keyword_modules.md) | **Done** |
 | 03 | [Enrichment keyword manifest + thin facade](./STORY_03_enrichment_manifest.md) | Planned |
 
 **Order:** 01 → 02 → 03.

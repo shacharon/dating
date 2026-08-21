@@ -1,11 +1,13 @@
 # Story 02 — Split interest / rhythm / conflict mappers
 
-**Sprint 57 · Status: Planned**  
+**Sprint 57 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 2 days  
 **Repo:** `dating-api`  
 **Extra agents:** none (behavior-preserving refactor)  
-**Depends on:** Story 01
+**Depends on:** Story 01  
+**Branch:** `feature/sprint-57-story-2`  
+**Closed:** 2026-08-21 (Agent 3)
 
 ---
 
@@ -22,21 +24,31 @@ Move frozen keyword logic out of the monolith into focused modules (exact names 
 
 ## Acceptance criteria
 
-- [ ] No new regex / allowlist entries (Sprint 52 freeze)
-- [ ] Public entry points used by evaluate / enrichment-v4 unchanged
-- [ ] Characterization suite still green
-- [ ] Each new module has a clear ownership header pointing at KEYWORD_INVENTORY / FREEZE docs
+- [x] No new regex / allowlist entries (Sprint 52 freeze)
+- [x] Public entry points used by evaluate / enrichment-v4 unchanged
+- [x] Characterization suite still green
+- [x] Each new module has a clear ownership header pointing at KEYWORD_INVENTORY / FREEZE docs
 
 ## Definition of Done
 
-- [ ] Files exist under `src/evaluate/` (or agreed subfolder)
-- [ ] Specs + tsc green; Agent 2 approved
-- [ ] Agents 2.5 / 3.5 / 4 / 5: N/A
-- [ ] Agent 3 PM close
+- [x] Files exist under `src/evaluate/` (or agreed subfolder)
+- [x] Specs + tsc green; Agent 2 approved
+- [x] Agents 2.5 / 3.5 / 4 / 5: N/A
+- [x] Agent 3 PM close
 
 ## Deferred
 
 - Manifest registration → [Story 03](./STORY_03_enrichment_manifest.md)
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | complete (`afcc676`) |
+| 2 code-review | approved |
+| 3 PM | Done |
 
 ## Suggested commit
 
