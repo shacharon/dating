@@ -40,9 +40,10 @@ extract(domain, text, profileId?)
   ├─ buildExtractionPipelineTrace  → stage snapshots / diffs
   └─ finalizeUsageAndLogging       → _usage, cost log
 
-extractAllThree(aboutMe, aboutPartner, aboutRelationship)
+extractAllThree(aboutMe, aboutRelationship, aboutPartner)
   └─ three extract() calls in parallel + mergeUsage
 ```
+
 
 ## 3. Collaborator summary (Story 02)
 
