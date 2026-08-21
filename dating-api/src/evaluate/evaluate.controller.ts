@@ -15,7 +15,7 @@ import type {
   RelationshipMotivationResult,
   AttractionResult,
   AttractionTraitsResult,
-} from './evaluate.service';
+} from './evaluate-public-api';
 import type { LifestyleConflictsResult } from '../compatibility/lifestyle-conflicts';
 import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
 import { EvaluateService } from './evaluate.service';

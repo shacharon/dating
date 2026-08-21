@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { AdminGuard } from '../admin/admin.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import type { EvaluateBatchResult } from '../evaluate/evaluate-public-api';
 import { EvaluateService } from '../evaluate/evaluate.service';
 
 export interface ProfilesEvaluateBodyDto {

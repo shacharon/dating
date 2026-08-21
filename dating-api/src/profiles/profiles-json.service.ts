@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join, isAbsolute, normalize } from 'node:path';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import type { EvaluateBatchResult } from '../evaluate/evaluate-public-api';
 import type { RawInterests } from '../extraction/extracted-interests.interface';
 
 /** Resolve data/profiles relative to project root (works when run from dist/profiles). */

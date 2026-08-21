@@ -5,7 +5,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { SimpleLogger } from '../logger/simple-logger.service';
-import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import type { EvaluateBatchResult } from '../evaluate/evaluate-public-api';
 import {
   sanitizeEnrichmentSignalsV1ForPersist,
   wrapEnrichmentV1,

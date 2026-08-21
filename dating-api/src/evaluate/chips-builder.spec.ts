@@ -1,7 +1,7 @@
 import { buildChips } from './chips-builder';
 import type { ExtractedSignals } from '../extraction/extracted-signals.interface';
 import type { RawInterests } from '../extraction/extracted-interests.interface';
-import type { ExtendedSignals } from './evaluate.service';
+import type { ExtendedSignals } from './evaluate-batch.types';
 
 function mockExtractedSignals(
   domain: 'self' | 'partner' | 'relationship',

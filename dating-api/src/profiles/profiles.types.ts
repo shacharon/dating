@@ -1,4 +1,4 @@
-import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import type { EvaluateBatchResult } from '../evaluate/evaluate-public-api';
 import type { RawInterests } from '../extraction/extracted-interests.interface';
 
 export interface ProfileJsonPayload {

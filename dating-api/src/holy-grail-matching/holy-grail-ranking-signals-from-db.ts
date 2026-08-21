@@ -9,7 +9,7 @@
  */
 
 import type { MatchingRankingSignalsSnapshot } from '../canonical/matching-canonical.types';
-import type { EvaluateBatchResult } from '../evaluate/evaluate.service';
+import type { EvaluateBatchResult } from '../evaluate/evaluate-public-api';
 import type { EnrichmentSignalsV1 } from '../evaluate/enrichment-signals';
 
 function normInterest(raw: string): string {

@@ -11,8 +11,8 @@ import type { ExtractedSignals } from '../extraction/extracted-signals.interface
 import type {
   RelationshipMotivationResult,
   AttractionTraitsResult,
-  ExtendedSignals,
-} from './evaluate.service';
+} from './evaluate-inference-schemas';
+import type { ExtendedSignals } from './evaluate-batch.types';
 
 /** Display chip for UI explainability (read-only). */
 export interface Chip {
