@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { z } from 'zod';
 import { ExtractionService } from '../extraction/extraction.service';
 import type { ExtractedSignals } from '../extraction/extracted-signals.interface';
 import { LLMRouterService } from '../llm/llm-router.service';
@@ -17,11 +16,7 @@ import {
   wrapEnrichmentV1,
   type EnrichmentV1,
 } from './enrichment-signals';
-import {
-  buildEvaluateLlmTrace,
-  buildEvaluateRawLlmLogPayload,
-  type EvaluateLlmCallTrace,
-} from './evaluate-llm-pipeline';
+import type { EvaluateLlmCallTrace } from './evaluate-llm-pipeline';
 import { buildExplicitExtendedLists } from './explicit-extended-lists';
 import {
   buildProductScoresPresentation,
@@ -32,26 +27,16 @@ import {
   DISPLAY_NOTE_LOW_QUALITY,
   isLowCoverageOrConfidence,
   type NormalizedDisplay,
-  normalizeDisplay,
 } from './evaluate-display-helpers';
-import {
-  ATTRACTION_SYSTEM_PROMPT,
-  ATTRACTION_TRAITS_SYSTEM_PROMPT,
-  DERIVED_CONTEXT_SYSTEM_PROMPT,
-  MOTIVATION_SYSTEM_PROMPT,
-  SUMMARY_SYSTEM_PROMPT,
-} from './evaluate-llm-prompts';
-import { sanitizeDerivedContextForPersist } from './derived-context-sanitize';
-import {
-  AnalysisPresentationSchema,
-  AttractionResultSchema,
-  AttractionTraitsResultSchema,
-  LlmDerivedContextRawSchema,
-  RelationshipMotivationResultSchema,
-  type AttractionResult,
-  type AttractionTraitsResult,
-  type LlmDerivedContextRaw,
-  type RelationshipMotivationResult,
+import { runEvaluateAttractionProfile } from './evaluate-attraction.runner';
+import { runEvaluateAttractionTraits } from './evaluate-attraction-traits.runner';
+import { runEvaluateDerivedContext } from './evaluate-derived-context.runner';
+import { runEvaluateMotivation } from './evaluate-motivation.runner';
+import { runEvaluateSummary } from './evaluate-summary.runner';
+import type {
+  AttractionResult,
+  AttractionTraitsResult,
+  RelationshipMotivationResult,
 } from './evaluate-inference-schemas';
 import type {
   DerivedContextV1,
@@ -116,68 +101,13 @@ export class EvaluateService {
     display: NormalizedDisplay;
     _evaluateLlmTrace: EvaluateLlmCallTrace;
   }> {
-    const payload = JSON.stringify(
-      {
-        self: {
-          signals: self.signals,
-          evidence: self.evidence,
-          confidence: self.confidence,
-        },
-        partner: {
-          signals: partner.signals,
-          evidence: partner.evidence,
-          confidence: partner.confidence,
-        },
-        relationship: {
-          signals: relationship.signals,
-          evidence: relationship.evidence,
-          confidence: relationship.confidence,
-        },
-      },
-      null,
-      2,
+    return runEvaluateSummary(
+      this.llm,
+      this.logger,
+      self,
+      partner,
+      relationship,
     );
-
-    const requestId = randomUUID();
-    const { value, rawText } = await this.llm.completeJSON<
-      z.infer<typeof AnalysisPresentationSchema>
-    >({
-      modelKey: 'fast',
-      system: SUMMARY_SYSTEM_PROMPT,
-      user: `Extracted data:\n${payload}`,
-      schema: AnalysisPresentationSchema,
-      temperature: 0.3,
-      maxTokens: 3000,
-      timeoutMs: 20_000,
-      requestId,
-      purpose: 'evaluate-summary',
-    });
-
-    this.logger.log(
-      JSON.stringify(
-        buildEvaluateRawLlmLogPayload(
-          { purpose: 'evaluate-summary', requestId },
-          value,
-          rawText,
-        ),
-      ),
-      'EvaluateService',
-    );
-
-    const normalized = normalizeDisplay(value);
-    const trace = buildEvaluateLlmTrace({
-      purpose: 'evaluate-summary',
-      requestId,
-      parsedJson: value,
-      rawText,
-      afterStages: [{ name: 'after_normalizeDisplay', value: normalized }],
-    });
-    this.logger.log(
-      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
-      'EvaluateService',
-    );
-
-    return { display: normalized, _evaluateLlmTrace: trace };
   }
 
   /**
@@ -192,62 +122,14 @@ export class EvaluateService {
   ): Promise<
     RelationshipMotivationResult & { _evaluateLlmTrace?: EvaluateLlmCallTrace }
   > {
-    const user = [
-      'aboutMe:',
-      aboutMe.trim() || '(empty)',
-      '',
-      'aboutPartner:',
-      aboutPartner.trim() || '(empty)',
-      '',
-      'aboutRelationship:',
-      aboutRelationship.trim() || '(empty)',
-    ].join('\n');
-
-    const requestId = randomUUID();
-    const { value, rawText } =
-      await this.llm.completeJSON<RelationshipMotivationResult>({
-        modelKey: 'fast',
-        system: MOTIVATION_SYSTEM_PROMPT,
-        user,
-        schema: RelationshipMotivationResultSchema,
-        temperature: 0.2,
-        maxTokens: 500,
-        timeoutMs: 15_000,
-        requestId,
-        purpose: 'evaluate-motivation',
-      });
-
-    this.logger.log(
-      JSON.stringify(
-        buildEvaluateRawLlmLogPayload(
-          { purpose: 'evaluate-motivation', requestId },
-          value,
-          rawText,
-        ),
-      ),
-      'EvaluateService',
+    return runEvaluateMotivation(
+      this.llm,
+      this.logger,
+      aboutMe,
+      aboutPartner,
+      aboutRelationship,
+      opts,
     );
-
-    const out: RelationshipMotivationResult = {
-      relationshipMotivation: value.relationshipMotivation,
-      confidence: Math.max(0, Math.min(1, value.confidence)),
-      evidence: Array.isArray(value.evidence) ? value.evidence : [],
-    };
-    const trace = buildEvaluateLlmTrace({
-      purpose: 'evaluate-motivation',
-      requestId,
-      parsedJson: value,
-      rawText,
-      afterStages: [{ name: 'after_clamp_and_normalize', value: out }],
-    });
-    this.logger.log(
-      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
-      'EvaluateService',
-    );
-    if (opts?.collectTrace) {
-      return { ...out, _evaluateLlmTrace: trace };
-    }
-    return out;
   }
 
   /**
@@ -259,66 +141,13 @@ export class EvaluateService {
     aboutPartner: string,
     opts?: { collectTrace?: boolean },
   ): Promise<AttractionResult & { _evaluateLlmTrace?: EvaluateLlmCallTrace }> {
-    const user = [
-      'aboutMe:',
-      aboutMe.trim() || '(empty)',
-      '',
-      'aboutPartner (ideal partner description):',
-      aboutPartner.trim() || '(empty)',
-    ].join('\n');
-
-    const requestId = randomUUID();
-    const { value, rawText } = await this.llm.completeJSON<AttractionResult>({
-      modelKey: 'fast',
-      system: ATTRACTION_SYSTEM_PROMPT,
-      user,
-      schema: AttractionResultSchema,
-      temperature: 0.2,
-      maxTokens: 500,
-      timeoutMs: 15_000,
-      requestId,
-      purpose: 'evaluate-attraction',
-    });
-
-    this.logger.log(
-      JSON.stringify(
-        buildEvaluateRawLlmLogPayload(
-          { purpose: 'evaluate-attraction', requestId },
-          value,
-          rawText,
-        ),
-      ),
-      'EvaluateService',
+    return runEvaluateAttractionProfile(
+      this.llm,
+      this.logger,
+      aboutMe,
+      aboutPartner,
+      opts,
     );
-
-    const clamp = (n: number, lo: number, hi: number) =>
-      Math.max(lo, Math.min(hi, n));
-    const out: AttractionResult = {
-      attractionProfile: {
-        ambition: clamp(value.attractionProfile.ambition, 0, 10),
-        appearance: clamp(value.attractionProfile.appearance, 0, 10),
-        kindness: clamp(value.attractionProfile.kindness, 0, 10),
-        status: clamp(value.attractionProfile.status, 0, 10),
-        stability: clamp(value.attractionProfile.stability, 0, 10),
-      },
-      confidence: Math.max(0, Math.min(1, value.confidence)),
-      evidence: Array.isArray(value.evidence) ? value.evidence : [],
-    };
-    const trace = buildEvaluateLlmTrace({
-      purpose: 'evaluate-attraction',
-      requestId,
-      parsedJson: value,
-      rawText,
-      afterStages: [{ name: 'after_clamp_and_normalize', value: out }],
-    });
-    this.logger.log(
-      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
-      'EvaluateService',
-    );
-    if (opts?.collectTrace) {
-      return { ...out, _evaluateLlmTrace: trace };
-    }
-    return out;
   }
 
   /**
@@ -333,91 +162,14 @@ export class EvaluateService {
   ): Promise<
     AttractionTraitsResult & { _evaluateLlmTrace?: EvaluateLlmCallTrace }
   > {
-    const parts: string[] = ['aboutPartner:', aboutPartner.trim() || '(empty)'];
-    if (aboutMe != null && aboutMe.trim()) {
-      parts.push('', '(optional) aboutMe:', aboutMe.trim());
-    }
-    if (aboutRelationship != null && aboutRelationship.trim()) {
-      parts.push('', '(optional) aboutRelationship:', aboutRelationship.trim());
-    }
-    const user = parts.join('\n');
-
-    const requestId = randomUUID();
-    const { value, rawText } =
-      await this.llm.completeJSON<AttractionTraitsResult>({
-        modelKey: 'fast',
-        system: ATTRACTION_TRAITS_SYSTEM_PROMPT,
-        user,
-        schema: AttractionTraitsResultSchema,
-        temperature: 0.2,
-        maxTokens: 600,
-        timeoutMs: 15_000,
-        requestId,
-        purpose: 'evaluate-attraction-traits',
-        latencyStage: 'eval_traits',
-        inputTextLength:
-          (aboutPartner?.trim().length ?? 0) +
-          (aboutMe?.trim().length ?? 0) +
-          (aboutRelationship?.trim().length ?? 0),
-      });
-
-    this.logger.log(
-      JSON.stringify(
-        buildEvaluateRawLlmLogPayload(
-          { purpose: 'evaluate-attraction-traits', requestId },
-          value,
-          rawText,
-        ),
-      ),
-      'EvaluateService',
+    return runEvaluateAttractionTraits(
+      this.llm,
+      this.logger,
+      aboutPartner,
+      aboutMe,
+      aboutRelationship,
+      opts,
     );
-
-    const clampInt = (n: number, lo: number, hi: number) =>
-      Math.round(Math.max(lo, Math.min(hi, n)));
-    const a = value.attraction;
-    const evidence = Array.isArray(value.evidence)
-      ? value.evidence.map((e) => ({
-          dimension:
-            typeof e.dimension === 'string'
-              ? e.dimension
-              : String(e.dimension ?? ''),
-          quote:
-            typeof e.quote === 'string'
-              ? e.quote.slice(0, 200)
-              : String(e.quote ?? ''),
-        }))
-      : [];
-
-    const out: AttractionTraitsResult = {
-      attraction: {
-        ambition: clampInt(a.ambition, 0, 10),
-        statusOrientation: clampInt(a.statusOrientation, 0, 10),
-        physicalPriority: clampInt(a.physicalPriority, 0, 10),
-        kindnessWarmth: clampInt(a.kindnessWarmth, 0, 10),
-        stabilityReliability: clampInt(a.stabilityReliability, 0, 10),
-        independenceAutonomy: clampInt(a.independenceAutonomy, 0, 10),
-        emotionalDepth: clampInt(a.emotionalDepth, 0, 10),
-        traditionalismValues: clampInt(a.traditionalismValues, 0, 10),
-        financialPrudence: clampInt(a.financialPrudence, 0, 10),
-      },
-      confidence: Math.max(0, Math.min(1, value.confidence)),
-      evidence,
-    };
-    const trace = buildEvaluateLlmTrace({
-      purpose: 'evaluate-attraction-traits',
-      requestId,
-      parsedJson: value,
-      rawText,
-      afterStages: [{ name: 'after_clamp_and_truncate', value: out }],
-    });
-    this.logger.log(
-      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
-      'EvaluateService',
-    );
-    if (opts?.collectTrace) {
-      return { ...out, _evaluateLlmTrace: trace };
-    }
-    return out;
   }
 
   /**
@@ -429,60 +181,15 @@ export class EvaluateService {
     aboutPartner: string,
     aboutRelationship: string,
     opts?: { collectTrace?: boolean },
-  ): Promise<
-    DerivedContextV1 & { _evaluateLlmTrace?: EvaluateLlmCallTrace }
-  > {
-    const user = [
-      'aboutMe:',
-      aboutMe.trim() || '(empty)',
-      '',
-      'aboutPartner:',
-      aboutPartner.trim() || '(empty)',
-      '',
-      'aboutRelationship:',
-      aboutRelationship.trim() || '(empty)',
-    ].join('\n');
-
-    const requestId = randomUUID();
-    const { value, rawText } = await this.llm.completeJSON<LlmDerivedContextRaw>({
-      modelKey: 'fast',
-      system: DERIVED_CONTEXT_SYSTEM_PROMPT,
-      user,
-      schema: LlmDerivedContextRawSchema,
-      temperature: 0.2,
-      maxTokens: 400,
-      timeoutMs: 15_000,
-      requestId,
-      purpose: 'evaluate-derived-context',
-    });
-
-    this.logger.log(
-      JSON.stringify(
-        buildEvaluateRawLlmLogPayload(
-          { purpose: 'evaluate-derived-context', requestId },
-          value,
-          rawText,
-        ),
-      ),
-      'EvaluateService',
+  ): Promise<DerivedContextV1 & { _evaluateLlmTrace?: EvaluateLlmCallTrace }> {
+    return runEvaluateDerivedContext(
+      this.llm,
+      this.logger,
+      aboutMe,
+      aboutPartner,
+      aboutRelationship,
+      opts,
     );
-
-    const out = sanitizeDerivedContextForPersist(value);
-    const trace = buildEvaluateLlmTrace({
-      purpose: 'evaluate-derived-context',
-      requestId,
-      parsedJson: value,
-      rawText,
-      afterStages: [{ name: 'after_sanitize', value: out }],
-    });
-    this.logger.log(
-      JSON.stringify({ event: 'evaluate_llm_pipeline_stage_diffs', ...trace }),
-      'EvaluateService',
-    );
-    if (opts?.collectTrace) {
-      return { ...out, _evaluateLlmTrace: trace };
-    }
-    return out;
   }
 
   /**
@@ -549,10 +256,10 @@ export class EvaluateService {
       | (Pick<
           ExtendedSignals,
           'relationshipMotivation' | 'attractionTraits'
-          > & {
-            motTrace?: EvaluateLlmCallTrace;
-            attTrace?: EvaluateLlmCallTrace;
-          })
+        > & {
+          motTrace?: EvaluateLlmCallTrace;
+          attTrace?: EvaluateLlmCallTrace;
+        })
       | undefined
     > => {
       try {
@@ -631,10 +338,9 @@ export class EvaluateService {
         : undefined;
 
     // Await optional extended signals and derived context (parallel with summary).
-    const [inferredExtendedSignals, inferredDerivedContext] = await Promise.all([
-      extendedSignalsPromise,
-      derivedContextPromise,
-    ]);
+    const [inferredExtendedSignals, inferredDerivedContext] = await Promise.all(
+      [extendedSignalsPromise, derivedContextPromise],
+    );
     const explicitExtendedLists = buildExplicitExtendedLists(
       aboutMe.trim(),
       aboutPartner.trim(),
