@@ -1,6 +1,6 @@
 # Sprint 58 — Extraction Orchestration Decomposition (P0)
 
-**Status:** Planned  
+**Status:** In Progress  
 **Depends on:** Sprint 51 (expansion manifest) Done; Sprint 57 helpful  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -28,7 +28,7 @@ Split `extraction/extraction.service.ts` (~797 LOC) into focused collaborators s
 
 | # | Story | Status |
 |---|-------|--------|
-| 01 | [Characterization + extraction pipeline map](./STORY_01_characterization_pipeline_map.md) | Planned |
+| 01 | [Characterization + extraction pipeline map](./STORY_01_characterization_pipeline_map.md) | Done |
 | 02 | [Extract PromptBuilder + Normalizer + Validator](./STORY_02_extract_collaborators.md) | Planned |
 | 03 | [Thin ExtractionService coordinator](./STORY_03_thin_coordinator.md) | Planned |
 

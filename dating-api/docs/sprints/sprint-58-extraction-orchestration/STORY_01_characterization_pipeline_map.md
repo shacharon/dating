@@ -1,6 +1,6 @@
 # Story 01 — Characterization + extraction pipeline map
 
-**Sprint 58 · Status: Planned**  
+**Sprint 58 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Repo:** `dating-api`  
@@ -14,15 +14,15 @@ Confirm / extend characterization around extraction passes (self / partner / rel
 
 ## Acceptance criteria
 
-- [ ] Pipeline map documents: prompt assembly → LLM call → normalize → validate → snapshot/trace
-- [ ] Existing `extraction.service.spec` (and related) green; gaps filled only if needed for safe move
-- [ ] No production behavior change
+- [x] Pipeline map documents: prompt assembly → LLM call → normalize → validate → snapshot/trace
+- [x] Existing `extraction.service.spec` (and related) green; gaps filled only if needed for safe move
+- [x] No production behavior change
 
 ## Definition of Done
 
-- [ ] `PIPELINE_MAP.md` in sprint folder
-- [ ] Specs green; Agent 2; Agent 3 close
-- [ ] Optional agents: N/A
+- [x] `PIPELINE_MAP.md` in sprint folder
+- [x] Specs green; Agent 2; Agent 3 close
+- [x] Optional agents: N/A
 
 ## Deferred
 
@@ -35,3 +35,7 @@ docs(extraction): pipeline map + characterize seams for sprint 58
 
 Sprint 58 Story 1
 ```
+
+## Close tip
+
+`feature/sprint-58-story-1` @ `9911b0f` (+ Agent 3 close commit)
