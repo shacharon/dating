@@ -48,7 +48,7 @@ Mega-file **deleted**; harness header documents entrypoints.
 
 ## Shipped
 
-`feature/sprint-63-story-2` @ `c78779e` (close tip noted below)
+eature/sprint-63-story-2 @ `e3d066b`
 
 - `3a45769` — test: split me-profile HTTP integration mega-suite
 - `c78779e` — test: green me-profile HTTP split harness (Agent 2)
