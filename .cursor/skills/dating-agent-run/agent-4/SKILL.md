@@ -26,7 +26,7 @@ Load and apply: [../../dating-e2e-tester/SKILL.md](../../dating-e2e-tester/SKILL
 ## Your job this step
 
 - [ ] Confirm the 3 baseline E2E specs are still green, unmodified (unless the story intentionally changes that behavior — must already be flagged upstream)
-- [ ] Add/extend E2E scenario(s) using `me-matches-eligibility-harness.ts` for whatever this story changed
+- [ ] Add/extend E2E scenario(s) using `me-matches-eligibility.spec-support.ts` for whatever this story changed
 - [ ] Run `npx jest --no-coverage "integration.spec" --runInBand` (from `dating-api`) and report the real result
 - [ ] **Do not** rewrite unit tests (agent 2's job) or implement fixes (agent 1's job) — if E2E finds a real bug, stop, write `blocked`, and send back to `--agent 1`
 

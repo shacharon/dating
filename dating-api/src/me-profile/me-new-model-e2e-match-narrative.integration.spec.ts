@@ -5,7 +5,7 @@
  * `GET /api/v1/me/matches/:id` (lazy narrative + cache hit / eval-id miss / no fallback cache).
  * Scoring / eligibility / ranking are unchanged — this suite only asserts narrative side effects.
  *
- * Harness: `me-matches-eligibility-harness.ts` (real Nest + HTTP, in-memory Prisma,
+ * Harness: `me-matches-eligibility.spec-support.ts` (real Nest + HTTP, in-memory Prisma,
  * stubbed `MatchNarrativeGenerator`).
  *
  * Run:
@@ -16,7 +16,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Match narrative wire + cache (Sprint 22 Story 2 integration)', () => {
   const harness = new EligibilityTestHarness();

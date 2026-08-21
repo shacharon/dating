@@ -24,7 +24,7 @@ Unit tests on `eligibility.evaluator.ts` or `holy-grail-five-signal-ranking.ts` 
 
 ## Existing harness — use this, do not reinvent it
 
-- `dating-api/src/me-profile/me-matches-eligibility-harness.ts` — shared N-profile harness: real Nest app boot (`Test.createTestingModule` + `app.init()`), real HTTP via `supertest`, `PrismaService` replaced with an in-memory mock backed by plain JS state, `MeProfileAnalysisService` stubbed with manual `ANALYZED` advancement (simulates the async analysis worker completing).
+- `dating-api/src/me-profile/me-matches-eligibility.spec-support.ts` — shared N-profile harness: real Nest app boot (`Test.createTestingModule` + `app.init()`), real HTTP via `supertest`, `PrismaService` replaced with an in-memory mock backed by plain JS state, `MeProfileAnalysisService` stubbed with manual `ANALYZED` advancement (simulates the async analysis worker completing).
 - `dating-api/src/me-profile/me-new-model-e2e.integration.spec.ts` — original 2-user happy-path template.
 - `dating-api/src/me-profile/me-new-model-e2e-eligibility.integration.spec.ts` — 5 scenarios: gender exclusion, age-range exclusion, missing-DOB exclusion, missing/withheld-gender exclusion, no-preference contrast case.
 - `dating-api/src/me-profile/me-new-model-e2e-ranking.integration.spec.ts` — 3-candidate ranking-order scenario.
@@ -51,7 +51,7 @@ Add an **E2E verification plan** subsection whenever the trigger table above app
 
 ## Dev (agent 1) — must extend, not skip
 
-- [ ] Add/extend a spec using `me-matches-eligibility-harness.ts` — do not hand-roll a new one-off harness
+- [ ] Add/extend a spec using `me-matches-eligibility.spec-support.ts` — do not hand-roll a new one-off harness
 - [ ] Run `npx jest --no-coverage "integration.spec" --runInBand` (from `dating-api`) and confirm the baseline specs are still green
 - [ ] If a baseline spec's assertion must legitimately change, say so explicitly in the handoff — that's a call for agent 2/3 to see, not a silent edit
 

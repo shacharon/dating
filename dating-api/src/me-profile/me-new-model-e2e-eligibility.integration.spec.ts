@@ -16,7 +16,7 @@
  *    *add* new passing scenarios (classifier-derived dealbreakers) without breaking any test below.
  *
  * Harness: real Nest app boot + real HTTP via supertest, `PrismaService` replaced by an in-memory
- * mock (`EligibilityTestHarness`, extracted to `me-matches-eligibility-harness.ts` — same pattern as
+ * mock (`EligibilityTestHarness`, extracted to `me-matches-eligibility.spec-support.ts` — same pattern as
  * `me-new-model-e2e.integration.spec.ts`, generalized to N profiles). Partner preferences
  * (`desiredPartnerGenders` / `partnerAgeMin` / `partnerAgeMax`) are set through the real
  * `POST`/`PATCH /api/v1/me/profile` HTTP path — never poked directly into mock state.
@@ -42,7 +42,7 @@ import {
   EligibilityTestHarness,
   makeEvalJson,
   makeIdentity,
-} from './me-matches-eligibility-harness';
+} from './me-matches-eligibility.spec-support';
 
 describe('Holy Grail eligibility regression baseline (integration)', () => {
   const harness = new EligibilityTestHarness();

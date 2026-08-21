@@ -6,72 +6,12 @@
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
 import type { SignalKey } from '../compatibility/compatibility-score';
 import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
+import { pickInterestOverlapTags } from './expansion-07-explainability';
 import {
-  isExpansion01ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_01,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_01,
-} from './expansion-01-explainability';
-import {
-  isExpansion02ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_02,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_02,
-} from './expansion-02-explainability';
-import {
-  isExpansion03ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_03,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_03,
-} from './expansion-03-explainability';
-import {
-  isExpansion04ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_04,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_04,
-} from './expansion-04-explainability';
-import {
-  isExpansion05ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_05,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_05,
-} from './expansion-05-explainability';
-import {
-  isExpansion06ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_06,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_06,
-} from './expansion-06-explainability';
-import {
-  isExpansion07ShadowChipKey,
-  pickInterestOverlapTags,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_07,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_07,
-} from './expansion-07-explainability';
-import {
-  isExpansion10ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_10,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_10,
-} from './expansion-10-explainability';
-import {
-  isExpansion11ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_11,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_11,
-} from './expansion-11-explainability';
-import {
-  isExpansion12ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_12,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_12,
-} from './expansion-12-explainability';
-import {
-  isExpansion13ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_13,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_13,
-} from './expansion-13-explainability';
-import {
-  isExpansion14ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_14,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_14,
-} from './expansion-14-explainability';
-import {
-  isExpansion15ShadowChipKey,
-  SHADOW_POSITIVE_CHIP_BY_SIGNAL as SHADOW_POSITIVE_CHIP_BY_SIGNAL_15,
-  SHADOW_SIGNAL_DOMAIN as SHADOW_SIGNAL_DOMAIN_15,
-} from './expansion-15-explainability';
+  expansionChipLabelForKey,
+  expansionSignalDomainForKey,
+  isRegisteredExpansionShadowChipKey,
+} from './expansion-explainability-manifest';
 
 export interface MatchExplainabilityDto {
   positiveChips: string[];
@@ -196,84 +136,17 @@ function isSignalKey(k: string): k is SignalKey {
 }
 
 function isExplainabilityChipKey(key: string): boolean {
-  return (
-    isSignalKey(key) ||
-    isExpansion01ShadowChipKey(key) ||
-    isExpansion02ShadowChipKey(key) ||
-    isExpansion03ShadowChipKey(key) ||
-    isExpansion04ShadowChipKey(key) ||
-    isExpansion05ShadowChipKey(key) ||
-    isExpansion06ShadowChipKey(key) ||
-    isExpansion07ShadowChipKey(key) ||
-    isExpansion10ShadowChipKey(key) ||
-    isExpansion11ShadowChipKey(key) ||
-    isExpansion12ShadowChipKey(key) ||
-    isExpansion13ShadowChipKey(key) ||
-    isExpansion14ShadowChipKey(key) ||
-    isExpansion15ShadowChipKey(key)
-  );
+  return isSignalKey(key) || isRegisteredExpansionShadowChipKey(key);
 }
 
 function chipLabelForKey(key: string): string | undefined {
   if (isSignalKey(key)) return POSITIVE_CHIP_BY_SIGNAL[key];
-  if (isExpansion01ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_01[key];
-  }
-  if (isExpansion02ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_02[key];
-  }
-  if (isExpansion03ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_03[key];
-  }
-  if (isExpansion04ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_04[key];
-  }
-  if (isExpansion05ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_05[key];
-  }
-  if (isExpansion06ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_06[key];
-  }
-  if (isExpansion07ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_07[key];
-  }
-  if (isExpansion10ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_10[key];
-  }
-  if (isExpansion11ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_11[key];
-  }
-  if (isExpansion12ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_12[key];
-  }
-  if (isExpansion13ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_13[key];
-  }
-  if (isExpansion14ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_14[key];
-  }
-  if (isExpansion15ShadowChipKey(key)) {
-    return SHADOW_POSITIVE_CHIP_BY_SIGNAL_15[key];
-  }
-  return undefined;
+  return expansionChipLabelForKey(key);
 }
 
 function domainForKey(key: string): string {
   if (isSignalKey(key)) return SIGNAL_DOMAIN[key];
-  if (isExpansion01ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_01[key];
-  if (isExpansion02ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_02[key];
-  if (isExpansion03ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_03[key];
-  if (isExpansion04ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_04[key];
-  if (isExpansion05ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_05[key];
-  if (isExpansion06ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_06[key];
-  if (isExpansion07ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_07[key];
-  if (isExpansion10ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_10[key];
-  if (isExpansion11ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_11[key];
-  if (isExpansion12ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_12[key];
-  if (isExpansion13ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_13[key];
-  if (isExpansion14ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_14[key];
-  if (isExpansion15ShadowChipKey(key)) return SHADOW_SIGNAL_DOMAIN_15[key];
-  return 'unknown';
+  return expansionSignalDomainForKey(key) ?? 'unknown';
 }
 
 function compareBreakdownEntry(a: BreakdownEntry, b: BreakdownEntry): number {

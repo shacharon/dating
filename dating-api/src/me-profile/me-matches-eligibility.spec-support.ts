@@ -2,6 +2,8 @@
  * Shared boot/state harness for the Sprint 16/17 eligibility + ranking regression specs
  * (`me-new-model-e2e-eligibility.integration.spec.ts`, `me-new-model-e2e-ranking.integration.spec.ts`).
  *
+ * Test support only (`*.spec-support.ts`) — excluded from Nest `dist/` via tsconfig.build.
+ *
  * Mirrors the exact pattern established by `me-new-model-e2e.integration.spec.ts`:
  *  - Real Nest app boot (`Test.createTestingModule` + `app.init()`), real HTTP via supertest.
  *  - `PrismaService` replaced by a hand-rolled in-memory mock (plain JS `Map`s simulate DB rows —

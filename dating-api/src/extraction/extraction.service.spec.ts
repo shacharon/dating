@@ -481,8 +481,10 @@ describe('ExtractionService', () => {
     }
 
     const covPercent = coveragePercent(overlapping, totalSignals);
-    // With 39 signals (15 official + 24 shadow), 5 overlapping ≈ 12%
-    expect(covPercent).toBeGreaterThanOrEqual(12);
+    // Shared mocked keys: ambition, socialBattery, emotionalDepth, directness, lifestylePace.
+    // Percent drifts as EXTRACTION_SIGNAL_KEYS grows (was ~39; now official+shadow ≈ 53 → ~9%).
+    expect(overlapping).toBe(5);
+    expect(covPercent).toBeGreaterThanOrEqual(9);
   });
 });
 

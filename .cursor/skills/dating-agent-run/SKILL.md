@@ -165,7 +165,7 @@ Stories touching **eligibility**, **preference dimensions**, or **ranking order*
 | Agent | Gate |
 |-------|------|
 | **0** | Document E2E verification plan in handoff (which baseline specs stay green, which new scenarios are needed) |
-| **1** | Extend `me-matches-eligibility-harness.ts` if trivial; full scenario coverage is agent 4's job, not required to block agent 1's handoff |
+| **1** | Extend `me-matches-eligibility.spec-support.ts` if trivial; full scenario coverage is agent 4's job, not required to block agent 1's handoff |
 | **2** | Do not approve mocks-only eligibility/ranking coverage in the *unit* test sense; flag that agent 4 is required next |
 | **4** | Owns actual E2E execution: baseline specs green, new scenarios added, real test run reported. Sends real bugs back to `--agent 1` |
 | **3** | Do not mark Done if agent 4 was applicable but skipped, or its scenario was deferred without a tracked follow-up |

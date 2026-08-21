@@ -19,45 +19,11 @@ import {
   normalizeRawInterestTags,
 } from './extraction-normalization';
 import { validateExtraction } from './extraction-strict-validation';
-import { EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-01-signal-definitions';
-import { EXPANSION_02_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-02-signal-definitions';
-import { EXPANSION_03_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-03-signal-definitions';
-import { EXPANSION_04_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-04-signal-definitions';
-import { EXPANSION_05_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-05-signal-definitions';
-import { EXPANSION_06_SELF_SHADOW_SIGNAL_BLOCK } from './expansion-06-signal-definitions';
 import {
-  EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-07-signal-definitions';
-import {
-  EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-08-signal-definitions';
-import {
-  EXPANSION_10_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_10_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-10-signal-definitions';
-import {
-  EXPANSION_11_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_11_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-11-signal-definitions';
-import {
-  EXPANSION_12_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_12_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-12-signal-definitions';
-import {
-  EXPANSION_13_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_13_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-13-signal-definitions';
-import {
-  EXPANSION_14_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_14_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-14-signal-definitions';
-import {
-  EXPANSION_15_PARTNER_SHADOW_SIGNAL_BLOCK,
-  EXPANSION_15_SELF_SHADOW_SIGNAL_BLOCK,
-} from './expansion-15-signal-definitions';
-import { EXPANSION_09_INTEREST_GUIDANCE_BLOCK } from './expansion-09-interest-guidance';
+  joinExpansionInterestGuidanceBlocks,
+  joinExpansionPartnerShadowBlocks,
+  joinExpansionSelfShadowBlocks,
+} from './expansion-manifest';
 import {
   buildExtractionPipelineTrace,
   buildRawLlmPersistenceLogPayload,
@@ -94,7 +60,7 @@ CONCRETE TEXT EXAMPLES:
 INTERESTS:
 - Extract only explicit hobbies/passions into interests: string[] (pipeline maps to rawInterests)
 - Do not invent hobbies from vibe or generic personality language
-${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
+${joinExpansionInterestGuidanceBlocks()}
 
 ALLOWED KEYS:
 emotionalDepth, attachmentSecurity, directness, independence, socialBattery, lifestylePace, ambition, healthBodyConsciousness, spirituality, intellectualCuriosity, conflictStyle, adventureNovelty, structureChaosTolerance, empathyCompassion, vulnerabilityOpenness, emotionalRegulation, physicalAffectionStyle, humorPlayfulness, creativeExpression, physicalActivityLevel, domesticComfort, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment, familyEnmeshment, friendCoupleBalance, aloneTimeNeed
@@ -158,33 +124,7 @@ SIGNAL RULES:
 - friendCoupleBalance = explicit friends-first vs couple-centric time allocation (friends-first LOW ↔ couple-centric HIGH — do not invert); not social-energy intro/extro alone
 - aloneTimeNeed = explicit need for solo recharge time (rarely needs alone time LOW ↔ strong solo need HIGH); not general independence/autonomy alone, not socialBattery alone
 
-${EXPANSION_01_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_02_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_03_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_04_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_05_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_06_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_07_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_08_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_10_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_11_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_12_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_13_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_14_SELF_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_15_SELF_SHADOW_SIGNAL_BLOCK}
+${joinExpansionSelfShadowBlocks()}
 
 HARD SEMANTIC GUARD:
 Do NOT map generic personality or value language to deep traits.
@@ -258,7 +198,7 @@ CONCRETE TEXT EXAMPLES:
 INTERESTS:
 - Extract only explicit shared-bond or lifestyle interests into interests: string[] (pipeline maps to rawInterests)
 - Do not invent hobbies from vibe or generic personality language
-${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
+${joinExpansionInterestGuidanceBlocks()}
 
 ALLOWED KEYS:
 emotionalDepth, attachmentSecurity, relationshipClarity, traditionalism, spirituality, lifestylePace, socialBattery
@@ -347,7 +287,7 @@ CONCRETE TEXT EXAMPLES:
 INTERESTS:
 - Extract only explicit desired partner hobbies/interests into interests: string[] (pipeline maps to rawInterests)
 - Do not invent hobbies from vibe or generic personality language
-${EXPANSION_09_INTEREST_GUIDANCE_BLOCK}
+${joinExpansionInterestGuidanceBlocks()}
 
 ALLOWED KEYS:
 emotionalDepth, relationshipClarity, traditionalism, lifestylePace, socialBattery, physicalPriority, intellectualCuriosity, conflictStyle, casualIntimacyIntent, supportExchangeOrientation, supportProviderOrientation, supportRecipientOrientation, religiousObservance, educationLevel, honestyIntegrity, chronotype, physicalTypePreference, repairSkills, forgivenessStyle, stressResponse, jealousySecurity, listeningPresence, emotionalExpression, growthMindset, selfAwareness, patienceTolerance, intimacyPacing, monogamyAlignment, familyEnmeshment, friendCoupleBalance, aloneTimeNeed
@@ -398,21 +338,7 @@ SIGNAL RULES:
 - friendCoupleBalance = desired partner friends-first vs couple-centric time allocation (friends-first LOW ↔ couple-centric HIGH — do not invert); not social-energy intro/extro alone
 - aloneTimeNeed = desired partner need for solo recharge time (rarely needs alone time LOW ↔ strong solo need HIGH); not general autonomy/fusion alone, not socialBattery alone
 
-${EXPANSION_07_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_08_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_10_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_11_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_12_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_13_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_14_PARTNER_SHADOW_SIGNAL_BLOCK}
-
-${EXPANSION_15_PARTNER_SHADOW_SIGNAL_BLOCK}
+${joinExpansionPartnerShadowBlocks()}
 
 DIRECTION LOCK:
 For lifestylePace:

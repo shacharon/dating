@@ -7,6 +7,10 @@
 
 Improved 8-agent pipeline with pre-flight validation, security review, UI/UX audit, post-deploy verification, and feedback loops.
 
+## Engineering playbooks
+
+- [Add-expansion playbook](./ADD_EXPANSION_PLAYBOOK.md) — register Expansion-N via paired manifests (Sprint 51)
+
 ## Pipeline Agents
 
 ### Core Pipeline (Always Run)
