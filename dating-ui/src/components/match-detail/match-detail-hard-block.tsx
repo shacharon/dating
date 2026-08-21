@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { HardBlockedDto } from '@/lib/me-matches-api';
-import { formatHardBlockReason } from '@/app/dating/me-matches/hard-block-display';
+import { formatHardBlockReason } from '@/lib/matches/hard-block-display';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {

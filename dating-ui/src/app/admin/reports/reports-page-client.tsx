@@ -2,94 +2,23 @@
 
 // Internal English-only — admin tools are not product-localized.
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  getAdminReport,
-  listAdminReports,
-  updateAdminReport,
-  type AdminReportDetail,
-  type AdminReportListItem,
-} from '@/lib/admin-reports-api';
+import { InlineError } from '@/components/errors';
+import { useAdminReportsPage } from '@/hooks/use-admin-reports-page';
 
 export default function AdminReportsPage() {
-  const [rows, setRows] = useState<AdminReportListItem[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<AdminReportDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [opsNote, setOpsNote] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await listAdminReports('OPEN');
-      setRows(res.items);
-      if (selectedId && !res.items.some((row) => row.id === selectedId)) {
-        setSelectedId(null);
-        setDetail(null);
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message === 'admin_forbidden') {
-        setError('You are not authorized to view the admin report queue.');
-      } else {
-        setError(e instanceof Error ? e.message : 'Failed to load reports');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      setOpsNote('');
-      return;
-    }
-    let cancelled = false;
-    setDetailLoading(true);
-    void (async () => {
-      try {
-        const row = await getAdminReport(selectedId);
-        if (!cancelled) {
-          setDetail(row);
-          setOpsNote(row.opsNote ?? '');
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load report detail');
-        }
-      } finally {
-        if (!cancelled) setDetailLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedId]);
-
-  async function resolve(status: 'DISMISSED' | 'ACTION_TAKEN') {
-    if (!selectedId) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await updateAdminReport(selectedId, status, opsNote);
-      setSelectedId(null);
-      setDetail(null);
-      setOpsNote('');
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Update failed');
-    } finally {
-      setBusy(false);
-    }
-  }
+  const {
+    rows,
+    selectedId,
+    setSelectedId,
+    detail,
+    loading,
+    detailLoading,
+    error,
+    busy,
+    opsNote,
+    setOpsNote,
+    resolve,
+  } = useAdminReportsPage();
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
@@ -111,11 +40,7 @@ export default function AdminReportsPage() {
       {loading ? (
         <p className="text-sm text-zinc-500">Loading reports…</p>
       ) : null}
-      {error ? (
-        <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <InlineError className="mb-4">{error}</InlineError> : null}
       {!loading && !error && rows.length === 0 ? (
         <p className="text-sm text-zinc-500">No open reports.</p>
       ) : null}

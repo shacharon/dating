@@ -4,13 +4,9 @@ import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { LanguagePicker } from "@/components/language-picker";
 import { useAuth } from "@/contexts/auth-context";
 import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
   getLocaleDirection,
   getLocaleHtmlLang,
-  readStoredLocale,
-  type AppLocale,
+  useAppLocale,
 } from "@/lib/i18n";
 import {
   emitProductLog,
@@ -52,9 +48,9 @@ export function PublicLandingClient() {
   const { status, signInWithGoogleIdToken, lastError, clearLastError, refresh } =
     useAuth();
   const [signingIn, setSigningIn] = useState(false);
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { locale, copy: appCopy } = useAppLocale();
 
-  const copy = getCopy(locale).landing;
+  const copy = appCopy.landing;
   const dir = getLocaleDirection(locale);
   const lang = getLocaleHtmlLang(locale);
 
@@ -62,29 +58,6 @@ export function PublicLandingClient() {
     () => safeNextPath(searchParams.get("next")),
     [searchParams],
   );
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -126,7 +99,6 @@ export function PublicLandingClient() {
   const languageSlot = showCta ? (
     <LanguagePicker
       locale={locale}
-      onLocaleChange={setLocale}
       className="max-w-[11rem] rounded-md border border-zinc-200/80 bg-white/80 px-2 py-1 backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-950/80"
       id="landing-language-picker"
     />

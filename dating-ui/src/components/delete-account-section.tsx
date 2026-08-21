@@ -1,49 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { deleteMyAccount } from '@/lib/delete-account-api';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 
 const CONFIRMATION_TEXT = 'DELETE';
 
 export function DeleteAccountSection() {
   const router = useRouter();
   const { refresh } = useAuth();
-  const [locale, setLocale] = useState<AppLocale>(() => readStoredLocale());
+  const { copy: appCopy } = useAppLocale();
   const [confirmation, setConfirmation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const copy = getCopy(locale).deleteAccount;
+  const copy = appCopy.deleteAccount;
   const canSubmit =
     confirmation === CONFIRMATION_TEXT && !submitting;
-
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      setLocale(e.detail ?? readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
 
   const handleDelete = async () => {
     if (!canSubmit) {

@@ -26,13 +26,14 @@ function applyDocumentLocale(locale: AppLocale): void {
 
 /**
  * Updates `<html lang dir>` when user switches locale client-side.
- * 
- * Server-rendered initial locale is correct from layout.tsx.
- * This component only updates the attributes when the locale changes after hydration.
- * It checks if the locale has actually changed before updating to avoid unnecessary DOM mutations.
+ *
+ * Applies stored locale on mount (covers hydration when localStorage differs
+ * from SSR), then listens for locale-change / storage events.
  */
 export function LocaleDocumentSync() {
   useEffect(() => {
+    applyDocumentLocale(readStoredLocale());
+
     const onLocaleChanged = (event: Event) => {
       const detail = (event as CustomEvent<AppLocale>).detail;
       if (detail && isSupportedLocale(detail)) {

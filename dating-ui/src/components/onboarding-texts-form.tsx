@@ -1,21 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  fetchMyProfile,
-  patchMyProfile,
-  submitMyProfileForAnalysis,
-} from '@/lib/me-profile-api';
-import {
-  ContentModerationApiError,
-  type ContentModerationDetails,
-} from '@/lib/content-moderation-error';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
+import { InlineError } from '@/components/errors';
 import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text-field-help';
-import { useAppLocale } from '@/lib/i18n';
-import { onboardingResumePath } from '@/lib/onboarding-path';
+import { useOnboardingTextsForm } from '@/hooks/use-onboarding-texts-form';
 
 function fieldLabelFor(
   field: string | undefined,
@@ -39,342 +28,146 @@ export function OnboardingTextsForm({
   /** Called after a successful save (hub quality meter refresh). */
   onSaved?: () => void;
 } = {}) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { copy } = useAppLocale();
-  const ob = copy.onboarding;
-  const tf = ob.textsForm;
-  const wh = tf.writingHelp;
-  const prompts = ob.writingPrompts;
-  const mod = copy.contentModeration;
-  const isHub = variant === 'profileHub';
-  const [aboutMe, setAboutMe] = useState('');
-  const [aboutPartner, setAboutPartner] = useState('');
-  const [aboutRelationship, setAboutRelationship] = useState('');
-  const [profileSyncing, setProfileSyncing] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [finishError, setFinishError] = useState<string | null>(null);
-  const [moderationDetails, setModerationDetails] =
-    useState<ContentModerationDetails | null>(null);
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [finishing, setFinishing] = useState(false);
-
-  const aboutMeRef = useRef<HTMLTextAreaElement>(null);
-  const aboutPartnerRef = useRef<HTMLTextAreaElement>(null);
-  const aboutRelationshipRef = useRef<HTMLTextAreaElement>(null);
-
-  const resumeOptions = useMemo(
-    () =>
-      searchParams.get('edit') === '1'
-        ? ({ edit: true, page: 'texts' } as const)
-        : undefined,
-    [searchParams],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled) return;
-        if (!isHub) {
-          const path = onboardingResumePath(profile, resumeOptions);
-          if (path !== '/onboarding/texts') {
-            setProfileSyncing(false);
-            router.replace(path);
-            return;
-          }
-          if (!profile) {
-            setProfileSyncing(false);
-            router.replace('/onboarding/basic');
-            return;
-          }
-        } else if (!profile) {
-          setProfileSyncing(false);
-          setLoadError(ob.loadFailed);
-          return;
-        }
-        setAboutMe(profile.aboutMe ?? '');
-        setAboutPartner(profile.aboutPartner ?? '');
-        setAboutRelationship(profile.aboutRelationship ?? '');
-        setProfileSyncing(false);
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : ob.loadFailed);
-          setProfileSyncing(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, resumeOptions, ob.loadFailed, isHub]);
-
-  useEffect(() => {
-    if (!moderationDetails?.field) return;
-    const el =
-      moderationDetails.field === 'aboutMe'
-        ? aboutMeRef.current
-        : moderationDetails.field === 'aboutPartner'
-          ? aboutPartnerRef.current
-          : moderationDetails.field === 'aboutRelationship'
-            ? aboutRelationshipRef.current
-            : null;
-    el?.focus();
-    if (typeof el?.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [moderationDetails]);
-
-  function clearModeration() {
-    setModerationDetails(null);
-  }
-
-  function applyCaughtError(
-    e: unknown,
-    setFlat: (msg: string) => void,
-    flatFallback: string,
-  ) {
-    if (e instanceof ContentModerationApiError) {
-      setModerationDetails(e.details);
-      setSaveError(null);
-      setFinishError(null);
-      return;
-    }
-    clearModeration();
-    setFlat(e instanceof Error ? e.message : flatFallback);
-  }
-
-  async function handleSaveProgress() {
-    setSaveError(null);
-    clearModeration();
-    try {
-      await patchMyProfile({
-        aboutMe: aboutMe.trim() ? aboutMe : null,
-        aboutPartner: aboutPartner.trim() ? aboutPartner : null,
-        aboutRelationship: aboutRelationship.trim()
-          ? aboutRelationship
-          : null,
-      });
-      onSaved?.();
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 2000);
-    } catch (e) {
-      applyCaughtError(e, setSaveError, ob.saveFailed);
-    }
-  }
-
-  async function handleFinish() {
-    setFinishError(null);
-    clearModeration();
-    try {
-      const latest = await fetchMyProfile();
-      if (
-        !latest?.gender ||
-        latest.gender === 'PREFER_NOT_TO_SAY'
-      ) {
-        setFinishError(tf.genderMissingError);
-        return;
-      }
-    } catch {
-      setFinishError(tf.verifyFailedError);
-      return;
-    }
-
-    setFinishing(true);
-    try {
-      await patchMyProfile({
-        aboutMe: aboutMe.trim() ? aboutMe : null,
-        aboutPartner: aboutPartner.trim() ? aboutPartner : null,
-        aboutRelationship: aboutRelationship.trim()
-          ? aboutRelationship
-          : null,
-        onboardingStep: 'COMPLETED',
-      });
-      await submitMyProfileForAnalysis();
-      onSaved?.();
-      if (isHub) {
-        setFinishing(false);
-        setSavedFlash(true);
-        setTimeout(() => setSavedFlash(false), 2000);
-        return;
-      }
-      router.replace('/profile?tab=analysis');
-    } catch (e) {
-      setFinishing(false);
-      applyCaughtError(e, setFinishError, tf.finishFailedError);
-    }
-  }
+  const m = useOnboardingTextsForm({ variant, onSaved });
 
   const inputClass =
     'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
   const labelClass =
     'mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
-  const moderationLabels = {
-    fieldLabel: mod.fieldLabel,
-    flaggedLabel: mod.flaggedLabel,
-    whyLabel: mod.whyLabel,
-    suggestionLabel: mod.suggestionLabel,
-    exampleLabel: mod.exampleLabel,
-    mutedLabel: mod.mutedLabel,
-    dismiss: mod.dismiss,
-  };
-
   return (
     <div className="space-y-6">
-      {loadError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {loadError}
-        </p>
-      ) : null}
+      {m.loadError ? <InlineError>{m.loadError}</InlineError> : null}
 
-      {profileSyncing ? (
+      {m.profileSyncing ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
-          {ob.syncingProfile}
+          {m.ob.syncingProfile}
         </p>
       ) : null}
 
       <div
-        className={`space-y-6 ${profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
-        aria-busy={profileSyncing}
+        className={`space-y-6 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
+        aria-busy={m.profileSyncing}
       >
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        {tf.intro}
-      </p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{m.tf.intro}</p>
 
-      <div>
-        <label htmlFor="ot-about-me" className={labelClass}>
-          {tf.aboutMeLabel}
-        </label>
-        <textarea
-          id="ot-about-me"
-          ref={aboutMeRef}
-          value={aboutMe}
-          onChange={(e) => {
-            setAboutMe(e.target.value);
-            clearModeration();
-          }}
-          rows={4}
-          className={`${inputClass} min-h-[6rem]`}
-          placeholder={tf.aboutMePlaceholder}
-        />
-        <OnboardingTextFieldHelp
-          value={aboutMe}
-          field={prompts.aboutMe}
-          chrome={wh}
-          testIdPrefix="ot-about-me"
-        />
+        <div>
+          <label htmlFor="ot-about-me" className={labelClass}>
+            {m.tf.aboutMeLabel}
+          </label>
+          <textarea
+            id="ot-about-me"
+            ref={m.aboutMeRef}
+            value={m.aboutMe}
+            onChange={(e) => {
+              m.setAboutMe(e.target.value);
+              m.clearModeration();
+            }}
+            rows={4}
+            className={`${inputClass} min-h-[6rem]`}
+            placeholder={m.tf.aboutMePlaceholder}
+          />
+          <OnboardingTextFieldHelp
+            value={m.aboutMe}
+            field={m.prompts.aboutMe}
+            chrome={m.wh}
+            testIdPrefix="ot-about-me"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="ot-about-partner" className={labelClass}>
+            {m.tf.aboutPartnerLabel}
+          </label>
+          <textarea
+            id="ot-about-partner"
+            ref={m.aboutPartnerRef}
+            value={m.aboutPartner}
+            onChange={(e) => {
+              m.setAboutPartner(e.target.value);
+              m.clearModeration();
+            }}
+            rows={4}
+            className={`${inputClass} min-h-[6rem]`}
+            placeholder={m.tf.aboutPartnerPlaceholder}
+          />
+          <OnboardingTextFieldHelp
+            value={m.aboutPartner}
+            field={m.prompts.aboutPartner}
+            chrome={m.wh}
+            testIdPrefix="ot-about-partner"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="ot-about-rel" className={labelClass}>
+            {m.tf.aboutRelationshipLabel}
+          </label>
+          <textarea
+            id="ot-about-rel"
+            ref={m.aboutRelationshipRef}
+            value={m.aboutRelationship}
+            onChange={(e) => {
+              m.setAboutRelationship(e.target.value);
+              m.clearModeration();
+            }}
+            rows={4}
+            className={`${inputClass} min-h-[6rem]`}
+            placeholder={m.tf.aboutRelationshipPlaceholder}
+          />
+          <OnboardingTextFieldHelp
+            value={m.aboutRelationship}
+            field={m.prompts.aboutRelationship}
+            chrome={m.wh}
+            testIdPrefix="ot-about-rel"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void m.handleSaveProgress()}
+            disabled={m.finishing || m.profileSyncing}
+            className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {m.ob.saveProgress}
+          </button>
+          <button
+            type="button"
+            onClick={() => void m.handleFinish()}
+            disabled={m.finishing || m.profileSyncing}
+            className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            {m.finishing ? m.tf.submitting : m.tf.finishAndAnalyze}
+          </button>
+          <Link
+            href={m.editBasicsHref}
+            prefetch
+            className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${m.profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
+            aria-disabled={m.profileSyncing}
+          >
+            {m.tf.backToBasics}
+          </Link>
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="ot-about-partner" className={labelClass}>
-          {tf.aboutPartnerLabel}
-        </label>
-        <textarea
-          id="ot-about-partner"
-          ref={aboutPartnerRef}
-          value={aboutPartner}
-          onChange={(e) => {
-            setAboutPartner(e.target.value);
-            clearModeration();
-          }}
-          rows={4}
-          className={`${inputClass} min-h-[6rem]`}
-          placeholder={tf.aboutPartnerPlaceholder}
-        />
-        <OnboardingTextFieldHelp
-          value={aboutPartner}
-          field={prompts.aboutPartner}
-          chrome={wh}
-          testIdPrefix="ot-about-partner"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="ot-about-rel" className={labelClass}>
-          {tf.aboutRelationshipLabel}
-        </label>
-        <textarea
-          id="ot-about-rel"
-          ref={aboutRelationshipRef}
-          value={aboutRelationship}
-          onChange={(e) => {
-            setAboutRelationship(e.target.value);
-            clearModeration();
-          }}
-          rows={4}
-          className={`${inputClass} min-h-[6rem]`}
-          placeholder={tf.aboutRelationshipPlaceholder}
-        />
-        <OnboardingTextFieldHelp
-          value={aboutRelationship}
-          field={prompts.aboutRelationship}
-          chrome={wh}
-          testIdPrefix="ot-about-rel"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void handleSaveProgress()}
-          disabled={finishing || profileSyncing}
-          className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          {ob.saveProgress}
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleFinish()}
-          disabled={finishing || profileSyncing}
-          className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          {finishing ? tf.submitting : tf.finishAndAnalyze}
-        </button>
-        <Link
-          href={
-            isHub
-              ? '/profile?tab=edit#basic'
-              : searchParams.get('edit') === '1'
-                ? '/onboarding/basic?edit=1'
-                : '/onboarding/basic'
-          }
-          prefetch
-          className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
-          aria-disabled={profileSyncing}
-        >
-          {tf.backToBasics}
-        </Link>
-      </div>
-      </div>
-
-      {savedFlash ? (
+      {m.savedFlash ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
-          {ob.savedFlash}
+          {m.ob.savedFlash}
         </p>
       ) : null}
-      {moderationDetails ? (
+      {m.moderationDetails ? (
         <ContentModerationErrorAlert
-          details={moderationDetails}
+          details={m.moderationDetails}
           variant="profile"
-          title={mod.profileTitle}
-          fieldLabel={fieldLabelFor(moderationDetails.field, tf)}
-          labels={moderationLabels}
-          onDismiss={clearModeration}
+          title={m.mod.profileTitle}
+          fieldLabel={fieldLabelFor(m.moderationDetails.field, m.tf)}
+          labels={m.moderationLabels}
+          onDismiss={m.clearModeration}
         />
       ) : null}
-      {saveError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {saveError}
-        </p>
-      ) : null}
-      {finishError ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {finishError}
-        </p>
-      ) : null}
+      {m.saveError ? <InlineError>{m.saveError}</InlineError> : null}
+      {m.finishError ? <InlineError>{m.finishError}</InlineError> : null}
     </div>
   );
 }

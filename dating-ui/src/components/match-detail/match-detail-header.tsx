@@ -5,7 +5,7 @@ import type { MeMatchDetailDto } from '@/lib/me-matches-api';
 import {
   matchDetailSubtitle,
   matchDetailTitle,
-} from '@/app/dating/me-matches/match-display';
+} from '@/lib/matches/match-display';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {

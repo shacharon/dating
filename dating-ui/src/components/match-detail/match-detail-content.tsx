@@ -6,7 +6,7 @@ import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
 import {
   resolveDetailProse,
   splitNarrativeParagraphs,
-} from '@/app/dating/me-matches/[id]/match-detail-prose';
+} from '@/lib/matches/match-detail-prose';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 
 type Props = {

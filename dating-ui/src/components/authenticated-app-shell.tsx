@@ -4,17 +4,15 @@ import type { ReactNode } from "react";
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/nav/app-nav";
+import { InlineError } from "@/components/errors";
 import { MessagingShellProvider } from "@/components/messaging-shell-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { hasSessionCookie } from "@/lib/session-cookie";
 import { isNavHrefCurrent } from "@/components/nav/nav-active";
 import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  DEFAULT_LOCALE,
-  getCopy,
   getLocaleDirection,
-  readStoredLocale,
+  useAppLocale,
+  type AppCopySchema,
   type AppLocale,
 } from "@/lib/i18n";
 
@@ -36,9 +34,8 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   const { status, user, lastError, refresh } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
+  const { locale, copy } = useAppLocale();
   const [navPending, setNavPending] = useState(false);
-  const copy = getCopy(locale);
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
@@ -56,29 +53,6 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(t);
   }, [navPending]);
 
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      if (e.detail) {
-        setLocale(e.detail);
-        return;
-      }
-      setLocale(readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
   if (status === "error") {
     return (
       <>
@@ -89,9 +63,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
         </header>
         <div className="mx-auto max-w-lg px-4 py-10 text-sm text-zinc-600 dark:text-zinc-400">
           {lastError ? (
-            <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              {lastError}
-            </p>
+            <InlineError className="mb-4">{lastError}</InlineError>
           ) : null}
           <button
             type="button"
@@ -185,7 +157,7 @@ function AuthenticatedProductChrome({
   children: ReactNode;
   pathname: string;
   locale: AppLocale;
-  copy: ReturnType<typeof getCopy>;
+  copy: AppCopySchema;
   navPending: boolean;
   setNavPending: (v: boolean) => void;
 }) {

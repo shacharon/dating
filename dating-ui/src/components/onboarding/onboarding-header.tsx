@@ -1,15 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import {
-  APP_LOCALE_CHANGE_EVENT,
-  APP_LOCALE_STORAGE_KEY,
-  DEFAULT_LOCALE,
-  getCopy,
-  readStoredLocale,
-  type AppLocale,
-} from '@/lib/i18n';
+import { useAppLocale } from '@/lib/i18n';
 import { ExitConfirmationDialog } from './exit-confirmation-dialog';
 import { OnboardingStepper } from './onboarding-stepper';
 import { onboardingUiStepFromPathname } from './onboarding-step';
@@ -24,30 +17,10 @@ export function OnboardingHeader() {
   const router = useRouter();
   const editMode = searchParams.get('edit') === '1';
   const current = onboardingUiStepFromPathname(pathname);
-
-  const [locale, setLocale] = useState<AppLocale>(DEFAULT_LOCALE);
+  const { copy: appCopy } = useAppLocale();
   const [exitOpen, setExitOpen] = useState(false);
 
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocaleChanged = (event: Event) => {
-      const e = event as CustomEvent<AppLocale>;
-      setLocale(e.detail ?? readStoredLocale());
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === APP_LOCALE_STORAGE_KEY) {
-        setLocale(readStoredLocale());
-      }
-    };
-    window.addEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(APP_LOCALE_CHANGE_EVENT, onLocaleChanged);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
-
-  const copy = getCopy(locale).onboarding;
+  const copy = appCopy.onboarding;
   const dest = leaveDestination(editMode);
 
   return (

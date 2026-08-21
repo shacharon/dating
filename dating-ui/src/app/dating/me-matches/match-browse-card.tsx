@@ -14,7 +14,7 @@ import {
   resolveMatchBrowseClaim,
   resolveMatchBrowseHook,
   resolveMatchBrowseHybridLines,
-} from './match-display';
+} from '@/lib/matches/match-display';
 import { MatchBrowseActions } from './match-browse-actions';
 import { MatchWhySection } from './match-why-section';
 import { markMatchesScrollForRestore } from './me-matches-scroll';

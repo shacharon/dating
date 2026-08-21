@@ -8,8 +8,8 @@ import type { AppCopySchema, AppLocale } from '@/lib/i18n';
 import {
   matchListPrimaryLabel,
   matchListSecondaryMeta,
-} from './match-display';
-import { formatHardBlockReason } from './hard-block-display';
+} from '@/lib/matches/match-display';
+import { formatHardBlockReason } from '@/lib/matches/hard-block-display';
 import { markMatchesScrollForRestore } from './me-matches-scroll';
 
 type ListCopy = AppCopySchema['matches']['list'];
