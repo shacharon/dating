@@ -76,9 +76,10 @@ Deferred from S01: legacy `me-profile-matches.service.ts` still on `PrismaServic
 
 ## Shipped
 
-`feature/sprint-62-story-1` @ `06321ff` (close commit follows)
+`feature/sprint-62-story-1` @ `1557cf2`
 
 - `cf7a5f0` — feat: match repository MATCH_REPOSITORY port
 - `06321ff` — test: guard match repository wiring
+- `1557cf2` — chore: close sprint 62 story 1
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A — persistence peel only)
