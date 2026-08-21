@@ -13,7 +13,7 @@
  *    fixture `evaluationJson` via {@link EligibilityTestHarness.markAnalyzed}, simulating the
  *    async analysis worker completing.
  *  - `MeProfileValidationPipe` overridden as a pass-through (same as the reference spec) — DTO
- *    validation itself is covered elsewhere (`me-profile-http.integration.spec.ts`); these specs
+ *    validation itself is covered elsewhere (`me-profile-http-*.integration.spec.ts`); these specs
  *    care about eligibility/ranking behavior, not input validation.
  *
  * IMPORTANT: partner preferences (`partnerAgeMin`/`partnerAgeMax`/`desiredPartnerGenders`) are set

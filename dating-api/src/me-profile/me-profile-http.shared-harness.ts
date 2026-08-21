@@ -34,7 +34,6 @@ import { MatchNarrativeGenerator } from '../matches/match-narrative';
 import { PHOTO_STORAGE } from '../photo-storage/photo-storage.module';
 import { MeProfileAnalysisService } from './me-profile-analysis.service';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
-import { MeConversationsService } from './me-conversations.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import {
   createMatchNarrativeCachePrismaMock,
@@ -45,6 +44,8 @@ import { MeProfileValidationPipe } from './me-profile-validation.pipe';
 import { CONTENT_MODERATION } from '../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
+import { MATCH_LIST_MATERIALIZED_ENV } from './match-list-materialized-flag';
+import { MatchListRankQueueService } from '../workers/match-list-rank.worker';
 
 export function parseStructuredJsonLogs(
   spy: jest.SpiedFunction<typeof console.log>,
@@ -110,6 +111,14 @@ export type MeProfileHttpHarness = {
 
 export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness> {
   let app: INestApplication<App>;
+  const prevMaterializedFlag = process.env[MATCH_LIST_MATERIALIZED_ENV];
+  // Live ranking path: HTTP suite fixtures seed userProfile.findMany, not MatchListRank rows.
+  process.env[MATCH_LIST_MATERIALIZED_ENV] = '0';
+
+  const matchListRankQueueStub = {
+    enqueueRebuild: jest.fn().mockResolvedValue('inline:me-profile-http'),
+  };
+
   const narrativeCachePrisma = createMatchNarrativeCachePrismaMock();
   const matchNarrativeGeneratorStub = createMatchNarrativeGeneratorStub({
     source: 'llm',
@@ -144,13 +153,18 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
     $queryRaw: jest.fn(async (sql: { values: unknown[]; strings?: readonly string[] }) => {
       const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
       // Sprint 34 Story 1 — last SENT message batch (DISTINCT ON Message). Default empty.
-      if (sqlText.includes('DISTINCT ON')) {
+      // Do NOT short-circuit UserProfileEvaluation DISTINCT ON (match list latest-eval batch).
+      if (
+        sqlText.includes('DISTINCT ON') &&
+        (sqlText.includes('"Message"') || sqlText.includes(' FROM "Message"'))
+      ) {
         return [];
       }
       // Sprint 28 Story 4 — inbox unread batch (UNNEST on Message). Default empty; tests override.
       if (sqlText.includes('UNNEST') || sqlText.includes('"Message"')) {
         return [];
       }
+      // Latest UserProfileEvaluation batch (DISTINCT ON "profileId") + other raw helpers.
       const rows: Array<{
         profileId: string;
         evaluationJson: unknown;
@@ -322,6 +336,9 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
       .useValue(moderationClientMock)
       .overrideProvider(ContentViolationService)
       .useValue(contentViolationsMock)
+      // Profile CRUD / actions enqueue rebuilds; stub so findUnique Once-chains stay valid.
+      .overrideProvider(MatchListRankQueueService)
+      .useValue(matchListRankQueueStub)
       .compile();
   
     app = moduleFixture.createNestApplication();
@@ -492,6 +509,11 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
     resetForTest,
     close: async () => {
       await app.close();
+      if (prevMaterializedFlag === undefined) {
+        delete process.env[MATCH_LIST_MATERIALIZED_ENV];
+      } else {
+        process.env[MATCH_LIST_MATERIALIZED_ENV] = prevMaterializedFlag;
+      }
     },
   };
 }

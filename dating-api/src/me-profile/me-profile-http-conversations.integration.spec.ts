@@ -769,6 +769,7 @@ describe('me profile HTTP — conversations (integration)', () => {
           text: 'Hello!',
           status: 'SENT',
         },
+        select: expect.any(Object),
       });
     });
 
@@ -885,6 +886,7 @@ describe('me profile HTTP — conversations (integration)', () => {
 
       expect(prismaMock.message.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ text: 'Hi' }),
+        select: expect.any(Object),
       });
     });
   });
