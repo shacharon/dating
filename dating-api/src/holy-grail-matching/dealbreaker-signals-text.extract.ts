@@ -16,6 +16,9 @@ import {
   type DealbreakerClassification,
   type DealbreakerTag,
 } from './dealbreaker-taxonomy';
+import { escapeRegExp, isNegatedBefore } from '../shared/text-match.utils';
+
+export { isNegatedBefore };
 
 export type EmittedDealbreakerClassification = Exclude<
   DealbreakerClassification,
@@ -68,20 +71,6 @@ type TopicFamily = {
   /** Values/social: no HARD_REQUIRE. */
   readonly excludeOnly?: boolean;
 };
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/** Lightweight "not …" scope before a match (same discipline as interest/personality extractors). */
-export function isNegatedBefore(
-  haystackLower: string,
-  matchStart: number,
-): boolean {
-  const before = haystackLower.slice(0, matchStart);
-  const t = before.trimEnd();
-  return /\bnot(\s+[\w'-]+){0,6}\s*$/i.test(t);
-}
 
 function joinFields(input: FreeTextInput): string {
   return [input.aboutMe, input.aboutPartner, input.aboutRelationship]

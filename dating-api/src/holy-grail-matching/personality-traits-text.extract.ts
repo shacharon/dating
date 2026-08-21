@@ -14,6 +14,8 @@
  * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
+import { escapeRegExp, isNegatedBefore } from '../shared/text-match.utils';
+
 export const PERSONALITY_TRAIT_TAGS = [
   'humor_playful',
   'honesty_integrity',
@@ -56,16 +58,6 @@ export type PersonalityTraitsTextExtraction = {
   readonly self: PersonalityTraitsScopeExtraction;
   readonly partner: PersonalityTraitsScopeExtraction;
 };
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function isNegatedBefore(haystackLower: string, matchStart: number): boolean {
-  const before = haystackLower.slice(0, matchStart);
-  const t = before.trimEnd();
-  return /\bnot(\s+[\w'-]+){0,6}\s*$/i.test(t);
-}
 
 /**
  * Word hit only when some occurrence is not in a lightweight "not …" scope (cf. lifestyle v2).

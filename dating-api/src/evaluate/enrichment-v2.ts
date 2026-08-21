@@ -31,6 +31,11 @@ function joinBlocks(
     .join('\n');
 }
 
+/**
+ * Intentionally different from `shared/text-match.utils` `isNegatedBefore`
+ * (HG: 6-word `not` scope). Enrichment uses a char window + broader negation
+ * tokens — do not unify without a Sprint 52 keyword-freeze RFC (Sprint 60 Story 2).
+ */
 function isNegatedBefore(
   text: string,
   matchIndex: number,

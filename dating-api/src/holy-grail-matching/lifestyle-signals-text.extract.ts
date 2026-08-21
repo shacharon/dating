@@ -18,6 +18,8 @@
  * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
+import { escapeRegExp, isNegatedBefore } from '../shared/text-match.utils';
+
 export const LIFESTYLE_SIGNAL_TAGS = [
   'athletic_swimming',
   'outdoors_nature',
@@ -58,20 +60,6 @@ export type LifestyleSignalsTextExtraction = {
   readonly self: LifestyleSignalsScopeExtraction;
   readonly partner: LifestyleSignalsScopeExtraction;
 };
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * True when the match at `matchStart` is immediately preceded by a lightweight "not …" scope
- * (up to a few words), e.g. "not a swimmer", "not into hiking".
- */
-function isNegatedBefore(haystackLower: string, matchStart: number): boolean {
-  const before = haystackLower.slice(0, matchStart);
-  const t = before.trimEnd();
-  return /\bnot(\s+[\w'-]+){0,6}\s*$/i.test(t);
-}
 
 /**
  * Word hit only when some occurrence is not in a lightweight "not …" scope before the token

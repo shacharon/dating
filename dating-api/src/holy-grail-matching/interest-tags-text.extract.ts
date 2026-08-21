@@ -13,6 +13,8 @@
  * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
+import { escapeRegExp, isNegatedBefore } from '../shared/text-match.utils';
+
 /** Legacy v1 ids (prefix of full allowlist). */
 export const INTEREST_TAGS_V1 = ['music', 'film'] as const;
 
@@ -54,16 +56,6 @@ export type InterestTagsTextExtraction = {
   readonly self: InterestTagsScopeExtraction;
   readonly partner: InterestTagsScopeExtraction;
 };
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function isNegatedBefore(haystackLower: string, matchStart: number): boolean {
-  const before = haystackLower.slice(0, matchStart);
-  const t = before.trimEnd();
-  return /\bnot(\s+[\w'-]+){0,6}\s*$/i.test(t);
-}
 
 function matchesNegatableWord(lower: string, word: string): boolean {
   const re = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
