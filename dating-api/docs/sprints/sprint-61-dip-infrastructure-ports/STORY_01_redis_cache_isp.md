@@ -100,7 +100,7 @@ Story 02 wires rate-limit stores onto the same Redis connection.
 
 ## Shipped
 
-`feature/sprint-61-story-1` @ `be834e3`
+`feature/sprint-61-story-1` @ `96e1734`
 
 - `54b9f06` — feat: redis cache ISP ports + shared connection
 - `ca41c92` — test: guard redis ISP wiring
