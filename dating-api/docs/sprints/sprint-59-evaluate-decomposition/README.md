@@ -28,7 +28,7 @@ Split `evaluate/evaluate.service.ts` (~695 LOC) into a thin orchestrator that de
 | # | Story | Status |
 |---|-------|--------|
 | 01 | [Characterization + inference map](./STORY_01_characterization_inference_map.md) | Done |
-| 02 | [Extract inference runners](./STORY_02_extract_inference_runners.md) | Planned |
+| 02 | [Extract inference runners](./STORY_02_extract_inference_runners.md) | Done |
 | 03 | [Thin EvaluateService orchestrator](./STORY_03_thin_orchestrator.md) | Planned |
 
 **Order:** 01 → 02 → 03.

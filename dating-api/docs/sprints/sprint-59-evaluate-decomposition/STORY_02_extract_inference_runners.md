@@ -1,6 +1,6 @@
 # Story 02 — Extract inference runners
 
-**Sprint 59 · Status: Planned**  
+**Sprint 59 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 2–3 days  
 **Repo:** `dating-api`  
@@ -17,15 +17,15 @@ Deterministic steps (chips, enrichment wrap, product scores, display normalize) 
 
 ## Acceptance criteria
 
-- [ ] One runner per LLM purpose (or tightly coupled pair if map says so)
-- [ ] `EvaluateService` mostly sequences runners + assembly
-- [ ] Specs green; parity with Story 01 characterizations
-- [ ] No scoring / chip formula changes
+- [x] One runner per LLM purpose (or tightly coupled pair if map says so)
+- [x] `EvaluateService` mostly sequences runners + assembly
+- [x] Specs green; parity with Story 01 characterizations
+- [x] No scoring / chip formula changes
 
 ## Definition of Done
 
-- [ ] Runner files + service wired
-- [ ] Agent 2; Agent 3 close
+- [x] Runner files + service wired
+- [x] Agent 2; Agent 3 close
 
 ## Deferred
 
@@ -38,3 +38,7 @@ refactor(evaluate): extract LLM inference runners from EvaluateService
 
 Sprint 59 Story 2
 ```
+
+## Close tip
+
+`feature/sprint-59-story-2` @ `8c0c165` (+ Agent 3 close commit)
