@@ -69,10 +69,10 @@ Optional: fix eligibility harness `matchListRank` readback so `me-new-model-e2e-
 
 ## Shipped
 
-`feature/sprint-62-story-4` @ _(close commit)_
+`feature/sprint-62-story-4` @ `c1546d6`
 
 - `b85feca` — feat: profile photo PROFILE_PHOTO_REPOSITORY
 - `33bd368` — test: guard profile photo repository wiring
-- _(close)_ — chore: close sprint 62 story 4
+- `c1546d6` — chore: close sprint 62 story 4
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 4 → 3`
