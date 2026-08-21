@@ -4,7 +4,7 @@ import type { LLMRouterService } from '../llm/llm-router.service';
 import type { SimpleLogger } from '../logger/simple-logger.service';
 import { computeCompatibility } from '../compatibility/compatibility-score';
 import { buildChips } from './chips-builder';
-import { buildEnrichmentSignalsV4 } from './enrichment-v4';
+import { buildEnrichmentSignalsV2 } from './enrichment-v2';
 import {
   sanitizeEnrichmentSignalsV1ForPersist,
   wrapEnrichmentV1,
@@ -220,7 +220,7 @@ export async function runEvaluateBatch(
     extendedSignals,
   );
 
-  const enrichmentMapped = buildEnrichmentSignalsV4(
+  const enrichmentMapped = buildEnrichmentSignalsV2(
     aboutMe.trim(),
     aboutPartner.trim(),
     aboutRelationship.trim(),

@@ -24,7 +24,7 @@ This map locks the current `EvaluateService.evaluateBatch` (and related public `
 | Product scores | deterministic | `computeProductScores` / `buildProductScoresPresentation` | **keep** `product-scores` |
 | Explicit lists | deterministic | `buildExplicitExtendedLists` | **keep** module |
 | Chips | deterministic | `buildChips` | **keep** `chips-builder` |
-| Enrichment | deterministic | `buildEnrichmentSignalsV4` + sanitize/wrap | **keep** enrichment modules |
+| Enrichment | deterministic | `buildEnrichmentSignalsV2` + sanitize/wrap | **keep** enrichment modules |
 | Trace helpers | shared | `evaluate-llm-pipeline` | **keep**; runners may call |
 | Prompts / schemas | shared | `evaluate-llm-prompts` / `evaluate-inference-schemas` | **keep**; runners import |
 | Batch orchestration | Nest | `evaluateBatch` | stay on `EvaluateService` (thin in Story 03) |
@@ -46,7 +46,7 @@ evaluateBatch(input)
   ├─ await optional extended + derived packs
   ├─ buildExplicitExtendedLists → merge into extendedSignals
   ├─ buildChips(...)
-  ├─ buildEnrichmentSignalsV4 → sanitize → wrapEnrichmentV1
+  ├─ buildEnrichmentSignalsV2 → sanitize → wrapEnrichmentV1
   └─ assemble EvaluateBatchResult (+ _evaluateLlmTraces)
 ```
 

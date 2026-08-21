@@ -13,7 +13,7 @@ import {
   type EnrichmentKidsTimelineLabel,
   type EnrichmentRelationshipPaceLabel,
 } from './enrichment-canonical-labels';
-import { buildEnrichmentSignalsV4 } from './enrichment-v4';
+import { buildEnrichmentSignalsV2 } from './enrichment-v2';
 
 export interface EnrichmentSignalsV1 {
   /** Sleep / routine / pace-of-day cues (explicit or clearly implied). */
@@ -125,7 +125,7 @@ export function buildEnrichmentSignals(
   aboutPartner: string,
   aboutRelationship: string,
 ): EnrichmentSignalsV1 {
-  const raw = buildEnrichmentSignalsV4(
+  const raw = buildEnrichmentSignalsV2(
     aboutMe,
     aboutPartner,
     aboutRelationship,

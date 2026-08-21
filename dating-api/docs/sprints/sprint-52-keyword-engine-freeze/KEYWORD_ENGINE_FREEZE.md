@@ -53,7 +53,7 @@ Copy into the PR description (or append under an “Approved exceptions” secti
 **Not frozen as regex dumps** (different growth path):
 
 - `src/extraction/` — LLM signals / canonical interests via expansion playbook; **no** new regex fallbacks for interests.
-- `enrichment-v3.ts` / `enrichment-v4.ts` — aliases only; freeze lives in `enrichment-v2.ts`.
+- `enrichment-v2.ts` — enrichment keyword freeze SoT (Sprint 60 Story 1 removed v3/v4 alias shims).
 
 ---
 
