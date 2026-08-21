@@ -78,15 +78,17 @@ evaluateBatch(input)
 
 All AC classes have **EXISTING** locks. No Story 01 gap-fill suite required.
 
-| AC class | Coverage | Status |
-|----------|----------|--------|
-| Display honesty / low coverage | `evaluate.service.spec.ts` — cautious language, rich high-confidence | **EXISTING** |
-| Product scores shape / determinism / caps | productScores + presentation tests | **EXISTING** |
-| Extended signals (motivation + attraction traits) | populated + sidecar-only vs scores | **EXISTING** |
-| Explicit extended lists | recall / dedupe / max 5 | **EXISTING** |
-| Chips | populated, max 5, empty inputs, display-only vs scores | **EXISTING** |
-| Derived context | populated; batch succeeds when LLM fails | **EXISTING** |
-| Extraction handoff (mocked) | evaluateBatch uses extractAllThree | **EXISTING** |
+| AC class | Coverage (examples in `evaluate.service.spec.ts`) | Status |
+|----------|-----------------------------------------------------|--------|
+| Display honesty / low coverage | `display uses cautious language when coverage and confidence are low`; `rich high-confidence case remains direct` | **EXISTING** |
+| Product scores shape / determinism / caps | `response includes … productScores`; `productScores are deterministic`; `low coverage + moderate fit produces capped overallDecisionScore` | **EXISTING** |
+| Extended signals (motivation + attraction traits) | `extendedSignals are populated with relationshipMotivation and attractionTraits`; sidecar-only vs scores | **EXISTING** |
+| Explicit extended lists | `explicit lists are concrete, deduped … max 5`; recall phrases case | **EXISTING** |
+| Chips | `chips are populated…`; `chips respect max 5`; `empty inputs produce empty chips`; display-only vs scores | **EXISTING** |
+| Derived context | `derivedContext is populated…`; `evaluateBatch succeeds without derivedContext when derived-context LLM fails` | **EXISTING** |
+| Extraction handoff (mocked) | evaluateBatch path mocks `extractAllThree` throughout suite | **EXISTING** |
+
+Also: `evaluate-display-helpers.spec.ts` locks normalize / honesty helpers used after summary LLM.
 
 ### Verification commands
 
