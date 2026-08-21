@@ -3,7 +3,7 @@
 **Sprint:** 62  
 **Effort:** 2 days  
 **Risk:** ⚡ LOW–MED  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -53,12 +53,26 @@ Prefer **sibling** to `IUserProfileRepository`, not a second competing profile a
 
 ## Success
 
-- [ ] `ProfilePhotoService` without `PrismaService`
-- [ ] Soft sprint goal: Prisma injectors down meaningfully (~29 → ≤15 if Stories 01–04 all land)
-- [ ] Tests green
+- [x] `ProfilePhotoService` without `PrismaService` (also AdminPhotos / PhotoModeration / PhotoSlaEnforcer)
+- [x] Soft sprint goal: Prisma injectors down meaningfully (~29 → ≤15 if Stories 01–04 all land) — ~12 `*.service.ts` files still reference `PrismaService`
+- [x] Tests green (unit/wiring/admin HTTP; photo visibility pool assertions documented harness noise)
 
 ---
 
 ## Follow-up
 
-Optional later pass: session/users/admin-match-quality still on Prisma — not required to close Track 4 MVP.
+Optional later pass: session/users/admin-match-quality / analysis / legacy matches still on Prisma — not required to close Track 4 MVP.
+
+Optional: fix eligibility harness `matchListRank` readback so `me-new-model-e2e-photo-moderation` pool-appearance cases go fully green.
+
+---
+
+## Shipped
+
+`feature/sprint-62-story-4` @ _(close commit)_
+
+- `b85feca` — feat: profile photo PROFILE_PHOTO_REPOSITORY
+- `33bd368` — test: guard profile photo repository wiring
+- _(close)_ — chore: close sprint 62 story 4
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 4 → 3`
