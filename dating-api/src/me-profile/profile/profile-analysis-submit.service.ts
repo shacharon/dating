@@ -4,10 +4,8 @@ import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import { ErrorCodes } from '../../logging/error-codes';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { PrismaService } from '../../prisma/prisma.service';
 import { ProfileAnalysisQueueService } from '../../workers/profile-analysis.worker';
 import type { MeLatestAnalysisResponseDto } from '../me-profile.dto';
-import { latestEvaluationForProfile } from '../me-profile-analysis.service';
 import { viewerHasApprovedPhoto } from '../me-profile-photo-gate';
 import {
   mapProfileStatusToAnalysisApi,
@@ -29,6 +27,10 @@ import {
 } from '../repositories/user-profile.repository';
 import type { MeProfileSubmitResponseDto } from './me-profile-submit.dto';
 import { SUBMITTABLE_STATUSES, toResponse } from './profile-write.helpers';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from '../repositories/match.repository';
 
 /**
  * Submit-for-analysis path plus analysis status / latest evaluation reads.
@@ -39,7 +41,7 @@ export class ProfileAnalysisSubmitService {
   constructor(
     @Inject(USER_PROFILE_REPOSITORY)
     private readonly profiles: IUserProfileRepository,
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     private readonly analysisQueue: ProfileAnalysisQueueService,
@@ -72,7 +74,7 @@ export class ProfileAnalysisSubmitService {
       throw new ProfileSubmitGenderRequiredError();
     }
 
-    if (!(await viewerHasApprovedPhoto(this.prisma, existing.id))) {
+    if (!(await viewerHasApprovedPhoto(this.matches, existing.id))) {
       this.analytics.track(userId, ProductAnalyticsEvents.PROFILE_PHOTO_GATE_BLOCKED, {
         surface: 'submit',
       });
@@ -159,7 +161,8 @@ export class ProfileAnalysisSubmitService {
       });
     }
 
-    const latest = await latestEvaluationForProfile(this.prisma, profile.id);
+    const latest =
+      await this.matches.findLatestEvaluationForProfile(profile.id);
 
     if (!latest) {
       throw new NotFoundException({

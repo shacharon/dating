@@ -42,6 +42,8 @@ import { ProfilePhotoService } from './profile/profile-photo.service';
 import { ProfilePreferenceService } from './profile/profile-preference.service';
 import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
 import { USER_PROFILE_REPOSITORY } from './repositories/user-profile.repository';
+import { PrismaMatchRepository } from './repositories/prisma-match.repository';
+import { MATCH_REPOSITORY } from './repositories/match.repository';
 import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
 import { MatchingPolicyModule } from '../matching-policy/matching-policy.module';
 
@@ -75,6 +77,10 @@ import { MatchingPolicyModule } from '../matching-policy/matching-policy.module'
     {
       provide: USER_PROFILE_REPOSITORY,
       useClass: PrismaUserProfileRepository,
+    },
+    {
+      provide: MATCH_REPOSITORY,
+      useClass: PrismaMatchRepository,
     },
     ProfileCrudService,
     ProfilePhotoService,

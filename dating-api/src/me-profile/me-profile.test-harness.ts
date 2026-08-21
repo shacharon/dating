@@ -15,6 +15,7 @@ import { ProfileModerationService } from './profile/profile-moderation.service';
 import { ProfilePhotoService } from './profile/profile-photo.service';
 import { ProfilePreferenceService } from './profile/profile-preference.service';
 import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
+import { PrismaMatchRepository } from './repositories/prisma-match.repository';
 import type { IUserProfileRepository } from './repositories/user-profile.repository';
 
 /** Collaborator dependencies, in the same order as the pre-split `MeProfileService` constructor. */
@@ -67,7 +68,7 @@ export function createMeProfileServiceForTest(
   );
   const analysisSubmit = new ProfileAnalysisSubmitService(
     profiles,
-    deps.prisma,
+    new PrismaMatchRepository(deps.prisma),
     deps.obs,
     deps.analytics,
     deps.analysisQueue,

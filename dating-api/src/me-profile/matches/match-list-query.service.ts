@@ -1,26 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { UserProfilePhotoStatus } from '@prisma/client';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import type { MatchListCursorPayload } from '../../cache/match-list-cache';
 import { ErrorCodes } from '../../logging/error-codes';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { PrismaService } from '../../prisma/prisma.service';
-import { latestEvaluationForProfile } from '../me-profile-analysis.service';
 import { buildMatchCandidateSqlPrefilterWhere } from '../me-matches-candidate-sql-prefilter';
 import { MatchListViewerEvaluationMissingError } from '../me-matches.errors';
 import { countApprovedPhotosForProfile } from '../me-profile-photo-gate';
 import { buildProductProfileMatchingBridge } from '../user-profile-matching-bridge.contract';
-import { matchListRankAfterCursorWhere } from './match-list-cursor';
 import {
   STATUS_ANALYZED,
   partnerGenderSourceForMeMatchesRow,
 } from './match-list.helpers';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from '../repositories/match.repository';
 
 @Injectable()
 export class MatchListQueryService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
   ) {}
@@ -117,10 +118,7 @@ export class MatchListQueryService {
         viewerAgeYears: number | null;
       }
   > {
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: { preference: true },
-    });
+    const viewer = await this.matches.findViewerWithPreferenceByUserId(userId);
     if (!viewer) {
       this.obs.trace(
         `me matches list: no profile for userId=${userId}`,
@@ -136,7 +134,7 @@ export class MatchListQueryService {
       return { status: 'not_ready', reason: 'not_analyzed' };
     }
     const approvedPhotoCount = await countApprovedPhotosForProfile(
-      this.prisma,
+      this.matches,
       viewer.id,
     );
     if (approvedPhotoCount < 1) {
@@ -158,7 +156,8 @@ export class MatchListQueryService {
       asOf,
       partnerGenderSourceForMeMatchesRow(viewer, this.obs),
     );
-    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
+    const viewerEval =
+      await this.matches.findLatestEvaluationForProfile(viewer.id);
     if (!viewerEval) {
       throw new MatchListViewerEvaluationMissingError();
     }
@@ -187,20 +186,7 @@ export class MatchListQueryService {
       hardBlocked: boolean;
     }>
   > {
-    return this.prisma.matchListRank.findMany({
-      where: matchListRankAfterCursorWhere(viewerUserId, cursor),
-      orderBy: [
-        { hardBlocked: 'asc' },
-        { matchScore: 'desc' },
-        { candidateProfileId: 'asc' },
-      ],
-      take,
-      select: {
-        candidateProfileId: true,
-        matchScore: true,
-        hardBlocked: true,
-      },
-    });
+    return this.matches.fetchMatchListRankPage(viewerUserId, cursor, take);
   }
 
   matchCandidateBaseWhere(viewerUserId: string) {

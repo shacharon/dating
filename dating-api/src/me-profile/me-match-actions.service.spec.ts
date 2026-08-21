@@ -7,6 +7,7 @@ import type { AnalyticsService } from '../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import type { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { IMatchRepository } from './repositories/match.repository';
 
 describe('MeMatchActionsService', () => {
   const prisma = {
@@ -36,6 +37,55 @@ describe('MeMatchActionsService', () => {
     enqueueRebuild: jest.fn().mockResolvedValue('inline:actor'),
   };
 
+  const matches = {
+    findActionWithCreatedAt: jest.fn((actorUserId, targetUserId) =>
+      prisma.matchAction.findUnique({
+        where: { actorUserId_targetUserId: { actorUserId, targetUserId } },
+        select: { action: true, createdAt: true },
+      }),
+    ),
+    findActiveMutualByUserPair: jest.fn((actorUserId, targetUserId) =>
+      mutualMatches.findActiveByUserPair(actorUserId, targetUserId),
+    ),
+    findActionByActorTarget: jest.fn((actorUserId, targetUserId) =>
+      prisma.matchAction.findUnique({
+        where: { actorUserId_targetUserId: { actorUserId, targetUserId } },
+        select: { action: true },
+      }),
+    ),
+    deleteActionByActorTarget: jest.fn(async (actorUserId, targetUserId) => {
+      await prisma.matchAction.delete({
+        where: { actorUserId_targetUserId: { actorUserId, targetUserId } },
+      });
+    }),
+    upsertActionAndDetectMutual: jest.fn(
+      async ({ actorUserId, targetUserId, targetProfileIdSnapshot, action }) =>
+        prisma.$transaction(async (tx) => {
+          const row = await tx.matchAction.upsert({
+            where: {
+              actorUserId_targetUserId: { actorUserId, targetUserId },
+            },
+            create: {
+              actorUserId,
+              targetUserId,
+              targetProfileIdSnapshot,
+              action,
+            },
+            update: { action, targetProfileIdSnapshot },
+          });
+          const detectResult =
+            action === MatchActionType.LIKE
+              ? await mutualMatches.detectAndCreateMutualMatch(
+                  actorUserId,
+                  targetUserId,
+                  tx as never,
+                )
+              : null;
+          return { row, detectResult };
+        }),
+    ),
+  } as unknown as IMatchRepository;
+
   let service: MeMatchActionsService;
 
   beforeEach(() => {
@@ -44,9 +94,8 @@ describe('MeMatchActionsService', () => {
       fn(prisma),
     );
     service = new MeMatchActionsService(
-      prisma,
+      matches,
       meMatches,
-      mutualMatches,
       mutualMatchEmail,
       analytics,
       matchListRankQueue as never,

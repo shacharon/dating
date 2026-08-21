@@ -1,6 +1,6 @@
 import { resolveMatchPrimaryPhotoUrl } from '../../photo-storage/cdn-url';
 import type { MatchActionType } from '@prisma/client';
-import type { PrismaService } from '../../prisma/prisma.service';
+import type { IMatchRepository } from '../repositories/match.repository';
 import { toMeMatchListItem } from '../me-matches-response.mapper';
 import type { MeMatchItemDto } from '../dto/me-matches-response.dto';
 import type { HardBlockedDto } from '../../holy-grail-matching/hard-block-reasons';
@@ -46,7 +46,7 @@ type ViewerSelfHints = ReturnType<typeof extractSelfFactHintsFromFreeText>;
  * Extracted from MatchRankingService to keep Nest ranking under LOC cap.
  */
 export async function appendPendingHardBlockMatches(args: {
-  prisma: PrismaService;
+  matchesRepository: Pick<IMatchRepository, 'findAboutTextByProfileIds'>;
   pendingHardBlocks: PendingHardBlockMatch[];
   matches: MeMatchItemDto[];
   viewerDealbreakerSignals: ViewerDealbreakerSignals;
@@ -70,15 +70,9 @@ export async function appendPendingHardBlockMatches(args: {
   const { pendingHardBlocks, matches } = args;
   if (pendingHardBlocks.length === 0) return;
 
-  const aboutRows = await args.prisma.userProfile.findMany({
-    where: { id: { in: pendingHardBlocks.map((p) => p.row.id) } },
-    select: {
-      id: true,
-      aboutMe: true,
-      aboutPartner: true,
-      aboutRelationship: true,
-    },
-  });
+  const aboutRows = await args.matchesRepository.findAboutTextByProfileIds(
+    pendingHardBlocks.map((p) => p.row.id),
+  );
   const aboutById = new Map(aboutRows.map((r) => [r.id, r]));
   for (const pending of pendingHardBlocks) {
     const about = aboutById.get(pending.row.id);

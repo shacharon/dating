@@ -14,6 +14,7 @@ import { MatchEligibilityService } from './matches/match-eligibility.service';
 import { MatchRankingService } from './matches/match-ranking.service';
 import { MatchListCacheService } from './matches/match-list-cache.service';
 import { MatchDetailService } from './matches/match-detail.service';
+import { PrismaMatchRepository } from './repositories/prisma-match.repository';
 
 /** Collaborator dependencies, in the same order as the pre-split `MeMatchesService` constructor. */
 export type MeMatchesServiceTestDeps = {
@@ -35,19 +36,20 @@ export type MeMatchesServiceTestDeps = {
 export function createMeMatchesServiceForTest(
   deps: MeMatchesServiceTestDeps,
 ): MeMatchesService {
+  const matches = new PrismaMatchRepository(deps.prisma);
   const query = new MatchListQueryService(
-    deps.prisma,
+    matches,
     deps.obs,
     deps.analytics,
   );
   const eligibility = new MatchEligibilityService(
-    deps.prisma,
+    matches,
     deps.obs,
     query,
   );
   const pairMatchPolicy = new HgGateLegacyRankPolicy();
   const ranking = new MatchRankingService(
-    deps.prisma,
+    matches,
     deps.obs,
     deps.analytics,
     query,
@@ -55,7 +57,7 @@ export function createMeMatchesServiceForTest(
     pairMatchPolicy,
   );
   const cacheSvc = new MatchListCacheService(
-    deps.prisma,
+    matches,
     deps.obs,
     deps.analytics,
     deps.cache,
@@ -64,7 +66,7 @@ export function createMeMatchesServiceForTest(
     deps.matchListRankQueue,
   );
   const detail = new MatchDetailService(
-    deps.prisma,
+    matches,
     deps.obs,
     deps.photoStorage,
     deps.mutualMatches,

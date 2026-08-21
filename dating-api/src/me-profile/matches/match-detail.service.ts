@@ -4,8 +4,6 @@ import { StructuredObservabilityService } from '../../logging/structured-observa
 import { resolveMatchPrimaryPhotoUrl } from '../../photo-storage/cdn-url';
 import { PHOTO_STORAGE } from '../../photo-storage/photo-storage.module';
 import type { PhotoStorage } from '../../photo-storage/photo-storage.types';
-import { PrismaService } from '../../prisma/prisma.service';
-import { latestEvaluationForProfile } from '../me-profile-analysis.service';
 import { buildMeMatchesParticipantReadModel } from '../me-profile-engine.mapper';
 import {
   MatchCandidateNotFoundError,
@@ -49,11 +47,15 @@ import {
   partnerGenderSourceForMeMatchesRow,
   pickApprovedPrimaryPhotoId,
 } from './match-list.helpers';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from '../repositories/match.repository';
 
 @Injectable()
 export class MatchDetailService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly obs: StructuredObservabilityService,
     @Inject(PHOTO_STORAGE) private readonly photoStorage: PhotoStorage,
     private readonly mutualMatches: MutualMatchesService,
@@ -69,25 +71,13 @@ export class MatchDetailService {
     candidateProfileId: string,
   ): Promise<MeMatchDetailDto> {
     // Viewer must have an analyzed profile to retrieve match details.
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: {
-        preference: true,
-        signals: {
-          select: { signalKey: true, signalValue: true, evalVersion: true },
-        },
-        interests: {
-          select: { tag: true, rank: true, evalVersion: true },
-          orderBy: { rank: 'asc' },
-        },
-      },
-    });
+    const viewer = await this.matches.findViewerMatchContextByUserId(userId);
 
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
       throw new MatchViewerNotReadyError('not_analyzed');
     }
 
-    if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
+    if (!(await viewerHasApprovedPhoto(this.matches, viewer.id))) {
       throw new MatchViewerNotReadyError('no_photo');
     }
 
@@ -99,10 +89,10 @@ export class MatchDetailService {
     );
 
     // Load candidate by UserProfile.id — never by userId (no foreign-key exposure).
-    const candidate = await this.prisma.userProfile.findUnique({
-      where: { id: candidateProfileId },
-      select: this.query.candidateSelectDetail,
-    });
+    const candidate = await this.matches.findCandidateProfileForDetail(
+      candidateProfileId,
+      this.query.candidateSelectDetail,
+    );
 
     if (
       !candidate ||
@@ -131,11 +121,10 @@ export class MatchDetailService {
       throw new MatchCandidateNotFoundError();
     }
 
-    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
-    const candidateEval = await latestEvaluationForProfile(
-      this.prisma,
-      candidate.id,
-    );
+    const viewerEval =
+      await this.matches.findLatestEvaluationForProfile(viewer.id);
+    const candidateEval =
+      await this.matches.findLatestEvaluationForProfile(candidate.id);
     if (!viewerEval || !candidateEval) {
       throw new MatchDetailEvaluationNotFoundError();
     }
@@ -197,15 +186,7 @@ export class MatchDetailService {
     let hardBlocked: HardBlockedDto | undefined;
     if (evaluated.gate.isHardFail) {
       const [actionRow, mutual] = await Promise.all([
-        this.prisma.matchAction.findUnique({
-          where: {
-            actorUserId_targetUserId: {
-              actorUserId: userId,
-              targetUserId: candidate.userId,
-            },
-          },
-          select: { action: true },
-        }),
+        this.matches.findActionByActorTarget(userId, candidate.userId),
         this.mutualMatches.findActiveByUserPair(userId, candidate.userId),
       ]);
       const yourAction = matchActionToYourAction(actionRow?.action ?? null);
@@ -333,25 +314,8 @@ export class MatchDetailService {
     candidateProfileId: string,
     photoId: string,
   ): Promise<{ contentType: string; content: Buffer }> {
-    const candidate = await this.prisma.userProfile.findUnique({
-      where: { id: candidateProfileId },
-      select: {
-        id: true,
-        userId: true,
-        status: true,
-        birthDate: true,
-        gender: true,
-        desiredPartnerGenders: true,
-        city: true,
-        country: true,
-        locationLabel: true,
-        aboutMe: true,
-        aboutPartner: true,
-        aboutRelationship: true,
-        preference: true,
-        user: { select: { deletedAt: true } },
-      },
-    });
+    const candidate =
+      await this.matches.findCandidateProfileForPhotoAccess(candidateProfileId);
     if (!candidate || candidate.user?.deletedAt != null) {
       throw new MatchCandidateNotFoundError();
     }
@@ -364,15 +328,12 @@ export class MatchDetailService {
       return this.readApprovedPrimaryPhotoFile(candidateProfileId, photoId);
     }
 
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: { preference: true },
-    });
+    const viewer = await this.matches.findViewerWithPreferenceByUserId(userId);
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
       throw new MatchCandidateNotFoundError();
     }
 
-    if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
+    if (!(await viewerHasApprovedPhoto(this.matches, viewer.id))) {
       throw new MatchCandidateNotFoundError();
     }
 
@@ -400,7 +361,7 @@ export class MatchDetailService {
       throw new MatchCandidateNotFoundError();
     }
 
-    if (!(await candidateHasApprovedPhoto(this.prisma, candidate.id))) {
+    if (!(await candidateHasApprovedPhoto(this.matches, candidate.id))) {
       throw new MatchCandidateNotFoundError();
     }
 
@@ -413,15 +374,10 @@ export class MatchDetailService {
     candidateProfileId: string,
     photoId: string,
   ): Promise<{ contentType: string; content: Buffer }> {
-    const photo = await this.prisma.userProfilePhoto.findFirst({
-      where: {
-        id: photoId,
-        profileId: candidateProfileId,
-        status: 'APPROVED',
-        isPrimary: true,
-      },
-      select: { mimeType: true, storageKey: true },
-    });
+    const photo = await this.matches.findApprovedPrimaryPhoto(
+      candidateProfileId,
+      photoId,
+    );
     if (!photo) {
       throw new MatchPhotoNotFoundError();
     }

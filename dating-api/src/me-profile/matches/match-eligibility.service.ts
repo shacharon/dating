@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { MatchActionType } from '@prisma/client';
 import {
   buildHardBlockReasons,
@@ -12,9 +12,7 @@ import {
   extractSelfFactHintsFromFreeText,
 } from '../../holy-grail-matching/dealbreaker-signals-text.extract';
 import { evaluateHolyGrailPairDirections } from '../../matches/holy-grail-pair-directions';
-import { PrismaService } from '../../prisma/prisma.service';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { latestEvaluationForProfile } from '../me-profile-analysis.service';
 import {
   MatchCandidateNotFoundError,
   MatchDetailEvaluationNotFoundError,
@@ -31,11 +29,15 @@ import {
   assertCandidateHasApprovedPhotosInRow,
   partnerGenderSourceForMeMatchesRow,
 } from './match-list.helpers';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from '../repositories/match.repository';
 
 @Injectable()
 export class MatchEligibilityService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly query: MatchListQueryService,
   ) {}
@@ -44,25 +46,14 @@ export class MatchEligibilityService {
     viewerUserId: string,
     candidateProfileId: string,
   ): Promise<{ candidateProfileId: string; targetUserId: string }> {
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId: viewerUserId },
-      include: {
-        preference: true,
-        signals: {
-          select: { signalKey: true, signalValue: true, evalVersion: true },
-        },
-        interests: {
-          select: { tag: true, rank: true, evalVersion: true },
-          orderBy: { rank: 'asc' },
-        },
-      },
-    });
+    const viewer =
+      await this.matches.findViewerMatchContextByUserId(viewerUserId);
 
     if (!viewer || viewer.status !== STATUS_ANALYZED) {
       throw new MatchViewerNotReadyError('not_analyzed');
     }
 
-    if (!(await viewerHasApprovedPhoto(this.prisma, viewer.id))) {
+    if (!(await viewerHasApprovedPhoto(this.matches, viewer.id))) {
       throw new MatchViewerNotReadyError('no_photo');
     }
 
@@ -73,10 +64,10 @@ export class MatchEligibilityService {
       partnerGenderSourceForMeMatchesRow(viewer, this.obs),
     );
 
-    const candidate = await this.prisma.userProfile.findUnique({
-      where: { id: candidateProfileId },
-      select: this.query.candidateSelectDetail,
-    });
+    const candidate = await this.matches.findCandidateProfileForDetail(
+      candidateProfileId,
+      this.query.candidateSelectDetail,
+    );
 
     if (
       !candidate ||
@@ -104,11 +95,10 @@ export class MatchEligibilityService {
       throw new MatchCandidateNotFoundError();
     }
 
-    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
-    const candidateEval = await latestEvaluationForProfile(
-      this.prisma,
-      candidate.id,
-    );
+    const viewerEval =
+      await this.matches.findLatestEvaluationForProfile(viewer.id);
+    const candidateEval =
+      await this.matches.findLatestEvaluationForProfile(candidate.id);
     if (!viewerEval || !candidateEval) {
       throw new MatchDetailEvaluationNotFoundError();
     }
@@ -125,12 +115,10 @@ export class MatchEligibilityService {
     viewerUserId: string,
     targetUserId: string,
   ): Promise<void> {
-    const row = await this.prisma.matchAction.findUnique({
-      where: {
-        actorUserId_targetUserId: { actorUserId: viewerUserId, targetUserId },
-      },
-      select: { action: true },
-    });
+    const row = await this.matches.findActionByActorTarget(
+      viewerUserId,
+      targetUserId,
+    );
     if (row?.action === MatchActionType.BLOCK) {
       throw new MatchCandidateNotFoundError();
     }

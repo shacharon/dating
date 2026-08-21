@@ -8,25 +8,24 @@ import {
 import { MatchActionType, MutualMatchStatus } from '@prisma/client';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
-import { PrismaService } from '../prisma/prisma.service';
 import type { MatchActionDto, MatchActionStateDto } from './me-match-actions.dto';
 import { MeMatchesService } from './me-matches.service';
-import {
-  MutualMatchesService,
-  type MutualMatchDetectResult,
-} from './mutual-matches.service';
+import type { MutualMatchDetectResult } from './repositories/match.repository.types';
 import { MutualMatchEmailService } from '../notifications/mutual-match-email.service';
 import {
   MATCH_LIST_RANK_QUEUE_PORT,
   type MatchListRankQueuePort,
 } from '../workers/match-list-rank.ports';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from './repositories/match.repository';
 
 @Injectable()
 export class MeMatchActionsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly meMatches: MeMatchesService,
-    private readonly mutualMatches: MutualMatchesService,
     private readonly mutualMatchEmail: MutualMatchEmailService,
     private readonly analytics: AnalyticsService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
@@ -43,16 +42,8 @@ export class MeMatchActionsService {
     );
 
     const [row, mutual] = await Promise.all([
-      this.prisma.matchAction.findUnique({
-        where: {
-          actorUserId_targetUserId: {
-            actorUserId,
-            targetUserId,
-          },
-        },
-        select: { action: true, createdAt: true },
-      }),
-      this.mutualMatches.findActiveByUserPair(actorUserId, targetUserId),
+      this.matches.findActionWithCreatedAt(actorUserId, targetUserId),
+      this.matches.findActiveMutualByUserPair(actorUserId, targetUserId),
     ]);
 
     if (!row) {
@@ -86,36 +77,12 @@ export class MeMatchActionsService {
       throw new BadRequestException('Cannot act on yourself');
     }
 
-    const { row, detectResult } = await this.prisma.$transaction(async (tx) => {
-      const upserted = await tx.matchAction.upsert({
-        where: {
-          actorUserId_targetUserId: {
-            actorUserId,
-            targetUserId,
-          },
-        },
-        create: {
-          actorUserId,
-          targetUserId,
-          targetProfileIdSnapshot: profileId,
-          action,
-        },
-        update: {
-          action,
-          targetProfileIdSnapshot: profileId,
-        },
-      });
-
-      let detection: MutualMatchDetectResult | null = null;
-      if (action === MatchActionType.LIKE) {
-        detection = await this.mutualMatches.detectAndCreateMutualMatch(
-          actorUserId,
-          targetUserId,
-          tx,
-        );
-      }
-
-      return { row: upserted, detectResult: detection };
+    const { row, detectResult } =
+      await this.matches.upsertActionAndDetectMutual({
+        actorUserId,
+        targetUserId,
+        targetProfileIdSnapshot: profileId,
+        action,
     });
 
     const mutualFields =
@@ -176,15 +143,10 @@ export class MeMatchActionsService {
       candidateProfileId,
     );
 
-    const row = await this.prisma.matchAction.findUnique({
-      where: {
-        actorUserId_targetUserId: {
-          actorUserId,
-          targetUserId,
-        },
-      },
-      select: { action: true },
-    });
+    const row = await this.matches.findActionByActorTarget(
+      actorUserId,
+      targetUserId,
+    );
 
     if (!row) {
       throw new NotFoundException('No action to undo');
@@ -194,14 +156,7 @@ export class MeMatchActionsService {
       throw new ForbiddenException('Blocked matches cannot be undone');
     }
 
-    await this.prisma.matchAction.delete({
-      where: {
-        actorUserId_targetUserId: {
-          actorUserId,
-          targetUserId,
-        },
-      },
-    });
+    await this.matches.deleteActionByActorTarget(actorUserId, targetUserId);
 
     this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_ACTION, {
       action: 'undo',

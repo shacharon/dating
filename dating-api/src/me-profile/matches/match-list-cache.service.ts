@@ -16,7 +16,6 @@ import {
   recordCacheMiss,
   recordMatchListCacheSetMs,
 } from '../../observability/custom-metrics';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
   MATCH_LIST_RANK_QUEUE_PORT,
   type MatchListRankQueuePort,
@@ -28,11 +27,15 @@ import type {
 import { listFromMaterializedRanks } from './match-list-materialized';
 import { MatchListQueryService } from './match-list-query.service';
 import { MatchRankingService } from './match-ranking.service';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from '../repositories/match.repository';
 
 @Injectable()
 export class MatchListCacheService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     @Inject(CACHE_KV) private readonly cache: CacheKvPort,
@@ -111,7 +114,7 @@ export class MatchListCacheService {
   ): Promise<MeMatchesListResponseDto> {
     return listFromMaterializedRanks(
       {
-        prisma: this.prisma,
+        matches: this.matches,
         obs: this.obs,
         analytics: this.analytics,
         query: this.query,

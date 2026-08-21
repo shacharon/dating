@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MutualMatchStatus } from '@prisma/client';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import { ErrorCodes } from '../../logging/error-codes';
@@ -12,21 +11,12 @@ import {
   recordMatchListScoreCpuMs,
 } from '../../observability/custom-metrics';
 import { resolveMatchPrimaryPhotoUrl } from '../../photo-storage/cdn-url';
-import { PrismaService } from '../../prisma/prisma.service';
-import {
-  latestEvaluationForProfile,
-  latestEvaluationsForProfileIds,
-} from '../me-profile-analysis.service';
 import { buildMeMatchesParticipantReadModel } from '../me-profile-engine.mapper';
 import {
   MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY,
   resolveMatchListCandidateCap,
   resolveMatchListRebuildCandidateCap,
 } from '../match-list-candidate-cap';
-import {
-  MATCH_LIST_RANK_PERSIST_CHUNK,
-  MATCH_LIST_RANK_PERSIST_TX,
-} from '../match-list-rank-persist.constants';
 import { toStoredMatchListScore } from '../match-list-rank-score';
 import {
   MatchListCandidateEvaluationMissingError,
@@ -78,11 +68,15 @@ import {
   pickApprovedPrimaryPhotoId,
 } from './match-list.helpers';
 import type { MatchListRankSnapshot } from './match-list-rank.types';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from '../repositories/match.repository';
 
 @Injectable()
 export class MatchRankingService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matchesRepository: IMatchRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     private readonly query: MatchListQueryService,
@@ -135,54 +129,15 @@ export class MatchRankingService {
       return { rowsWritten: 0, rowsDeleted: 0 };
     }
     if (snapshot.status === 'not_ready' || snapshot.rows.length === 0) {
-      const del = await this.prisma.matchListRank.deleteMany({
-        where: { viewerUserId },
-      });
-      return { rowsWritten: 0, rowsDeleted: del.count };
+      const rowsDeleted =
+        await this.matchesRepository.deleteAllRanksForViewer(viewerUserId);
+      return { rowsWritten: 0, rowsDeleted };
     }
-
-    const builtAt = new Date();
-    const ids = snapshot.rows.map((r) => r.candidateProfileId);
-
-    // Sprint 40 — upsert-before-delete in short chunked txns (not one unbounded txn).
-    for (let i = 0; i < snapshot.rows.length; i += MATCH_LIST_RANK_PERSIST_CHUNK) {
-      const chunk = snapshot.rows.slice(i, i + MATCH_LIST_RANK_PERSIST_CHUNK);
-      await this.prisma.$transaction(async (tx) => {
-        await Promise.all(
-          chunk.map((row) =>
-            tx.matchListRank.upsert({
-              where: {
-                viewerUserId_candidateProfileId: {
-                  viewerUserId,
-                  candidateProfileId: row.candidateProfileId,
-                },
-              },
-              create: {
-                viewerUserId,
-                candidateProfileId: row.candidateProfileId,
-                matchScore: row.matchScore,
-                hardBlocked: row.hardBlocked,
-                builtAt,
-              },
-              update: {
-                matchScore: row.matchScore,
-                hardBlocked: row.hardBlocked,
-                builtAt,
-              },
-            }),
-          ),
-        );
-      }, MATCH_LIST_RANK_PERSIST_TX);
-    }
-
-    const del = await this.prisma.matchListRank.deleteMany({
-      where: {
-        viewerUserId,
-        candidateProfileId: { notIn: ids },
-      },
-    });
-
-    return { rowsWritten: snapshot.rows.length, rowsDeleted: del.count };
+    return this.matchesRepository.replaceRankSnapshot(
+      viewerUserId,
+      snapshot.rows,
+      new Date(),
+    );
   }
 
   /** Full ranked match list (cache miss path) + materialized page hydrate. */
@@ -209,19 +164,8 @@ export class MatchRankingService {
       options?.candidateCap ?? resolveMatchListCandidateCap();
     const nowFn = options?.now ?? Date.now;
     const deadlineAtMs = options?.deadlineAtMs;
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId },
-      include: {
-        preference: true,
-        signals: {
-          select: { signalKey: true, signalValue: true, evalVersion: true },
-        },
-        interests: {
-          select: { tag: true, rank: true, evalVersion: true },
-          orderBy: { rank: 'asc' },
-        },
-      },
-    });
+    const viewer =
+      await this.matchesRepository.findViewerMatchContextByUserId(userId);
 
     if (!viewer) {
       this.obs.trace(
@@ -240,7 +184,7 @@ export class MatchRankingService {
     }
 
     const approvedPhotoCount = await countApprovedPhotosForProfile(
-      this.prisma,
+      this.matchesRepository,
       viewer.id,
     );
     if (approvedPhotoCount < 1) {
@@ -268,7 +212,8 @@ export class MatchRankingService {
     );
 
     // Latest evaluation only (ORDER BY createdAt DESC LIMIT 1) — required for scoring.
-    const viewerEval = await latestEvaluationForProfile(this.prisma, viewer.id);
+    const viewerEval =
+      await this.matchesRepository.findLatestEvaluationForProfile(viewer.id);
     if (!viewerEval) {
       throw new MatchListViewerEvaluationMissingError();
     }
@@ -315,13 +260,11 @@ export class MatchRankingService {
           matches: [],
         };
       }
-      const loaded = await this.prisma.userProfile.findMany({
-        where: {
-          id: { in: pageIds },
-          status: STATUS_ANALYZED,
-        },
-        select: this.query.candidateSelectList,
-      });
+      const loaded =
+        await this.matchesRepository.findCandidateProfilesByIdsForList(
+          pageIds,
+          this.query.candidateSelectList,
+        );
       const byId = new Map(loaded.map((r) => [r.id, r]));
       candidateRows = pageIds
         .map((id) => byId.get(id))
@@ -336,13 +279,11 @@ export class MatchRankingService {
         asOf,
       });
       const [totalAnalyzed, eligible, rows] = await Promise.all([
-        this.prisma.userProfile.count({
-          where: this.query.matchCandidateBaseWhere(userId),
-        }),
-        this.prisma.userProfile.count({
-          where: listCandidateWhere,
-        }),
-        this.prisma.userProfile.findMany({
+        this.matchesRepository.countCandidates(
+          this.query.matchCandidateBaseWhere(userId),
+        ),
+        this.matchesRepository.countCandidates(listCandidateWhere),
+        this.matchesRepository.listCandidates({
           // Viewer→cand gender/age may be SQL-prefiltered; reciprocal gender still
           // evaluated in memory via reciprocalProductGenderEligibility below.
           where: listCandidateWhere,
@@ -361,40 +302,26 @@ export class MatchRankingService {
     const candidateLoadMs = Date.now() - candidateLoadStarted;
 
     const evalQueryStarted = Date.now();
-    const latestEvalByProfile = await latestEvaluationsForProfileIds(
-      this.prisma,
+    const latestEvalByProfile =
+      await this.matchesRepository.findLatestEvaluationsForProfileIds(
       candidateRows.map((r) => r.id),
     );
     const evalQueryMs = Date.now() - evalQueryStarted;
 
     const actionByTargetUserId = new Map(
       (
-        await this.prisma.matchAction.findMany({
-          where: isPageHydrate
-            ? {
-                actorUserId: userId,
-                targetUserId: {
-                  in: candidateRows.map((r) => r.userId as string),
-                },
-              }
-            : { actorUserId: userId },
-          select: { targetUserId: true, action: true },
-        })
+        await (isPageHydrate
+          ? this.matchesRepository.listActionsByActorForTargets(
+              userId,
+              candidateRows.map((r) => r.userId as string),
+            )
+          : this.matchesRepository.listActionsByActor(userId))
       ).map((row) => [row.targetUserId, row.action]),
     );
 
-    const mutualCounterpartUserIds = new Set<string>();
-    for (const m of await this.prisma.mutualMatch.findMany({
-      where: {
-        status: MutualMatchStatus.ACTIVE,
-        OR: [{ userId1: userId }, { userId2: userId }],
-      },
-      select: { userId1: true, userId2: true },
-    })) {
-      mutualCounterpartUserIds.add(
-        m.userId1 === userId ? m.userId2 : m.userId1,
-      );
-    }
+    const mutualCounterpartUserIds = new Set(
+      await this.matchesRepository.listActiveMutualCounterpartUserIds(userId),
+    );
 
     const scoreCpuStarted = Date.now();
     const matches: MeMatchItemDto[] = [];
@@ -572,7 +499,7 @@ export class MatchRankingService {
     }
 
     await appendPendingHardBlockMatches({
-      prisma: this.prisma,
+      matchesRepository: this.matchesRepository,
       pendingHardBlocks,
       matches,
       viewerDealbreakerSignals,

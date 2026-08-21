@@ -1,12 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { ProfileGender } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   ProfileQualityDto,
   type ProfileQualitySuggestionId,
 } from './dto/profile-quality.dto';
 import { viewerHasApprovedPhoto } from './me-profile-photo-gate';
 import { MeProfileService } from './me-profile.service';
+import {
+  MATCH_REPOSITORY,
+  type IMatchRepository,
+} from './repositories/match.repository';
 
 export const PROFILE_QUALITY_STORY_MIN_CHARS = 50;
 
@@ -113,7 +116,7 @@ export function computeProfileQuality(
 @Injectable()
 export class ProfileQualityService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_REPOSITORY) private readonly matches: IMatchRepository,
     private readonly meProfile: MeProfileService,
   ) {}
 
@@ -128,7 +131,7 @@ export class ProfileQualityService {
     }
 
     const hasApprovedPhoto = await viewerHasApprovedPhoto(
-      this.prisma,
+      this.matches,
       profile.id,
     );
 

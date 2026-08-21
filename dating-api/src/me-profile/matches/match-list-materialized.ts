@@ -7,7 +7,6 @@ import {
 import { ErrorCodes } from '../../logging/error-codes';
 import type { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import { recordMatchListLoadTimeMs } from '../../observability/custom-metrics';
-import type { PrismaService } from '../../prisma/prisma.service';
 import type {
   MeMatchItemDto,
   MeMatchesListResponseDto,
@@ -19,9 +18,10 @@ import {
 } from '../me-matches-response.mapper';
 import type { MatchListQueryService } from './match-list-query.service';
 import type { MatchRankingService } from './match-ranking.service';
+import type { IMatchRepository } from '../repositories/match.repository';
 
 type MaterializedListDeps = {
-  prisma: PrismaService;
+  matches: Pick<IMatchRepository, 'countRanksForViewer'>;
   obs: StructuredObservabilityService;
   analytics: AnalyticsService;
   query: MatchListQueryService;
@@ -113,9 +113,7 @@ export async function listFromMaterializedRanks(
     : null;
 
   if (cursor == null) {
-    const matchCount = await deps.prisma.matchListRank.count({
-      where: { viewerUserId: userId },
-    });
+    const matchCount = await deps.matches.countRanksForViewer(userId);
     deps.analytics.track(userId, ProductAnalyticsEvents.MATCH_LIST_VIEWED, {
       matchCount,
       viewerProfileId: gate.viewerProfileId,

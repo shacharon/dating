@@ -1,26 +1,23 @@
-import { UserProfilePhotoStatus } from '@prisma/client';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { IMatchRepository } from './repositories/match.repository';
 
 export async function countApprovedPhotosForProfile(
-  prisma: Pick<PrismaService, 'userProfilePhoto'>,
+  matches: Pick<IMatchRepository, 'countApprovedPhotosForProfile'>,
   profileId: string,
 ): Promise<number> {
-  return prisma.userProfilePhoto.count({
-    where: { profileId, status: UserProfilePhotoStatus.APPROVED },
-  });
+  return matches.countApprovedPhotosForProfile(profileId);
 }
 
 export async function viewerHasApprovedPhoto(
-  prisma: Pick<PrismaService, 'userProfilePhoto'>,
+  matches: Pick<IMatchRepository, 'countApprovedPhotosForProfile'>,
   profileId: string,
 ): Promise<boolean> {
-  return (await countApprovedPhotosForProfile(prisma, profileId)) >= 1;
+  return (await countApprovedPhotosForProfile(matches, profileId)) >= 1;
 }
 
 /** True when candidate profile has ≥1 APPROVED photo (browse eligibility). */
 export async function candidateHasApprovedPhoto(
-  prisma: Pick<PrismaService, 'userProfilePhoto'>,
+  matches: Pick<IMatchRepository, 'countApprovedPhotosForProfile'>,
   profileId: string,
 ): Promise<boolean> {
-  return viewerHasApprovedPhoto(prisma, profileId);
+  return viewerHasApprovedPhoto(matches, profileId);
 }
