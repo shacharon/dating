@@ -1,4 +1,5 @@
 import { MatchActionType, MutualMatchStatus } from '@prisma/client';
+import { LATEST_EVAL_BATCH_SIZE } from '../me-profile-analysis.service';
 import { MATCH_LIST_RANK_PERSIST_CHUNK } from '../match-list-rank-persist.constants';
 import { PrismaMatchRepository } from './prisma-match.repository';
 import type { PrismaService } from '../../prisma/prisma.service';
@@ -22,11 +23,16 @@ describe('PrismaMatchRepository', () => {
     findMany: jest.fn(),
     count: jest.fn(),
   };
+  const userProfileEvaluation = {
+    findFirst: jest.fn(),
+  };
   const prisma = {
     matchAction,
     mutualMatch,
     matchListRank,
+    userProfileEvaluation,
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
   } as unknown as PrismaService;
 
   let repo: PrismaMatchRepository;
@@ -127,5 +133,56 @@ describe('PrismaMatchRepository', () => {
       },
     });
     expect(result).toEqual({ rowsWritten: rows.length, rowsDeleted: 3 });
+  });
+
+  it('findLatestEvaluationForProfile orders by createdAt desc take 1', async () => {
+    userProfileEvaluation.findFirst.mockResolvedValue({
+      id: 'e1',
+      profileId: 'p1',
+      version: 'v1',
+      evaluationJson: {},
+      createdAt: new Date('2026-01-01'),
+    });
+
+    await repo.findLatestEvaluationForProfile('p1');
+
+    expect(userProfileEvaluation.findFirst).toHaveBeenCalledWith({
+      where: { profileId: 'p1' },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    });
+  });
+
+  it('findLatestEvaluationsForProfileIds chunks above LATEST_EVAL_BATCH_SIZE', async () => {
+    const ids = Array.from(
+      { length: LATEST_EVAL_BATCH_SIZE + 1 },
+      (_, i) => `p${i}`,
+    );
+    (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
+
+    await repo.findLatestEvaluationsForProfileIds(ids);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it('findLatestEvaluationsForProfileIds maps DISTINCT ON rows by profileId', async () => {
+    (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+      {
+        profileId: 'p1',
+        evaluationJson: { ok: true },
+        createdAt: '2026-02-01T00:00:00.000Z',
+        version: 'v1',
+      },
+    ]);
+
+    const map = await repo.findLatestEvaluationsForProfileIds(['p1', 'p1']);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(map.get('p1')).toEqual({
+      profileId: 'p1',
+      evaluationJson: { ok: true },
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      version: 'v1',
+    });
   });
 });

@@ -8,6 +8,10 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  scrubbedDeletedUserEmail,
+  scrubbedDeletedUserGoogleId,
+} from '../account-scrub.helpers';
 import type { IAccountRepository } from './account.repository';
 
 @Injectable()
@@ -122,8 +126,8 @@ export class PrismaAccountRepository implements IAccountRepository {
         data: {
           deletedAt: now,
           status: UserStatus.DISABLED,
-          email: `deleted+${userId}@deleted.invalid`,
-          googleId: `deleted+${userId}`,
+          email: scrubbedDeletedUserEmail(userId),
+          googleId: scrubbedDeletedUserGoogleId(userId),
           displayName: null,
           avatarUrl: null,
           emailNotificationsEnabled: false,

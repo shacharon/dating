@@ -14,14 +14,15 @@ import {
   ACCOUNT_REPOSITORY,
   type IAccountRepository,
 } from './repositories/account.repository';
+import {
+  scrubbedDeletedUserEmail,
+  scrubbedDeletedUserGoogleId,
+} from './account-scrub.helpers';
 
-export function scrubbedDeletedUserEmail(userId: string): string {
-  return `deleted+${userId}@deleted.invalid`;
-}
-
-export function scrubbedDeletedUserGoogleId(userId: string): string {
-  return `deleted+${userId}`;
-}
+export {
+  scrubbedDeletedUserEmail,
+  scrubbedDeletedUserGoogleId,
+} from './account-scrub.helpers';
 
 @Injectable()
 export class MeAccountService {
