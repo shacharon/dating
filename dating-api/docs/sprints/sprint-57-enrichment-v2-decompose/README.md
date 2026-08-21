@@ -1,11 +1,13 @@
 # Sprint 57 — Enrichment-v2 Keyword Engine Decomposition (P0)
 
-**Status:** In Progress (Stories 01–02 Done)  
+**Status:** Done  
 **Depends on:** Sprint 52 (keyword freeze / inventory) Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
 **Repo:** `dating-api`  
-**Round:** 3 (post-merge scan)
+**Round:** 3 (post-merge scan)  
+**Closed:** 2026-08-21  
+**Merge tip:** `feature/sprint-57-story-3`
 
 ---
 
@@ -25,7 +27,7 @@ Respect Sprint 52 freeze: **no new regex / phrases / allowlist ids** unless RFC 
 |---|-------|--------|
 | 01 | [Characterization + seam map](./STORY_01_characterization_seam_map.md) | **Done** |
 | 02 | [Split interest / rhythm / conflict mappers](./STORY_02_split_keyword_modules.md) | **Done** |
-| 03 | [Enrichment keyword manifest + thin facade](./STORY_03_enrichment_manifest.md) | Planned |
+| 03 | [Enrichment keyword manifest + thin facade](./STORY_03_enrichment_manifest.md) | **Done** |
 
 **Order:** 01 → 02 → 03.
 
@@ -35,7 +37,13 @@ Respect Sprint 52 freeze: **no new regex / phrases / allowlist ids** unless RFC 
 
 ## Success criteria
 
-- `enrichment-v2.ts` is a thin facade (target ≤ ~200 LOC) or deleted in favor of named modules + manifest
-- Existing enrichment specs / evaluate parity green
-- Manifest pattern mirrors Sprint 51 `expansion-manifest` (OCP for future *structure*, not new regex)
-- Freeze policy docs still authoritative for vocabulary changes
+- [x] `enrichment-v2.ts` is a thin facade (target ≤ ~200 LOC) or deleted in favor of named modules + manifest
+- [x] Existing enrichment specs / evaluate parity green
+- [x] Manifest pattern mirrors Sprint 51 `expansion-manifest` (OCP for future *structure*, not new regex)
+- [x] Freeze policy docs still authoritative for vocabulary changes
+
+## Delivered
+
+- Story 01: characterization + `SEAM_MAP.md`
+- Story 02: helpers / interest / rhythm / conflict modules + thin compose facade
+- Story 03: `enrichment-keyword-manifest.ts` + manifest-driven facade; freeze/inventory path updates; Agent 4 enrichment parity pass
