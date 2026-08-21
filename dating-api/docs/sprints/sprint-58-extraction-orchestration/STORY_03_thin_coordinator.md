@@ -1,6 +1,6 @@
 # Story 03 — Thin ExtractionService coordinator
 
-**Sprint 58 · Status: Planned**  
+**Sprint 58 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1–2 days  
 **Repo:** `dating-api`  
@@ -15,14 +15,14 @@
 
 ## Acceptance criteria
 
-- [ ] Soft LOC budget met or documented residual with ownership note
-- [ ] No duplicate prompt / validate / normalize logic left in service
-- [ ] Worker / evaluate call sites unchanged
-- [ ] Specs + tsc green
+- [x] Soft LOC budget met or documented residual with ownership note
+- [x] No duplicate prompt / validate / normalize logic left in service
+- [x] Worker / evaluate call sites unchanged
+- [x] Specs + tsc green
 
 ## Definition of Done
 
-- [ ] Agent 2 approved; Agent 4 if run; Agent 3 PM close
+- [x] Agent 2 approved; Agent 4 if run; Agent 3 PM close
 
 ## Suggested commit
 
@@ -31,3 +31,7 @@ refactor(extraction): thin ExtractionService as coordinator
 
 Sprint 58 Story 3
 ```
+
+## Close tip
+
+`feature/sprint-58-story-3` @ `a9c14f1` (+ Agent 3 close commit)

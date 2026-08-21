@@ -1,6 +1,6 @@
 # Sprint 58 — Extraction Orchestration Decomposition (P0)
 
-**Status:** In Progress  
+**Status:** Done  
 **Depends on:** Sprint 51 (expansion manifest) Done; Sprint 57 helpful  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -30,7 +30,7 @@ Split `extraction/extraction.service.ts` (~797 LOC) into focused collaborators s
 |---|-------|--------|
 | 01 | [Characterization + extraction pipeline map](./STORY_01_characterization_pipeline_map.md) | Done |
 | 02 | [Extract PromptBuilder + Normalizer + Validator](./STORY_02_extract_collaborators.md) | Done |
-| 03 | [Thin ExtractionService coordinator](./STORY_03_thin_coordinator.md) | Planned |
+| 03 | [Thin ExtractionService coordinator](./STORY_03_thin_coordinator.md) | Done |
 
 **Order:** 01 → 02 → 03.
 
@@ -40,6 +40,6 @@ Split `extraction/extraction.service.ts` (~797 LOC) into focused collaborators s
 
 ## Success criteria
 
-- `ExtractionService` ≤ ~250 LOC soft target (orchestration only)
+- `ExtractionService` ≤ ~250 LOC soft target (orchestration only) — **residual ~348 LOC documented** in [COORDINATOR_LOC.md](./COORDINATOR_LOC.md) (stage logging ownership)
 - Expansion joins stay via `expansion-manifest` (no paste regression)
 - Extraction unit + integration specs green; empty-pass / strict validation parity
