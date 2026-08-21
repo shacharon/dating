@@ -1,9 +1,9 @@
 import type { Prisma, UserProfile, UserProfileStatus } from '@prisma/client';
+import type { CreateMeProfileDto, PatchMeProfileDto } from '../me-profile.dto';
 import type {
-  CreateMeProfileDto,
-  PatchMeProfileDto,
-} from '../me-profile.dto';
-import type { UserProfileWithPreference } from './user-profile.repository.types';
+  LegacyProfileMatchCandidateRow,
+  UserProfileWithPreference,
+} from './user-profile.repository.types';
 
 export const USER_PROFILE_REPOSITORY = Symbol('USER_PROFILE_REPOSITORY');
 
@@ -61,4 +61,30 @@ export interface IUserProfileRepository {
     analyzedAt: Date | null;
     lastAnalysisError: string | null;
   } | null>;
+
+  markAnalyzing(userId: string): Promise<void>;
+  markAnalysisFailed(userId: string, errorMessage: string): Promise<void>;
+  persistAnalysisSuccess(args: {
+    userId: string;
+    profileId: string;
+    dbFirstColumns: Record<string, unknown>;
+    evaluationVersion: string;
+    evaluationJson: unknown;
+    signals: Array<{
+      signalKey: string;
+      signalValue: number;
+      evalVersion: string;
+    }>;
+    interests: Array<{
+      tag: string;
+      rank: number;
+      source: string;
+      evalVersion: string;
+    }>;
+  }): Promise<void>;
+
+  findLegacyProfileMatchesViewer(userId: string): Promise<UserProfile | null>;
+  listLegacyAnalyzedCandidatesExcludingUser(
+    userId: string,
+  ): Promise<LegacyProfileMatchCandidateRow[]>;
 }

@@ -1,20 +1,23 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { MatchFeedbackSentiment } from '@prisma/client';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
 import type {
   MatchFeedbackDto,
   MatchFeedbackStateDto,
 } from './me-match-feedback.dto';
 import { MeMatchesService } from './me-matches.service';
+import {
+  MATCH_FEEDBACK_REPOSITORY,
+  type IMatchFeedbackRepository,
+} from './repositories/match-feedback.repository';
 
 @Injectable()
 export class MeMatchFeedbackService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MATCH_FEEDBACK_REPOSITORY)
+    private readonly feedback: IMatchFeedbackRepository,
     private readonly meMatches: MeMatchesService,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
@@ -30,17 +33,16 @@ export class MeMatchFeedbackService {
         candidateProfileId,
       );
 
-    const row = await this.prisma.matchFeedback.findUnique({
-      where: {
-        userId_matchProfileId: {
-          userId: actorUserId,
-          matchProfileId: profileId,
-        },
-      },
-      select: { sentiment: true },
-    });
+    const sentiment = await this.feedback.findSentiment(actorUserId, profileId);
 
-    return { sentiment: row?.sentiment ?? null };
+    return {
+      sentiment:
+        sentiment === 'positive'
+          ? 'POSITIVE'
+          : sentiment === 'negative'
+            ? 'NEGATIVE'
+            : null,
+    };
   }
 
   async upsertFeedback(
@@ -58,21 +60,10 @@ export class MeMatchFeedbackService {
       throw new BadRequestException({ error: 'cannot_feedback_self' });
     }
 
-    const dbSentiment = wireSentimentToDb(sentiment);
-
-    const row = await this.prisma.matchFeedback.upsert({
-      where: {
-        userId_matchProfileId: {
-          userId: actorUserId,
-          matchProfileId: profileId,
-        },
-      },
-      create: {
-        userId: actorUserId,
-        matchProfileId: profileId,
-        sentiment: dbSentiment,
-      },
-      update: { sentiment: dbSentiment },
+    const row = await this.feedback.upsertSentiment({
+      userId: actorUserId,
+      matchProfileId: profileId,
+      sentiment,
     });
 
     this.obs.trace(
@@ -91,12 +82,4 @@ export class MeMatchFeedbackService {
       updatedAt: row.updatedAt.toISOString(),
     };
   }
-}
-
-function wireSentimentToDb(
-  sentiment: 'positive' | 'negative',
-): MatchFeedbackSentiment {
-  return sentiment === 'positive'
-    ? MatchFeedbackSentiment.POSITIVE
-    : MatchFeedbackSentiment.NEGATIVE;
 }

@@ -1,104 +1,78 @@
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  MessageStatus,
-  MutualMatchStatus,
-  UserProfileStatus,
-  UserStatus,
-} from '@prisma/client';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
-import { ErrorCodes } from '../logging/error-codes';
 import type { AnalyticsService } from '../analytics/analytics.service';
+import { ErrorCodes } from '../logging/error-codes';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { PhotoStorage } from '../photo-storage/photo-storage.types';
-import type { PrismaService } from '../prisma/prisma.service';
 import {
   MeAccountService,
   scrubbedDeletedUserEmail,
   scrubbedDeletedUserGoogleId,
 } from './me-account.service';
+import type { IAccountRepository } from './repositories/account.repository';
 
-describe('scrubbedDeletedUserEmail', () => {
-  it('returns deterministic scrubbed email', () => {
+describe('account scrub identifiers', () => {
+  it('builds deterministic deleted-user identifiers', () => {
     expect(scrubbedDeletedUserEmail('user-abc')).toBe(
       'deleted+user-abc@deleted.invalid',
     );
+    expect(scrubbedDeletedUserGoogleId('user-abc')).toBe('deleted+user-abc');
   });
 });
 
 describe('MeAccountService', () => {
-  const tx = {
-    userProfilePhoto: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
-    userProfileEvaluation: {
-      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-    },
-    userProfileSignal: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
-    userProfileInterest: {
-      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-    },
-    userProfilePreference: {
-      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-    },
-    userProfile: { update: jest.fn().mockResolvedValue({}) },
-    matchAction: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
-    matchFeedback: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
-    userContentViolation: {
-      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-    },
-    mutualMatch: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    message: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
-    user: { update: jest.fn().mockResolvedValue({}) },
-  };
-
-  const prisma = {
-    user: { findUnique: jest.fn() },
-    userProfile: { findUnique: jest.fn() },
-    userProfilePhoto: { findMany: jest.fn().mockResolvedValue([]) },
-    $transaction: jest.fn(async (fn: (t: typeof tx) => Promise<unknown>) =>
-      fn(tx),
-    ),
-  } as unknown as PrismaService;
-
-  const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
-  const analytics = { track: jest.fn() } as unknown as AnalyticsService;
-  const photoStorage = {
-    delete: jest.fn().mockResolvedValue(undefined),
-  } as unknown as PhotoStorage;
-
+  let accounts: jest.Mocked<IAccountRepository>;
+  let obs: jest.Mocked<Pick<StructuredObservabilityService, 'trace'>>;
+  let analytics: jest.Mocked<Pick<AnalyticsService, 'track'>>;
+  let photoStorage: jest.Mocked<Pick<PhotoStorage, 'delete'>>;
   let service: MeAccountService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    service = new MeAccountService(prisma, obs, analytics, photoStorage);
+    accounts = {
+      findActiveUser: jest.fn(),
+      findProfileIdByUserId: jest.fn().mockResolvedValue(null),
+      listPhotoStorageKeys: jest.fn().mockResolvedValue([]),
+      scrubAndSoftDeleteAccount: jest.fn().mockResolvedValue(undefined),
+    };
+    obs = { trace: jest.fn() };
+    analytics = { track: jest.fn() };
+    photoStorage = { delete: jest.fn().mockResolvedValue(undefined) };
+    service = new MeAccountService(
+      accounts,
+      obs as unknown as StructuredObservabilityService,
+      analytics as unknown as AnalyticsService,
+      photoStorage as unknown as PhotoStorage,
+    );
   });
 
-  it('rejects invalid confirmation', async () => {
+  it('rejects invalid confirmation before repository calls', async () => {
     await expect(
       service.deleteAccountForUser('user-1', 'delete'),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(accounts.findActiveUser).not.toHaveBeenCalled();
     expect(analytics.track).not.toHaveBeenCalled();
   });
 
-  it('returns 404 when user already deleted in service', async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+  it('returns 404 when the user is missing or deleted', async () => {
+    accounts.findActiveUser.mockResolvedValue({
       id: 'user-1',
       deletedAt: new Date(),
     });
+
     await expect(
       service.deleteAccountForUser('user-1', 'DELETE'),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(accounts.scrubAndSoftDeleteAccount).not.toHaveBeenCalled();
   });
 
-  it('scrubs user, profile, unmatches, and anonymizes messages', async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+  it('tracks analytics and delegates the DB scrub to the account port', async () => {
+    const now = new Date('2026-08-21T10:00:00.000Z');
+    jest.useFakeTimers({ now });
+    accounts.findActiveUser.mockResolvedValue({
       id: 'user-1',
       deletedAt: null,
     });
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue({
-      id: 'prof-1',
-    });
+    accounts.findProfileIdByUserId.mockResolvedValue('prof-1');
 
     await service.deleteAccountForUser('user-1', 'DELETE');
 
@@ -107,84 +81,50 @@ describe('MeAccountService', () => {
       ProductAnalyticsEvents.ACCOUNT_DELETED,
       {},
     );
-    expect(tx.userProfile.update).toHaveBeenCalledWith({
-      where: { id: 'prof-1' },
-      data: expect.objectContaining({
-        nickname: null,
-        status: UserProfileStatus.DRAFT,
-      }),
+    expect(accounts.scrubAndSoftDeleteAccount).toHaveBeenCalledWith({
+      userId: 'user-1',
+      profileId: 'prof-1',
+      now,
     });
-    expect(tx.matchAction.deleteMany).toHaveBeenCalledWith({
-      where: { actorUserId: 'user-1' },
-    });
-    expect(tx.matchFeedback.deleteMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-    });
-    expect(tx.userContentViolation.deleteMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-    });
-    expect(tx.matchFeedback.deleteMany).toHaveBeenCalledWith({
-      where: { matchProfileId: 'prof-1' },
-    });
-    expect(tx.mutualMatch.updateMany).toHaveBeenCalledWith({
-      where: {
-        status: MutualMatchStatus.ACTIVE,
-        OR: [{ userId1: 'user-1' }, { userId2: 'user-1' }],
-      },
-      data: expect.objectContaining({
-        status: MutualMatchStatus.UNMATCHED,
-        unmatchedByUserId: 'user-1',
-      }),
-    });
-    expect(tx.message.updateMany).toHaveBeenCalledWith({
-      where: { senderId: 'user-1' },
-      data: {
-        text: '[deleted user]',
-        status: MessageStatus.DELETED,
-      },
-    });
-    expect(tx.user.update).toHaveBeenCalledWith({
-      where: { id: 'user-1' },
-      data: expect.objectContaining({
-        status: UserStatus.DISABLED,
-        email: scrubbedDeletedUserEmail('user-1'),
-        googleId: scrubbedDeletedUserGoogleId('user-1'),
-      }),
-    });
-    expect(obs.trace).toHaveBeenCalled();
+    expect(obs.trace).toHaveBeenCalledWith(
+      expect.stringContaining('account deleted'),
+      ErrorCodes.ACCOUNT_DELETE_SUCCESS,
+    );
+    jest.useRealTimers();
   });
 
-  it('fires analytics before DB transaction', async () => {
+  it('deletes photo storage before delegating the DB scrub', async () => {
     const order: string[] = [];
-    (analytics.track as jest.Mock).mockImplementation(() => {
-      order.push('analytics');
-    });
-    (prisma.$transaction as jest.Mock).mockImplementation(async () => {
-      order.push('transaction');
-    });
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    accounts.findActiveUser.mockResolvedValue({
       id: 'user-1',
       deletedAt: null,
     });
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue(null);
+    accounts.findProfileIdByUserId.mockResolvedValue('prof-1');
+    accounts.listPhotoStorageKeys.mockResolvedValue([
+      { id: 'photo-1', storageKey: 'photos/1.jpg' },
+    ]);
+    photoStorage.delete.mockImplementation(async () => {
+      order.push('storage');
+    });
+    accounts.scrubAndSoftDeleteAccount.mockImplementation(async () => {
+      order.push('database');
+    });
 
     await service.deleteAccountForUser('user-1', 'DELETE');
 
-    expect(order).toEqual(['analytics', 'transaction']);
+    expect(order).toEqual(['storage', 'database']);
   });
 
-  it('logs photo storage failure without aborting delete', async () => {
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+  it('logs storage failures and still scrubs the database', async () => {
+    accounts.findActiveUser.mockResolvedValue({
       id: 'user-1',
       deletedAt: null,
     });
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue({
-      id: 'prof-1',
-    });
-    (prisma.userProfilePhoto.findMany as jest.Mock).mockResolvedValue([
+    accounts.findProfileIdByUserId.mockResolvedValue('prof-1');
+    accounts.listPhotoStorageKeys.mockResolvedValue([
       { id: 'photo-1', storageKey: 'photos/1.jpg' },
     ]);
-    (photoStorage.delete as jest.Mock).mockRejectedValue(new Error('s3 down'));
+    photoStorage.delete.mockRejectedValue(new Error('s3 down'));
 
     await service.deleteAccountForUser('user-1', 'DELETE');
 
@@ -192,6 +132,6 @@ describe('MeAccountService', () => {
       expect.stringContaining('photoId=photo-1'),
       ErrorCodes.ACCOUNT_DELETE_PHOTO_STORAGE_FAILED,
     );
-    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(accounts.scrubAndSoftDeleteAccount).toHaveBeenCalled();
   });
 });

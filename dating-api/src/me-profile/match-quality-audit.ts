@@ -9,7 +9,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { MeMatchDetailDto } from './dto/me-matches-response.dto';
 import type { MeMatchesService } from './me-matches.service';
-import { latestEvaluationForProfile } from './me-profile-analysis.service';
 import {
   buildMeMatchesParticipantReadModel,
   resolveMeMatchesEngineInputSourceMode,
@@ -135,11 +134,16 @@ export async function buildMatchQualityAuditJson(
     );
   }
 
-  const viewerEval = await latestEvaluationForProfile(prisma, viewerRow.id);
-  const candidateEval = await latestEvaluationForProfile(
-    prisma,
-    candidateRow.id,
-  );
+  const viewerEval = await prisma.userProfileEvaluation.findFirst({
+    where: { profileId: viewerRow.id },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  });
+  const candidateEval = await prisma.userProfileEvaluation.findFirst({
+    where: { profileId: candidateRow.id },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  });
 
   const viewerVersion = viewerEval?.version ?? '';
   const candidateVersion = candidateEval?.version ?? '';
@@ -189,9 +193,11 @@ export async function buildMatchQualityAuditJson(
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     env: {
-      engineInputSource: viewerSourceMode === 'normalized' && candidateSourceMode === 'normalized'
-        ? 'normalized'
-        : 'evaluationJson',
+      engineInputSource:
+        viewerSourceMode === 'normalized' &&
+        candidateSourceMode === 'normalized'
+          ? 'normalized'
+          : 'evaluationJson',
     },
     viewer: {
       userId: viewerUserId,

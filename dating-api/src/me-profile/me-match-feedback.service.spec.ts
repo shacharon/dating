@@ -4,14 +4,15 @@ import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { ErrorCodes } from '../logging/error-codes';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
-import type { PrismaService } from '../prisma/prisma.service';
 import { MeMatchFeedbackService } from './me-match-feedback.service';
 import type { MeMatchesService } from './me-matches.service';
+import type { IMatchFeedbackRepository } from './repositories/match-feedback.repository';
 
 describe('MeMatchFeedbackService', () => {
-  const prisma = {
-    matchFeedback: { findUnique: jest.fn(), upsert: jest.fn() },
-  } as unknown as PrismaService;
+  const feedback = {
+    findSentiment: jest.fn(),
+    upsertSentiment: jest.fn(),
+  } as unknown as IMatchFeedbackRepository;
 
   const meMatches = {
     assertMatchCandidateVisible: jest.fn(),
@@ -24,7 +25,7 @@ describe('MeMatchFeedbackService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MeMatchFeedbackService(prisma, meMatches, obs, analytics);
+    service = new MeMatchFeedbackService(feedback, meMatches, obs, analytics);
   });
 
   it('getFeedback returns null when no row exists', async () => {
@@ -32,7 +33,7 @@ describe('MeMatchFeedbackService', () => {
       candidateProfileId: 'prof-cand',
       targetUserId: 'target-user',
     });
-    (prisma.matchFeedback.findUnique as jest.Mock).mockResolvedValue(null);
+    (feedback.findSentiment as jest.Mock).mockResolvedValue(null);
 
     await expect(service.getFeedback('actor-1', 'prof-cand')).resolves.toEqual({
       sentiment: null,
@@ -44,9 +45,7 @@ describe('MeMatchFeedbackService', () => {
       candidateProfileId: 'prof-cand',
       targetUserId: 'target-user',
     });
-    (prisma.matchFeedback.findUnique as jest.Mock).mockResolvedValue({
-      sentiment: MatchFeedbackSentiment.POSITIVE,
-    });
+    (feedback.findSentiment as jest.Mock).mockResolvedValue('positive');
 
     await expect(service.getFeedback('actor-1', 'prof-cand')).resolves.toEqual({
       sentiment: 'POSITIVE',
@@ -58,9 +57,9 @@ describe('MeMatchFeedbackService', () => {
       new NotFoundException('Match not found.'),
     );
 
-    await expect(service.getFeedback('actor-1', 'prof-cand')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.getFeedback('actor-1', 'prof-cand'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('upsertFeedback rejects self feedback', async () => {
@@ -73,7 +72,7 @@ describe('MeMatchFeedbackService', () => {
       service.upsertFeedback('actor-1', 'prof-self', 'positive'),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(prisma.matchFeedback.upsert).not.toHaveBeenCalled();
+    expect(feedback.upsertSentiment).not.toHaveBeenCalled();
   });
 
   it('upsertFeedback creates POSITIVE row and tracks analytics', async () => {
@@ -83,7 +82,7 @@ describe('MeMatchFeedbackService', () => {
     });
     const createdAt = new Date('2026-06-06T10:00:00.000Z');
     const updatedAt = new Date('2026-06-06T10:00:00.000Z');
-    (prisma.matchFeedback.upsert as jest.Mock).mockResolvedValue({
+    (feedback.upsertSentiment as jest.Mock).mockResolvedValue({
       matchProfileId: 'prof-cand',
       sentiment: MatchFeedbackSentiment.POSITIVE,
       createdAt,
@@ -102,19 +101,10 @@ describe('MeMatchFeedbackService', () => {
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
     });
-    expect(prisma.matchFeedback.upsert).toHaveBeenCalledWith({
-      where: {
-        userId_matchProfileId: {
-          userId: 'actor-1',
-          matchProfileId: 'prof-cand',
-        },
-      },
-      create: {
-        userId: 'actor-1',
-        matchProfileId: 'prof-cand',
-        sentiment: MatchFeedbackSentiment.POSITIVE,
-      },
-      update: { sentiment: MatchFeedbackSentiment.POSITIVE },
+    expect(feedback.upsertSentiment).toHaveBeenCalledWith({
+      userId: 'actor-1',
+      matchProfileId: 'prof-cand',
+      sentiment: 'positive',
     });
     expect(analytics.track).toHaveBeenCalledWith(
       'actor-1',
@@ -139,7 +129,7 @@ describe('MeMatchFeedbackService', () => {
     });
     const createdAt = new Date('2026-06-06T10:00:00.000Z');
     const updatedAt = new Date('2026-06-06T11:00:00.000Z');
-    (prisma.matchFeedback.upsert as jest.Mock).mockResolvedValue({
+    (feedback.upsertSentiment as jest.Mock).mockResolvedValue({
       matchProfileId: 'prof-cand',
       sentiment: MatchFeedbackSentiment.NEGATIVE,
       createdAt,

@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma, type UserProfile, type UserProfileStatus } from '@prisma/client';
+import { Inject, Injectable } from '@nestjs/common';
+import type { UserProfile, UserProfileStatus } from '@prisma/client';
 import type {
   EvaluateBatchInput,
   EvaluateBatchResult,
@@ -7,15 +7,16 @@ import type {
 import { EvaluateService } from '../evaluate/evaluate.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  USER_PROFILE_REPOSITORY,
+  type IUserProfileRepository,
+} from './repositories/user-profile.repository';
 
 /** Max profile ids per DISTINCT ON query (keeps IN-lists bounded). */
 export const LATEST_EVAL_BATCH_SIZE = 500;
 
 const STATUS_SUBMITTED = 'SUBMITTED' as UserProfileStatus;
-const STATUS_ANALYZING = 'ANALYZING' as UserProfileStatus;
 const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
-const STATUS_FAILED = 'FAILED' as UserProfileStatus;
 
 /**
  * Pipeline version tag stored in every UserProfileEvaluation row.
@@ -72,7 +73,7 @@ function toNullableSignalInt(value: unknown): number | null {
  * Top interest tags from enrichment / extended / raw signals, deduped by lowercase key (max 3).
  *
  * **Semantic source of truth** for what these tags mean is `UserProfileEvaluation.evaluationJson`
- * for the evaluation row created in the same `$transaction` as {@link buildInterestOperations}.
+ * for the evaluation row created in the same transaction as the interest rows.
  * `UserProfileInterest` rows are a denormalized index. The same tags are **written** onto
  * `UserProfile.interestsTop` via {@link mapDbFirstColumnsFromEvaluation} for DB-first search only;
  * product code under `src/me-profile/` does **not** read that column back for matching or mapping.
@@ -88,8 +89,8 @@ function pickTopInterests(result: EvaluateBatchResult): string[] {
   const fromEnrichment = result.enrichment?.signals?.interestsTop3;
   const fromExtended = result.extendedSignals?.interests;
   const fromRaw = result.self?.rawInterests;
-  const candidate = [fromEnrichment, fromExtended, fromRaw].find((v) =>
-    Array.isArray(v) && v.length > 0,
+  const candidate = [fromEnrichment, fromExtended, fromRaw].find(
+    (v) => Array.isArray(v) && v.length > 0,
   );
   if (!candidate) {
     return [];
@@ -121,9 +122,7 @@ function pickTopInterests(result: EvaluateBatchResult): string[] {
  *
  * (No `evaluationId` on interest rows; see {@link pickTopInterests}.)
  */
-export function mapDbFirstColumnsFromEvaluation(
-  result: EvaluateBatchResult,
-): {
+export function mapDbFirstColumnsFromEvaluation(result: EvaluateBatchResult): {
   interestsTop: string[];
   sigEmotionalDepth: number | null;
   sigLifestylePace: number | null;
@@ -147,23 +146,19 @@ export function mapDbFirstColumnsFromEvaluation(
  * Only signals with a non-null value produce a row. Caller must pass the same `evalVersion` string
  * used for `UserProfileEvaluation.version` in the same transaction (see {@link SIGNAL_KEYS}).
  */
-function buildSignalUpserts(
-  prisma: PrismaService,
-  profileId: string,
+function buildSignalRows(
   result: EvaluateBatchResult,
   evalVersion: string,
-) {
+): Array<{
+  signalKey: string;
+  signalValue: number;
+  evalVersion: string;
+}> {
   const selfSignals = (result.self?.signals ?? {}) as Record<string, unknown>;
   return SIGNAL_KEYS.flatMap((key) => {
     const value = toNullableSignalInt(selfSignals[key]);
     if (value === null) return [];
-    return [
-      prisma.userProfileSignal.upsert({
-        where: { profileId_signalKey: { profileId, signalKey: key } },
-        create: { profileId, signalKey: key, signalValue: value, evalVersion },
-        update: { signalValue: value, evalVersion },
-      }),
-    ];
+    return [{ signalKey: key, signalValue: value, evalVersion }];
   });
 }
 
@@ -172,100 +167,21 @@ function buildSignalUpserts(
  * Always removes all interest rows for the profile, then re-creates ranked rows from {@link pickTopInterests}.
  * Caller must pass the same `evalVersion` as `UserProfileEvaluation.version` in the same transaction.
  */
-function buildInterestOperations(
-  prisma: PrismaService,
-  profileId: string,
+function buildInterestRows(
   result: EvaluateBatchResult,
   evalVersion: string,
-) {
-  const tags = pickTopInterests(result);
-  return [
-    prisma.userProfileInterest.deleteMany({ where: { profileId } }),
-    ...tags.map((tag, i) =>
-      prisma.userProfileInterest.create({
-        data: {
-          profileId,
-          tag: tag.toLowerCase().trim(),
-          rank: i + 1,
-          source: 'enrichment',
-          evalVersion,
-        },
-      }),
-    ),
-  ];
-}
-
-/**
- * Latest-evaluation retrieval rule: exactly one row, newest `createdAt` only.
- * Equivalent to `ORDER BY createdAt DESC LIMIT 1` — never returns older evaluations.
- */
-export function latestEvaluationForProfile(
-  prisma: PrismaService,
-  profileId: string,
-) {
-  return prisma.userProfileEvaluation.findFirst({
-    where: { profileId },
-    orderBy: { createdAt: 'desc' },
-    take: 1,
-  });
-}
-
-/** Payload shape used by `MeMatchesService` when batch-loading latest evals. */
-export type LatestEvaluationForMatchPick = {
-  profileId: string;
-  evaluationJson: Prisma.JsonValue;
-  createdAt: Date;
-  /** Same as `UserProfileEvaluation.version`; required for normalized read guard. */
-  version: string;
-};
-
-type LatestEvalRawRow = {
-  profileId: string;
-  evaluationJson: Prisma.JsonValue;
-  createdAt: Date | string;
-  version: string;
-};
-
-/**
- * Latest `UserProfileEvaluation` per profile id via chunked Postgres
- * `DISTINCT ON ("profileId") ... ORDER BY "profileId", "createdAt" DESC`.
- * Missing profiles are omitted. Does not call {@link latestEvaluationForProfile}.
- */
-export async function latestEvaluationsForProfileIds(
-  prisma: PrismaService,
-  profileIds: string[],
-): Promise<Map<string, LatestEvaluationForMatchPick>> {
-  const out = new Map<string, LatestEvaluationForMatchPick>();
-  const unique = [...new Set(profileIds)];
-  if (unique.length === 0) {
-    return out;
-  }
-
-  for (let i = 0; i < unique.length; i += LATEST_EVAL_BATCH_SIZE) {
-    const chunk = unique.slice(i, i + LATEST_EVAL_BATCH_SIZE);
-    const rows = await prisma.$queryRaw<LatestEvalRawRow[]>(Prisma.sql`
-      SELECT DISTINCT ON ("profileId")
-        "profileId",
-        "evaluationJson",
-        "createdAt",
-        "version"
-      FROM "UserProfileEvaluation"
-      WHERE "profileId" IN (${Prisma.join(chunk)})
-      ORDER BY "profileId", "createdAt" DESC
-    `);
-    for (const row of rows) {
-      out.set(row.profileId, {
-        profileId: row.profileId,
-        evaluationJson: row.evaluationJson,
-        createdAt:
-          row.createdAt instanceof Date
-            ? row.createdAt
-            : new Date(row.createdAt),
-        version: row.version,
-      });
-    }
-  }
-  return out;
+): Array<{
+  tag: string;
+  rank: number;
+  source: string;
+  evalVersion: string;
+}> {
+  return pickTopInterests(result).map((tag, i) => ({
+    tag: tag.toLowerCase().trim(),
+    rank: i + 1,
+    source: 'enrichment',
+    evalVersion,
+  }));
 }
 
 /**
@@ -352,15 +268,14 @@ function contextToEvaluateBatchInput(
 @Injectable()
 export class MeProfileAnalysisService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(USER_PROFILE_REPOSITORY)
+    private readonly profiles: IUserProfileRepository,
     private readonly evaluate: EvaluateService,
     private readonly obs: StructuredObservabilityService,
   ) {}
 
   async runForUser(userId: string): Promise<ProfileAnalysisRunOutcome> {
-    const profile = await this.prisma.userProfile.findUnique({
-      where: { userId },
-    });
+    const profile = await this.profiles.findByUserId(userId);
 
     // Guard: skip if profile was concurrently moved away from SUBMITTED.
     // Already ANALYZED → treat as success so Bull retries after a prior attempt
@@ -389,10 +304,7 @@ export class MeProfileAnalysisService {
 
     // Transition to ANALYZING.
     try {
-      await this.prisma.userProfile.update({
-        where: { userId },
-        data: { status: STATUS_ANALYZING },
-      });
+      await this.profiles.markAnalyzing(userId);
     } catch (e: unknown) {
       this.obs.error(
         `me profile analysis failed to set ANALYZING profileId=${profile.id}`,
@@ -420,29 +332,15 @@ export class MeProfileAnalysisService {
       // are wiped then repopulated from `result` so they match this batch's evaluation JSON
       // (`UserProfileSignal` / `UserProfileInterest` have evalVersion only — no evaluationId FK; see SIGNAL_KEYS and pickTopInterests).
       // If any operation fails the catch block fires and sets FAILED.
-      await this.prisma.$transaction([
-        this.prisma.userProfile.update({
-          where: { userId },
-          data: {
-            status: STATUS_ANALYZED,
-            analyzedAt: new Date(),
-            lastAnalysisError: null,
-            ...dbFirstColumns,
-          },
-        }),
-        this.prisma.userProfileEvaluation.create({
-          data: {
-            profileId: profile.id,
-            version: EVALUATION_VERSION,
-            evaluationJson: result as unknown as Prisma.InputJsonValue,
-          },
-        }),
-        this.prisma.userProfileSignal.deleteMany({
-          where: { profileId: profile.id },
-        }),
-        ...buildSignalUpserts(this.prisma, profile.id, result, EVALUATION_VERSION),
-        ...buildInterestOperations(this.prisma, profile.id, result, EVALUATION_VERSION),
-      ]);
+      await this.profiles.persistAnalysisSuccess({
+        userId,
+        profileId: profile.id,
+        dbFirstColumns,
+        evaluationVersion: EVALUATION_VERSION,
+        evaluationJson: result,
+        signals: buildSignalRows(result, EVALUATION_VERSION),
+        interests: buildInterestRows(result, EVALUATION_VERSION),
+      });
 
       this.obs.trace(
         `me profile analysis complete profileId=${profile.id}`,
@@ -454,14 +352,8 @@ export class MeProfileAnalysisService {
 
       // Best-effort: persist FAILED status. Do not throw if this update also
       // fails — the caller uses fire-and-forget.
-      await this.prisma.userProfile
-        .update({
-          where: { userId },
-          data: {
-            status: STATUS_FAILED,
-            lastAnalysisError: message.slice(0, 500),
-          },
-        })
+      await this.profiles
+        .markAnalysisFailed(userId, message)
         .catch(() => undefined);
 
       this.obs.error(

@@ -12,10 +12,7 @@ import { NestFactory } from '@nestjs/core';
 import { ProfileGender } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import {
-  latestEvaluationForProfile,
-  MeProfileAnalysisService,
-} from '../src/me-profile/me-profile-analysis.service';
+import { MeProfileAnalysisService } from '../src/me-profile/me-profile-analysis.service';
 import { MeProfileService } from '../src/me-profile/me-profile.service';
 
 // ── POC users ────────────────────────────────────────────────────────────────
@@ -62,7 +59,11 @@ async function main() {
     console.log(`  UserProfile.id     : ${profile.id}`);
     console.log(`  UserProfile.status : ${profile.status}`);
 
-    const latestEval = await latestEvaluationForProfile(prisma, profile.id);
+    const latestEval = await prisma.userProfileEvaluation.findFirst({
+      where: { profileId: profile.id },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    });
     console.log(
       `  LatestEval         : ${latestEval ? `EXISTS id=${latestEval.id}` : 'MISSING'}`,
     );
@@ -81,7 +82,9 @@ async function main() {
     }
 
     // ── 4. Submit (DRAFT / ANALYZED / FAILED → SUBMITTED) ────────────
-    const statusNow = (await prisma.userProfile.findUnique({ where: { userId: user.userId } }))?.status;
+    const statusNow = (
+      await prisma.userProfile.findUnique({ where: { userId: user.userId } })
+    )?.status;
     if (statusNow === 'SUBMITTED' || statusNow === 'ANALYZING') {
       console.log(`  → Profile already in ${statusNow} — skipping submit`);
     } else {
@@ -95,7 +98,9 @@ async function main() {
     await analysis.runForUser(user.userId);
 
     // ── 6. Verify result ──────────────────────────────────────────────
-    const profileAfter = await prisma.userProfile.findUnique({ where: { userId: user.userId } });
+    const profileAfter = await prisma.userProfile.findUnique({
+      where: { userId: user.userId },
+    });
     const evalAfter = await prisma.userProfileEvaluation.findFirst({
       where: { profileId: profile.id },
       orderBy: { createdAt: 'desc' },
@@ -104,10 +109,15 @@ async function main() {
 
     console.log(`  Status after       : ${profileAfter?.status}`);
     console.log(`  AnalyzedAt         : ${profileAfter?.analyzedAt}`);
-    console.log(`  LastError          : ${profileAfter?.lastAnalysisError ?? 'none'}`);
-    console.log(`  EvaluationRow      : ${evalAfter ? `EXISTS  id=${evalAfter.id}  version=${evalAfter.version}` : 'MISSING — analysis may have failed'}`);
+    console.log(
+      `  LastError          : ${profileAfter?.lastAnalysisError ?? 'none'}`,
+    );
+    console.log(
+      `  EvaluationRow      : ${evalAfter ? `EXISTS  id=${evalAfter.id}  version=${evalAfter.version}` : 'MISSING — analysis may have failed'}`,
+    );
 
-    const matchReady = profileAfter?.status === 'ANALYZED' && evalAfter !== null;
+    const matchReady =
+      profileAfter?.status === 'ANALYZED' && evalAfter !== null;
     console.log(`  Match-ready        : ${matchReady ? '✓ YES' : '✗ NO'}`);
   }
 
@@ -115,10 +125,20 @@ async function main() {
   console.log('\n══════════════════════════════════════════════');
   console.log('FINAL STATE:');
   for (const user of POC_USERS) {
-    const profile = await prisma.userProfile.findUnique({ where: { userId: user.userId } });
-    const evalRow = profile ? await latestEvaluationForProfile(prisma, profile.id) : null;
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId: user.userId },
+    });
+    const evalRow = profile
+      ? await prisma.userProfileEvaluation.findFirst({
+          where: { profileId: profile.id },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        })
+      : null;
     const ready = profile?.status === 'ANALYZED' && evalRow !== null;
-    console.log(`  ${user.label.padEnd(32)}  status=${profile?.status ?? 'NO_PROFILE'}  eval=${evalRow ? 'YES' : 'NO'}  match-ready=${ready ? 'YES ✓' : 'NO ✗'}`);
+    console.log(
+      `  ${user.label.padEnd(32)}  status=${profile?.status ?? 'NO_PROFILE'}  eval=${evalRow ? 'YES' : 'NO'}  match-ready=${ready ? 'YES ✓' : 'NO ✗'}`,
+    );
   }
 
   await app.close();

@@ -48,6 +48,8 @@ import { PrismaConversationRepository } from './repositories/prisma-conversation
 import { CONVERSATION_REPOSITORY } from './repositories/conversation.repository';
 import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
 import { MatchingPolicyModule } from '../matching-policy/matching-policy.module';
+import { MATCH_FEEDBACK_REPOSITORY } from './repositories/match-feedback.repository';
+import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedback.repository';
 
 /**
  * Product me-profile module.
@@ -83,6 +85,10 @@ import { MatchingPolicyModule } from '../matching-policy/matching-policy.module'
     {
       provide: MATCH_REPOSITORY,
       useClass: PrismaMatchRepository,
+    },
+    {
+      provide: MATCH_FEEDBACK_REPOSITORY,
+      useClass: PrismaMatchFeedbackRepository,
     },
     {
       provide: CONVERSATION_REPOSITORY,

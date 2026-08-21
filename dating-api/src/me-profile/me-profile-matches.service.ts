@@ -1,14 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import type { UserProfileStatus } from '@prisma/client';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  USER_PROFILE_REPOSITORY,
+  type IUserProfileRepository,
+} from './repositories/user-profile.repository';
 import {
   buildProductProfileMatchingBridge,
   reciprocalProductGenderEligibility,
 } from './user-profile-matching-bridge.contract';
-
-const STATUS_ANALYZED = 'ANALYZED' as UserProfileStatus;
 
 // ─── Response shape ───────────────────────────────────────────────────────────
 
@@ -58,14 +58,15 @@ export interface MeProfileMatchesResponseDto {
 @Injectable()
 export class MeProfileMatchesService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(USER_PROFILE_REPOSITORY)
+    private readonly profiles: IUserProfileRepository,
     private readonly obs: StructuredObservabilityService,
   ) {}
 
-  async getMatchesForUser(userId: string): Promise<MeProfileMatchesResponseDto> {
-    const viewer = await this.prisma.userProfile.findUnique({
-      where: { userId },
-    });
+  async getMatchesForUser(
+    userId: string,
+  ): Promise<MeProfileMatchesResponseDto> {
+    const viewer = await this.profiles.findLegacyProfileMatchesViewer(userId);
 
     if (!viewer) {
       this.obs.trace(
@@ -82,27 +83,8 @@ export class MeProfileMatchesService {
 
     // Candidates: all ANALYZED profiles that are not the viewer.
     // Select only the fields required by the bridge + response shape to keep the query tight.
-    const candidateRows = await this.prisma.userProfile.findMany({
-      where: { userId: { not: userId }, status: STATUS_ANALYZED },
-      select: {
-        id: true,
-        birthDate: true,
-        gender: true,
-        desiredPartnerGenders: true,
-        city: true,
-        country: true,
-        locationLabel: true,
-        aboutMe: true,
-        aboutPartner: true,
-        aboutRelationship: true,
-        analyzedAt: true,
-        _count: { select: { evaluations: true } },
-        photos: {
-          where: { status: 'APPROVED' as const },
-          select: { id: true, isPrimary: true },
-        },
-      },
-    });
+    const candidateRows =
+      await this.profiles.listLegacyAnalyzedCandidatesExcludingUser(userId);
 
     const totalBeforeFilter = candidateRows.length;
 

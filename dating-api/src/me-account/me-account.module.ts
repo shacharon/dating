@@ -10,6 +10,8 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { MeAccountController } from './me-account.controller';
 import { MeAccountService } from './me-account.service';
+import { ACCOUNT_REPOSITORY } from './repositories/account.repository';
+import { PrismaAccountRepository } from './repositories/prisma-account.repository';
 
 @Module({
   imports: [
@@ -23,6 +25,13 @@ import { MeAccountService } from './me-account.service';
     forwardRef(() => AuthModule),
   ],
   controllers: [MeAccountController],
-  providers: [MeAccountService, MeProfileValidationPipe],
+  providers: [
+    MeAccountService,
+    MeProfileValidationPipe,
+    {
+      provide: ACCOUNT_REPOSITORY,
+      useClass: PrismaAccountRepository,
+    },
+  ],
 })
 export class MeAccountModule {}
