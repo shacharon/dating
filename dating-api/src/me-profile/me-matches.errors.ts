@@ -1,16 +1,10 @@
-import { ErrorCodes, type ErrorCode } from '../logging/error-codes';
+import { ErrorCodes } from '../logging/error-codes';
+import { MeDomainError } from './me-domain.error';
 
 /** Base for me-matches orchestration errors mapped by ObservabilityExceptionFilter. */
-export abstract class MeMatchesDomainError extends Error {
-  abstract readonly httpStatus: number;
-  /** Body passed to `new HttpException(body, status)` — must match current Nest responses. */
-  abstract readonly httpBody: string | Record<string, unknown>;
-  /** Stable ErrorCodes.* value for optional filter logging. */
-  abstract readonly errorCode: ErrorCode;
-
+export abstract class MeMatchesDomainError extends MeDomainError {
   constructor(message?: string) {
     super(message ?? 'MeMatchesDomainError');
-    this.name = new.target.name;
   }
 }
 

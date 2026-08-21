@@ -1,5 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ErrorCodes } from '../logging/error-codes';
+import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import {
@@ -9,15 +11,21 @@ import {
 
 describe('ConversationMessageRateLimitService (memory)', () => {
   let service: ConversationMessageRateLimitService;
+  const obs = { trace: jest.fn(), error: jest.fn() };
 
   beforeEach(async () => {
     delete process.env.REDIS_URL;
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversationMessageRateLimitService,
         {
           provide: SimpleLogger,
           useValue: { warn: jest.fn(), log: jest.fn(), error: jest.fn() },
+        },
+        {
+          provide: StructuredObservabilityService,
+          useValue: obs,
         },
       ],
     }).compile();
@@ -47,6 +55,10 @@ describe('ConversationMessageRateLimitService (memory)', () => {
 
     await expect(service.consumeSendSlot('user_a')).rejects.toBeInstanceOf(
       HttpException,
+    );
+    expect(obs.trace).toHaveBeenCalledWith(
+      'me conversations message rate limited userId=user_a',
+      ErrorCodes.ME_CONVERSATIONS_MESSAGE_RATE_LIMITED,
     );
     try {
       await service.consumeSendSlot('user_a');

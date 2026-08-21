@@ -18,6 +18,13 @@ import type { AnalyticsService } from '../analytics/analytics.service';
 import type { MeProfileAnalysisService } from './me-profile-analysis.service';
 import type { MeProfileService } from './me-profile.service';
 import { createMeProfileServiceForTest } from './me-profile.test-harness';
+import {
+  ProfileNotFoundForSubmitError,
+  ProfileSubmitGenderRequiredError,
+  ProfileSubmitInvalidStateError,
+  ProfileSubmitPersistenceFailedError,
+  ProfileSubmitPhotoRequiredError,
+} from './me-profile.errors';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 import type { OpenAIModerationClient } from '../content-moderation/openai-moderation.client';
@@ -500,10 +507,10 @@ describe('MeProfileService', () => {
   // ---------------------------------------------------------------------------
 
   describe('submitForUser', () => {
-    it('throws NotFoundException when profile missing', async () => {
+    it('throws ProfileNotFoundForSubmitError when profile missing', async () => {
       prisma.userProfile.findUnique.mockResolvedValue(null);
       await expect(service.submitForUser(userId)).rejects.toBeInstanceOf(
-        NotFoundException,
+        ProfileNotFoundForSubmitError,
       );
       expect(prisma.userProfile.update).not.toHaveBeenCalled();
     });
@@ -521,7 +528,7 @@ describe('MeProfileService', () => {
       ['null', null],
       ['PREFER_NOT_TO_SAY', ProfileGender.PREFER_NOT_TO_SAY],
     ] as const)(
-      'throws UnprocessableEntityException when gender is %s',
+      'throws ProfileSubmitGenderRequiredError when gender is %s',
       async (_label, gender) => {
         prisma.userProfile.findUnique.mockResolvedValue({
           ...baseRow,
@@ -529,14 +536,14 @@ describe('MeProfileService', () => {
           gender: gender as unknown as typeof baseRow.gender,
         });
         await expect(service.submitForUser(userId)).rejects.toMatchObject({
-          response: expect.objectContaining({ error: 'gender_required' }),
+          httpBody: expect.objectContaining({ error: 'gender_required' }),
         });
         expect(prisma.userProfile.update).not.toHaveBeenCalled();
         expect(analysisQueue.enqueueOrRunInline).not.toHaveBeenCalled();
       },
     );
 
-    it('throws UnprocessableEntityException when no approved photo', async () => {
+    it('throws ProfileSubmitPhotoRequiredError when no approved photo', async () => {
       prisma.userProfile.findUnique.mockResolvedValue({
         ...baseRow,
         status: UserProfileStatus.DRAFT,
@@ -545,7 +552,7 @@ describe('MeProfileService', () => {
       prisma.userProfilePhoto.count.mockResolvedValue(0);
 
       await expect(service.submitForUser(userId)).rejects.toMatchObject({
-        response: expect.objectContaining({ error: 'photo_required' }),
+        httpBody: expect.objectContaining({ error: 'photo_required' }),
       });
       expect(analytics.track).toHaveBeenCalledWith(
         userId,
@@ -557,12 +564,12 @@ describe('MeProfileService', () => {
     });
 
     it.each([S.SUBMITTED, S.ANALYZING])(
-      'throws UnprocessableEntityException when status is %s',
+      'throws ProfileSubmitInvalidStateError when status is %s',
       async (status) => {
         // status guard fires before gender guard — gender=null is intentional here
         prisma.userProfile.findUnique.mockResolvedValue({ ...baseRow, status, gender: null });
         await expect(service.submitForUser(userId)).rejects.toBeInstanceOf(
-          UnprocessableEntityException,
+          ProfileSubmitInvalidStateError,
         );
         expect(prisma.userProfile.update).not.toHaveBeenCalled();
         expect(analysisQueue.enqueueOrRunInline).not.toHaveBeenCalled();
@@ -621,7 +628,7 @@ describe('MeProfileService', () => {
       },
     );
 
-    it('throws InternalServerErrorException when Prisma update rejects', async () => {
+    it('throws ProfileSubmitPersistenceFailedError when Prisma update rejects', async () => {
       prisma.userProfile.findUnique.mockResolvedValue({
         ...baseRow,
         status: UserProfileStatus.DRAFT,
@@ -630,12 +637,7 @@ describe('MeProfileService', () => {
       prisma.userProfile.update.mockRejectedValue(new Error('db error'));
 
       await expect(service.submitForUser(userId)).rejects.toBeInstanceOf(
-        InternalServerErrorException,
-      );
-      expect(obs.error).toHaveBeenCalledWith(
-        expect.stringContaining('submit persistence failed'),
-        'ME_PROFILE_SUBMIT_FAILED',
-        expect.any(Error),
+        ProfileSubmitPersistenceFailedError,
       );
     });
 

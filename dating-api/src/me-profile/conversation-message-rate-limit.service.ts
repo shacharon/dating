@@ -6,6 +6,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { createClient, type RedisClientType } from 'redis';
+import { ErrorCodes } from '../logging/error-codes';
+import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { MessageRateLimitExceededError } from './conversation-message-rate-limit.error';
 import { MemoryMessageRateLimitStore } from './conversation-message-rate-limit-memory.store';
@@ -25,7 +27,10 @@ export class ConversationMessageRateLimitService
   private redisClient: RedisClientType | null = null;
   private usingRedisStore = false;
 
-  constructor(private readonly logger: SimpleLogger) {}
+  constructor(
+    private readonly logger: SimpleLogger,
+    private readonly obs: StructuredObservabilityService,
+  ) {}
 
   isUsingRedisStore(): boolean {
     return this.usingRedisStore;
@@ -76,6 +81,10 @@ export class ConversationMessageRateLimitService
       await this.store.consumeSendSlot(sessionUserId);
     } catch (e) {
       if (e instanceof MessageRateLimitExceededError) {
+        this.obs.trace(
+          `me conversations message rate limited userId=${sessionUserId}`,
+          ErrorCodes.ME_CONVERSATIONS_MESSAGE_RATE_LIMITED,
+        );
         throw new HttpException(
           { message: 'Too many messages. Please wait.' },
           HttpStatus.TOO_MANY_REQUESTS,

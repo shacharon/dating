@@ -10,6 +10,9 @@ import { AuthSessionConfigService } from './config/auth-session-config.service';
 import { AppModule } from './app.module';
 import { SimpleLogger } from './logger/simple-logger.service';
 import { requestCorrelationMiddleware } from './logging/request-correlation.middleware';
+import { registerProcessErrorHandlers } from './logging/process-error-handlers';
+import { StructuredObservabilityService } from './logging/structured-observability.service';
+import { SentryBridgeService } from './observability/sentry-bridge.service';
 
 /** `cookie-parser` is CJS; default import typing under `nodenext` can be `error` — pin to Express `RequestHandler`. */
 type CookieParserFactory = (secret?: string | string[]) => RequestHandler;
@@ -34,6 +37,10 @@ async function bootstrap() {
   // `cookie-parser` types depend on Express v4 merges; middleware is standard RequestHandler.
 
   app.use(cookieParser());
+
+  const obs = app.get(StructuredObservabilityService);
+  const sentry = app.get(SentryBridgeService);
+  registerProcessErrorHandlers({ obs, sentry });
 
   const config = app.get(ConfigService);
   const authSessionConfig = app.get(AuthSessionConfigService);

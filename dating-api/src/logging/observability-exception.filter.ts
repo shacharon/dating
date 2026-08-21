@@ -5,7 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core';
-import { MeMatchesDomainError } from '../me-profile/me-matches.errors';
+import { MeDomainError } from '../me-profile/me-domain.error';
 import { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { maybeRecordPrismaPoolTimeout } from '../prisma/prisma-pool.helpers';
 import { ErrorCodes } from './error-codes';
@@ -25,7 +25,7 @@ export class ObservabilityExceptionFilter extends BaseExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     maybeRecordPrismaPoolTimeout(exception);
 
-    if (exception instanceof MeMatchesDomainError) {
+    if (exception instanceof MeDomainError) {
       if (exception.httpStatus >= HttpStatus.INTERNAL_SERVER_ERROR) {
         this.obs.error(exception.message, exception.errorCode, exception);
       } else {

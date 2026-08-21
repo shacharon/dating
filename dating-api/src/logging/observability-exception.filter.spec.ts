@@ -11,12 +11,23 @@ import {
   MatchViewerNotReadyError,
   MeMatchesDomainError,
 } from '../me-profile/me-matches.errors';
+import {
+  ConversationListInvalidCursorError,
+  ConversationNotFoundError,
+} from '../me-profile/me-conversations.errors';
+import { ProfileSubmitPhotoRequiredError } from '../me-profile/me-profile.errors';
+import { MeDomainError } from '../me-profile/me-domain.error';
 import { ErrorCodes } from './error-codes';
 import { ObservabilityExceptionFilter } from './observability-exception.filter';
 
 describe('ObservabilityExceptionFilter — me-matches domain errors', () => {
   let filter: ObservabilityExceptionFilter;
-  let obs: { trace: jest.Mock; error: jest.Mock; fatal: jest.Mock; httpServerError: jest.Mock };
+  let obs: {
+    trace: jest.Mock;
+    error: jest.Mock;
+    fatal: jest.Mock;
+    httpServerError: jest.Mock;
+  };
   let superCatch: jest.SpyInstance;
 
   beforeEach(() => {
@@ -49,7 +60,7 @@ describe('ObservabilityExceptionFilter — me-matches domain errors', () => {
   const host = {} as never;
 
   function expectMapped(
-    err: MeMatchesDomainError,
+    err: MeDomainError,
     status: number,
     body: string | Record<string, unknown>,
   ) {
@@ -113,5 +124,35 @@ describe('ObservabilityExceptionFilter — me-matches domain errors', () => {
   it('maps MatchPhotoFileNotFoundError → 404 object', () => {
     const err = new MatchPhotoFileNotFoundError();
     expectMapped(err, 404, err.httpBody);
+  });
+
+  it('maps ConversationListInvalidCursorError → 400', () => {
+    const err = new ConversationListInvalidCursorError();
+    expectMapped(err, 400, err.httpBody);
+    expect(obs.trace).toHaveBeenCalledWith(
+      err.message,
+      ErrorCodes.ME_CONVERSATIONS_INVALID_CURSOR,
+    );
+  });
+
+  it('maps ConversationNotFoundError → 404', () => {
+    const err = new ConversationNotFoundError();
+    expectMapped(err, 404, err.httpBody);
+  });
+
+  it('maps ProfileSubmitPhotoRequiredError → 422', () => {
+    const err = new ProfileSubmitPhotoRequiredError();
+    expectMapped(err, 422, err.httpBody);
+    expect(obs.trace).toHaveBeenCalledWith(
+      err.message,
+      ErrorCodes.ME_PROFILE_PHOTO_REQUIRED,
+    );
+  });
+
+  it('MeMatchesDomainError remains instanceof MeDomainError', () => {
+    expect(new MatchCandidateNotFoundError()).toBeInstanceOf(MeDomainError);
+    expect(new MatchCandidateNotFoundError()).toBeInstanceOf(
+      MeMatchesDomainError,
+    );
   });
 });
