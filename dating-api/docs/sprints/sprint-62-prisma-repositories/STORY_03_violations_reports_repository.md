@@ -60,9 +60,10 @@ Story 04 — Profile photo repository.
 
 ## Shipped
 
-`feature/sprint-62-story-3` @ `82855c1` (close commit follows)
+`feature/sprint-62-story-3` @ `73fe40a`
 
 - `d38cf24` — feat: violations + reports repositories
 - `82855c1` — test: guard violations + reports repository wiring
+- `73fe40a` — chore: close sprint 62 story 3
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
