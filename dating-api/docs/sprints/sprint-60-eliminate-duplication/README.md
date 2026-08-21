@@ -1,6 +1,6 @@
 # Sprint 60 — Eliminate Code Duplication & Dead Code (P1)
 
-**Status:** Planned  
+**Status:** In Progress  
 **Depends on:** None (can run in parallel with Sprints 57-59)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -27,9 +27,9 @@ Eliminate code duplication and remove dead code identified in the August 2026 te
 |-------|--------------|--------------|
 | **Duplicate keyword helpers** | 5 copies of `isNegatedBefore`, drift risk | 1 shared util module |
 | **Expansion shotgun surgery** | Edit 2 manifests + 2 files per signal | 1 config table edit |
-| **Dead POC code** | ~500 LOC confusion, `UserId` alias unused | Deleted |
-| **Version alias files** | V3/V4 just re-export V2 | Deleted, direct imports |
-| **Retired HG ranker stubs** | Empty DTO fields shipping | Cleaned up |
+| **Version alias files** | V3/V4 just re-export V2 | **Done (Story 01)** — direct V2 imports |
+| **Dead POC code** | ~500 LOC confusion | Deferred (live DI/seed; not Story 01) |
+| **Retired HG ranker stubs** | Empty DTO fields shipping | Deferred (wire DTO compatibility) |
 
 ---
 
@@ -37,13 +37,14 @@ Eliminate code duplication and remove dead code identified in the August 2026 te
 
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
-| 01 | [Delete dead code & version aliases](./STORY_01_delete_dead_code.md) | 4 hours | ⚡ ZERO | Planned |
+| 01 | [Delete dead code & version aliases](./STORY_01_delete_dead_code.md) | 4 hours | ⚡ LOW | Done |
 | 02 | [Extract shared text-match utilities](./STORY_02_shared_text_utils.md) | 1 day | ⚡ LOW | Planned |
 | 03 | [Consolidate expansion explainability config](./STORY_03_expansion_config.md) | 3 days | ⚠️ MEDIUM | Planned |
 
 **Order:** 01 → 02 → 03 (or 01+02 in parallel).
 
-**Preferred merge tip:** `feature/sprint-60-story-3`
+**Preferred merge tip:** `feature/sprint-60-story-1` (until Story 03; then `feature/sprint-60-story-3`)
+
 
 ---
 
