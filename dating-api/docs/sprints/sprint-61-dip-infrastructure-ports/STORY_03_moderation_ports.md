@@ -86,9 +86,10 @@ Known noise (not S03): match-list integration/E2E harness mocks missing `prisma.
 
 ## Shipped
 
-`feature/sprint-61-story-3` @ `ec79b07` (close commit follows)
+`feature/sprint-61-story-3` @ `b2f365a`
 
 - `a5e3219` — feat: moderation ports CONTENT_MODERATION + REKOGNITION
 - `ec79b07` — test: guard moderation ports wiring
+- `b2f365a` — chore: close sprint 61 story 3
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 4 → 3` (Agent 4 = moderation regression smoke; matching eligibility N/A)
