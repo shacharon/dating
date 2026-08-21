@@ -54,10 +54,10 @@ If already merged: document “done” and skip to hygiene.
 
 ## Shipped
 
-`feature/sprint-63-story-1` @ _(close)_
+`feature/sprint-63-story-1` @ `7b43d85`
 
 - `c9986c1` — feat: land enrichment keyword modules + hygiene
 - `d73b3e3` — test: guard enrichment merge hygiene wiring
-- _(close)_ — chore: close sprint 63 story 1
+- `7b43d85` — chore: close sprint 63 story 1
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
