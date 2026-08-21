@@ -71,9 +71,10 @@ Story 03 — Violations + reports.
 
 ## Shipped
 
-`feature/sprint-62-story-2` @ `57f56b2` (close commit follows)
+`feature/sprint-62-story-2` @ `a27d281`
 
 - `b4d03d5` — feat: conversation repository CONVERSATION_REPOSITORY
 - `57f56b2` — test: guard conversation repository wiring
+- `a27d281` — chore: close sprint 62 story 2
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
