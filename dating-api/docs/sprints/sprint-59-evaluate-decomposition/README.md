@@ -1,6 +1,6 @@
 # Sprint 59 — Evaluate Multi-Inference Decomposition (P0)
 
-**Status:** Planned  
+**Status:** In Progress  
 **Depends on:** Sprint 58 Done (extraction thin); Sprint 57 helpful  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md)  
@@ -27,7 +27,7 @@ Split `evaluate/evaluate.service.ts` (~695 LOC) into a thin orchestrator that de
 
 | # | Story | Status |
 |---|-------|--------|
-| 01 | [Characterization + inference map](./STORY_01_characterization_inference_map.md) | Planned |
+| 01 | [Characterization + inference map](./STORY_01_characterization_inference_map.md) | Done |
 | 02 | [Extract inference runners](./STORY_02_extract_inference_runners.md) | Planned |
 | 03 | [Thin EvaluateService orchestrator](./STORY_03_thin_orchestrator.md) | Planned |
 

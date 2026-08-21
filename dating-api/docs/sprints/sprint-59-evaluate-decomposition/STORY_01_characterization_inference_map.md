@@ -1,6 +1,6 @@
 # Story 01 — Characterization + inference map
 
-**Sprint 59 · Status: Planned**  
+**Sprint 59 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 1 day  
 **Repo:** `dating-api`  
@@ -14,13 +14,13 @@ Map `EvaluateService` inference sequence (extraction handoff → enrichment → 
 
 ## Acceptance criteria
 
-- [ ] Map lists each LLM purpose + deterministic step + owning file target
-- [ ] Specs green; no behavior change
+- [x] Map lists each LLM purpose + deterministic step + owning file target
+- [x] Specs green; no behavior change
 
 ## Definition of Done
 
-- [ ] `INFERENCE_MAP.md` committed
-- [ ] Agent 2; Agent 3 close
+- [x] `INFERENCE_MAP.md` committed
+- [x] Agent 2; Agent 3 close
 
 ## Deferred
 
@@ -33,3 +33,7 @@ docs(evaluate): inference map + characterize evaluate.service seams
 
 Sprint 59 Story 1
 ```
+
+## Close tip
+
+`feature/sprint-59-story-1` @ `9670af9` (+ Agent 3 close commit)
