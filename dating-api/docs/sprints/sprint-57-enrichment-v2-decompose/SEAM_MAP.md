@@ -77,8 +77,8 @@ Keep these green when moving modules:
 **Sprint 57 `describe('sprint-57 characterization')` cases:**
 
 - hobby cooking positive control → `cooking`
-- never go silent + talk it through → `process_together`
-- line cook / kitchens / service season → no `cooking`
-- pastry cook / sous chef → no `cooking`
-- fermentation journals → `fermentation`
-- bare fermentation near brewery/yeast labs → no `fermentation`
+- line cook / kitchens / service season → empty `interestsTop3`
+- pastry cook / sous chef → empty `interestsTop3`
+- fermentation journals → `['fermentation']`
+- bare fermentation near brewery/yeast labs → empty `interestsTop3`
+- never go silent + talk it through → `process_together` (not `withdraws_shuts_down`)

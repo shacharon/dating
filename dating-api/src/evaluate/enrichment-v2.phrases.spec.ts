@@ -71,30 +71,20 @@ describe('sprint-57 characterization', () => {
     });
   });
 
-  describe('negated phrases', () => {
-    it('never go silent + talk it through → process_together (not withdraws_shuts_down)', () => {
-      expect(
-        mapEnrichmentV2FromText(
-          'I never go silent when we argue; we talk it through calmly.',
-        ).conflictStyleDetail,
-      ).toBe('process_together');
-    });
-  });
-
   describe('cooking-job false positives', () => {
     it('line cook / kitchens / service season → no cooking interest', () => {
       expect(
         mapEnrichmentV2FromText(
           'I am a line cook in kitchens during service season.',
         ).interestsTop3,
-      ).not.toContain('cooking');
+      ).toEqual([]);
     });
 
     it('pastry cook / sous chef → no cooking interest', () => {
       expect(
         mapEnrichmentV2FromText('Worked as a pastry cook and sous chef for years.')
           .interestsTop3,
-      ).not.toContain('cooking');
+      ).toEqual([]);
     });
   });
 
@@ -103,7 +93,7 @@ describe('sprint-57 characterization', () => {
       expect(
         mapEnrichmentV2FromText('I keep fermentation journals every Sunday.')
           .interestsTop3,
-      ).toContain('fermentation');
+      ).toEqual(['fermentation']);
     });
 
     it('bare fermentation near brewery/yeast labs → no fermentation', () => {
@@ -111,7 +101,17 @@ describe('sprint-57 characterization', () => {
         mapEnrichmentV2FromText(
           'I study fermentation at a brewery with yeast labs.',
         ).interestsTop3,
-      ).not.toContain('fermentation');
+      ).toEqual([]);
+    });
+  });
+
+  describe('negated phrases', () => {
+    it('never go silent + talk it through → process_together (not withdraws_shuts_down)', () => {
+      const conflict = mapEnrichmentV2FromText(
+        'I never go silent when we argue; we talk it through calmly.',
+      ).conflictStyleDetail;
+      expect(conflict).toBe('process_together');
+      expect(conflict).not.toBe('withdraws_shuts_down');
     });
   });
 });
