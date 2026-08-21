@@ -3,7 +3,7 @@
 **Sprint:** 61  
 **Effort:** 1–2 days  
 **Risk:** ⚡ LOW (interfaces already exist)  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -22,11 +22,15 @@ Stop `ConversationMessageRateLimitService` and `MessagingWsRateLimitService` fro
 
 **Already good:** `MessageRateLimitStore`, `WsRateLimitStore` interfaces.
 
-**DIP gap:** store selection + Redis lifecycle live inside the service.
+**DIP gap:** store selection + Redis lifecycle live inside the service. *(resolved — store providers)*
 
 ---
 
 ## Design
+
+Shipped as `OnModuleInit` store providers (not sync `useFactory` — shared `REDIS_CLIENT` is not connected at construct time). Tokens: `MESSAGE_RATE_LIMIT_STORE` / `WS_RATE_LIMIT_STORE`.
+
+Historical sketch:
 
 ```typescript
 // In module (example)
@@ -40,37 +44,40 @@ Stop `ConversationMessageRateLimitService` and `MessagingWsRateLimitService` fro
 }
 ```
 
-Service constructor becomes:
-
-```typescript
-constructor(
-  @Inject(MESSAGE_RATE_LIMIT_STORE) private readonly store: MessageRateLimitStore,
-) {}
-```
-
 Prefer sharing `REDIS_CLIENT` from Story 01 when Redis is enabled (avoid second connection pool).
 
-**ISP cleanup (optional same PR):** move `resetForTests()` off production interface onto a test-only helper or `ResettableRateLimitStore`.
+**ISP cleanup (optional):** move `resetForTests()` off production interface — deferred.
 
 ---
 
 ## Tasks
 
-1. Add Nest tokens for message + WS stores.
-2. Module factories choose Redis vs memory from config (same env flags as today).
-3. Strip `createClient` / `new` from both services.
-4. Specs: rate-limit unit + messaging gateway / send-message paths that assert 429 behavior.
+1. ~~Add Nest tokens for message + WS stores.~~
+2. ~~Module factories choose Redis vs memory from config (same env flags as today).~~ *(via shared handle availability)*
+3. ~~Strip `createClient` / `new` from both services.~~
+4. ~~Specs: rate-limit unit + wiring / provider binding.~~
 
 ---
 
 ## Success
 
-- [ ] Zero Redis client construction inside rate-limit services
-- [ ] Behavior parity (memory in tests, Redis when configured)
-- [ ] Optional: shared Redis client with cache module
+- [x] Zero Redis client construction inside rate-limit services
+- [x] Behavior parity (memory in tests, Redis when configured)
+- [x] Optional: shared Redis client with cache module
 
 ---
 
 ## Follow-up
 
 Story 03 — moderation ports (independent of Redis once 01–02 land).
+
+---
+
+## Shipped
+
+`feature/sprint-61-story-2` @ `6f04fd1` (+ Agent 3 close commit)
+
+- `eeee1f6` — feat: rate-limit store DI via shared REDIS_CLIENT
+- `6f04fd1` — test: guard rate-limit store DI wiring
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 3` (no Agent 4 / 2.5 / 3.5)

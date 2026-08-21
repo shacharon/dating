@@ -46,7 +46,7 @@ Stop high-level services from owning Redis / AWS / OpenAI SDK construction. Wire
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
 | 01 | [Redis connection + cache ISP](./STORY_01_redis_cache_isp.md) | 2–3 days | ⚠️ MEDIUM | Done |
-| 02 | [Rate-limit store DI](./STORY_02_rate_limit_di.md) | 1–2 days | ⚡ LOW | Planned |
+| 02 | [Rate-limit store DI](./STORY_02_rate_limit_di.md) | 1–2 days | ⚡ LOW | Done |
 | 03 | [Moderation ports (text + Rekognition)](./STORY_03_moderation_ports.md) | 2 days | ⚠️ MEDIUM | Planned |
 
 **Order:** 01 → 02 → 03 (02 can overlap late 01 if shared Redis provider exists).
@@ -57,8 +57,8 @@ Stop high-level services from owning Redis / AWS / OpenAI SDK construction. Wire
 
 ## Success criteria
 
-- No `createClient` / `new Redis*` inside message or WS rate-limit services
-- Product code injects cache **ports** (or narrow tokens), not only fat `RedisCacheService` API surface for new call sites
+- [x] No `createClient` / `new Redis*` inside message or WS rate-limit services *(Story 02)*
+- Product code injects cache **ports** (or narrow tokens), not only fat `RedisCacheService` API surface for new call sites *(Story 01)*
 - Messaging + profile moderation depend on a moderation **port**, not OpenAI concrete class
 - Photo moderation uses Nest-provided `RekognitionPort` (no constructor `new RekognitionClient` as default wiring)
 - Existing specs green (match-list cache, WS presence, rate limits, photo moderation, message send)
