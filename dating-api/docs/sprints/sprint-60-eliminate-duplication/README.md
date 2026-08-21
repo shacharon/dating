@@ -25,7 +25,7 @@ Eliminate code duplication and remove dead code identified in the August 2026 te
 
 | Issue | Current Cost | After Sprint |
 |-------|--------------|--------------|
-| **Duplicate keyword helpers** | 5 copies of `isNegatedBefore`, drift risk | 1 shared util module |
+| **Duplicate keyword helpers** | 5 copies of `isNegatedBefore`, drift risk | **Done (Story 02)** — HG SoT in `shared/text-match.utils` (enrichment negation remains local) |
 | **Expansion shotgun surgery** | Edit 2 manifests + 2 files per signal | 1 config table edit |
 | **Version alias files** | V3/V4 just re-export V2 | **Done (Story 01)** — direct V2 imports |
 | **Dead POC code** | ~500 LOC confusion | Deferred (live DI/seed; not Story 01) |
@@ -38,12 +38,12 @@ Eliminate code duplication and remove dead code identified in the August 2026 te
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
 | 01 | [Delete dead code & version aliases](./STORY_01_delete_dead_code.md) | 4 hours | ⚡ LOW | Done |
-| 02 | [Extract shared text-match utilities](./STORY_02_shared_text_utils.md) | 1 day | ⚡ LOW | Planned |
+| 02 | [Extract shared text-match utilities](./STORY_02_shared_text_utils.md) | 1 day | ⚡ LOW | Done |
 | 03 | [Consolidate expansion explainability config](./STORY_03_expansion_config.md) | 3 days | ⚠️ MEDIUM | Planned |
 
 **Order:** 01 → 02 → 03 (or 01+02 in parallel).
 
-**Preferred merge tip:** `feature/sprint-60-story-1` (until Story 03; then `feature/sprint-60-story-3`)
+**Preferred merge tip:** `feature/sprint-60-story-2` (until Story 03; then `feature/sprint-60-story-3`)
 
 
 ---
