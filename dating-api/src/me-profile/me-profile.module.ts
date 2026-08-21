@@ -16,6 +16,8 @@ import {
   MatchNarrativeGenerator,
 } from '../matches/match-narrative';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
+import { MessageRateLimitStoreProvider } from './conversation-message-rate-limit-store.provider';
+import { MESSAGE_RATE_LIMIT_STORE } from './conversation-message-rate-limit.tokens';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
 import { MeConversationsService } from './me-conversations.service';
 import { MeMatchActionsService } from './me-match-actions.service';
@@ -93,6 +95,11 @@ import { MatchingPolicyModule } from '../matching-policy/matching-policy.module'
     MeMatchActionsService,
     MeMatchFeedbackService,
     MeConversationsService,
+    MessageRateLimitStoreProvider,
+    {
+      provide: MESSAGE_RATE_LIMIT_STORE,
+      useExisting: MessageRateLimitStoreProvider,
+    },
     ConversationMessageRateLimitService,
     MeConversationMessagesService,
     MutualMatchesService,

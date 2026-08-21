@@ -10,6 +10,8 @@ import { MessagingGateway } from './messaging.gateway';
 import { MessagingSocketRegistryModule } from './messaging-socket-registry.module';
 import { MessagingWsAuthService } from './messaging-ws-auth.service';
 import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
+import { WsRateLimitStoreProvider } from './messaging-ws-rate-limit-store.provider';
+import { WS_RATE_LIMIT_STORE } from './messaging-ws-rate-limit.tokens';
 import { MessagingWsSessionService } from './messaging-ws-session.service';
 import { MessagingRealtimeHealthService } from './messaging-realtime-health.service';
 
@@ -27,6 +29,11 @@ import { MessagingRealtimeHealthService } from './messaging-realtime-health.serv
   providers: [
     MessagingGateway,
     MessagingWsAuthService,
+    WsRateLimitStoreProvider,
+    {
+      provide: WS_RATE_LIMIT_STORE,
+      useExisting: WsRateLimitStoreProvider,
+    },
     MessagingWsRateLimitService,
     MessagingWsSessionService,
     MessagingRealtimeHealthService,

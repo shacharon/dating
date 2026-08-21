@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { REDIS_CLIENT } from '../cache/cache.ports';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 import { WsRateLimitExceededError } from './messaging-ws-rate-limit.error';
+import { WsRateLimitStoreProvider } from './messaging-ws-rate-limit-store.provider';
+import { WS_RATE_LIMIT_STORE } from './messaging-ws-rate-limit.tokens';
 import {
   WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW,
   WS_INBOUND_RATE_LIMIT_WINDOW_MS,
@@ -14,6 +17,19 @@ describe('MessagingWsRateLimitService (memory)', () => {
     delete process.env.REDIS_URL;
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: REDIS_CLIENT,
+          useValue: {
+            getClient: () => null,
+            isAvailable: () => false,
+            isUrlConfigured: () => false,
+          },
+        },
+        WsRateLimitStoreProvider,
+        {
+          provide: WS_RATE_LIMIT_STORE,
+          useExisting: WsRateLimitStoreProvider,
+        },
         MessagingWsRateLimitService,
         {
           provide: SimpleLogger,
@@ -22,13 +38,10 @@ describe('MessagingWsRateLimitService (memory)', () => {
       ],
     }).compile();
 
+    const store = module.get(WsRateLimitStoreProvider);
+    await store.onModuleInit();
     service = module.get(MessagingWsRateLimitService);
-    await service.onModuleInit();
     await service.resetForTests();
-  });
-
-  afterEach(async () => {
-    await service.onModuleDestroy();
   });
 
   it('uses in-memory store when REDIS_URL is unset', () => {

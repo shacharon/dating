@@ -1,9 +1,12 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { REDIS_CLIENT } from '../cache/cache.ports';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { SimpleLogger } from '../logger/simple-logger.service';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
+import { MessageRateLimitStoreProvider } from './conversation-message-rate-limit-store.provider';
+import { MESSAGE_RATE_LIMIT_STORE } from './conversation-message-rate-limit.tokens';
 import {
   MESSAGE_RATE_LIMIT_MAX_PER_WINDOW,
   MESSAGE_RATE_LIMIT_WINDOW_MS,
@@ -18,6 +21,19 @@ describe('ConversationMessageRateLimitService (memory)', () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: REDIS_CLIENT,
+          useValue: {
+            getClient: () => null,
+            isAvailable: () => false,
+            isUrlConfigured: () => false,
+          },
+        },
+        MessageRateLimitStoreProvider,
+        {
+          provide: MESSAGE_RATE_LIMIT_STORE,
+          useExisting: MessageRateLimitStoreProvider,
+        },
         ConversationMessageRateLimitService,
         {
           provide: SimpleLogger,
@@ -30,13 +46,10 @@ describe('ConversationMessageRateLimitService (memory)', () => {
       ],
     }).compile();
 
+    const store = module.get(MessageRateLimitStoreProvider);
+    await store.onModuleInit();
     service = module.get(ConversationMessageRateLimitService);
-    await service.onModuleInit();
     await service.resetForTests();
-  });
-
-  afterEach(async () => {
-    await service.onModuleDestroy();
   });
 
   it('uses in-memory store when REDIS_URL is unset', () => {
