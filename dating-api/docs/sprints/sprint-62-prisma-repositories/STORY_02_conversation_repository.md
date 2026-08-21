@@ -3,7 +3,7 @@
 **Sprint:** 62  
 **Effort:** 2–3 days  
 **Risk:** ⚠️ MEDIUM  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -57,12 +57,23 @@ Start with **one** port if the surface is small; split only if ISP suffers.
 
 ## Success
 
-- [ ] Conversations + messages services inject repository, not `PrismaService`
-- [ ] Send-message path behavior unchanged
-- [ ] Tests green
+- [x] Conversations + messages services inject repository, not `PrismaService`
+- [x] Send-message path behavior unchanged
+- [x] Tests green
 
 ---
 
 ## Follow-up
 
 Story 03 — Violations + reports.
+
+---
+
+## Shipped
+
+`feature/sprint-62-story-2` @ `57f56b2` (close commit follows)
+
+- `b4d03d5` — feat: conversation repository CONVERSATION_REPOSITORY
+- `57f56b2` — test: guard conversation repository wiring
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
