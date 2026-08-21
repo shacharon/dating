@@ -1,9 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-/** Frozen keyword-dump SoT paths (Sprint 52 Story 02) — relative to dating-api/src. */
+/** Frozen keyword-dump SoT paths (Sprint 52 Story 02 + Sprint 57 enrichment split) — relative to dating-api/src. */
 const FROZEN_SRC_RELATIVE_PATHS = [
   'evaluate/enrichment-v2.ts',
+  'evaluate/enrichment-keyword-manifest.ts',
+  'evaluate/enrichment-keyword-helpers.ts',
+  'evaluate/enrichment-interest-keywords.ts',
+  'evaluate/enrichment-rhythm-keywords.ts',
+  'evaluate/enrichment-conflict-keywords.ts',
   'evaluate/explicit-extended-lists.ts',
   'holy-grail-matching/dealbreaker-signals-text.extract.ts',
   'holy-grail-matching/dealbreaker-taxonomy.ts',

@@ -1,4 +1,4 @@
-import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
+import { batchLastMessagesByConversationId } from './repositories/prisma-conversation.repository';
 
 describe('batchLastMessagesByConversationId', () => {
   it('returns empty map for empty ids without querying', async () => {

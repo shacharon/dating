@@ -12,12 +12,18 @@ import { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
+import { batchLastMessagesByConversationId } from './repositories/prisma-conversation.repository';
 import type { IConversationRepository } from './repositories/conversation.repository';
 
-jest.mock('./me-conversations-last-message-batch', () => ({
-  batchLastMessagesByConversationId: jest.fn(),
-}));
+jest.mock('./repositories/prisma-conversation.repository', () => {
+  const actual = jest.requireActual<
+    typeof import('./repositories/prisma-conversation.repository')
+  >('./repositories/prisma-conversation.repository');
+  return {
+    ...actual,
+    batchLastMessagesByConversationId: jest.fn(),
+  };
+});
 
 const batchLastMessagesMock =
   batchLastMessagesByConversationId as jest.MockedFunction<

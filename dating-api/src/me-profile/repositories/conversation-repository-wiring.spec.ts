@@ -55,21 +55,24 @@ describe('conversation repository wiring (sprint-62 story 2)', () => {
     expect(src).toContain('ConversationForbiddenError');
   });
 
-  it('batch helpers re-export adapter functions; adapter owns chunk sizes + $queryRaw', () => {
-    const unread = fs.readFileSync(
-      path.join(meProfileRoot, 'me-conversations-unread-batch.ts'),
-      'utf8',
+  it('adapter owns batch helpers, chunk sizes, and $queryRaw (no re-export shims)', () => {
+    const unreadShim = path.join(
+      meProfileRoot,
+      'me-conversations-unread-batch.ts',
     );
-    const last = fs.readFileSync(
-      path.join(meProfileRoot, 'me-conversations-last-message-batch.ts'),
-      'utf8',
+    const lastShim = path.join(
+      meProfileRoot,
+      'me-conversations-last-message-batch.ts',
     );
+    expect(fs.existsSync(unreadShim)).toBe(false);
+    expect(fs.existsSync(lastShim)).toBe(false);
+
     const adapter = fs.readFileSync(
       path.join(meProfileRoot, 'repositories', 'prisma-conversation.repository.ts'),
       'utf8',
     );
-    expect(unread).toContain('prisma-conversation.repository');
-    expect(last).toContain('prisma-conversation.repository');
+    expect(adapter).toContain('export async function batchUnreadCountsByConversationId');
+    expect(adapter).toContain('export async function batchLastMessagesByConversationId');
     expect(adapter).toContain('UNREAD_COUNT_BATCH_SIZE = 200');
     expect(adapter).toContain('LAST_MESSAGE_BATCH_SIZE = 50');
     expect(adapter).toContain('$queryRaw');

@@ -1,4 +1,4 @@
-import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
+import { batchUnreadCountsByConversationId } from './repositories/prisma-conversation.repository';
 
 describe('batchUnreadCountsByConversationId', () => {
   it('returns empty map for empty specs without querying', async () => {

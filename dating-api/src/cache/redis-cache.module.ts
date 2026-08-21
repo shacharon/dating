@@ -18,12 +18,6 @@ import { RedisConnectionProvider } from './redis-connection.provider';
     { provide: CACHE_SETS, useExisting: RedisCacheService },
     { provide: CRON_LOCK, useExisting: RedisCacheService },
   ],
-  exports: [
-    REDIS_CLIENT,
-    CACHE_KV,
-    CACHE_SETS,
-    CRON_LOCK,
-    RedisCacheService, // temporary compat — prefer port tokens
-  ],
+  exports: [REDIS_CLIENT, CACHE_KV, CACHE_SETS, CRON_LOCK],
 })
 export class RedisCacheModule {}
