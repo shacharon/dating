@@ -75,9 +75,10 @@ Story 03 — moderation ports (independent of Redis once 01–02 land).
 
 ## Shipped
 
-`feature/sprint-61-story-2` @ `6f04fd1` (+ Agent 3 close commit)
+`feature/sprint-61-story-2` @ `b852a19`
 
 - `eeee1f6` — feat: rate-limit store DI via shared REDIS_CLIENT
 - `6f04fd1` — test: guard rate-limit store DI wiring
+- `b852a19` — chore: close sprint 61 story 2
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (no Agent 4 / 2.5 / 3.5)
