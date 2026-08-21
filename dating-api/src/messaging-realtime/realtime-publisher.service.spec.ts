@@ -1,5 +1,5 @@
 import { RealtimePublisher } from './realtime-publisher.service';
-import { userRoom } from './messaging-realtime.constants';
+import { sessionRoom, userRoom } from './messaging-realtime.constants';
 
 describe('RealtimePublisher', () => {
   it('emits to user room after bindNamespaceServer', () => {
@@ -33,10 +33,49 @@ describe('RealtimePublisher', () => {
     expect(emit).toHaveBeenCalledTimes(2);
   });
 
+  it('disconnectSessionSockets targets session room', () => {
+    const disconnectSockets = jest.fn();
+    const inn = jest.fn().mockReturnValue({ disconnectSockets });
+    const namespace = { in: inn } as unknown as import('socket.io').Namespace;
+
+    const publisher = new RealtimePublisher();
+    publisher.bindNamespaceServer(namespace);
+    publisher.disconnectSessionSockets('sess_1');
+
+    expect(inn).toHaveBeenCalledWith(sessionRoom('sess_1'));
+    expect(disconnectSockets).toHaveBeenCalledWith(true);
+  });
+
+  it('disconnectSessionSockets no-ops on blank session id', () => {
+    const disconnectSockets = jest.fn();
+    const inn = jest.fn().mockReturnValue({ disconnectSockets });
+    const namespace = { in: inn } as unknown as import('socket.io').Namespace;
+
+    const publisher = new RealtimePublisher();
+    publisher.bindNamespaceServer(namespace);
+    publisher.disconnectSessionSockets('  ');
+
+    expect(inn).not.toHaveBeenCalled();
+  });
+
+  it('disconnectUserSockets targets user room', () => {
+    const disconnectSockets = jest.fn();
+    const inn = jest.fn().mockReturnValue({ disconnectSockets });
+    const namespace = { in: inn } as unknown as import('socket.io').Namespace;
+
+    const publisher = new RealtimePublisher();
+    publisher.bindNamespaceServer(namespace);
+    publisher.disconnectUserSockets('user_1');
+
+    expect(inn).toHaveBeenCalledWith(userRoom('user_1'));
+    expect(disconnectSockets).toHaveBeenCalledWith(true);
+  });
+
   it('no-ops when namespace is not bound', () => {
     const publisher = new RealtimePublisher();
     expect(() =>
       publisher.publishToUser('user_x', 'ping', {}),
     ).not.toThrow();
+    expect(() => publisher.disconnectSessionSockets('sess_1')).not.toThrow();
   });
 });

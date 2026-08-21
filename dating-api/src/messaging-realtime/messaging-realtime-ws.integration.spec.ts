@@ -28,12 +28,14 @@ import {
 import { WS_INBOUND_RATE_LIMIT_MAX_PER_WINDOW } from './messaging-ws-inbound.constants';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { MessagingRealtimeModule } from './messaging-realtime.module';
+import { MessagingSocketRegistry } from './messaging-socket-registry.service';
 import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 
 describe('Messaging realtime WS (integration)', () => {
   let app: INestApplication;
   let baseUrl: string;
   let rateLimit: MessagingWsRateLimitService;
+  let socketRegistry: MessagingSocketRegistry;
 
   const PEPPER = 'messaging-ws-test-pepper';
   const SESSION_COOKIE = 'dating_session';
@@ -86,6 +88,7 @@ describe('Messaging realtime WS (integration)', () => {
 
     app = moduleFixture.createNestApplication();
     rateLimit = app.get(MessagingWsRateLimitService);
+    socketRegistry = app.get(MessagingSocketRegistry);
     app.useWebSocketAdapter(new IoAdapter(app));
     await app.init();
     await app.listen(0);
@@ -113,6 +116,7 @@ describe('Messaging realtime WS (integration)', () => {
     usersServiceMock.findById.mockResolvedValue({
       id: 'user_ws_1',
       status: UserStatus.ACTIVE,
+      deletedAt: null,
     });
     conversationsMock.assertActiveConversationParticipant.mockResolvedValue({
       id: 'conv_allowed',
@@ -272,4 +276,40 @@ describe('Messaging realtime WS (integration)', () => {
     }
   });
 
+  it('drops soft-deleted user on handshake', async () => {
+    usersServiceMock.findById.mockResolvedValue({
+      id: 'user_ws_1',
+      status: UserStatus.ACTIVE,
+      deletedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    const socket = connectSocket(`${SESSION_COOKIE}=${RAW_TOKEN}`);
+    try {
+      await new Promise((r) => setTimeout(r, 500));
+      expect(socket.connected).toBe(false);
+    } finally {
+      if (socket.connected) {
+        socket.disconnect();
+      }
+    }
+  });
+
+  it('disconnects connected client when session is force-disconnected (logout path)', async () => {
+    const socket = connectSocket(`${SESSION_COOKIE}=${RAW_TOKEN}`);
+    try {
+      await waitForConnect(socket);
+      expect(socket.connected).toBe(true);
+
+      const disconnectPromise = new Promise<void>((resolve) => {
+        socket.once('disconnect', () => resolve());
+      });
+      await socketRegistry.disconnectBySessionId('sess_ws_1');
+      await disconnectPromise;
+
+      expect(socket.connected).toBe(false);
+    } finally {
+      if (socket.connected) {
+        socket.disconnect();
+      }
+    }
+  });
 });

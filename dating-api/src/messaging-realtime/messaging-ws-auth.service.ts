@@ -45,7 +45,8 @@ export class MessagingWsAuthService {
     }
 
     const user = await this.users.findById(validated.userId);
-    if (!user) {
+    // Match AuthGuard: soft-deleted ≈ missing (no distinct user_deleted reason).
+    if (!user || user.deletedAt != null) {
       return { ok: false, reason: 'user_not_found' };
     }
     if (user.status !== USER_STATUS_ACTIVE) {

@@ -24,3 +24,14 @@ export const USER_ROOM_PREFIX = 'user:';
 export function userRoom(userId: string): string {
   return `${USER_ROOM_PREFIX}${userId}`;
 }
+
+/**
+ * Per-session room for cluster-wide logout disconnect (Sprint 49 Story 3).
+ * Room name embeds sessionId (auth-sensitive). Server joins after handshake only;
+ * clients cannot invent rooms. Keep Redis (Socket.IO adapter) private.
+ */
+export const SESSION_ROOM_PREFIX = 'session:';
+
+export function sessionRoom(sessionId: string): string {
+  return `${SESSION_ROOM_PREFIX}${sessionId}`;
+}
