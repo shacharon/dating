@@ -2,6 +2,10 @@
  * Closed, versioned dealbreaker/requirement topic taxonomy (v1).
  * Revives + extends the abandoned NEGATIVE_TAGS allowlist.
  * Source of truth for Story 17 classifiers — do not duplicate tag lists elsewhere.
+ *
+ * KEYWORD ENGINE FROZEN (Sprint 52 Story 02)
+ * See docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_ENGINE_FREEZE.md
+ * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
 export const DEALBREAKER_TAXONOMY_VERSION = 'v1' as const;

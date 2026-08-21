@@ -1,6 +1,12 @@
 /**
  * Regex-based explicit extended lists: deterministic pattern matching on profile text.
  * Pure functions, no DI, no LLM calls.
+ *
+ * Sprint 52 keyword engine: explicit-extended-lists (sibling of enrichment-v2)
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * KEYWORD ENGINE FROZEN (Sprint 52 Story 02)
+ * See docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_ENGINE_FREEZE.md
+ * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
 export interface ExplicitExtendedLists {

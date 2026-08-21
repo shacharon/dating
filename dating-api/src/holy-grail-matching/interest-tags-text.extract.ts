@@ -5,6 +5,12 @@
  *
  * v1: `music`, `film`
  * v2 additive: reading/books, sports, visual art, gaming, food, travel, photography, technology
+ *
+ * Sprint 52 keyword engine: hg-interest-text
+ * Inventory: docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_INVENTORY.md
+ * KEYWORD ENGINE FROZEN (Sprint 52 Story 02)
+ * See docs/sprints/sprint-52-keyword-engine-freeze/KEYWORD_ENGINE_FREEZE.md
+ * No new regex/phrases/allowlist ids without RFC in that doc.
  */
 
 /** Legacy v1 ids (prefix of full allowlist). */
