@@ -1,7 +1,7 @@
 # Sprint 63 — Finish Round 3 Leftovers (P0/P1)
 
-**Status:** Planned  
-**Depends on:** Sprints 58–62 Done on main; **merge Sprint 57 first if enrichment still fat on main**  
+**Status:** In Progress  
+**Depends on:** Sprints 58–62 Done on main; Story 01 lands Sprint 57 enrichment structure on tip  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md) · [ROUND3_AGENT_COMMANDS.md](../ROUND3_AGENT_COMMANDS.md)  
 **Repo:** `dating-api`  
@@ -29,7 +29,7 @@ Close gaps exposed after Sprints 57–62:
 |--------|-------------|-----|
 | Evaluate | ~132 LOC ✅ | — |
 | Extraction | ~348 LOC | Soft ≤250 optional later |
-| Enrichment-v2 | ~889 on main ⚠️ | Merge/verify Sprint 57 |
+| Enrichment-v2 | thin facade on tip ✅ | Merge tip → main |
 | Prisma injectors | ~10–12 (was 31) | Finish peel |
 | `IMatchRepository` | God port | ISP split |
 | Rate-limit twins | HTTP + WS duplicates | Shared module |
@@ -41,7 +41,7 @@ Close gaps exposed after Sprints 57–62:
 
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
-| 01 | [Enrichment on main + hygiene](./STORY_01_enrichment_merge_hygiene.md) | 0.5–1 day | ⚡ LOW | Planned |
+| 01 | [Enrichment on main + hygiene](./STORY_01_enrichment_merge_hygiene.md) | 0.5–1 day | ⚡ LOW | Done |
 | 02 | [Split me-profile HTTP integration specs](./STORY_02_split_me_profile_http_specs.md) | 2–3 days | ⚠️ MEDIUM | Planned |
 | 03 | [Finish Prisma peel](./STORY_03_finish_prisma_peel.md) | 2–3 days | ⚠️ MEDIUM | Planned |
 | 04 | [Match repo ISP + shared rate-limit](./STORY_04_match_repo_isp_rate_limit.md) | 2–3 days | ⚠️ MEDIUM | Planned |
@@ -54,7 +54,7 @@ Close gaps exposed after Sprints 57–62:
 
 ## Success criteria
 
-- [ ] `enrichment-v2.ts` is thin facade on main (or documented freeze-only dump with keyword modules present)
+- [x] `enrichment-v2.ts` is thin facade on tip (keyword modules present; merge to main to clear checkpoint) *(Story 01)*
 - [ ] Me-profile HTTP integration suite split into ≤4 focused files (no single 6k LOC file)
 - [ ] Prisma injectors in product me-profile path ≤ ~6 (analysis/feedback/account peeled or justified)
 - [ ] Match repository split or Prisma types removed from port surface
