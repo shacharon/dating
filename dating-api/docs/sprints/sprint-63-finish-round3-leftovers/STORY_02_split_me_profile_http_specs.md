@@ -48,9 +48,11 @@ Mega-file **deleted**; harness header documents entrypoints.
 
 ## Shipped
 
-eature/sprint-63-story-2 @ `e3d066b`
+`feature/sprint-63-story-2` @ `57e6479`
 
 - `3a45769` — test: split me-profile HTTP integration mega-suite
 - `c78779e` — test: green me-profile HTTP split harness (Agent 2)
+- `e3d066b` — chore: close sprint 63 story 2
+- `57e6479` — docs: note sprint 63 story 2 close tip
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
