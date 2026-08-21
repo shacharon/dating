@@ -100,9 +100,10 @@ Story 02 wires rate-limit stores onto the same Redis connection.
 
 ## Shipped
 
-`feature/sprint-61-story-1` @ `ca41c92` (+ Agent 3 close commit)
+`feature/sprint-61-story-1` @ `be834e3`
 
 - `54b9f06` — feat: redis cache ISP ports + shared connection
 - `ca41c92` — test: guard redis ISP wiring
+- `be834e3` — chore: close sprint 61 story 1
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (no Agent 4 / 2.5 / 3.5)
