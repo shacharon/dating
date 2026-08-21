@@ -4,7 +4,6 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import { MessageStatus, type Prisma } from '@prisma/client';
 import { MESSAGING_EVENT_MESSAGE_NEW } from '../messaging-realtime/messaging-realtime.constants';
 import { RealtimePublisher } from '../messaging-realtime/realtime-publisher.service';
 import { ErrorCodes } from '../logging/error-codes';
@@ -13,13 +12,15 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { hashConversationId } from '../analytics/hash-conversation-id';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   CONTENT_MODERATION,
   type ContentModerationPort,
 } from '../content-moderation/content-moderation.ports';
 import { ContentViolationService } from '../content-moderation/content-violation.service';
-import { isContentModerationEnabled, datingPolicySexualScoreMin } from '../content-moderation/content-moderation.types';
+import {
+  isContentModerationEnabled,
+  datingPolicySexualScoreMin,
+} from '../content-moderation/content-moderation.types';
 import {
   evaluateContentPolicy,
   isDatingPolicyNearMiss,
@@ -33,22 +34,18 @@ import {
   type MessageListDto,
   toMessageDto,
 } from './me-conversation-messages.dto';
-
-const messageSelect = {
-  id: true,
-  conversationId: true,
-  senderId: true,
-  text: true,
-  createdAt: true,
-  status: true,
-} as const;
+import {
+  CONVERSATION_REPOSITORY,
+  type IConversationRepository,
+} from './repositories/conversation.repository';
 
 const MAX_AFTER_POLL_LIMIT = 100;
 
 @Injectable()
 export class MeConversationMessagesService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(CONVERSATION_REPOSITORY)
+    private readonly conversationsRepo: IConversationRepository,
     private readonly conversations: MeConversationsService,
     private readonly obs: StructuredObservabilityService,
     private readonly messageRateLimit: ConversationMessageRateLimitService,
@@ -156,9 +153,7 @@ export class MeConversationMessagesService {
     options: { limit: number; before?: string; after?: string },
   ): Promise<MessageListDto> {
     if (options.before && options.after) {
-      throw new BadRequestException(
-        'Cannot use before and after together.',
-      );
+      throw new BadRequestException('Cannot use before and after together.');
     }
 
     await this.conversations.assertActiveConversationParticipant(
@@ -189,31 +184,19 @@ export class MeConversationMessagesService {
     after: string,
     limit: number,
   ): Promise<MessageListDto> {
-    const cursor = await this.prisma.message.findFirst({
-      where: {
-        id: after,
-        conversationId,
-        status: MessageStatus.SENT,
-      },
-      select: { id: true, createdAt: true },
-    });
+    const cursor = await this.conversationsRepo.findSentMessageCursor(
+      conversationId,
+      after,
+    );
     if (!cursor) {
       throw new BadRequestException('Invalid message cursor.');
     }
 
     const pollLimit = Math.min(limit, MAX_AFTER_POLL_LIMIT);
-    const rows = await this.prisma.message.findMany({
-      where: {
-        conversationId,
-        status: MessageStatus.SENT,
-        OR: [
-          { createdAt: { gt: cursor.createdAt } },
-          { createdAt: cursor.createdAt, id: { gt: cursor.id } },
-        ],
-      },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      take: pollLimit,
-      select: messageSelect,
+    const rows = await this.conversationsRepo.listSentMessagesAfterCursor({
+      conversationId,
+      cursor,
+      limit: pollLimit,
     });
 
     const messages = rows.map(toMessageDto);
@@ -235,40 +218,22 @@ export class MeConversationMessagesService {
     limit: number,
     before?: string,
   ): Promise<MessageListDto> {
-    const whereBase: Prisma.MessageWhereInput = {
-      conversationId,
-      status: MessageStatus.SENT,
-    };
-
-    let where: Prisma.MessageWhereInput = whereBase;
-
+    let beforeCursor: { id: string; createdAt: Date } | undefined;
     if (before) {
-      const cursor = await this.prisma.message.findFirst({
-        where: {
-          id: before,
-          conversationId,
-          status: MessageStatus.SENT,
-        },
-        select: { id: true, createdAt: true },
-      });
-      if (!cursor) {
+      const found = await this.conversationsRepo.findSentMessageCursor(
+        conversationId,
+        before,
+      );
+      if (!found) {
         throw new BadRequestException('Invalid message cursor.');
       }
-
-      where = {
-        ...whereBase,
-        OR: [
-          { createdAt: { lt: cursor.createdAt } },
-          { createdAt: cursor.createdAt, id: { lt: cursor.id } },
-        ],
-      };
+      beforeCursor = found;
     }
 
-    const rows = await this.prisma.message.findMany({
-      where,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-      select: messageSelect,
+    const rows = await this.conversationsRepo.listSentMessagesHistory({
+      conversationId,
+      limit,
+      beforeCursor,
     });
 
     const hasMore = rows.length > limit;
@@ -279,8 +244,7 @@ export class MeConversationMessagesService {
     rows.reverse();
 
     const messages = rows.map(toMessageDto);
-    const nextCursor =
-      hasMore && messages.length > 0 ? messages[0].id : null;
+    const nextCursor = hasMore && messages.length > 0 ? messages[0].id : null;
 
     this.obs.trace(
       `me conversations messages list conversationId=${conversationId} userId=${sessionUserId} count=${messages.length} hasMore=${hasMore}`,
@@ -312,8 +276,6 @@ export class MeConversationMessagesService {
       await this.assertMessagingAllowed(sessionUserId);
     }
 
-    await this.messageRateLimit.consumeSendSlot(sessionUserId);
-
     if (isContentModerationEnabled()) {
       const recipientUserId =
         sessionUserId === match.userId1 ? match.userId2 : match.userId1;
@@ -323,13 +285,12 @@ export class MeConversationMessagesService {
       });
     }
 
-    const row = await this.prisma.message.create({
-      data: {
-        conversationId,
-        senderId: sessionUserId,
-        text: trimmed,
-        status: MessageStatus.SENT,
-      },
+    await this.messageRateLimit.consumeSendSlot(sessionUserId);
+
+    const row = await this.conversationsRepo.createSentMessage({
+      conversationId,
+      senderId: sessionUserId,
+      text: trimmed,
     });
 
     this.obs.trace(

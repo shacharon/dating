@@ -1,16 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  MessageStatus,
-  MutualMatchStatus,
-  ProfileGender,
-  Prisma,
-} from '@prisma/client';
+import { MutualMatchStatus } from '@prisma/client';
 import { ErrorCodes } from '../logging/error-codes';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { hashConversationId } from '../analytics/hash-conversation-id';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
 import type { MeConversationsListQuery } from './dto/me-conversations-list-query.dto';
 import { DEFAULT_CONVERSATION_LIST_LIMIT } from './dto/me-conversations-list-query.dto';
 import {
@@ -22,12 +16,18 @@ import {
   decodeConversationListCursor,
   paginateConversationList,
 } from './me-conversations-list-cursor';
-import { batchUnreadCountsByConversationId } from './me-conversations-unread-batch';
-import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
 import {
   MATCH_LIST_RANK_QUEUE_PORT,
   type MatchListRankQueuePort,
 } from '../workers/match-list-rank.ports';
+import {
+  CONVERSATION_REPOSITORY,
+  type IConversationRepository,
+} from './repositories/conversation.repository';
+import type {
+  ActiveMatchRow,
+  ConversationProfileRow,
+} from './repositories/conversation.repository.types';
 
 function deriveAgeYears(birthDate: Date | null, asOf: Date): number | null {
   if (!birthDate) return null;
@@ -91,47 +91,11 @@ export interface MarkConversationReadResponseDto {
   lastReadAt: string;
 }
 
-const profileSelect = {
-  id: true,
-  userId: true,
-  nickname: true,
-  gender: true,
-  birthDate: true,
-  city: true,
-  country: true,
-  locationLabel: true,
-  desiredPartnerGenders: true,
-  photos: {
-    where: { status: 'APPROVED' as const },
-    select: { id: true, isPrimary: true },
-  },
-} as const;
-
-type ConversationProfileRow = {
-  id: string;
-  userId: string;
-  nickname: string | null;
-  gender: ProfileGender;
-  birthDate: Date | null;
-  city: string | null;
-  country: string | null;
-  locationLabel: string | null;
-  photos: ReadonlyArray<{ id: string; isPrimary: boolean }>;
-};
-
-type MutualMatchListRow = {
-  id: string;
-  userId1: string;
-  userId2: string;
-  createdAt: Date;
-  user1LastReadAt: Date | null;
-  user2LastReadAt: Date | null;
-};
-
 @Injectable()
 export class MeConversationsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(CONVERSATION_REPOSITORY)
+    private readonly conversationsRepo: IConversationRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
@@ -158,21 +122,8 @@ export class MeConversationsService {
       throw new ConversationListInvalidCursorError();
     }
 
-    const rows = await this.prisma.mutualMatch.findMany({
-      where: {
-        status: MutualMatchStatus.ACTIVE,
-        OR: [{ userId1: sessionUserId }, { userId2: sessionUserId }],
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        userId1: true,
-        userId2: true,
-        createdAt: true,
-        user1LastReadAt: true,
-        user2LastReadAt: true,
-      },
-    });
+    const rows =
+      await this.conversationsRepo.findActiveMatchesForUser(sessionUserId);
 
     if (rows.length === 0) {
       this.obs.trace(
@@ -191,10 +142,8 @@ export class MeConversationsService {
         lastReadAt: lastReadAtForUser(row, sessionUserId),
       };
     });
-    const unreadByConversationId = await batchUnreadCountsByConversationId(
-      this.prisma,
-      unreadSpecs,
-    );
+    const unreadByConversationId =
+      await this.conversationsRepo.batchUnreadCounts(unreadSpecs);
 
     type Ranked = {
       id: string;
@@ -240,17 +189,15 @@ export class MeConversationsService {
     }
 
     const otherUserIds = page.map((p) => p.otherUserId);
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { userId: { in: otherUserIds } },
-      select: profileSelect,
-    });
+    const profiles =
+      await this.conversationsRepo.findProfilesByUserIds(otherUserIds);
     const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
     const asOf = new Date();
 
-    const lastByConversationId = await batchLastMessagesByConversationId(
-      this.prisma,
-      page.map((p) => p.id),
-    );
+    const lastByConversationId =
+      await this.conversationsRepo.batchLastMessagesByConversationIds(
+        page.map((p) => p.id),
+      );
 
     const conversations: ConversationListItemDto[] = page.map((item) => {
       const profile = profileByUserId.get(item.otherUserId);
@@ -285,19 +232,8 @@ export class MeConversationsService {
   async unreadTotal(
     sessionUserId: string,
   ): Promise<ConversationsUnreadTotalDto> {
-    const rows = await this.prisma.mutualMatch.findMany({
-      where: {
-        status: MutualMatchStatus.ACTIVE,
-        OR: [{ userId1: sessionUserId }, { userId2: sessionUserId }],
-      },
-      select: {
-        id: true,
-        userId1: true,
-        userId2: true,
-        user1LastReadAt: true,
-        user2LastReadAt: true,
-      },
-    });
+    const rows =
+      await this.conversationsRepo.findActiveMatchesForUser(sessionUserId);
 
     if (rows.length === 0) {
       return { totalUnread: 0 };
@@ -312,10 +248,8 @@ export class MeConversationsService {
         lastReadAt: lastReadAtForUser(row, sessionUserId),
       };
     });
-    const unreadByConversationId = await batchUnreadCountsByConversationId(
-      this.prisma,
-      unreadSpecs,
-    );
+    const unreadByConversationId =
+      await this.conversationsRepo.batchUnreadCounts(unreadSpecs);
 
     let totalUnread = 0;
     for (const row of rows) {
@@ -335,18 +269,7 @@ export class MeConversationsService {
     user1LastReadAt: Date | null;
     user2LastReadAt: Date | null;
   }> {
-    const match = await this.prisma.mutualMatch.findUnique({
-      where: { id: conversationId },
-      select: {
-        id: true,
-        userId1: true,
-        userId2: true,
-        createdAt: true,
-        status: true,
-        user1LastReadAt: true,
-        user2LastReadAt: true,
-      },
-    });
+    const match = await this.conversationsRepo.findMatchById(conversationId);
 
     if (!match || match.status !== MutualMatchStatus.ACTIVE) {
       throw new ConversationNotFoundError();
@@ -378,10 +301,8 @@ export class MeConversationsService {
     const otherUserId =
       match.userId1 === sessionUserId ? match.userId2 : match.userId1;
 
-    const profile = await this.prisma.userProfile.findUnique({
-      where: { userId: otherUserId },
-      select: profileSelect,
-    });
+    const profile =
+      await this.conversationsRepo.findProfileByUserId(otherUserId);
 
     const asOf = new Date();
 
@@ -390,9 +311,13 @@ export class MeConversationsService {
       ErrorCodes.ME_CONVERSATIONS_DETAIL_OK,
     );
 
-    this.analytics.track(sessionUserId, ProductAnalyticsEvents.CONVERSATION_OPENED, {
-      conversationIdHash: hashConversationId(conversationId),
-    });
+    this.analytics.track(
+      sessionUserId,
+      ProductAnalyticsEvents.CONVERSATION_OPENED,
+      {
+        conversationIdHash: hashConversationId(conversationId),
+      },
+    );
 
     return {
       id: match.id,
@@ -415,10 +340,7 @@ export class MeConversationsService {
     const field = lastReadFieldForUser(match.userId1, sessionUserId);
     const now = new Date();
 
-    await this.prisma.mutualMatch.update({
-      where: { id: conversationId },
-      data: { [field]: now },
-    });
+    await this.conversationsRepo.updateLastReadAt(conversationId, field, now);
 
     this.obs.trace(
       `me conversations mark-read id=${conversationId} userId=${sessionUserId}`,
@@ -442,34 +364,30 @@ export class MeConversationsService {
 
   private async countUnreadForMatchRow(
     sessionUserId: string,
-    row: MutualMatchListRow,
+    row: ActiveMatchRow,
   ): Promise<number> {
     const otherUserId =
       row.userId1 === sessionUserId ? row.userId2 : row.userId1;
     const lastReadAt = lastReadAtForUser(row, sessionUserId);
 
-    return this.prisma.message.count({
-      where: unreadMessageCountWhere(row.id, otherUserId, lastReadAt),
+    return this.conversationsRepo.countUnreadMessages({
+      conversationId: row.id,
+      otherUserId,
+      lastReadAt,
     });
   }
 
-  async unmatch(
-    sessionUserId: string,
-    conversationId: string,
-  ): Promise<void> {
+  async unmatch(sessionUserId: string, conversationId: string): Promise<void> {
     const match = await this.assertActiveConversationParticipant(
       sessionUserId,
       conversationId,
     );
 
-    await this.prisma.mutualMatch.update({
-      where: { id: conversationId },
-      data: {
-        status: MutualMatchStatus.UNMATCHED,
-        unmatchedAt: new Date(),
-        unmatchedByUserId: sessionUserId,
-      },
-    });
+    await this.conversationsRepo.markUnmatched(
+      conversationId,
+      sessionUserId,
+      new Date(),
+    );
 
     await this.matchListRankQueue.enqueueRebuild(match.userId1, 'unmatch');
     await this.matchListRankQueue.enqueueRebuild(match.userId2, 'unmatch');
@@ -493,9 +411,7 @@ function buildOtherUserDto(
     profileId: profile?.id ?? '',
     nickname: profile?.nickname?.trim() ? profile.nickname.trim() : null,
     gender: profile ? String(profile.gender) : null,
-    ageYears: profile
-      ? deriveAgeYears(profile.birthDate ?? null, asOf)
-      : null,
+    ageYears: profile ? deriveAgeYears(profile.birthDate ?? null, asOf) : null,
     locationLabel: profile?.locationLabel ?? null,
     photoUrl:
       profile?.id && photoId
@@ -509,19 +425,6 @@ function pickApprovedPrimaryPhotoId(
 ): string | null {
   const primary = photos.find((p) => p.isPrimary);
   return primary?.id ?? null;
-}
-
-function unreadMessageCountWhere(
-  conversationId: string,
-  otherUserId: string,
-  lastReadAt: Date | null,
-): Prisma.MessageWhereInput {
-  return {
-    conversationId,
-    senderId: otherUserId,
-    status: MessageStatus.SENT,
-    ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
-  };
 }
 
 function lastReadFieldForUser(

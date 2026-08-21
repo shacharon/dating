@@ -3,12 +3,17 @@ import {
   ConversationListInvalidCursorError,
   ConversationNotFoundError,
 } from './me-conversations.errors';
-import { MessageStatus, MutualMatchStatus, ProfileGender } from '@prisma/client';
+import {
+  MessageStatus,
+  MutualMatchStatus,
+  ProfileGender,
+} from '@prisma/client';
 import { MeConversationsService } from './me-conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { batchLastMessagesByConversationId } from './me-conversations-last-message-batch';
+import type { IConversationRepository } from './repositories/conversation.repository';
 
 jest.mock('./me-conversations-last-message-batch', () => ({
   batchLastMessagesByConversationId: jest.fn(),
@@ -40,6 +45,85 @@ describe('MeConversationsService', () => {
     $queryRaw: jest.fn(),
   } as unknown as PrismaService;
 
+  const conversationsRepo = {
+    findActiveMatchesForUser: jest.fn((userId: string) =>
+      prisma.mutualMatch.findMany({
+        where: {
+          status: MutualMatchStatus.ACTIVE,
+          OR: [{ userId1: userId }, { userId2: userId }],
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          userId1: true,
+          userId2: true,
+          createdAt: true,
+          user1LastReadAt: true,
+          user2LastReadAt: true,
+        },
+      }),
+    ),
+    findMatchById: jest.fn((id: string) =>
+      prisma.mutualMatch.findUnique({ where: { id } }),
+    ),
+    updateLastReadAt: jest.fn(
+      (id: string, field: 'user1LastReadAt' | 'user2LastReadAt', at: Date) =>
+        prisma.mutualMatch.update({
+          where: { id },
+          data: { [field]: at },
+        }),
+    ),
+    markUnmatched: jest.fn((id: string, byUserId: string, at: Date) =>
+      prisma.mutualMatch.update({
+        where: { id },
+        data: {
+          status: MutualMatchStatus.UNMATCHED,
+          unmatchedAt: at,
+          unmatchedByUserId: byUserId,
+        },
+      }),
+    ),
+    findProfilesByUserIds: jest.fn((userIds: string[]) =>
+      prisma.userProfile.findMany({
+        where: { userId: { in: userIds } },
+        select: expect.any(Object),
+      }),
+    ),
+    findProfileByUserId: jest.fn((userId: string) =>
+      prisma.userProfile.findUnique({
+        where: { userId },
+        select: expect.any(Object),
+      }),
+    ),
+    batchUnreadCounts: jest.fn(async () => {
+      const rows = await (prisma.$queryRaw as jest.Mock)();
+      return new Map(
+        (rows as Array<{ conversationId: string; cnt: number }>).map((row) => [
+          row.conversationId,
+          Number(row.cnt),
+        ]),
+      );
+    }),
+    countUnreadMessages: jest.fn(
+      (args: {
+        conversationId: string;
+        otherUserId: string;
+        lastReadAt: Date | null;
+      }) =>
+        prisma.message.count({
+          where: {
+            conversationId: args.conversationId,
+            senderId: args.otherUserId,
+            status: MessageStatus.SENT,
+            ...(args.lastReadAt ? { createdAt: { gt: args.lastReadAt } } : {}),
+          },
+        }),
+    ),
+    batchLastMessagesByConversationIds: jest.fn((ids: string[]) =>
+      batchLastMessagesByConversationId(prisma, ids),
+    ),
+  } as unknown as IConversationRepository;
+
   const obs = {
     trace: jest.fn(),
     error: jest.fn(),
@@ -55,7 +139,7 @@ describe('MeConversationsService', () => {
     jest.clearAllMocks();
     const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationsService(
-      prisma,
+      conversationsRepo,
       obs,
       analytics,
       matchListRankQueue as never,
@@ -201,7 +285,9 @@ describe('MeConversationsService', () => {
     expect(result.conversations[0].otherUser.id).toBe(otherUserIdA);
     expect(result.conversations[0].otherUser.profileId).toBe('prof_a');
     expect(result.conversations[0].otherUser.gender).toBe('FEMALE');
-    expect(result.conversations[0].otherUser.ageYears).toEqual(expect.any(Number));
+    expect(result.conversations[0].otherUser.ageYears).toEqual(
+      expect.any(Number),
+    );
   });
 
   it('returns row with empty profile fields when other profile is missing', async () => {
@@ -302,12 +388,12 @@ describe('MeConversationsService', () => {
 
       expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
       expect(prisma.message.count).not.toHaveBeenCalled();
-      expect(result.conversations.find((c) => c.id === 'mutual_1')?.unreadCount).toBe(
-        1,
-      );
-      expect(result.conversations.find((c) => c.id === 'mutual_2')?.unreadCount).toBe(
-        2,
-      );
+      expect(
+        result.conversations.find((c) => c.id === 'mutual_1')?.unreadCount,
+      ).toBe(1);
+      expect(
+        result.conversations.find((c) => c.id === 'mutual_2')?.unreadCount,
+      ).toBe(2);
     });
 
     it('sorts conversations with higher unreadCount before newer matchedAt', async () => {
@@ -610,7 +696,9 @@ describe('MeConversationsService', () => {
     };
 
     it('returns detail for ACTIVE mutual match when session user is participant', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue(
         candidateProfile,
       );
@@ -664,7 +752,9 @@ describe('MeConversationsService', () => {
     });
 
     it('resolves other user as userId1 when session user is userId2', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue(
         candidateProfile,
       );
@@ -679,7 +769,9 @@ describe('MeConversationsService', () => {
     });
 
     it('returns empty profile fields when other profile is missing', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue(null);
 
       const result = await service.getById(sessionUserId, conversationId);
@@ -712,7 +804,9 @@ describe('MeConversationsService', () => {
         userId1: sessionUserId,
         userId2: otherUserIdA,
       };
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(matchAsUser1);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        matchAsUser1,
+      );
       (prisma.mutualMatch.update as jest.Mock).mockResolvedValue({});
 
       const result = await service.markAsRead(sessionUserId, conversationId);
@@ -726,7 +820,9 @@ describe('MeConversationsService', () => {
     });
 
     it('updates user2LastReadAt when session user is userId2', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       (prisma.mutualMatch.update as jest.Mock).mockResolvedValue({});
 
       await service.markAsRead(sessionUserId, conversationId);
@@ -738,7 +834,9 @@ describe('MeConversationsService', () => {
     });
 
     it('advances timestamp on second call', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       const first = new Date('2026-05-31T10:00:00.000Z');
       const second = new Date('2026-05-31T11:00:00.000Z');
       (prisma.mutualMatch.update as jest.Mock)
@@ -750,8 +848,14 @@ describe('MeConversationsService', () => {
         .mockImplementationOnce(() => first as unknown as Date)
         .mockImplementationOnce(() => second as unknown as Date);
 
-      const firstResult = await service.markAsRead(sessionUserId, conversationId);
-      const secondResult = await service.markAsRead(sessionUserId, conversationId);
+      const firstResult = await service.markAsRead(
+        sessionUserId,
+        conversationId,
+      );
+      const secondResult = await service.markAsRead(
+        sessionUserId,
+        conversationId,
+      );
 
       expect(firstResult.lastReadAt).toBe(first.toISOString());
       expect(secondResult.lastReadAt).toBe(second.toISOString());
@@ -800,7 +904,9 @@ describe('MeConversationsService', () => {
     };
 
     it('counts all peer SENT messages when lastReadAt is null', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       (prisma.message.count as jest.Mock).mockResolvedValue(3);
 
       const count = await service.countUnreadForParticipant(
@@ -843,7 +949,9 @@ describe('MeConversationsService', () => {
     });
 
     it('does not count own messages (senderId is other user only)', async () => {
-      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(activeMatch);
+      (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue(
+        activeMatch,
+      );
       (prisma.message.count as jest.Mock).mockResolvedValue(1);
 
       await service.countUnreadForParticipant(sessionUserId, conversationId);

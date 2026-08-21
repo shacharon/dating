@@ -19,6 +19,7 @@ import type { NewMessageEmailService } from '../notifications/new-message-email.
 import type { ContentModerationPort } from '../content-moderation/content-moderation.ports';
 import type { ContentViolationService } from '../content-moderation/content-violation.service';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
+import type { IConversationRepository } from './repositories/conversation.repository';
 
 describe('MeConversationMessagesService', () => {
   const sessionUserId = 'user_viewer_1';
@@ -35,6 +36,76 @@ describe('MeConversationMessagesService', () => {
       update: jest.fn().mockResolvedValue({}),
     },
   } as unknown as PrismaService;
+
+  const conversationsRepo = {
+    findSentMessageCursor: jest.fn(
+      (conversationId: string, messageId: string) =>
+        prisma.message.findFirst({
+          where: {
+            id: messageId,
+            conversationId,
+            status: MessageStatus.SENT,
+          },
+          select: { id: true, createdAt: true },
+        }),
+    ),
+    listSentMessagesAfterCursor: jest.fn(
+      (args: {
+        conversationId: string;
+        cursor: { id: string; createdAt: Date };
+        limit: number;
+      }) =>
+        prisma.message.findMany({
+          where: {
+            conversationId: args.conversationId,
+            status: MessageStatus.SENT,
+            OR: [
+              { createdAt: { gt: args.cursor.createdAt } },
+              {
+                createdAt: args.cursor.createdAt,
+                id: { gt: args.cursor.id },
+              },
+            ],
+          },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: args.limit,
+          select: expect.any(Object),
+        }),
+    ),
+    listSentMessagesHistory: jest.fn(
+      (args: {
+        conversationId: string;
+        limit: number;
+        beforeCursor?: { id: string; createdAt: Date };
+      }) =>
+        prisma.message.findMany({
+          where: {
+            conversationId: args.conversationId,
+            status: MessageStatus.SENT,
+            ...(args.beforeCursor
+              ? {
+                  OR: [
+                    { createdAt: { lt: args.beforeCursor.createdAt } },
+                    {
+                      createdAt: args.beforeCursor.createdAt,
+                      id: { lt: args.beforeCursor.id },
+                    },
+                  ],
+                }
+              : {}),
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: args.limit + 1,
+          select: expect.any(Object),
+        }),
+    ),
+    createSentMessage: jest.fn(
+      (args: { conversationId: string; senderId: string; text: string }) =>
+        prisma.message.create({
+          data: { ...args, status: MessageStatus.SENT },
+        }),
+    ),
+  } as unknown as IConversationRepository;
 
   const conversations = {
     assertActiveConversationParticipant: jest.fn(),
@@ -118,7 +189,7 @@ describe('MeConversationMessagesService', () => {
       .mockReturnValue(true);
     const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationMessagesService(
-      prisma,
+      conversationsRepo,
       conversations,
       obs,
       messageRateLimit,
@@ -128,16 +199,16 @@ describe('MeConversationMessagesService', () => {
       moderation as unknown as ContentModerationPort,
       contentViolations as unknown as ContentViolationService,
     );
-    (conversations.assertActiveConversationParticipant as jest.Mock).mockResolvedValue(
-      {
-        id: conversationId,
-        userId1: otherUserId,
-        userId2: sessionUserId,
-        createdAt: new Date('2026-05-31T10:00:00.000Z'),
-        user1LastReadAt: null,
-        user2LastReadAt: null,
-      },
-    );
+    (
+      conversations.assertActiveConversationParticipant as jest.Mock
+    ).mockResolvedValue({
+      id: conversationId,
+      userId1: otherUserId,
+      userId2: sessionUserId,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+      user1LastReadAt: null,
+      user2LastReadAt: null,
+    });
   });
 
   afterEach(() => {
@@ -296,7 +367,11 @@ describe('MeConversationMessagesService', () => {
     });
 
     try {
-      await service.sendMessage(sessionUserId, conversationId, 'i want to fuck');
+      await service.sendMessage(
+        sessionUserId,
+        conversationId,
+        'i want to fuck',
+      );
       fail('expected throw');
     } catch (e) {
       expect(e).toBeInstanceOf(BadRequestException);
@@ -480,7 +555,9 @@ describe('MeConversationMessagesService', () => {
   });
 
   it('propagates NotFoundException when conversation is missing', async () => {
-    (conversations.assertActiveConversationParticipant as jest.Mock).mockRejectedValue(
+    (
+      conversations.assertActiveConversationParticipant as jest.Mock
+    ).mockRejectedValue(
       new NotFoundException({
         error: 'conversation_not_found',
         message: 'Conversation not found.',
@@ -494,7 +571,9 @@ describe('MeConversationMessagesService', () => {
   });
 
   it('propagates NotFoundException when conversation is UNMATCHED', async () => {
-    (conversations.assertActiveConversationParticipant as jest.Mock).mockRejectedValue(
+    (
+      conversations.assertActiveConversationParticipant as jest.Mock
+    ).mockRejectedValue(
       new NotFoundException({
         error: 'conversation_not_found',
         message: 'Conversation not found.',
@@ -508,7 +587,9 @@ describe('MeConversationMessagesService', () => {
   });
 
   it('propagates ForbiddenException when session user is not a participant', async () => {
-    (conversations.assertActiveConversationParticipant as jest.Mock).mockRejectedValue(
+    (
+      conversations.assertActiveConversationParticipant as jest.Mock
+    ).mockRejectedValue(
       new ForbiddenException({
         error: 'conversation_forbidden',
         message: 'You do not have access to this conversation.',
@@ -646,7 +727,9 @@ describe('MeConversationMessagesService', () => {
     });
 
     it('propagates NotFoundException when conversation is missing', async () => {
-      (conversations.assertActiveConversationParticipant as jest.Mock).mockRejectedValue(
+      (
+        conversations.assertActiveConversationParticipant as jest.Mock
+      ).mockRejectedValue(
         new NotFoundException({
           error: 'conversation_not_found',
           message: 'Conversation not found.',
@@ -660,7 +743,9 @@ describe('MeConversationMessagesService', () => {
     });
 
     it('propagates ForbiddenException when session user is not a participant', async () => {
-      (conversations.assertActiveConversationParticipant as jest.Mock).mockRejectedValue(
+      (
+        conversations.assertActiveConversationParticipant as jest.Mock
+      ).mockRejectedValue(
         new ForbiddenException({
           error: 'conversation_forbidden',
           message: 'You do not have access to this conversation.',
