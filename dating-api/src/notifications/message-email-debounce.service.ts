@@ -46,7 +46,7 @@ export class MessageEmailDebounceService {
       return this.tryClaimLocal(mapKey, windowMs);
     }
 
-    if (!this.redis?.isAvailable()) {
+    if (!this.redis?.isAvailable() || !this.cache) {
       this.logger.warn(
         'email debounce redis unavailable — fail-open allow send',
       );
@@ -54,7 +54,7 @@ export class MessageEmailDebounceService {
     }
 
     const redisKey = emailMsgDebounceKey(conversationId, recipientUserId);
-    return this.cache!.setNx(
+    return this.cache.setNx(
       redisKey,
       { at: new Date().toISOString() },
       ttlSeconds,

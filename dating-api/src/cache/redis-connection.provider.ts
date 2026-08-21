@@ -15,7 +15,7 @@ export class RedisConnectionProvider
     const url = process.env.REDIS_URL?.trim();
     if (!url) {
       this.logger.warn(
-        'REDIS_URL unset — RedisCacheService disabled (fail-open to DB)',
+        'REDIS_URL unset — Redis cache connection disabled (fail-open to DB)',
       );
       this.urlConfigured = false;
       return;
