@@ -3,7 +3,7 @@
 **Status:** FROZEN as of Sprint 52 Story 02 (2026-08-20) · branch `feature/sprint-52-story-2`
 
 Ownership map: [KEYWORD_INVENTORY.md](./KEYWORD_INVENTORY.md).  
-Agent/PR policy: [NO_NEW_REGEX_POLICY.md](./NO_NEW_REGEX_POLICY.md).
+Agent/PR policy prose: Story 03 will publish the long-form “where new signals go” guide on top of this freeze.
 
 ---
 
@@ -87,5 +87,5 @@ A single shared taxonomy table that generates classifiers is **out of scope** fo
 ## Related
 
 - [KEYWORD_INVENTORY.md](./KEYWORD_INVENTORY.md)
-- [NO_NEW_REGEX_POLICY.md](./NO_NEW_REGEX_POLICY.md) — agent/PR policy (Sprint 52 Story 03)
+- Story 03 — no-new-regex agent/PR policy (planned)
 - LLM expansion registration: Sprint 51 `docs/sprints/ADD_EXPANSION_PLAYBOOK.md` (when that branch is merged; until then use expansion manifest headers under `src/extraction/` / `src/matches/`)
