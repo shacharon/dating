@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   ENFORCEMENT_DAY_MS,
   ENFORCEMENT_HOUR_MS,
@@ -11,11 +10,16 @@ import {
   type EnforcementSurface,
   type ViolationStats,
 } from './content-moderation.types';
+import {
+  CONTENT_VIOLATION_REPOSITORY,
+  type IContentViolationRepository,
+} from './repositories/content-violation.repository';
 
 @Injectable()
 export class ContentViolationService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(CONTENT_VIOLATION_REPOSITORY)
+    private readonly violations: IContentViolationRepository,
     private readonly obs: StructuredObservabilityService,
   ) {}
 
@@ -33,24 +37,16 @@ export class ContentViolationService {
     const conversationId = args.conversationId ?? null;
     const recipientUserId = args.recipientUserId ?? null;
 
-    await this.prisma.$transaction([
-      this.prisma.userContentViolation.create({
-        data: {
-          userId: args.userId,
-          surface: args.surface,
-          flaggedText: args.flaggedText,
-          category: args.category,
-          score: args.score,
-          action: args.action,
-          conversationId,
-          recipientUserId,
-        },
-      }),
-      this.prisma.user.update({
-        where: { id: args.userId },
-        data: { contentViolationCount: { increment: 1 } },
-      }),
-    ]);
+    await this.violations.createViolationAndIncrementCount({
+      userId: args.userId,
+      surface: args.surface,
+      flaggedText: args.flaggedText,
+      category: args.category,
+      score: args.score,
+      action: args.action,
+      conversationId,
+      recipientUserId,
+    });
 
     const contextSuffix =
       conversationId != null || recipientUserId != null
@@ -72,21 +68,11 @@ export class ContentViolationService {
     userId: string,
     options?: { surface?: string; surfacePrefix?: string; since?: Date },
   ): Promise<number> {
-    const surfaceFilter =
-      options?.surface != null
-        ? { surface: options.surface }
-        : options?.surfacePrefix != null
-          ? { surface: { startsWith: options.surfacePrefix } }
-          : {};
-
-    return this.prisma.userContentViolation.count({
-      where: {
-        userId,
-        ...surfaceFilter,
-        ...(options?.since != null
-          ? { createdAt: { gte: options.since } }
-          : {}),
-      },
+    return this.violations.countViolations({
+      userId,
+      surface: options?.surface,
+      surfacePrefix: options?.surfacePrefix,
+      since: options?.since,
     });
   }
 
@@ -95,14 +81,7 @@ export class ContentViolationService {
     mutedUntil: Date | null;
     violationCount: number;
   }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        contentViolationStatus: true,
-        contentViolationMutedUntil: true,
-        contentViolationCount: true,
-      },
-    });
+    const user = await this.violations.getUserViolationFields(userId);
 
     return {
       status: user?.contentViolationStatus ?? 'ok',
@@ -127,10 +106,7 @@ export class ContentViolationService {
         return { shouldBlock: false, reason: 'under_threshold' };
       }
 
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { contentViolationStatus: 'profile_edit_blocked' },
-      });
+      await this.violations.setProfileEditBlocked(userId);
       this.obs.trace(
         `user content blocked userId=${userId} reason=profile_edit_blocked profileViolations=${count}`,
         ErrorCodes.CONTENT_USER_BLOCKED,
@@ -176,13 +152,7 @@ export class ContentViolationService {
       return { shouldBlock: false, reason };
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        contentViolationStatus: 'messaging_muted',
-        contentViolationMutedUntil: mutedUntil ?? null,
-      },
-    });
+    await this.violations.setMessagingMute(userId, mutedUntil ?? null);
     this.obs.trace(
       `content user muted userId=${userId} duration=${muteLabel} hourly=${hourly} daily=${daily} lifetime=${lifetime} reason=${reason}`,
       ErrorCodes.CONTENT_USER_MUTED,
@@ -213,13 +183,7 @@ export class ContentViolationService {
     const mutedUntil = status.mutedUntil;
     const now = new Date();
     if (mutedUntil != null && mutedUntil <= now) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          contentViolationStatus: 'ok',
-          contentViolationMutedUntil: null,
-        },
-      });
+      await this.violations.resetViolationStatus(userId);
       return false;
     }
 
@@ -231,58 +195,34 @@ export class ContentViolationService {
    * Does not touch indefinite mutes (`mutedUntil` null).
    */
   async clearExpiredMutes(): Promise<number> {
-    const result = await this.prisma.user.updateMany({
-      where: {
-        contentViolationStatus: 'messaging_muted',
-        contentViolationMutedUntil: {
-          not: null,
-          lte: new Date(),
-        },
-      },
-      data: {
-        contentViolationStatus: 'ok',
-        contentViolationMutedUntil: null,
-      },
-    });
+    const count = await this.violations.clearExpiredMutes(new Date());
 
-    if (result.count > 0) {
+    if (count > 0) {
       this.obs.trace(
-        `cleared ${result.count} expired mutes`,
+        `cleared ${count} expired mutes`,
         ErrorCodes.CONTENT_MUTES_EXPIRED,
       );
     }
 
-    return result.count;
+    return count;
   }
 
   async getViolationStats(): Promise<ViolationStats> {
-    const [byCategory, bySurface, totalViolations, blockedProfileUsers, mutedUsers] =
-      await Promise.all([
-        this.prisma.userContentViolation.groupBy({
-          by: ['category'],
-          _count: { _all: true },
-        }),
-        this.prisma.userContentViolation.groupBy({
-          by: ['surface'],
-          _count: { _all: true },
-        }),
-        this.prisma.userContentViolation.count(),
-        this.prisma.user.count({
-          where: { contentViolationStatus: 'profile_edit_blocked' },
-        }),
-        this.prisma.user.findMany({
-          where: { contentViolationStatus: 'messaging_muted' },
-          select: { contentViolationMutedUntil: true },
-        }),
-      ]);
+    const {
+      byCategory,
+      bySurface,
+      totalViolations,
+      blockedProfileUsers,
+      mutedUsers,
+    } = await this.violations.getViolationStatsRaw();
 
     const violationsByCategory: Record<string, number> = {};
     for (const row of byCategory) {
-      violationsByCategory[row.category] = row._count._all;
+      violationsByCategory[row.category] = row.count;
     }
     const violationsBySurface: Record<string, number> = {};
     for (const row of bySurface) {
-      violationsBySurface[row.surface] = row._count._all;
+      violationsBySurface[row.surface] = row.count;
     }
 
     const mutedMessageUsersTemporary = mutedUsers.filter(

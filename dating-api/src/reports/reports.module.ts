@@ -7,6 +7,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { ReportsController } from './reports.controller';
+import { PrismaReportRepository } from './repositories/prisma-report.repository';
+import { REPORT_REPOSITORY } from './repositories/report.repository';
 import { ReportsService } from './reports.service';
 
 @Module({
@@ -19,6 +21,11 @@ import { ReportsService } from './reports.service';
     forwardRef(() => AuthModule),
   ],
   controllers: [ReportsController],
-  providers: [ReportsService, MeProfileValidationPipe],
+  providers: [
+    ReportsService,
+    MeProfileValidationPipe,
+    { provide: REPORT_REPOSITORY, useClass: PrismaReportRepository },
+  ],
+  exports: [REPORT_REPOSITORY],
 })
 export class ReportsModule {}

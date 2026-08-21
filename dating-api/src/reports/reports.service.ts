@@ -1,24 +1,25 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  MutualMatchStatus,
-  UserReportContextType,
-  type UserReport,
-} from '@prisma/client';
+import { MutualMatchStatus, UserReportContextType } from '@prisma/client';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { ReportOpsEmailService } from '../notifications/report-ops-email.service';
-import { PrismaService } from '../prisma/prisma.service';
 import type {
   CreateUserReportDto,
   UserReportResponseDto,
 } from './dto/create-user-report.dto';
+import {
+  REPORT_REPOSITORY,
+  type IReportRepository,
+} from './repositories/report.repository';
+import type { ReportRow } from './repositories/report.repository.types';
 
 const REPORT_DEBOUNCE_MS = 24 * 60 * 60 * 1000;
 
@@ -38,7 +39,8 @@ export function sanitizeReportDetails(
 @Injectable()
 export class ReportsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(REPORT_REPOSITORY)
+    private readonly reports: IReportRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
     private readonly reportOpsEmail: ReportOpsEmailService,
@@ -59,14 +61,11 @@ export class ReportsService {
     }
 
     const since = new Date(Date.now() - REPORT_DEBOUNCE_MS);
-    const existing = await this.prisma.userReport.findFirst({
-      where: {
-        reporterUserId,
-        reportedUserId,
-        reason: body.reason,
-        status: 'OPEN',
-        createdAt: { gte: since },
-      },
+    const existing = await this.reports.findOpenDuplicateReport({
+      reporterUserId,
+      reportedUserId,
+      reason: body.reason,
+      since,
     });
     if (existing) {
       throw new ConflictException({ error: 'report_duplicate' });
@@ -74,15 +73,13 @@ export class ReportsService {
 
     const details = sanitizeReportDetails(body.details);
 
-    const row = await this.prisma.userReport.create({
-      data: {
-        reporterUserId,
-        reportedUserId,
-        reason: body.reason,
-        details,
-        contextType: body.contextType,
-        contextId: body.contextId,
-      },
+    const row = await this.reports.createReport({
+      reporterUserId,
+      reportedUserId,
+      reason: body.reason,
+      details,
+      contextType: body.contextType,
+      contextId: body.contextId,
     });
 
     this.obs.trace(
@@ -105,25 +102,24 @@ export class ReportsService {
     contextId: string,
   ): Promise<string> {
     if (contextType === UserReportContextType.MATCH_PROFILE) {
-      const profile = await this.prisma.userProfile.findUnique({
-        where: { id: contextId },
-        select: { userId: true },
-      });
-      if (!profile) {
+      const profileUserId =
+        await this.reports.findProfileUserIdByProfileId(contextId);
+      if (!profileUserId) {
         throw new NotFoundException({ error: 'report_context_not_found' });
       }
-      return profile.userId;
+      return profileUserId;
     }
 
     if (contextType === UserReportContextType.CONVERSATION) {
-      const match = await this.prisma.mutualMatch.findUnique({
-        where: { id: contextId },
-        select: { userId1: true, userId2: true, status: true },
-      });
+      const match =
+        await this.reports.findMutualMatchParticipantsById(contextId);
       if (!match || match.status !== MutualMatchStatus.ACTIVE) {
         throw new NotFoundException({ error: 'report_context_not_found' });
       }
-      if (match.userId1 !== reporterUserId && match.userId2 !== reporterUserId) {
+      if (
+        match.userId1 !== reporterUserId &&
+        match.userId2 !== reporterUserId
+      ) {
         throw new NotFoundException({ error: 'report_context_not_found' });
       }
       return match.userId1 === reporterUserId ? match.userId2 : match.userId1;
@@ -133,7 +129,7 @@ export class ReportsService {
   }
 }
 
-function toUserReportResponseDto(row: UserReport): UserReportResponseDto {
+function toUserReportResponseDto(row: ReportRow): UserReportResponseDto {
   return {
     id: row.id,
     reason: row.reason,

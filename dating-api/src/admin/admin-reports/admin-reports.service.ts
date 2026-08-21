@@ -1,18 +1,19 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import {
-  UserReportContextType,
-  UserReportStatus,
-  type UserReport,
-} from '@prisma/client';
+import { UserReportContextType, UserReportStatus } from '@prisma/client';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import { ErrorCodes } from '../../logging/error-codes';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  REPORT_REPOSITORY,
+  type IReportRepository,
+} from '../../reports/repositories/report.repository';
+import type { ReportRow } from '../../reports/repositories/report.repository.types';
 import type { AdminReportDetailDto } from './dto/admin-report-detail.dto';
 import type {
   AdminReportListItemDto,
@@ -41,7 +42,7 @@ function sanitizeOpsNote(raw: string | null | undefined): string | null {
   return cleaned.slice(0, 500);
 }
 
-function toListItem(row: UserReport): AdminReportListItemDto {
+function toListItem(row: ReportRow): AdminReportListItemDto {
   return {
     id: row.id,
     reason: row.reason,
@@ -53,7 +54,7 @@ function toListItem(row: UserReport): AdminReportListItemDto {
   };
 }
 
-function toDetail(row: UserReport): AdminReportDetailDto {
+function toDetail(row: ReportRow): AdminReportDetailDto {
   return {
     id: row.id,
     reason: row.reason,
@@ -73,7 +74,8 @@ function toDetail(row: UserReport): AdminReportDetailDto {
 @Injectable()
 export class AdminReportsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(REPORT_REPOSITORY)
+    private readonly reports: IReportRepository,
     private readonly obs: StructuredObservabilityService,
     private readonly analytics: AnalyticsService,
   ) {}
@@ -84,36 +86,25 @@ export class AdminReportsService {
     cursor?: string,
   ): Promise<ListAdminReportsResponseDto> {
     const take = Math.min(Math.max(limit, 1), 100);
-    let cursorRow: { id: string; createdAt: Date; status: UserReportStatus } | null =
-      null;
+    let cursorRow: {
+      id: string;
+      createdAt: Date;
+      status: UserReportStatus;
+    } | null = null;
 
     if (cursor?.trim()) {
-      const row = await this.prisma.userReport.findUnique({
-        where: { id: cursor.trim() },
-        select: { id: true, createdAt: true, status: true },
-      });
+      const row = await this.reports.findReportCursor(cursor.trim());
       if (row?.status === status) {
         cursorRow = row;
       }
     }
 
-    const rows = await this.prisma.userReport.findMany({
-      where: {
-        status,
-        ...(cursorRow
-          ? {
-              OR: [
-                { createdAt: { lt: cursorRow.createdAt } },
-                {
-                  createdAt: cursorRow.createdAt,
-                  id: { lt: cursorRow.id },
-                },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    const rows = await this.reports.listReportsByStatus({
+      status,
       take: take + 1,
+      cursor: cursorRow
+        ? { createdAt: cursorRow.createdAt, id: cursorRow.id }
+        : undefined,
     });
 
     const page = rows.slice(0, take);
@@ -124,9 +115,7 @@ export class AdminReportsService {
   }
 
   async getReportById(reportId: string): Promise<AdminReportDetailDto> {
-    const row = await this.prisma.userReport.findUnique({
-      where: { id: reportId },
-    });
+    const row = await this.reports.getReportById(reportId);
     if (!row) {
       throw new NotFoundException({
         error: 'report_not_found',
@@ -141,9 +130,7 @@ export class AdminReportsService {
     reportId: string,
     body: UpdateAdminReportDto,
   ): Promise<AdminReportDetailDto> {
-    const row = await this.prisma.userReport.findUnique({
-      where: { id: reportId },
-    });
+    const row = await this.reports.getReportById(reportId);
     if (!row) {
       throw new NotFoundException({
         error: 'report_not_found',
@@ -155,21 +142,22 @@ export class AdminReportsService {
     }
 
     const opsNote = sanitizeOpsNote(body.opsNote);
-    const updated = await this.prisma.userReport.update({
-      where: { id: reportId },
-      data: {
-        status: body.status,
-        opsNote,
-      },
+    const updated = await this.reports.updateReportStatus(reportId, {
+      status: body.status,
+      opsNote,
     });
 
     this.obs.trace(
       `event=report_ops_resolved adminUserId=${adminUserId} reportId=${reportId} reportedUserId=${row.reportedUserId} newStatus=${body.status}`,
       ErrorCodes.ADMIN_REPORT_STATUS_UPDATED,
     );
-    this.analytics.track(adminUserId, ProductAnalyticsEvents.REPORT_OPS_RESOLVED, {
-      status: body.status,
-    });
+    this.analytics.track(
+      adminUserId,
+      ProductAnalyticsEvents.REPORT_OPS_RESOLVED,
+      {
+        status: body.status,
+      },
+    );
 
     return toDetail(updated);
   }

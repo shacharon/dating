@@ -7,7 +7,7 @@ import {
 import { ProductAnalyticsEvents } from '../../analytics/product-analytics.events';
 import type { AnalyticsService } from '../../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../../logging/structured-observability.service';
-import type { PrismaService } from '../../prisma/prisma.service';
+import type { IReportRepository } from '../../reports/repositories/report.repository';
 import {
   AdminReportsService,
   buildReportContextPath,
@@ -32,23 +32,26 @@ describe('AdminReportsService', () => {
   const analytics = { track: jest.fn() } as unknown as AnalyticsService;
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
 
-  const prisma = {
-    userReport: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-    },
-  } as unknown as PrismaService;
+  const reports = {
+    findOpenDuplicateReport: jest.fn(),
+    createReport: jest.fn(),
+    findProfileUserIdByProfileId: jest.fn(),
+    findMutualMatchParticipantsById: jest.fn(),
+    getReportById: jest.fn(),
+    findReportCursor: jest.fn(),
+    listReportsByStatus: jest.fn(),
+    updateReportStatus: jest.fn(),
+  } as unknown as IReportRepository;
 
   let service: AdminReportsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new AdminReportsService(prisma, obs, analytics);
+    service = new AdminReportsService(reports, obs, analytics);
   });
 
   it('lists OPEN reports without details', async () => {
-    prisma.userReport.findMany = jest.fn().mockResolvedValue([
+    reports.listReportsByStatus = jest.fn().mockResolvedValue([
       {
         id: 'report_1',
         reason: UserReportReason.HARASSMENT,
@@ -68,7 +71,7 @@ describe('AdminReportsService', () => {
   });
 
   it('getReportById returns detail with contextPath', async () => {
-    prisma.userReport.findUnique = jest.fn().mockResolvedValue({
+    reports.getReportById = jest.fn().mockResolvedValue({
       id: 'report_1',
       reason: UserReportReason.SPAM,
       status: UserReportStatus.OPEN,
@@ -88,7 +91,7 @@ describe('AdminReportsService', () => {
   });
 
   it('updateReportStatus rejects non-OPEN report', async () => {
-    prisma.userReport.findUnique = jest.fn().mockResolvedValue({
+    reports.getReportById = jest.fn().mockResolvedValue({
       id: 'report_1',
       status: UserReportStatus.DISMISSED,
       reportedUserId: 'user_b',
@@ -102,7 +105,7 @@ describe('AdminReportsService', () => {
   });
 
   it('updateReportStatus dismisses OPEN report with opsNote', async () => {
-    prisma.userReport.findUnique = jest.fn().mockResolvedValue({
+    reports.getReportById = jest.fn().mockResolvedValue({
       id: 'report_1',
       status: UserReportStatus.OPEN,
       reportedUserId: 'user_b',
@@ -115,7 +118,7 @@ describe('AdminReportsService', () => {
       details: null,
       opsNote: null,
     });
-    prisma.userReport.update = jest.fn().mockResolvedValue({
+    reports.updateReportStatus = jest.fn().mockResolvedValue({
       id: 'report_1',
       reason: UserReportReason.OTHER,
       status: UserReportStatus.DISMISSED,
@@ -152,7 +155,7 @@ describe('AdminReportsService', () => {
   });
 
   it('updateReportStatus marks action taken and tracks analytics', async () => {
-    prisma.userReport.findUnique = jest.fn().mockResolvedValue({
+    reports.getReportById = jest.fn().mockResolvedValue({
       id: 'report_1',
       status: UserReportStatus.OPEN,
       reportedUserId: 'user_b',
@@ -165,7 +168,7 @@ describe('AdminReportsService', () => {
       details: 'harassment text',
       opsNote: null,
     });
-    prisma.userReport.update = jest.fn().mockResolvedValue({
+    reports.updateReportStatus = jest.fn().mockResolvedValue({
       id: 'report_1',
       reason: UserReportReason.HARASSMENT,
       status: UserReportStatus.ACTION_TAKEN,
@@ -192,7 +195,7 @@ describe('AdminReportsService', () => {
   });
 
   it('getReportById throws when missing', async () => {
-    prisma.userReport.findUnique = jest.fn().mockResolvedValue(null);
+    reports.getReportById = jest.fn().mockResolvedValue(null);
     await expect(service.getReportById('missing')).rejects.toBeInstanceOf(
       NotFoundException,
     );

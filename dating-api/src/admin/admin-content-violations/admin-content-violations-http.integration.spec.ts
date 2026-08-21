@@ -14,6 +14,8 @@ import { AnalyticsModule } from '../../analytics/analytics.module';
 import { AuthModule } from '../../auth/auth.module';
 import { GoogleAuthService } from '../../auth/google-auth.service';
 import { ContentViolationService } from '../../content-moderation/content-violation.service';
+import { CONTENT_VIOLATION_REPOSITORY } from '../../content-moderation/repositories/content-violation.repository';
+import { PrismaContentViolationRepository } from '../../content-moderation/repositories/prisma-content-violation.repository';
 import { AuthSessionConfigModule } from '../../config/auth-session-config.module';
 import { AuthSessionConfigService } from '../../config/auth-session-config.service';
 import { SimpleLoggerModule } from '../../logger/simple-logger.module';
@@ -69,6 +71,9 @@ describe('admin content violations HTTP (integration)', () => {
     },
     $transaction: jest.fn(),
   };
+  const contentViolationRepository = new PrismaContentViolationRepository(
+    prismaMock as unknown as PrismaService,
+  );
 
   const configStub = {
     googleClientId: 'google-client-id',
@@ -111,6 +116,8 @@ describe('admin content violations HTTP (integration)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(CONTENT_VIOLATION_REPOSITORY)
+      .useValue(contentViolationRepository)
       .overrideProvider(PHOTO_STORAGE)
       .useValue(photoStorageMock)
       .overrideProvider(AuthSessionConfigService)
@@ -145,7 +152,9 @@ describe('admin content violations HTTP (integration)', () => {
     prismaMock.user.findUnique.mockImplementation(
       ({ where }: { where: { id: string } }) => {
         if (where.id === ADMIN_USER_ID) {
-          return Promise.resolve(activeUser(ADMIN_USER_ID, 'admin@example.com'));
+          return Promise.resolve(
+            activeUser(ADMIN_USER_ID, 'admin@example.com'),
+          );
         }
         if (where.id === NON_ADMIN_USER_ID) {
           return Promise.resolve(

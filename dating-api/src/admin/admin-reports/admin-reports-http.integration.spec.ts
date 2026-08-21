@@ -26,6 +26,8 @@ import { StructuredLoggingModule } from '../../logging/structured-logging.module
 import { PHOTO_STORAGE } from '../../photo-storage/photo-storage.module';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaReportRepository } from '../../reports/repositories/prisma-report.repository';
+import { REPORT_REPOSITORY } from '../../reports/repositories/report.repository';
 import { SessionModule } from '../../session/session.module';
 import { hashSessionToken } from '../../session/session-token.crypto';
 import { UsersModule } from '../../users/users.module';
@@ -61,6 +63,9 @@ describe('admin reports HTTP (integration)', () => {
     },
     $transaction: jest.fn(),
   };
+  const reportRepository = new PrismaReportRepository(
+    prismaMock as unknown as PrismaService,
+  );
 
   const configStub = {
     googleClientId: 'google-client-id',
@@ -117,6 +122,8 @@ describe('admin reports HTTP (integration)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(REPORT_REPOSITORY)
+      .useValue(reportRepository)
       .overrideProvider(PHOTO_STORAGE)
       .useValue(photoStorageMock)
       .overrideProvider(AuthSessionConfigService)
@@ -146,14 +153,15 @@ describe('admin reports HTTP (integration)', () => {
       expiresAt: new Date(Date.now() + 86400000),
       revokedAt: null,
     });
-    prismaMock.user.findUnique.mockImplementation(({ where }: { where: { id: string } }) =>
-      Promise.resolve(
-        where.id === ADMIN_USER_ID
-          ? activeUser(ADMIN_USER_ID, 'admin@example.com')
-          : where.id === NON_ADMIN_USER_ID
-            ? activeUser(NON_ADMIN_USER_ID, 'other@example.com')
-            : null,
-      ),
+    prismaMock.user.findUnique.mockImplementation(
+      ({ where }: { where: { id: string } }) =>
+        Promise.resolve(
+          where.id === ADMIN_USER_ID
+            ? activeUser(ADMIN_USER_ID, 'admin@example.com')
+            : where.id === NON_ADMIN_USER_ID
+              ? activeUser(NON_ADMIN_USER_ID, 'other@example.com')
+              : null,
+        ),
     );
   });
 

@@ -4,129 +4,97 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  MutualMatchStatus,
   UserReportContextType,
   UserReportReason,
-  MutualMatchStatus,
 } from '@prisma/client';
-import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import type { AnalyticsService } from '../analytics/analytics.service';
+import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { ReportOpsEmailService } from '../notifications/report-ops-email.service';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { IReportRepository } from './repositories/report.repository';
 import { ReportsService, sanitizeReportDetails } from './reports.service';
 
 describe('sanitizeReportDetails', () => {
-  it('trims and strips null bytes', () => {
+  it('trims, strips null bytes, and normalizes empty details', () => {
     expect(sanitizeReportDetails('  hello\0world  ')).toBe('helloworld');
-  });
-
-  it('returns null for empty after trim', () => {
     expect(sanitizeReportDetails('   ')).toBeNull();
   });
 });
 
 describe('ReportsService', () => {
-  const prisma = {
-    userProfile: { findUnique: jest.fn() },
-    mutualMatch: { findUnique: jest.fn() },
-    userReport: { findFirst: jest.fn(), create: jest.fn() },
-  } as unknown as PrismaService;
-
+  const reports = {
+    findOpenDuplicateReport: jest.fn(),
+    createReport: jest.fn(),
+    findProfileUserIdByProfileId: jest.fn(),
+    findMutualMatchParticipantsById: jest.fn(),
+    getReportById: jest.fn(),
+    findReportCursor: jest.fn(),
+    listReportsByStatus: jest.fn(),
+    updateReportStatus: jest.fn(),
+  } as unknown as IReportRepository;
   const obs = { trace: jest.fn() } as unknown as StructuredObservabilityService;
   const analytics = { track: jest.fn() } as unknown as AnalyticsService;
   const reportOpsEmail = {
     notifyReportCreatedBestEffort: jest.fn().mockResolvedValue(undefined),
   } as unknown as ReportOpsEmailService;
-
   let service: ReportsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ReportsService(prisma, obs, analytics, reportOpsEmail);
+    service = new ReportsService(reports, obs, analytics, reportOpsEmail);
   });
 
-  it('creates report for MATCH_PROFILE context', async () => {
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue({
-      userId: 'target-user',
-    });
-    (prisma.userReport.findFirst as jest.Mock).mockResolvedValue(null);
-    const createdAt = new Date('2026-06-06T12:00:00.000Z');
-    (prisma.userReport.create as jest.Mock).mockResolvedValue({
+  it('creates a sanitized report for a profile context', async () => {
+    (reports.findProfileUserIdByProfileId as jest.Mock).mockResolvedValue(
+      'target-user',
+    );
+    (reports.findOpenDuplicateReport as jest.Mock).mockResolvedValue(null);
+    (reports.createReport as jest.Mock).mockResolvedValue({
       id: 'report-1',
       reason: UserReportReason.HARASSMENT,
       status: 'OPEN',
-      createdAt,
+      createdAt: new Date('2026-06-06T12:00:00.000Z'),
       contextType: UserReportContextType.MATCH_PROFILE,
       contextId: 'prof-1',
     });
-
     const result = await service.createReport('reporter-1', {
       reason: UserReportReason.HARASSMENT,
       contextType: UserReportContextType.MATCH_PROFILE,
       contextId: 'prof-1',
       details: '  details  ',
     });
-
     expect(result.id).toBe('report-1');
-    expect(prisma.userReport.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+    expect(reports.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({
         reporterUserId: 'reporter-1',
         reportedUserId: 'target-user',
         details: 'details',
       }),
-    });
+    );
     expect(analytics.track).toHaveBeenCalledWith(
       'reporter-1',
       ProductAnalyticsEvents.USER_REPORTED,
       { reason: UserReportReason.HARASSMENT },
     );
-    const traceMessage = (obs.trace as jest.Mock).mock.calls[0]?.[0] as string;
-    expect(traceMessage).not.toContain('details');
-    expect(traceMessage).not.toContain('secret');
+    expect(reportOpsEmail.notifyReportCreatedBestEffort).toHaveBeenCalled();
   });
 
-  it('does not include details text in observability trace', async () => {
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue({
-      userId: 'target-user',
-    });
-    (prisma.userReport.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.userReport.create as jest.Mock).mockResolvedValue({
-      id: 'report-3',
-      reason: UserReportReason.OTHER,
-      status: 'OPEN',
-      createdAt: new Date(),
-      contextType: UserReportContextType.MATCH_PROFILE,
-      contextId: 'prof-1',
-    });
-
-    await service.createReport('reporter-1', {
-      reason: UserReportReason.OTHER,
-      contextType: UserReportContextType.MATCH_PROFILE,
-      contextId: 'prof-1',
-      details: 'secret complaint text',
-    });
-
-    const traceMessage = (obs.trace as jest.Mock).mock.calls[0]?.[0] as string;
-    expect(traceMessage).not.toContain('secret complaint text');
-  });
-
-  it('rejects self-report', async () => {
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue({
-      userId: 'same-user',
-    });
-
+  it('rejects self-report and missing profile contexts', async () => {
+    (reports.findProfileUserIdByProfileId as jest.Mock).mockResolvedValueOnce(
+      'same-user',
+    );
     await expect(
       service.createReport('same-user', {
         reason: UserReportReason.SPAM,
         contextType: UserReportContextType.MATCH_PROFILE,
-        contextId: 'prof-self',
+        contextId: 'self',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-  });
 
-  it('throws when match profile context is missing', async () => {
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue(null);
-
+    (reports.findProfileUserIdByProfileId as jest.Mock).mockResolvedValueOnce(
+      null,
+    );
     await expect(
       service.createReport('reporter-1', {
         reason: UserReportReason.OTHER,
@@ -136,41 +104,55 @@ describe('ReportsService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('derives reported user from CONVERSATION context', async () => {
-    (prisma.mutualMatch.findUnique as jest.Mock).mockResolvedValue({
+  it('derives the target from an active participant conversation', async () => {
+    (reports.findMutualMatchParticipantsById as jest.Mock).mockResolvedValue({
       userId1: 'reporter-1',
       userId2: 'target-user',
       status: MutualMatchStatus.ACTIVE,
     });
-    (prisma.userReport.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.userReport.create as jest.Mock).mockResolvedValue({
+    (reports.findOpenDuplicateReport as jest.Mock).mockResolvedValue(null);
+    (reports.createReport as jest.Mock).mockResolvedValue({
       id: 'report-2',
-      reason: UserReportReason.INAPPROPRIATE_CONTENT,
+      reason: UserReportReason.SPAM,
       status: 'OPEN',
       createdAt: new Date(),
       contextType: UserReportContextType.CONVERSATION,
       contextId: 'conv-1',
     });
-
     await service.createReport('reporter-1', {
-      reason: UserReportReason.INAPPROPRIATE_CONTENT,
+      reason: UserReportReason.SPAM,
       contextType: UserReportContextType.CONVERSATION,
       contextId: 'conv-1',
     });
-
-    expect(prisma.userReport.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ reportedUserId: 'target-user' }),
-    });
+    expect(reports.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({ reportedUserId: 'target-user' }),
+    );
   });
 
-  it('debounces duplicate OPEN report within 24h', async () => {
-    (prisma.userProfile.findUnique as jest.Mock).mockResolvedValue({
-      userId: 'target-user',
+  it('hides inactive and non-participant conversations', async () => {
+    (
+      reports.findMutualMatchParticipantsById as jest.Mock
+    ).mockResolvedValueOnce({
+      userId1: 'reporter-1',
+      userId2: 'target-user',
+      status: MutualMatchStatus.UNMATCHED,
     });
-    (prisma.userReport.findFirst as jest.Mock).mockResolvedValue({
+    await expect(
+      service.createReport('reporter-1', {
+        reason: UserReportReason.OTHER,
+        contextType: UserReportContextType.CONVERSATION,
+        contextId: 'conv-1',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('debounces duplicate OPEN reports within 24 hours', async () => {
+    (reports.findProfileUserIdByProfileId as jest.Mock).mockResolvedValue(
+      'target-user',
+    );
+    (reports.findOpenDuplicateReport as jest.Mock).mockResolvedValue({
       id: 'existing',
     });
-
     await expect(
       service.createReport('reporter-1', {
         reason: UserReportReason.HARASSMENT,
@@ -178,6 +160,36 @@ describe('ReportsService', () => {
         contextId: 'prof-1',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(prisma.userReport.create).not.toHaveBeenCalled();
+    expect(reports.createReport).not.toHaveBeenCalled();
+    expect(reports.findOpenDuplicateReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reporterUserId: 'reporter-1',
+        reportedUserId: 'target-user',
+        reason: UserReportReason.HARASSMENT,
+        since: expect.any(Date),
+      }),
+    );
+  });
+
+  it('does not include report details in observability traces', async () => {
+    (reports.findProfileUserIdByProfileId as jest.Mock).mockResolvedValue(
+      'target-user',
+    );
+    (reports.findOpenDuplicateReport as jest.Mock).mockResolvedValue(null);
+    (reports.createReport as jest.Mock).mockResolvedValue({
+      id: 'report-3',
+      reason: UserReportReason.OTHER,
+      status: 'OPEN',
+      createdAt: new Date(),
+      contextType: UserReportContextType.MATCH_PROFILE,
+      contextId: 'prof-1',
+    });
+    await service.createReport('reporter-1', {
+      reason: UserReportReason.OTHER,
+      contextType: UserReportContextType.MATCH_PROFILE,
+      contextId: 'prof-1',
+      details: 'secret complaint text',
+    });
+    expect((obs.trace as jest.Mock).mock.calls[0]?.[0]).not.toContain('secret');
   });
 });

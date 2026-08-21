@@ -29,6 +29,8 @@ import { SessionModule } from '../session/session.module';
 import { hashSessionToken } from '../session/session-token.crypto';
 import { UsersModule } from '../users/users.module';
 import { ReportsModule } from './reports.module';
+import { PrismaReportRepository } from './repositories/prisma-report.repository';
+import { REPORT_REPOSITORY } from './repositories/report.repository';
 
 describe('reports HTTP (integration)', () => {
   let app: INestApplication<App>;
@@ -57,6 +59,9 @@ describe('reports HTTP (integration)', () => {
       create: jest.fn(),
     },
   };
+  const reportRepository = new PrismaReportRepository(
+    prismaMock as unknown as PrismaService,
+  );
 
   const configStub = {
     googleClientId: 'google-client-id',
@@ -97,6 +102,8 @@ describe('reports HTTP (integration)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(REPORT_REPOSITORY)
+      .useValue(reportRepository)
       .overrideProvider(AuthSessionConfigService)
       .useValue(configStub)
       .overrideProvider(GoogleAuthService)

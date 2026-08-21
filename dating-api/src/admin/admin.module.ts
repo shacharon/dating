@@ -6,6 +6,7 @@ import { MeProfileValidationPipe } from '../me-profile/me-profile-validation.pip
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { ReportsModule } from '../reports/reports.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { WorkerModule } from '../workers/worker.module';
@@ -31,6 +32,7 @@ import { AdminReportsService } from './admin-reports/admin-reports.service';
     MeProfileModule,
     AdminAuthModule,
     ContentModerationModule,
+    ReportsModule,
   ],
   controllers: [
     AdminPhotosController,
