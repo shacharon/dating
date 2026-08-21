@@ -1,46 +1,33 @@
+import { EXPANSION_06_CONFIG } from './expansion-explainability-config';
+import {
+  buildStandardShadowBreakdown,
+  isShadowChipKeyIn,
+} from './expansion-shadow-breakdown';
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
-import { computePairScore } from '../compatibility/compatibility-score';
 
-export const EXPANSION_06_SHADOW_CHIP_KEYS = ['adventureNovelty'] as const;
+export const EXPANSION_06_SHADOW_CHIP_KEYS = EXPANSION_06_CONFIG.shadowChipKeys;
 
 export type Expansion06ShadowChipKey =
   (typeof EXPANSION_06_SHADOW_CHIP_KEYS)[number];
 
-export const SHADOW_POSITIVE_CHIP_BY_SIGNAL: Record<
-  Expansion06ShadowChipKey,
-  string
-> = {
-  adventureNovelty: 'Adventure & novelty',
-};
+export const SHADOW_POSITIVE_CHIP_BY_SIGNAL =
+  EXPANSION_06_CONFIG.positiveChipBySignal;
 
-export const SHADOW_SIGNAL_DOMAIN: Record<Expansion06ShadowChipKey, string> = {
-  adventureNovelty: 'lifestyle',
-};
+export const SHADOW_SIGNAL_DOMAIN = EXPANSION_06_CONFIG.signalDomain;
 
 export function isExpansion06ShadowChipKey(
   key: string,
 ): key is Expansion06ShadowChipKey {
-  return (EXPANSION_06_SHADOW_CHIP_KEYS as readonly string[]).includes(key);
+  return isShadowChipKeyIn(EXPANSION_06_SHADOW_CHIP_KEYS, key);
 }
 
 export function buildExpansion06ShadowBreakdown(
   signalsA: Record<string, number | null>,
   signalsB: Record<string, number | null>,
 ): BreakdownEntry[] {
-  const out: BreakdownEntry[] = [];
-  for (const key of EXPANSION_06_SHADOW_CHIP_KEYS) {
-    const self = signalsA[key];
-    const partner = signalsB[key];
-    if (self == null || partner == null) continue;
-    if (!Number.isFinite(self) || !Number.isFinite(partner)) continue;
-    const gap = Math.abs(self - partner);
-    out.push({
-      key,
-      self,
-      partner,
-      gap,
-      pairScore: computePairScore(self, partner),
-    });
-  }
-  return out;
+  return buildStandardShadowBreakdown(
+    EXPANSION_06_SHADOW_CHIP_KEYS,
+    signalsA,
+    signalsB,
+  );
 }

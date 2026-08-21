@@ -4,7 +4,10 @@
  * Both-low jealousy: synthetic pair chip (NOT high×high on jealousySecurity).
  */
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
-import { computePairScore } from '../compatibility/compatibility-score';
+import {
+  buildStandardShadowBreakdown,
+  syntheticPairEntry as makeSyntheticPairEntry,
+} from './expansion-shadow-breakdown';
 
 /** Standalone: aligned stress direction via pairScore. */
 export const EXPANSION_11_STANDALONE_CHIP_KEYS = ['stressResponse'] as const;
@@ -48,13 +51,7 @@ function finiteOrNull(v: number | null | undefined): number | null {
 }
 
 function syntheticPairEntry(key: Expansion11ShadowChipKey): BreakdownEntry {
-  return {
-    key,
-    self: 9,
-    partner: 9,
-    gap: 0,
-    pairScore: 10,
-  };
+  return makeSyntheticPairEntry(key);
 }
 
 function buildPairChipEntries(
@@ -74,21 +71,12 @@ export function buildExpansion11ShadowBreakdown(
   signalsA: Record<string, number | null>,
   signalsB: Record<string, number | null>,
 ): BreakdownEntry[] {
-  const out: BreakdownEntry[] = [];
-  for (const key of EXPANSION_11_STANDALONE_CHIP_KEYS) {
-    const self = signalsA[key];
-    const partner = signalsB[key];
-    if (self == null || partner == null) continue;
-    if (!Number.isFinite(self) || !Number.isFinite(partner)) continue;
-    const gap = Math.abs(self - partner);
-    out.push({
-      key,
-      self,
-      partner,
-      gap,
-      pairScore: computePairScore(self, partner),
-    });
-  }
-  out.push(...buildPairChipEntries(signalsA, signalsB));
-  return out;
+  return [
+    ...buildStandardShadowBreakdown(
+      EXPANSION_11_STANDALONE_CHIP_KEYS,
+      signalsA,
+      signalsB,
+    ),
+    ...buildPairChipEntries(signalsA, signalsB),
+  ];
 }

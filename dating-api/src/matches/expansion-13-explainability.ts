@@ -3,6 +3,7 @@
  * Both-high growth / self-awareness: synthetic pair chips (NOT raw pairScore).
  */
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
+import { syntheticPairEntry as makeSyntheticPairEntry } from './expansion-shadow-breakdown';
 
 /**
  * Virtual keys for both-high positive chips only (NOT extraction keys).
@@ -45,13 +46,7 @@ function finiteOrNull(v: number | null | undefined): number | null {
 }
 
 function syntheticPairEntry(key: Expansion13ShadowChipKey): BreakdownEntry {
-  return {
-    key,
-    self: 9,
-    partner: 9,
-    gap: 0,
-    pairScore: 10,
-  };
+  return makeSyntheticPairEntry(key);
 }
 
 function buildPairChipEntries(

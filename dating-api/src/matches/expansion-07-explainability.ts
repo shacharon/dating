@@ -4,7 +4,10 @@
  * Interest-overlap tag picker for distinct UI chips (outside the positive-chip picker).
  */
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
-import { computePairScore } from '../compatibility/compatibility-score';
+import {
+  buildStandardShadowBreakdown,
+  syntheticPairEntry as makeSyntheticPairEntry,
+} from './expansion-shadow-breakdown';
 
 /** Standalone chips (pairScore from real signals). */
 export const EXPANSION_07_STANDALONE_CHIP_KEYS = [
@@ -78,13 +81,7 @@ function finiteOrNull(v: number | null | undefined): number | null {
 }
 
 function syntheticPairEntry(key: Expansion07ShadowChipKey): BreakdownEntry {
-  return {
-    key,
-    self: 9,
-    partner: 9,
-    gap: 0,
-    pairScore: 10,
-  };
+  return makeSyntheticPairEntry(key);
 }
 
 function buildPairChipEntries(
@@ -122,22 +119,14 @@ export function buildExpansion07ShadowBreakdown(
   signalsA: Record<string, number | null>,
   signalsB: Record<string, number | null>,
 ): BreakdownEntry[] {
-  const out: BreakdownEntry[] = [];
-  for (const key of EXPANSION_07_STANDALONE_CHIP_KEYS) {
-    const self = signalsA[key];
-    const partner = signalsB[key];
-    if (self == null || partner == null) continue;
-    if (!Number.isFinite(self) || !Number.isFinite(partner)) continue;
-    const gap = Math.abs(self - partner);
-    out.push({
-      key,
-      self,
-      partner,
-      gap,
-      pairScore: computePairScore(self, partner),
-    });
-  }
-  out.push(...buildPairChipEntries(signalsA, signalsB));
+  const out: BreakdownEntry[] = [
+    ...buildStandardShadowBreakdown(
+      EXPANSION_07_STANDALONE_CHIP_KEYS,
+      signalsA,
+      signalsB,
+    ),
+    ...buildPairChipEntries(signalsA, signalsB),
+  ];
   return out;
 }
 

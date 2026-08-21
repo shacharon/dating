@@ -3,6 +3,7 @@
  * Synthetic pair chips (NOT raw pairScore on extraction keys).
  */
 import type { BreakdownEntry } from '../compatibility/compatibility-score';
+import { syntheticPairEntry as makeSyntheticPairEntry } from './expansion-shadow-breakdown';
 
 /**
  * Virtual keys for Expansion-15 positive chips only (NOT extraction keys).
@@ -50,13 +51,7 @@ function finiteOrNull(v: number | null | undefined): number | null {
 }
 
 function syntheticPairEntry(key: Expansion15ShadowChipKey): BreakdownEntry {
-  return {
-    key,
-    self: 9,
-    partner: 9,
-    gap: 0,
-    pairScore: 10,
-  };
+  return makeSyntheticPairEntry(key);
 }
 
 function dualBandAligned(a: number | null, b: number | null): boolean {
