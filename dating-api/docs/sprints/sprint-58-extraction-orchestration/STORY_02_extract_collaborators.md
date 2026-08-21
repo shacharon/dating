@@ -1,6 +1,6 @@
 # Story 02 — Extract PromptBuilder + Normalizer + Validator
 
-**Sprint 58 · Status: Planned**  
+**Sprint 58 · Status: Done**  
 **Priority:** P0  
 **Estimated effort:** 2–3 days  
 **Repo:** `dating-api`  
@@ -21,15 +21,15 @@ Service still wires Nest deps (`LLMRouterService`, logger) but body shrinks.
 
 ## Acceptance criteria
 
-- [ ] Prompt strings live in builder (or existing prompt modules), not mixed with HTTP/DI noise
-- [ ] Normalization / validation not re-implemented in service
-- [ ] Expansion manifest joins remain the only expansion injection path
-- [ ] Specs green; behavior parity
+- [x] Prompt strings live in builder (or existing prompt modules), not mixed with HTTP/DI noise
+- [x] Normalization / validation not re-implemented in service
+- [x] Expansion manifest joins remain the only expansion injection path
+- [x] Specs green; behavior parity
 
 ## Definition of Done
 
-- [ ] Collaborator files + service wired
-- [ ] Agent 2 approved; Agent 3 close
+- [x] Collaborator files + service wired
+- [x] Agent 2 approved; Agent 3 close
 
 ## Deferred
 
@@ -42,3 +42,7 @@ refactor(extraction): extract prompt builder and thin LLM/normalize seams
 
 Sprint 58 Story 2
 ```
+
+## Close tip
+
+`feature/sprint-58-story-2` @ `97c6dc5` (+ Agent 3 close commit)

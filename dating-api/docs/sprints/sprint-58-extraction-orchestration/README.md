@@ -29,7 +29,7 @@ Split `extraction/extraction.service.ts` (~797 LOC) into focused collaborators s
 | # | Story | Status |
 |---|-------|--------|
 | 01 | [Characterization + extraction pipeline map](./STORY_01_characterization_pipeline_map.md) | Done |
-| 02 | [Extract PromptBuilder + Normalizer + Validator](./STORY_02_extract_collaborators.md) | Planned |
+| 02 | [Extract PromptBuilder + Normalizer + Validator](./STORY_02_extract_collaborators.md) | Done |
 | 03 | [Thin ExtractionService coordinator](./STORY_03_thin_coordinator.md) | Planned |
 
 **Order:** 01 → 02 → 03.
