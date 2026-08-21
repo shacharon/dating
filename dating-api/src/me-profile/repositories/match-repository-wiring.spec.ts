@@ -31,6 +31,19 @@ describe('match repository wiring (sprint-62/63)', () => {
     }
   });
 
+  it('profile-quality and analysis-submit inject MATCH_QUERY_REPOSITORY', () => {
+    const files = [
+      path.join(meProfileRoot, 'profile-quality.service.ts'),
+      path.join(meProfileRoot, 'profile', 'profile-analysis-submit.service.ts'),
+    ];
+    for (const file of files) {
+      const src = fs.readFileSync(file, 'utf8');
+      expect(src).toContain('MATCH_QUERY_REPOSITORY');
+      expect(src).toContain('@Inject(MATCH_QUERY_REPOSITORY)');
+      expect(src).not.toMatch(/PrismaService/);
+    }
+  });
+
   it('MeProfileModule registers facade + facet tokens via PrismaMatchRepository', () => {
     const src = fs.readFileSync(
       path.join(meProfileRoot, 'me-profile.module.ts'),

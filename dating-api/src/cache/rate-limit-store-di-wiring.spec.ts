@@ -3,7 +3,7 @@ import * as path from 'node:path';
 
 /**
  * Sprint 61 Story 2 / Sprint 63 Story 4 — rate-limit services/providers must not
- * own Redis createClient; shared fixed-window lives under cache/rate-limit.
+ * own Redis createClient; shared fixed-window binder lives under cache/rate-limit.
  */
 describe('rate-limit store DI wiring (sprint-61/63)', () => {
   const srcRoot = path.join(__dirname, '..');
@@ -21,6 +21,11 @@ describe('rate-limit store DI wiring (sprint-61/63)', () => {
     path.join(messaging, 'messaging-ws-rate-limit-store.provider.ts'),
   ];
 
+  const factoryFile = path.join(
+    sharedRateLimit,
+    'fixed-window-rate-limit-store.provider.factory.ts',
+  );
+
   it('rate-limit services contain no createClient / redis quit', () => {
     for (const file of serviceFiles) {
       const src = fs.readFileSync(file, 'utf8');
@@ -30,15 +35,23 @@ describe('rate-limit store DI wiring (sprint-61/63)', () => {
     }
   });
 
-  it('store providers use REDIS_CLIENT and never createClient/quit', () => {
+  it('feature providers are thin wrappers over createFixedWindowRateLimitStoreProvider', () => {
     for (const file of providerFiles) {
       const src = fs.readFileSync(file, 'utf8');
-      expect(src).toContain('REDIS_CLIENT');
-      expect(src).toContain('OnModuleInit');
+      expect(src).toContain('createFixedWindowRateLimitStoreProvider');
       expect(src).not.toMatch(/\bcreateClient\b/);
       expect(src).not.toMatch(/\.quit\s*\(/);
       expect(src).not.toMatch(/from ['"]redis['"]/);
+      expect(src).not.toMatch(/OnModuleInit/);
     }
+  });
+
+  it('shared binder factory uses REDIS_CLIENT and never createClient/quit', () => {
+    const src = fs.readFileSync(factoryFile, 'utf8');
+    expect(src).toContain('REDIS_CLIENT');
+    expect(src).toContain('OnModuleInit');
+    expect(src).not.toMatch(/\bcreateClient\b/);
+    expect(src).not.toMatch(/\.quit\s*\(/);
   });
 
   it('shared cache/rate-limit stores exist and redis store has no createClient', () => {
