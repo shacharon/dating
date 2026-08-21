@@ -3,7 +3,7 @@
 **Sprint:** 63  
 **Effort:** 2–3 days  
 **Risk:** ⚠️ MEDIUM  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -13,16 +13,16 @@ Peel remaining high-value `PrismaService` injectors left after Sprint 62 (~10–
 
 ---
 
-## Priority targets
+## Priority targets (shipped)
 
-| Service | Path | Approach |
-|---------|------|----------|
-| Analysis persist | `me-profile/me-profile-analysis.service.ts` | Extend `IUserProfileRepository` or `EvaluationRepository` |
-| Match feedback | `me-profile/me-match-feedback.service.ts` | Methods on match repo or `MatchFeedbackRepository` |
-| Account delete | `me-account/me-account.service.ts` | `AccountRepository` or user-profile cascade port |
-| Profile matches facade | `me-profile/me-profile-matches.service.ts` | Route through `MATCH_REPOSITORY` / MeMatches |
+| Service | Peeled to |
+|---------|-----------|
+| Analysis persist | `USER_PROFILE_REPOSITORY` (`persistAnalysisSuccess`, status marks) |
+| Match feedback | `MATCH_FEEDBACK_REPOSITORY` (dedicated; not god match port) |
+| Account delete | `ACCOUNT_REPOSITORY` (DB scrub in adapter; storage I/O in service) |
+| Profile matches facade | `USER_PROFILE_REPOSITORY` (legacy list peel-in-place) |
 
-**Defer OK (justify in README):** `session`, `users`, `messaging-ws-session`, `matches.service` (legacy), `admin-match-quality`, `match-narrative-cache` — peel only if cheap.
+**Deferred (justified):** `session`, `users`, `messaging-ws-session`, `matches.service` (legacy), `admin-match-quality`, `match-narrative-cache`, email helpers / report adapters.
 
 ---
 
@@ -37,6 +37,17 @@ Peel remaining high-value `PrismaService` injectors left after Sprint 62 (~10–
 
 ## Success
 
-- [ ] Analysis + feedback (+ account if in scope) off Prisma
-- [ ] Injector count trending down from ~12
-- [ ] Specs green
+- [x] Analysis + feedback + account + legacy profile-matches off Prisma
+- [x] Injector count: **4 → 0** on those Success services (me-profile product path clean of Prisma injectors)
+- [x] Specs green (Agent 2: 41 peel/wiring + 200 HTTP smoke)
+
+---
+
+## Shipped
+
+`feature/sprint-63-story-3` @ `39f2c6d`
+
+- `50eedb1` — feat: peel Prisma from analysis/feedback/matches/account
+- `39f2c6d` — test: guard prisma peel wiring + eval lookup (Agent 2)
+
+**Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agent 4 N/A)
