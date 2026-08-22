@@ -19,7 +19,10 @@ import { hashSessionToken } from '../session/session-token.crypto';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { AuthModule } from '../auth/auth.module';
+import { jwtConfigStub } from '../auth/auth-test.stub';
 import { GoogleAuthService } from '../auth/google-auth.service';
+import { JwtAuthConfigModule } from '../config/jwt-auth-config.module';
+import { JwtAuthConfigService } from '../config/jwt-auth-config.service';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { LLM_CONFIG } from '../llm/llm.constants';
@@ -65,6 +68,11 @@ describe('me conversation messages WS (integration)', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn().mockResolvedValue({}),
+    },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({ id: 'rt_ws' }),
+      findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     userProfile: {
       findUnique: jest.fn(),
@@ -118,6 +126,7 @@ describe('me conversation messages WS (integration)', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         AuthSessionConfigModule,
+        JwtAuthConfigModule,
         PrismaModule,
         SessionModule,
         UsersModule,
@@ -132,6 +141,8 @@ describe('me conversation messages WS (integration)', () => {
       .useValue(prismaMock)
       .overrideProvider(AuthSessionConfigService)
       .useValue(configStub)
+      .overrideProvider(JwtAuthConfigService)
+      .useValue(jwtConfigStub)
       .overrideProvider(GoogleAuthService)
       .useValue({ verifyIdToken })
       .overrideProvider(UsersService)

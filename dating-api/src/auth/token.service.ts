@@ -32,6 +32,7 @@ export class TokenService {
   async generateTokenPair(
     userId: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
+    this.assertSigningConfigured();
     const secret = this.jwtCfg.requireJwtSecret();
     const signOpts = (expiresIn: string): JwtSignOptions => ({
       secret,
@@ -101,6 +102,11 @@ export class TokenService {
 
   async revokeAllRefreshTokens(userId: string): Promise<void> {
     await this.refreshTokens.revokeAllForUser(userId);
+  }
+
+  /** Fail fast before session/cookie side effects when JWT signing is misconfigured. */
+  assertSigningConfigured(): void {
+    this.jwtCfg.requireJwtSecret();
   }
 
   private async verifyToken(token: string): Promise<VerifiedJwtPayload | null> {

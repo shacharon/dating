@@ -32,6 +32,7 @@ describe('AuthService.logout', () => {
       revokeRefreshToken: jest.fn(),
       revokeAllRefreshTokens: jest.fn(),
       verifyAccessToken: jest.fn(),
+      assertSigningConfigured: jest.fn(),
     } as unknown as import('./token.service').TokenService;
 
     const service = new AuthService(
@@ -109,6 +110,7 @@ describe('AuthService referral signup', () => {
       revokeRefreshToken: jest.fn(),
       revokeAllRefreshTokens: jest.fn(),
       verifyAccessToken: jest.fn(),
+      assertSigningConfigured: jest.fn(),
     } as unknown as import('./token.service').TokenService;
 
     const service = new AuthService(

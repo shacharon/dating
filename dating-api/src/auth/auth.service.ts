@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   HttpException,
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { User } from '@prisma/client';
@@ -96,6 +97,14 @@ export class AuthService {
         profile,
         referredByUserId,
       );
+
+      try {
+        this.tokens.assertSigningConfigured();
+      } catch {
+        throw new InternalServerErrorException(
+          'JWT auth is not configured (JWT_SECRET)',
+        );
+      }
 
       const forwarded = req.headers['x-forwarded-for'];
       const ip =

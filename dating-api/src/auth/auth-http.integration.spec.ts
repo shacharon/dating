@@ -862,5 +862,40 @@ describe('auth HTTP (integration)', () => {
         .send({ refreshToken: oldRefresh })
         .expect(401);
     });
+
+    it('GET /api/v1/auth/me returns 403 for Bearer when user is disabled', async () => {
+      verifyIdToken.mockResolvedValue({
+        googleId: 'google-disabled-bearer',
+        email: 'disabled@example.com',
+        displayName: 'Off',
+        avatarUrl: null,
+      });
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: 'user_disabled_bearer',
+        email: 'disabled@example.com',
+        googleId: 'google-disabled-bearer',
+        displayName: 'Off',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+
+      const login = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-disabled' })
+        .expect(200);
+
+      usersServiceMock.findById.mockResolvedValue({
+        id: 'user_disabled_bearer',
+        email: 'disabled@example.com',
+        displayName: 'Off',
+        avatarUrl: null,
+        status: UserStatus.DISABLED,
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .expect(403);
+    });
   });
 });
