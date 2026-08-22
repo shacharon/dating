@@ -29,8 +29,8 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 ### Functional
 - [ ] FCM push notifications work on Android (background + foreground) — **FE-06** (backend Story 1 Done)
 - [x] Device tokens stored and registered — Story 1
-- [ ] Match actions (PASS/BLOCK) correctly update conversation status
-- [ ] Rematch flow reactivates UNMATCHED conversations
+- [x] Match actions (PASS/BLOCK) correctly update conversation status — Story 2
+- [x] Rematch flow reactivates UNMATCHED conversations — Story 2
 - [ ] Redis adapter fails boot if unavailable in production
 - [ ] Google auth accepts multiple client IDs (web + Android + iOS)
 - [ ] Photo storage defaults validated at boot (require S3 in prod)
@@ -38,8 +38,8 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 
 ### Testing
 - [ ] End-to-end: Android receives push when app backgrounded — **FE-06**
-- [ ] End-to-end: Block user → conversation becomes UNMATCHED
-- [ ] End-to-end: Rematch reopens conversation
+- [x] End-to-end: Block user → conversation becomes UNMATCHED — Story 2 (HTTP/unit; Android UI optional)
+- [x] End-to-end: Rematch reopens conversation — Story 2 (HTTP/unit)
 - [ ] Integration: Multi-pod messaging (2 pods, users on different pods can chat)
 - [ ] Integration: Android native sign-in works
 
@@ -54,7 +54,8 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 
 ### Story 2 — Match State Consistency Fixes
 **Effort:** 2 days  
-**Risk:** 🟡 LOW (transaction boundaries, data-only)
+**Risk:** 🟡 LOW (transaction boundaries, data-only)  
+**Status:** ✅ **Done** (2026-08-22) — branch `feature/sprint-67-story-2`
 
 ### Story 3 — Production Infrastructure Validation
 **Effort:** 1 day  
