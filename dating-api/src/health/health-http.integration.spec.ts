@@ -8,6 +8,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { HealthController } from './health.controller';
+import { HealthService } from './health.service';
 import { MessagingRealtimeHealthService } from '../messaging-realtime/messaging-realtime-health.service';
 import { MessagingWsRateLimitService } from '../messaging-realtime/messaging-ws-rate-limit.service';
 import { SentryConfigService } from '../observability/sentry-config.service';
@@ -20,27 +21,44 @@ const wsRateLimitStub = {
   isUsingRedisStore: jest.fn().mockReturnValue(false),
 };
 
+const readinessStub = {
+  getReadiness: jest.fn().mockResolvedValue({
+    ok: true,
+    service: 'dating-api',
+    ts: new Date().toISOString(),
+    checks: { database: 'ok', redisAdapter: 'ok' },
+  }),
+};
+
+function buildProviders(sentryEnabled: boolean) {
+  return [
+    MessagingRealtimeHealthService,
+    {
+      provide: MessagingWsRateLimitService,
+      useValue: wsRateLimitStub,
+    },
+    {
+      provide: AuthSessionConfigService,
+      useValue: { sessionCookieName: 'dating_session' },
+    },
+    {
+      provide: SentryConfigService,
+      useValue: { sentryTestRouteEnabled: sentryEnabled },
+    },
+    {
+      provide: HealthService,
+      useValue: readinessStub,
+    },
+  ];
+}
+
 describe('health HTTP (integration)', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [
-        MessagingRealtimeHealthService,
-        {
-          provide: MessagingWsRateLimitService,
-          useValue: wsRateLimitStub,
-        },
-        {
-          provide: AuthSessionConfigService,
-          useValue: { sessionCookieName: 'dating_session' },
-        },
-        {
-          provide: SentryConfigService,
-          useValue: { sentryTestRouteEnabled: false },
-        },
-      ],
+      providers: buildProviders(false),
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -107,21 +125,7 @@ describe('health HTTP — sentry-test route', () => {
   it('GET /health/sentry-test returns 404 when route disabled', async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [
-        MessagingRealtimeHealthService,
-        {
-          provide: MessagingWsRateLimitService,
-          useValue: wsRateLimitStub,
-        },
-        {
-          provide: AuthSessionConfigService,
-          useValue: { sessionCookieName: 'dating_session' },
-        },
-        {
-          provide: SentryConfigService,
-          useValue: { sentryTestRouteEnabled: false },
-        },
-      ],
+      providers: buildProviders(false),
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -135,21 +139,7 @@ describe('health HTTP — sentry-test route', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [
-        MessagingRealtimeHealthService,
-        {
-          provide: MessagingWsRateLimitService,
-          useValue: wsRateLimitStub,
-        },
-        {
-          provide: AuthSessionConfigService,
-          useValue: { sessionCookieName: 'dating_session' },
-        },
-        {
-          provide: SentryConfigService,
-          useValue: { sentryTestRouteEnabled: true },
-        },
-      ],
+      providers: buildProviders(true),
     }).compile();
 
     app = moduleFixture.createNestApplication();

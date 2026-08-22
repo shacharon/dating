@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import type { Server, ServerOptions } from 'socket.io';
+import { isProductionEnv } from '../config/is-production-env';
 import { setMessagingRedisAdapterBound } from './messaging-realtime-redis-state';
 
 export class RedisIoAdapter extends IoAdapter {
@@ -14,7 +15,15 @@ export class RedisIoAdapter extends IoAdapter {
 
   async connectToRedis(): Promise<void> {
     const url = process.env.REDIS_URL?.trim();
+    const production = isProductionEnv();
+
     if (!url) {
+      if (production) {
+        throw new Error(
+          'REDIS_URL is required in production for multi-instance WebSocket support. ' +
+            'Without Redis, messages will not be delivered across pods.',
+        );
+      }
       return;
     }
 
@@ -31,12 +40,19 @@ export class RedisIoAdapter extends IoAdapter {
       this.redisAdapter = createAdapter(pubClient, subClient);
       setMessagingRedisAdapterBound(true);
     } catch (err) {
+      setMessagingRedisAdapterBound(false);
       const message = err instanceof Error ? err.message : String(err);
+      if (production) {
+        throw new Error(
+          `Redis unavailable in production (${message}). ` +
+            'Fix REDIS_URL / Redis connectivity before starting the API.',
+          { cause: err instanceof Error ? err : undefined },
+        );
+      }
       console.warn(
         `[RedisIoAdapter] Redis unavailable (${message}) — continuing in single-instance mode. ` +
           'Unset REDIS_URL for local dev or start Redis.',
       );
-      setMessagingRedisAdapterBound(false);
     }
   }
 

@@ -31,12 +31,66 @@ function parseStorageDriver(raw: string | undefined): PhotoStorageDriver {
   return t === 's3' ? 's3' : 'local';
 }
 
-function hasAwsCredentials(env: NodeJS.ProcessEnv): boolean {
+/** True when AWS SDK can resolve credentials (keys, profile, or container role). */
+export function hasAwsCredentials(env: NodeJS.ProcessEnv): boolean {
   return Boolean(
     trimOrUndefined(env.AWS_ACCESS_KEY_ID) ||
       trimOrUndefined(env.AWS_PROFILE) ||
       trimOrUndefined(env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI),
   );
+}
+
+/**
+ * Fail-fast photo/moderation config for `NODE_ENV=production`.
+ * Call only when production; throws Error with config names (no secrets).
+ */
+export function assertProductionPhotoConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  const storageDriver = parseStorageDriver(env.PHOTO_STORAGE_DRIVER);
+  if (storageDriver !== 's3') {
+    throw new Error(
+      'PHOTO_STORAGE_DRIVER must be "s3" in production. ' +
+        'Local storage is ephemeral and will cause data loss on pod restart/scale.',
+    );
+  }
+
+  if (!trimOrUndefined(env.PHOTO_S3_BUCKET)) {
+    throw new Error('PHOTO_S3_BUCKET is required when PHOTO_STORAGE_DRIVER=s3');
+  }
+  if (!trimOrUndefined(env.PHOTO_S3_REGION)) {
+    throw new Error('PHOTO_S3_REGION is required when PHOTO_STORAGE_DRIVER=s3');
+  }
+
+  if (env.PHOTO_MODERATION_AUTO_APPROVE === '1') {
+    throw new Error(
+      'PHOTO_MODERATION_AUTO_APPROVE cannot be "1" in production. ' +
+        'This would allow NSFW/inappropriate content to bypass moderation.',
+    );
+  }
+
+  const moderationDriver = parseModerationDriver(
+    env.PHOTO_MODERATION_DRIVER,
+    env,
+  );
+  if (moderationDriver === 'mock' || moderationDriver === 'stub') {
+    throw new Error(
+      `PHOTO_MODERATION_DRIVER="${moderationDriver}" is not allowed in production. ` +
+        'Use "rekognition".',
+    );
+  }
+  if (moderationDriver !== 'rekognition') {
+    throw new Error(
+      'PHOTO_MODERATION_DRIVER must be "rekognition" in production',
+    );
+  }
+
+  if (!hasAwsCredentials(env)) {
+    throw new Error(
+      'AWS credentials are required for Rekognition in production ' +
+        '(AWS_ACCESS_KEY_ID, AWS_PROFILE, or container credentials).',
+    );
+  }
 }
 
 /**

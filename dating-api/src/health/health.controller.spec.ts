@@ -5,6 +5,7 @@ import {
   type RealtimeHealthSnapshot,
 } from '../messaging-realtime/messaging-realtime-health.service';
 import { SentryConfigService } from '../observability/sentry-config.service';
+import { HealthService } from './health.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -17,8 +18,17 @@ describe('HealthController', () => {
     sessionCookieName: 'dating_session',
   };
 
-  const healthServiceMock = {
+  const messagingHealthMock = {
     getSnapshot: jest.fn().mockReturnValue(snapshot),
+  };
+
+  const readinessServiceMock = {
+    getReadiness: jest.fn().mockResolvedValue({
+      ok: true,
+      service: 'dating-api',
+      ts: new Date().toISOString(),
+      checks: { database: 'ok', redisAdapter: 'ok' },
+    }),
   };
 
   const sentryConfigMock = {
@@ -32,9 +42,10 @@ describe('HealthController', () => {
       providers: [
         {
           provide: MessagingRealtimeHealthService,
-          useValue: healthServiceMock,
+          useValue: messagingHealthMock,
         },
         { provide: SentryConfigService, useValue: sentryConfigMock },
+        { provide: HealthService, useValue: readinessServiceMock },
       ],
     }).compile();
 
@@ -56,6 +67,6 @@ describe('HealthController', () => {
     expect(result.service).toBe('dating-api');
     expect(typeof result.ts).toBe('string');
     expect(result.messaging).toEqual(snapshot);
-    expect(healthServiceMock.getSnapshot).toHaveBeenCalledTimes(1);
+    expect(messagingHealthMock.getSnapshot).toHaveBeenCalledTimes(1);
   });
 });
