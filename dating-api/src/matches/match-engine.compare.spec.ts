@@ -1,6 +1,7 @@
 import { compare, compareWithStatus, hasAnalyzedSignals } from './match-engine';
 import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
 import * as compatibilityScore from '../compatibility/compatibility-score';
+import { MAX_POSITIVE_CHIPS } from './match-explainability';
 import { makeProfile, makeSignals } from './match-engine.spec-support';
 
 describe('match-engine compare', () => {
@@ -47,7 +48,9 @@ describe('match-engine compare', () => {
     expect(result).toHaveProperty('coverageFactor');
     expect(result).toHaveProperty('confidence');
     expect(result).toHaveProperty('infoFlags');
-    expect(result.explainability.positiveChips.length).toBeLessThanOrEqual(3);
+    expect(result.explainability.positiveChips.length).toBeLessThanOrEqual(
+      MAX_POSITIVE_CHIPS,
+    );
     expect(result.explainability.reasonShort.length).toBeGreaterThan(10);
     expect(typeof result.compatibility).toBe('number');
     expect(typeof result.valuesAlignment).toBe('number');
