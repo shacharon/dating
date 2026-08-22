@@ -33,6 +33,9 @@ import { AuthModule } from '../auth/auth.module';
 import { GoogleAuthService } from '../auth/google-auth.service';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
+import { JwtAuthConfigModule } from '../config/jwt-auth-config.module';
+import { JwtAuthConfigService } from '../config/jwt-auth-config.service';
+import { jwtConfigStub } from '../auth/auth-test.stub';
 import { LLM_CONFIG } from '../llm/llm.constants';
 import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
@@ -405,6 +408,11 @@ describe('Two-user new-model E2E flow (integration)', () => {
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({}),
     },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({ id: 'rt_e2e' }),
+      findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     userProfile: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -623,6 +631,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         AuthSessionConfigModule,
+        JwtAuthConfigModule,
         PrismaModule,
         SessionModule,
         UsersModule,
@@ -635,6 +644,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
     })
       .overrideProvider(PrismaService).useValue(prismaMock)
       .overrideProvider(AuthSessionConfigService).useValue(configStub)
+      .overrideProvider(JwtAuthConfigService).useValue(jwtConfigStub)
       .overrideProvider(GoogleAuthService).useValue({ verifyIdToken })
       .overrideProvider(UsersService).useValue(usersServiceMock)
       // Prevent OPENAI_API_KEY bootstrap error (LLM not called in this spec)
@@ -699,7 +709,7 @@ describe('Two-user new-model E2E flow (integration)', () => {
       .send({ idToken: `mock-jwt-${userId}` });
 
     expect(loginRes.status).toBe(200);
-    expect(loginRes.body.id).toBe(userId);
+    expect(loginRes.body.user.id).toBe(userId);
 
     const raw = extractCookieValue(loginRes.headers as Record<string, unknown>, SESSION_COOKIE);
     expect(raw).toBeTruthy();

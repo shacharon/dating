@@ -1,47 +1,38 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { mergeRequestLogContext } from '../logging/request-log-context';
-import { SessionService } from '../session/session.service';
-import { UsersService } from '../users/users.service';
-import { USER_STATUS_ACTIVE } from './auth.constants';
 import type { AuthenticatedRequest } from './auth-request.types';
-import { readSessionCookieRaw } from './auth-request.util';
-import { toAuthMeResponseDto } from './auth.dto';
+import { AuthCredentialsService } from './auth-credentials.service';
 
 /**
- * Populates {@link AuthenticatedRequest.authUser} / `authSession` when the session cookie
- * resolves to an ACTIVE user; otherwise leaves them unset and allows the request through.
+ * Populates {@link AuthenticatedRequest.authUser} when Bearer JWT or session cookie
+ * resolves to an ACTIVE user; otherwise leaves auth fields unset and allows the request.
  */
 @Injectable()
 export class OptionalAuthGuard implements CanActivate {
-  constructor(
-    private readonly sessions: SessionService,
-    private readonly users: UsersService,
-    private readonly cfg: AuthSessionConfigService,
-  ) {}
+  constructor(private readonly credentials: AuthCredentialsService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     delete req.authUser;
     delete req.authSession;
+    delete req.authMethod;
 
-    const raw = readSessionCookieRaw(req, this.cfg.sessionCookieName);
-    const validated = await this.sessions.validateSessionToken(raw);
-    if (!validated) {
+    const resolved = await this.credentials.resolveOptional(req);
+    if (!resolved) {
       return true;
     }
 
-    const user = await this.users.findById(validated.userId);
-    if (!user || user.deletedAt != null || user.status !== USER_STATUS_ACTIVE) {
-      return true;
+    req.authUser = resolved.user;
+    req.authMethod = resolved.kind === 'session' ? 'session' : 'bearer';
+    if (resolved.kind === 'session') {
+      mergeRequestLogContext({
+        userId: resolved.session.userId,
+        sessionId: resolved.session.sessionId,
+      });
+      req.authSession = resolved.session;
+    } else {
+      mergeRequestLogContext({ userId: resolved.user.id });
     }
-
-    mergeRequestLogContext({
-      userId: validated.userId,
-      sessionId: validated.sessionId,
-    });
-    req.authUser = toAuthMeResponseDto(user);
-    req.authSession = validated;
     return true;
   }
 }

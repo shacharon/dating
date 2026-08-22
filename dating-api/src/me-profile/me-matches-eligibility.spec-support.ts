@@ -31,6 +31,9 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { UserStatus } from '@prisma/client';
+import { JwtAuthConfigModule } from '../config/jwt-auth-config.module';
+import { JwtAuthConfigService } from '../config/jwt-auth-config.service';
+import { jwtConfigStub } from '../auth/auth-test.stub';
 import { AuthModule } from '../auth/auth.module';
 import { GoogleAuthService } from '../auth/google-auth.service';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
@@ -69,6 +72,8 @@ export const configStub = {
   cookieSecure: false,
   corsOrigin: 'http://localhost:3000',
 };
+
+export { jwtConfigStub } from '../auth/auth-test.stub';
 
 /** Minimal evaluation JSON that passes the engine's hasNumericSelfSignals check. */
 export function makeEvalJson(
@@ -552,6 +557,11 @@ export class EligibilityTestHarness {
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({}),
     },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({ id: 'rt_eligibility' }),
+      findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     userProfile: {
       findUnique: jest.fn(
         async ({ where }: { where: { userId?: string; id?: string } }) => {
@@ -1008,6 +1018,7 @@ export class EligibilityTestHarness {
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         AuthSessionConfigModule,
+        JwtAuthConfigModule,
         PrismaModule,
         SessionModule,
         UsersModule,
@@ -1020,6 +1031,7 @@ export class EligibilityTestHarness {
     })
       .overrideProvider(PrismaService).useValue(this.prismaMock)
       .overrideProvider(AuthSessionConfigService).useValue(configStub)
+      .overrideProvider(JwtAuthConfigService).useValue(jwtConfigStub)
       .overrideProvider(GoogleAuthService).useValue({ verifyIdToken: this.verifyIdToken })
       .overrideProvider(UsersService).useValue(this.usersServiceMock)
       .overrideProvider(LLM_CONFIG).useValue({ openai: { apiKey: 'test-key-not-used' }, models: new Map() })

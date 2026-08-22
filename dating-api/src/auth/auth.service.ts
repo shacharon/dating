@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   HttpException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import type { Request, Response } from 'express';
@@ -23,10 +24,21 @@ import {
   readRequestCookieJar,
   sessionMaxAgeMsFromTtlDays,
 } from './auth-cookies.util';
-import { toAuthMeResponseDto, type AuthMeResponseDto } from './auth.dto';
+import {
+  toAuthMeResponseDto,
+  type AuthLogoutBodyDto,
+  type AuthLogoutResponseDto,
+  type AuthMeResponseDto,
+  type AuthRefreshResponseDto,
+  type AuthTokenLoginResponseDto,
+  type GoogleIdTokenLoginDto,
+  type RefreshTokenBodyDto,
+} from './auth.dto';
 import { GoogleAuthService } from './google-auth.service';
 import { isPrismaUniqueConstraintViolation } from './prisma-auth.errors';
 import { ReferralAttributionService } from './referral-attribution.service';
+import { TokenService } from './token.service';
+import { readBearerToken } from './auth-request.util';
 
 function forbiddenAuthError(code: AuthErrorCode): ForbiddenException {
   return new ForbiddenException({
@@ -53,6 +65,7 @@ export class AuthService {
     private readonly socketRegistry: MessagingSocketRegistry,
     private readonly referralAttribution: ReferralAttributionService,
     private readonly analytics: AnalyticsService,
+    private readonly tokens: TokenService,
   ) {}
 
   /**
@@ -63,7 +76,7 @@ export class AuthService {
     req: Request,
     res: Response,
     body: { idToken?: unknown; referredByUserId?: unknown },
-  ): Promise<AuthMeResponseDto> {
+  ): Promise<AuthTokenLoginResponseDto> {
     this.obs.trace(
       'google id token login started',
       ErrorCodes.AUTH_LOGIN_START,
@@ -118,7 +131,14 @@ export class AuthService {
         `google id token login success userId=${user.id}`,
         ErrorCodes.AUTH_LOGIN_SUCCESS,
       );
-      return toAuthMeResponseDto(user);
+      const { accessToken, refreshToken } = await this.tokens.generateTokenPair(
+        user.id,
+      );
+      return {
+        user: toAuthMeResponseDto(user),
+        accessToken,
+        refreshToken,
+      };
     } catch (e: unknown) {
       const includeStack = !(e instanceof HttpException);
       this.obs.error(
@@ -131,7 +151,29 @@ export class AuthService {
     }
   }
 
-  async logout(req: Request, res: Response): Promise<{ ok: true }> {
+  async refreshAccessToken(
+    body: RefreshTokenBodyDto,
+  ): Promise<AuthRefreshResponseDto> {
+    const raw =
+      typeof body?.refreshToken === 'string' ? body.refreshToken.trim() : '';
+    if (!raw) {
+      throw new BadRequestException('refreshToken is required');
+    }
+    try {
+      return await this.tokens.rotateRefreshToken(raw);
+    } catch (e: unknown) {
+      if (e instanceof UnauthorizedException) {
+        throw e;
+      }
+      throw new UnauthorizedException();
+    }
+  }
+
+  async logout(
+    req: Request,
+    res: Response,
+    body?: AuthLogoutBodyDto,
+  ): Promise<{ ok: true }> {
     const name = this.cfg.sessionCookieName;
     const raw = readRequestCookieJar(req)[name] ?? undefined;
 
@@ -145,6 +187,20 @@ export class AuthService {
         await this.socketRegistry.disconnectBySessionId(validated.sessionId);
       }
       await this.sessions.revokeSession({ rawToken: raw.trim() });
+    }
+
+    const refreshRaw =
+      typeof body?.refreshToken === 'string' ? body.refreshToken.trim() : '';
+    if (refreshRaw) {
+      await this.tokens.revokeRefreshToken(refreshRaw);
+    } else {
+      const bearer = readBearerToken(req);
+      if (bearer) {
+        const verified = await this.tokens.verifyAccessToken(bearer);
+        if (verified) {
+          await this.tokens.revokeAllRefreshTokens(verified.userId);
+        }
+      }
     }
 
     res.clearCookie(

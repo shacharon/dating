@@ -28,7 +28,10 @@ import { hashSessionToken } from '../session/session-token.crypto';
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { AuthModule } from '../auth/auth.module';
+import { jwtConfigStub } from '../auth/auth-test.stub';
 import { GoogleAuthService } from '../auth/google-auth.service';
+import { JwtAuthConfigModule } from '../config/jwt-auth-config.module';
+import { JwtAuthConfigService } from '../config/jwt-auth-config.service';
 import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
@@ -213,6 +216,11 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn(),
     },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({ id: 'rt_me_profile' }),
+      findUnique: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     userProfile: {
       findUnique: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
@@ -301,6 +309,7 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         AuthSessionConfigModule,
+        JwtAuthConfigModule,
         PrismaModule,
         SessionModule,
         UsersModule,
@@ -316,6 +325,8 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
       .useValue(prismaMock)
       .overrideProvider(AuthSessionConfigService)
       .useValue(configStub)
+      .overrideProvider(JwtAuthConfigService)
+      .useValue(jwtConfigStub)
       .overrideProvider(GoogleAuthService)
       .useValue({ verifyIdToken })
       .overrideProvider(UsersService)

@@ -13,6 +13,8 @@ import type { App } from 'supertest/types';
 import { UserStatus } from '@prisma/client';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
+import { JwtAuthConfigModule } from '../config/jwt-auth-config.module';
+import { JwtAuthConfigService } from '../config/jwt-auth-config.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashSessionToken } from '../session/session-token.crypto';
@@ -64,6 +66,11 @@ describe('auth HTTP (integration)', () => {
       update: jest.Mock;
       updateMany: jest.Mock;
     };
+    refreshToken: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      updateMany: jest.Mock;
+    };
   };
   let usersServiceMock: {
     findById: jest.Mock;
@@ -75,6 +82,7 @@ describe('auth HTTP (integration)', () => {
   let verifyIdToken: jest.Mock;
 
   const PEPPER = 'integration-test-pepper';
+  const JWT_SECRET = 'integration-test-jwt-secret-min-32-chars';
   const SESSION_COOKIE = 'dating_session';
   const configStub = {
     googleClientId: 'google-client-id',
@@ -84,6 +92,13 @@ describe('auth HTTP (integration)', () => {
     cookieDomain: undefined as string | undefined,
     cookieSecure: false,
     corsOrigin: 'http://localhost:3000',
+  };
+  const jwtConfigStub = {
+    jwtSecret: JWT_SECRET,
+    accessTtl: '15m',
+    refreshTtl: '7d',
+    refreshTtlDays: 7,
+    requireJwtSecret: () => JWT_SECRET,
   };
 
   beforeAll(async () => {
@@ -102,6 +117,11 @@ describe('auth HTTP (integration)', () => {
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn(),
       },
+      refreshToken: {
+        create: jest.fn().mockResolvedValue({ id: 'rt_1' }),
+        findUnique: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
 
     prismaMock.userSession.create.mockImplementation(async ({ data }) => ({
@@ -113,6 +133,7 @@ describe('auth HTTP (integration)', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         AuthSessionConfigModule,
+        JwtAuthConfigModule,
         PrismaModule,
         StructuredLoggingModule,
         AuthModule,
@@ -122,6 +143,8 @@ describe('auth HTTP (integration)', () => {
       .useValue(prismaMock)
       .overrideProvider(AuthSessionConfigService)
       .useValue(configStub)
+      .overrideProvider(JwtAuthConfigService)
+      .useValue(jwtConfigStub)
       .overrideProvider(GoogleAuthService)
       .useValue({ verifyIdToken: verifyIdToken })
       .overrideProvider(UsersService)
@@ -374,16 +397,21 @@ describe('auth HTTP (integration)', () => {
         .expect(200);
 
       expect(login.body).toEqual({
-        id: 'user_api_v1',
-        email: 'api@example.com',
-        displayName: 'API',
-        avatarUrl: null,
-        status: 'ACTIVE',
-        emailNotificationsEnabled: true,
-        inAppNotificationsEnabled: true,
+        user: {
+          id: 'user_api_v1',
+          email: 'api@example.com',
+          displayName: 'API',
+          avatarUrl: null,
+          status: 'ACTIVE',
+          emailNotificationsEnabled: true,
+          inAppNotificationsEnabled: true,
+        },
+        accessToken: expect.any(String),
+        refreshToken: expect.any(String),
       });
       expect(login.body).not.toHaveProperty('rawToken');
       expect(login.body).not.toHaveProperty('sessionToken');
+      expect(prismaMock.refreshToken.create).toHaveBeenCalled();
 
       const setCookie = login.headers['set-cookie'];
       expect(setCookie).toBeDefined();
@@ -422,6 +450,12 @@ describe('auth HTTP (integration)', () => {
         .expect(200);
 
       expect(me.body.email).toBe('api@example.com');
+
+      const meBearer = await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .expect(200);
+      expect(meBearer.body.email).toBe('api@example.com');
 
       const prot = await request(app.getHttpServer())
         .get('/api/v1/auth/protected-test')
@@ -497,13 +531,17 @@ describe('auth HTTP (integration)', () => {
         identity,
       );
       expect(login.body).toEqual({
-        id: 'user_repeat',
-        email: 'repeat@example.com',
-        displayName: 'Repeat',
-        avatarUrl: null,
-        status: 'ACTIVE',
-        emailNotificationsEnabled: true,
-        inAppNotificationsEnabled: true,
+        user: {
+          id: 'user_repeat',
+          email: 'repeat@example.com',
+          displayName: 'Repeat',
+          avatarUrl: null,
+          status: 'ACTIVE',
+          emailNotificationsEnabled: true,
+          inAppNotificationsEnabled: true,
+        },
+        accessToken: expect.any(String),
+        refreshToken: expect.any(String),
       });
       expect(login.body).not.toHaveProperty('sessionToken');
       expect(login.body).not.toHaveProperty('rawToken');
@@ -739,6 +777,90 @@ describe('auth HTTP (integration)', () => {
 
       expect(usersServiceMock.createFromGoogleIdentity).not.toHaveBeenCalled();
       expect(usersServiceMock.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('JWT bearer + refresh', () => {
+    it('GET /api/v1/auth/me returns 401 for invalid Bearer token', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', 'Bearer not-a-valid-jwt')
+        .expect(401);
+    });
+
+    it('POST /api/v1/auth/refresh returns 400 without refreshToken', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({})
+        .expect(400);
+    });
+
+    it('POST /api/v1/auth/refresh returns 401 for invalid refreshToken', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: 'invalid' })
+        .expect(401);
+    });
+
+    it('POST /api/v1/auth/refresh rotates tokens and invalidates old refresh', async () => {
+      verifyIdToken.mockResolvedValue({
+        googleId: 'google-refresh-flow',
+        email: 'refresh@example.com',
+        displayName: 'Refresh',
+        avatarUrl: null,
+      });
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: 'user_refresh',
+        email: 'refresh@example.com',
+        googleId: 'google-refresh-flow',
+        displayName: 'Refresh',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+      usersServiceMock.findById.mockResolvedValue({
+        id: 'user_refresh',
+        email: 'refresh@example.com',
+        displayName: 'Refresh',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+
+      const login = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-login' })
+        .expect(200);
+
+      const oldRefresh = login.body.refreshToken as string;
+      prismaMock.refreshToken.findUnique.mockImplementation(
+        async ({ where }: { where: { tokenHash: string } }) => {
+          if (where.tokenHash) {
+            return {
+              id: 'rt_active',
+              userId: 'user_refresh',
+              tokenHash: where.tokenHash,
+              expiresAt: new Date('2038-01-01T00:00:00.000Z'),
+              revokedAt: null,
+            };
+          }
+          return null;
+        },
+      );
+
+      const refreshed = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefresh })
+        .expect(200);
+
+      expect(refreshed.body.accessToken).toBeDefined();
+      expect(refreshed.body.refreshToken).toBeDefined();
+      expect(refreshed.body.refreshToken).not.toBe(oldRefresh);
+      expect(prismaMock.refreshToken.updateMany).toHaveBeenCalled();
+
+      prismaMock.refreshToken.findUnique.mockResolvedValue(null);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefresh })
+        .expect(401);
     });
   });
 });

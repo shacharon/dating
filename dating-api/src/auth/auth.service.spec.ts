@@ -25,6 +25,15 @@ describe('AuthService.logout', () => {
       disconnectBySessionId: jest.fn().mockResolvedValue(undefined),
     } as unknown as MessagingSocketRegistry;
 
+    const tokens = {
+      generateTokenPair: jest
+        .fn()
+        .mockResolvedValue({ accessToken: 'access', refreshToken: 'refresh' }),
+      revokeRefreshToken: jest.fn(),
+      revokeAllRefreshTokens: jest.fn(),
+      verifyAccessToken: jest.fn(),
+    } as unknown as import('./token.service').TokenService;
+
     const service = new AuthService(
       {
         sessionCookieName: 'dating_session',
@@ -38,6 +47,7 @@ describe('AuthService.logout', () => {
       socketRegistry,
       { resolveReferrerUserId: jest.fn() } as unknown as import('./referral-attribution.service').ReferralAttributionService,
       { track: jest.fn() } as unknown as import('../analytics/analytics.service').AnalyticsService,
+      tokens,
     );
 
     const req = {
@@ -92,6 +102,15 @@ describe('AuthService referral signup', () => {
       }),
     } as unknown as SessionService;
 
+    const tokens = {
+      generateTokenPair: jest
+        .fn()
+        .mockResolvedValue({ accessToken: 'access', refreshToken: 'refresh' }),
+      revokeRefreshToken: jest.fn(),
+      revokeAllRefreshTokens: jest.fn(),
+      verifyAccessToken: jest.fn(),
+    } as unknown as import('./token.service').TokenService;
+
     const service = new AuthService(
       {
         sessionCookieName: 'dating_session',
@@ -108,6 +127,7 @@ describe('AuthService referral signup', () => {
       { disconnectBySessionId: jest.fn() } as unknown as MessagingSocketRegistry,
       referralAttribution,
       analytics,
+      tokens,
     );
 
     const req = { headers: {}, socket: { remoteAddress: '127.0.0.1' } } as Request;

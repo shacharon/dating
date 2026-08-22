@@ -11,17 +11,20 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type {
+  AuthLogoutBodyDto,
   AuthLogoutResponseDto,
   AuthMeResponseDto,
+  AuthRefreshResponseDto,
+  AuthTokenLoginResponseDto,
   GoogleIdTokenLoginDto,
+  RefreshTokenBodyDto,
 } from './auth.dto';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 
 /**
- * Versioned cookie-session auth (no JWT, no client-supplied user id).
- * Google Sign-In: GIS posts an `id_token` to {@link ApiV1AuthController.googleLogin}.
+ * Versioned auth: Google GIS login, opaque session cookie (web), JWT Bearer (mobile).
  */
 @Controller('api/v1/auth')
 export class ApiV1AuthController {
@@ -33,8 +36,16 @@ export class ApiV1AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body() body: GoogleIdTokenLoginDto,
-  ): Promise<AuthMeResponseDto> {
+  ): Promise<AuthTokenLoginResponseDto> {
     return this.auth.loginWithGoogleIdToken(req, res, body);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Body() body: RefreshTokenBodyDto,
+  ): Promise<AuthRefreshResponseDto> {
+    return this.auth.refreshAccessToken(body);
   }
 
   @Get('me')
@@ -57,7 +68,8 @@ export class ApiV1AuthController {
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @Body() body: AuthLogoutBodyDto,
   ): Promise<AuthLogoutResponseDto> {
-    return this.auth.logout(req, res);
+    return this.auth.logout(req, res, body);
   }
 }

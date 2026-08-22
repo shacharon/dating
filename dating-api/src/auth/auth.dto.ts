@@ -21,6 +21,29 @@ export interface GoogleIdTokenLoginDto {
 /** POST /api/v1/auth/logout success body. */
 export type AuthLogoutResponseDto = { ok: true };
 
+/** POST /api/v1/auth/google success body (mobile + web dual-mode). */
+export interface AuthTokenLoginResponseDto {
+  user: AuthMeResponseDto;
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** POST /api/v1/auth/refresh success body. */
+export interface AuthRefreshResponseDto {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** POST /api/v1/auth/refresh request body. */
+export interface RefreshTokenBodyDto {
+  refreshToken: string;
+}
+
+/** POST /api/v1/auth/logout optional body (mobile refresh revocation). */
+export interface AuthLogoutBodyDto {
+  refreshToken?: string;
+}
+
 export function toAuthMeResponseDto(user: User): AuthMeResponseDto {
   return {
     id: user.id,

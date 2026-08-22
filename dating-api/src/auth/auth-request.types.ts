@@ -9,6 +9,7 @@ import type { AuthMeResponseDto } from './auth.dto';
 export type RequestAuthState = {
   authUser?: AuthMeResponseDto;
   authSession?: ValidatedSession;
+  authMethod?: 'session' | 'bearer';
 };
 
 export type AuthenticatedRequest = Request & RequestAuthState;
