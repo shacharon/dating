@@ -185,6 +185,50 @@ describe('PrismaMatchRepository', () => {
     expect(result.unmatchedExisting).toBe(false);
   });
 
+  it('upsertActionAndDetectMutual soft-unmatches on PASS (idempotent when none)', async () => {
+    const row = {
+      id: 'a1',
+      actorUserId: 'u2',
+      targetUserId: 'u1',
+      targetProfileIdSnapshot: 'p1',
+      action: MatchActionType.PASS,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    matchAction.upsert.mockResolvedValue(row);
+    mutualMatch.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await repo.upsertActionAndDetectMutual({
+      actorUserId: 'u2',
+      targetUserId: 'u1',
+      targetProfileIdSnapshot: 'p1',
+      action: MatchActionType.PASS,
+    });
+
+    expect(result.unmatchedExisting).toBe(false);
+    expect(mutualMatch.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId1: 'u1',
+        userId2: 'u2',
+        status: MutualMatchStatus.ACTIVE,
+      },
+      data: expect.objectContaining({
+        status: MutualMatchStatus.UNMATCHED,
+        unmatchedByUserId: 'u2',
+      }),
+    });
+  });
+
+  it('deleteActionByActorTarget soft-unmatches when softUnmatchIfLike', async () => {
+    matchAction.delete.mockResolvedValue({});
+    mutualMatch.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await repo.deleteActionByActorTarget('u1', 'u2', true);
+
+    expect(result).toEqual({ unmatchedExisting: true });
+    expect(matchAction.delete).toHaveBeenCalled();
+    expect(mutualMatch.updateMany).toHaveBeenCalled();
+  });
+
   it('replaceRankSnapshot chunks upserts then deletes stale ranks', async () => {
     const rows = Array.from({ length: MATCH_LIST_RANK_PERSIST_CHUNK + 2 }, (_, i) => ({
       candidateProfileId: `c${i}`,

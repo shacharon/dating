@@ -461,6 +461,49 @@ describe('MeMatchActionsService', () => {
     );
   });
 
+  it('BLOCK with unmatchedExisting rebuilds both users with unmatch reason', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    const createdAt = new Date('2026-05-31T12:00:00.000Z');
+    (matches.upsertActionAndDetectMutual as jest.Mock).mockResolvedValueOnce({
+      row: {
+        id: 'action-block',
+        actorUserId: 'actor-1',
+        targetUserId: 'target-user',
+        targetProfileIdSnapshot: 'prof-cand',
+        action: MatchActionType.BLOCK,
+        createdAt,
+      },
+      detectResult: null,
+      unmatchedExisting: true,
+    });
+
+    const result = await service.createAction(
+      'actor-1',
+      'prof-cand',
+      MatchActionType.BLOCK,
+    );
+
+    expect(result).toMatchObject({
+      action: 'BLOCK',
+      mutualMatch: false,
+      conversationId: null,
+    });
+    expect(meMatches.invalidateMatchListCache).toHaveBeenCalledWith('actor-1');
+    expect(meMatches.invalidateMatchListCache).toHaveBeenCalledWith('target-user');
+    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+      'actor-1',
+      'match_action',
+    );
+    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+      'target-user',
+      'unmatch',
+    );
+    expect(pushQueue.enqueueMutualMatchBestEffort).not.toHaveBeenCalled();
+  });
+
   it('deletes LIKE row on undo', async () => {
     meMatches.assertMatchCandidateVisible.mockResolvedValue({
       candidateProfileId: 'prof-cand',
@@ -491,6 +534,32 @@ describe('MeMatchActionsService', () => {
     expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
       'actor-1',
       'match_action',
+    );
+  });
+
+  it('undo LIKE with soft-unmatch rebuilds target with unmatch reason', async () => {
+    meMatches.assertMatchCandidateVisible.mockResolvedValue({
+      candidateProfileId: 'prof-cand',
+      targetUserId: 'target-user',
+    });
+    (prisma.matchAction.findUnique as jest.Mock).mockResolvedValue({
+      action: MatchActionType.LIKE,
+    });
+    (matches.deleteActionByActorTarget as jest.Mock).mockResolvedValueOnce({
+      unmatchedExisting: true,
+    });
+
+    await service.deleteAction('actor-1', 'prof-cand');
+
+    expect(matches.deleteActionByActorTarget).toHaveBeenCalledWith(
+      'actor-1',
+      'target-user',
+      true,
+    );
+    expect(meMatches.invalidateMatchListCache).toHaveBeenCalledWith('target-user');
+    expect(matchListRankQueue.enqueueRebuild).toHaveBeenCalledWith(
+      'target-user',
+      'unmatch',
     );
   });
 

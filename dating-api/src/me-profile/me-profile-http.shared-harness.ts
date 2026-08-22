@@ -262,6 +262,7 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     message: {
       create: jest.fn(),
@@ -429,6 +430,8 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
       prismaMock.mutualMatch.findMany?.mockResolvedValue([]);
       prismaMock.mutualMatch.findUnique?.mockReset?.();
       prismaMock.mutualMatch.update?.mockReset?.();
+      prismaMock.mutualMatch.updateMany?.mockReset?.();
+      prismaMock.mutualMatch.updateMany?.mockResolvedValue?.({ count: 0 });
       prismaMock.message.create?.mockReset?.();
       prismaMock.message.findMany?.mockReset?.();
       prismaMock.message.findFirst?.mockReset?.();
