@@ -17,6 +17,10 @@ import {
   type MatchListRankQueuePort,
 } from '../workers/match-list-rank.ports';
 import {
+  PUSH_NOTIFICATION_QUEUE_PORT,
+  type PushNotificationQueuePort,
+} from '../workers/push-notification.ports';
+import {
   MATCH_ACTIONS_REPOSITORY,
   type IMatchActionsRepository,
 } from './repositories/match.repository';
@@ -31,6 +35,8 @@ export class MeMatchActionsService {
     private readonly analytics: AnalyticsService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
+    @Inject(PUSH_NOTIFICATION_QUEUE_PORT)
+    private readonly pushQueue: PushNotificationQueuePort,
   ) {}
 
   async getActionState(
@@ -95,6 +101,9 @@ export class MeMatchActionsService {
       void this.mutualMatchEmail.notifyNewMutualMatchBestEffort(
         detectResult.mutualMatch,
       );
+      void this.pushQueue.enqueueMutualMatchBestEffort({
+        match: detectResult.mutualMatch,
+      });
       const { id: mutualMatchId } = detectResult.mutualMatch;
       this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_MUTUAL_CREATED, {
         mutualMatchId,

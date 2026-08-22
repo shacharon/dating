@@ -82,6 +82,7 @@
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
+    "firebase-admin": "^14.3.0",
     "google-auth-library": "^10.6.2",
     "openai": "^6.25.0",
     "redis": "^6.0.0",

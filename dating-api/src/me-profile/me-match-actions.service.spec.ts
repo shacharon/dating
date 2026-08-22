@@ -37,6 +37,12 @@ describe('MeMatchActionsService', () => {
     enqueueRebuild: jest.fn().mockResolvedValue('inline:actor'),
   };
 
+  const pushQueue = {
+    enqueueNewMessageBestEffort: jest.fn().mockResolvedValue('inline:push'),
+    enqueueMutualMatchBestEffort: jest.fn().mockResolvedValue(undefined),
+    isBullEnabled: jest.fn().mockReturnValue(false),
+  };
+
   const matches = {
     findActionWithCreatedAt: jest.fn((actorUserId, targetUserId) =>
       prisma.matchAction.findUnique({
@@ -99,6 +105,7 @@ describe('MeMatchActionsService', () => {
       mutualMatchEmail,
       analytics,
       matchListRankQueue as never,
+      pushQueue as never,
     );
   });
 

@@ -38,7 +38,11 @@ import {
   CONVERSATION_REPOSITORY,
   type IConversationRepository,
 } from './repositories/conversation.repository';
-
+import {
+  PUSH_NOTIFICATION_QUEUE_PORT,
+  type PushNotificationQueuePort,
+} from '../workers/push-notification.ports';
+import { truncatePushPreview } from '../workers/push-notification.queue';
 const MAX_AFTER_POLL_LIMIT = 100;
 
 @Injectable()
@@ -55,6 +59,8 @@ export class MeConversationMessagesService {
     @Inject(CONTENT_MODERATION)
     private readonly moderation: ContentModerationPort,
     private readonly contentViolations: ContentViolationService,
+    @Inject(PUSH_NOTIFICATION_QUEUE_PORT)
+    private readonly pushQueue: PushNotificationQueuePort,
   ) {}
 
   private async assertMessagingAllowed(userId: string): Promise<void> {
@@ -317,6 +323,12 @@ export class MeConversationMessagesService {
       recipientUserId,
       senderUserId: sessionUserId,
       messageId: dto.id,
+    });
+    void this.pushQueue.enqueueNewMessageBestEffort({
+      recipientUserId,
+      senderUserId: sessionUserId,
+      conversationId,
+      messagePreview: truncatePushPreview(trimmed),
     });
 
     return dto;

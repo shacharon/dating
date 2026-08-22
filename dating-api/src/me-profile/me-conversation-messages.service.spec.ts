@@ -128,6 +128,12 @@ describe('MeConversationMessagesService', () => {
     maybeNotifyBestEffort: jest.fn().mockResolvedValue(undefined),
   } as unknown as NewMessageEmailService;
 
+  const pushQueue = {
+    enqueueNewMessageBestEffort: jest.fn().mockResolvedValue('inline:push'),
+    enqueueMutualMatchBestEffort: jest.fn().mockResolvedValue(undefined),
+    isBullEnabled: jest.fn().mockReturnValue(false),
+  };
+
   const moderation = {
     checkContent: jest.fn().mockResolvedValue({
       flagged: false,
@@ -198,6 +204,7 @@ describe('MeConversationMessagesService', () => {
       analytics,
       moderation as unknown as ContentModerationPort,
       contentViolations as unknown as ContentViolationService,
+      pushQueue as never,
     );
     (
       conversations.assertActiveConversationParticipant as jest.Mock
