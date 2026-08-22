@@ -1,6 +1,7 @@
 import { UserStatus } from '@prisma/client';
 import { MessagingWsSessionService } from './messaging-ws-session.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { TokenService } from '../auth/token.service';
 
 describe('MessagingWsSessionService', () => {
   const prisma = {
@@ -12,11 +13,15 @@ describe('MessagingWsSessionService', () => {
     },
   } as unknown as PrismaService;
 
+  const tokens = {
+    verifyAccessToken: jest.fn(),
+  } as unknown as TokenService;
+
   let service: MessagingWsSessionService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MessagingWsSessionService(prisma);
+    service = new MessagingWsSessionService(prisma, tokens);
   });
 
   describe('isSessionActive', () => {
@@ -108,6 +113,51 @@ describe('MessagingWsSessionService', () => {
       });
       await expect(
         service.isConnectionAllowed('sess_1', 'user_1'),
+      ).resolves.toBe(true);
+    });
+  });
+
+  describe('isBearerConnectionAllowed', () => {
+    it('returns false when token verify fails', async () => {
+      (tokens.verifyAccessToken as jest.Mock).mockResolvedValue(null);
+      await expect(
+        service.isBearerConnectionAllowed('user_1', 'bad-token'),
+      ).resolves.toBe(false);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('returns false when token userId mismatches', async () => {
+      (tokens.verifyAccessToken as jest.Mock).mockResolvedValue({
+        userId: 'other_user',
+      });
+      await expect(
+        service.isBearerConnectionAllowed('user_1', 'token'),
+      ).resolves.toBe(false);
+    });
+
+    it('returns false when user is disabled', async () => {
+      (tokens.verifyAccessToken as jest.Mock).mockResolvedValue({
+        userId: 'user_1',
+      });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        deletedAt: null,
+        status: UserStatus.DISABLED,
+      });
+      await expect(
+        service.isBearerConnectionAllowed('user_1', 'token'),
+      ).resolves.toBe(false);
+    });
+
+    it('returns true when token and user are valid', async () => {
+      (tokens.verifyAccessToken as jest.Mock).mockResolvedValue({
+        userId: 'user_1',
+      });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        deletedAt: null,
+        status: UserStatus.ACTIVE,
+      });
+      await expect(
+        service.isBearerConnectionAllowed('user_1', 'token'),
       ).resolves.toBe(true);
     });
   });

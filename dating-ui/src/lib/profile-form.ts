@@ -5,14 +5,6 @@ import type {
   PatchMeProfileBody,
 } from '@/lib/me-profile-api';
 import { ME_PROFILE_GENDERS } from '@/lib/me-profile-api';
-import { fetchMyProfile } from '@/lib/me-profile-api';
-
-/**
- * Loads the current account's product profile (session cookie). `null` when none exists yet.
- */
-export async function resolveEditableProfile(): Promise<MeProfileDto | null> {
-  return fetchMyProfile();
-}
 
 /** Onboarding / save form state (client-only shape). */
 export type ProfileFormState = {

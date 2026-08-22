@@ -1,8 +1,29 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DatingChapterFields } from '@/components/dating-chapter-fields';
 import { enCopy } from '@/lib/i18n/en';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
+
+const { fetchMyProfile, patchMyProfile } = vi.hoisted(() => ({
+  fetchMyProfile: vi.fn(),
+  patchMyProfile: vi.fn(),
+}));
+
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile,
+      createMyProfile: vi.fn(),
+      submitMyProfileForAnalysis: vi.fn(),
+    },
+  },
+}));
 
 describe('DatingChapterFields', () => {
   afterEach(() => {
@@ -87,13 +108,32 @@ describe('Dating chapter i18n', () => {
 });
 
 describe('DatingChapterPreferencesSection', () => {
-  const fetchMyProfile = vi.fn();
-  const patchMyProfile = vi.fn();
-
   beforeEach(() => {
-    vi.resetModules();
-    fetchMyProfile.mockReset();
-    patchMyProfile.mockReset();
+    vi.clearAllMocks();
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'DRAFT',
+      onboardingStep: 'BASIC',
+      datingChapter: 'first_chapter',
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    });
+    patchMyProfile.mockImplementation(async (body) => ({
+      id: 'p1',
+      userId: 'u1',
+      status: 'DRAFT',
+      onboardingStep: 'BASIC',
+      datingChapter: body.datingChapter ?? null,
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    }));
   });
 
   afterEach(() => {
@@ -101,24 +141,16 @@ describe('DatingChapterPreferencesSection', () => {
   });
 
   it('loads chapter and PATCHes on change', async () => {
-    fetchMyProfile.mockResolvedValue({ datingChapter: 'first_chapter' });
-    patchMyProfile.mockResolvedValue({ datingChapter: 'new_chapter' });
-
-    vi.doMock('@/lib/me-profile-api', () => ({
-      fetchMyProfile,
-      patchMyProfile,
-    }));
-    vi.doMock('@/lib/i18n', async () => {
-      const { enCopy } = await import('@/lib/i18n/en');
-      return {
-        useAppLocale: () => ({ copy: enCopy, locale: 'en' }),
-      };
-    });
-
     const { DatingChapterPreferencesSection } = await import(
       '@/components/dating-chapter-preferences-section'
     );
-    render(<DatingChapterPreferencesSection />);
+    render(
+      createElement(
+        QueryClientTestProvider,
+        { client: createTestQueryClient() },
+        createElement(DatingChapterPreferencesSection),
+      ),
+    );
 
     await waitFor(() => {
       expect(

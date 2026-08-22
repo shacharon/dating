@@ -4,12 +4,12 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { submitMyProfileForAnalysis } from '@/lib/me-profile-api';
+import { useSubmitProfileForAnalysis } from '@/hooks/use-profile';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { useAppLocale } from '@/lib/i18n';
 import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
-import { useInfiniteMatches } from './use-infinite-matches';
+import { useInfiniteMatches } from '@/hooks/use-matches';
 import { MatchListItem } from './match-list-item';
 import { MatchPrioritySections } from './match-priority-sections';
 import {
@@ -46,6 +46,7 @@ export default function MeMatchesPageClient() {
     reload,
     sentinelRef,
   } = useInfiniteMatches(listCopy.loadFailed);
+  const submitAnalysisMutation = useSubmitProfileForAnalysis();
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshSuccess, setRefreshSuccess] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export default function MeMatchesPageClient() {
     setRefreshError(null);
     setRefreshSuccess(null);
     try {
-      await submitMyProfileForAnalysis();
+      await submitAnalysisMutation.mutateAsync();
       setRefreshSuccess(listCopy.refreshStarted);
       await reload();
     } catch (e: unknown) {

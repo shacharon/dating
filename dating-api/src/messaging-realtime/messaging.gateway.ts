@@ -30,6 +30,7 @@ import {
   MessagingWsAuthService,
   type MessagingSocketData,
 } from './messaging-ws-auth.service';
+import { readHandshakeAccessToken } from './messaging-ws-handshake.util';
 import { MessagingSocketRegistry } from './messaging-socket-registry.service';
 import { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 import { WsRateLimitExceededError } from './messaging-ws-rate-limit.error';
@@ -79,9 +80,7 @@ export class MessagingGateway
   }
 
   async handleConnection(client: Socket): Promise<void> {
-    const result = await this.wsAuth.validateHandshake(
-      client.handshake.headers.cookie,
-    );
+    const result = await this.wsAuth.validateHandshake(client.handshake);
 
     if (!result.ok) {
       this.obs.trace(
@@ -94,17 +93,29 @@ export class MessagingGateway
 
     const data: MessagingSocketData = {
       userId: result.userId,
-      sessionId: result.sessionId,
+      authKind: result.authKind,
       subscribedConversationIds: new Set(),
+      ...(result.authKind === 'session'
+        ? { sessionId: result.sessionId }
+        : {
+            bearerAccessToken:
+              readHandshakeAccessToken(client.handshake) ?? undefined,
+          }),
     };
     client.data = data;
     await client.join(userRoom(result.userId));
-    await client.join(sessionRoom(result.sessionId));
+    if (result.authKind === 'session') {
+      await client.join(sessionRoom(result.sessionId));
+    }
     await this.socketRegistry.registerAsync(client);
-    this.startSessionRevalidation(client);
+    this.startConnectionRevalidation(client);
 
+    const sessionTrace =
+      result.authKind === 'session'
+        ? ` sessionId=${result.sessionId}`
+        : '';
     this.obs.trace(
-      `messaging ws connect userId=${result.userId} sessionId=${result.sessionId} socketId=${client.id} active=${this.socketRegistry.activeConnectionCount()}`,
+      `messaging ws connect authKind=${result.authKind} userId=${result.userId}${sessionTrace} socketId=${client.id} active=${this.socketRegistry.activeConnectionCount()}`,
       ErrorCodes.MESSAGING_WS_CONNECT_OK,
     );
     this.analytics.track(
@@ -122,7 +133,7 @@ export class MessagingGateway
 
     const data = client.data as MessagingSocketData | undefined;
     const userId = data?.userId ?? 'unknown';
-    const sessionId = data?.sessionId ?? 'unknown';
+    const sessionId = data?.sessionId ?? (data?.authKind === 'bearer' ? 'bearer' : 'unknown');
 
     this.obs.trace(
       `messaging ws disconnect userId=${userId} sessionId=${sessionId} socketId=${client.id} active=${this.socketRegistry.activeConnectionCount()}`,
@@ -231,22 +242,36 @@ export class MessagingGateway
     }
   }
 
-  private startSessionRevalidation(client: Socket): void {
+  private startConnectionRevalidation(client: Socket): void {
     const data = client.data as MessagingSocketData;
 
     const timer = setInterval(() => {
       void (async () => {
-        const allowed = await this.wsSession.isConnectionAllowed(
-          data.sessionId,
-          data.userId,
-        );
-        if (!allowed) {
-          this.obs.trace(
-            `messaging ws session invalid userId=${data.userId} sessionId=${data.sessionId} socketId=${client.id}`,
-            ErrorCodes.MESSAGING_WS_SESSION_INVALIDATED,
+        let allowed: boolean;
+        if (data.authKind === 'bearer') {
+          const token = data.bearerAccessToken;
+          allowed =
+            !!token &&
+            (await this.wsSession.isBearerConnectionAllowed(
+              data.userId,
+              token,
+            ));
+        } else {
+          allowed = await this.wsSession.isConnectionAllowed(
+            data.sessionId ?? '',
+            data.userId,
           );
+        }
+        if (!allowed) {
+          const invalidTrace =
+            data.authKind === 'bearer'
+              ? `messaging ws bearer invalid userId=${data.userId} socketId=${client.id}`
+              : `messaging ws session invalid userId=${data.userId} sessionId=${data.sessionId} socketId=${client.id}`;
+          this.obs.trace(invalidTrace, ErrorCodes.MESSAGING_WS_SESSION_INVALIDATED);
           this.sentry.captureMessage(
-            `messaging ws session invalid userId=${data.userId}`,
+            data.authKind === 'bearer'
+              ? `messaging ws bearer invalid userId=${data.userId}`
+              : `messaging ws session invalid userId=${data.userId}`,
             {
               errorCode: ErrorCodes.MESSAGING_WS_SESSION_INVALIDATED,
               tags: { subsystem: 'messaging-realtime' },

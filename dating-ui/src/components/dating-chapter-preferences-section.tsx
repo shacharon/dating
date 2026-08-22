@@ -6,49 +6,48 @@ import {
   type DatingChapterValue,
 } from '@/components/dating-chapter-fields';
 import { useAppLocale } from '@/lib/i18n';
-import { fetchMyProfile, patchMyProfile } from '@/lib/me-profile-api';
+import { usePatchProfile, useProfile } from '@/hooks/use-profile';
 
 /** Settings: persist dating chapter via PATCH /me/profile. */
 export function DatingChapterPreferencesSection() {
   const { copy } = useAppLocale();
   const dc = copy.profile.datingChapter;
+  const { profile, isLoading, error: profileError } = useProfile();
+  const patchMutation = usePatchProfile();
+
   const [value, setValue] = useState<DatingChapterValue | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled) return;
-        const chapter = profile?.datingChapter ?? null;
-        setValue(
-          chapter === 'first_chapter' ||
-            chapter === 'ready_again' ||
-            chapter === 'new_chapter'
-            ? chapter
-            : null,
-        );
-      } catch {
-        if (!cancelled) setError(dc.saveError);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [dc.saveError]);
+    if (isLoading) return;
+    if (initialized) return;
+    if (profileError) {
+      setError(dc.saveError);
+      setInitialized(true);
+      return;
+    }
+    const chapter = profile?.datingChapter ?? null;
+    setValue(
+      chapter === 'first_chapter' ||
+        chapter === 'ready_again' ||
+        chapter === 'new_chapter'
+        ? chapter
+        : null,
+    );
+    setInitialized(true);
+  }, [profile, isLoading, profileError, initialized, dc.saveError]);
+
+  const loading = isLoading || !initialized;
 
   const persist = async (next: DatingChapterValue | null) => {
     setError(null);
     setSaving(true);
     setSavedFlash(false);
     try {
-      await patchMyProfile({ datingChapter: next });
+      await patchMutation.mutateAsync({ datingChapter: next });
       setValue(next);
       setSavedFlash(true);
     } catch {

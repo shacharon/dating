@@ -3,15 +3,12 @@
  */
 
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import { captureRequestIdFromResponse } from '@/lib/observability/request-id';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
   Accept: 'application/json',
-};
-
-const credFetch = {
-  credentials: 'include' as const,
 };
 
 function apiUnreachableMessage(base: string, path: string): string {
@@ -65,9 +62,8 @@ export async function listMyProfilePhotos(): Promise<MeProfilePhotoDto[]> {
   const path = '/api/v1/me/profile/photos';
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'GET',
-      ...credFetch,
       cache: 'no-store',
       headers: { Accept: 'application/json' },
     });
@@ -91,10 +87,9 @@ export async function uploadMyProfilePhoto(file: File): Promise<MeProfilePhotoDt
   form.append('file', file);
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'POST',
-      credentials: 'include',
-      body: form,
+    body: form,
     });
   } catch {
     throw new Error(apiUnreachableMessage(base, path));
@@ -117,9 +112,8 @@ export async function deleteMyProfilePhoto(photoId: string): Promise<void> {
   const path = `/api/v1/me/profile/photos/${encodeURIComponent(photoId)}`;
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'DELETE',
-      ...credFetch,
       headers: { Accept: 'application/json' },
     });
   } catch {
@@ -144,9 +138,8 @@ export async function setPrimaryMyProfilePhoto(
   const path = `/api/v1/me/profile/photos/${encodeURIComponent(photoId)}/primary`;
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'PATCH',
-      ...credFetch,
       headers: JSON_HEADERS,
       body: '{}',
     });
@@ -171,9 +164,8 @@ export async function fetchMyProfilePhotoBlob(photoId: string): Promise<Blob> {
   const path = `/api/v1/me/profile/photos/${encodeURIComponent(photoId)}/file`;
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'GET',
-      ...credFetch,
       cache: 'no-store',
     });
   } catch {

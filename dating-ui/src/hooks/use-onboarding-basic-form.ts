@@ -1,15 +1,13 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import {
-  createMyProfile,
-  fetchMyProfile,
   ME_PROFILE_GENDERS,
-  patchMyProfile,
   type MeDatingChapter,
   type MeProfileGender,
+  type PatchMeProfileBody,
 } from '@/lib/me-profile-api';
 import {
   ContentModerationApiError,
@@ -17,17 +15,64 @@ import {
 } from '@/lib/content-moderation-error';
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
+import { validateOnboardingBasicAdvance } from '@/lib/onboarding-basic-validation';
 import type { DatingChapterValue } from '@/components/dating-chapter-fields';
 import {
   ageFromBirthInput,
   normalizeNicknameValue,
   togglePartnerGender,
 } from '@/components/onboarding-basic-helpers';
+import {
+  useCreateProfile,
+  usePatchProfile,
+  useProfile,
+} from '@/hooks/use-profile';
 
 export type UseOnboardingBasicFormOptions = {
   variant?: 'onboarding' | 'profileHub';
   onSaved?: () => void;
 };
+
+function seedBasicFieldsFromProfile(
+  profile: NonNullable<ReturnType<typeof useProfile>['profile']>,
+  setters: {
+    setHasProfile: (v: boolean) => void;
+    setLoadedNickname: (v: string | null) => void;
+    setNickname: (v: string) => void;
+    setBirthDate: (v: string) => void;
+    setGender: (v: string) => void;
+    setDesiredPartnerGenders: (v: MeProfileGender[]) => void;
+    setCity: (v: string) => void;
+    setCountry: (v: string) => void;
+    setLocationLabel: (v: string) => void;
+    setDatingChapter: (v: DatingChapterValue | null) => void;
+  },
+) {
+  setters.setHasProfile(true);
+  setters.setLoadedNickname(profile.nickname ?? null);
+  setters.setNickname(profile.nickname ?? '');
+  const bd = profile.birthDate?.slice(0, 10) ?? '';
+  setters.setBirthDate(/^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : '');
+  setters.setGender(profile.gender ?? '');
+  const allowed = new Set<string>(ME_PROFILE_GENDERS);
+  setters.setDesiredPartnerGenders(
+    (profile.desiredPartnerGenders ?? []).filter(
+      (x): x is MeProfileGender =>
+        typeof x === 'string' && allowed.has(x),
+    ),
+  );
+  setters.setCity(profile.city ?? '');
+  setters.setCountry(profile.country ?? '');
+  setters.setLocationLabel(profile.locationLabel ?? '');
+  const chapter = profile.datingChapter;
+  setters.setDatingChapter(
+    chapter === 'first_chapter' ||
+      chapter === 'ready_again' ||
+      chapter === 'new_chapter'
+      ? chapter
+      : null,
+  );
+}
 
 export function useOnboardingBasicForm({
   variant = 'onboarding',
@@ -43,6 +88,10 @@ export function useOnboardingBasicForm({
   const genderCopy = copy.gender;
   const googleName = user?.displayName?.trim() || '—';
   const isHub = variant === 'profileHub';
+
+  const { profile, isLoading, error: profileLoadError } = useProfile();
+  const patchMutation = usePatchProfile();
+  const createMutation = useCreateProfile();
 
   const [nickname, setNickname] = useState('');
   const [loadedNickname, setLoadedNickname] = useState<string | null>(null);
@@ -67,6 +116,7 @@ export function useOnboardingBasicForm({
   const [savedFlash, setSavedFlash] = useState(false);
   const [partnerError, setPartnerError] = useState<string | null>(null);
   const [genderStepError, setGenderStepError] = useState<string | null>(null);
+  const loadHandledRef = useRef(false);
 
   const birthDateMax = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const derivedAge = useMemo(() => ageFromBirthInput(birthDate), [birthDate]);
@@ -79,73 +129,67 @@ export function useOnboardingBasicForm({
     [searchParams],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled) return;
-        if (!profile) {
-          setHasProfile(false);
-          setProfileSyncing(false);
-          return;
-        }
-        if (!isHub) {
-          const path = onboardingResumePath(profile, resumeOptions);
-          if (path !== '/onboarding/basic') {
-            setProfileSyncing(false);
-            router.replace(path);
-            return;
-          }
-        }
-        setHasProfile(true);
-        setLoadedNickname(profile.nickname ?? null);
-        setNickname(profile.nickname ?? '');
-        const bd = profile.birthDate?.slice(0, 10) ?? '';
-        setBirthDate(/^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : '');
-        setGender(profile.gender ?? '');
-        const allowed = new Set<string>(ME_PROFILE_GENDERS);
-        setDesiredPartnerGenders(
-          (profile.desiredPartnerGenders ?? []).filter(
-            (x): x is MeProfileGender =>
-              typeof x === 'string' && allowed.has(x),
-          ),
-        );
-        setCity(profile.city ?? '');
-        setCountry(profile.country ?? '');
-        setLocationLabel(profile.locationLabel ?? '');
-        const chapter = profile.datingChapter;
-        setDatingChapter(
-          chapter === 'first_chapter' ||
-            chapter === 'ready_again' ||
-            chapter === 'new_chapter'
-            ? chapter
-            : null,
-        );
+  useLayoutEffect(() => {
+    if (isLoading || loadHandledRef.current) return;
+
+    if (profileLoadError) {
+      loadHandledRef.current = true;
+      setLoadError(profileLoadError);
+      setProfileSyncing(false);
+      return;
+    }
+
+    if (!profile) {
+      loadHandledRef.current = true;
+      setHasProfile(false);
+      setProfileSyncing(false);
+      return;
+    }
+
+    if (!isHub) {
+      const path = onboardingResumePath(profile, resumeOptions);
+      if (path !== '/onboarding/basic') {
+        loadHandledRef.current = true;
         setProfileSyncing(false);
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : ob.loadFailed);
-          setProfileSyncing(false);
-        }
+        router.replace(path);
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, resumeOptions, ob.loadFailed, isHub]);
+    }
+
+    seedBasicFieldsFromProfile(profile, {
+      setHasProfile,
+      setLoadedNickname,
+      setNickname,
+      setBirthDate,
+      setGender,
+      setDesiredPartnerGenders,
+      setCity,
+      setCountry,
+      setLocationLabel,
+      setDatingChapter,
+    });
+    loadHandledRef.current = true;
+    setProfileSyncing(false);
+  }, [
+    profile,
+    isLoading,
+    profileLoadError,
+    router,
+    resumeOptions,
+    isHub,
+  ]);
 
   function setPartnerGender(g: MeProfileGender, checked: boolean) {
     setDesiredPartnerGenders((prev) => togglePartnerGender(prev, g, checked));
   }
 
-  function basicBody(advanceToTexts: boolean) {
+  function basicBody(advanceToTexts: boolean): PatchMeProfileBody {
     const nextNickname = nickname.trim() ? nickname.trim() : null;
     const nicknameChanged =
       normalizeNicknameValue(nextNickname) !==
       normalizeNicknameValue(loadedNickname);
 
-    const body: Parameters<typeof patchMyProfile>[0] = {
+    const body: PatchMeProfileBody = {
       birthDate: birthDate.trim() ? birthDate.trim() : null,
       gender: (gender || null) as MeProfileGender | null,
       desiredPartnerGenders:
@@ -169,40 +213,31 @@ export function useOnboardingBasicForm({
     setPartnerError(null);
     setGenderStepError(null);
     if (advanceToTexts) {
-      if (!gender.trim() || gender === 'PREFER_NOT_TO_SAY') {
-        setGenderStepError(
-          bf.genderRequiredError(genderCopy.PREFER_NOT_TO_SAY),
-        );
-        return false;
-      }
-      if (desiredPartnerGenders.length === 0) {
-        setPartnerError(bf.partnerGendersRequiredError);
+      const advanceResult = validateOnboardingBasicAdvance({
+        gender,
+        desiredPartnerGenders,
+      });
+      if (!advanceResult.ok) {
+        if (advanceResult.error === 'genderInvalidForAdvance') {
+          setGenderStepError(
+            bf.genderRequiredError(genderCopy.PREFER_NOT_TO_SAY),
+          );
+        } else {
+          setPartnerError(bf.partnerGendersRequiredError);
+        }
         return false;
       }
     }
     const body = basicBody(advanceToTexts);
     try {
       if (hasProfile) {
-        await patchMyProfile(body);
+        await patchMutation.mutateAsync(body);
         setLoadedNickname(
           normalizeNicknameValue(nickname.trim() ? nickname.trim() : null),
         );
       } else {
-        try {
-          await createMyProfile(body);
-          setHasProfile(true);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : '';
-          if (
-            msg.includes(' 409 ') ||
-            msg.toLowerCase().includes('profile_already_exists')
-          ) {
-            await patchMyProfile(body);
-            setHasProfile(true);
-          } else {
-            throw e;
-          }
-        }
+        await createMutation.mutateAsync(body);
+        setHasProfile(true);
       }
       return true;
     } catch (e) {

@@ -1,7 +1,7 @@
 # FE Sprint 01 — Mobile Auth Foundation (Token-Based)
 
-**Status:** Planned  
-**Priority:** 🔴 **P0 BLOCKER** — Android app cannot launch without this  
+**Status:** ✅ **Done** (2026-08-22) — all 4 stories code-complete; manual/E2E smoke partial  
+**Priority:** 🔴 **P0** — Foundation for mobile auth (code complete; Android shell + FE-03 socket auth remain for launch)  
 **Depends on:** None (independent)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Repo:** `dating-ui` (frontend)  
@@ -55,19 +55,19 @@ Implement **token-based authentication** (JWT or opaque tokens) that works for:
 
 ### Frontend (`dating-ui`)
 
-- [ ] **Auth context** stores tokens in memory (web) or secure storage (mobile)
-- [ ] **API client** attaches `Authorization: Bearer <token>` to all requests
-- [ ] **Auto-refresh** logic triggers before token expires
-- [ ] **Login/logout** updates token state
-- [ ] **Backward compat** web flow still works (cookies + tokens dual mode)
+- [x] **Auth context** stores tokens in memory + sessionStorage (web); Capacitor Preferences (mobile)
+- [x] **API client** attaches `Authorization: Bearer <token>` to authenticated requests — Story 3 ✅
+- [x] **Auto-refresh** logic triggers before token expires
+- [x] **Login/logout** updates token state
+- [x] **Backward compat** web flow still works (cookies + tokens dual mode)
 
 ### Testing
 
-- [ ] Web app login/logout works (Chrome, Safari)
-- [ ] Token refresh works (let token expire, verify auto-refresh)
-- [ ] Android mock test (Capacitor stub or React Native stub)
+- [ ] Web app login/logout works (Chrome, Safari) — manual smoke deferred
+- [ ] Token refresh works (let token expire, verify auto-refresh) — manual smoke deferred
+- [x] Android mock test (Capacitor Preferences unit tests) — emulator deferred Phase B
 - [ ] Unauthorized → redirect to login
-- [ ] Concurrent requests during refresh don't duplicate refresh calls
+- [x] Concurrent requests during refresh don't duplicate refresh calls — Story 3 (coordinator mutex)
 
 ---
 
@@ -104,7 +104,8 @@ Implement **token-based authentication** (JWT or opaque tokens) that works for:
 
 ### Story 2 — Frontend Auth Context + Token Storage
 **Effort:** 2-3 days  
-**Risk:** 🟡 MEDIUM (need to handle race conditions on refresh)
+**Risk:** 🟡 MEDIUM (need to handle race conditions on refresh)  
+**Status:** ✅ **Done** (2026-08-22) — uncommitted on `feature/fe-sprint-01-story-1` (dating-ui changes)
 
 **Tasks:**
 1. Create `AuthContext` (stores `accessToken`, `refreshToken`, `user` in state)
@@ -131,7 +132,10 @@ Implement **token-based authentication** (JWT or opaque tokens) that works for:
 
 ### Story 3 — API Client Integration (Axios/Fetch + Token)
 **Effort:** 2 days  
-**Risk:** 🟢 LOW
+**Risk:** 🟢 LOW  
+**Status:** ✅ **Done** (2026-08-22) — uncommitted on working tree (dating-ui)
+
+**Delivered:** `authenticatedFetch()` (fetch-native, no axios), `auth-refresh-coordinator`, `auth-session-revocation`, 13 lib `*-api.ts` modules migrated. See [STORY_03_api_client_integration.md](./STORY_03_api_client_integration.md).
 
 **Tasks:**
 1. Create centralized `apiClient.ts` (Axios or fetch wrapper)
@@ -162,7 +166,10 @@ const res = await apiClient.get('/api/me/profile');
 
 ### Story 4 — Platform Detection + Mobile Stub
 **Effort:** 1-2 days  
-**Risk:** 🟢 LOW
+**Risk:** 🟢 LOW  
+**Status:** ✅ **Done** (2026-08-22) — Phase A; uncommitted on working tree (dating-ui)
+
+**Delivered:** `platform.ts`, `CapacitorTokenStorage` (Preferences), `ReactNativeTokenStorage` stub, `@capacitor/core` + `@capacitor/preferences`. Phase B (Android shell) deferred. See [STORY_04_platform_mobile_stub.md](./STORY_04_platform_mobile_stub.md).
 
 **Tasks:**
 1. Create `platform.ts` utility (detect web vs Capacitor vs React Native)

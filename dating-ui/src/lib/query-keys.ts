@@ -5,6 +5,14 @@ export const queryKeys = {
     conversations: {
       unreadTotal: ['me', 'conversations', 'unread-total'] as const,
       list: ['me', 'conversations', 'list'] as const,
+      messages: (conversationId: string) =>
+        ['me', 'conversations', 'messages', conversationId] as const,
+    },
+    profile: {
+      detail: ['me', 'profile'] as const,
+    },
+    matches: {
+      list: ['me', 'matches', 'list'] as const,
     },
   },
   admin: {

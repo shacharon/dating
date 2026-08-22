@@ -4,18 +4,33 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { enCopy } from '@/lib/i18n/en';
 import type { MeMatchItemDto } from '@/lib/me-matches-api';
 
-const { likeMatch, passMatch, emitProductLog } = vi.hoisted(() => ({
+const { likeMatch, passMatch, undoMatchAction, fetchMatchAction, blockMatch, emitProductLog } = vi.hoisted(() => ({
   likeMatch: vi.fn(),
   passMatch: vi.fn(),
+  undoMatchAction: vi.fn(),
+  fetchMatchAction: vi.fn(),
+  blockMatch: vi.fn(),
   emitProductLog: vi.fn(),
+}));
+
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    matches: {
+      likeMatch,
+      passMatch,
+      undoMatchAction,
+      fetchMatchAction,
+      blockMatch,
+    },
+  },
 }));
 
 vi.mock('@/lib/me-matches-api', () => ({
   likeMatch,
   passMatch,
-  undoMatchAction: vi.fn(),
-  fetchMatchAction: vi.fn(),
-  blockMatch: vi.fn(),
+  undoMatchAction,
+  fetchMatchAction,
+  blockMatch,
 }));
 
 vi.mock('@/lib/observability/product-logger', () => ({
@@ -52,6 +67,18 @@ vi.mock('@/components/match-photo', () => ({
 }));
 
 import { MatchBrowseCard } from './match-browse-card';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
+
+function renderCard(ui: React.ReactElement) {
+  return render(
+    <QueryClientTestProvider client={createTestQueryClient()}>
+      {ui}
+    </QueryClientTestProvider>,
+  );
+}
 
 const match = {
   id: 'prof-1',
@@ -95,7 +122,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('renders photo-first region, collapsed why, and like/pass', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -124,7 +151,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('expands why and emits analytics with explanation_expanded true', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -180,7 +207,7 @@ describe('MatchBrowseCard', () => {
       conversationId: null,
     });
 
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -201,7 +228,7 @@ describe('MatchBrowseCard', () => {
 
   it('keeps photo h-[70vh] with long hook and Why closed (no layout steal)', () => {
     const longHook = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ');
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -234,7 +261,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('keeps small corner score badge (not Mode B hero)', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -256,7 +283,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('hides score badge when teaser.showScore is false', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -276,7 +303,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('hook uses dark-mode text token; card exposes teaser mode', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -298,7 +325,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B shows score hero + claim, hides corner badge', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -356,7 +383,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B empty claim uses i18n fallback; emits ready_again analytics', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -394,7 +421,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B omits score hero when matchScore is null', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -424,7 +451,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode B hides score hero when teaser.showScore is false', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -452,7 +479,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode A does not render Mode B teaser block', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={match}
@@ -474,7 +501,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode C shows hybrid lines, hides corner badge and Mode B hero', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -537,7 +564,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode C empty lines uses i18n fallback; emits new_chapter analytics', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{
@@ -576,7 +603,7 @@ describe('MatchBrowseCard', () => {
   });
 
   it('Mode C one-line teaser does not invent line2', () => {
-    render(
+    renderCard(
       <ul>
         <MatchBrowseCard
           match={{

@@ -64,6 +64,7 @@ describe('MessagingGateway', () => {
   const wsSession = {
     isSessionActive: jest.fn().mockResolvedValue(true),
     isConnectionAllowed: jest.fn().mockResolvedValue(true),
+    isBearerConnectionAllowed: jest.fn().mockResolvedValue(true),
   } as unknown as MessagingWsSessionService;
 
   const socketRegistry = {
@@ -108,9 +109,10 @@ describe('MessagingGateway', () => {
     expect(publisher.bindNamespaceServer).toHaveBeenCalledWith(ns);
   });
 
-  it('joins user and session rooms, registers socket, and logs connect on valid handshake', async () => {
+  it('joins user and session rooms, registers socket, and logs connect on valid session handshake', async () => {
     (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
       ok: true,
+      authKind: 'session',
       userId: 'user_a',
       sessionId: 'sess_a',
     });
@@ -130,6 +132,34 @@ describe('MessagingGateway', () => {
       'user_a',
       ProductAnalyticsEvents.MESSAGING_WS_CONNECTED,
       { activeConnections: 1 },
+    );
+  });
+
+  it('joins user room only on bearer handshake', async () => {
+    (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
+      ok: true,
+      authKind: 'bearer',
+      userId: 'user_bearer',
+    });
+    const client = {
+      id: 'socket_bearer_1',
+      handshake: {
+        headers: {},
+        auth: { token: 'jwt-access' },
+      },
+      data: {},
+      join: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn(),
+      emit: jest.fn(),
+    } as unknown as Socket;
+
+    await gateway.handleConnection(client);
+
+    expect(client.join).toHaveBeenCalledWith(userRoom('user_bearer'));
+    expect(client.join).not.toHaveBeenCalledWith(expect.stringContaining('session:'));
+    expect((client.data as { authKind: string }).authKind).toBe('bearer');
+    expect((client.data as { bearerAccessToken: string }).bearerAccessToken).toBe(
+      'jwt-access',
     );
   });
 
@@ -156,7 +186,7 @@ describe('MessagingGateway', () => {
       { id: 'conv_1' },
     );
     const client = mockSocket();
-    client.data = { userId: 'user_a', sessionId: 'sess_a' };
+    client.data = { userId: 'user_a', authKind: 'session', sessionId: 'sess_a' };
 
     await gateway.onSubscribe(client, { conversationId: 'conv_1' });
 
@@ -174,7 +204,7 @@ describe('MessagingGateway', () => {
       new ForbiddenException(),
     );
     const client = mockSocket();
-    client.data = { userId: 'user_a', sessionId: 'sess_a' };
+    client.data = { userId: 'user_a', authKind: 'session', sessionId: 'sess_a' };
 
     await gateway.onSubscribe(client, { conversationId: 'conv_other' });
 
@@ -190,7 +220,7 @@ describe('MessagingGateway', () => {
 
   it('emits subscribe.denied for invalid payload', async () => {
     const client = mockSocket();
-    client.data = { userId: 'user_a', sessionId: 'sess_a' };
+    client.data = { userId: 'user_a', authKind: 'session', sessionId: 'sess_a' };
 
     await gateway.onSubscribe(client, { conversationId: '  ' });
 
@@ -205,6 +235,7 @@ describe('MessagingGateway', () => {
     const client = mockSocket();
     client.data = {
       userId: 'user_a',
+      authKind: 'session',
       sessionId: 'sess_a',
       subscribedConversationIds: new Set(['conv_1']),
     };
@@ -221,7 +252,7 @@ describe('MessagingGateway', () => {
       new WsRateLimitExceededError(),
     );
     const client = mockSocket();
-    client.data = { userId: 'user_a', sessionId: 'sess_a' };
+    client.data = { userId: 'user_a', authKind: 'session', sessionId: 'sess_a' };
 
     await gateway.onSubscribe(client, { conversationId: 'conv_1' });
 
@@ -236,6 +267,7 @@ describe('MessagingGateway', () => {
     jest.useFakeTimers();
     (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
       ok: true,
+      authKind: 'session',
       userId: 'user_a',
       sessionId: 'sess_a',
     });
@@ -259,10 +291,43 @@ describe('MessagingGateway', () => {
     jest.useRealTimers();
   });
 
+  it('uses bearer revalidation for bearer connections', async () => {
+    jest.useFakeTimers();
+    (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
+      ok: true,
+      authKind: 'bearer',
+      userId: 'user_bearer',
+    });
+    const client = {
+      id: 'socket_bearer_reval',
+      handshake: { headers: {}, auth: { token: 'jwt-live' } },
+      data: {},
+      join: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn(),
+      emit: jest.fn(),
+    } as unknown as Socket;
+
+    await gateway.handleConnection(client);
+    (wsSession.isBearerConnectionAllowed as jest.Mock).mockClear();
+
+    jest.advanceTimersByTime(WS_SESSION_REVALIDATE_MS);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(wsSession.isBearerConnectionAllowed).toHaveBeenCalledWith(
+      'user_bearer',
+      'jwt-live',
+    );
+    expect(wsSession.isConnectionAllowed).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
   it('disconnects when periodic session check fails', async () => {
     jest.useFakeTimers();
     (wsAuth.validateHandshake as jest.Mock).mockResolvedValue({
       ok: true,
+      authKind: 'session',
       userId: 'user_a',
       sessionId: 'sess_a',
     });
@@ -288,6 +353,7 @@ describe('MessagingGateway', () => {
     const client = mockSocket();
     client.data = {
       userId: 'user_b',
+      authKind: 'session',
       sessionId: 'sess_b',
       sessionCheckTimer: setInterval(() => {}, 60_000),
     };

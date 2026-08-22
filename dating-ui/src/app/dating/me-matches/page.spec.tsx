@@ -5,7 +5,7 @@ import type { MatchRecommendationDto } from '@/lib/me-matches-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 
-const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock, pushMock, likeMatch, passMatch, undoMatchAction, fetchMatchAction, emitProductLog } = vi.hoisted(() => ({
+const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock, pushMock, likeMatch, passMatch, undoMatchAction, fetchMatchAction, blockMatch, emitProductLog } = vi.hoisted(() => ({
   fetchMyMatches: vi.fn(),
   submitMyProfileForAnalysis: vi.fn(),
   fetchMyProfile: vi.fn(),
@@ -16,7 +16,27 @@ const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfil
   passMatch: vi.fn(),
   undoMatchAction: vi.fn(),
   fetchMatchAction: vi.fn(),
+  blockMatch: vi.fn(),
   emitProductLog: vi.fn(),
+}));
+
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    matches: {
+      fetchMyMatches,
+      likeMatch,
+      passMatch,
+      blockMatch,
+      undoMatchAction,
+      fetchMatchAction,
+    },
+    profile: {
+      fetchMyProfile,
+      submitMyProfileForAnalysis,
+      patchMyProfile: vi.fn(),
+      createMyProfile: vi.fn(),
+    },
+  },
 }));
 
 vi.mock('@/lib/me-matches-api', () => ({
@@ -25,12 +45,7 @@ vi.mock('@/lib/me-matches-api', () => ({
   passMatch,
   undoMatchAction,
   fetchMatchAction,
-  blockMatch: vi.fn(),
-}));
-
-vi.mock('@/lib/me-profile-api', () => ({
-  submitMyProfileForAnalysis,
-  fetchMyProfile,
+  blockMatch,
 }));
 
 vi.mock('@/lib/me-photos-api', () => ({
@@ -55,7 +70,19 @@ class MockIntersectionObserver {
 }
 vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 import MeMatchesPage from './me-matches-page-client';
+
+function renderPage(ui: React.ReactElement = <MeMatchesPage />) {
+  return render(
+    <QueryClientTestProvider client={createTestQueryClient()}>
+      {ui}
+    </QueryClientTestProvider>,
+  );
+}
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: replaceMock, push: pushMock }),
@@ -124,7 +151,7 @@ describe('MeMatchesPage (empty list)', () => {
       matches: [],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
@@ -148,7 +175,7 @@ describe('MeMatchesPage (not_ready photo gate)', () => {
       reason: 'no_photo',
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-list-photo-gate')).toBeTruthy();
@@ -170,7 +197,7 @@ describe('MeMatchesPage (not_ready photo gate)', () => {
       { id: 'ph1', status: 'PENDING' },
     ]);
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -195,7 +222,7 @@ describe('MeMatchesPage (not_ready analysis redirect)', () => {
       reason: 'not_analyzed',
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/profile?tab=analysis');
@@ -220,7 +247,7 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
       matches: [baseMatch],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -250,19 +277,22 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
     submitMyProfileForAnalysis.mockImplementation(async () => {
       submitted = true;
       return {
-        id: 'p1',
-        userId: 'u1',
-        status: 'SUBMITTED',
-        onboardingStep: 'COMPLETED',
-        aboutMe: null,
-        aboutPartner: null,
-        aboutRelationship: null,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
+        analysisJobId: 'job-1',
+        profile: {
+          id: 'p1',
+          userId: 'u1',
+          status: 'SUBMITTED',
+          onboardingStep: 'COMPLETED',
+          aboutMe: null,
+          aboutPartner: null,
+          aboutRelationship: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
       };
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId('matches-refresh-analysis').length).toBeGreaterThanOrEqual(1);
@@ -292,7 +322,7 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
       matches: [baseMatch],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -311,7 +341,7 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
       matches: [baseMatch],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -336,7 +366,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       matches: [{ ...baseMatch, yourAction: 'LIKE' as const }],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You liked this person')).toBeTruthy();
@@ -351,7 +381,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       matches: [{ ...baseMatch, yourAction: 'PASS' as const }],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You passed on this person')).toBeTruthy();
@@ -366,7 +396,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       matches: [{ ...baseMatch, yourAction: null }],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-browse-like')).toBeTruthy();
@@ -402,7 +432,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       ],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -430,7 +460,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       matches: [{ ...baseMatch, nickname: 'River', gender: 'FEMALE', ageYears: 29, locationLabel: 'Tel Aviv' }],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-browse-name').textContent).toMatch(/River/);
@@ -473,7 +503,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       ],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Clear overlap: real depth and presence.')).toBeTruthy();
@@ -517,7 +547,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       ],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -557,7 +587,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       ],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-browse-card')).toBeTruthy();
@@ -589,7 +619,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
       ],
     });
 
-    const { unmount } = render(<MeMatchesPage />);
+    const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-why-toggle')).toBeTruthy();
@@ -633,7 +663,7 @@ describe('MeMatchesPage (blocked list exclusion)', () => {
       ],
     });
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-browse-location').textContent).toBe(
@@ -666,7 +696,7 @@ describe('MeMatchesPage (match photos)', () => {
       ],
     });
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       const photos = screen.getAllByTestId('match-browse-photo');
@@ -687,7 +717,7 @@ describe('MeMatchesPage (match photos)', () => {
       matches: [{ ...baseMatch, primaryPhotoUrl: null }],
     });
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       const photo = screen.getByTestId('match-browse-photo');
@@ -731,7 +761,7 @@ describe('MeMatchesPage (i18n)', () => {
   it('renders Hebrew list copy when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -750,7 +780,7 @@ describe('MeMatchesPage (i18n)', () => {
   it('still renders API list takeaway in English when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(
@@ -783,7 +813,7 @@ describe('MeMatchesPage (priority sections)', () => {
       ],
     });
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-priority-section-high')).toBeTruthy();
@@ -811,7 +841,7 @@ describe('MeMatchesPage (priority sections)', () => {
       ],
     });
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-priority-toggle-good')).toBeTruthy();
@@ -859,7 +889,7 @@ describe('MeMatchesPage (priority sections)', () => {
       ],
     });
 
-    render(<MeMatchesPage />);
+    renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-priority-blocked-trailer')).toBeTruthy();

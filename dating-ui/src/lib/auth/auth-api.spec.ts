@@ -2,10 +2,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetRequestIdContextForTests } from '@/lib/observability/request-id';
 import {
+  authLogout,
   exchangeGoogleIdToken,
   fetchAuthMe,
   fetchAuthMeWithRetry,
   isTransientAuthMeFailure,
+  parseAuthTokenLoginResponse,
+  refreshAccessToken,
 } from './auth-api';
 import { REFERRAL_STORAGE_KEY } from '@/lib/referral-attribution';
 
@@ -16,6 +19,7 @@ describe('auth-api', () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_API_URL = 'http://auth.test';
     resetRequestIdContextForTests();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -157,17 +161,26 @@ describe('auth-api', () => {
       ok: true,
       headers: new Headers(),
       json: async () => ({
-        id: 'u-new',
-        email: 'new@b.com',
-        displayName: 'N',
-        avatarUrl: null,
-        status: 'ACTIVE',
+        user: {
+          id: 'u-new',
+          email: 'new@b.com',
+          displayName: 'N',
+          avatarUrl: null,
+          status: 'ACTIVE',
+        },
+        accessToken: 'access-jwt',
+        refreshToken: 'refresh-jwt',
       }),
     } as Response);
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
     const r = await exchangeGoogleIdToken('jwt-ref');
     expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.user.id).toBe('u-new');
+      expect(r.accessToken).toBe('access-jwt');
+      expect(r.refreshToken).toBe('refresh-jwt');
+    }
     expect(fetch).toHaveBeenCalledWith(
       'http://auth.test/api/v1/auth/google',
       expect.objectContaining({
@@ -176,5 +189,108 @@ describe('auth-api', () => {
       }),
     );
     expect(sessionStorage.getItem(REFERRAL_STORAGE_KEY)).toBeNull();
+  });
+
+  it('parseAuthTokenLoginResponse rejects flat user body', () => {
+    expect(
+      parseAuthTokenLoginResponse({
+        id: 'u1',
+        email: 'a@b.com',
+        status: 'ACTIVE',
+      }),
+    ).toBeNull();
+  });
+
+  it('fetchAuthMe sends Authorization when accessToken provided', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      json: async () => ({
+        id: 'u1',
+        email: 'a@b.com',
+        displayName: 'A',
+        avatarUrl: null,
+        status: 'ACTIVE',
+      }),
+    } as Response);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await fetchAuthMe({ accessToken: 'bearer-token' });
+    expect(fetch).toHaveBeenCalledWith(
+      'http://auth.test/api/v1/auth/me',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer bearer-token',
+        }),
+      }),
+    );
+  });
+
+  it('refreshAccessToken posts refresh token and returns rotated pair', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      json: async () => ({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+      }),
+    } as Response);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const r = await refreshAccessToken('old-refresh');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.accessToken).toBe('new-access');
+      expect(r.refreshToken).toBe('new-refresh');
+    }
+    expect(fetch).toHaveBeenCalledWith(
+      'http://auth.test/api/v1/auth/refresh',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ refreshToken: 'old-refresh' }),
+      }),
+    );
+  });
+
+  it('refreshAccessToken returns failure status on 401', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 401,
+      ok: false,
+      headers: new Headers(),
+      json: async () => ({}),
+    } as Response);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const r = await refreshAccessToken('stale-refresh');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.status).toBe(401);
+  });
+
+  it('authLogout sends Bearer and refreshToken body when provided', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+    } as Response);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await authLogout({
+      accessToken: 'access-jwt',
+      refreshToken: 'refresh-jwt',
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      'http://auth.test/api/v1/auth/logout',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-jwt',
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ refreshToken: 'refresh-jwt' }),
+      }),
+    );
   });
 });

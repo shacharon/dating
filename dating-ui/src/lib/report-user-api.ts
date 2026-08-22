@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import type {
   CreateUserReportBody,
   UserReportResponseDto,
@@ -28,10 +29,9 @@ export async function createUserReport(
   body: CreateUserReportBody,
 ): Promise<UserReportResponseDto> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/me/reports`, {
+  const res = await authenticatedFetch(`/api/v1/me/reports`, {
     method: 'POST',
     headers: JSON_HEADERS,
-    credentials: 'include',
     body: JSON.stringify(body),
   });
   const text = await res.text();

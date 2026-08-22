@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
@@ -24,6 +25,7 @@ import { MessagingRealtimeHealthService } from './messaging-realtime-health.serv
     StructuredLoggingModule,
     SimpleLoggerModule,
     MessagingSocketRegistryModule,
+    AuthModule,
     forwardRef(() => MeProfileModule),
   ],
   providers: [

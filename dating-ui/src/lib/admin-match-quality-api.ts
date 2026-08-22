@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 export type MatchQualitySummary = {
   windowDays: number;
@@ -33,9 +34,9 @@ export async function getMatchQualitySummary(
 ): Promise<MatchQualitySummary> {
   const base = getApiBase();
   const params = new URLSearchParams({ windowDays: String(windowDays) });
-  const res = await fetch(
-    `${base}/api/v1/admin/match-quality/summary?${params.toString()}`,
-    { credentials: 'include', headers: { Accept: 'application/json' } },
+  const res = await authenticatedFetch(`/api/v1/admin/match-quality/summary?${params.toString()}`,
+    {
+    headers: { Accept: 'application/json' } },
   );
   if (res.status === 403) {
     throw new Error('admin_forbidden');
@@ -57,9 +58,9 @@ export async function listNegativeCandidates(
     limit: String(limit),
     offset: String(offset),
   });
-  const res = await fetch(
-    `${base}/api/v1/admin/match-quality/negative-candidates?${params.toString()}`,
-    { credentials: 'include', headers: { Accept: 'application/json' } },
+  const res = await authenticatedFetch(`/api/v1/admin/match-quality/negative-candidates?${params.toString()}`,
+    {
+    headers: { Accept: 'application/json' } },
   );
   if (res.status === 403) {
     throw new Error('admin_forbidden');
@@ -134,9 +135,9 @@ export async function getCandidateAudit(
   if (viewerUserId?.trim()) {
     params.set('viewerUserId', viewerUserId.trim());
   }
-  const res = await fetch(
-    `${base}/api/v1/admin/match-quality/candidates/${encodeURIComponent(profileId)}/audit?${params.toString()}`,
-    { credentials: 'include', headers: { Accept: 'application/json' } },
+  const res = await authenticatedFetch(`/api/v1/admin/match-quality/candidates/${encodeURIComponent(profileId)}/audit?${params.toString()}`,
+    {
+    headers: { Accept: 'application/json' } },
   );
   if (res.status === 403) {
     throw new Error('admin_forbidden');

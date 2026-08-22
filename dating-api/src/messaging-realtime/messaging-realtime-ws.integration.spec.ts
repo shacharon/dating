@@ -1,11 +1,12 @@
 /**
- * WebSocket integration: `/ws/messaging` namespace + session cookie auth.
+ * WebSocket integration: `/ws/messaging` namespace + session cookie + JWT auth.
  * Run: `npx jest messaging-realtime-ws.integration.spec.ts --runInBand`
  */
 import { ForbiddenException } from '@nestjs/common';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { UserStatus } from '@prisma/client';
 import { io, type Socket } from 'socket.io-client';
@@ -36,6 +37,9 @@ describe('Messaging realtime WS (integration)', () => {
   let baseUrl: string;
   let rateLimit: MessagingWsRateLimitService;
   let socketRegistry: MessagingSocketRegistry;
+  let jwtService: JwtService;
+
+  const JWT_SECRET = 'ws-integration-jwt-secret';
 
   const PEPPER = 'messaging-ws-test-pepper';
   const SESSION_COOKIE = 'dating_session';
@@ -66,7 +70,11 @@ describe('Messaging realtime WS (integration)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [() => ({ JWT_SECRET })],
+        }),
         AuthSessionConfigModule,
         PrismaModule,
         SessionModule,
@@ -89,6 +97,7 @@ describe('Messaging realtime WS (integration)', () => {
     app = moduleFixture.createNestApplication();
     rateLimit = app.get(MessagingWsRateLimitService);
     socketRegistry = app.get(MessagingSocketRegistry);
+    jwtService = app.get(JwtService);
     app.useWebSocketAdapter(new IoAdapter(app));
     await app.init();
     await app.listen(0);
@@ -122,6 +131,22 @@ describe('Messaging realtime WS (integration)', () => {
       id: 'conv_allowed',
     });
   });
+
+  function connectWithToken(accessToken: string): Socket {
+    return io(`${baseUrl}${MESSAGING_WS_NAMESPACE}`, {
+      path: '/socket.io',
+      transports: ['websocket'],
+      forceNew: true,
+      auth: { token: accessToken },
+    });
+  }
+
+  function mintAccessToken(userId: string, expiresIn: string | number = '15m'): string {
+    return jwtService.sign(
+      { sub: userId, typ: 'access' },
+      { secret: JWT_SECRET, expiresIn },
+    );
+  }
 
   function connectSocket(
     cookieHeader?: string,
@@ -189,6 +214,78 @@ describe('Messaging realtime WS (integration)', () => {
       socket.once(event, handler);
     });
   }
+
+  it('connects to /ws/messaging with valid JWT access token', async () => {
+    const socket = connectWithToken(mintAccessToken('user_ws_1'));
+    try {
+      await waitForConnect(socket);
+      expect(socket.connected).toBe(true);
+    } finally {
+      socket.disconnect();
+    }
+  });
+
+  it('drops connection with invalid JWT and no cookie', async () => {
+    const socket = connectWithToken('not.a.valid.jwt');
+    try {
+      await new Promise((r) => setTimeout(r, 500));
+      expect(socket.connected).toBe(false);
+    } finally {
+      if (socket.connected) {
+        socket.disconnect();
+      }
+    }
+  });
+
+  it('connects with valid JWT when cookie is also present (token first)', async () => {
+    const socket = io(`${baseUrl}${MESSAGING_WS_NAMESPACE}`, {
+      path: '/socket.io',
+      transports: ['websocket'],
+      forceNew: true,
+      auth: { token: mintAccessToken('user_ws_1') },
+      extraHeaders: { cookie: `${SESSION_COOKIE}=${RAW_TOKEN}` },
+    });
+    try {
+      await waitForConnect(socket);
+      expect(socket.connected).toBe(true);
+    } finally {
+      socket.disconnect();
+    }
+  });
+
+  it('falls back to session cookie when JWT is expired', async () => {
+    const socket = io(`${baseUrl}${MESSAGING_WS_NAMESPACE}`, {
+      path: '/socket.io',
+      transports: ['websocket'],
+      forceNew: true,
+      auth: { token: mintAccessToken('user_ws_1', '-1s') },
+      extraHeaders: { cookie: `${SESSION_COOKIE}=${RAW_TOKEN}` },
+    });
+    try {
+      await waitForConnect(socket);
+      expect(socket.connected).toBe(true);
+    } finally {
+      socket.disconnect();
+    }
+  });
+
+  it('returns subscribe.ok over JWT-authenticated socket', async () => {
+    const socket = connectWithToken(mintAccessToken('user_ws_1'));
+    try {
+      await waitForConnect(socket);
+      const ackPromise = waitForEvent<{ conversationId: string }>(
+        socket,
+        MESSAGING_EVENT_SUBSCRIBE_OK,
+      );
+      socket.emit(MESSAGING_EVENT_CONVERSATION_SUBSCRIBE, {
+        conversationId: 'conv_allowed',
+      });
+      const ack = await ackPromise;
+      expect(ack.conversationId).toBe('conv_allowed');
+    } finally {
+      socket.disconnect();
+    }
+  });
 
   it('connects to /ws/messaging with valid session cookie', async () => {
     const socket = connectSocket(`${SESSION_COOKIE}=${RAW_TOKEN}`);

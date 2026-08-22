@@ -14,12 +14,13 @@ import {
   profileToMatchPreferencesForm,
   type MatchPreferencesFormState,
 } from '@/lib/match-preferences-form';
-import { resolveEditableProfile } from '@/lib/profile-form';
+import { useProfile } from '@/hooks/use-profile';
 
 /** Profile hub Settings tab: notifications + match-prefs preview. */
 export function ProfileSettingsTab() {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
+  const { profile, isLoading, error: profileError } = useProfile();
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>(
     'loading',
   );
@@ -28,29 +29,23 @@ export function ProfileSettingsTab() {
   );
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const profile = await resolveEditableProfile();
-        if (cancelled) return;
-        if (!profile) {
-          setForm(emptyMatchPreferencesFormState());
-          setStatus('ready');
-          return;
-        }
-        setForm(profileToMatchPreferencesForm(profile));
-        setStatus('ready');
-      } catch {
-        if (!cancelled) {
-          setForm(emptyMatchPreferencesFormState());
-          setStatus('error');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (isLoading) {
+      setStatus('loading');
+      return;
+    }
+    if (profileError) {
+      setForm(emptyMatchPreferencesFormState());
+      setStatus('error');
+      return;
+    }
+    if (!profile) {
+      setForm(emptyMatchPreferencesFormState());
+      setStatus('ready');
+      return;
+    }
+    setForm(profileToMatchPreferencesForm(profile));
+    setStatus('ready');
+  }, [profile, isLoading, profileError]);
 
   const lines =
     status === 'ready' && matchPreferencesPreviewHasValues(form)

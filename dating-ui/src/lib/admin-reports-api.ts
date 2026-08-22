@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -42,8 +43,7 @@ export async function listAdminReports(
   const base = getApiBase();
   const params = new URLSearchParams({ status });
   if (cursor) params.set('cursor', cursor);
-  const res = await fetch(`${base}/api/v1/admin/reports?${params.toString()}`, {
-    credentials: 'include',
+  const res = await authenticatedFetch(`/api/v1/admin/reports?${params.toString()}`, {
     headers: { Accept: 'application/json' },
   });
   if (res.status === 403) {
@@ -57,9 +57,9 @@ export async function listAdminReports(
 
 export async function getAdminReport(reportId: string): Promise<AdminReportDetail> {
   const base = getApiBase();
-  const res = await fetch(
-    `${base}/api/v1/admin/reports/${encodeURIComponent(reportId)}`,
-    { credentials: 'include', headers: { Accept: 'application/json' } },
+  const res = await authenticatedFetch(`/api/v1/admin/reports/${encodeURIComponent(reportId)}`,
+    {
+    headers: { Accept: 'application/json' } },
   );
   if (res.status === 403) {
     throw new Error('admin_forbidden');
@@ -76,12 +76,10 @@ export async function updateAdminReport(
   opsNote?: string,
 ): Promise<AdminReportDetail> {
   const base = getApiBase();
-  const res = await fetch(
-    `${base}/api/v1/admin/reports/${encodeURIComponent(reportId)}`,
+  const res = await authenticatedFetch(`/api/v1/admin/reports/${encodeURIComponent(reportId)}`,
     {
       method: 'PATCH',
-      credentials: 'include',
-      headers: JSON_HEADERS,
+    headers: JSON_HEADERS,
       body: JSON.stringify({
         status,
         ...(opsNote?.trim() ? { opsNote: opsNote.trim() } : {}),

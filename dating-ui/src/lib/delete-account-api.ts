@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -7,10 +8,9 @@ const JSON_HEADERS = {
 
 export async function deleteMyAccount(confirmation: string): Promise<void> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/me/account`, {
+  const res = await authenticatedFetch(`/api/v1/me/account`, {
     method: 'DELETE',
     headers: JSON_HEADERS,
-    credentials: 'include',
     body: JSON.stringify({ confirmation }),
   });
   if (res.status === 204) {

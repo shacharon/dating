@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import type { ProfileDraft } from '@/app/dating/_lib/types';
 import { ProfileAnalysisTab } from '@/components/profile/profile-analysis-tab';
 import { ProfileEditTab } from '@/components/profile/profile-edit-tab';
 import {
@@ -13,8 +12,9 @@ import {
 import { ProfileOverviewTab } from '@/components/profile/profile-overview-tab';
 import { ProfileQualityMeter } from '@/components/profile/profile-quality-meter';
 import { ProfileSettingsTab } from '@/components/profile/profile-settings-tab';
-import { profileToFormFields, resolveEditableProfile } from '@/lib/profile-form';
+import { profileToFormFields } from '@/lib/profile-form';
 import { useAppLocale } from '@/lib/i18n';
+import { useProfile } from '@/hooks/use-profile';
 
 export default function ProfileHubClient() {
   const searchParams = useSearchParams();
@@ -23,43 +23,24 @@ export default function ProfileHubClient() {
   const vp = copy.profile.viewPage;
   const tab = parseProfileHubTab(searchParams.get('tab'));
 
-  const [draft, setDraft] = useState<ProfileDraft | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { profile, isLoading, error: loadError } = useProfile();
+  const draft = useMemo(
+    () => (profile ? profileToFormFields(profile) : null),
+    [profile],
+  );
   const [qualityRefreshKey, setQualityRefreshKey] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await resolveEditableProfile();
-        if (cancelled) return;
-        setDraft(profile ? profileToFormFields(profile) : null);
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(
-            e instanceof Error ? e.message : copy.onboarding.loadFailed,
-          );
-          setDraft(null);
-        }
-      } finally {
-        if (!cancelled) setMounted(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [copy.onboarding.loadFailed]);
-
-  useEffect(() => {
-    if (!mounted) return;
+    if (isLoading) return;
     const hash = window.location.hash.replace(/^#/, '');
     if (!hash) return;
     const el = document.getElementById(hash);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [mounted, tab]);
+  }, [isLoading, tab]);
+
+  const mounted = !isLoading;
 
   return (
     <div

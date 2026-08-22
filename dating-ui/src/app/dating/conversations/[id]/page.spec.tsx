@@ -62,6 +62,18 @@ const {
   };
 });
 
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    conversations: {
+      fetchMyConversationById,
+      fetchConversationMessages,
+      markConversationAsRead,
+      sendConversationMessage,
+      unmatchMyConversation,
+    },
+  },
+}));
+
 vi.mock('@/lib/conversations-api', () => ({
   fetchMyConversationById,
   fetchConversationMessages,
@@ -124,7 +136,19 @@ vi.mock('next/navigation', () => ({
 
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 import ConversationDetailPage from './page';
+
+function renderPage(ui: React.ReactElement = <ConversationDetailPage />) {
+  return render(
+    <QueryClientTestProvider client={createTestQueryClient()}>
+      {ui}
+    </QueryClientTestProvider>,
+  );
+}
 
 vi.mock('next/link', () => ({
   default ({
@@ -197,7 +221,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('sets active conversation id on mount and clears on unmount', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(setActiveConversationId).toHaveBeenCalledWith('mutual_abc');
@@ -211,7 +235,7 @@ describe('ConversationDetailPage', () => {
   it('renders match card with name and matched date', async () => {
     fetchMyConversationById.mockResolvedValue(detail);
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-match-card')).toBeTruthy();
@@ -225,7 +249,7 @@ describe('ConversationDetailPage', () => {
   it('renders enabled composer and empty messages state', async () => {
     fetchMyConversationById.mockResolvedValue(detail);
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-messaging')).toBeTruthy();
@@ -242,7 +266,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('loads messages on mount', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(fetchConversationMessages).toHaveBeenCalledWith('mutual_abc');
@@ -251,7 +275,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('calls markConversationAsRead after conversation shell loads', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(markConversationAsRead).toHaveBeenCalledWith('mutual_abc');
@@ -260,7 +284,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('refreshes nav unread after successful mark-as-read', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(markConversationAsRead).toHaveBeenCalledWith('mutual_abc');
@@ -278,7 +302,7 @@ describe('ConversationDetailPage', () => {
       get: () => 'visible',
     });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(markConversationAsRead).toHaveBeenCalled();
@@ -309,7 +333,7 @@ describe('ConversationDetailPage', () => {
       get: () => 'visible',
     });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(markConversationAsRead).toHaveBeenCalled();
@@ -325,7 +349,7 @@ describe('ConversationDetailPage', () => {
   it('does not show error banner when mark-as-read fails', async () => {
     markConversationAsRead.mockRejectedValue(new Error('Mark read failed'));
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(markConversationAsRead).toHaveBeenCalled();
@@ -359,7 +383,7 @@ describe('ConversationDetailPage', () => {
       pagination: { hasMore: false, nextCursor: null },
     });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('My message')).toBeTruthy();
@@ -390,7 +414,7 @@ describe('ConversationDetailPage', () => {
       pagination: { hasMore: false, nextCursor: null },
     });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-message-time')).toBeTruthy();
@@ -423,7 +447,7 @@ describe('ConversationDetailPage', () => {
       pagination: { hasMore: false, nextCursor: null },
     });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Mine timed')).toBeTruthy();
@@ -478,7 +502,7 @@ describe('ConversationDetailPage', () => {
         pagination: { hasMore: false, nextCursor: null },
       });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-load-earlier')).toBeTruthy();
@@ -501,7 +525,7 @@ describe('ConversationDetailPage', () => {
       new Error('Failed to load messages'),
     );
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-messages-error')).toBeTruthy();
@@ -516,7 +540,7 @@ describe('ConversationDetailPage', () => {
       pagination: { hasMore: false, nextCursor: null },
     });
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Hello there')).toBeTruthy();
@@ -537,7 +561,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('shows character count as draft length / 2000', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-char-count')).toBeTruthy();
@@ -554,7 +578,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('shows red character count and disables Send when draft exceeds 2000', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Message')).toBeTruthy();
@@ -579,7 +603,7 @@ describe('ConversationDetailPage', () => {
       new Error('Too many messages. Please wait.'),
     );
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Message')).toBeTruthy();
@@ -616,7 +640,7 @@ describe('ConversationDetailPage', () => {
       ),
     );
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Message')).toBeTruthy();
@@ -641,7 +665,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('disables Send when draft is empty', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-send-button')).toBeTruthy();
@@ -655,7 +679,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('calls sendConversationMessage and shows message bubble on Send', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Message')).toBeTruthy();
@@ -683,7 +707,7 @@ describe('ConversationDetailPage', () => {
   it('shows send error when API fails', async () => {
     sendConversationMessage.mockRejectedValue(new Error('Network error'));
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Message')).toBeTruthy();
@@ -704,7 +728,7 @@ describe('ConversationDetailPage', () => {
   it('renders back link to conversation list', async () => {
     fetchMyConversationById.mockResolvedValue(detail);
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-back-link')).toBeTruthy();
@@ -720,7 +744,7 @@ describe('ConversationDetailPage', () => {
       new Error('Conversation not found.'),
     );
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-error')).toBeTruthy();
@@ -730,7 +754,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('shows Unmatch button on loaded detail', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
@@ -739,7 +763,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('shows confirmation with other user name when Unmatch is clicked', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
@@ -754,7 +778,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('opens report dialog from overflow menu', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('conversation-report-open')).toBeTruthy();
@@ -768,7 +792,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('cancels unmatch without calling API', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
@@ -783,7 +807,7 @@ describe('ConversationDetailPage', () => {
   });
 
   it('calls unmatchMyConversation and redirects on confirm', async () => {
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
@@ -802,7 +826,7 @@ describe('ConversationDetailPage', () => {
   it('shows error when unmatch fails', async () => {
     unmatchMyConversation.mockRejectedValue(new Error('Network error'));
 
-    const { unmount } = render(<ConversationDetailPage />);
+    const { unmount } = renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^unmatch$/i })).toBeTruthy();
@@ -836,7 +860,7 @@ describe('ConversationDetailPage', () => {
   });
 
     it('appends a bubble when message.new is received', async () => {
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(acquireMessagingSocket).toHaveBeenCalled();
@@ -854,7 +878,7 @@ describe('ConversationDetailPage', () => {
     it('does not schedule polling interval when mode is ws', async () => {
       const intervalSpy = vi.spyOn(global, 'setInterval');
 
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('conversation-messaging')).toBeTruthy();
@@ -869,7 +893,7 @@ describe('ConversationDetailPage', () => {
     });
 
     it('ignores message.new for a different conversationId', async () => {
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(messageNewHandlerRef.current).toBeTruthy();
@@ -887,7 +911,7 @@ describe('ConversationDetailPage', () => {
     });
 
     it('shows reconnecting banner after disconnect', async () => {
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(connectHandlerRef.current).toBeTruthy();
@@ -925,7 +949,7 @@ describe('ConversationDetailPage', () => {
           pagination: { hasMore: false, nextCursor: null },
         });
 
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(connectHandlerRef.current).toBeTruthy();
@@ -966,7 +990,7 @@ describe('ConversationDetailPage', () => {
           pagination: { hasMore: false, nextCursor: null },
         });
 
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(connectHandlerRef.current).toBeTruthy();
@@ -984,7 +1008,7 @@ describe('ConversationDetailPage', () => {
     });
 
     it('releases shared socket on unmount', async () => {
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(acquireMessagingSocket).toHaveBeenCalled();
@@ -1000,7 +1024,7 @@ describe('ConversationDetailPage', () => {
         pagination: { hasMore: false, nextCursor: null },
       });
 
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Message')).toBeTruthy();
@@ -1033,7 +1057,7 @@ describe('ConversationDetailPage', () => {
     });
 
     it('does not show reconnecting banner in poll mode', async () => {
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('conversation-messaging')).toBeTruthy();
@@ -1060,7 +1084,7 @@ describe('ConversationDetailPage', () => {
         pagination: { hasMore: false, nextCursor: null },
       });
 
-      const { unmount } = render(<ConversationDetailPage />);
+      const { unmount } = renderPage(<ConversationDetailPage />);
 
       await waitFor(() => {
         expect(
@@ -1122,7 +1146,7 @@ describe('ConversationDetailPage (i18n)', () => {
   it('renders Hebrew messaging chrome when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(<ConversationDetailPage />);
+    renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(
@@ -1157,7 +1181,7 @@ describe('ConversationDetailPage (i18n)', () => {
       pagination: { hasMore: false, nextCursor: null },
     });
 
-    render(<ConversationDetailPage />);
+    renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Thanks for saying hi!')).toBeTruthy();
@@ -1168,7 +1192,7 @@ describe('ConversationDetailPage (i18n)', () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     fetchConversationMessages.mockRejectedValue('network');
 
-    render(<ConversationDetailPage />);
+    renderPage(<ConversationDetailPage />);
 
     await waitFor(() => {
       expect(

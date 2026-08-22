@@ -1,18 +1,20 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  fetchMyProfile,
-  patchMyProfile,
-  submitMyProfileForAnalysis,
-} from '@/lib/me-profile-api';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { PatchMeProfileBody } from '@/lib/me-profile-api';
 import {
   ContentModerationApiError,
   type ContentModerationDetails,
 } from '@/lib/content-moderation-error';
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/onboarding-path';
+import {
+  usePatchProfile,
+  useProfile,
+  useSubmitProfileForAnalysis,
+} from '@/hooks/use-profile';
+import { datingApi } from '@/lib/api-sdk';
 
 export type UseOnboardingTextsFormOptions = {
   variant?: 'onboarding' | 'profileHub';
@@ -32,6 +34,11 @@ export function useOnboardingTextsForm({
   const prompts = ob.writingPrompts;
   const mod = copy.contentModeration;
   const isHub = variant === 'profileHub';
+
+  const { profile, isLoading, error: profileLoadError } = useProfile();
+  const patchMutation = usePatchProfile();
+  const submitMutation = useSubmitProfileForAnalysis();
+
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
@@ -43,6 +50,7 @@ export function useOnboardingTextsForm({
     useState<ContentModerationDetails | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const loadHandledRef = useRef(false);
 
   const aboutMeRef = useRef<HTMLTextAreaElement>(null);
   const aboutPartnerRef = useRef<HTMLTextAreaElement>(null);
@@ -63,44 +71,53 @@ export function useOnboardingTextsForm({
         ? '/onboarding/basic?edit=1'
         : '/onboarding/basic';
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled) return;
-        if (!isHub) {
-          const path = onboardingResumePath(profile, resumeOptions);
-          if (path !== '/onboarding/texts') {
-            setProfileSyncing(false);
-            router.replace(path);
-            return;
-          }
-          if (!profile) {
-            setProfileSyncing(false);
-            router.replace('/onboarding/basic');
-            return;
-          }
-        } else if (!profile) {
-          setProfileSyncing(false);
-          setLoadError(ob.loadFailed);
-          return;
-        }
-        setAboutMe(profile.aboutMe ?? '');
-        setAboutPartner(profile.aboutPartner ?? '');
-        setAboutRelationship(profile.aboutRelationship ?? '');
+  useLayoutEffect(() => {
+    if (isLoading || loadHandledRef.current) return;
+
+    if (profileLoadError) {
+      loadHandledRef.current = true;
+      setLoadError(profileLoadError);
+      setProfileSyncing(false);
+      return;
+    }
+
+    if (!isHub) {
+      const path = onboardingResumePath(profile, resumeOptions);
+      if (path !== '/onboarding/texts') {
+        loadHandledRef.current = true;
         setProfileSyncing(false);
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : ob.loadFailed);
-          setProfileSyncing(false);
-        }
+        router.replace(path);
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, resumeOptions, ob.loadFailed, isHub]);
+      if (!profile) {
+        loadHandledRef.current = true;
+        setProfileSyncing(false);
+        router.replace('/onboarding/basic');
+        return;
+      }
+    } else if (!profile) {
+      loadHandledRef.current = true;
+      setLoadError(ob.loadFailed);
+      setProfileSyncing(false);
+      return;
+    }
+
+    if (profile) {
+      setAboutMe(profile.aboutMe ?? '');
+      setAboutPartner(profile.aboutPartner ?? '');
+      setAboutRelationship(profile.aboutRelationship ?? '');
+    }
+    loadHandledRef.current = true;
+    setProfileSyncing(false);
+  }, [
+    profile,
+    isLoading,
+    profileLoadError,
+    router,
+    resumeOptions,
+    ob.loadFailed,
+    isHub,
+  ]);
 
   useEffect(() => {
     if (!moderationDetails?.field) return;
@@ -137,17 +154,24 @@ export function useOnboardingTextsForm({
     setFlat(e instanceof Error ? e.message : flatFallback);
   }
 
+  function textsPatchBody(
+    onboardingStep?: PatchMeProfileBody['onboardingStep'],
+  ): PatchMeProfileBody {
+    return {
+      aboutMe: aboutMe.trim() ? aboutMe : null,
+      aboutPartner: aboutPartner.trim() ? aboutPartner : null,
+      aboutRelationship: aboutRelationship.trim()
+        ? aboutRelationship
+        : null,
+      ...(onboardingStep ? { onboardingStep } : {}),
+    };
+  }
+
   async function handleSaveProgress() {
     setSaveError(null);
     clearModeration();
     try {
-      await patchMyProfile({
-        aboutMe: aboutMe.trim() ? aboutMe : null,
-        aboutPartner: aboutPartner.trim() ? aboutPartner : null,
-        aboutRelationship: aboutRelationship.trim()
-          ? aboutRelationship
-          : null,
-      });
+      await patchMutation.mutateAsync(textsPatchBody());
       onSaved?.();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
@@ -160,7 +184,7 @@ export function useOnboardingTextsForm({
     setFinishError(null);
     clearModeration();
     try {
-      const latest = await fetchMyProfile();
+      const latest = await datingApi.profile.fetchMyProfile();
       if (!latest?.gender || latest.gender === 'PREFER_NOT_TO_SAY') {
         setFinishError(tf.genderMissingError);
         return;
@@ -172,15 +196,10 @@ export function useOnboardingTextsForm({
 
     setFinishing(true);
     try {
-      await patchMyProfile({
-        aboutMe: aboutMe.trim() ? aboutMe : null,
-        aboutPartner: aboutPartner.trim() ? aboutPartner : null,
-        aboutRelationship: aboutRelationship.trim()
-          ? aboutRelationship
-          : null,
-        onboardingStep: 'COMPLETED',
-      });
-      await submitMyProfileForAnalysis();
+      await patchMutation.mutateAsync(
+        textsPatchBody('COMPLETED'),
+      );
+      await submitMutation.mutateAsync();
       onSaved?.();
       if (isHub) {
         setFinishing(false);

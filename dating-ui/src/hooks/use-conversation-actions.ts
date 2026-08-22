@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { unmatchMyConversation } from '@/lib/conversations-api';
+import { useQueryClient } from '@tanstack/react-query';
+import { datingApi } from '@/lib/api-sdk';
+import { queryKeys } from '@/lib/query-keys';
 
 export interface UseConversationActionsReturn {
   unmatch: () => Promise<void>;
@@ -13,6 +15,7 @@ export function useConversationActions(
   conversationId: string,
 ): UseConversationActionsReturn {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [unmatching, setUnmatching] = useState(false);
   const [unmatchError, setUnmatchError] = useState<string | null>(null);
 
@@ -21,7 +24,10 @@ export function useConversationActions(
     setUnmatchError(null);
     setUnmatching(true);
     try {
-      await unmatchMyConversation(conversationId);
+      await datingApi.conversations.unmatchMyConversation(conversationId);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.me.conversations.list,
+      });
       router.push('/dating/conversations');
     } catch (e: unknown) {
       setUnmatchError(
@@ -31,7 +37,7 @@ export function useConversationActions(
     } finally {
       setUnmatching(false);
     }
-  }, [conversationId, unmatching, router]);
+  }, [conversationId, unmatching, router, queryClient]);
 
   const clearUnmatchError = useCallback(() => {
     setUnmatchError(null);

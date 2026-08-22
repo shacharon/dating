@@ -1,17 +1,40 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
+/** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createElement, type ReactNode } from 'react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useConversationActions } from './use-conversation-actions';
-import * as conversationsApi from '@/lib/conversations-api';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
+
+const { unmatchMyConversation } = vi.hoisted(() => ({
+  unmatchMyConversation: vi.fn(),
+}));
+
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    conversations: {
+      unmatchMyConversation,
+    },
+  },
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }));
 
-vi.mock('@/lib/conversations-api');
-
-const mockUnmatchMyConversation = vi.mocked(conversationsApi.unmatchMyConversation);
+const mockUnmatchMyConversation = vi.mocked(unmatchMyConversation);
 const mockPush = vi.fn();
+
+function wrapper({ children }: { children: ReactNode }) {
+  return createElement(
+    QueryClientTestProvider,
+    { client: createTestQueryClient() },
+    children,
+  );
+}
 
 describe('useConversationActions', () => {
   beforeEach(() => {
@@ -23,15 +46,15 @@ describe('useConversationActions', () => {
       forward: vi.fn(),
       refresh: vi.fn(),
       prefetch: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useRouter>);
   });
 
   it('should unmatch conversation successfully', async () => {
     mockUnmatchMyConversation.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useConversationActions('conv-1')
-    );
+    const { result } = renderHook(() => useConversationActions('conv-1'), {
+      wrapper,
+    });
 
     expect(result.current.unmatching).toBe(false);
     expect(result.current.unmatchError).toBeNull();
@@ -51,9 +74,9 @@ describe('useConversationActions', () => {
     const errorMessage = 'Unmatch failed';
     mockUnmatchMyConversation.mockRejectedValue(new Error(errorMessage));
 
-    const { result } = renderHook(() =>
-      useConversationActions('conv-1')
-    );
+    const { result } = renderHook(() => useConversationActions('conv-1'), {
+      wrapper,
+    });
 
     await expect(result.current.unmatch()).rejects.toThrow();
 
@@ -67,12 +90,12 @@ describe('useConversationActions', () => {
 
   it('should not unmatch when already unmatching', async () => {
     mockUnmatchMyConversation.mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 100))
+      () => new Promise((resolve) => setTimeout(resolve, 100)),
     );
 
-    const { result } = renderHook(() =>
-      useConversationActions('conv-1')
-    );
+    const { result } = renderHook(() => useConversationActions('conv-1'), {
+      wrapper,
+    });
 
     const firstUnmatch = result.current.unmatch();
 
@@ -92,9 +115,9 @@ describe('useConversationActions', () => {
     const errorMessage = 'Unmatch failed';
     mockUnmatchMyConversation.mockRejectedValue(new Error(errorMessage));
 
-    const { result } = renderHook(() =>
-      useConversationActions('conv-1')
-    );
+    const { result } = renderHook(() => useConversationActions('conv-1'), {
+      wrapper,
+    });
 
     await expect(result.current.unmatch()).rejects.toThrow();
 
@@ -110,9 +133,9 @@ describe('useConversationActions', () => {
   });
 
   it('should not unmatch without conversation ID', async () => {
-    const { result } = renderHook(() =>
-      useConversationActions('')
-    );
+    const { result } = renderHook(() => useConversationActions(''), {
+      wrapper,
+    });
 
     await result.current.unmatch();
 
@@ -123,9 +146,9 @@ describe('useConversationActions', () => {
   it('should handle generic error message', async () => {
     mockUnmatchMyConversation.mockRejectedValue('Non-error object');
 
-    const { result } = renderHook(() =>
-      useConversationActions('conv-1')
-    );
+    const { result } = renderHook(() => useConversationActions('conv-1'), {
+      wrapper,
+    });
 
     await expect(result.current.unmatch()).rejects.toThrow();
 

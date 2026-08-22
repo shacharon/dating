@@ -1,6 +1,11 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
 const {
   fetchMyProfile,
@@ -12,15 +17,16 @@ const {
   submitMyProfileForAnalysis: vi.fn(),
 }));
 
-vi.mock('@/lib/me-profile-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/me-profile-api')>();
-  return {
-    ...actual,
-    fetchMyProfile,
-    patchMyProfile,
-    submitMyProfileForAnalysis,
-  };
-});
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile,
+      createMyProfile: vi.fn(),
+      submitMyProfileForAnalysis,
+    },
+  },
+}));
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
@@ -49,6 +55,16 @@ const textsProfile: MeProfileDto = {
   updatedAt: '2026-01-02T00:00:00.000Z',
 };
 
+function renderForm() {
+  return render(
+    createElement(
+      QueryClientTestProvider,
+      { client: createTestQueryClient() },
+      createElement(OnboardingTextsForm),
+    ),
+  );
+}
+
 describe('OnboardingTextsForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,7 +74,10 @@ describe('OnboardingTextsForm', () => {
       ...textsProfile,
       ...body,
     }));
-    submitMyProfileForAnalysis.mockResolvedValue(undefined);
+    submitMyProfileForAnalysis.mockResolvedValue({
+      analysisJobId: 'job-1',
+      profile: textsProfile,
+    });
   });
 
   afterEach(() => {
@@ -67,7 +86,7 @@ describe('OnboardingTextsForm', () => {
   });
 
   it('renders English intro and field labels after profile sync', async () => {
-    render(<OnboardingTextsForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(screen.getByText(enCopy.onboarding.textsForm.intro)).toBeTruthy();
@@ -79,7 +98,7 @@ describe('OnboardingTextsForm', () => {
 
   it('renders Hebrew finish and back links when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    render(<OnboardingTextsForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
@@ -99,12 +118,13 @@ describe('OnboardingTextsForm', () => {
       return { ...textsProfile, gender: 'PREFER_NOT_TO_SAY' };
     });
 
-    render(<OnboardingTextsForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: enCopy.onboarding.textsForm.finishAndAnalyze }),
-      ).toBeTruthy();
+        (screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel) as HTMLTextAreaElement)
+          .value,
+      ).toBe('Hello');
     });
 
     fireEvent.click(
@@ -120,9 +140,12 @@ describe('OnboardingTextsForm', () => {
   });
 
   it('shows writing help with word count and collapsed examples under each field', async () => {
-    render(<OnboardingTextsForm />);
+    renderForm();
 
     await waitFor(() => {
+      expect(
+        screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+      ).toHaveProperty('value', 'Hello');
       expect(screen.getByTestId('ot-about-me-writing-help')).toBeTruthy();
     });
 
@@ -149,7 +172,7 @@ describe('OnboardingTextsForm', () => {
 
   it('shows localized writing help heading when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    render(<OnboardingTextsForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
@@ -178,14 +201,13 @@ describe('OnboardingTextsForm', () => {
       ),
     );
 
-    render(<OnboardingTextsForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', {
-          name: enCopy.onboarding.saveProgress,
-        }),
-      ).toBeTruthy();
+        (screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel) as HTMLTextAreaElement)
+          .value,
+      ).toBe('Hello');
     });
 
     fireEvent.click(

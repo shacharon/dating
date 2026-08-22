@@ -22,8 +22,11 @@
     "validate:phase2-me-profile": "vitest run src/lib/me-profile-api.spec.ts src/lib/profile-form.spec.ts src/lib/phase25-profile-enrichment.spec.ts src/middleware.spec.ts"
   },
   "dependencies": {
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/preferences": "^7.0.4",
     "@sentry/nextjs": "^10.56.0",
     "@tanstack/react-query": "^5.101.4",
+    "jwt-decode": "^4.0.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -31,6 +34,7 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.101.4",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",

@@ -21,19 +21,21 @@ export function presenceMetaKey(socketId: string): string {
 
 export function encodePresenceMeta(
   userId: string,
-  sessionId: string,
+  sessionId?: string,
 ): string {
-  return `${userId}|${sessionId}`;
+  return `${userId}|${sessionId ?? ''}`;
 }
 
 export function decodePresenceMeta(
   raw: string | null | undefined,
-): { userId: string; sessionId: string } | null {
+): { userId: string; sessionId?: string } | null {
   if (!raw) return null;
   const idx = raw.indexOf('|');
-  if (idx <= 0 || idx === raw.length - 1) return null;
+  if (idx <= 0) return null;
+  const userId = raw.slice(0, idx);
+  const sessionId = raw.slice(idx + 1);
   return {
-    userId: raw.slice(0, idx),
-    sessionId: raw.slice(idx + 1),
+    userId,
+    sessionId: sessionId || undefined,
   };
 }

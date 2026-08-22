@@ -1,21 +1,27 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
-const { resolveEditableProfile, listMyProfilePhotos } = vi.hoisted(() => ({
-  resolveEditableProfile: vi.fn(),
+const { fetchMyProfile, listMyProfilePhotos } = vi.hoisted(() => ({
+  fetchMyProfile: vi.fn(),
   listMyProfilePhotos: vi.fn(),
 }));
 
-vi.mock('@/lib/profile-form', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/profile-form')>(
-    '@/lib/profile-form',
-  );
-  return {
-    ...actual,
-    resolveEditableProfile,
-  };
-});
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile: vi.fn(),
+      createMyProfile: vi.fn(),
+      submitMyProfileForAnalysis: vi.fn(),
+    },
+  },
+}));
 
 vi.mock('@/lib/me-photos-api', () => ({
   listMyProfilePhotos,
@@ -45,6 +51,16 @@ vi.mock('@/components/profile-photo-section', () => ({
 
 import { ProfileEditTab } from '@/components/profile/profile-edit-tab';
 
+function renderEditTab() {
+  return render(
+    createElement(
+      QueryClientTestProvider,
+      { client: createTestQueryClient() },
+      createElement(ProfileEditTab),
+    ),
+  );
+}
+
 describe('ProfileEditTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,7 +68,11 @@ describe('ProfileEditTab', () => {
     listMyProfilePhotos.mockResolvedValue([
       { id: 'p1', status: 'APPROVED', isPrimary: true, position: 0 },
     ]);
-    resolveEditableProfile.mockResolvedValue({
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'DRAFT',
+      onboardingStep: 'BASIC',
       nickname: 'Noa',
       birthDate: '1990-01-01',
       gender: 'FEMALE',
@@ -63,6 +83,8 @@ describe('ProfileEditTab', () => {
       aboutMe: 'Hello world',
       aboutPartner: '',
       aboutRelationship: '',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
     });
   });
 
@@ -71,7 +93,7 @@ describe('ProfileEditTab', () => {
   });
 
   it('shows one pane at a time with Basics → Photos → Story nav order', async () => {
-    render(<ProfileEditTab />);
+    renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
       expect(screen.getByTestId('profile-edit-section-nav')).toBeTruthy();
@@ -98,7 +120,7 @@ describe('ProfileEditTab', () => {
   });
 
   it('marks progress dots complete from profile + photos', async () => {
-    render(<ProfileEditTab />);
+    renderEditTab();
     await waitFor(() => {
       expect(
         screen
@@ -119,7 +141,7 @@ describe('ProfileEditTab', () => {
   });
 
   it('nav click switches pane and updates hash', async () => {
-    render(<ProfileEditTab />);
+    renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-nav-story')).toBeTruthy();
     });
@@ -133,7 +155,7 @@ describe('ProfileEditTab', () => {
 
   it('opens photos pane from #photos hash', async () => {
     window.history.replaceState(null, '', '/profile?tab=edit#photos');
-    render(<ProfileEditTab />);
+    renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(
         false,

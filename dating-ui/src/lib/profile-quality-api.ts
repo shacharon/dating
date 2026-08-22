@@ -3,6 +3,7 @@
  */
 
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import {
   suggestionHref,
   type ProfileSuggestionId,
@@ -34,9 +35,8 @@ export type ProfileQualityDto = {
 export async function fetchProfileQuality(): Promise<ProfileQualityDto> {
   const base = getApiBase();
   const path = '/api/v1/me/profile/quality';
-  const res = await fetch(`${base}${path}`, {
+  const res = await authenticatedFetch(path, {
     method: 'GET',
-    credentials: 'include',
     cache: 'no-store',
     headers: { Accept: 'application/json' },
   });

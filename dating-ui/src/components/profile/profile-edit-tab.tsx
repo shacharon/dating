@@ -13,11 +13,11 @@ import type { ProfileDraft } from '@/app/dating/_lib/types';
 import {
   emptyProfileFormState,
   profileToFormFields,
-  resolveEditableProfile,
 } from '@/lib/profile-form';
 import { buildCompletenessFlags } from '@/lib/profile-completeness';
 import { listMyProfilePhotos } from '@/lib/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
+import { useProfile } from '@/hooks/use-profile';
 
 const SECTION_IDS: EditSectionId[] = ['basic', 'photos', 'story'];
 
@@ -51,6 +51,7 @@ export function ProfileEditTab({
 } = {}) {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
+  const { profile, refetch } = useProfile();
 
   const [draft, setDraft] = useState<ProfileDraft>(emptyProfileFormState);
   const [approvedPhotoCount, setApprovedPhotoCount] = useState(0);
@@ -58,22 +59,24 @@ export function ProfileEditTab({
     () => sectionFromHash() ?? 'basic',
   );
 
+  useEffect(() => {
+    if (profile) {
+      setDraft(profileToFormFields(profile));
+    }
+  }, [profile]);
+
   const refreshProgress = useCallback(async () => {
     try {
-      const [profile, photos] = await Promise.all([
-        resolveEditableProfile(),
+      const [, photos] = await Promise.all([
+        refetch(),
         listMyProfilePhotos(),
       ]);
-      const next = profile
-        ? profileToFormFields(profile)
-        : emptyProfileFormState();
       const approved = photos.filter((p) => p.status === 'APPROVED').length;
-      setDraft(next);
       setApprovedPhotoCount(approved);
     } catch {
       // keep last known progress
     }
-  }, []);
+  }, [refetch]);
 
   useEffect(() => {
     void refreshProgress();

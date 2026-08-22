@@ -11,17 +11,14 @@ import {
   type MatchPreferencesFormState,
   type MatchPreferencesValidationError,
 } from '@/lib/match-preferences-form';
-import {
-  fetchMyProfile,
-  patchMyProfile,
-  type InferredDealbreakerDto,
-} from '@/lib/me-profile-api';
+import type { InferredDealbreakerDto } from '@/lib/me-profile-api';
 import {
   MatchPreferencesAgeSection,
   MatchPreferencesDistanceSection,
   MatchPreferencesInferredDealbreakersSection,
   MatchPreferencesPartnerGendersSection,
 } from '@/components/match-preferences-sections';
+import { usePatchProfile, useProfile } from '@/hooks/use-profile';
 
 function validationMessage(
   copy: AppCopySchema['matchPreferences'],
@@ -34,46 +31,34 @@ function validationMessage(
 export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolean }) {
   const { copy } = useAppLocale();
   const mp = copy.matchPreferences;
+  const { profile, isLoading, error: profileError } = useProfile();
+  const patchMutation = usePatchProfile();
+
   const [form, setForm] = useState<MatchPreferencesFormState>(
     emptyMatchPreferencesFormState(),
   );
   const [inferredDealbreakers, setInferredDealbreakers] = useState<
     InferredDealbreakerDto[]
   >([]);
-  const [loading, setLoading] = useState(true);
-  const [noProfile, setNoProfile] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled) return;
-        if (!profile) {
-          setNoProfile(true);
-          return;
-        }
-        setForm(profileToMatchPreferencesForm(profile));
-        setInferredDealbreakers(profile.inferredDealbreakers ?? []);
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(
-            e instanceof Error ? e.message : copy.matchPreferences.saveError,
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [copy.matchPreferences.saveError]);
+    if (isLoading) return;
+    if (initialized) return;
+    if (profile) {
+      setForm(profileToMatchPreferencesForm(profile));
+      setInferredDealbreakers(profile.inferredDealbreakers ?? []);
+    }
+    setInitialized(true);
+  }, [profile, isLoading, initialized]);
+
+  const loading = isLoading || !initialized;
+  const noProfile = initialized && !isLoading && !profile;
+  const loadError = profileError;
 
   const handleSave = async () => {
     setValidationError(null);
@@ -86,7 +71,9 @@ export function MatchPreferencesForm({ showTitle = false }: { showTitle?: boolea
     }
     setSaving(true);
     try {
-      const updated = await patchMyProfile(matchPreferencesFormToPatchBody(form));
+      const updated = await patchMutation.mutateAsync(
+        matchPreferencesFormToPatchBody(form),
+      );
       setForm(profileToMatchPreferencesForm(updated));
       setSaveSuccess(true);
     } catch {

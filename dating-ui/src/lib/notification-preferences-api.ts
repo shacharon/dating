@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 export type NotificationPreferences = {
   emailNotificationsEnabled: boolean;
@@ -14,9 +15,8 @@ export async function patchNotificationPreferences(
   patch: Partial<NotificationPreferences>,
 ): Promise<NotificationPreferences> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/me/notification-preferences`, {
+  const res = await authenticatedFetch(`/api/v1/me/notification-preferences`, {
     method: 'PATCH',
-    credentials: 'include',
     headers: JSON_HEADERS,
     body: JSON.stringify(patch),
   });

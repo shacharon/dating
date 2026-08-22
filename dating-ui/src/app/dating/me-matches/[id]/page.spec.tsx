@@ -24,6 +24,21 @@ const {
   mockPush: vi.fn(),
 }));
 
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    matches: {
+      fetchMyMatchById,
+      fetchMatchAction,
+      fetchMatchFeedback,
+      upsertMatchFeedback,
+      likeMatch,
+      passMatch,
+      undoMatchAction,
+      blockMatch,
+    },
+  },
+}));
+
 vi.mock('@/lib/me-matches-api', () => ({
   fetchMyMatchById,
   fetchMatchAction,
@@ -62,7 +77,19 @@ vi.mock('next/link', () => ({
 
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 import MeMatchDetailPage from './page';
+
+function renderPage(ui: React.ReactElement = <MeMatchDetailPage />) {
+  return render(
+    <QueryClientTestProvider client={createTestQueryClient()}>
+      {ui}
+    </QueryClientTestProvider>,
+  );
+}
 
 const noActionState = {
   action: null as const,
@@ -137,7 +164,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('shows Like and Pass buttons when no action', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
@@ -166,7 +193,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     });
     fetchMatchAction.mockResolvedValue(noActionState);
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-hard-blocked')).toBeTruthy();
@@ -189,7 +216,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('shows decorative heart on Like button with text accessible name', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       const likeBtn = screen.getByRole('button', { name: /^like$/i });
@@ -199,7 +226,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('records like on Like click', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
@@ -226,7 +253,7 @@ describe('MeMatchDetailPage (match actions)', () => {
         ...baseActionFields,
       });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^pass$/i })).toBeTruthy();
@@ -247,7 +274,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   it('shows error when like fails', async () => {
     likeMatch.mockRejectedValue(new Error('Network error'));
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
@@ -270,7 +297,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       ...baseActionFields,
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You liked this person')).toBeTruthy();
@@ -287,7 +314,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       ...baseActionFields,
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You passed on this person')).toBeTruthy();
@@ -304,7 +331,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       ...baseActionFields,
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You blocked this person')).toBeTruthy();
@@ -321,7 +348,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       })
       .mockResolvedValueOnce(noActionState);
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /undo your like on this match/i })).toBeTruthy();
@@ -348,7 +375,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       })
       .mockResolvedValueOnce(noActionState);
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /undo your pass on this match/i })).toBeTruthy();
@@ -367,7 +394,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('shows Block button on load', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^block$/i })).toBeTruthy();
@@ -375,7 +402,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('shows confirm copy when Block is clicked', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^block$/i })).toBeTruthy();
@@ -389,7 +416,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('Cancel hides confirm without calling blockMatch', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^block$/i })).toBeTruthy();
@@ -404,7 +431,7 @@ describe('MeMatchDetailPage (match actions)', () => {
   });
 
   it('calls blockMatch and redirects on confirm', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^block$/i })).toBeTruthy();
@@ -426,7 +453,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       ...baseActionFields,
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You liked this person')).toBeTruthy();
@@ -464,7 +491,7 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
   });
 
   it('shows celebration modal when like returns mutualMatch true', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
@@ -485,7 +512,7 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
   });
 
   it('navigates to conversation when Send a message is clicked', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
@@ -503,7 +530,7 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
   });
 
   it('hides modal when close is clicked', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^like$/i })).toBeTruthy();
@@ -531,7 +558,7 @@ describe('MeMatchDetailPage (mutual match notification)', () => {
       conversationId: 'mutual_row_1',
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByText('You matched!')).toBeTruthy();
@@ -560,7 +587,7 @@ describe('MeMatchDetailPage (match photos)', () => {
       primaryPhotoUrl: '/api/v1/me/matches/prof-cand-1/photos/photo-1/file',
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       const photo = screen.getByTestId('match-detail-photo');
@@ -577,7 +604,7 @@ describe('MeMatchDetailPage (match photos)', () => {
       primaryPhotoUrl: null,
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       const photo = screen.getByTestId('match-detail-photo');
@@ -587,7 +614,7 @@ describe('MeMatchDetailPage (match photos)', () => {
   });
 
   it('opens report dialog from match detail footer', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-report')).toBeTruthy();
@@ -626,7 +653,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
@@ -645,7 +672,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-shared-interests')).toBeTruthy();
@@ -673,7 +700,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
@@ -714,7 +741,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-narrative')).toBeTruthy();
@@ -760,7 +787,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
@@ -789,7 +816,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-takeaway')).toBeTruthy();
@@ -811,7 +838,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       recommendation: null,
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-feedback')).toBeTruthy();
@@ -838,7 +865,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-detail-narrative')).toBeTruthy();
@@ -864,7 +891,7 @@ describe('MeMatchDetailPage (human-first layout)', () => {
       },
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-feedback')).toBeTruthy();
@@ -894,7 +921,7 @@ describe('MeMatchDetailPage (match feedback)', () => {
   it('reflects loaded feedback sentiment on positive thumb', async () => {
     fetchMatchFeedback.mockResolvedValue({ sentiment: 'POSITIVE' });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-feedback-positive')).toBeTruthy();
@@ -910,7 +937,7 @@ describe('MeMatchDetailPage (match feedback)', () => {
   });
 
   it('clicking thumbs up submits feedback and shows thanks', async () => {
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-feedback-positive')).toBeTruthy();
@@ -943,7 +970,7 @@ describe('MeMatchDetailPage (match feedback)', () => {
         updatedAt: '2026-06-06T11:00:00.000Z',
       });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('match-feedback-positive')).toBeTruthy();
@@ -993,7 +1020,7 @@ describe('MeMatchDetailPage (i18n)', () => {
   it('renders Hebrew detail chrome when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       const likeBtn = screen.getByRole('button', {
@@ -1013,7 +1040,7 @@ describe('MeMatchDetailPage (i18n)', () => {
   it('still renders API takeaway in English when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(
@@ -1038,7 +1065,7 @@ describe('MeMatchDetailPage (i18n)', () => {
       conversationId: 'mutual_row_1',
     });
 
-    render(<MeMatchDetailPage />);
+    renderPage(<MeMatchDetailPage />);
 
     await waitFor(() => {
       expect(

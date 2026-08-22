@@ -3,16 +3,13 @@
  */
 
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 import {
   emitProductLog,
   getObservabilityRoute,
 } from '@/lib/observability/product-logger';
 import { captureRequestIdFromResponse } from '@/lib/observability/request-id';
 import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
-
-const credFetch = {
-  credentials: 'include' as const,
-};
 
 function apiUnreachableMessage(base: string, path: string): string {
   const hint =
@@ -58,9 +55,8 @@ export async function fetchAnalysisStatus(): Promise<AnalysisStatusDto> {
   const path = '/api/v1/me/profile/analysis-status';
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'GET',
-      ...credFetch,
       cache: 'no-store',
       headers: { Accept: 'application/json' },
     });
@@ -86,9 +82,8 @@ export async function fetchMyLatestAnalysis(): Promise<MeLatestAnalysisDto | nul
   const route = getObservabilityRoute();
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    res = await authenticatedFetch(path, {
       method: 'GET',
-      ...credFetch,
       cache: 'no-store',
       headers: { Accept: 'application/json' },
     });

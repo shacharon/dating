@@ -60,8 +60,12 @@ export class MessagingSocketRegistry {
   async unregisterAsync(client: Socket): Promise<void> {
     const data = client.data as MessagingSocketData | undefined;
     this.unregisterLocal(client);
-    if (data?.sessionId && data.userId) {
-      await this.clearRedisSocket(client.id, data.userId, data.sessionId);
+    if (data?.userId) {
+      if (data.sessionId) {
+        await this.clearRedisSocket(client.id, data.userId, data.sessionId);
+      } else {
+        await this.clearBearerRedisSocket(client.id, data.userId);
+      }
     }
   }
 
@@ -181,7 +185,7 @@ export class MessagingSocketRegistry {
 
   activeConnectionCount(): number {
     let total = 0;
-    for (const set of this.bySession.values()) {
+    for (const set of this.byUserId.values()) {
       total += set.size;
     }
     return total;
@@ -204,7 +208,16 @@ export class MessagingSocketRegistry {
 
   private registerLocal(client: Socket): void {
     const data = client.data as MessagingSocketData | undefined;
-    if (!data?.sessionId) {
+    if (!data?.userId) {
+      return;
+    }
+
+    if (data.authKind === 'bearer') {
+      this.addToUserMap(data.userId, client);
+      return;
+    }
+
+    if (!data.sessionId) {
       return;
     }
 
@@ -214,20 +227,23 @@ export class MessagingSocketRegistry {
       this.bySession.set(data.sessionId, sessionSet);
     }
     sessionSet.add(client);
-
-    if (data.userId) {
-      let userSet = this.byUserId.get(data.userId);
-      if (!userSet) {
-        userSet = new Set();
-        this.byUserId.set(data.userId, userSet);
-      }
-      userSet.add(client);
-    }
+    this.addToUserMap(data.userId, client);
   }
 
   private unregisterLocal(client: Socket): void {
     const data = client.data as MessagingSocketData | undefined;
-    if (!data?.sessionId) {
+    if (!data) {
+      return;
+    }
+
+    if (data.authKind === 'bearer') {
+      if (data.userId) {
+        this.removeFromUserMap(data.userId, client);
+      }
+      return;
+    }
+
+    if (!data.sessionId) {
       return;
     }
 
@@ -251,14 +267,28 @@ export class MessagingSocketRegistry {
       return false;
     }
     const data = client.data as MessagingSocketData | undefined;
-    if (!data?.sessionId || !data.userId) return false;
+    if (!data?.userId) return false;
 
     const socketId = client.id;
     const userKey = presenceUserKey(data.userId);
-    const sessionKey = presenceSessionKey(data.sessionId);
     const metaKey = presenceMetaKey(socketId);
     const ttl = PRESENCE_TTL_SECONDS;
 
+    if (data.authKind === 'bearer' || !data.sessionId) {
+      const ok = await this.cache.sAdd(userKey, socketId, ttl);
+      await this.cache.setString(
+        metaKey,
+        encodePresenceMeta(data.userId),
+        ttl,
+      );
+      if (!ok) {
+        this.traceDegraded('error');
+        return false;
+      }
+      return true;
+    }
+
+    const sessionKey = presenceSessionKey(data.sessionId);
     const a = await this.cache.sAdd(userKey, socketId, ttl);
     const b = await this.cache.sAdd(sessionKey, socketId, ttl);
     await this.cache.setString(
@@ -271,6 +301,20 @@ export class MessagingSocketRegistry {
       return false;
     }
     return true;
+  }
+
+  private async clearBearerRedisSocket(
+    socketId: string,
+    userId: string,
+  ): Promise<void> {
+    if (!this.redis?.isAvailable()) return;
+    const userKey = presenceUserKey(userId);
+    await this.cache.sRem(userKey, socketId);
+    await this.cache.del(presenceMetaKey(socketId));
+    const userCount = await this.cache.sCard(userKey);
+    if (userCount === 0) {
+      await this.cache.del(userKey);
+    }
   }
 
   private async clearRedisSocket(
@@ -300,6 +344,15 @@ export class MessagingSocketRegistry {
       ErrorCodes.PRESENCE_REDIS_DEGRADED,
     );
     this.logger.warn(`presence redis degraded reason=${reason}`);
+  }
+
+  private addToUserMap(userId: string, client: Socket): void {
+    let userSet = this.byUserId.get(userId);
+    if (!userSet) {
+      userSet = new Set();
+      this.byUserId.set(userId, userSet);
+    }
+    userSet.add(client);
   }
 
   private removeFromUserMap(userId: string, client: Socket): void {

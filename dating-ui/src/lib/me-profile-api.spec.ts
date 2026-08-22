@@ -147,13 +147,13 @@ describe('me-profile-api', () => {
       expect.objectContaining({
         method: 'POST',
         credentials: 'include',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        }),
         body: JSON.stringify({ aboutMe: 'x' }),
       }),
     );
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    const headers = init.headers as Headers;
+    expect(headers.get('Content-Type')).toBe('application/json');
+    expect(headers.get('Accept')).toBe('application/json');
   });
 
   it('patchMyProfile PATCHes JSON with credentials', async () => {

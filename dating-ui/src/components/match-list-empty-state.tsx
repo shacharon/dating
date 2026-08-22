@@ -1,39 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { fetchMyProfile } from '@/lib/me-profile-api';
 import { useAppLocale } from '@/lib/i18n';
 import { buildInviteUrl } from '@/lib/referral-attribution';
+import { useProfile } from '@/hooks/use-profile';
 
 export function MatchListEmptyState() {
   const { user } = useAuth();
   const { copy: appCopy } = useAppLocale();
-  const [place, setPlace] = useState<string | null>(null);
+  const { profile } = useProfile();
   const [inviteCopied, setInviteCopied] = useState(false);
 
   const copy = appCopy.launch.emptyMatches;
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled || !profile) return;
-        const label =
-          profile.locationLabel?.trim() ||
-          profile.city?.trim() ||
-          null;
-        setPlace(label);
-      } catch {
-        /* optional context */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const place = useMemo(() => {
+    if (!profile) return null;
+    return (
+      profile.locationLabel?.trim() ||
+      profile.city?.trim() ||
+      null
+    );
+  }, [profile]);
 
   async function onCopyInviteLink() {
     const origin =

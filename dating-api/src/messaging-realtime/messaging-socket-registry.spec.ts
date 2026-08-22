@@ -13,7 +13,15 @@ function mockSocket(
 ): Socket {
   return {
     id,
-    data: { userId, sessionId },
+    data: { userId, sessionId, authKind: 'session' as const },
+    disconnect: jest.fn(),
+  } as unknown as Socket;
+}
+
+function mockBearerSocket(id: string, userId = 'user_bearer'): Socket {
+  return {
+    id,
+    data: { userId, authKind: 'bearer' as const },
     disconnect: jest.fn(),
   } as unknown as Socket;
 }
@@ -91,6 +99,14 @@ describe('MessagingSocketRegistry', () => {
       expect(await registry.hasActiveConnection('user_online')).toBe(false);
     });
 
+    it('hasActiveConnection reflects registered bearer sockets', async () => {
+      const sock = mockBearerSocket('sock_bearer', 'user_bearer');
+      await registry.registerAsync(sock);
+      expect(await registry.hasActiveConnection('user_bearer')).toBe(true);
+      await registry.unregisterAsync(sock);
+      expect(await registry.hasActiveConnection('user_bearer')).toBe(false);
+    });
+
     it('disconnectBySessionId disconnects all sockets for the session', async () => {
       const a = mockSocket('sess_1', 'sock_a');
       const b = mockSocket('sess_1', 'sock_b');
@@ -157,6 +173,22 @@ describe('MessagingSocketRegistry', () => {
   });
 
   describe('cross-process via shared Redis mock', () => {
+    it('hasActiveConnection sees bearer socket via shared Redis mock', async () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      const redis = createSharedMemoryRedis();
+      const nodeA = registryWithRedis(redis);
+      const nodeB = registryWithRedis(redis);
+      const sock = mockBearerSocket('sockBearer', 'u_bearer');
+
+      await nodeA.registerAsync(sock);
+      expect(await nodeB.hasActiveConnection('u_bearer')).toBe(true);
+      expect(await redis.sCard(presenceUserKey('u_bearer'))).toBe(1);
+      expect(await redis.sMembers(presenceSessionKey('sess_1'))).toEqual([]);
+
+      await nodeA.unregisterAsync(sock);
+      expect(await nodeB.hasActiveConnection('u_bearer')).toBe(false);
+    });
+
     it('hasActiveConnection sees peer registry via shared Redis mock', async () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       const redis = createSharedMemoryRedis();

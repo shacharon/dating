@@ -1,33 +1,33 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
 const {
-  resolveEditableProfile,
+  fetchMyProfile,
   listMyProfilePhotos,
   fetchMyProfilePhotoBlob,
   fetchProfileQuality,
 } = vi.hoisted(() => ({
-  resolveEditableProfile: vi.fn(),
+  fetchMyProfile: vi.fn(),
   listMyProfilePhotos: vi.fn(),
   fetchMyProfilePhotoBlob: vi.fn(),
   fetchProfileQuality: vi.fn(),
 }));
 
-vi.mock('@/lib/profile-form', () => ({
-  resolveEditableProfile,
-  profileToFormFields: (p: Record<string, unknown>) => ({
-    nickname: p.nickname ?? '',
-    birthDate: (p.birthDate as string)?.slice?.(0, 10) ?? '',
-    gender: p.gender ?? '',
-    desiredPartnerGenders: p.desiredPartnerGenders ?? [],
-    city: p.city ?? '',
-    country: p.country ?? '',
-    locationLabel: p.locationLabel ?? '',
-    aboutMe: p.aboutMe ?? '',
-    aboutPartner: p.aboutPartner ?? '',
-    aboutRelationship: p.aboutRelationship ?? '',
-  }),
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile: vi.fn(),
+      createMyProfile: vi.fn(),
+      submitMyProfileForAnalysis: vi.fn(),
+    },
+  },
 }));
 
 vi.mock('@/lib/me-photos-api', () => ({
@@ -92,6 +92,16 @@ import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 import ProfileHubClient from './profile-hub-client';
 
+function renderHub() {
+  return render(
+    createElement(
+      QueryClientTestProvider,
+      { client: createTestQueryClient() },
+      createElement(ProfileHubClient),
+    ),
+  );
+}
+
 describe('ProfileHubClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -119,17 +129,23 @@ describe('ProfileHubClient', () => {
       },
       suggestions: [{ id: 'aboutRelationship', points: 15 }],
     });
-    resolveEditableProfile.mockResolvedValue({
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'ANALYZED',
+      onboardingStep: 'COMPLETED',
       nickname: 'Noa',
       birthDate: '1990-01-01',
-      gender: 'WOMAN',
-      desiredPartnerGenders: ['MAN'],
+      gender: 'FEMALE',
+      desiredPartnerGenders: ['MALE'],
       city: 'Tel Aviv',
       country: 'IL',
       locationLabel: 'TLV',
       aboutMe: 'Hello',
       aboutPartner: 'Kind',
       aboutRelationship: 'Long term',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
     });
   });
 
@@ -138,7 +154,7 @@ describe('ProfileHubClient', () => {
   });
 
   it('defaults to overview tab and shows meter', async () => {
-    render(<ProfileHubClient />);
+    renderHub();
     await waitFor(() => {
       expect(screen.getByTestId('profile-hub')).toBeTruthy();
       expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
@@ -150,7 +166,7 @@ describe('ProfileHubClient', () => {
   });
 
   it('renders overview hero card and edit CTA', async () => {
-    render(<ProfileHubClient />);
+    renderHub();
     await waitFor(() => {
       expect(screen.getByTestId('profile-overview-hero')).toBeTruthy();
       expect(screen.getByTestId('profile-overview-edit')).toBeTruthy();
@@ -165,7 +181,7 @@ describe('ProfileHubClient', () => {
 
   it('opens edit tab from ?tab=edit', async () => {
     mockSearch = 'tab=edit';
-    render(<ProfileHubClient />);
+    renderHub();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
     });
@@ -173,7 +189,7 @@ describe('ProfileHubClient', () => {
 
   it('falls back invalid tab to overview', async () => {
     mockSearch = 'tab=nope';
-    render(<ProfileHubClient />);
+    renderHub();
     await waitFor(() => {
       expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
     });
@@ -181,7 +197,7 @@ describe('ProfileHubClient', () => {
 
   it('renders Hebrew hub title when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    render(<ProfileHubClient />);
+    renderHub();
     await waitFor(() => {
       expect(
         screen.getByRole('heading', {

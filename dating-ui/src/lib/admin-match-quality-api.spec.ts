@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   formatPositiveRate,
   getCandidateAudit,
@@ -6,12 +6,17 @@ import {
   listNegativeCandidates,
 } from './admin-match-quality-api';
 
-vi.mock('@/lib/api-base', () => ({
-  getApiBase: () => 'http://api.test',
-}));
-
 describe('admin-match-quality-api', () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = process.env.NEXT_PUBLIC_API_URL;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_URL = 'http://api.test';
+  });
+
   afterEach(() => {
+    globalThis.fetch = originalFetch;
+    process.env.NEXT_PUBLIC_API_URL = originalEnv;
     vi.unstubAllGlobals();
   });
 

@@ -1,20 +1,27 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
 const { fetchMyProfile, patchMyProfile } = vi.hoisted(() => ({
   fetchMyProfile: vi.fn(),
   patchMyProfile: vi.fn(),
 }));
 
-vi.mock('@/lib/me-profile-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/me-profile-api')>();
-  return {
-    ...actual,
-    fetchMyProfile,
-    patchMyProfile,
-  };
-});
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile,
+      createMyProfile: vi.fn(),
+      submitMyProfileForAnalysis: vi.fn(),
+    },
+  },
+}));
 
 import { MatchPreferencesForm } from '@/components/match-preferences-form';
 import type { MeProfileDto } from '@/lib/me-profile-api';
@@ -34,6 +41,16 @@ const mockProfile: MeProfileDto = {
   partnerAgeMax: 35,
 };
 
+function renderForm(props?: { showTitle?: boolean }) {
+  return render(
+    createElement(
+      QueryClientTestProvider,
+      { client: createTestQueryClient() },
+      createElement(MatchPreferencesForm, props ?? {}),
+    ),
+  );
+}
+
 describe('MatchPreferencesForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,7 +66,7 @@ describe('MatchPreferencesForm', () => {
   });
 
   it('loads profile and renders preference fields', async () => {
-    render(<MatchPreferencesForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(screen.getByTestId('pref-age-min').getAttribute('value')).toBe('25');
@@ -61,7 +78,7 @@ describe('MatchPreferencesForm', () => {
   });
 
   it('does not render removed lifestyle/education/family/similarity controls', async () => {
-    render(<MatchPreferencesForm showTitle />);
+    renderForm({ showTitle: true });
 
     await waitFor(() => {
       expect(screen.getByTestId('pref-age-min')).toBeTruthy();
@@ -80,7 +97,7 @@ describe('MatchPreferencesForm', () => {
   });
 
   it('patches preferences on save', async () => {
-    render(<MatchPreferencesForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(screen.getByTestId('match-prefs-save')).toBeTruthy();
@@ -104,7 +121,7 @@ describe('MatchPreferencesForm', () => {
   });
 
   it('shows validation error when partner genders are cleared', async () => {
-    render(<MatchPreferencesForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(screen.getByTestId('pref-gender-FEMALE')).toBeTruthy();
@@ -122,7 +139,7 @@ describe('MatchPreferencesForm', () => {
   });
 
   it('shows validation error when age min exceeds max', async () => {
-    render(<MatchPreferencesForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(screen.getByTestId('pref-age-min')).toBeTruthy();

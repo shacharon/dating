@@ -1,12 +1,12 @@
+'use client';
+
 import { useState, useCallback, useRef } from 'react';
 import {
-  likeMatch,
-  passMatch,
-  blockMatch,
-  undoMatchAction,
-  fetchMatchAction,
-  type MatchActionDto,
-} from '@/lib/me-matches-api';
+  useLikeMatch,
+  usePassMatch,
+  useBlockMatch,
+  useUndoMatchAction,
+} from '@/hooks/use-matches';
 
 type ActionType = 'LIKE' | 'PASS' | 'BLOCK';
 type YourAction = ActionType | null;
@@ -43,37 +43,45 @@ export function useMatchActions({
   onActionSuccess,
 }: UseMatchActionsOptions): UseMatchActionsReturn {
   const [currentAction, setCurrentAction] = useState<YourAction>(initialAction);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [pendingLocal, setPendingLocal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<LastActionRecord | null>(null);
-  
+
   const previousActionRef = useRef<YourAction>(null);
+  const actionInFlightRef = useRef(false);
+
+  const likeMutation = useLikeMatch({ onMutualMatch });
+  const passMutation = usePassMatch();
+  const blockMutation = useBlockMatch();
+  const undoMutation = useUndoMatchAction();
+
+  const actionLoading =
+    pendingLocal ||
+    likeMutation.isPending ||
+    passMutation.isPending ||
+    blockMutation.isPending ||
+    undoMutation.isPending;
 
   const recordAction = useCallback(
     async (action: ActionType, errorMessage: string): Promise<void> => {
-      if (actionLoading || currentAction != null) return;
+      if (actionInFlightRef.current || currentAction != null) return;
 
       setError(null);
-      setActionLoading(true);
+      setPendingLocal(true);
+      actionInFlightRef.current = true;
       previousActionRef.current = currentAction;
 
       try {
-        let result: MatchActionDto;
         if (action === 'LIKE') {
-          result = await likeMatch(matchId);
+          await likeMutation.mutateAsync(matchId);
           setCurrentAction('LIKE');
           setLastAction({ type: 'LIKE', timestamp: Date.now() });
-
-          if (result.mutualMatch && result.conversationId) {
-            onMutualMatch?.(result.conversationId);
-          }
         } else if (action === 'PASS') {
-          result = await passMatch(matchId);
-          const actionState = await fetchMatchAction(matchId);
+          const { actionState } = await passMutation.mutateAsync(matchId);
           setCurrentAction(actionState.action);
           setLastAction({ type: 'PASS', timestamp: Date.now() });
         } else {
-          result = await blockMatch(matchId);
+          await blockMutation.mutateAsync(matchId);
           setCurrentAction('BLOCK');
           setLastAction({ type: 'BLOCK', timestamp: Date.now() });
         }
@@ -83,10 +91,18 @@ export function useMatchActions({
         setCurrentAction(previousActionRef.current);
         setError(e instanceof Error ? e.message : errorMessage);
       } finally {
-        setActionLoading(false);
+        setPendingLocal(false);
+        actionInFlightRef.current = false;
       }
     },
-    [matchId, actionLoading, currentAction, onMutualMatch, onActionSuccess],
+    [
+      matchId,
+      currentAction,
+      likeMutation,
+      passMutation,
+      blockMutation,
+      onActionSuccess,
+    ],
   );
 
   const like = useCallback(async () => {
@@ -102,26 +118,27 @@ export function useMatchActions({
   }, [recordAction]);
 
   const undo = useCallback(async () => {
-    if (actionLoading || currentAction == null || currentAction === 'BLOCK') {
+    if (actionInFlightRef.current || currentAction == null || currentAction === 'BLOCK') {
       return;
     }
 
     setError(null);
-    setActionLoading(true);
+    setPendingLocal(true);
+    actionInFlightRef.current = true;
     previousActionRef.current = currentAction;
 
     try {
-      await undoMatchAction(matchId);
-      const actionState = await fetchMatchAction(matchId);
+      const actionState = await undoMutation.mutateAsync(matchId);
       setCurrentAction(actionState.action);
       setLastAction(null);
     } catch (e: unknown) {
       setCurrentAction(previousActionRef.current);
       setError(e instanceof Error ? e.message : 'Could not undo action.');
     } finally {
-      setActionLoading(false);
+      setPendingLocal(false);
+      actionInFlightRef.current = false;
     }
-  }, [matchId, actionLoading, currentAction]);
+  }, [matchId, currentAction, undoMutation]);
 
   const canUndo =
     currentAction != null &&

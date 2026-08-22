@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -48,9 +49,9 @@ export async function listPendingPhotos(
   const params = new URLSearchParams();
   if (cursor) params.set('cursor', cursor);
   const qs = params.toString();
-  const res = await fetch(
-    `${base}/api/v1/admin/photos/pending${qs ? `?${qs}` : ''}`,
-    { credentials: 'include', headers: { Accept: 'application/json' } },
+  const res = await authenticatedFetch(`/api/v1/admin/photos/pending${qs ? `?${qs}` : ''}`,
+    {
+    headers: { Accept: 'application/json' } },
   );
   if (res.status === 403) {
     throw new Error('admin_forbidden');
@@ -70,9 +71,8 @@ export async function moderatePhoto(
   },
 ): Promise<ModeratePhotoResponse> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/admin/photos/${encodeURIComponent(photoId)}`, {
+  const res = await authenticatedFetch(`/api/v1/admin/photos/${encodeURIComponent(photoId)}`, {
     method: 'PATCH',
-    credentials: 'include',
     headers: JSON_HEADERS,
     body: JSON.stringify({
       decision,
@@ -96,7 +96,7 @@ export async function moderatePhoto(
 export async function fetchAdminPhotoBlob(fileUrl: string): Promise<Blob> {
   const base = getApiBase();
   const path = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
-  const res = await fetch(`${base}${path}`, { credentials: 'include' });
+  const res = await authenticatedFetch(path, { credentials: 'include' });
   if (!res.ok) {
     throw new Error(`GET admin photo file failed: ${res.status}`);
   }

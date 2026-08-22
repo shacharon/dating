@@ -1,9 +1,46 @@
+/** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createElement, type ReactNode } from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMatchActions } from './use-match-actions';
-import * as api from '@/lib/me-matches-api';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
-vi.mock('@/lib/me-matches-api');
+const {
+  likeMatch,
+  passMatch,
+  blockMatch,
+  undoMatchAction,
+  fetchMatchAction,
+} = vi.hoisted(() => ({
+  likeMatch: vi.fn(),
+  passMatch: vi.fn(),
+  blockMatch: vi.fn(),
+  undoMatchAction: vi.fn(),
+  fetchMatchAction: vi.fn(),
+}));
+
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    matches: {
+      likeMatch,
+      passMatch,
+      blockMatch,
+      undoMatchAction,
+      fetchMatchAction,
+    },
+  },
+}));
+
+function wrapper({ children }: { children: ReactNode }) {
+  return createElement(
+    QueryClientTestProvider,
+    { client: createTestQueryClient() },
+    children,
+  );
+}
 
 describe('useMatchActions', () => {
   const mockMatchId = 'match-123';
@@ -15,8 +52,9 @@ describe('useMatchActions', () => {
   });
 
   it('should initialize with default state', () => {
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId }),
+      { wrapper },
     );
 
     expect(result.current.currentAction).toBeNull();
@@ -27,8 +65,9 @@ describe('useMatchActions', () => {
   });
 
   it('should initialize with initial action', () => {
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+      { wrapper },
     );
 
     expect(result.current.currentAction).toBe('LIKE');
@@ -47,17 +86,19 @@ describe('useMatchActions', () => {
       conversationId: null,
     };
 
-    vi.mocked(api.likeMatch).mockResolvedValue(mockResult);
+    likeMatch.mockResolvedValue(mockResult);
 
-    const { result } = renderHook(() =>
-      useMatchActions({
-        matchId: mockMatchId,
-        onActionSuccess: mockOnActionSuccess,
-      }),
+    const { result } = renderHook(
+      () =>
+        useMatchActions({
+          matchId: mockMatchId,
+          onActionSuccess: mockOnActionSuccess,
+        }),
+      { wrapper },
     );
 
     act(() => {
-      result.current.like();
+      void result.current.like();
     });
 
     expect(result.current.actionLoading).toBe(true);
@@ -66,7 +107,7 @@ describe('useMatchActions', () => {
       expect(result.current.actionLoading).toBe(false);
     });
 
-    expect(api.likeMatch).toHaveBeenCalledWith(mockMatchId);
+    expect(likeMatch).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBe('LIKE');
     expect(result.current.lastAction).toMatchObject({
       type: 'LIKE',
@@ -87,13 +128,15 @@ describe('useMatchActions', () => {
       conversationId: 'conv-123',
     };
 
-    vi.mocked(api.likeMatch).mockResolvedValue(mockResult);
+    likeMatch.mockResolvedValue(mockResult);
 
-    const { result } = renderHook(() =>
-      useMatchActions({
-        matchId: mockMatchId,
-        onMutualMatch: mockOnMutualMatch,
-      }),
+    const { result } = renderHook(
+      () =>
+        useMatchActions({
+          matchId: mockMatchId,
+          onMutualMatch: mockOnMutualMatch,
+        }),
+      { wrapper },
     );
 
     await act(async () => {
@@ -122,22 +165,24 @@ describe('useMatchActions', () => {
       conversationId: null,
     };
 
-    vi.mocked(api.passMatch).mockResolvedValue(mockActionResult);
-    vi.mocked(api.fetchMatchAction).mockResolvedValue(mockActionState);
+    passMatch.mockResolvedValue(mockActionResult);
+    fetchMatchAction.mockResolvedValue(mockActionState);
 
-    const { result } = renderHook(() =>
-      useMatchActions({
-        matchId: mockMatchId,
-        onActionSuccess: mockOnActionSuccess,
-      }),
+    const { result } = renderHook(
+      () =>
+        useMatchActions({
+          matchId: mockMatchId,
+          onActionSuccess: mockOnActionSuccess,
+        }),
+      { wrapper },
     );
 
     await act(async () => {
       await result.current.pass();
     });
 
-    expect(api.passMatch).toHaveBeenCalledWith(mockMatchId);
-    expect(api.fetchMatchAction).toHaveBeenCalledWith(mockMatchId);
+    expect(passMatch).toHaveBeenCalledWith(mockMatchId);
+    expect(fetchMatchAction).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBe('PASS');
     expect(mockOnActionSuccess).toHaveBeenCalledWith('PASS');
   });
@@ -154,20 +199,22 @@ describe('useMatchActions', () => {
       conversationId: null,
     };
 
-    vi.mocked(api.blockMatch).mockResolvedValue(mockResult);
+    blockMatch.mockResolvedValue(mockResult);
 
-    const { result } = renderHook(() =>
-      useMatchActions({
-        matchId: mockMatchId,
-        onActionSuccess: mockOnActionSuccess,
-      }),
+    const { result } = renderHook(
+      () =>
+        useMatchActions({
+          matchId: mockMatchId,
+          onActionSuccess: mockOnActionSuccess,
+        }),
+      { wrapper },
     );
 
     await act(async () => {
       await result.current.block();
     });
 
-    expect(api.blockMatch).toHaveBeenCalledWith(mockMatchId);
+    expect(blockMatch).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBe('BLOCK');
     expect(mockOnActionSuccess).toHaveBeenCalledWith('BLOCK');
   });
@@ -179,11 +226,12 @@ describe('useMatchActions', () => {
       conversationId: null,
     };
 
-    vi.mocked(api.undoMatchAction).mockResolvedValue(undefined);
-    vi.mocked(api.fetchMatchAction).mockResolvedValue(mockActionState);
+    undoMatchAction.mockResolvedValue(undefined);
+    fetchMatchAction.mockResolvedValue(mockActionState);
 
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+      { wrapper },
     );
 
     expect(result.current.currentAction).toBe('LIKE');
@@ -193,15 +241,16 @@ describe('useMatchActions', () => {
       await result.current.undo();
     });
 
-    expect(api.undoMatchAction).toHaveBeenCalledWith(mockMatchId);
-    expect(api.fetchMatchAction).toHaveBeenCalledWith(mockMatchId);
+    expect(undoMatchAction).toHaveBeenCalledWith(mockMatchId);
+    expect(fetchMatchAction).toHaveBeenCalledWith(mockMatchId);
     expect(result.current.currentAction).toBeNull();
     expect(result.current.lastAction).toBeNull();
   });
 
   it('should not allow undo for BLOCK action', async () => {
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId, initialAction: 'BLOCK' }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId, initialAction: 'BLOCK' }),
+      { wrapper },
     );
 
     expect(result.current.canUndo).toBe(false);
@@ -210,15 +259,16 @@ describe('useMatchActions', () => {
       await result.current.undo();
     });
 
-    expect(api.undoMatchAction).not.toHaveBeenCalled();
+    expect(undoMatchAction).not.toHaveBeenCalled();
   });
 
   it('should handle like error with rollback', async () => {
     const mockError = new Error('Network error');
-    vi.mocked(api.likeMatch).mockRejectedValue(mockError);
+    likeMatch.mockRejectedValue(mockError);
 
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId }),
+      { wrapper },
     );
 
     await act(async () => {
@@ -231,10 +281,11 @@ describe('useMatchActions', () => {
 
   it('should handle pass error with rollback', async () => {
     const mockError = new Error('Network error');
-    vi.mocked(api.passMatch).mockRejectedValue(mockError);
+    passMatch.mockRejectedValue(mockError);
 
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId }),
+      { wrapper },
     );
 
     await act(async () => {
@@ -247,10 +298,11 @@ describe('useMatchActions', () => {
 
   it('should handle undo error with rollback', async () => {
     const mockError = new Error('Cannot undo');
-    vi.mocked(api.undoMatchAction).mockRejectedValue(mockError);
+    undoMatchAction.mockRejectedValue(mockError);
 
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+      { wrapper },
     );
 
     const previousAction = result.current.currentAction;
@@ -264,36 +316,38 @@ describe('useMatchActions', () => {
   });
 
   it('should prevent concurrent actions', async () => {
-    vi.mocked(api.likeMatch).mockImplementation(
+    likeMatch.mockImplementation(
       () => new Promise((resolve) => setTimeout(resolve, 100)),
     );
 
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId }),
+      { wrapper },
     );
 
     act(() => {
-      result.current.like();
+      void result.current.like();
     });
 
     expect(result.current.actionLoading).toBe(true);
 
     act(() => {
-      result.current.pass();
+      void result.current.pass();
     });
 
-    expect(api.passMatch).not.toHaveBeenCalled();
+    expect(passMatch).not.toHaveBeenCalled();
   });
 
   it('should not allow action if current action exists', async () => {
-    const { result } = renderHook(() =>
-      useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+    const { result } = renderHook(
+      () => useMatchActions({ matchId: mockMatchId, initialAction: 'LIKE' }),
+      { wrapper },
     );
 
     await act(async () => {
       await result.current.pass();
     });
 
-    expect(api.passMatch).not.toHaveBeenCalled();
+    expect(passMatch).not.toHaveBeenCalled();
   });
 });

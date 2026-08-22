@@ -1,21 +1,32 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
-const { fetchMyProfile, patchMyProfile, listMyProfilePhotos } = vi.hoisted(() => ({
+const { fetchMyProfile, patchMyProfile, createMyProfile } = vi.hoisted(() => ({
   fetchMyProfile: vi.fn(),
   patchMyProfile: vi.fn(),
-  listMyProfilePhotos: vi.fn(),
+  createMyProfile: vi.fn(),
 }));
 
-vi.mock('@/lib/me-profile-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/me-profile-api')>();
-  return {
-    ...actual,
-    fetchMyProfile,
-    patchMyProfile,
-  };
-});
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile,
+      createMyProfile,
+      submitMyProfileForAnalysis: vi.fn(),
+    },
+  },
+}));
+
+const { listMyProfilePhotos } = vi.hoisted(() => ({
+  listMyProfilePhotos: vi.fn(),
+}));
 
 vi.mock('@/lib/me-photos-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/me-photos-api')>();
@@ -57,6 +68,16 @@ const basicProfile: MeProfileDto = {
   updatedAt: '2026-01-02T00:00:00.000Z',
 };
 
+function renderForm() {
+  return render(
+    createElement(
+      QueryClientTestProvider,
+      { client: createTestQueryClient() },
+      createElement(OnboardingBasicForm),
+    ),
+  );
+}
+
 describe('OnboardingBasicForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,7 +96,7 @@ describe('OnboardingBasicForm', () => {
   });
 
   it('renders English labels after profile sync', async () => {
-    render(<OnboardingBasicForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
@@ -92,7 +113,7 @@ describe('OnboardingBasicForm', () => {
 
   it('renders Hebrew section title and save button when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    render(<OnboardingBasicForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
@@ -105,12 +126,12 @@ describe('OnboardingBasicForm', () => {
   });
 
   it('shows localized partner-gender validation when continuing without selections', async () => {
-    render(<OnboardingBasicForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: enCopy.onboarding.basicForm.continueToStory }),
-      ).toBeTruthy();
+        (document.getElementById('onb-gender') as HTMLSelectElement).value,
+      ).toBe('MALE');
     });
 
     fireEvent.click(
@@ -127,12 +148,12 @@ describe('OnboardingBasicForm', () => {
 
   it('shows Hebrew partner-gender validation when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    render(<OnboardingBasicForm />);
+    renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: heCopy.onboarding.basicForm.continueToStory }),
-      ).toBeTruthy();
+        (document.getElementById('onb-gender') as HTMLSelectElement).value,
+      ).toBe('MALE');
     });
 
     fireEvent.click(

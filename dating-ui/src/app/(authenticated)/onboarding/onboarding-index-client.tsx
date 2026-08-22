@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { getMyProfile } from "@/lib/me-profile-api";
-import { onboardingResumePath } from "@/lib/onboarding-resume";
+import { onboardingResumePath } from "@/lib/onboarding-path";
+import { useProfile } from "@/hooks/use-profile";
 
 /**
  * `/onboarding` index — resume to the correct step (or profile if complete).
@@ -13,24 +13,19 @@ import { onboardingResumePath } from "@/lib/onboarding-resume";
 export function OnboardingIndexClient() {
   const router = useRouter();
   const t = useTranslations("Onboarding");
+  const { profile, isLoading, error: profileError } = useProfile();
   const [error, setError] = useState<string | null>(null);
+  const [redirected, setRedirected] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const profile = await getMyProfile();
-        if (cancelled) return;
-        router.replace(onboardingResumePath(profile));
-      } catch {
-        if (cancelled) return;
-        setError(t("loadError"));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, t]);
+    if (isLoading || redirected) return;
+    if (profileError) {
+      setError(t("loadError"));
+      return;
+    }
+    setRedirected(true);
+    router.replace(onboardingResumePath(profile));
+  }, [profile, isLoading, profileError, router, t, redirected]);
 
   if (error) {
     return (

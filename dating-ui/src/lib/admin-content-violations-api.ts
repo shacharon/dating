@@ -1,4 +1,5 @@
 import { getApiBase } from '@/lib/api-base';
+import { authenticatedFetch } from '@/lib/authenticated-fetch';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -107,11 +108,9 @@ export async function listAdminContentViolations(
   if (filters.offset != null) params.set('offset', String(filters.offset));
 
   const qs = params.toString();
-  const res = await fetch(
-    `${base}/api/v1/admin/content-violations${qs ? `?${qs}` : ''}`,
+  const res = await authenticatedFetch(`/api/v1/admin/content-violations${qs ? `?${qs}` : ''}`,
     {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json' },
     },
   );
   if (res.status === 403) {
@@ -132,11 +131,9 @@ export async function listAdminBlockedUsers(filters: {
   if (filters.limit != null) params.set('limit', String(filters.limit));
   if (filters.offset != null) params.set('offset', String(filters.offset));
   const qs = params.toString();
-  const res = await fetch(
-    `${base}/api/v1/admin/content-violations/blocked-users${qs ? `?${qs}` : ''}`,
+  const res = await authenticatedFetch(`/api/v1/admin/content-violations/blocked-users${qs ? `?${qs}` : ''}`,
     {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json' },
     },
   );
   if (res.status === 403) {
@@ -150,8 +147,7 @@ export async function listAdminBlockedUsers(filters: {
 
 export async function getAdminContentViolationStats(): Promise<AdminContentViolationStats> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/v1/admin/content-violations/stats`, {
-    credentials: 'include',
+  const res = await authenticatedFetch(`/api/v1/admin/content-violations/stats`, {
     headers: { Accept: 'application/json' },
   });
   if (res.status === 403) {
@@ -168,12 +164,10 @@ export async function unblockAdminContentUser(
   reason: string,
 ): Promise<UnblockContentViolationResponse> {
   const base = getApiBase();
-  const res = await fetch(
-    `${base}/api/v1/admin/content-violations/unblock/${encodeURIComponent(userId)}`,
+  const res = await authenticatedFetch(`/api/v1/admin/content-violations/unblock/${encodeURIComponent(userId)}`,
     {
       method: 'POST',
-      credentials: 'include',
-      headers: JSON_HEADERS,
+    headers: JSON_HEADERS,
       body: JSON.stringify({ reason }),
     },
   );

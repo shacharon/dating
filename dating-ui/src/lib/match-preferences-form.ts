@@ -1,5 +1,6 @@
 import type { MeProfileDto, MeProfileGender, PatchMeProfileBody } from '@/lib/me-profile-api';
 import { ME_PARTNER_GENDER_CHOICES } from '@/lib/me-profile-api';
+import { validatePartnerGendersNonEmpty } from '@/lib/profile-field-validation';
 
 export type MatchPreferencesValidationError =
   | 'ageRangeInvalid'
@@ -54,8 +55,11 @@ export function profileToMatchPreferencesForm(
 export function validateMatchPreferencesForm(
   state: MatchPreferencesFormState,
 ): { ok: true } | { ok: false; error: MatchPreferencesValidationError } {
-  if (state.desiredPartnerGenders.length === 0) {
-    return { ok: false, error: 'partnerGendersRequired' };
+  const partnerResult = validatePartnerGendersNonEmpty(
+    state.desiredPartnerGenders,
+  );
+  if (!partnerResult.ok) {
+    return partnerResult;
   }
   const min = parseOptionalInt(state.partnerAgeMin);
   const max = parseOptionalInt(state.partnerAgeMax);

@@ -28,6 +28,12 @@ describe('messaging-presence.keys', () => {
     expect(decodePresenceMeta('')).toBeNull();
     expect(decodePresenceMeta('nopesplit')).toBeNull();
     expect(decodePresenceMeta('|sess')).toBeNull();
-    expect(decodePresenceMeta('user|')).toBeNull();
+  });
+
+  it('decodes bearer meta with empty session segment', () => {
+    expect(decodePresenceMeta('user_a|')).toEqual({
+      userId: 'user_a',
+      sessionId: undefined,
+    });
   });
 });

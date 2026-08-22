@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { USER_STATUS_ACTIVE } from '../auth/auth.constants';
+import { TokenService } from '../auth/token.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MessagingWsSessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokens: TokenService,
+  ) {}
 
   /** Session row only (revoked / expired). Prefer {@link isConnectionAllowed} for revalidate. */
   async isSessionActive(sessionId: string): Promise<boolean> {
@@ -22,7 +26,22 @@ export class MessagingWsSessionService {
     if (!(await this.sessionRowActive(sessionId))) {
       return false;
     }
+    return this.isUserActive(userId);
+  }
 
+  /** Bearer WS revalidate: JWT still valid AND user active. */
+  async isBearerConnectionAllowed(
+    userId: string,
+    accessToken: string,
+  ): Promise<boolean> {
+    const verified = await this.tokens.verifyAccessToken(accessToken);
+    if (!verified || verified.userId !== userId.trim()) {
+      return false;
+    }
+    return this.isUserActive(userId);
+  }
+
+  private async isUserActive(userId: string): Promise<boolean> {
     const uid = userId.trim();
     if (!uid) {
       return false;

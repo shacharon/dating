@@ -1,20 +1,26 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  QueryClientTestProvider,
+  createTestQueryClient,
+} from '@/test/query-client-wrapper';
 
-const { resolveEditableProfile } = vi.hoisted(() => ({
-  resolveEditableProfile: vi.fn(),
+const { fetchMyProfile } = vi.hoisted(() => ({
+  fetchMyProfile: vi.fn(),
 }));
 
-vi.mock('@/lib/profile-form', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/profile-form')>(
-    '@/lib/profile-form',
-  );
-  return {
-    ...actual,
-    resolveEditableProfile,
-  };
-});
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile,
+      patchMyProfile: vi.fn(),
+      createMyProfile: vi.fn(),
+      submitMyProfileForAnalysis: vi.fn(),
+    },
+  },
+}));
 
 vi.mock('@/components/notification-preferences-section', () => ({
   NotificationPreferencesSection: () => (
@@ -30,15 +36,34 @@ vi.mock('@/components/dating-chapter-preferences-section', () => ({
 
 import { ProfileSettingsTab } from '@/components/profile/profile-settings-tab';
 
+function renderSettingsTab() {
+  return render(
+    createElement(
+      QueryClientTestProvider,
+      { client: createTestQueryClient() },
+      createElement(ProfileSettingsTab),
+    ),
+  );
+}
+
 describe('ProfileSettingsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveEditableProfile.mockResolvedValue({
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'ANALYZED',
+      onboardingStep: 'COMPLETED',
       nickname: 'Noa',
       partnerAgeMin: 25,
       partnerAgeMax: 35,
       maxDistanceKm: 50,
       desiredPartnerGenders: ['MALE', 'FEMALE'],
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
     });
   });
 
@@ -47,7 +72,7 @@ describe('ProfileSettingsTab', () => {
   });
 
   it('removes Account/Language links and keeps notifications', async () => {
-    render(<ProfileSettingsTab />);
+    renderSettingsTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-settings-tab')).toBeTruthy();
     });
@@ -63,13 +88,13 @@ describe('ProfileSettingsTab', () => {
   });
 
   it('shows CTA to /settings/preferences with testid', async () => {
-    render(<ProfileSettingsTab />);
+    renderSettingsTab();
     const cta = await screen.findByTestId('profile-match-preferences-link');
     expect(cta.getAttribute('href')).toBe('/settings/preferences');
   });
 
   it('renders age, distance, and partner gender preview lines', async () => {
-    render(<ProfileSettingsTab />);
+    renderSettingsTab();
     await waitFor(() => {
       expect(screen.getByText(/25–35/)).toBeTruthy();
     });
