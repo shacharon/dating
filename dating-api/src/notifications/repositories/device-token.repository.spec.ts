@@ -1,10 +1,22 @@
-import { PrismaDeviceTokenRepository } from './device-token.repository';
+import {
+  MAX_DEVICE_TOKENS_PER_USER,
+  PrismaDeviceTokenRepository,
+} from './device-token.repository';
 import type { PrismaService } from '../../prisma/prisma.service';
 
 describe('PrismaDeviceTokenRepository', () => {
-  const prisma = {
+  const tx = {
     deviceToken: {
       upsert: jest.fn(),
+      findMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+  };
+  const prisma = {
+    $transaction: jest.fn(async (fn: (client: typeof tx) => Promise<void>) =>
+      fn(tx),
+    ),
+    deviceToken: {
       findMany: jest.fn(),
       deleteMany: jest.fn(),
     },
@@ -17,15 +29,38 @@ describe('PrismaDeviceTokenRepository', () => {
     repo = new PrismaDeviceTokenRepository(prisma);
   });
 
-  it('upserts by unique token', async () => {
-    (prisma.deviceToken.upsert as jest.Mock).mockResolvedValue({});
+  it('upserts by unique token inside a transaction', async () => {
+    tx.deviceToken.upsert.mockResolvedValue({});
+    tx.deviceToken.findMany.mockResolvedValue([{ id: 'dt1' }]);
 
     await repo.upsert('user-1', 'fcm-token', 'android');
 
-    expect(prisma.deviceToken.upsert).toHaveBeenCalledWith({
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(tx.deviceToken.upsert).toHaveBeenCalledWith({
       where: { token: 'fcm-token' },
       create: { userId: 'user-1', token: 'fcm-token', platform: 'android' },
       update: { userId: 'user-1', platform: 'android' },
+    });
+    expect(tx.deviceToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('drops oldest tokens when user exceeds cap', async () => {
+    tx.deviceToken.upsert.mockResolvedValue({});
+    const owned = Array.from({ length: MAX_DEVICE_TOKENS_PER_USER + 2 }, (_, i) => ({
+      id: `dt${i}`,
+    }));
+    tx.deviceToken.findMany.mockResolvedValue(owned);
+    tx.deviceToken.deleteMany.mockResolvedValue({ count: 2 });
+
+    await repo.upsert('user-1', 'newest', 'android');
+
+    expect(tx.deviceToken.findMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      orderBy: { updatedAt: 'asc' },
+      select: { id: true },
+    });
+    expect(tx.deviceToken.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ['dt0', 'dt1'] } },
     });
   });
 

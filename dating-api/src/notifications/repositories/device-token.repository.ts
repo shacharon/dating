@@ -11,15 +11,33 @@ export interface IDeviceTokenRepository {
 
 export const DEVICE_TOKEN_REPOSITORY = Symbol('DEVICE_TOKEN_REPOSITORY');
 
+/** Cap tokens per user to limit storage / FCM fan-out abuse (Sprint 67.1 security). */
+export const MAX_DEVICE_TOKENS_PER_USER = 10;
+
 @Injectable()
 export class PrismaDeviceTokenRepository implements IDeviceTokenRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsert(userId: string, token: string, platform: string): Promise<void> {
-    await this.prisma.deviceToken.upsert({
-      where: { token },
-      create: { userId, token, platform },
-      update: { userId, platform },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.deviceToken.upsert({
+        where: { token },
+        create: { userId, token, platform },
+        update: { userId, platform },
+      });
+
+      const owned = await tx.deviceToken.findMany({
+        where: { userId },
+        orderBy: { updatedAt: 'asc' },
+        select: { id: true },
+      });
+      const overflow = owned.length - MAX_DEVICE_TOKENS_PER_USER;
+      if (overflow > 0) {
+        const dropIds = owned.slice(0, overflow).map((row) => row.id);
+        await tx.deviceToken.deleteMany({
+          where: { id: { in: dropIds } },
+        });
+      }
     });
   }
 
