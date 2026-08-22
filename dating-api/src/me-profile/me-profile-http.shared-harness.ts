@@ -1,9 +1,12 @@
 /**
  * Shared Nest + mocked Prisma harness for me-profile HTTP integration suites.
  *
- * Entrypoints (Sprint 63 Story 2):
+ * Entrypoints (Sprint 63 Story 2 + Sprint 65 Story 3 matches sub-split):
  * - me-profile-http-crud.integration.spec.ts
- * - me-profile-http-matches.integration.spec.ts
+ * - me-profile-http-matches-list-detail.integration.spec.ts
+ * - me-profile-http-matches-narrative-feedback.integration.spec.ts
+ * - me-profile-http-matches-actions.integration.spec.ts
+ * - me-profile-http-matches-mutual.integration.spec.ts
  * - me-profile-http-conversations.integration.spec.ts
  * - me-profile-http-photos.integration.spec.ts
  *
