@@ -273,6 +273,12 @@ describe('MeConversationMessagesService', () => {
       senderUserId: sessionUserId,
       messageId: 'msg_abc',
     });
+    expect(pushQueue.enqueueNewMessageBestEffort).toHaveBeenCalledWith({
+      recipientUserId: otherUserId,
+      senderUserId: sessionUserId,
+      conversationId,
+      messagePreview: 'Hello!',
+    });
   });
 
   it('returns MessageDto when publishToUsers throws', async () => {

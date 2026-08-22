@@ -300,6 +300,9 @@ describe('MeMatchActionsService', () => {
     expect(mutualMatchEmail.notifyNewMutualMatchBestEffort).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'mutual_row_1' }),
     );
+    expect(pushQueue.enqueueMutualMatchBestEffort).toHaveBeenCalledWith({
+      match: expect.objectContaining({ id: 'mutual_row_1' }),
+    });
     expect(analytics.track).toHaveBeenCalledWith(
       'actor-1',
       ProductAnalyticsEvents.MATCH_MUTUAL_CREATED,
@@ -342,6 +345,7 @@ describe('MeMatchActionsService', () => {
     await service.createAction('actor-1', 'prof-cand', MatchActionType.LIKE);
 
     expect(mutualMatchEmail.notifyNewMutualMatchBestEffort).not.toHaveBeenCalled();
+    expect(pushQueue.enqueueMutualMatchBestEffort).not.toHaveBeenCalled();
     expect(analytics.track).not.toHaveBeenCalledWith(
       expect.anything(),
       ProductAnalyticsEvents.MATCH_MUTUAL_CREATED,
