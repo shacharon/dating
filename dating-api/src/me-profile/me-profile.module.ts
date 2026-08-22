@@ -26,6 +26,10 @@ import { MeMatchesService } from './me-matches.service';
 import { MatchListQueryService } from './matches/match-list-query.service';
 import { MatchEligibilityService } from './matches/match-eligibility.service';
 import { MatchRankingService } from './matches/match-ranking.service';
+import { RankingAssembleService } from './matches/match-ranking/ranking-assemble.service';
+import { RankingLoadService } from './matches/match-ranking/ranking-load.service';
+import { RankingScorerService } from './matches/match-ranking/ranking-scorer.service';
+import { RankingTelemetryService } from './matches/match-ranking/ranking-telemetry.service';
 import { MatchListCacheService } from './matches/match-list-cache.service';
 import { MatchDetailService } from './matches/match-detail.service';
 import { MutualMatchesService } from './mutual-matches.service';
@@ -119,6 +123,10 @@ import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedb
     MeProfileMatchesService,
     MatchListQueryService,
     MatchEligibilityService,
+    RankingLoadService,
+    RankingScorerService,
+    RankingAssembleService,
+    RankingTelemetryService,
     MatchRankingService,
     MatchListCacheService,
     MatchDetailService,
