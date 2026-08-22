@@ -26,7 +26,6 @@ import type {
   CandidatePhotoAccessRow,
   EvaluationRow,
   LatestEvaluationForMatchRow,
-  MatchActionRow,
   MatchCandidateDetailRow,
   MatchCandidateListRow,
   MatchListCandidateFilter,
@@ -34,6 +33,7 @@ import type {
   MutualMatchRow,
   RankPageRow,
   RankPersistRow,
+  UpsertActionDetectResult,
   ViewerMatchContext,
   ViewerWithPreference,
 } from './match.repository.types';
@@ -286,10 +286,7 @@ export class PrismaMatchRepository implements IMatchRepository {
     targetUserId: string;
     targetProfileIdSnapshot: string;
     action: MatchActionType;
-  }): Promise<{
-    row: MatchActionRow;
-    detectResult: MutualMatchDetectResult | null;
-  }> {
+  }): Promise<UpsertActionDetectResult> {
     return this.prisma.$transaction(async (tx) => {
       const row = await tx.matchAction.upsert({
         where: {
@@ -304,24 +301,45 @@ export class PrismaMatchRepository implements IMatchRepository {
           targetProfileIdSnapshot: args.targetProfileIdSnapshot,
         },
       });
-      const detectResult =
-        args.action === MatchActionType.LIKE
-          ? await this.detectAndCreateWithClient(
-              args.actorUserId,
-              args.targetUserId,
-              tx,
-            )
-          : null;
-      return { row, detectResult };
+
+      if (args.action === MatchActionType.LIKE) {
+        const detectResult = await this.detectAndCreateWithClient(
+          args.actorUserId,
+          args.targetUserId,
+          tx,
+        );
+        return { row, detectResult, unmatchedExisting: false };
+      }
+
+      const unmatchedExisting = await this.unmatchActivePairIfExists(
+        tx,
+        args.actorUserId,
+        args.targetUserId,
+        args.actorUserId,
+      );
+      return { row, detectResult: null, unmatchedExisting };
     });
   }
 
   async deleteActionByActorTarget(
     actorUserId: string,
     targetUserId: string,
-  ): Promise<void> {
-    await this.prisma.matchAction.delete({
-      where: { actorUserId_targetUserId: { actorUserId, targetUserId } },
+    softUnmatchIfLike = false,
+  ): Promise<{ unmatchedExisting: boolean }> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.matchAction.delete({
+        where: { actorUserId_targetUserId: { actorUserId, targetUserId } },
+      });
+      if (!softUnmatchIfLike) {
+        return { unmatchedExisting: false };
+      }
+      const unmatchedExisting = await this.unmatchActivePairIfExists(
+        tx,
+        actorUserId,
+        targetUserId,
+        actorUserId,
+      );
+      return { unmatchedExisting };
     });
   }
 
@@ -428,6 +446,28 @@ export class PrismaMatchRepository implements IMatchRepository {
     return userA < userB ? [userA, userB] : [userB, userA];
   }
 
+  private async unmatchActivePairIfExists(
+    db: MatchPersistenceClient,
+    actorUserId: string,
+    targetUserId: string,
+    unmatchedByUserId: string,
+  ): Promise<boolean> {
+    const [userId1, userId2] = this.sortUserPair(actorUserId, targetUserId);
+    const result = await db.mutualMatch.updateMany({
+      where: {
+        userId1,
+        userId2,
+        status: MutualMatchStatus.ACTIVE,
+      },
+      data: {
+        status: MutualMatchStatus.UNMATCHED,
+        unmatchedAt: new Date(),
+        unmatchedByUserId,
+      },
+    });
+    return result.count > 0;
+  }
+
   private async detectAndCreateWithClient(
     actorUserId: string,
     targetUserId: string,
@@ -448,11 +488,26 @@ export class PrismaMatchRepository implements IMatchRepository {
     const existing = await db.mutualMatch.findUnique({
       where: { userId1_userId2: { userId1, userId2 } },
     });
-    if (existing) return { mutualMatch: existing, created: false };
-
-    const mutualMatch = await db.mutualMatch.create({
-      data: { userId1, userId2, status: MutualMatchStatus.ACTIVE },
-    });
-    return { mutualMatch, created: true };
+    if (!existing) {
+      const mutualMatch = await db.mutualMatch.create({
+        data: { userId1, userId2, status: MutualMatchStatus.ACTIVE },
+      });
+      return { mutualMatch, created: true };
+    }
+    if (existing.status === MutualMatchStatus.ACTIVE) {
+      return { mutualMatch: existing, created: false };
+    }
+    if (existing.status === MutualMatchStatus.UNMATCHED) {
+      const mutualMatch = await db.mutualMatch.update({
+        where: { id: existing.id },
+        data: {
+          status: MutualMatchStatus.ACTIVE,
+          unmatchedAt: null,
+          unmatchedByUserId: null,
+        },
+      });
+      return { mutualMatch, created: true };
+    }
+    return { mutualMatch: existing, created: false };
   }
 }

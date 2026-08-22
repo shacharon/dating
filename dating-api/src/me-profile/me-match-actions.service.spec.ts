@@ -63,6 +63,7 @@ describe('MeMatchActionsService', () => {
       await prisma.matchAction.delete({
         where: { actorUserId_targetUserId: { actorUserId, targetUserId } },
       });
+      return { unmatchedExisting: false };
     }),
     upsertActionAndDetectMutual: jest.fn(
       async ({ actorUserId, targetUserId, targetProfileIdSnapshot, action }) =>
@@ -87,7 +88,7 @@ describe('MeMatchActionsService', () => {
                   tx as never,
                 )
               : null;
-          return { row, detectResult };
+          return { row, detectResult, unmatchedExisting: false };
         }),
     ),
   } as unknown as IMatchRepository;
