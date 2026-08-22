@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AdminAuthModule } from '../admin/admin-auth.module';
-import { AuthModule } from '../auth/auth.module';
-import { SimpleLoggerModule } from '../logger/simple-logger.module';
-import { MatchingPolicyModule } from '../matching-policy/matching-policy.module';
-import { ProfilesModule } from '../profiles/profiles.module';
+import { AdminAuthModule } from '../../admin/admin-auth.module';
+import { AuthModule } from '../../auth/auth.module';
+import { SimpleLoggerModule } from '../../logger/simple-logger.module';
+import { MatchingPolicyModule } from '../../matching-policy/matching-policy.module';
+import { ProfilesModule } from '../../profiles/profiles.module';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { AdminPairMatchEvaluator } from './admin-pair-match.evaluator';
 import { MatchDaemonService } from './match-daemon.service';
 import { MatchesApiController } from './matches-api.controller';
@@ -18,6 +19,7 @@ import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapsho
     AuthModule,
     AdminAuthModule,
     MatchingPolicyModule,
+    PrismaModule,
   ],
   controllers: [MatchesController, MatchesApiController],
   providers: [
@@ -26,9 +28,6 @@ import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapsho
     MatchDaemonService,
     HolyGrailPairSnapshotTelemetryService,
   ],
-  exports: [
-    MatchesService,
-    MatchDaemonService,
-  ],
+  exports: [MatchesService, MatchDaemonService],
 })
-export class MatchesModule {}
+export class AdminLegacyMatchesModule {}

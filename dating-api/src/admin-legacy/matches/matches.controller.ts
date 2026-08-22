@@ -8,8 +8,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../admin/admin.guard';
-import { AuthGuard } from '../auth/auth.guard';
+import { AdminGuard } from '../../admin/admin.guard';
+import { AuthGuard } from '../../auth/auth.guard';
 import type {
   CompareBodyDto,
   CompareGuardMatchDto,
@@ -17,11 +17,11 @@ import type {
 import type {
   MatchIndexDto,
   MatchRecordDto,
-} from './match.types';
-import { resolveEngineFinalScore } from './match-score.util';
+} from '../../matches/match.types';
+import { resolveEngineFinalScore } from '../../matches/match-score.util';
 import type { RebuildStatsDto } from './match-daemon.service';
 import { MatchDaemonService } from './match-daemon.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { MatchesService } from './matches.service';
 import { computeMatchDetailPairHg } from './match-detail-children-unsure';
 import {
@@ -30,6 +30,9 @@ import {
 } from './match-detail-ui.mapper';
 import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 
+/**
+ * @deprecated Admin legacy HTTP surface. Product path: `GET /api/v1/me/matches` via MeProfileController.
+ */
 @Controller('api/v1/matches')
 @UseGuards(AuthGuard, AdminGuard)
 export class MatchesController {

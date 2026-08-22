@@ -1,5 +1,5 @@
 import { mapMatchRecordToDetailUi } from './match-detail-ui.mapper';
-import type { MatchRecordDto } from './match.types';
+import type { MatchRecordDto } from '../../matches/match.types';
 
 const BASE: MatchRecordDto = {
   matchId: 'a__b',

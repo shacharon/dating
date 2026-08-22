@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ContradictionModule } from '../contradiction/contradiction.module';
 import { EvaluateModule } from '../evaluate/evaluate.module';
-import { MatchesModule } from '../matches/matches.module';
+import { AdminLegacyMatchesModule } from '../admin-legacy/matches/admin-legacy-matches.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import {
   DefaultLegacyBackendAdapter,
@@ -11,7 +11,7 @@ import {
 @Global()
 @Module({
   imports: [
-    MatchesModule,
+    AdminLegacyMatchesModule,
     EvaluateModule,
     ContradictionModule,
     ProfilesModule,

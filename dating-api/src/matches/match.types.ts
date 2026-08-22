@@ -2,7 +2,7 @@
 
 import type { CompareResultDto, MatchDebugDto } from './match-engine';
 
-export type { HolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
+export type { HolyGrailMatchDiagnosticsDto } from '../admin-legacy/matches/holy-grail-match-diagnostics.wire';
 
 /** Holy Grail children soft-pass flags (both directions on the stored pair a|b). */
 export interface ChildrenUnsureDirectionsDto {

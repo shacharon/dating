@@ -1,10 +1,10 @@
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
-import type { MatchListItemDto, MatchRecordDto } from './match.types';
+import type { MatchListItemDto, MatchRecordDto } from '../../matches/match.types';
 import {
   resolvePairHgFieldsFromSnapshotAndRows,
   type MatchPairHgSnapshotRow,
 } from './match-pair-hg-snapshot';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
 
 export function parseHgListAdmissionGateEnv(
   configValue: string | undefined,

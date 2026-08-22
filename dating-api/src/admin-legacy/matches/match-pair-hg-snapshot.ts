@@ -1,15 +1,15 @@
-import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matching/eligibility.evaluator';
-import { HOLY_GRAIL_DIMENSION_KEYS } from '../holy-grail-matching/holy-grail-dimensions';
-import type { PrismaService } from '../prisma/prisma.service';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import { HG_LIST_PRODUCT_POLICY_VERSION } from './children-unsure.product-policy';
-import { evaluateHolyGrailPairDirections } from './holy-grail-pair-directions';
+import type { HolyGrailDirectionalEvaluationResult } from '../../holy-grail-matching/eligibility.evaluator';
+import { HOLY_GRAIL_DIMENSION_KEYS } from '../../holy-grail-matching/holy-grail-dimensions';
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
+import { HG_LIST_PRODUCT_POLICY_VERSION } from '../../matches/children-unsure.product-policy';
+import { evaluateHolyGrailPairDirections } from '../../matches/holy-grail-pair-directions';
 import type {
   ChildrenUnsureDirectionsDto,
   HolyGrailMatchDiagnosticsDto,
   MatchRecordDto,
-} from './match.types';
-import { anyChildrenUnsure } from './children-unsure.helpers';
+} from '../../matches/match.types';
+import { anyChildrenUnsure } from '../../matches/children-unsure.helpers';
 
 const HG_CHILDREN_STATUS_SEP = ':';
 

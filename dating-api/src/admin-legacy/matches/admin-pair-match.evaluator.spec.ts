@@ -1,9 +1,9 @@
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import type { ProfileJsonPayload } from '../profiles/profiles.types';
-import { HgGateLegacyRankPolicy } from '../matching-policy/hg-gate-legacy-rank.policy';
-import * as holyGrailPair from './holy-grail-pair-directions';
-import * as matchEngine from './match-engine';
-import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matching/eligibility.evaluator';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
+import type { ProfileJsonPayload } from '../../profiles/profiles.types';
+import { HgGateLegacyRankPolicy } from '../../matching-policy/hg-gate-legacy-rank.policy';
+import * as holyGrailPair from '../../matches/holy-grail-pair-directions';
+import * as matchEngine from '../../matches/match-engine';
+import type { HolyGrailDirectionalEvaluationResult } from '../../holy-grail-matching/eligibility.evaluator';
 import { AdminPairMatchEvaluator } from './admin-pair-match.evaluator';
 
 describe('AdminPairMatchEvaluator', () => {

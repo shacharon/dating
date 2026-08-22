@@ -16,7 +16,7 @@ import { StructuredLoggingModule } from './logging/structured-logging.module';
 import { LlmModule } from './llm/llm.module';
 import { HolyGrailMatchingModule } from './holy-grail-matching/holy-grail-matching.module';
 import { LegacyBackendModule } from './legacy/legacy-backend.module';
-import { MatchesModule } from './matches/matches.module';
+import { AdminLegacyModule } from './admin-legacy/admin-legacy.module';
 import { MessagingRealtimeModule } from './messaging-realtime/messaging-realtime.module';
 import { MeProfileModule } from './me-profile/me-profile.module';
 import { MeAccountModule } from './me-account/me-account.module';
@@ -53,7 +53,7 @@ import { ContentModerationModule } from './content-moderation/content-moderation
     ReportsModule,
     MeAccountModule,
     MessagingRealtimeModule,
-    MatchesModule,
+    AdminLegacyModule,
     HolyGrailMatchingModule,
     SessionModule,
     AuthModule,

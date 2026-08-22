@@ -4,9 +4,9 @@
  * `admission.*` and `ranking.*` are **counterfactual** (shadow mutual-pass gate, shadow HG sort vs legacy among HG-complete rows);
  * there is no hypothetical penalty sort.
  */
-import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
-import type { MatchListItemDto } from './match.types';
-import { MATCH_RANKING_CONTRACT } from './match-ranking-contract';
+import { anyChildrenUnsure, getDisplayScore } from '../../matches/children-unsure.helpers';
+import type { MatchListItemDto } from '../../matches/match.types';
+import { MATCH_RANKING_CONTRACT } from '../../matches/match-ranking-contract';
 
 /** Legacy dealbreaker codes that proxy “clarity / commitment stress” (not HG structured children). */
 export const LEGACY_RELATIONSHIP_CLARITY_DEALBREAKER_CODES = [

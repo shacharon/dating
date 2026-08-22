@@ -1,10 +1,10 @@
-import type { ProfileJsonPayload } from '../profiles/profiles.types';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import type { MatchListItemDto, MatchRecordDto } from './match.types';
-import { resolveEngineFinalScore } from './match-score.util';
-import { compareWithStatus } from './match-engine';
-import { buildShortReason } from './match-short-reason';
-import { toCanonicalMatchId } from './match-id';
+import type { ProfileJsonPayload } from '../../profiles/profiles.types';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
+import type { MatchListItemDto, MatchRecordDto } from '../../matches/match.types';
+import { resolveEngineFinalScore } from '../../matches/match-score.util';
+import { compareWithStatus } from '../../matches/match-engine';
+import { buildShortReason } from '../../matches/match-short-reason';
+import { toCanonicalMatchId } from '../../matches/match-id';
 import {
   resolvePairHgFieldsFromSnapshotAndRows,
   type MatchPairHgSnapshotRow,

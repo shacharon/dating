@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../../src/app.module';
-import { MatchesService } from '../../../src/matches/matches.service';
+import { MatchesService } from '../../../src/admin-legacy/matches/matches.service';
 import { MatchDaemonService } from '../../../src/matches/match-daemon.service';
 import { PrismaService } from '../../../src/prisma/prisma.service';
 import {

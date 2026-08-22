@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { SimpleLogger } from '../logger/simple-logger.service';
+import { SimpleLogger } from '../../logger/simple-logger.service';
 import type {
   MatchIndexDto,
   MatchIndexItemDto,
   MatchRecordDto,
-} from './match.types';
+} from '../../matches/match.types';
 import { MatchesService } from './matches.service';
 import {
   resolveEngineFinalScore,
   type EngineFinalScoreSource,
-} from './match-score.util';
+} from '../../matches/match-score.util';
 
 function recordToIndexItem(record: MatchRecordDto): MatchIndexItemDto {
   const score = resolveEngineFinalScore(record);

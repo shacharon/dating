@@ -1,14 +1,14 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { AdminGuard } from '../admin/admin.guard';
-import { AuthGuard } from '../auth/auth.guard';
-import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
-import { buildShortReason } from './match-short-reason';
-import { resolveEngineFinalScore } from './match-score.util';
+import { AdminGuard } from '../../admin/admin.guard';
+import { AuthGuard } from '../../auth/auth.guard';
+import { LegacyBackendAdapter } from '../../legacy/legacy-backend.adapter';
+import { buildShortReason } from '../../matches/match-short-reason';
+import { resolveEngineFinalScore } from '../../matches/match-score.util';
 import type {
   MatchDebugDto,
   MatchExplainabilityDto,
   MatchRecommendationDto,
-} from './match-engine';
+} from '../../matches/match-engine';
 export interface MatchesApiItemDto {
   matchId: string;
   finalScore: number;
@@ -69,6 +69,9 @@ export interface MatchesApiItemDto {
  * membership filter as this list (`GET /api/matches`): rows **without** a valid HG diagnostic triple are **kept**; rows **with**
  * a valid triple are kept only when `hgMutualPass === true` (`hg-list-admission-gate.ts`). Production sort remains
  * `MATCH_RANKING_CONTRACT` (`HG_GATE_LEGACY_RANK_V1`).
+ */
+/**
+ * @deprecated Admin legacy list API (`GET /api/matches`). Product path: MeMatchesService.
  */
 @Controller('api/matches')
 @UseGuards(AuthGuard, AdminGuard)

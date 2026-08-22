@@ -1,10 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { MatchesService } from './matches.service';
-import type { ProfileJsonPayload } from '../profiles/profiles.types';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import * as HolyGrailPairDirections from './holy-grail-pair-directions';
+import type { ProfileJsonPayload } from '../../profiles/profiles.types';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
+import * as HolyGrailPairDirections from '../../matches/holy-grail-pair-directions';
 import { AdminPairMatchEvaluator } from './admin-pair-match.evaluator';
-import { HgGateLegacyRankPolicy } from '../matching-policy/hg-gate-legacy-rank.policy';
+import { HgGateLegacyRankPolicy } from '../../matching-policy/hg-gate-legacy-rank.policy';
 
 function makeProfile(
   id: string,

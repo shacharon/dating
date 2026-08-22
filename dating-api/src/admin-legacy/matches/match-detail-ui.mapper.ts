@@ -4,12 +4,12 @@
  */
 
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
-import { buildShortReason } from './match-short-reason';
+import { buildShortReason } from '../../matches/match-short-reason';
 import type {
   ChildrenUnsureDirectionsDto,
   MatchRecordDto,
-} from './match.types';
-import { resolveEngineFinalScore } from './match-score.util';
+} from '../../matches/match.types';
+import { resolveEngineFinalScore } from '../../matches/match-score.util';
 
 /** Detail UI HG triple — local structural type so ESLint/TS never sees a broken re-exported symbol. */
 type HolyGrailDetailSlice = Readonly<{

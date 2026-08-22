@@ -1,18 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { ProfileJsonPayload } from '../profiles/profiles.types';
-import type { MatchPairRuntimeBundle } from '../profiles/profiles-prisma.service';
-import { ProfilesPrismaService } from '../profiles/profiles-prisma.service';
-import { resolveEngineFinalScore } from './match-score.util';
-import type { CompareResultDto } from './match-engine';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
+import type { ProfileJsonPayload } from '../../profiles/profiles.types';
+import type { MatchPairRuntimeBundle } from '../../profiles/profiles-prisma.service';
+import { ProfilesPrismaService } from '../../profiles/profiles-prisma.service';
+import { resolveEngineFinalScore } from '../../matches/match-score.util';
+import type { CompareResultDto } from '../../matches/match-engine';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
 import type {
   ChildrenUnsureDirectionsDto,
   HolyGrailMatchDiagnosticsDto,
   MatchListItemDto,
   MatchRecordDto,
-} from './match.types';
-import { PrismaService } from '../prisma/prisma.service';
+} from '../../matches/match.types';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   buildMatchListItems,
   buildMatchRecordsFromProfiles,
@@ -20,8 +20,8 @@ import {
 import { AdminPairMatchEvaluator } from './admin-pair-match.evaluator';
 import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
 import { loadChildrenUnsureProfileRowMap } from './match-detail-children-unsure';
-import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
-import { toCanonicalMatchId } from './match-id';
+import { anyChildrenUnsure, getDisplayScore } from '../../matches/children-unsure.helpers';
+import { toCanonicalMatchId } from '../../matches/match-id';
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
 import {
   holyGrailMatchDiagnosticsFromDirections,
@@ -36,18 +36,18 @@ import {
   listItemPassesHgListAdmissionGate,
   parseHgListAdmissionGateEnv,
 } from './hg-list-admission-gate';
-import { evaluateHolyGrailPairDirections } from './holy-grail-pair-directions';
+import { evaluateHolyGrailPairDirections } from '../../matches/holy-grail-pair-directions';
 import {
   computeShadowHgVsLegacyMetricsFromListItems,
   type ShadowHgVsLegacyMetricsReport,
 } from './shadow-hg-vs-legacy-metrics';
-export type { CompareResultDto } from './match-engine';
-export type { MatchListItemDto } from './match.types';
+export type { CompareResultDto } from '../../matches/match-engine';
+export type { MatchListItemDto } from '../../matches/match.types';
 
 export {
   MATCH_RANKING_CONTRACT,
   type MatchRankingContractId,
-} from './match-ranking-contract';
+} from '../../matches/match-ranking-contract';
 export { ENABLE_HG_LIST_ADMISSION_GATE_ENV } from './hg-list-admission-gate.constants';
 export type { ShadowHgVsLegacyMetricsReport } from './shadow-hg-vs-legacy-metrics';
 
@@ -116,6 +116,10 @@ export type CompareHgDiagnosticResult =
   | CompareHgDiagnosticSuccess
   | CompareHgDiagnosticFailure;
 
+/**
+ * @deprecated Admin/legacy match stack. Product code must use {@link MeMatchesService}.
+ * Quarantined in Sprint 64 Story 02 under `admin-legacy/matches/`.
+ */
 @Injectable()
 export class MatchesService {
   constructor(

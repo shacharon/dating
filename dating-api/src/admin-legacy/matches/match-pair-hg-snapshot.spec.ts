@@ -1,10 +1,10 @@
 import {
   WantsChildrenSelf,
   MATCHING_CANONICAL_MODEL_VERSION,
-} from '../canonical/matching-canonical.types';
-import type { MatchingCanonicalModel } from '../canonical/matching-canonical.types';
-import { evaluateHolyGrailDirectional } from '../holy-grail-matching/eligibility.evaluator';
-import { HG_LIST_PRODUCT_POLICY_VERSION } from './children-unsure.product-policy';
+} from '../../canonical/matching-canonical.types';
+import type { MatchingCanonicalModel } from '../../canonical/matching-canonical.types';
+import { evaluateHolyGrailDirectional } from '../../holy-grail-matching/eligibility.evaluator';
+import { HG_LIST_PRODUCT_POLICY_VERSION } from '../../matches/children-unsure.product-policy';
 import {
   buildPairHgSnapshotPayload,
   classifyChildrenUnsureFromSnapshot,
@@ -13,8 +13,8 @@ import {
   upsertMatchPairHgSnapshots,
   type MatchPairHgSnapshotRow,
 } from './match-pair-hg-snapshot';
-import type { MatchRecordDto } from './match.types';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
+import type { MatchRecordDto } from '../../matches/match.types';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
 
 const AT = new Date('2020-06-15T12:00:00.000Z');
 

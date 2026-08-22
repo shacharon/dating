@@ -1,20 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ProfileJsonPayload } from '../profiles/profiles.types';
+import type { ProfileJsonPayload } from '../../profiles/profiles.types';
 import {
   PAIR_MATCH_POLICY,
   type PairMatchPolicy,
-} from '../matching-policy/pair-match-policy';
+} from '../../matching-policy/pair-match-policy';
 import type {
   CompareGuardFailureResultDto,
   CompareResultDto,
-} from './match-engine';
-import { compareWithStatus } from './match-engine';
+} from '../../matches/match-engine';
+import { compareWithStatus } from '../../matches/match-engine';
 import {
   directionsMutualHardPass,
   profileWithNeutralSelfSignalsFallback,
   type HolyGrailPairDirections,
-} from './compare-hg-first-helpers';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
+} from '../../matches/compare-hg-first-helpers';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
 
 export type AdminPairCompareInput = {
   readonly rowA: ChildrenUnsureProfileRow;

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ContradictionService } from '../contradiction/contradiction.service';
 import { EvaluateService } from '../evaluate/evaluate.service';
-import { MatchesService } from '../matches/matches.service';
+import { MatchesService } from '../admin-legacy/matches/matches.service';
 import { ProfilesJsonService } from '../profiles/profiles-json.service';
 
 /**

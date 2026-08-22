@@ -1,12 +1,12 @@
-import type { ChildrenUnsureDirectionsDto } from './match.types';
+import type { ChildrenUnsureDirectionsDto } from '../../matches/match.types';
 import type { MatchListItemDto } from './matches.service';
-import { resolveEngineFinalScore } from './match-score.util';
-import { anyChildrenUnsure, getDisplayScore } from './children-unsure.helpers';
+import { resolveEngineFinalScore } from '../../matches/match-score.util';
+import { anyChildrenUnsure, getDisplayScore } from '../../matches/children-unsure.helpers';
 import { tryPickHolyGrailMatchDiagnosticsDto } from './holy-grail-match-diagnostics.wire';
 import {
   MATCH_PREVIEW_AGE_PLACEHOLDER,
   MATCH_PREVIEW_CHIPS_SLICE,
-} from './children-unsure.product-policy';
+} from '../../matches/children-unsure.product-policy';
 
 /** UI-friendly match preview for /dating/matches list. */
 export interface DatingMatchPreviewDto {

@@ -1,4 +1,4 @@
-import type { MatchListItemDto, MatchRecordDto } from './match.types';
+import type { MatchListItemDto, MatchRecordDto } from '../../matches/match.types';
 import {
   filterMatchRecordsByHgListAdmissionGate,
   listItemPassesHgListAdmissionGate,

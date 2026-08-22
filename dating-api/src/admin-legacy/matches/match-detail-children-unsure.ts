@@ -1,16 +1,16 @@
-import type { PrismaService } from '../prisma/prisma.service';
-import { evaluateHolyGrailPairDirections } from './holy-grail-pair-directions';
-import type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
-import { toCanonicalMatchId } from './match-id';
+import type { PrismaService } from '../../prisma/prisma.service';
+import { evaluateHolyGrailPairDirections } from '../../matches/holy-grail-pair-directions';
+import type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
+import { toCanonicalMatchId } from '../../matches/match-id';
 import {
   classifyChildrenUnsureFromSnapshot,
   classifyHolyGrailDiagnosticsFromSnapshot,
   resolvePairHgFieldsFromSnapshotClassifications,
   type HgPairResolutionTelemetry,
 } from './match-pair-hg-snapshot';
-import type { HolyGrailMatchDiagnosticsDto } from './match.types';
+import type { HolyGrailMatchDiagnosticsDto } from '../../matches/match.types';
 
-export type { ChildrenUnsureProfileRow } from './children-unsure-profile-row.types';
+export type { ChildrenUnsureProfileRow } from '../../matches/children-unsure-profile-row.types';
 
 interface LegacyMatchmakingProfileSelect {
   id: true;

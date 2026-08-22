@@ -1,4 +1,4 @@
-import type { MatchListItemDto } from './match.types';
+import type { MatchListItemDto } from '../../matches/match.types';
 import {
   computeShadowHgVsLegacyMetricsFromListItems,
   legacyListComparator,

@@ -8,14 +8,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { AdminGuard } from '../admin/admin.guard';
-import { AuthGuard } from '../auth/auth.guard';
+import { AdminGuard } from '../../admin/admin.guard';
+import { AuthGuard } from '../../auth/auth.guard';
 import { MatchesController } from './matches.controller';
 import { MatchesService } from './matches.service';
 import { MatchDaemonService } from './match-daemon.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
-import type { MatchRecordDto } from './match.types';
+import type { MatchRecordDto } from '../../matches/match.types';
 
 function hasOwn(o: unknown, k: string): boolean {
   return o != null && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);

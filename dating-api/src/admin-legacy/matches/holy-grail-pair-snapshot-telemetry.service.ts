@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SimpleLogger } from '../logger/simple-logger.service';
+import { SimpleLogger } from '../../logger/simple-logger.service';
 import type { HgPairResolutionTelemetry } from './match-pair-hg-snapshot';
 
 export interface HgPairSnapshotListBatchStats {
