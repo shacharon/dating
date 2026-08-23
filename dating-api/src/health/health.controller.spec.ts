@@ -1,3 +1,4 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import {
@@ -68,5 +69,26 @@ describe('HealthController', () => {
     expect(typeof result.ts).toBe('string');
     expect(result.messaging).toEqual(snapshot);
     expect(messagingHealthMock.getSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('GET health/ready returns readiness payload when ok', async () => {
+    const result = await controller.ready();
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toEqual({ database: 'ok', redisAdapter: 'ok' });
+    expect(readinessServiceMock.getReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('GET health/ready throws 503 when not ready', async () => {
+    readinessServiceMock.getReadiness.mockResolvedValueOnce({
+      ok: false,
+      service: 'dating-api',
+      ts: new Date().toISOString(),
+      checks: { database: 'failed', redisAdapter: 'ok' },
+    });
+
+    await expect(controller.ready()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 });

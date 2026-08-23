@@ -111,6 +111,38 @@ describe('health HTTP (integration)', () => {
 
     expect(res.body.messaging.redisAdapter).toBe(true);
   });
+
+  it('GET /health/ready returns 200 when readiness is ok', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      ok: true,
+      service: 'dating-api',
+      checks: { database: 'ok', redisAdapter: 'ok' },
+    });
+    expect(readinessStub.getReadiness).toHaveBeenCalled();
+  });
+
+  it('GET /health/ready returns 503 when readiness fails', async () => {
+    readinessStub.getReadiness.mockResolvedValueOnce({
+      ok: false,
+      service: 'dating-api',
+      ts: new Date().toISOString(),
+      checks: { database: 'failed', redisAdapter: 'ok' },
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(503);
+
+    expect(res.body).toMatchObject({
+      ok: false,
+      service: 'dating-api',
+      checks: { database: 'failed', redisAdapter: 'ok' },
+    });
+  });
 });
 
 describe('health HTTP — sentry-test route', () => {
