@@ -93,4 +93,29 @@ describe("capacitor-push", () => {
 
     expect(remove).toHaveBeenCalled();
   });
+
+  it("forwards notification tap data to handler", async () => {
+    setPlatformOverrideForTests("capacitor");
+    const onNotificationAction = vi.fn();
+    let actionCallback: ((payload: unknown) => void) | null = null;
+    addListener.mockImplementation(async (event: string, cb: (payload: unknown) => void) => {
+      if (event === "pushNotificationActionPerformed") {
+        actionCallback = cb;
+      }
+      return { remove: vi.fn().mockResolvedValue(undefined) };
+    });
+
+    await setupCapacitorPush({ onNotificationAction });
+
+    actionCallback?.({
+      notification: {
+        data: { type: "new_message", conversationId: "c1" },
+      },
+    });
+
+    expect(onNotificationAction).toHaveBeenCalledWith({
+      type: "new_message",
+      conversationId: "c1",
+    });
+  });
 });
