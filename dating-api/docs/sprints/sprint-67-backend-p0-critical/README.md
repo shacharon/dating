@@ -31,10 +31,10 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 - [x] Device tokens stored and registered — Story 1
 - [x] Match actions (PASS/BLOCK) correctly update conversation status — Story 2
 - [x] Rematch flow reactivates UNMATCHED conversations — Story 2
-- [ ] Redis adapter fails boot if unavailable in production
+- [x] Redis adapter fails boot if unavailable in production — Story 3
 - [ ] Google auth accepts multiple client IDs (web + Android + iOS)
-- [ ] Photo storage defaults validated at boot (require S3 in prod)
-- [ ] Photo moderation validated (no mock in prod)
+- [x] Photo storage defaults validated at boot (require S3 in prod) — Story 3
+- [x] Photo moderation validated (no mock in prod) — Story 3
 
 ### Testing
 - [ ] End-to-end: Android receives push when app backgrounded — **FE-06**
@@ -59,7 +59,8 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 
 ### Story 3 — Production Infrastructure Validation
 **Effort:** 1 day  
-**Risk:** 🟢 LOW (boot-time checks)
+**Risk:** 🟢 LOW (boot-time checks)  
+**Status:** ✅ **Done** (2026-08-23) — branch `feature/sprint-67-story-3`
 
 ### Story 4 — Multi-Audience Google OAuth
 **Effort:** 4 hours  

@@ -3,7 +3,7 @@
 **Sprint:** 67  
 **Effort:** 1 day  
 **Risk:** 🟢 LOW (boot-time checks only)  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -414,12 +414,12 @@ NODE_ENV=production \
 
 ## SOLID/OOP/KISS Checklist
 
-- [ ] Validation service has ONE responsibility (config checks)
-- [ ] Each validation method checks ONE thing
-- [ ] KISS: Simple throws, no complex retry/fallback
-- [ ] Fail-fast: App doesn't start if misconfigured
-- [ ] Clear error messages guide ops team to fix
-- [ ] Development mode unaffected (validations only in production)
+- [x] Validation service has ONE responsibility (config checks)
+- [x] Each validation method checks ONE thing
+- [x] KISS: Simple throws, no complex retry/fallback
+- [x] Fail-fast: App doesn't start if misconfigured
+- [x] Clear error messages guide ops team to fix
+- [x] Development mode unaffected (validations only in production)
 
 ---
 
@@ -439,12 +439,12 @@ NODE_ENV=production \
 
 ## Success Criteria
 
-- [ ] Production boot fails if REDIS_URL missing
-- [ ] Production boot fails if PHOTO_STORAGE_DRIVER != 's3'
-- [ ] Production boot fails if PHOTO_MODERATION_DRIVER != 'rekognition'
-- [ ] Health check returns 503 if Redis or DB unreachable
-- [ ] Development mode unaffected (no validation errors)
-- [ ] Error messages are clear and actionable
+- [x] Production boot fails if REDIS_URL missing
+- [x] Production boot fails if PHOTO_STORAGE_DRIVER != 's3'
+- [x] Production boot fails if PHOTO_MODERATION_DRIVER != 'rekognition'
+- [x] Readiness check (`GET /health/ready`) returns 503 if Redis or DB unreachable (liveness `/health` stays shallow)
+- [x] Development mode unaffected (no validation errors)
+- [x] Error messages are clear and actionable
 
 ---
 
