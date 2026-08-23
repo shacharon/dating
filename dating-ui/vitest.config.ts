@@ -4,7 +4,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.spec.ts', 'src/**/*.spec.tsx'],
+    include: [
+      'src/**/*.spec.ts',
+      'src/**/*.spec.tsx',
+      'capacitor.config.spec.ts',
+      'scripts/**/*.spec.ts',
+    ],
     setupFiles: ['./src/test/setup-next-dynamic.ts'],
   },
   resolve: {
