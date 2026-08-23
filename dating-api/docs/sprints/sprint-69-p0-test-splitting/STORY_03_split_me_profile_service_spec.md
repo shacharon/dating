@@ -55,10 +55,11 @@ Monolith **`me-profile.service.spec.ts`** deleted.
 
 ## Shipped
 
-`feature/sprint-69-story-3` @ `f1ab88c`
+`feature/sprint-69-story-3` @ `2ba10a5`
 
 - `b583a07` — test: split me-profile.service.spec by method family
 - `f1ab88c` — test: update me-profile service split wiring for story 03
+- `2ba10a5` — chore: close sprint 69 story 3
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
 
