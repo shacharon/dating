@@ -1,6 +1,6 @@
 # FE Sprint 05 — Android Project Setup
 
-**Status:** In Progress (Stories 1–2 Done)  
+**Status:** In Progress (Stories 1–3 Done)  
 **Priority:** 🔴 **P0 BLOCKER** — Cannot build Android app without this  
 **Depends on:** None (independent)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
@@ -21,9 +21,9 @@ Setup Android project infrastructure so app can build and run:
 ## Success Criteria
 
 - [x] `android/` directory exists (Story 1 — scaffold)
-- [x] APK builds with real app UI (Story 2 export + sync — API until Story 3)
+- [x] APK builds with real app UI (Story 2 export + sync)
 - [x] `output: 'export'` in Next.js config (Story 2 — `CAPACITOR_BUILD=1` dual build)
-- [ ] API base URL uses `NEXT_PUBLIC_API_URL` on mobile
+- [x] API base URL uses `NEXT_PUBLIC_API_URL` on mobile (Story 3 — fail-fast + resolver)
 - [ ] Viewport meta tag configured
 
 ---
@@ -38,8 +38,9 @@ Fix: Capacitor config, placeholder webDir, `android/` project, `cap sync`
 **Doc:** [`STORY_02_next_export.md`](./STORY_02_next_export.md)  
 Fix: `CAPACITOR_BUILD` dual build, static export to `out/`, `cap:sync:android` wired to real UI
 
-### Story 3 — API URL for Mobile (4-6 hours)
-Enforce `NEXT_PUBLIC_API_URL` for Capacitor, update `getApiBase()`
+### Story 3 — API URL for Mobile ✅ Done
+**Doc:** [`STORY_03_api_url_mobile.md`](./STORY_03_api_url_mobile.md)  
+Fix: `resolvePublicApiOrigin()`, mobile fail-fast, socket alignment, `.env.example`
 
 ### Story 4 — Viewport + Mobile Polish (2 hours)
 Add viewport metadata, test responsive layout
