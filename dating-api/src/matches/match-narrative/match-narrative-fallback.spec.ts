@@ -1,6 +1,6 @@
 import { buildMatchNarrativeFactPack } from './match-narrative-fact-pack';
 import { buildFallbackMatchNarrative } from './match-narrative-fallback';
-import { textContainsChipLabel } from '../match-explanation-traits';
+import { textContainsChipLabel } from '../explainability/core/match-explanation-traits';
 
 describe('buildFallbackMatchNarrative', () => {
   it('is deterministic, uses evidence, and does not list chip labels', () => {

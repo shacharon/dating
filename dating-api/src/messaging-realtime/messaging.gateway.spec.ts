@@ -10,7 +10,7 @@ import {
 import { WS_SESSION_REVALIDATE_MS } from './messaging-ws-inbound.constants';
 import { MessagingGateway } from './messaging.gateway';
 import type { MessagingWsAuthService } from './messaging-ws-auth.service';
-import type { MeConversationsService } from '../me-profile/me-conversations.service';
+import type { MeConversationsService } from '../me-profile/conversations/me-conversations.service';
 import type { MessagingSocketRegistry } from './messaging-socket-registry.service';
 import type { MessagingWsRateLimitService } from './messaging-ws-rate-limit.service';
 import type { MessagingWsSessionService } from './messaging-ws-session.service';

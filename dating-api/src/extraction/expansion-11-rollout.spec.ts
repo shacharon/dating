@@ -12,7 +12,7 @@ import {
   EXPANSION_11_PROMOTION_WEIGHTS,
   EXPANSION_11_SHADOW_SIGNAL_KEYS,
 } from './expansion-11-signal-definitions';
-import { SHADOW_POSITIVE_CHIP_BY_SIGNAL } from '../matches/expansion-11-explainability';
+import { SHADOW_POSITIVE_CHIP_BY_SIGNAL } from '../matches/explainability/expansions/10-15/expansion-11-explainability';
 import { tensionRules } from '../engine/tension-rules';
 
 describe('Expansion-11 rollout gate', () => {

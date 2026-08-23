@@ -5,7 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core';
-import { MeDomainError } from '../me-profile/me-domain.error';
+import { MeDomainError } from '../me-profile/contracts/me-domain.error';
 import { SentryBridgeService } from '../observability/sentry-bridge.service';
 import { maybeRecordPrismaPoolTimeout } from '../prisma/prisma-pool.helpers';
 import { ErrorCodes } from './error-codes';

@@ -24,10 +24,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SessionModule } from '../../session/session.module';
 import { hashSessionToken } from '../../session/session-token.crypto';
 import { UsersModule } from '../../users/users.module';
-import { MeMatchesService } from '../../me-profile/me-matches.service';
-import { buildMatchQualityAuditJson } from '../../me-profile/match-quality-audit';
+import { MeMatchesService } from '../../me-profile/matches/core/me-matches.service';
+import { buildMatchQualityAuditJson } from '../../me-profile/matches/actions/match-quality-audit';
 
-jest.mock('../../me-profile/match-quality-audit', () => ({
+jest.mock('../../me-profile/matches/actions/match-quality-audit', () => ({
   buildMatchQualityAuditJson: jest.fn(),
 }));
 

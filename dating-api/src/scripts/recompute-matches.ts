@@ -13,7 +13,7 @@ import { readdir, readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type { MatchRecordDto } from '../matches/match.types';
-import { resolveEngineFinalScore } from '../matches/match-score.util';
+import { resolveEngineFinalScore } from '../matches/engine/match-score.util';
 import { recomputeAllMatches, RECOMPUTE_POLICY_VERSION } from '../engine/recompute';
 
 const PROFILES_DIR = process.env.PROFILES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'profiles');

@@ -1,8 +1,8 @@
-import type { MatchExplainabilityDto } from '../match-explainability';
+import type { MatchExplainabilityDto } from '../explainability/core/match-explainability';
 import {
   buildMatchExplanationTraits,
   type MatchExplanationTrait,
-} from '../match-explanation-traits';
+} from '../explainability/core/match-explanation-traits';
 import {
   buildProfileExcerpts,
   type ProfileAboutFields,

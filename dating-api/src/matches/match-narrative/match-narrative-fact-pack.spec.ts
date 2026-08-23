@@ -2,7 +2,7 @@ import {
   buildMatchNarrativeFactPack,
   scoreBandFromFinalScore,
 } from './match-narrative-fact-pack';
-import type { MatchExplainabilityDto } from '../match-explainability';
+import type { MatchExplainabilityDto } from '../explainability/core/match-explainability';
 
 function explainability(
   overrides: Partial<MatchExplainabilityDto> = {},

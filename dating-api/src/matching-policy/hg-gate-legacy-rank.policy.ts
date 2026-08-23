@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { evaluateHolyGrailPairDirections } from '../matches/holy-grail-pair-directions';
-import { compareWithStatus } from '../matches/match-engine';
+import { evaluateHolyGrailPairDirections } from '../matches/holy-grail/holy-grail-pair-directions';
+import { compareWithStatus } from '../matches/engine/match-engine';
 import {
   MATCH_RANKING_CONTRACT,
   type MatchRankingContractId,
-} from '../matches/match-ranking-contract';
+} from '../matches/recommendation/match-ranking-contract';
 import type {
   PairMatchPolicy,
   PairMatchPolicyInput,

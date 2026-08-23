@@ -2,13 +2,13 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../admin/admin.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { LegacyBackendAdapter } from '../legacy/legacy-backend.adapter';
-import { buildShortReason } from './match-short-reason';
-import { resolveEngineFinalScore } from './match-score.util';
+import { buildShortReason } from './presentation/match-short-reason';
+import { resolveEngineFinalScore } from './engine/match-score.util';
 import type {
   MatchDebugDto,
   MatchExplainabilityDto,
   MatchRecommendationDto,
-} from './match-engine';
+} from './engine/match-engine';
 export interface MatchesApiItemDto {
   matchId: string;
   finalScore: number;

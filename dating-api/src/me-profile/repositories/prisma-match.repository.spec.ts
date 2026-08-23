@@ -1,6 +1,6 @@
 import { MatchActionType, MutualMatchStatus } from '@prisma/client';
-import { LATEST_EVAL_BATCH_SIZE } from '../me-profile-analysis.service';
-import { MATCH_LIST_RANK_PERSIST_CHUNK } from '../match-list-rank-persist.constants';
+import { LATEST_EVAL_BATCH_SIZE } from '../profile/me-profile-analysis.service';
+import { MATCH_LIST_RANK_PERSIST_CHUNK } from '../matches/rank/match-list-rank-persist.constants';
 import { PrismaMatchRepository } from './prisma-match.repository';
 import type { PrismaService } from '../../prisma/prisma.service';
 

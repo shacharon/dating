@@ -3,8 +3,8 @@ import Queue from 'bull';
 import {
   MeProfileAnalysisService,
   type ProfileAnalysisRunOutcome,
-} from '../me-profile/me-profile-analysis.service';
-import { MeMatchesService } from '../me-profile/me-matches.service';
+} from '../me-profile/profile/me-profile-analysis.service';
+import { MeMatchesService } from '../me-profile/matches/core/me-matches.service';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import {

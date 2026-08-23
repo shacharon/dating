@@ -1,7 +1,7 @@
 import { ProfileAnalysisQueueService } from './profile-analysis.worker';
 import { profileAnalysisJobId } from './profile-analysis.queue';
-import type { MeProfileAnalysisService } from '../me-profile/me-profile-analysis.service';
-import type { MeMatchesService } from '../me-profile/me-matches.service';
+import type { MeProfileAnalysisService } from '../me-profile/profile/me-profile-analysis.service';
+import type { MeMatchesService } from '../me-profile/matches/core/me-matches.service';
 import type { MatchListRankQueuePort } from './match-list-rank.ports';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { ErrorCodes } from '../logging/error-codes';

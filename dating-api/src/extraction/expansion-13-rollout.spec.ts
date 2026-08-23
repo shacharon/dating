@@ -15,7 +15,7 @@ import {
 import {
   SHADOW_POSITIVE_CHIP_BY_SIGNAL,
   SHADOW_SIGNAL_DOMAIN,
-} from '../matches/expansion-13-explainability';
+} from '../matches/explainability/expansions/10-15/expansion-13-explainability';
 import { tensionRules } from '../engine/tension-rules';
 
 describe('Expansion-13 rollout gate', () => {

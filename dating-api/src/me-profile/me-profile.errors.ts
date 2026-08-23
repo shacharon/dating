@@ -1,5 +1,5 @@
 import { ErrorCodes } from '../logging/error-codes';
-import { MeDomainError } from './me-domain.error';
+import { MeDomainError } from './contracts/me-domain.error';
 
 /** Base for me-profile orchestration errors (submit path). */
 export abstract class MeProfileDomainError extends MeDomainError {

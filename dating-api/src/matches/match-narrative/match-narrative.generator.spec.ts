@@ -2,7 +2,7 @@ import { MatchNarrativeGenerator } from './match-narrative.generator';
 import { buildMatchNarrativeFactPack } from './match-narrative-fact-pack';
 import { buildFallbackMatchNarrative } from './match-narrative-fallback';
 import type { LLMRouterService } from '../../llm/llm-router.service';
-import { textContainsChipLabel } from '../match-explanation-traits';
+import { textContainsChipLabel } from '../explainability/core/match-explanation-traits';
 
 describe('MatchNarrativeGenerator', () => {
   const pack = buildMatchNarrativeFactPack({

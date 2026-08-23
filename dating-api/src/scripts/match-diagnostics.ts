@@ -9,7 +9,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { MatchRecordDto } from '../matches/match.types';
-import { resolveEngineFinalScore } from '../matches/match-score.util';
+import { resolveEngineFinalScore } from '../matches/engine/match-score.util';
 
 const MATCHES_DIR =
   process.env.MATCHES_DATA_DIR?.trim() || join(process.cwd(), 'data', 'matches');

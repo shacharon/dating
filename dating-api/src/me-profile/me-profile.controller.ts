@@ -31,21 +31,21 @@ import {
   CreateMeProfileDto,
   PatchMeProfileDto,
 } from './me-profile.dto';
-import { SendConversationMessageDto, parseMessageListLimit } from './me-conversation-messages.dto';
-import { MeConversationMessagesService } from './me-conversation-messages.service';
-import { CreateMatchActionDto } from './me-match-actions.dto';
-import { UpsertMatchFeedbackDto } from './me-match-feedback.dto';
-import { MeConversationsService } from './me-conversations.service';
-import { MeMatchActionsService } from './me-match-actions.service';
-import { MeMatchFeedbackService } from './me-match-feedback.service';
-import { MeMatchesService } from './me-matches.service';
-import { MeProfileMatchesService } from './me-profile-matches.service';
-import { MeProfileService } from './me-profile.service';
+import { SendConversationMessageDto, parseMessageListLimit } from './conversations/me-conversation-messages.dto';
+import { MeConversationMessagesService } from './conversations/me-conversation-messages.service';
+import { CreateMatchActionDto } from './matches/actions/me-match-actions.dto';
+import { UpsertMatchFeedbackDto } from './matches/actions/me-match-feedback.dto';
+import { MeConversationsService } from './conversations/me-conversations.service';
+import { MeMatchActionsService } from './matches/actions/me-match-actions.service';
+import { MeMatchFeedbackService } from './matches/actions/me-match-feedback.service';
+import { MeMatchesService } from './matches/core/me-matches.service';
+import { MeProfileMatchesService } from './matches/core/me-profile-matches.service';
+import { MeProfileService } from './profile/me-profile.service';
 import { PatchNotificationPreferencesDto } from './dto/patch-notification-preferences.dto';
 import { parseMatchListLimit } from './dto/me-matches-list-query.dto';
 import { parseConversationListLimit } from './dto/me-conversations-list-query.dto';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
-import { ProfileQualityService } from './profile-quality.service';
+import { ProfileQualityService } from './profile/profile-quality.service';
 import { UsersService } from '../users/users.service';
 
 /**

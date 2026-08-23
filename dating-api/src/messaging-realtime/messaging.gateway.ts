@@ -14,7 +14,7 @@ import { ProductAnalyticsEvents } from '../analytics/product-analytics.events';
 import { ErrorCodes } from '../logging/error-codes';
 import { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { SentryBridgeService } from '../observability/sentry-bridge.service';
-import { MeConversationsService } from '../me-profile/me-conversations.service';
+import { MeConversationsService } from '../me-profile/conversations/me-conversations.service';
 import {
   MESSAGING_EVENT_CONVERSATION_SUBSCRIBE,
   MESSAGING_EVENT_CONVERSATION_UNSUBSCRIBE,

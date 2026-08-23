@@ -11,7 +11,7 @@ import {
   wrapEnrichmentV1,
   type EnrichmentSignalsV1,
 } from '../evaluate/enrichment-signals';
-import type { ChildrenUnsureProfileRow } from '../matches/children-unsure-profile-row.types';
+import type { ChildrenUnsureProfileRow } from '../matches/children-unsure/children-unsure-profile-row.types';
 import type { ProfileJsonPayload, ProfileListItem } from './profiles.types';
 
 /** Legacy bundle shape; MatchmakingProfile reads removed (slice 8 / pre–Migration 4). */

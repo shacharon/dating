@@ -1,8 +1,8 @@
-import type { ChildrenUnsureProfileRow } from '../matches/children-unsure-profile-row.types';
+import type { ChildrenUnsureProfileRow } from '../matches/children-unsure/children-unsure-profile-row.types';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
-import * as holyGrailPair from '../matches/holy-grail-pair-directions';
-import * as matchEngine from '../matches/match-engine';
-import { MATCH_RANKING_CONTRACT } from '../matches/match-ranking-contract';
+import * as holyGrailPair from '../matches/holy-grail/holy-grail-pair-directions';
+import * as matchEngine from '../matches/engine/match-engine';
+import { MATCH_RANKING_CONTRACT } from '../matches/recommendation/match-ranking-contract';
 import { HgGateLegacyRankPolicy } from './hg-gate-legacy-rank.policy';
 import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matching/eligibility.evaluator';
 

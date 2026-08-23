@@ -1,4 +1,4 @@
-import type { MatchQualityAuditReport } from '../../../me-profile/match-quality-audit';
+import type { MatchQualityAuditReport } from '../../../me-profile/matches/actions/match-quality-audit';
 
 export type CandidateFeedbackSummaryDto = {
   negativeCount: number;

@@ -6,8 +6,8 @@
 import type {
   CompareGuardFailureResultDto,
   CompareResultDto,
-} from '../matches/match-engine';
-import { compareWithStatus as computeMatchWithStatus } from '../matches/match-engine';
+} from '../matches/engine/match-engine';
+import { compareWithStatus as computeMatchWithStatus } from '../matches/engine/match-engine';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 
 export const RECOMPUTE_POLICY_VERSION = 'v2';

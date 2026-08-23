@@ -1,10 +1,10 @@
-import type { ChildrenUnsureProfileRow } from '../matches/children-unsure-profile-row.types';
+import type { ChildrenUnsureProfileRow } from '../matches/children-unsure/children-unsure-profile-row.types';
 import type { ProfileJsonPayload } from '../profiles/profiles.types';
 import type {
   MatchExplainabilityDto,
   MatchRecommendationDto,
-} from '../matches/match-engine';
-import type { MatchRankingContractId } from '../matches/match-ranking-contract';
+} from '../matches/engine/match-engine';
+import type { MatchRankingContractId } from '../matches/recommendation/match-ranking-contract';
 import type { HolyGrailDirectionalEvaluationResult } from '../holy-grail-matching/eligibility.evaluator';
 
 export const PAIR_MATCH_POLICY = Symbol('PAIR_MATCH_POLICY');

@@ -8,8 +8,8 @@ describe('user profile repository wiring (sprint-63 story 3)', () => {
   const meProfileRoot = path.join(__dirname, '..');
 
   const successServices = [
-    path.join(meProfileRoot, 'me-profile-analysis.service.ts'),
-    path.join(meProfileRoot, 'me-profile-matches.service.ts'),
+    path.join(meProfileRoot, 'profile', 'me-profile-analysis.service.ts'),
+    path.join(meProfileRoot, 'matches', 'core', 'me-profile-matches.service.ts'),
     path.join(meProfileRoot, 'profile', 'profile-crud.service.ts'),
     path.join(meProfileRoot, 'profile', 'profile-analysis-submit.service.ts'),
   ];

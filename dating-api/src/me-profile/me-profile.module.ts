@@ -15,26 +15,35 @@ import {
   MatchNarrativeCacheService,
   MatchNarrativeGenerator,
 } from '../matches/match-narrative';
-import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
-import { MessageRateLimitStoreProvider } from './conversation-message-rate-limit-store.provider';
-import { MESSAGE_RATE_LIMIT_STORE } from './conversation-message-rate-limit.tokens';
-import { MeConversationMessagesService } from './me-conversation-messages.service';
-import { MeConversationsService } from './me-conversations.service';
-import { MeMatchActionsService } from './me-match-actions.service';
-import { MeMatchFeedbackService } from './me-match-feedback.service';
-import { MeMatchesService } from './me-matches.service';
-import { MatchListQueryService } from './matches/match-list-query.service';
-import { MatchEligibilityService } from './matches/match-eligibility.service';
-import { MatchRankingService } from './matches/match-ranking.service';
-import { MatchListCacheService } from './matches/match-list-cache.service';
-import { MatchDetailService } from './matches/match-detail.service';
-import { MutualMatchesService } from './mutual-matches.service';
-import { MeProfileAnalysisService } from './me-profile-analysis.service';
-import { MeProfileMatchesService } from './me-profile-matches.service';
+import { ConversationMessageRateLimitService } from './conversations/conversation-message-rate-limit.service';
+import { MessageRateLimitStoreProvider } from './conversations/conversation-message-rate-limit-store.provider';
+import { MESSAGE_RATE_LIMIT_STORE } from './conversations/conversation-message-rate-limit.tokens';
+import { MeConversationMessagesService } from './conversations/me-conversation-messages.service';
+import { ConversationListService } from './conversations/conversation-list.service';
+import { ConversationReadStateService } from './conversations/conversation-read-state.service';
+import { ConversationLifecycleService } from './conversations/conversation-lifecycle.service';
+import { MeConversationsService } from './conversations/me-conversations.service';
+import { MeMatchActionsService } from './matches/actions/me-match-actions.service';
+import { MeMatchFeedbackService } from './matches/actions/me-match-feedback.service';
+import { MeMatchesService } from './matches/core/me-matches.service';
+import { MatchListQueryService } from './matches/list/match-list-query.service';
+import { MatchEligibilityService } from './matches/detail/match-eligibility.service';
+import { MatchRankingService } from './matches/list/ranking/match-ranking.service';
+import { MatchListCandidateLoaderService } from './matches/list/ranking/match-list-candidate-loader.service';
+import { MatchListCandidateScorerService } from './matches/list/ranking/match-list-candidate-scorer.service';
+import { MatchListResponseAssemblerService } from './matches/list/ranking/match-list-response-assembler.service';
+import { MatchListRankTelemetryService } from './matches/list/ranking/match-list-rank-telemetry.service';
+import { MatchListCacheService } from './matches/list/match-list-cache.service';
+import { MatchDetailQueryService } from './matches/detail/match-detail-query.service';
+import { MatchDetailPhotoService } from './matches/detail/match-detail-photo.service';
+import { MatchDetailService } from './matches/detail/match-detail.service';
+import { MutualMatchesService } from './matches/actions/mutual-matches.service';
+import { MeProfileAnalysisService } from './profile/me-profile-analysis.service';
+import { MeProfileMatchesService } from './matches/core/me-profile-matches.service';
 import { MeProfileController } from './me-profile.controller';
-import { MeProfileService } from './me-profile.service';
+import { MeProfileService } from './profile/me-profile.service';
 import { MeProfileValidationPipe } from './me-profile-validation.pipe';
-import { ProfileQualityService } from './profile-quality.service';
+import { ProfileQualityService } from './profile/profile-quality.service';
 import { ProfileAnalysisSubmitService } from './profile/profile-analysis-submit.service';
 import { ProfileCrudService } from './profile/profile-crud.service';
 import { ProfileModerationService } from './profile/profile-moderation.service';
@@ -119,8 +128,14 @@ import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedb
     MeProfileMatchesService,
     MatchListQueryService,
     MatchEligibilityService,
+    MatchListCandidateLoaderService,
+    MatchListCandidateScorerService,
+    MatchListResponseAssemblerService,
+    MatchListRankTelemetryService,
     MatchRankingService,
     MatchListCacheService,
+    MatchDetailQueryService,
+    MatchDetailPhotoService,
     MatchDetailService,
     MeMatchesService,
     {
@@ -129,6 +144,9 @@ import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedb
     },
     MeMatchActionsService,
     MeMatchFeedbackService,
+    ConversationListService,
+    ConversationReadStateService,
+    ConversationLifecycleService,
     MeConversationsService,
     MessageRateLimitStoreProvider,
     {

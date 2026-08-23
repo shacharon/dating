@@ -12,7 +12,7 @@ import { UserStatus } from '@prisma/client';
 import { io, type Socket } from 'socket.io-client';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
-import { MeConversationsService } from '../me-profile/me-conversations.service';
+import { MeConversationsService } from '../me-profile/conversations/me-conversations.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionModule } from '../session/session.module';

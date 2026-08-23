@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { MatchFeedbackSentiment } from '@prisma/client';
-import { buildMatchQualityAuditJson } from '../../me-profile/match-quality-audit';
-import type { MeMatchesService } from '../../me-profile/me-matches.service';
+import { buildMatchQualityAuditJson } from '../../me-profile/matches/actions/match-quality-audit';
+import type { MeMatchesService } from '../../me-profile/matches/core/me-matches.service';
 import type { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { AdminMatchQualityService } from './admin-match-quality.service';
@@ -14,7 +14,7 @@ import {
 } from './match-quality-window';
 import type { MatchQualityCompareQueryDto } from './dto/match-quality-compare-query.dto';
 
-jest.mock('../../me-profile/match-quality-audit', () => ({
+jest.mock('../../me-profile/matches/actions/match-quality-audit', () => ({
   buildMatchQualityAuditJson: jest.fn(),
 }));
 

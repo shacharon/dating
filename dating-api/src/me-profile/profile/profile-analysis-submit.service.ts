@@ -6,12 +6,12 @@ import { ErrorCodes } from '../../logging/error-codes';
 import { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import { ProfileAnalysisQueueService } from '../../workers/profile-analysis.worker';
 import type { MeLatestAnalysisResponseDto } from '../me-profile.dto';
-import { viewerHasApprovedPhoto } from '../me-profile-photo-gate';
+import { viewerHasApprovedPhoto } from './me-profile-photo-gate';
 import {
   mapProfileStatusToAnalysisApi,
   type AnalysisStatusResponseDto,
 } from '../dto/analysis-status-response.dto';
-import { MeMatchesService } from '../me-matches.service';
+import { MeMatchesService } from '../matches/core/me-matches.service';
 import {
   MeProfileDomainError,
   ProfileNotFoundForSubmitError,

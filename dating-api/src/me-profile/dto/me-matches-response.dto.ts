@@ -1,10 +1,10 @@
 import type { HardBlockedDto } from '../../holy-grail-matching/hard-block-reasons';
-import type { MatchExplanationTrait } from '../../matches/match-explanation-traits';
+import type { MatchExplanationTrait } from '../../matches/explainability/core/match-explanation-traits';
 import type {
   MatchExplainabilityDto,
   MatchRecommendationDto,
-} from '../../matches/match-engine';
-import type { MatchTeaserDto } from '../../matches/match-teaser';
+} from '../../matches/engine/match-engine';
+import type { MatchTeaserDto } from '../../matches/presentation/match-teaser';
 
 /**
  * Sprint 45 Story 3 — public HTTP response shapes for `GET /api/v1/me/matches`

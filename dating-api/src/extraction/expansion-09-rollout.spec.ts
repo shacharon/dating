@@ -1,5 +1,5 @@
 import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
-import { INTEREST_OVERLAP_CHIP_PREFERRED_TAGS } from '../matches/expansion-07-explainability';
+import { INTEREST_OVERLAP_CHIP_PREFERRED_TAGS } from '../matches/explainability/expansions/01-07/expansion-07-explainability';
 import {
   INTEREST_CANONICAL_TAGS,
   INTEREST_CANONICAL_TAG_SET,

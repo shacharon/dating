@@ -9,8 +9,8 @@ import { StructuredObservabilityService } from '../../logging/structured-observa
 import {
   buildMatchQualityAuditJson,
   type MatchQualityAuditReport,
-} from '../../me-profile/match-quality-audit';
-import { MeMatchesService } from '../../me-profile/me-matches.service';
+} from '../../me-profile/matches/actions/match-quality-audit';
+import { MeMatchesService } from '../../me-profile/matches/core/me-matches.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CandidateAuditResponseDto } from './dto/candidate-audit-response.dto';
 import type { CandidateFeedbackSummaryDto } from './dto/candidate-audit-response.dto';

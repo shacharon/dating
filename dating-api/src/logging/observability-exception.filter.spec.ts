@@ -10,13 +10,13 @@ import {
   MatchPhotoNotFoundError,
   MatchViewerNotReadyError,
   MeMatchesDomainError,
-} from '../me-profile/me-matches.errors';
+} from '../me-profile/matches/support/me-matches.errors';
 import {
   ConversationListInvalidCursorError,
   ConversationNotFoundError,
-} from '../me-profile/me-conversations.errors';
+} from '../me-profile/conversations/me-conversations.errors';
 import { ProfileSubmitPhotoRequiredError } from '../me-profile/me-profile.errors';
-import { MeDomainError } from '../me-profile/me-domain.error';
+import { MeDomainError } from '../me-profile/contracts/me-domain.error';
 import { ErrorCodes } from './error-codes';
 import { ObservabilityExceptionFilter } from './observability-exception.filter';
 

@@ -8,9 +8,23 @@ import * as path from 'node:path';
 describe('conversation repository wiring (sprint-62 story 2)', () => {
   const meProfileRoot = path.join(__dirname, '..');
 
+  const repoCollaborators = [
+    path.join(meProfileRoot, 'conversations', 'conversation-list.service.ts'),
+    path.join(
+      meProfileRoot,
+      'conversations',
+      'conversation-read-state.service.ts',
+    ),
+    path.join(
+      meProfileRoot,
+      'conversations',
+      'conversation-lifecycle.service.ts',
+    ),
+  ];
+
   const successServices = [
-    path.join(meProfileRoot, 'me-conversations.service.ts'),
-    path.join(meProfileRoot, 'me-conversation-messages.service.ts'),
+    path.join(meProfileRoot, 'conversations', 'me-conversation-messages.service.ts'),
+    ...repoCollaborators,
   ];
 
   it('Success services inject CONVERSATION_REPOSITORY and not PrismaService', () => {
@@ -35,7 +49,7 @@ describe('conversation repository wiring (sprint-62 story 2)', () => {
 
   it('messages service keeps CONTENT_MODERATION and rate-limit; create goes through repo', () => {
     const src = fs.readFileSync(
-      path.join(meProfileRoot, 'me-conversation-messages.service.ts'),
+      path.join(meProfileRoot, 'conversations', 'me-conversation-messages.service.ts'),
       'utf8',
     );
     expect(src).toContain('CONTENT_MODERATION');
@@ -44,24 +58,33 @@ describe('conversation repository wiring (sprint-62 story 2)', () => {
     expect(src).toMatch(/consumeSendSlot[\s\S]*createSentMessage/);
   });
 
-  it('assertActiveConversationParticipant stays on MeConversationsService', () => {
-    const src = fs.readFileSync(
-      path.join(meProfileRoot, 'me-conversations.service.ts'),
+  it('assertActiveConversationParticipant stays on MeConversationsService facade', () => {
+    const facadeSrc = fs.readFileSync(
+      path.join(meProfileRoot, 'conversations', 'me-conversations.service.ts'),
       'utf8',
     );
-    expect(src).toContain('assertActiveConversationParticipant');
-    expect(src).toContain('findMatchById');
-    expect(src).toContain('ConversationNotFoundError');
-    expect(src).toContain('ConversationForbiddenError');
+    expect(facadeSrc).toContain('assertActiveConversationParticipant');
+    expect(facadeSrc).toContain('lifecycleService.assertActiveConversationParticipant');
+    expect(facadeSrc).not.toContain('CONVERSATION_REPOSITORY');
+
+    const lifecycleSrc = fs.readFileSync(
+      path.join(meProfileRoot, 'conversations', 'conversation-lifecycle.service.ts'),
+      'utf8',
+    );
+    expect(lifecycleSrc).toContain('findMatchById');
+    expect(lifecycleSrc).toContain('ConversationNotFoundError');
+    expect(lifecycleSrc).toContain('ConversationForbiddenError');
   });
 
   it('adapter owns batch helpers, chunk sizes, and $queryRaw (no re-export shims)', () => {
     const unreadShim = path.join(
       meProfileRoot,
+      'conversations',
       'me-conversations-unread-batch.ts',
     );
     const lastShim = path.join(
       meProfileRoot,
+      'conversations',
       'me-conversations-last-message-batch.ts',
     );
     expect(fs.existsSync(unreadShim)).toBe(false);

@@ -18,17 +18,17 @@ import type {
   MatchIndexDto,
   MatchRecordDto,
 } from './match.types';
-import { resolveEngineFinalScore } from './match-score.util';
-import type { RebuildStatsDto } from './match-daemon.service';
-import { MatchDaemonService } from './match-daemon.service';
+import { resolveEngineFinalScore } from './engine/match-score.util';
+import type { RebuildStatsDto } from './api/match-daemon.service';
+import { MatchDaemonService } from './api/match-daemon.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesService } from './matches.service';
-import { computeMatchDetailPairHg } from './match-detail-children-unsure';
+import { computeMatchDetailPairHg } from './presentation/match-detail-children-unsure';
 import {
   mapMatchRecordToDetailUi,
   type MatchDetailUiDto,
-} from './match-detail-ui.mapper';
-import { HolyGrailPairSnapshotTelemetryService } from './holy-grail-pair-snapshot-telemetry.service';
+} from './presentation/match-detail-ui.mapper';
+import { HolyGrailPairSnapshotTelemetryService } from './holy-grail/holy-grail-pair-snapshot-telemetry.service';
 
 @Controller('api/v1/matches')
 @UseGuards(AuthGuard, AdminGuard)

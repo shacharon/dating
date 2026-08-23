@@ -9,13 +9,14 @@ describe('match repository wiring (sprint-62/63)', () => {
   const meProfileRoot = path.join(__dirname, '..');
 
   const successServices = [
-    path.join(meProfileRoot, 'matches', 'match-ranking.service.ts'),
-    path.join(meProfileRoot, 'matches', 'match-detail.service.ts'),
-    path.join(meProfileRoot, 'matches', 'match-eligibility.service.ts'),
-    path.join(meProfileRoot, 'matches', 'match-list-query.service.ts'),
-    path.join(meProfileRoot, 'matches', 'match-list-cache.service.ts'),
-    path.join(meProfileRoot, 'me-match-actions.service.ts'),
-    path.join(meProfileRoot, 'mutual-matches.service.ts'),
+    path.join(meProfileRoot, 'matches', 'list', 'ranking', 'match-ranking.service.ts'),
+    path.join(meProfileRoot, 'matches', 'detail', 'match-detail-query.service.ts'),
+    path.join(meProfileRoot, 'matches', 'detail', 'match-detail-photo.service.ts'),
+    path.join(meProfileRoot, 'matches', 'detail', 'match-eligibility.service.ts'),
+    path.join(meProfileRoot, 'matches', 'list', 'match-list-query.service.ts'),
+    path.join(meProfileRoot, 'matches', 'list', 'match-list-cache.service.ts'),
+    path.join(meProfileRoot, 'matches', 'actions', 'me-match-actions.service.ts'),
+    path.join(meProfileRoot, 'matches', 'actions', 'mutual-matches.service.ts'),
   ];
 
   const matchRepoToken =
@@ -31,9 +32,20 @@ describe('match repository wiring (sprint-62/63)', () => {
     }
   });
 
+  it('MatchDetailService facade omits MATCH_QUERY_REPOSITORY and PHOTO_STORAGE', () => {
+    const src = fs.readFileSync(
+      path.join(meProfileRoot, 'matches', 'detail', 'match-detail.service.ts'),
+      'utf8',
+    );
+    expect(src).not.toContain('MATCH_QUERY_REPOSITORY');
+    expect(src).not.toContain('PHOTO_STORAGE');
+    expect(src).toContain('MatchDetailQueryService');
+    expect(src).toContain('MatchDetailPhotoService');
+  });
+
   it('profile-quality and analysis-submit inject MATCH_QUERY_REPOSITORY', () => {
     const files = [
-      path.join(meProfileRoot, 'profile-quality.service.ts'),
+      path.join(meProfileRoot, 'profile', 'profile-quality.service.ts'),
       path.join(meProfileRoot, 'profile', 'profile-analysis-submit.service.ts'),
     ];
     for (const file of files) {

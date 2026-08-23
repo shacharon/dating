@@ -6,7 +6,7 @@ describe('match feedback repository wiring', () => {
 
   it('MeMatchFeedbackService injects MATCH_FEEDBACK_REPOSITORY', () => {
     const src = fs.readFileSync(
-      path.join(meProfileRoot, 'me-match-feedback.service.ts'),
+      path.join(meProfileRoot, 'matches', 'actions', 'me-match-feedback.service.ts'),
       'utf8',
     );
     expect(src).toContain('@Inject(MATCH_FEEDBACK_REPOSITORY)');

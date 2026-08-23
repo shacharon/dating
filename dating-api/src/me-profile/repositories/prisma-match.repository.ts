@@ -7,15 +7,15 @@ import {
 } from '@prisma/client';
 import type { MatchListCursorPayload } from '../../cache/match-list-cache';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY } from '../match-list-candidate-cap';
+import { MATCH_LIST_CANDIDATE_HYDRATE_ORDER_BY } from '../matches/list/match-list-candidate-cap';
 import {
   MATCH_LIST_RANK_PERSIST_CHUNK,
   MATCH_LIST_RANK_PERSIST_TX,
-} from '../match-list-rank-persist.constants';
-import { buildMatchCandidateSqlPrefilterWhere } from '../me-matches-candidate-sql-prefilter';
-import { LATEST_EVAL_BATCH_SIZE } from '../me-profile-analysis.service';
-import { matchListRankAfterCursorWhere } from '../matches/match-list-cursor';
-import { STATUS_ANALYZED } from '../matches/match-list.helpers';
+} from '../matches/rank/match-list-rank-persist.constants';
+import { buildMatchCandidateSqlPrefilterWhere } from '../matches/list/me-matches-candidate-sql-prefilter';
+import { LATEST_EVAL_BATCH_SIZE } from '../profile/me-profile-analysis.service';
+import { matchListRankAfterCursorWhere } from '../matches/list/match-list-cursor';
+import { STATUS_ANALYZED } from '../matches/list/match-list.helpers';
 import type { IMatchRepository } from './match.repository';
 import {
   CANDIDATE_SELECT_DETAIL,

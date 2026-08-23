@@ -26,7 +26,7 @@ import type {
   MeProfileResponseDto,
   PatchMeProfileDto,
 } from '../me-profile.dto';
-import { MeMatchesService } from '../me-matches.service';
+import { MeMatchesService } from '../matches/core/me-matches.service';
 import {
   USER_PROFILE_REPOSITORY,
   type IUserProfileRepository,
