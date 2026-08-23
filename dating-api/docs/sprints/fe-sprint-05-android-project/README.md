@@ -1,6 +1,6 @@
 # FE Sprint 05 — Android Project Setup
 
-**Status:** In Progress (Stories 1–3 Done)  
+**Status:** ✅ Done (Stories 1–4)  
 **Priority:** 🔴 **P0 BLOCKER** — Cannot build Android app without this  
 **Depends on:** None (independent)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
@@ -24,7 +24,7 @@ Setup Android project infrastructure so app can build and run:
 - [x] APK builds with real app UI (Story 2 export + sync)
 - [x] `output: 'export'` in Next.js config (Story 2 — `CAPACITOR_BUILD=1` dual build)
 - [x] API base URL uses `NEXT_PUBLIC_API_URL` on mobile (Story 3 — fail-fast + resolver)
-- [ ] Viewport meta tag configured
+- [x] Viewport meta tag configured (Story 4 — `app-viewport.ts` + safe-area polish)
 
 ---
 
@@ -42,8 +42,9 @@ Fix: `CAPACITOR_BUILD` dual build, static export to `out/`, `cap:sync:android` w
 **Doc:** [`STORY_03_api_url_mobile.md`](./STORY_03_api_url_mobile.md)  
 Fix: `resolvePublicApiOrigin()`, mobile fail-fast, socket alignment, `.env.example`
 
-### Story 4 — Viewport + Mobile Polish (2 hours)
-Add viewport metadata, test responsive layout
+### Story 4 — Viewport + Mobile Polish ✅ Done
+**Doc:** [`STORY_04_viewport_mobile_polish.md`](./STORY_04_viewport_mobile_polish.md)  
+Fix: typed viewport export, safe-area top/bottom insets for mobile chrome
 
 ---
 
@@ -54,5 +55,10 @@ Add viewport metadata, test responsive layout
 - **Mobile-First:** Ensure responsive design, touch-friendly interactions
 
 ---
+
+## Post-sprint
+
+- **Agent 3.5:** Emulator smoke — `NEXT_PUBLIC_API_URL=http://10.0.2.2:3001`, `build:capacitor`, `cap:sync:android`, sign-in flow
+- **Merge:** `feature/fe-sprint-05-story-4` → `main` (or stacked PRs per story)
 
 Detailed story docs in folder.
