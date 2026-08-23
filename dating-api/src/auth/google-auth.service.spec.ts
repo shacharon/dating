@@ -8,6 +8,7 @@ describe('GoogleAuthService', () => {
   let verifySpy: jest.SpyInstance;
 
   const cfg = {
+    googleClientIds: ['test-client-id.apps.googleusercontent.com'],
     googleClientId: 'test-client-id.apps.googleusercontent.com',
   };
 
@@ -46,7 +47,7 @@ describe('GoogleAuthService', () => {
     });
     expect(verifySpy).toHaveBeenCalledWith({
       idToken: 'raw.jwt.here',
-      audience: cfg.googleClientId,
+      audience: cfg.googleClientIds,
     });
   });
 
@@ -75,11 +76,14 @@ describe('GoogleAuthService', () => {
     });
   });
 
-  it('rejects missing GOOGLE_CLIENT_ID', async () => {
+  it('rejects missing Google client IDs', async () => {
     const mod = await Test.createTestingModule({
       providers: [
         GoogleAuthService,
-        { provide: AuthSessionConfigService, useValue: { googleClientId: undefined } },
+        {
+          provide: AuthSessionConfigService,
+          useValue: { googleClientIds: [], googleClientId: undefined },
+        },
       ],
     }).compile();
     const bare = mod.get(GoogleAuthService);
