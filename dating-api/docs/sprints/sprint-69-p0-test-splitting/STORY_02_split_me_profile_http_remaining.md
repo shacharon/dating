@@ -77,10 +77,11 @@ Monoliths **`me-profile-http-crud.integration.spec.ts`** and **`me-profile-http-
 
 ## Shipped
 
-`feature/sprint-69-story-2` @ `3a0cefb`
+`feature/sprint-69-story-2` @ `bdb260b`
 
 - `f4f0dec` — test: split me-profile-http crud and conversations specs
 - `3a0cefb` — test: update me-profile HTTP split wiring for story 02
+- `bdb260b` — chore: close sprint 69 story 2
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
 
