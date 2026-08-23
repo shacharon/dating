@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dating</string>
+    <string name="title_activity_main">Dating</string>
+    <string name="package_name">com.dating.app</string>
+    <string name="custom_url_scheme">com.dating.app</string>
+</resources>

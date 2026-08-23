@@ -19,7 +19,11 @@
     "test": "vitest run",
     "test:e2e": "vitest run \"src/app/(authenticated)/profile/page.spec.tsx\" src/app/profile-route-redirects.spec.tsx",
     "test:watch": "vitest",
-    "validate:phase2-me-profile": "vitest run src/lib/me-profile-api.spec.ts src/lib/profile-form.spec.ts src/lib/phase25-profile-enrichment.spec.ts src/middleware.spec.ts"
+    "validate:phase2-me-profile": "vitest run src/lib/me-profile-api.spec.ts src/lib/profile-form.spec.ts src/lib/phase25-profile-enrichment.spec.ts src/middleware.spec.ts",
+    "cap:prepare-webdir": "node scripts/prepare-cap-webdir.mjs",
+    "cap:sync": "npm run cap:prepare-webdir && npx cap sync",
+    "cap:sync:android": "npm run cap:prepare-webdir && npx cap sync android",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/core": "^7.6.8",
@@ -34,8 +38,10 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "^5.101.4",
+    "@capacitor/android": "^7.6.8",
+    "@capacitor/cli": "^7.6.8",
     "@tailwindcss/postcss": "^4",
+    "@tanstack/react-query-devtools": "^5.101.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/jsdom": "^28.0.1",
