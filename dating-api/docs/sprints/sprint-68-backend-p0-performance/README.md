@@ -1,6 +1,6 @@
 # Sprint 68 — Backend P0 Performance Fixes
 
-**Status:** In Progress (Stories 1–2 Done)  
+**Status:** In Progress (Stories 1–3 Done)  
 **Priority:** 🟠 **P0 HIGH** — Performance issues that degrade mobile UX  
 **Depends on:** Sprint 67 complete  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
@@ -22,7 +22,7 @@ Fix performance issues that cause slow/laggy mobile experience:
 
 - [x] Inbox pagination works at DB level (no load-all-then-slice)
 - [x] Message send idempotency prevents duplicates
-- [ ] Match list uses cached explainability (no re-score)
+- [x] Match list uses cached explainability (no re-score)
 - [ ] Auth endpoints have rate limiting (10/5min for login)
 
 ---
@@ -37,8 +37,9 @@ Fix: `listInboxPage` SQL with cursor pagination; list path O(page) not O(n)
 **Doc:** [`STORY_02_message_send_idempotency.md`](./STORY_02_message_send_idempotency.md)  
 Fix: Optional `clientMessageId` + unique constraint; idempotent replay, side-effect gate
 
-### Story 3 — Match List Caching (2 days)
-Fix: Persist explainability JSON on `MatchListRank`, hydrate without re-scoring
+### Story 3 — Match List Caching ✅ Done
+**Doc:** [`STORY_03_match_list_caching.md`](./STORY_03_match_list_caching.md)  
+Fix: `presentationJson` on `MatchListRank`; profile-only page hydrate, no per-page re-score
 
 ### Story 4 — Auth Rate Limiting (6 hours)
 Fix: Add Redis-backed rate limit guards on `/auth/google`, `/auth/refresh`
