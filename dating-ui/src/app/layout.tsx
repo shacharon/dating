@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   description: "Find your match",
 };
 
+export { viewport } from "@/lib/app-viewport";
+
 export default async function RootLayout({
   children,
 }: Readonly<{

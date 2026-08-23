@@ -16,6 +16,10 @@ import {
   type AppLocale,
 } from "@/lib/i18n";
 
+/** Clears fixed bottom tab bar + home-indicator inset on mobile. */
+const MOBILE_NAV_CONTENT_PAD =
+  "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0";
+
 function landingUrlWithNext(): string {
   if (typeof window === "undefined") return "/";
   const next = `${window.location.pathname}${window.location.search}`;
@@ -129,7 +133,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
     <div dir={getLocaleDirection(locale)}>
       <MessagingShellProvider sessionUserId={user.id}>
         <Suspense
-          fallback={<div className="pb-20 md:pb-0">{children}</div>}
+          fallback={<div className={MOBILE_NAV_CONTENT_PAD}>{children}</div>}
         >
           <AuthenticatedProductChrome
             pathname={pathname}
@@ -185,7 +189,7 @@ function AuthenticatedProductChrome({
           }}
         />
       )}
-      <div className={hideAppNav ? undefined : 'pb-20 md:pb-0'}>
+      <div className={hideAppNav ? undefined : MOBILE_NAV_CONTENT_PAD}>
         {children}
       </div>
     </>

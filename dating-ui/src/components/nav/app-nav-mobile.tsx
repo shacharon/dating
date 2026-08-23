@@ -26,7 +26,7 @@ export function AppNavMobile({
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2">
           <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             {copy.nav.brand}
