@@ -59,6 +59,7 @@ describe('PrismaConversationRepository', () => {
       conversationId: 'c1',
       senderId: 'u1',
       text: 'hi',
+      clientMessageId: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       status: MessageStatus.SENT,
     };
@@ -75,6 +76,7 @@ describe('PrismaConversationRepository', () => {
         conversationId: 'c1',
         senderId: 'u1',
         text: 'hi',
+        clientMessageId: null,
         status: MessageStatus.SENT,
       },
       select: expect.objectContaining({
@@ -82,11 +84,12 @@ describe('PrismaConversationRepository', () => {
         conversationId: true,
         senderId: true,
         text: true,
+        clientMessageId: true,
         createdAt: true,
         status: true,
       }),
     });
-    expect(result).toEqual(row);
+    expect(result).toEqual({ row, created: true });
   });
 
   it('markUnmatched sets UNMATCHED + unmatchedAt/by', async () => {

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { BadRequestException } from '@nestjs/common';
 import { MAX_MESSAGE_TEXT_LENGTH } from './conversation-message.constants';
 
@@ -9,6 +9,10 @@ export class SendConversationMessageDto {
     message: 'Message exceeds 2000 characters',
   })
   text!: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  clientMessageId?: string;
 }
 
 export interface MessageDto {
@@ -18,6 +22,7 @@ export interface MessageDto {
   text: string;
   createdAt: string;
   status: 'SENT';
+  clientMessageId: string | null;
 }
 
 export interface MessageListDto {
@@ -51,6 +56,7 @@ export function toMessageDto(row: {
   conversationId: string;
   senderId: string;
   text: string;
+  clientMessageId?: string | null;
   createdAt: Date;
   status: string;
 }): MessageDto {
@@ -61,5 +67,6 @@ export function toMessageDto(row: {
     text: row.text,
     createdAt: row.createdAt.toISOString(),
     status: 'SENT',
+    clientMessageId: row.clientMessageId ?? null,
   };
 }

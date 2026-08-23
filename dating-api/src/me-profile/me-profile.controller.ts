@@ -163,7 +163,10 @@ export class MeProfileController {
     @Param('id') id: string,
     @Body() body: SendConversationMessageDto,
   ) {
-    return this.conversationMessages.sendMessage(user.id, id, body.text);
+    return this.conversationMessages.sendMessage(user.id, id, {
+      text: body.text,
+      clientMessageId: body.clientMessageId,
+    });
   }
 
   /**

@@ -49,8 +49,14 @@ export type MessageRow = {
   conversationId: string;
   senderId: string;
   text: string;
+  clientMessageId: string | null;
   createdAt: Date;
   status: MessageStatus;
+};
+
+export type CreateSentMessageResult = {
+  row: MessageRow;
+  created: boolean;
 };
 
 export type InboxListPageRow = {

@@ -703,6 +703,7 @@ describe('me profile HTTP — conversations (integration)', () => {
         conversationId: CONVERSATION_ID,
         senderId: USER_ID,
         text: 'Hello!',
+        clientMessageId: null,
         createdAt,
         status: 'SENT',
       });
@@ -718,6 +719,7 @@ describe('me profile HTTP — conversations (integration)', () => {
         conversationId: CONVERSATION_ID,
         senderId: USER_ID,
         text: 'Hello!',
+        clientMessageId: null,
         createdAt: createdAt.toISOString(),
         status: 'SENT',
       });
@@ -726,6 +728,7 @@ describe('me profile HTTP — conversations (integration)', () => {
           conversationId: CONVERSATION_ID,
           senderId: USER_ID,
           text: 'Hello!',
+          clientMessageId: null,
           status: 'SENT',
         },
         select: expect.any(Object),

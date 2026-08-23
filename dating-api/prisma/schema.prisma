@@ -320,15 +320,17 @@ model MutualMatch {
 }
 
 model Message {
-  id             String        @id @default(cuid())
-  conversationId String
-  conversation   MutualMatch   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  text           String        @db.Text
-  createdAt      DateTime      @default(now())
-  status         MessageStatus @default(SENT)
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    MutualMatch   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text            String        @db.Text
+  clientMessageId String?
+  createdAt       DateTime      @default(now())
+  status          MessageStatus @default(SENT)
 
+  @@unique([conversationId, senderId, clientMessageId], map: "Message_idempotency_key")
   @@index([conversationId, createdAt])
   @@index([senderId])
   @@index([conversationId, senderId, status, createdAt])

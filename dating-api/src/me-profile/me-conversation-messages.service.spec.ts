@@ -100,11 +100,19 @@ describe('MeConversationMessagesService', () => {
         }),
     ),
     createSentMessage: jest.fn(
-      (args: { conversationId: string; senderId: string; text: string }) =>
-        prisma.message.create({
+      async (args: {
+        conversationId: string;
+        senderId: string;
+        text: string;
+        clientMessageId?: string | null;
+      }) => {
+        const row = await prisma.message.create({
           data: { ...args, status: MessageStatus.SENT },
-        }),
+        });
+        return { row, created: true };
+      },
     ),
+    findSentMessageByClientKey: jest.fn().mockResolvedValue(null),
   } as unknown as IConversationRepository;
 
   const conversations = {
@@ -233,11 +241,9 @@ describe('MeConversationMessagesService', () => {
       status: MessageStatus.SENT,
     });
 
-    const result = await service.sendMessage(
-      sessionUserId,
-      conversationId,
-      'Hello!',
-    );
+    const result = await service.sendMessage(sessionUserId, conversationId, {
+      text: 'Hello!',
+    });
 
     expect(result).toEqual({
       id: 'msg_abc',
@@ -246,12 +252,14 @@ describe('MeConversationMessagesService', () => {
       text: 'Hello!',
       createdAt: createdAt.toISOString(),
       status: 'SENT',
+      clientMessageId: null,
     });
     expect(prisma.message.create).toHaveBeenCalledWith({
       data: {
         conversationId,
         senderId: sessionUserId,
         text: 'Hello!',
+        clientMessageId: null,
         status: MessageStatus.SENT,
       },
     });
@@ -295,11 +303,9 @@ describe('MeConversationMessagesService', () => {
       throw new Error('socket down');
     });
 
-    const result = await service.sendMessage(
-      sessionUserId,
-      conversationId,
-      'Hi',
-    );
+    const result = await service.sendMessage(sessionUserId, conversationId, {
+      text: 'Hi',
+    });
 
     expect(result.id).toBe('msg_fail_pub');
     expect(obs.error).toHaveBeenCalledWith(
@@ -315,7 +321,7 @@ describe('MeConversationMessagesService', () => {
     );
 
     await expect(
-      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+      service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toBeInstanceOf(HttpException);
     expect(prisma.message.create).not.toHaveBeenCalled();
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
@@ -332,7 +338,7 @@ describe('MeConversationMessagesService', () => {
     });
 
     try {
-      await service.sendMessage(sessionUserId, conversationId, 'bad stuff');
+      await service.sendMessage(sessionUserId, conversationId, { text: 'bad stuff' });
       fail('expected throw');
     } catch (e) {
       expect(e).toBeInstanceOf(BadRequestException);
@@ -380,11 +386,9 @@ describe('MeConversationMessagesService', () => {
     });
 
     try {
-      await service.sendMessage(
-        sessionUserId,
-        conversationId,
-        'i want to fuck',
-      );
+      await service.sendMessage(sessionUserId, conversationId, {
+        text: 'i want to fuck',
+      });
       fail('expected throw');
     } catch (e) {
       expect(e).toBeInstanceOf(BadRequestException);
@@ -430,7 +434,7 @@ describe('MeConversationMessagesService', () => {
     });
 
     try {
-      await service.sendMessage(sessionUserId, conversationId, 'flagged');
+      await service.sendMessage(sessionUserId, conversationId, { text: 'flagged' });
       fail('expected throw');
     } catch (e) {
       expect(e).toBeInstanceOf(BadRequestException);
@@ -455,7 +459,7 @@ describe('MeConversationMessagesService', () => {
     });
 
     await expect(
-      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+      service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(messageRateLimit.consumeSendSlot).not.toHaveBeenCalled();
@@ -474,7 +478,7 @@ describe('MeConversationMessagesService', () => {
       status: MessageStatus.SENT,
     });
 
-    await service.sendMessage(sessionUserId, conversationId, 'Hi');
+    await service.sendMessage(sessionUserId, conversationId, { text: 'Hi' });
 
     expect(prisma.message.create).toHaveBeenCalled();
   });
@@ -497,7 +501,7 @@ describe('MeConversationMessagesService', () => {
       status: MessageStatus.SENT,
     });
 
-    await service.sendMessage(sessionUserId, conversationId, 'maybe');
+    await service.sendMessage(sessionUserId, conversationId, { text: 'maybe' });
 
     expect(contentViolations.recordViolation).not.toHaveBeenCalled();
     expect(prisma.message.create).toHaveBeenCalled();
@@ -516,7 +520,7 @@ describe('MeConversationMessagesService', () => {
       status: MessageStatus.SENT,
     });
 
-    await service.sendMessage(sessionUserId, conversationId, 'Hi');
+    await service.sendMessage(sessionUserId, conversationId, { text: 'Hi' });
 
     expect(contentViolations.isUserBlocked).not.toHaveBeenCalled();
     expect(moderation.checkContent).not.toHaveBeenCalled();
@@ -525,7 +529,7 @@ describe('MeConversationMessagesService', () => {
 
   it('throws BadRequestException when text is empty after trim', async () => {
     await expect(
-      service.sendMessage(sessionUserId, conversationId, '   '),
+      service.sendMessage(sessionUserId, conversationId, { text: '   ' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.message.create).not.toHaveBeenCalled();
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
@@ -533,7 +537,7 @@ describe('MeConversationMessagesService', () => {
 
   it('throws BadRequestException when text is empty string', async () => {
     await expect(
-      service.sendMessage(sessionUserId, conversationId, ''),
+      service.sendMessage(sessionUserId, conversationId, { text: '' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.message.create).not.toHaveBeenCalled();
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
@@ -545,7 +549,7 @@ describe('MeConversationMessagesService', () => {
     );
 
     await expect(
-      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+      service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toThrow('db error');
     expect(realtime.publishToUsers).not.toHaveBeenCalled();
   });
@@ -560,7 +564,7 @@ describe('MeConversationMessagesService', () => {
       status: MessageStatus.SENT,
     });
 
-    await service.sendMessage(sessionUserId, conversationId, '  Hi there  ');
+    await service.sendMessage(sessionUserId, conversationId, { text: '  Hi there  ' });
 
     expect(prisma.message.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ text: 'Hi there' }),
@@ -578,7 +582,7 @@ describe('MeConversationMessagesService', () => {
     );
 
     await expect(
-      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+      service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.message.create).not.toHaveBeenCalled();
   });
@@ -594,7 +598,7 @@ describe('MeConversationMessagesService', () => {
     );
 
     await expect(
-      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+      service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.message.create).not.toHaveBeenCalled();
   });
@@ -610,7 +614,7 @@ describe('MeConversationMessagesService', () => {
     );
 
     await expect(
-      service.sendMessage(sessionUserId, conversationId, 'Hi'),
+      service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.message.create).not.toHaveBeenCalled();
   });

@@ -125,6 +125,9 @@ export const ErrorCodes = {
   /** Sprint 3 Story 6 — message send rate limit exceeded. */
   ME_CONVERSATIONS_MESSAGE_RATE_LIMITED:
     'ME_CONVERSATIONS_MESSAGE_RATE_LIMITED',
+  /** Same clientMessageId, different text on send retry. */
+  ME_CONVERSATIONS_MESSAGE_IDEMPOTENCY_CONFLICT:
+    'ME_CONVERSATIONS_MESSAGE_IDEMPOTENCY_CONFLICT',
 
   /** Sprint 4 Story 1 — messaging WebSocket connected. */
   MESSAGING_WS_CONNECT_OK: 'MESSAGING_WS_CONNECT_OK',

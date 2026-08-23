@@ -46,3 +46,19 @@ export class ConversationForbiddenError extends MeConversationsDomainError {
     super('You do not have access to this conversation.');
   }
 }
+
+export class MessageIdempotencyConflictError extends MeConversationsDomainError {
+  readonly httpStatus = 409;
+  readonly errorCode = ErrorCodes.ME_CONVERSATIONS_MESSAGE_IDEMPOTENCY_CONFLICT;
+  readonly httpBody = {
+    error: 'message_idempotency_conflict',
+    message:
+      'A message with this clientMessageId already exists with different text.',
+  } as const;
+
+  constructor() {
+    super(
+      'A message with this clientMessageId already exists with different text.',
+    );
+  }
+}

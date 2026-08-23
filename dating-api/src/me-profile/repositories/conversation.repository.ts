@@ -2,6 +2,7 @@ import type { ConversationListCursorPayload } from '../me-conversations-list-cur
 import type {
   ActiveMatchRow,
   ConversationProfileRow,
+  CreateSentMessageResult,
   InboxListPageResult,
   LastMessageRow,
   MatchRow,
@@ -58,5 +59,11 @@ export interface IConversationRepository {
     conversationId: string;
     senderId: string;
     text: string;
-  }): Promise<MessageRow>;
+    clientMessageId?: string | null;
+  }): Promise<CreateSentMessageResult>;
+  findSentMessageByClientKey(args: {
+    conversationId: string;
+    senderId: string;
+    clientMessageId: string;
+  }): Promise<MessageRow | null>;
 }
