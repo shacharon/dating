@@ -92,6 +92,14 @@ describe("getMessagingSocketOrigin", () => {
     expect(getMessagingSocketOrigin()).toBe("https://api.example.com");
   });
 
+  it("uses UI hostname and port for web when env is unset", () => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    delete process.env.NEXT_PUBLIC_API_PORT;
+    expect(getMessagingSocketOrigin()).toBe(
+      `${window.location.protocol}//${window.location.hostname}:3001`,
+    );
+  });
+
   it("falls back to INTERNAL_API_URL on the server", () => {
     vi.stubGlobal("window", undefined);
     delete process.env.NEXT_PUBLIC_API_URL;
