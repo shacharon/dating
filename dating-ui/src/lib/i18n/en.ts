@@ -67,6 +67,8 @@ export const enCopy: AppCopySchema = {
     apiUnreachableTitle: "Cannot reach dating-api",
     retryConnection: "Retry connection",
     redirecting: "Redirecting…",
+    offlineBanner:
+      "You're offline. Some features may be unavailable until you're back online.",
   },
   matches: {
     list: {

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/nav/app-nav";
 import { InlineError } from "@/components/errors";
+import { OfflineBanner } from "@/components/offline-banner";
 import { MessagingShellProvider } from "@/components/messaging-shell-provider";
 import { PushNotificationsRegistration } from "@/components/push-notifications-registration";
 import { useAuth } from "@/contexts/auth-context";
@@ -175,6 +176,7 @@ function AuthenticatedProductChrome({
 
   return (
     <>
+      <OfflineBanner />
       {hideAppNav ? null : (
         <AppNav
           pathname={pathname}

@@ -77,6 +77,7 @@ export type AppCopySchema = {
     apiUnreachableTitle: string;
     retryConnection: string;
     redirecting: string;
+    offlineBanner: string;
   };
   matches: {
     list: {

@@ -60,6 +60,8 @@ export const heCopy: AppCopySchema = {
     apiUnreachableTitle: "לא ניתן להתחבר ל-dating-api",
     retryConnection: "נסו שוב להתחבר",
     redirecting: "מעבירים…",
+    offlineBanner:
+      "אין חיבור לאינטרנט. חלק מהפעולות לא יהיו זמינות עד שהחיבור יחזור.",
   },
   matches: {
     list: {

@@ -68,6 +68,8 @@ export const esCopy: AppCopySchema = {
     apiUnreachableTitle: "No se puede conectar con dating-api",
     retryConnection: "Reintentar conexion",
     redirecting: "Redirigiendo…",
+    offlineBanner:
+      "Sin conexion. Algunas funciones pueden no estar disponibles hasta que vuelvas a estar en linea.",
   },
   matches: {
     list: {
