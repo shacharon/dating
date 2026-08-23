@@ -38,6 +38,7 @@ export const UiErrorCodes = {
   UI_RENDER_FATAL: 'UI_RENDER_FATAL',
   DATING_ROUTE_ERROR: 'DATING_ROUTE_ERROR',
   AUTHENTICATED_ROUTE_ERROR: 'AUTHENTICATED_ROUTE_ERROR',
+  UI_PUSH_REGISTER: 'UI_PUSH_REGISTER',
 } as const;
 
 export type UiErrorCode = (typeof UiErrorCodes)[keyof typeof UiErrorCodes];

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/nav/app-nav";
 import { InlineError } from "@/components/errors";
 import { MessagingShellProvider } from "@/components/messaging-shell-provider";
+import { PushNotificationsRegistration } from "@/components/push-notifications-registration";
 import { useAuth } from "@/contexts/auth-context";
 import { hasSessionCookie } from "@/lib/session-cookie";
 import { isNavHrefCurrent } from "@/components/nav/nav-active";
@@ -131,6 +132,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
 
   return (
     <div dir={getLocaleDirection(locale)}>
+      <PushNotificationsRegistration />
       <MessagingShellProvider sessionUserId={user.id}>
         <Suspense
           fallback={<div className={MOBILE_NAV_CONTENT_PAD}>{children}</div>}

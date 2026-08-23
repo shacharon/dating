@@ -31,6 +31,12 @@ import {
   getObservabilityRoute,
 } from "@/lib/observability/product-logger";
 import { UiErrorCodes } from "@/lib/observability/ui-error-codes";
+import { isCapacitor } from "@/lib/platform";
+import {
+  clearLastRegisteredPushToken,
+  getLastRegisteredPushToken,
+} from "@/lib/push/capacitor-push";
+import { unregisterDeviceToken } from "@/lib/push/device-tokens-api";
 import { tokenStorage } from "@/lib/token-storage";
 import { useRouter } from "next/navigation";
 
@@ -244,6 +250,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authLogout({ accessToken, refreshToken });
     } finally {
+      if (isCapacitor()) {
+        const pushToken = getLastRegisteredPushToken();
+        if (pushToken) {
+          try {
+            await unregisterDeviceToken(pushToken);
+          } catch {
+            /* best-effort */
+          }
+          clearLastRegisteredPushToken();
+        }
+      }
       await tokenStorage.clearTokens();
       queryClient.clear();
       setUser(null);
