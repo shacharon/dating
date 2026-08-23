@@ -839,6 +839,8 @@ export const esCopy: AppCopySchema = {
     photoAlt: (position: number) => `Foto ${position}`,
     loadFailed: "No se pudieron cargar las fotos",
     uploadFailed: "Error al subir",
+    cameraPermissionDenied:
+      "Se requiere acceso a la cámara o a la galería para subir una foto.",
     deleteFailed: "Error al eliminar",
     setPrimaryFailed: "No se pudo establecer como principal",
   },

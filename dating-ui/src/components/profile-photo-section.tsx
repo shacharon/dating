@@ -10,6 +10,12 @@ import {
   type MeProfilePhotoDto,
 } from '@/lib/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
+import { isCapacitor } from '@/lib/platform';
+import {
+  pickProfilePhotoFile,
+  ProfilePhotoPermissionDeniedError,
+  ProfilePhotoPickCancelledError,
+} from '@/lib/pick-profile-photo';
 import {
   ProfilePhotoEmptySlot,
   ProfilePhotoFilledSlot,
@@ -111,12 +117,7 @@ export function ProfilePhotoSection({
     return base.slice(0, MAX_PHOTOS);
   }, [photos]);
 
-  async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError(null);
-    if (!canUpload) return;
-
+  async function uploadPickedFile(file: File) {
     const localUrl = URL.createObjectURL(file);
     setUploading({ id: `up-${Date.now()}`, url: localUrl });
     try {
@@ -128,9 +129,47 @@ export function ProfilePhotoSection({
     } finally {
       URL.revokeObjectURL(localUrl);
       setUploading(null);
+    }
+  }
+
+  async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    if (!canUpload) return;
+
+    try {
+      await uploadPickedFile(file);
+    } finally {
       if (inputRef.current) inputRef.current.value = '';
     }
   }
+
+  async function onUploadClick() {
+    if (!canUpload) return;
+    setError(null);
+    try {
+      const file = await pickProfilePhotoFile();
+      if (!file) return;
+      await uploadPickedFile(file);
+    } catch (err) {
+      if (err instanceof ProfilePhotoPickCancelledError) return;
+      if (err instanceof ProfilePhotoPermissionDeniedError) {
+        setError(photosCopy.cameraPermissionDenied);
+        return;
+      }
+      if (
+        err instanceof Error &&
+        err.message.startsWith('Unsupported image format')
+      ) {
+        setError(photosCopy.uploadFailed);
+        return;
+      }
+      setError(err instanceof Error ? err.message : photosCopy.uploadFailed);
+    }
+  }
+
+  const uploadControlClassName = `rounded border px-3 py-1.5 text-xs font-medium ${canUpload ? 'cursor-pointer border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800' : 'cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'}`;
 
   async function onDelete(photoId: string) {
     setBusyPhotoId(photoId);
@@ -175,20 +214,31 @@ export function ProfilePhotoSection({
             </p>
           ) : null}
         </div>
-        <label
-          className={`rounded border px-3 py-1.5 text-xs font-medium ${canUpload ? 'cursor-pointer border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800' : 'cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'}`}
-          aria-disabled={!canUpload}
-        >
-          {photosCopy.upload}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={onPickFile}
+        {isCapacitor() ? (
+          <button
+            type="button"
+            onClick={onUploadClick}
             disabled={!canUpload}
-          />
-        </label>
+            className={uploadControlClassName}
+          >
+            {photosCopy.upload}
+          </button>
+        ) : (
+          <label
+            className={uploadControlClassName}
+            aria-disabled={!canUpload}
+          >
+            {photosCopy.upload}
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={onPickFile}
+              disabled={!canUpload}
+            />
+          </label>
+        )}
       </div>
       <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
         {photosCopy.hint}

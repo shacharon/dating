@@ -823,6 +823,8 @@ export const enCopy: AppCopySchema = {
     photoAlt: (position: number) => `Photo ${position}`,
     loadFailed: "Failed to load photos",
     uploadFailed: "Upload failed",
+    cameraPermissionDenied:
+      "Camera or photo library access is required to upload a photo.",
     deleteFailed: "Delete failed",
     setPrimaryFailed: "Could not set primary",
   },

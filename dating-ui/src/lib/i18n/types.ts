@@ -593,6 +593,7 @@ export type AppCopySchema = {
     photoAlt: (position: number) => string;
     loadFailed: string;
     uploadFailed: string;
+    cameraPermissionDenied: string;
     deleteFailed: string;
     setPrimaryFailed: string;
   };

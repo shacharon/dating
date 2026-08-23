@@ -799,6 +799,8 @@ export const heCopy: AppCopySchema = {
     photoAlt: (position: number) => `תמונה ${position}`,
     loadFailed: "לא ניתן לטעון תמונות",
     uploadFailed: "ההעלאה נכשלה",
+    cameraPermissionDenied:
+      "נדרשת גישה למצלמה או לגלריה כדי להעלות תמונה.",
     deleteFailed: "המחיקה נכשלה",
     setPrimaryFailed: "לא ניתן להגדיר תמונה ראשית",
   },

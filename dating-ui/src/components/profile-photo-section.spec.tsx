@@ -1,9 +1,13 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 const { listMyProfilePhotosMock } = vi.hoisted(() => ({
   listMyProfilePhotosMock: vi.fn(),
+}));
+
+const { pickProfilePhotoFileMock } = vi.hoisted(() => ({
+  pickProfilePhotoFileMock: vi.fn(),
 }));
 
 vi.mock('@/lib/me-photos-api', async (importOriginal) => {
@@ -14,16 +18,32 @@ vi.mock('@/lib/me-photos-api', async (importOriginal) => {
   };
 });
 
+vi.mock('@/lib/pick-profile-photo', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/pick-profile-photo')>();
+  return {
+    ...actual,
+    pickProfilePhotoFile: pickProfilePhotoFileMock,
+  };
+});
+
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
+import {
+  ProfilePhotoPermissionDeniedError,
+  ProfilePhotoPickCancelledError,
+} from '@/lib/pick-profile-photo';
+import { setPlatformOverrideForTests } from '@/lib/platform';
 
 describe('ProfilePhotoSection (requiredForMatching)', () => {
   afterEach(() => {
     cleanup();
+    setPlatformOverrideForTests(null);
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
     listMyProfilePhotosMock.mockResolvedValue([]);
+    pickProfilePhotoFileMock.mockResolvedValue(null);
+    setPlatformOverrideForTests(null);
   });
 
   it('shows required-for-matching hint when prop is set', async () => {
@@ -89,5 +109,48 @@ describe('ProfilePhotoSection (requiredForMatching)', () => {
       expect(screen.getByText('Rejected')).toBeTruthy();
       expect(screen.getByText(/Reason: Not a clear face photo/)).toBeTruthy();
     });
+  });
+
+  it('shows camera permission denied on capacitor when pick fails', async () => {
+    setPlatformOverrideForTests('capacitor');
+    pickProfilePhotoFileMock.mockRejectedValue(
+      new ProfilePhotoPermissionDeniedError(),
+    );
+
+    render(<ProfilePhotoSection />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /Camera or photo library access is required to upload a photo/,
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  it('swallows cancel on capacitor without showing error', async () => {
+    setPlatformOverrideForTests('capacitor');
+    pickProfilePhotoFileMock.mockRejectedValue(
+      new ProfilePhotoPickCancelledError(),
+    );
+
+    render(<ProfilePhotoSection />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
+
+    await waitFor(() => {
+      expect(pickProfilePhotoFileMock).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
