@@ -9,11 +9,13 @@ import {
   ProfileGender,
 } from '@prisma/client';
 import { MeConversationsService } from './me-conversations.service';
+import { paginateConversationList } from './me-conversations-list-cursor';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import { batchLastMessagesByConversationId } from './repositories/prisma-conversation.repository';
 import type { IConversationRepository } from './repositories/conversation.repository';
+import type { InboxListPageRow } from './repositories/conversation.repository.types';
 
 jest.mock('./repositories/prisma-conversation.repository', () => {
   const actual = jest.requireActual<
@@ -40,6 +42,67 @@ describe('MeConversationsService', () => {
     user2LastReadAt: null as Date | null,
   };
 
+  type ListMatchFixture = {
+    id: string;
+    userId1: string;
+    userId2: string;
+    createdAt: Date;
+    user1LastReadAt?: Date | null;
+    user2LastReadAt?: Date | null;
+  };
+
+  function buildSortedInboxRows(
+    matches: ListMatchFixture[],
+    unreadById: Record<string, number> = {},
+  ): InboxListPageRow[] {
+    const rows: InboxListPageRow[] = matches.map((match) => ({
+      id: match.id,
+      userId1: match.userId1,
+      userId2: match.userId2,
+      matchedAt: match.createdAt,
+      user1LastReadAt: match.user1LastReadAt ?? null,
+      user2LastReadAt: match.user2LastReadAt ?? null,
+      unreadCount: unreadById[match.id] ?? 0,
+    }));
+    rows.sort((a, b) => {
+      if (b.unreadCount !== a.unreadCount) {
+        return b.unreadCount - a.unreadCount;
+      }
+      const aTime = a.matchedAt.getTime();
+      const bTime = b.matchedAt.getTime();
+      if (aTime !== bTime) {
+        return bTime - aTime;
+      }
+      return a.id.localeCompare(b.id);
+    });
+    return rows;
+  }
+
+  function wireListInboxPage(
+    matches: ListMatchFixture[],
+    unreadById: Record<string, number> = {},
+  ) {
+    const allRows = buildSortedInboxRows(matches, unreadById);
+    (conversationsRepo.listInboxPage as jest.Mock).mockImplementation(
+      async ({
+        cursor,
+        limit,
+      }: {
+        cursor: { unreadCount: number; matchedAt: string; id: string } | null;
+        limit: number;
+      }) => {
+        const items = allRows.map((row) => ({
+          id: row.id,
+          matchedAt: row.matchedAt.toISOString(),
+          unreadCount: row.unreadCount,
+        }));
+        const { page, hasMore } = paginateConversationList(items, cursor, limit);
+        const rows = page.map((item) => allRows.find((row) => row.id === item.id)!);
+        return { rows, hasMore };
+      },
+    );
+  }
+
   const prisma = {
     mutualMatch: {
       findMany: jest.fn(),
@@ -52,6 +115,7 @@ describe('MeConversationsService', () => {
   } as unknown as PrismaService;
 
   const conversationsRepo = {
+    listInboxPage: jest.fn(async () => ({ rows: [], hasMore: false })),
     findActiveMatchesForUser: jest.fn((userId: string) =>
       prisma.mutualMatch.findMany({
         where: {
@@ -156,7 +220,7 @@ describe('MeConversationsService', () => {
   });
 
   it('returns empty list when user has no ACTIVE mutual matches', async () => {
-    (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([]);
+    wireListInboxPage([]);
 
     const result = await service.list(sessionUserId);
 
@@ -166,37 +230,32 @@ describe('MeConversationsService', () => {
       hasMore: false,
     });
     expect(prisma.userProfile.findMany).not.toHaveBeenCalled();
-    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(conversationsRepo.listInboxPage).toHaveBeenCalledWith({
+      sessionUserId,
+      cursor: null,
+      limit: 20,
+    });
     expect(batchLastMessagesMock).not.toHaveBeenCalled();
     expect(obs.trace).toHaveBeenCalled();
   });
 
-  it('queries only ACTIVE mutual matches for session user', async () => {
-    (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([]);
+  it('queries inbox page for session user via listInboxPage', async () => {
+    wireListInboxPage([]);
 
     await service.list(sessionUserId);
 
-    expect(prisma.mutualMatch.findMany).toHaveBeenCalledWith({
-      where: {
-        status: MutualMatchStatus.ACTIVE,
-        OR: [{ userId1: sessionUserId }, { userId2: sessionUserId }],
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        userId1: true,
-        userId2: true,
-        createdAt: true,
-        user1LastReadAt: true,
-        user2LastReadAt: true,
-      },
+    expect(conversationsRepo.listInboxPage).toHaveBeenCalledWith({
+      sessionUserId,
+      cursor: null,
+      limit: 20,
     });
+    expect(prisma.mutualMatch.findMany).not.toHaveBeenCalled();
   });
 
   it('returns two conversations with correct other users and sort order', async () => {
     const older = new Date('2026-05-30T10:00:00.000Z');
     const newer = new Date('2026-05-31T14:00:00.000Z');
-    (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+    wireListInboxPage([
       {
         id: 'mutual_new',
         userId1: sessionUserId,
@@ -262,7 +321,7 @@ describe('MeConversationsService', () => {
   });
 
   it('resolves other user when session user is userId2', async () => {
-    (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+    wireListInboxPage([
       {
         id: 'mutual_1',
         userId1: otherUserIdA,
@@ -297,7 +356,7 @@ describe('MeConversationsService', () => {
   });
 
   it('returns row with empty profile fields when other profile is missing', async () => {
-    (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+    wireListInboxPage([
       {
         id: 'mutual_orphan',
         userId1: sessionUserId,
@@ -323,31 +382,31 @@ describe('MeConversationsService', () => {
   });
 
   describe('list() unreadCount', () => {
-    it('returns unreadCount from batch query when lastReadAt is null', async () => {
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
-        {
-          id: 'mutual_1',
-          userId1: otherUserIdA,
-          userId2: sessionUserId,
-          createdAt: new Date('2026-05-31T10:00:00.000Z'),
-          ...listRowReadDefaults,
-        },
-      ]);
+    it('returns unreadCount from inbox page row when lastReadAt is null', async () => {
+      wireListInboxPage(
+        [
+          {
+            id: 'mutual_1',
+            userId1: otherUserIdA,
+            userId2: sessionUserId,
+            createdAt: new Date('2026-05-31T10:00:00.000Z'),
+            ...listRowReadDefaults,
+          },
+        ],
+        { mutual_1: 3 },
+      );
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
-        { conversationId: 'mutual_1', cnt: 3 },
-      ]);
 
       const result = await service.list(sessionUserId);
 
       expect(result.conversations[0].unreadCount).toBe(3);
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(conversationsRepo.listInboxPage).toHaveBeenCalledTimes(1);
       expect(prisma.message.count).not.toHaveBeenCalled();
     });
 
-    it('returns zero unread when batch omits conversation (no matching messages)', async () => {
+    it('returns zero unread when inbox page row has zero unread', async () => {
       const readAt = new Date('2026-06-01T12:00:00.000Z');
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+      wireListInboxPage([
         {
           id: 'mutual_1',
           userId1: otherUserIdA,
@@ -358,41 +417,39 @@ describe('MeConversationsService', () => {
         },
       ]);
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
 
       const result = await service.list(sessionUserId);
 
       expect(result.conversations[0].unreadCount).toBe(0);
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(conversationsRepo.listInboxPage).toHaveBeenCalledTimes(1);
       expect(prisma.message.count).not.toHaveBeenCalled();
     });
 
-    it('batches unread for all conversations in one query (not N message.count)', async () => {
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
-        {
-          id: 'mutual_1',
-          userId1: otherUserIdA,
-          userId2: sessionUserId,
-          createdAt: new Date('2026-05-31T10:00:00.000Z'),
-          ...listRowReadDefaults,
-        },
-        {
-          id: 'mutual_2',
-          userId1: sessionUserId,
-          userId2: otherUserIdB,
-          createdAt: new Date('2026-05-31T11:00:00.000Z'),
-          ...listRowReadDefaults,
-        },
-      ]);
+    it('does not call batchUnreadCounts on list path', async () => {
+      wireListInboxPage(
+        [
+          {
+            id: 'mutual_1',
+            userId1: otherUserIdA,
+            userId2: sessionUserId,
+            createdAt: new Date('2026-05-31T10:00:00.000Z'),
+            ...listRowReadDefaults,
+          },
+          {
+            id: 'mutual_2',
+            userId1: sessionUserId,
+            userId2: otherUserIdB,
+            createdAt: new Date('2026-05-31T11:00:00.000Z'),
+            ...listRowReadDefaults,
+          },
+        ],
+        { mutual_1: 1, mutual_2: 2 },
+      );
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
-        { conversationId: 'mutual_1', cnt: 1 },
-        { conversationId: 'mutual_2', cnt: 2 },
-      ]);
 
       const result = await service.list(sessionUserId);
 
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(conversationsRepo.batchUnreadCounts).not.toHaveBeenCalled();
       expect(prisma.message.count).not.toHaveBeenCalled();
       expect(
         result.conversations.find((c) => c.id === 'mutual_1')?.unreadCount,
@@ -405,27 +462,26 @@ describe('MeConversationsService', () => {
     it('sorts conversations with higher unreadCount before newer matchedAt', async () => {
       const newer = new Date('2026-05-31T14:00:00.000Z');
       const older = new Date('2026-05-30T10:00:00.000Z');
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
-        {
-          id: 'mutual_new',
-          userId1: sessionUserId,
-          userId2: otherUserIdA,
-          createdAt: newer,
-          ...listRowReadDefaults,
-        },
-        {
-          id: 'mutual_old',
-          userId1: otherUserIdB,
-          userId2: sessionUserId,
-          createdAt: older,
-          ...listRowReadDefaults,
-        },
-      ]);
+      wireListInboxPage(
+        [
+          {
+            id: 'mutual_new',
+            userId1: sessionUserId,
+            userId2: otherUserIdA,
+            createdAt: newer,
+            ...listRowReadDefaults,
+          },
+          {
+            id: 'mutual_old',
+            userId1: otherUserIdB,
+            userId2: sessionUserId,
+            createdAt: older,
+            ...listRowReadDefaults,
+          },
+        ],
+        { mutual_new: 0, mutual_old: 3 },
+      );
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
-        { conversationId: 'mutual_new', cnt: 0 },
-        { conversationId: 'mutual_old', cnt: 3 },
-      ]);
 
       const result = await service.list(sessionUserId);
 
@@ -438,7 +494,7 @@ describe('MeConversationsService', () => {
 
   describe('list() lastMessage', () => {
     it('returns null lastMessage when batch has no row for conversation', async () => {
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+      wireListInboxPage([
         {
           id: 'mutual_1',
           userId1: otherUserIdA,
@@ -458,7 +514,7 @@ describe('MeConversationsService', () => {
 
     it('maps newest SENT lastMessage onto list items', async () => {
       const sentAt = new Date('2026-08-01T15:30:00.000Z');
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+      wireListInboxPage([
         {
           id: 'mutual_1',
           userId1: otherUserIdA,
@@ -496,7 +552,7 @@ describe('MeConversationsService', () => {
       const t1 = new Date('2026-06-03T00:00:00.000Z');
       const t2 = new Date('2026-06-02T00:00:00.000Z');
       const t3 = new Date('2026-06-01T00:00:00.000Z');
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
+      wireListInboxPage([
         {
           id: 'c1',
           userId1: sessionUserId,
@@ -536,34 +592,32 @@ describe('MeConversationsService', () => {
       const t1 = new Date('2026-06-03T00:00:00.000Z');
       const t2 = new Date('2026-06-02T00:00:00.000Z');
       const t3 = new Date('2026-06-01T00:00:00.000Z');
-      (prisma.mutualMatch.findMany as jest.Mock).mockResolvedValue([
-        {
-          id: 'c1',
-          userId1: sessionUserId,
-          userId2: otherUserIdA,
-          createdAt: t1,
-          ...listRowReadDefaults,
-        },
-        {
-          id: 'c2',
-          userId1: sessionUserId,
-          userId2: otherUserIdB,
-          createdAt: t2,
-          ...listRowReadDefaults,
-        },
-        {
-          id: 'c3',
-          userId1: otherUserIdA,
-          userId2: sessionUserId,
-          createdAt: t3,
-          ...listRowReadDefaults,
-        },
-      ]);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
-        { conversationId: 'c1', cnt: 1 },
-        { conversationId: 'c2', cnt: 0 },
-        { conversationId: 'c3', cnt: 0 },
-      ]);
+      wireListInboxPage(
+        [
+          {
+            id: 'c1',
+            userId1: sessionUserId,
+            userId2: otherUserIdA,
+            createdAt: t1,
+            ...listRowReadDefaults,
+          },
+          {
+            id: 'c2',
+            userId1: sessionUserId,
+            userId2: otherUserIdB,
+            createdAt: t2,
+            ...listRowReadDefaults,
+          },
+          {
+            id: 'c3',
+            userId1: otherUserIdA,
+            userId2: sessionUserId,
+            createdAt: t3,
+            ...listRowReadDefaults,
+          },
+        ],
+        { c1: 1, c2: 0, c3: 0 },
+      );
       (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
 
       const page1 = await service.list(sessionUserId, { limit: 2 });
@@ -589,7 +643,7 @@ describe('MeConversationsService', () => {
       await expect(
         service.list(sessionUserId, { limit: 20, cursor: '!!!' }),
       ).rejects.toBeInstanceOf(ConversationListInvalidCursorError);
-      expect(prisma.mutualMatch.findMany).not.toHaveBeenCalled();
+      expect(conversationsRepo.listInboxPage).not.toHaveBeenCalled();
     });
   });
 

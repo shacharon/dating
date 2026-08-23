@@ -52,3 +52,18 @@ export type MessageRow = {
   createdAt: Date;
   status: MessageStatus;
 };
+
+export type InboxListPageRow = {
+  id: string;
+  userId1: string;
+  userId2: string;
+  matchedAt: Date;
+  user1LastReadAt: Date | null;
+  user2LastReadAt: Date | null;
+  unreadCount: number;
+};
+
+export type InboxListPageResult = {
+  rows: InboxListPageRow[];
+  hasMore: boolean;
+};

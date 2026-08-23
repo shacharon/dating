@@ -7,14 +7,17 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { IConversationRepository } from './conversation.repository';
+import type { ConversationListCursorPayload } from '../me-conversations-list-cursor';
 import type {
   ActiveMatchRow,
   ConversationProfileRow,
+  InboxListPageResult,
   LastMessageRow,
   MatchRow,
   MessageRow,
   UnreadCountSpec,
 } from './conversation.repository.types';
+import { queryInboxListPage } from './inbox-list-page.query';
 
 const profileSelect = {
   id: true,
@@ -111,6 +114,14 @@ export async function batchLastMessagesByConversationId(
 @Injectable()
 export class PrismaConversationRepository implements IConversationRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  listInboxPage(args: {
+    sessionUserId: string;
+    cursor: ConversationListCursorPayload | null;
+    limit: number;
+  }): Promise<InboxListPageResult> {
+    return queryInboxListPage(this.prisma, args);
+  }
 
   findActiveMatchesForUser(userId: string): Promise<ActiveMatchRow[]> {
     return this.prisma.mutualMatch.findMany({

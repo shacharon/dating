@@ -14,7 +14,7 @@ import {
 } from './me-conversations.errors';
 import {
   decodeConversationListCursor,
-  paginateConversationList,
+  encodeConversationListCursor,
 } from './me-conversations-list-cursor';
 import {
   MATCH_LIST_RANK_QUEUE_PORT,
@@ -122,10 +122,13 @@ export class MeConversationsService {
       throw new ConversationListInvalidCursorError();
     }
 
-    const rows =
-      await this.conversationsRepo.findActiveMatchesForUser(sessionUserId);
+    const page = await this.conversationsRepo.listInboxPage({
+      sessionUserId,
+      cursor,
+      limit,
+    });
 
-    if (rows.length === 0) {
+    if (page.rows.length === 0) {
       this.obs.trace(
         `me conversations list userId=${sessionUserId} count=0`,
         ErrorCodes.ME_CONVERSATIONS_LIST_OK,
@@ -133,62 +136,9 @@ export class MeConversationsService {
       return { conversations: [], nextCursor: null, hasMore: false };
     }
 
-    const unreadSpecs = rows.map((row) => {
-      const otherUserId =
-        row.userId1 === sessionUserId ? row.userId2 : row.userId1;
-      return {
-        conversationId: row.id,
-        otherUserId,
-        lastReadAt: lastReadAtForUser(row, sessionUserId),
-      };
-    });
-    const unreadByConversationId =
-      await this.conversationsRepo.batchUnreadCounts(unreadSpecs);
-
-    type Ranked = {
-      id: string;
-      matchedAt: string;
-      unreadCount: number;
-      otherUserId: string;
-    };
-
-    const ranked: Ranked[] = rows.map((row) => {
-      const otherUserId =
-        row.userId1 === sessionUserId ? row.userId2 : row.userId1;
-      return {
-        id: row.id,
-        matchedAt: row.createdAt.toISOString(),
-        unreadCount: unreadByConversationId.get(row.id) ?? 0,
-        otherUserId,
-      };
-    });
-
-    ranked.sort((a, b) => {
-      if (b.unreadCount !== a.unreadCount) {
-        return b.unreadCount - a.unreadCount;
-      }
-      if (a.matchedAt !== b.matchedAt) {
-        return b.matchedAt.localeCompare(a.matchedAt);
-      }
-      // Lexicographic id ASC — must match isAfterConversationListCursor.
-      return a.id.localeCompare(b.id);
-    });
-
-    const { page, nextCursor, hasMore } = paginateConversationList(
-      ranked,
-      cursor,
-      limit,
+    const otherUserIds = page.rows.map((row) =>
+      row.userId1 === sessionUserId ? row.userId2 : row.userId1,
     );
-
-    if (page.length === 0) {
-      this.obs.trace(
-        `me conversations list userId=${sessionUserId} count=0 page`,
-        ErrorCodes.ME_CONVERSATIONS_LIST_OK,
-      );
-      return { conversations: [], nextCursor: null, hasMore: false };
-    }
-
-    const otherUserIds = page.map((p) => p.otherUserId);
     const profiles =
       await this.conversationsRepo.findProfilesByUserIds(otherUserIds);
     const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
@@ -196,21 +146,19 @@ export class MeConversationsService {
 
     const lastByConversationId =
       await this.conversationsRepo.batchLastMessagesByConversationIds(
-        page.map((p) => p.id),
+        page.rows.map((row) => row.id),
       );
 
-    const conversations: ConversationListItemDto[] = page.map((item) => {
-      const profile = profileByUserId.get(item.otherUserId);
-      const last = lastByConversationId.get(item.id);
+    const conversations: ConversationListItemDto[] = page.rows.map((row) => {
+      const otherUserId =
+        row.userId1 === sessionUserId ? row.userId2 : row.userId1;
+      const profile = profileByUserId.get(otherUserId);
+      const last = lastByConversationId.get(row.id);
       return {
-        id: item.id,
-        otherUser: buildOtherUserDto(
-          item.otherUserId,
-          profile ?? undefined,
-          asOf,
-        ),
-        matchedAt: item.matchedAt,
-        unreadCount: item.unreadCount,
+        id: row.id,
+        otherUser: buildOtherUserDto(otherUserId, profile ?? undefined, asOf),
+        matchedAt: row.matchedAt.toISOString(),
+        unreadCount: row.unreadCount,
         lastMessage: last
           ? {
               text: last.text,
@@ -221,12 +169,21 @@ export class MeConversationsService {
       };
     });
 
+    const lastRow = page.rows[page.rows.length - 1];
+    const nextCursor = page.hasMore
+      ? encodeConversationListCursor({
+          unreadCount: lastRow.unreadCount,
+          matchedAt: lastRow.matchedAt.toISOString(),
+          id: lastRow.id,
+        })
+      : null;
+
     this.obs.trace(
-      `me conversations list userId=${sessionUserId} count=${conversations.length} hasMore=${hasMore}`,
+      `me conversations list userId=${sessionUserId} count=${conversations.length} hasMore=${page.hasMore}`,
       ErrorCodes.ME_CONVERSATIONS_LIST_OK,
     );
 
-    return { conversations, nextCursor, hasMore };
+    return { conversations, nextCursor, hasMore: page.hasMore };
   }
 
   async unreadTotal(
