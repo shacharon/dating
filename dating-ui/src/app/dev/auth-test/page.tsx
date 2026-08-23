@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import { isAuthTestPageEnabled } from "@/lib/auth-test-gate";
 import { DevAuthTestClient } from "./dev-auth-test-client";
 
-export const dynamic = "force-dynamic";
-
 export default function DevAuthTestPage() {
   if (!isAuthTestPageEnabled()) {
     notFound();

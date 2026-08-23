@@ -81,7 +81,7 @@ import {
   QueryClientTestProvider,
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
-import MeMatchDetailPage from './page';
+import MeMatchDetailPage from './me-match-detail-page-client';
 
 function renderPage(ui: React.ReactElement = <MeMatchDetailPage />) {
   return render(

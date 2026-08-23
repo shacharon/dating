@@ -8,6 +8,7 @@ export default defineConfig({
       'src/**/*.spec.ts',
       'src/**/*.spec.tsx',
       'capacitor.config.spec.ts',
+      'next.config.export.spec.ts',
       'scripts/**/*.spec.ts',
     ],
     setupFiles: ['./src/test/setup-next-dynamic.ts'],

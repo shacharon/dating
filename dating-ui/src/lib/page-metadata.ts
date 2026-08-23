@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { getCopy } from "@/lib/i18n";
+import { getCopy, DEFAULT_LOCALE } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/i18n/server-locale";
+import { isCapacitorBuild } from "@/lib/capacitor-build";
 import type { AppCopySchema } from "@/lib/i18n/types";
 
 /**
@@ -13,7 +14,7 @@ export async function buildPageMetadata(options: {
   /** Full document title (skips `| Dating App` template). */
   absolute?: boolean;
 }): Promise<Metadata> {
-  const locale = await getServerLocale();
+  const locale = isCapacitorBuild() ? DEFAULT_LOCALE : await getServerLocale();
   const copy = getCopy(locale);
   const pageTitle = options.title(copy);
 

@@ -2,8 +2,6 @@ import { PublicLandingClient } from "@/components/landing/public-landing-client"
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Find your match",
   description: "Dating app — sign in with Google",

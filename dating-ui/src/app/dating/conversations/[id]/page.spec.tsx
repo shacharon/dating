@@ -140,7 +140,7 @@ import {
   QueryClientTestProvider,
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
-import ConversationDetailPage from './page';
+import ConversationDetailPage from './conversation-detail-page-client';
 
 function renderPage(ui: React.ReactElement = <ConversationDetailPage />) {
   return render(

@@ -12,6 +12,7 @@
     "dev:nowait": "npx next dev --webpack -p 3000",
     "clean:next": "node scripts/clean-next.cjs",
     "build": "next build",
+    "build:capacitor": "cross-env CAPACITOR_BUILD=1 next build && node scripts/post-cap-export.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "next start",
     "lint": "eslint",
@@ -21,8 +22,8 @@
     "test:watch": "vitest",
     "validate:phase2-me-profile": "vitest run src/lib/me-profile-api.spec.ts src/lib/profile-form.spec.ts src/lib/phase25-profile-enrichment.spec.ts src/middleware.spec.ts",
     "cap:prepare-webdir": "node scripts/prepare-cap-webdir.mjs",
-    "cap:sync": "npm run cap:prepare-webdir && npx cap sync",
-    "cap:sync:android": "npm run cap:prepare-webdir && npx cap sync android",
+    "cap:sync": "npm run build:capacitor && npx cap sync",
+    "cap:sync:android": "npm run build:capacitor && npx cap sync android",
     "cap:open:android": "npx cap open android"
   },
   "dependencies": {
@@ -48,6 +49,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^28.1.0",

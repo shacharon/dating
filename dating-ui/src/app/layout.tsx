@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
-import { getLocaleDirection } from "@/lib/i18n";
+import { getLocaleDirection, DEFAULT_LOCALE } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/i18n/server-locale";
+import { isCapacitorBuild } from "@/lib/capacitor-build";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getServerLocale();
+  const locale = isCapacitorBuild() ? DEFAULT_LOCALE : await getServerLocale();
   const dir = getLocaleDirection(locale);
 
   return (

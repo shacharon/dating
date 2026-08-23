@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/i18n";
 import { onboardingResumePath } from "@/lib/onboarding-path";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -12,7 +12,7 @@ import { useProfile } from "@/hooks/use-profile";
  */
 export function OnboardingIndexClient() {
   const router = useRouter();
-  const t = useTranslations("Onboarding");
+  const { copy } = useAppLocale();
   const { profile, isLoading, error: profileError } = useProfile();
   const [error, setError] = useState<string | null>(null);
   const [redirected, setRedirected] = useState(false);
@@ -20,12 +20,12 @@ export function OnboardingIndexClient() {
   useEffect(() => {
     if (isLoading || redirected) return;
     if (profileError) {
-      setError(t("loadError"));
+      setError(copy.onboarding.loadFailed);
       return;
     }
     setRedirected(true);
     router.replace(onboardingResumePath(profile));
-  }, [profile, isLoading, profileError, router, t, redirected]);
+  }, [profile, isLoading, profileError, router, copy.onboarding.loadFailed, redirected]);
 
   if (error) {
     return (
@@ -36,6 +36,8 @@ export function OnboardingIndexClient() {
   }
 
   return (
-    <p className="text-sm text-zinc-600 dark:text-zinc-400">{t("redirecting")}</p>
+    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      {copy.appShell.redirecting}
+    </p>
   );
 }
