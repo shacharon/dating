@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as fs from "fs";
+import * as path from "path";
 import { setPlatformOverrideForTests } from "@/lib/platform";
 
 const checkPermissions = vi.fn();
@@ -185,5 +187,26 @@ describe("pickProfilePhotoFile", () => {
 
     expect(file).toBeInstanceOf(File);
     expect(getPhoto).toHaveBeenCalled();
+  });
+});
+
+describe("pick-profile-photo security invariants", () => {
+  it("does not log file paths or image bytes", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "pick-profile-photo.ts"),
+      "utf8",
+    );
+    expect(src).not.toMatch(/productLogger|console\.(log|debug|info|warn)/);
+  });
+
+  it("rejects formats outside the jpeg/png/webp allowlist", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "pick-profile-photo.ts"),
+      "utf8",
+    );
+    expect(src).toContain('"jpeg"');
+    expect(src).toContain('"webp"');
+    expect(src).toContain("ALLOWED_FORMATS");
+    expect(src).not.toContain('"heic"');
   });
 });

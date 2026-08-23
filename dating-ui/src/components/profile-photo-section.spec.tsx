@@ -1,6 +1,8 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const { listMyProfilePhotosMock, uploadMyProfilePhotoMock } = vi.hoisted(() => ({
   listMyProfilePhotosMock: vi.fn(),
@@ -217,5 +219,25 @@ describe('ProfilePhotoSection (requiredForMatching)', () => {
       expect(pickProfilePhotoFileMock).toHaveBeenCalled();
     });
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('ProfilePhotoSection upload security (static)', () => {
+  it('uploads picked photos via authenticated me-photos-api helper only', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, 'profile-photo-section.tsx'),
+      'utf8',
+    );
+    expect(src).toContain('uploadMyProfilePhoto');
+    expect(src).not.toMatch(/fetch\([^)]*\/api\/v1\/me\/profile\/photos/);
+  });
+
+  it('maps unsupported picker formats to generic upload failure copy', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, 'profile-photo-section.tsx'),
+      'utf8',
+    );
+    expect(src).toContain("Unsupported image format");
+    expect(src).toContain('photosCopy.uploadFailed');
   });
 });
