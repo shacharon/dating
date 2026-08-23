@@ -101,10 +101,13 @@ export type UpsertActionDetectResult = {
   unmatchedExisting: boolean;
 };
 
+import type { MatchListRankPresentationJson } from '../matches/match-list-rank-presentation.types';
+
 export type RankPersistRow = {
   candidateProfileId: string;
   matchScore: number;
   hardBlocked: boolean;
+  presentationJson: MatchListRankPresentationJson | null;
 };
 
 export type RankPageRow = RankPersistRow;

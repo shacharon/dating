@@ -15,6 +15,7 @@ import {
 import { buildMatchCandidateSqlPrefilterWhere } from '../me-matches-candidate-sql-prefilter';
 import { LATEST_EVAL_BATCH_SIZE } from '../me-profile-analysis.service';
 import { matchListRankAfterCursorWhere } from '../matches/match-list-cursor';
+import { parsePresentationJson } from '../matches/match-list-rank-presentation.types';
 import { STATUS_ANALYZED } from '../matches/match-list.helpers';
 import type { IMatchRepository } from './match.repository';
 import {
@@ -404,6 +405,7 @@ export class PrismaMatchRepository implements IMatchRepository {
               update: {
                 matchScore: row.matchScore,
                 hardBlocked: row.hardBlocked,
+                presentationJson: row.presentationJson,
                 builtAt,
               },
             }),
@@ -422,20 +424,30 @@ export class PrismaMatchRepository implements IMatchRepository {
     cursor: MatchListCursorPayload | null,
     take: number,
   ): Promise<RankPageRow[]> {
-    return this.prisma.matchListRank.findMany({
-      where: matchListRankAfterCursorWhere(viewerUserId, cursor),
-      orderBy: [
-        { hardBlocked: 'asc' },
-        { matchScore: 'desc' },
-        { candidateProfileId: 'asc' },
-      ],
-      take,
-      select: {
-        candidateProfileId: true,
-        matchScore: true,
-        hardBlocked: true,
-      },
-    });
+    return this.prisma.matchListRank
+      .findMany({
+        where: matchListRankAfterCursorWhere(viewerUserId, cursor),
+        orderBy: [
+          { hardBlocked: 'asc' },
+          { matchScore: 'desc' },
+          { candidateProfileId: 'asc' },
+        ],
+        take,
+        select: {
+          candidateProfileId: true,
+          matchScore: true,
+          hardBlocked: true,
+          presentationJson: true,
+        },
+      })
+      .then((rows) =>
+        rows.map((row) => ({
+          candidateProfileId: row.candidateProfileId,
+          matchScore: row.matchScore,
+          hardBlocked: row.hardBlocked,
+          presentationJson: parsePresentationJson(row.presentationJson),
+        })),
+      );
   }
 
   countRanksForViewer(viewerUserId: string): Promise<number> {

@@ -66,12 +66,19 @@ import {
   pickApprovedPrimaryPhotoId,
 } from './match-list.helpers';
 import type { MatchListRankSnapshot } from './match-list-rank.types';
+import { toPresentationJson } from './match-list-rank-presentation.types';
+import {
+  hydrateMatchListPageFromRanks,
+  type MatchListPageHydrateGate,
+  type MatchListPageHydrateResult,
+} from './match-list-page-hydrate';
 import {
   MATCH_QUERY_REPOSITORY,
   MATCH_RANK_REPOSITORY,
   type IMatchQueryRepository,
   type IMatchRankRepository,
 } from '../repositories/match.repository';
+import type { RankPageRow } from '../repositories/match.repository.types';
 
 @Injectable()
 export class MatchRankingService {
@@ -118,8 +125,29 @@ export class MatchRankingService {
         candidateProfileId: m.id,
         matchScore: toStoredMatchListScore(m.matchScore),
         hardBlocked: Boolean(m.hardBlocked),
+        presentationJson: toPresentationJson({
+          explainability: m.explainability,
+          recommendation: m.recommendation,
+          hardBlocked: m.hardBlocked,
+        }),
       })),
     };
+  }
+
+  async hydrateMatchListPageFromRanks(
+    userId: string,
+    pageRanks: RankPageRow[],
+    gate: MatchListPageHydrateGate,
+  ): Promise<MatchListPageHydrateResult> {
+    return hydrateMatchListPageFromRanks(
+      {
+        matches: this.matchesRepository,
+        obs: this.obs,
+      },
+      userId,
+      pageRanks,
+      gate,
+    );
   }
 
   async persistMatchListRankSnapshot(
