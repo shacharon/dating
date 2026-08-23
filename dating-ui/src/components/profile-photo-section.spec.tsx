@@ -2,8 +2,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
 
-const { listMyProfilePhotosMock } = vi.hoisted(() => ({
+const { listMyProfilePhotosMock, uploadMyProfilePhotoMock } = vi.hoisted(() => ({
   listMyProfilePhotosMock: vi.fn(),
+  uploadMyProfilePhotoMock: vi.fn(),
 }));
 
 const { pickProfilePhotoFileMock } = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ vi.mock('@/lib/me-photos-api', async (importOriginal) => {
   return {
     ...actual,
     listMyProfilePhotos: listMyProfilePhotosMock,
+    uploadMyProfilePhoto: uploadMyProfilePhotoMock,
   };
 });
 
@@ -42,6 +44,7 @@ describe('ProfilePhotoSection (requiredForMatching)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listMyProfilePhotosMock.mockResolvedValue([]);
+    uploadMyProfilePhotoMock.mockResolvedValue(undefined);
     pickProfilePhotoFileMock.mockResolvedValue(null);
     setPlatformOverrideForTests(null);
   });
@@ -108,6 +111,68 @@ describe('ProfilePhotoSection (requiredForMatching)', () => {
     await waitFor(() => {
       expect(screen.getByText('Rejected')).toBeTruthy();
       expect(screen.getByText(/Reason: Not a clear face photo/)).toBeTruthy();
+    });
+  });
+
+  it('renders web file input on web (not native upload button)', async () => {
+    render(<ProfilePhotoSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Upload')).toBeTruthy();
+    });
+
+    expect(screen.queryByRole('button', { name: 'Upload' })).toBeNull();
+    const input = document.querySelector('input[type="file"]');
+    expect(input).toBeTruthy();
+    expect(input?.getAttribute('accept')).toBe('image/jpeg,image/png,image/webp');
+  });
+
+  it('uploads picked file on capacitor success', async () => {
+    setPlatformOverrideForTests('capacitor');
+    const file = new File(['x'], 'profile-photo.jpeg', { type: 'image/jpeg' });
+    pickProfilePhotoFileMock.mockResolvedValue(file);
+    const onMutated = vi.fn();
+    const createObjectURLMock = vi.fn(() => 'blob:preview');
+    const revokeObjectURLMock = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURLMock,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURLMock,
+    });
+
+    render(<ProfilePhotoSection onMutated={onMutated} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
+
+    await waitFor(() => {
+      expect(uploadMyProfilePhotoMock).toHaveBeenCalledWith(file);
+      expect(onMutated).toHaveBeenCalled();
+    });
+  });
+
+  it('shows upload failed for unsupported format on capacitor', async () => {
+    setPlatformOverrideForTests('capacitor');
+    pickProfilePhotoFileMock.mockRejectedValue(
+      new Error('Unsupported image format: heic'),
+    );
+
+    render(<ProfilePhotoSection />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Upload failed')).toBeTruthy();
     });
   });
 

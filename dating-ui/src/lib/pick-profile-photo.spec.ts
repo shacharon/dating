@@ -129,4 +129,61 @@ describe("pickProfilePhotoFile", () => {
       "Unsupported image format: heic",
     );
   });
+
+  it("returns webp File when format is webp", async () => {
+    setPlatformOverrideForTests("capacitor");
+    getPhoto.mockResolvedValue({
+      webPath: "blob:http://localhost/webp",
+      format: "webp",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        blob: () => Promise.resolve(new Blob(["x"], { type: "image/webp" })),
+      }),
+    );
+
+    const file = await pickProfilePhotoFile();
+
+    expect(file?.type).toBe("image/webp");
+    expect(file?.name).toBe("profile-photo.webp");
+  });
+
+  it("throws when camera returns no webPath", async () => {
+    setPlatformOverrideForTests("capacitor");
+    getPhoto.mockResolvedValue({ format: "jpeg" });
+
+    await expect(pickProfilePhotoFile()).rejects.toThrow(
+      "Camera returned no image path",
+    );
+  });
+
+  it("propagates non-cancel getPhoto errors", async () => {
+    setPlatformOverrideForTests("capacitor");
+    getPhoto.mockRejectedValue(new Error("Camera hardware unavailable"));
+
+    await expect(pickProfilePhotoFile()).rejects.toThrow(
+      "Camera hardware unavailable",
+    );
+  });
+
+  it("skips requestPermissions when both already granted", async () => {
+    setPlatformOverrideForTests("capacitor");
+    checkPermissions.mockResolvedValue({ camera: "granted", photos: "granted" });
+
+    await pickProfilePhotoFile();
+
+    expect(requestPermissions).not.toHaveBeenCalled();
+  });
+
+  it("proceeds when photos granted even if camera denied", async () => {
+    setPlatformOverrideForTests("capacitor");
+    checkPermissions.mockResolvedValue({ camera: "prompt", photos: "prompt" });
+    requestPermissions.mockResolvedValue({ camera: "denied", photos: "granted" });
+
+    const file = await pickProfilePhotoFile();
+
+    expect(file).toBeInstanceOf(File);
+    expect(getPhoto).toHaveBeenCalled();
+  });
 });
