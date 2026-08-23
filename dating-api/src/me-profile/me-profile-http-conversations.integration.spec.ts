@@ -853,6 +853,206 @@ describe('me profile HTTP — conversations (integration)', () => {
     });
   });
 
+  describe('Sprint 68 Story 2: message send idempotency', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_message_idem_1';
+    const CLIENT_MESSAGE_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    };
+
+    type StoredMessage = {
+      id: string;
+      conversationId: string;
+      senderId: string;
+      text: string;
+      clientMessageId: string | null;
+      createdAt: Date;
+      status: 'SENT';
+    };
+
+    const storedByClientKey = new Map<string, StoredMessage>();
+
+    function clientKey(
+      conversationId: string,
+      senderId: string,
+      clientMessageId: string,
+    ): string {
+      return `${conversationId}:${senderId}:${clientMessageId}`;
+    }
+
+    function installIdempotentMessageMocks(): void {
+      storedByClientKey.clear();
+      prismaMock.message.findFirst.mockImplementation(
+        async (args: {
+          where?: {
+            conversationId?: string;
+            senderId?: string;
+            clientMessageId?: string;
+          };
+        }) => {
+          const where = args?.where;
+          if (
+            where?.conversationId &&
+            where?.senderId &&
+            where?.clientMessageId
+          ) {
+            return (
+              storedByClientKey.get(
+                clientKey(
+                  where.conversationId,
+                  where.senderId,
+                  where.clientMessageId,
+                ),
+              ) ?? null
+            );
+          }
+          return null;
+        },
+      );
+      prismaMock.message.create.mockImplementation(
+        async (args: {
+          data: {
+            conversationId: string;
+            senderId: string;
+            text: string;
+            clientMessageId?: string | null;
+            status: string;
+          };
+        }) => {
+          const row: StoredMessage = {
+            id: `msg_idem_${storedByClientKey.size + 1}`,
+            conversationId: args.data.conversationId,
+            senderId: args.data.senderId,
+            text: args.data.text,
+            clientMessageId: args.data.clientMessageId ?? null,
+            createdAt: new Date('2026-05-31T16:00:00.000Z'),
+            status: 'SENT',
+          };
+          if (args.data.clientMessageId) {
+            storedByClientKey.set(
+              clientKey(
+                args.data.conversationId,
+                args.data.senderId,
+                args.data.clientMessageId,
+              ),
+              row,
+            );
+          }
+          return row;
+        },
+      );
+    }
+
+    beforeEach(async () => {
+      installIdempotentMessageMocks();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      await app.get(ConversationMessageRateLimitService).resetForTests();
+    });
+
+    it('returns 201 on idempotent replay with same clientMessageId and one insert', async () => {
+      const raw = await loginAndCookie();
+      const body = { text: 'Hello!', clientMessageId: CLIENT_MESSAGE_ID };
+
+      const first = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(body)
+        .expect(201);
+
+      const second = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(body)
+        .expect(201);
+
+      expect(second.body).toEqual(first.body);
+      expect(second.body.clientMessageId).toBe(CLIENT_MESSAGE_ID);
+      expect(prismaMock.message.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 400 when clientMessageId is not a UUID v4', async () => {
+      const raw = await loginAndCookie();
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello!', clientMessageId: 'not-a-uuid' })
+        .expect(400);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 409 when clientMessageId matches but text differs', async () => {
+      const raw = await loginAndCookie();
+      storedByClientKey.set(clientKey(CONVERSATION_ID, USER_ID, CLIENT_MESSAGE_ID), {
+        id: 'msg_conflict',
+        conversationId: CONVERSATION_ID,
+        senderId: USER_ID,
+        text: 'Original',
+        clientMessageId: CLIENT_MESSAGE_ID,
+        createdAt: new Date('2026-05-31T16:00:00.000Z'),
+        status: 'SENT',
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Different', clientMessageId: CLIENT_MESSAGE_ID })
+        .expect(409);
+
+      expect(res.body).toMatchObject({
+        error: 'message_idempotency_conflict',
+      });
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('does not consume rate limit on idempotent replay', async () => {
+      const raw = await loginAndCookie();
+      const idempotentBody = {
+        text: 'Hello!',
+        clientMessageId: CLIENT_MESSAGE_ID,
+      };
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(idempotentBody)
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(idempotentBody)
+        .expect(201);
+
+      for (let i = 0; i < 8; i++) {
+        await request(app.getHttpServer())
+          .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ text: `Unique ${i}` })
+          .expect(201);
+      }
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Tenth unique' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Eleventh unique' })
+        .expect(429);
+    });
+  });
+
   describe('Sprint 30 Story 3: message content moderation', () => {
     const CANDIDATE_USER_ID = 'user_match_action_cand_1';
     const CONVERSATION_ID = 'mutual_row_message_mod_1';

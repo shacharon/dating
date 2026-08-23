@@ -20,6 +20,7 @@ import type { ContentModerationPort } from '../content-moderation/content-modera
 import type { ContentViolationService } from '../content-moderation/content-violation.service';
 import * as contentModerationTypes from '../content-moderation/content-moderation.types';
 import type { IConversationRepository } from './repositories/conversation.repository';
+import { MessageIdempotencyConflictError } from './me-conversations.errors';
 
 describe('MeConversationMessagesService', () => {
   const sessionUserId = 'user_viewer_1';
@@ -168,10 +169,15 @@ describe('MeConversationMessagesService', () => {
     }),
   };
 
+  const analytics = {
+    track: jest.fn(),
+  } as unknown as AnalyticsService;
+
   let service: MeConversationMessagesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (analytics.track as jest.Mock).mockReset();
     (messageRateLimit.consumeSendSlot as jest.Mock).mockReset();
     (messageRateLimit.consumeSendSlot as jest.Mock).mockResolvedValue(
       undefined,
@@ -201,7 +207,6 @@ describe('MeConversationMessagesService', () => {
     jest
       .spyOn(contentModerationTypes, 'isContentModerationEnabled')
       .mockReturnValue(true);
-    const analytics = { track: jest.fn() } as unknown as AnalyticsService;
     service = new MeConversationMessagesService(
       conversationsRepo,
       conversations,
@@ -617,6 +622,160 @@ describe('MeConversationMessagesService', () => {
       service.sendMessage(sessionUserId, conversationId, { text: 'Hi' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.message.create).not.toHaveBeenCalled();
+  });
+
+  describe('sendMessage idempotency', () => {
+    const clientMessageId = '550e8400-e29b-41d4-a716-446655440000';
+    const createdAt = new Date('2026-05-31T16:00:00.000Z');
+
+    it('returns existing message on idempotent replay without side effects', async () => {
+      const existing = {
+        id: 'msg_existing',
+        conversationId,
+        senderId: sessionUserId,
+        text: 'Hello!',
+        clientMessageId,
+        createdAt,
+        status: MessageStatus.SENT,
+      };
+      (conversationsRepo.findSentMessageByClientKey as jest.Mock).mockResolvedValue(
+        existing,
+      );
+
+      const result = await service.sendMessage(sessionUserId, conversationId, {
+        text: 'Hello!',
+        clientMessageId,
+      });
+
+      expect(result).toEqual({
+        id: 'msg_existing',
+        conversationId,
+        senderId: sessionUserId,
+        text: 'Hello!',
+        clientMessageId,
+        createdAt: createdAt.toISOString(),
+        status: 'SENT',
+      });
+      expect(conversationsRepo.createSentMessage).not.toHaveBeenCalled();
+      expect(messageRateLimit.consumeSendSlot).not.toHaveBeenCalled();
+      expect(moderation.checkContent).not.toHaveBeenCalled();
+      expect(analytics.track).not.toHaveBeenCalled();
+      expect(realtime.publishToUsers).not.toHaveBeenCalled();
+      expect(newMessageEmail.maybeNotifyBestEffort).not.toHaveBeenCalled();
+      expect(pushQueue.enqueueNewMessageBestEffort).not.toHaveBeenCalled();
+    });
+
+    it('skips side effects when createSentMessage reports created false', async () => {
+      const existing = {
+        id: 'msg_race',
+        conversationId,
+        senderId: sessionUserId,
+        text: 'Hello!',
+        clientMessageId,
+        createdAt,
+        status: MessageStatus.SENT,
+      };
+      (conversationsRepo.findSentMessageByClientKey as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (conversationsRepo.createSentMessage as jest.Mock).mockResolvedValue({
+        row: existing,
+        created: false,
+      });
+
+      const result = await service.sendMessage(sessionUserId, conversationId, {
+        text: 'Hello!',
+        clientMessageId,
+      });
+
+      expect(result.id).toBe('msg_race');
+      expect(analytics.track).not.toHaveBeenCalled();
+      expect(realtime.publishToUsers).not.toHaveBeenCalled();
+      expect(newMessageEmail.maybeNotifyBestEffort).not.toHaveBeenCalled();
+      expect(pushQueue.enqueueNewMessageBestEffort).not.toHaveBeenCalled();
+    });
+
+    it('throws MessageIdempotencyConflictError when same key has different text', async () => {
+      (conversationsRepo.findSentMessageByClientKey as jest.Mock).mockResolvedValue(
+        {
+          id: 'msg_existing',
+          conversationId,
+          senderId: sessionUserId,
+          text: 'Original',
+          clientMessageId,
+          createdAt,
+          status: MessageStatus.SENT,
+        },
+      );
+
+      await expect(
+        service.sendMessage(sessionUserId, conversationId, {
+          text: 'Different',
+          clientMessageId,
+        }),
+      ).rejects.toThrow(MessageIdempotencyConflictError);
+
+      expect(conversationsRepo.createSentMessage).not.toHaveBeenCalled();
+    });
+
+    it('throws MessageIdempotencyConflictError when createSentMessage returns mismatched text', async () => {
+      (conversationsRepo.findSentMessageByClientKey as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (conversationsRepo.createSentMessage as jest.Mock).mockResolvedValue({
+        row: {
+          id: 'msg_existing',
+          conversationId,
+          senderId: sessionUserId,
+          text: 'Original',
+          clientMessageId,
+          createdAt,
+          status: MessageStatus.SENT,
+        },
+        created: false,
+      });
+
+      await expect(
+        service.sendMessage(sessionUserId, conversationId, {
+          text: 'Different',
+          clientMessageId,
+        }),
+      ).rejects.toThrow(MessageIdempotencyConflictError);
+    });
+
+    it('creates two rows when clientMessageId is omitted', async () => {
+      (conversationsRepo.createSentMessage as jest.Mock)
+        .mockResolvedValueOnce({
+          row: {
+            id: 'msg_a',
+            conversationId,
+            senderId: sessionUserId,
+            text: 'a',
+            clientMessageId: null,
+            createdAt,
+            status: MessageStatus.SENT,
+          },
+          created: true,
+        })
+        .mockResolvedValueOnce({
+          row: {
+            id: 'msg_b',
+            conversationId,
+            senderId: sessionUserId,
+            text: 'b',
+            clientMessageId: null,
+            createdAt,
+            status: MessageStatus.SENT,
+          },
+          created: true,
+        });
+
+      await service.sendMessage(sessionUserId, conversationId, { text: 'a' });
+      await service.sendMessage(sessionUserId, conversationId, { text: 'b' });
+
+      expect(conversationsRepo.findSentMessageByClientKey).not.toHaveBeenCalled();
+      expect(conversationsRepo.createSentMessage).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('listMessages()', () => {
