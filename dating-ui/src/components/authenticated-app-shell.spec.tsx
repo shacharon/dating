@@ -68,6 +68,7 @@ import {
   APP_LOCALE_STORAGE_KEY,
   writeStoredLocale,
 } from '@/lib/i18n';
+import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
 import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
@@ -235,6 +236,64 @@ describe('AuthenticatedAppShell nav unread', () => {
     expect(
       screen.getAllByTestId('nav-conversations-unread')[0].getAttribute('aria-label'),
     ).toBe(heCopy.nav.conversationsUnreadLabel(2));
+  });
+});
+
+describe('AuthenticatedAppShell offline banner', () => {
+  beforeEach(() => {
+    authState.status = 'authenticated';
+    authState.user = {
+      id: 'user_me',
+      email: 'a@test.com',
+      displayName: 'A',
+      avatarUrl: null,
+      status: 'ACTIVE',
+      emailNotificationsEnabled: true,
+      inAppNotificationsEnabled: true,
+    };
+    authState.lastError = null;
+    vi.stubGlobal('navigator', { onLine: true });
+    localStorage.clear();
+    fetchConversationsUnreadTotal.mockResolvedValue({ totalUnread: 0 });
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows offline banner in authenticated product chrome when offline', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'en');
+    vi.stubGlobal('navigator', { onLine: false });
+
+    renderShell(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    window.dispatchEvent(new Event('offline'));
+
+    await waitFor(() => {
+      expect(screen.getByText(enCopy.appShell.offlineBanner)).toBeTruthy();
+    });
+  });
+
+  it('does not mount offline banner on auth error screen', () => {
+    authState.status = 'error';
+    authState.user = null;
+    vi.stubGlobal('navigator', { onLine: false });
+
+    renderShell(
+      <AuthenticatedAppShell>
+        <div>page</div>
+      </AuthenticatedAppShell>,
+    );
+
+    expect(
+      screen.queryByText(/You're offline\. Some features may be unavailable/),
+    ).toBeNull();
   });
 });
 

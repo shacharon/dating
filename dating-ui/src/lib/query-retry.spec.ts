@@ -61,6 +61,10 @@ describe("query-retry", () => {
     it("retries TypeError network failures when online", () => {
       expect(shouldRetryQuery(0, new TypeError("Failed to fetch"))).toBe(true);
     });
+
+    it("does not retry generic errors without HTTP status", () => {
+      expect(shouldRetryQuery(0, new Error("unexpected"))).toBe(false);
+    });
   });
 
   describe("queryRetryDelay", () => {

@@ -1,27 +1,24 @@
 /** @vitest-environment jsdom */
 import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("@/lib/use-online-status", () => ({
-  useOnlineStatus: vi.fn(() => true),
-}));
-
-import { useOnlineStatus } from "@/lib/use-online-status";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OfflineBanner } from "@/components/offline-banner";
 
 describe("OfflineBanner", () => {
+  beforeEach(() => {
+    vi.stubGlobal("navigator", { onLine: true });
+  });
+
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("renders nothing when online", () => {
-    vi.mocked(useOnlineStatus).mockReturnValue(true);
     const { container } = render(<OfflineBanner />);
     expect(container.firstChild).toBeNull();
   });
 
   it("shows offline message with status role when offline", () => {
-    vi.mocked(useOnlineStatus).mockReturnValue(false);
+    vi.stubGlobal("navigator", { onLine: false });
     render(<OfflineBanner />);
     const banner = screen.getByRole("status");
     expect(banner.getAttribute("aria-live")).toBe("polite");
