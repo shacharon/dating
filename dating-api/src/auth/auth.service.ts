@@ -40,6 +40,7 @@ import { isPrismaUniqueConstraintViolation } from './prisma-auth.errors';
 import { ReferralAttributionService } from './referral-attribution.service';
 import { TokenService } from './token.service';
 import { readBearerToken } from './auth-request.util';
+import { resolveClientIp } from './request-client-ip.util';
 
 function forbiddenAuthError(code: AuthErrorCode): ForbiddenException {
   return new ForbiddenException({
@@ -106,16 +107,8 @@ export class AuthService {
         );
       }
 
-      const forwarded = req.headers['x-forwarded-for'];
-      const ip =
-        typeof forwarded === 'string'
-          ? forwarded.split(',')[0]?.trim()
-          : Array.isArray(forwarded)
-            ? forwarded[0]
-            : (req.socket.remoteAddress ?? undefined);
-
       const session = await this.sessions.createSession(user.id, {
-        ip: ip ?? null,
+        ip: resolveClientIp(req),
         userAgent:
           typeof req.headers['user-agent'] === 'string'
             ? req.headers['user-agent']

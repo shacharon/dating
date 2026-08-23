@@ -16,6 +16,10 @@ export const ErrorCodes = {
   AUTH_LOGOUT: 'AUTH_LOGOUT',
   /** {@link AuthGuard}: no valid session or user missing */
   AUTH_GUARD_UNAUTHORIZED: 'AUTH_GUARD_UNAUTHORIZED',
+  /** POST /api/v1/auth/google rate limit exceeded */
+  AUTH_LOGIN_RATE_LIMITED: 'AUTH_LOGIN_RATE_LIMITED',
+  /** POST /api/v1/auth/refresh rate limit exceeded */
+  AUTH_REFRESH_RATE_LIMITED: 'AUTH_REFRESH_RATE_LIMITED',
 
   /** Me profile: GET when no row exists */
   ME_PROFILE_GET_NOT_FOUND: 'ME_PROFILE_GET_NOT_FOUND',

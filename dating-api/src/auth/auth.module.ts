@@ -8,7 +8,12 @@ import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { ApiV1AuthController } from './api-v1-auth.controller';
 import { AuthCredentialsService } from './auth-credentials.service';
+import { AuthEndpointRateLimitService } from './auth-endpoint-rate-limit.service';
 import { AuthGuard } from './auth.guard';
+import { AuthLoginRateLimitGuard } from './auth-login-rate-limit.guard';
+import { AuthLoginRateLimitStoreProvider } from './auth-login-rate-limit-store.provider';
+import { AuthRefreshRateLimitGuard } from './auth-refresh-rate-limit.guard';
+import { AuthRefreshRateLimitStoreProvider } from './auth-refresh-rate-limit-store.provider';
 import { AuthService } from './auth.service';
 import { GoogleAuthService } from './google-auth.service';
 import { OptionalAuthGuard } from './optional-auth.guard';
@@ -41,6 +46,11 @@ import { TokenService } from './token.service';
     AuthCredentialsService,
     AuthGuard,
     OptionalAuthGuard,
+    AuthLoginRateLimitStoreProvider,
+    AuthRefreshRateLimitStoreProvider,
+    AuthEndpointRateLimitService,
+    AuthLoginRateLimitGuard,
+    AuthRefreshRateLimitGuard,
   ],
   exports: [
     AuthService,

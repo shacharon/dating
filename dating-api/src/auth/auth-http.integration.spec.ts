@@ -13,6 +13,7 @@ import type { App } from 'supertest/types';
 import { UserStatus } from '@prisma/client';
 import { AuthSessionConfigModule } from '../config/auth-session-config.module';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
+import { RedisCacheModule } from '../cache/redis-cache.module';
 import { JwtAuthConfigModule } from '../config/jwt-auth-config.module';
 import { JwtAuthConfigService } from '../config/jwt-auth-config.service';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -21,6 +22,7 @@ import { hashSessionToken } from '../session/session-token.crypto';
 import { UsersService } from '../users/users.service';
 import { AuthModule } from './auth.module';
 import { AUTH_ERROR_CODES } from './auth-error-codes';
+import { AuthEndpointRateLimitService } from './auth-endpoint-rate-limit.service';
 import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { GoogleAuthService } from './google-auth.service';
@@ -59,6 +61,7 @@ function extractCookieValue(
 
 describe('auth HTTP (integration)', () => {
   let app: INestApplication<App>;
+  let rateLimit: AuthEndpointRateLimitService;
   let prismaMock: {
     userSession: {
       create: jest.Mock;
@@ -102,6 +105,7 @@ describe('auth HTTP (integration)', () => {
   };
 
   beforeAll(async () => {
+    delete process.env.REDIS_URL;
     verifyIdToken = jest.fn();
     usersServiceMock = {
       findById: jest.fn(),
@@ -136,6 +140,7 @@ describe('auth HTTP (integration)', () => {
         JwtAuthConfigModule,
         PrismaModule,
         StructuredLoggingModule,
+        RedisCacheModule,
         AuthModule,
       ],
     })
@@ -155,15 +160,17 @@ describe('auth HTTP (integration)', () => {
     app.use(requestCorrelationMiddleware);
     app.use(cookieParser());
     await app.init();
+    rateLimit = moduleFixture.get(AuthEndpointRateLimitService);
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     verifyIdToken.mockReset();
+    await rateLimit.resetForTests();
     usersServiceMock.findByEmail.mockResolvedValue(null);
     usersServiceMock.findByGoogleId.mockResolvedValue(null);
     usersServiceMock.findById.mockResolvedValue(null);
