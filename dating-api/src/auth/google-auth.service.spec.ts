@@ -51,6 +51,38 @@ describe('GoogleAuthService', () => {
     });
   });
 
+  it('passes multi-audience array to verifyIdToken', async () => {
+    const multiCfg = {
+      googleClientIds: [
+        'web-id.apps.googleusercontent.com',
+        'android-id.apps.googleusercontent.com',
+      ],
+      googleClientId: 'web-id.apps.googleusercontent.com',
+    };
+    const mod = await Test.createTestingModule({
+      providers: [
+        GoogleAuthService,
+        { provide: AuthSessionConfigService, useValue: multiCfg },
+      ],
+    }).compile();
+    const multiService = mod.get(GoogleAuthService);
+
+    verifySpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
+      getPayload: () => ({
+        sub: 'sub-android',
+        email: 'user@example.com',
+        email_verified: true,
+      }),
+    } as never);
+
+    await multiService.verifyIdToken('android-token');
+
+    expect(verifySpy).toHaveBeenCalledWith({
+      idToken: 'android-token',
+      audience: multiCfg.googleClientIds,
+    });
+  });
+
   it('maps empty name/picture to null', async () => {
     verifySpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
       getPayload: () => ({
