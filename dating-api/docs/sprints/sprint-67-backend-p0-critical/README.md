@@ -32,7 +32,7 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 - [x] Match actions (PASS/BLOCK) correctly update conversation status — Story 2
 - [x] Rematch flow reactivates UNMATCHED conversations — Story 2
 - [x] Redis adapter fails boot if unavailable in production — Story 3
-- [ ] Google auth accepts multiple client IDs (web + Android + iOS)
+- [x] Google auth accepts multiple client IDs (web + Android + iOS) — Story 4
 - [x] Photo storage defaults validated at boot (require S3 in prod) — Story 3
 - [x] Photo moderation validated (no mock in prod) — Story 3
 
@@ -41,7 +41,7 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 - [x] End-to-end: Block user → conversation becomes UNMATCHED — Story 2 (HTTP/unit; Android UI optional)
 - [x] End-to-end: Rematch reopens conversation — Story 2 (HTTP/unit)
 - [ ] Integration: Multi-pod messaging (2 pods, users on different pods can chat)
-- [ ] Integration: Android native sign-in works
+- [ ] Integration: Android native sign-in works — backend Story 4 Done; device E2E → FE-06
 
 ---
 
@@ -64,7 +64,10 @@ Fix **showstopper bugs** that will cause immediate Android launch failures:
 
 ### Story 4 — Multi-Audience Google OAuth
 **Effort:** 4 hours  
-**Risk:** 🟢 LOW (config change)
+**Risk:** 🟢 LOW (config change)  
+**Status:** ✅ **Done** (2026-08-23) — branch `feature/sprint-67-story-4`
+
+**Sprint 67 backend stories 1–4:** all Done on stacked feature branches (`story-1` → `story-4`). Merge to `main` when ready.
 
 ---
 

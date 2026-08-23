@@ -3,7 +3,7 @@
 **Sprint:** 67  
 **Effort:** 4 hours  
 **Risk:** 🟢 LOW (config change only)  
-**Status:** Planned
+**Status:** Done
 
 ---
 
@@ -257,11 +257,11 @@ describe('Google Auth (e2e)', () => {
 
 ## SOLID/OOP/KISS Checklist
 
-- [ ] OCP: Extended behavior (more client IDs) without modifying service logic
-- [ ] KISS: Minimal change (string → array)
-- [ ] Backward compatible (still accepts GOOGLE_CLIENT_ID)
-- [ ] No god classes created
-- [ ] Config validation throws clear error if no client IDs provided
+- [x] OCP: Extended behavior (more client IDs) without modifying service logic
+- [x] KISS: Minimal change (string → array)
+- [x] Backward compatible (still accepts GOOGLE_CLIENT_ID)
+- [x] No god classes created
+- [x] Config validation throws clear error if no client IDs provided (500 when empty)
 
 ---
 
@@ -279,13 +279,13 @@ describe('Google Auth (e2e)', () => {
 
 ## Success Criteria
 
-- [ ] Config accepts comma-separated client IDs
-- [ ] Service passes array to `verifyIdToken`
-- [ ] Web login still works (backward compat)
-- [ ] Android login works with Android client ID
-- [ ] iOS login will work with iOS client ID (when added)
-- [ ] Unknown client IDs rejected with 401
-- [ ] Tests pass
+- [x] Config accepts comma-separated client IDs
+- [x] Service passes array to `verifyIdToken`
+- [x] Web login still works (backward compat)
+- [x] Android login works with Android client ID (backend verify; device E2E → FE-06)
+- [x] iOS login will work with iOS client ID when added to `GOOGLE_CLIENT_IDS`
+- [x] Unknown client IDs rejected with 401
+- [x] Tests pass (45 tests — config, service, auth HTTP)
 
 ---
 
