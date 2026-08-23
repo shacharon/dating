@@ -26,6 +26,11 @@ import { AuthEndpointRateLimitService } from './auth-endpoint-rate-limit.service
 import { requestCorrelationMiddleware } from '../logging/request-correlation.middleware';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { GoogleAuthService } from './google-auth.service';
+import {
+  AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW,
+  AUTH_REFRESH_RATE_LIMIT_MAX_PER_WINDOW,
+} from './auth-rate-limit.constants';
+import { ErrorCodes } from '../logging/error-codes';
 
 function parseStructuredJsonLogs(
   spy: jest.SpiedFunction<typeof console.log>,
@@ -903,6 +908,170 @@ describe('auth HTTP (integration)', () => {
         .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${login.body.accessToken}`)
         .expect(403);
+    });
+  });
+
+  describe('auth endpoint rate limiting (Story 4)', () => {
+    function mockSuccessfulGoogleLogin(googleId = 'google-rl'): void {
+      verifyIdToken.mockResolvedValue({
+        googleId,
+        email: `${googleId}@example.com`,
+        displayName: 'RL',
+        avatarUrl: null,
+      });
+      usersServiceMock.findByGoogleId.mockResolvedValue(null);
+      usersServiceMock.createFromGoogleIdentity.mockResolvedValue({
+        id: `user_${googleId}`,
+        email: `${googleId}@example.com`,
+        googleId,
+        displayName: 'RL',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+    }
+
+    it('POST /api/v1/auth/google allows 10 logins then returns 429 without calling verifyIdToken', async () => {
+      mockSuccessfulGoogleLogin();
+
+      for (let i = 0; i < AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/google')
+          .send({ idToken: `jwt-rl-${i}` })
+          .expect(200);
+      }
+      expect(verifyIdToken).toHaveBeenCalledTimes(
+        AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW,
+      );
+
+      const limited = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-rl-blocked' })
+        .expect(429);
+
+      expect(limited.body).toEqual({
+        message: 'Too many login attempts. Please wait.',
+      });
+      expect(verifyIdToken).toHaveBeenCalledTimes(
+        AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW,
+      );
+    });
+
+    it('POST /api/v1/auth/google rate limit is independent per client IP', async () => {
+      mockSuccessfulGoogleLogin('google-rl-a');
+
+      for (let i = 0; i < AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/google')
+          .set('X-Forwarded-For', '203.0.113.10')
+          .send({ idToken: `jwt-ip-a-${i}` })
+          .expect(200);
+      }
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .set('X-Forwarded-For', '203.0.113.10')
+        .send({ idToken: 'jwt-ip-a-blocked' })
+        .expect(429);
+
+      mockSuccessfulGoogleLogin('google-rl-b');
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .set('X-Forwarded-For', '203.0.113.11')
+        .send({ idToken: 'jwt-ip-b-ok' })
+        .expect(200);
+    });
+
+    it('POST /api/v1/auth/google counts malformed bodies toward the login limit', async () => {
+      for (let i = 0; i < AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/google')
+          .send({})
+          .expect(400);
+      }
+      expect(verifyIdToken).not.toHaveBeenCalled();
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({})
+        .expect(429);
+      expect(verifyIdToken).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/v1/auth/refresh allows 5 attempts then returns 429', async () => {
+      for (let i = 0; i < AUTH_REFRESH_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/refresh')
+          .send({ refreshToken: `invalid-refresh-${i}` })
+          .expect(401);
+      }
+
+      const limited = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: 'invalid-refresh-blocked' })
+        .expect(429);
+
+      expect(limited.body).toEqual({
+        message: 'Too many refresh attempts. Please wait.',
+      });
+    });
+
+    it('emits AUTH_LOGIN_RATE_LIMITED trace when login limit exceeded', async () => {
+      mockSuccessfulGoogleLogin('google-rl-trace');
+      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        for (let i = 0; i < AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+          await request(app.getHttpServer())
+            .post('/api/v1/auth/google')
+            .send({ idToken: `jwt-trace-${i}` })
+            .expect(200);
+        }
+
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/google')
+          .send({ idToken: 'jwt-trace-blocked' })
+          .expect(429);
+
+        const lines = parseStructuredJsonLogs(spy);
+        const codes = lines.map(
+          (l) => (l as { errorCode?: string }).errorCode,
+        );
+        expect(codes).toContain(ErrorCodes.AUTH_LOGIN_RATE_LIMITED);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('GET /api/v1/auth/me is not rate limited when login limit exhausted', async () => {
+      mockSuccessfulGoogleLogin('google-rl-me');
+      const login = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-me-rl' })
+        .expect(200);
+
+      for (let i = 0; i < AUTH_LOGIN_RATE_LIMIT_MAX_PER_WINDOW - 1; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/google')
+          .send({ idToken: `jwt-me-exhaust-${i}` })
+          .expect(200);
+      }
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ idToken: 'jwt-me-blocked' })
+        .expect(429);
+
+      usersServiceMock.findById.mockResolvedValue({
+        id: 'user_google-rl-me',
+        email: 'google-rl-me@example.com',
+        displayName: 'RL',
+        avatarUrl: null,
+        status: UserStatus.ACTIVE,
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .expect(200);
     });
   });
 });
