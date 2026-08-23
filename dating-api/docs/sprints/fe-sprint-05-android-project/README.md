@@ -1,6 +1,6 @@
 # FE Sprint 05 — Android Project Setup
 
-**Status:** In Progress (Story 1 Done)  
+**Status:** In Progress (Stories 1–2 Done)  
 **Priority:** 🔴 **P0 BLOCKER** — Cannot build Android app without this  
 **Depends on:** None (independent)  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
@@ -21,8 +21,8 @@ Setup Android project infrastructure so app can build and run:
 ## Success Criteria
 
 - [x] `android/` directory exists (Story 1 — scaffold)
-- [ ] APK builds with real app UI (Story 2 export + sync)
-- [ ] `output: 'export'` in Next.js config
+- [x] APK builds with real app UI (Story 2 export + sync — API until Story 3)
+- [x] `output: 'export'` in Next.js config (Story 2 — `CAPACITOR_BUILD=1` dual build)
 - [ ] API base URL uses `NEXT_PUBLIC_API_URL` on mobile
 - [ ] Viewport meta tag configured
 
@@ -34,8 +34,9 @@ Setup Android project infrastructure so app can build and run:
 **Doc:** [`STORY_01_capacitor_android.md`](./STORY_01_capacitor_android.md)  
 Fix: Capacitor config, placeholder webDir, `android/` project, `cap sync`
 
-### Story 2 — Next.js Export Mode (8-12 hours)
-Change to `output: 'export'`, refactor async server components to client components
+### Story 2 — Next.js Export Mode ✅ Done
+**Doc:** [`STORY_02_next_export.md`](./STORY_02_next_export.md)  
+Fix: `CAPACITOR_BUILD` dual build, static export to `out/`, `cap:sync:android` wired to real UI
 
 ### Story 3 — API URL for Mobile (4-6 hours)
 Enforce `NEXT_PUBLIC_API_URL` for Capacitor, update `getApiBase()`
