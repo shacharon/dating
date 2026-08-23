@@ -234,6 +234,7 @@ describe('PrismaMatchRepository', () => {
       candidateProfileId: `c${i}`,
       matchScore: 1 - i * 0.001,
       hardBlocked: false,
+      presentationJson: null,
     }));
     matchListRank.deleteMany.mockResolvedValue({ count: 3 });
 
@@ -299,5 +300,45 @@ describe('PrismaMatchRepository', () => {
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
       version: 'v1',
     });
+  });
+
+  it('fetchMatchListRankPage parses presentationJson from stored rows', async () => {
+    matchListRank.findMany.mockResolvedValue([
+      {
+        candidateProfileId: 'p1',
+        matchScore: 90,
+        hardBlocked: false,
+        presentationJson: {
+          v: 1,
+          explainability: {
+            positiveChips: ['Ambition alignment'],
+            reasonShort: 'Strong fit',
+          },
+          recommendation: {
+            explainability: {
+              positiveChips: ['Ambition alignment'],
+              reasonShort: 'Strong fit',
+            },
+            primaryTakeaway: 'Strong match',
+            suggestedNextAction: 'Start a conversation',
+          },
+        },
+      },
+    ]);
+
+    const rows = await repo.fetchMatchListRankPage('viewer', null, 10);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        candidateProfileId: 'p1',
+        matchScore: 90,
+        presentationJson: expect.objectContaining({
+          v: 1,
+          explainability: expect.objectContaining({
+            positiveChips: ['Ambition alignment'],
+          }),
+        }),
+      }),
+    ]);
   });
 });
