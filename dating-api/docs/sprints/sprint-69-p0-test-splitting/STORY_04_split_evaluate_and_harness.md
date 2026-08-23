@@ -4,7 +4,7 @@
 **Effort:** 1–2 days  
 **Risk:** ⚡ LOW  
 **Status:** Ready  
-**Handoffs:** [preflight](./handoffs/STORY_04_split_evaluate_and_harness/agent--1-preflight.md) · [architect](./handoffs/STORY_04_split_evaluate_and_harness/agent-0-architect.md) · [dev](./handoffs/STORY_04_split_evaluate_and_harness/agent-1-dev.md)
+**Handoffs:** [preflight](./handoffs/STORY_04_split_evaluate_and_harness/agent--1-preflight.md) · [architect](./handoffs/STORY_04_split_evaluate_and_harness/agent-0-architect.md) · [dev](./handoffs/STORY_04_split_evaluate_and_harness/agent-1-dev.md) · [CR](./handoffs/STORY_04_split_evaluate_and_harness/agent-2-cr.md)
 
 ---
 
