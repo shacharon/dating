@@ -64,6 +64,13 @@ describe('assertProductionPhotoConfig', () => {
     expect(() =>
       assertProductionPhotoConfig({
         ...validProdEnv,
+        PHOTO_MODERATION_AUTO_APPROVE: 'true',
+      }),
+    ).toThrow(/PHOTO_MODERATION_AUTO_APPROVE/);
+
+    expect(() =>
+      assertProductionPhotoConfig({
+        ...validProdEnv,
         PHOTO_MODERATION_DRIVER: 'mock',
       }),
     ).toThrow(/PHOTO_MODERATION_DRIVER="mock"/);
@@ -89,13 +96,16 @@ describe('assertProductionPhotoConfig', () => {
 });
 
 describe('hasAwsCredentials', () => {
-  it('detects key, profile, or container URI', () => {
+  it('detects key, profile, container URI, or web identity token', () => {
     expect(hasAwsCredentials({ AWS_ACCESS_KEY_ID: 'x' })).toBe(true);
     expect(hasAwsCredentials({ AWS_PROFILE: 'default' })).toBe(true);
     expect(
       hasAwsCredentials({
         AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: '/v2/credentials/x',
       }),
+    ).toBe(true);
+    expect(
+      hasAwsCredentials({ AWS_WEB_IDENTITY_TOKEN_FILE: '/var/run/secrets/token' }),
     ).toBe(true);
     expect(hasAwsCredentials({})).toBe(false);
   });

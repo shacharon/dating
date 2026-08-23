@@ -36,7 +36,8 @@ export function hasAwsCredentials(env: NodeJS.ProcessEnv): boolean {
   return Boolean(
     trimOrUndefined(env.AWS_ACCESS_KEY_ID) ||
       trimOrUndefined(env.AWS_PROFILE) ||
-      trimOrUndefined(env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI),
+      trimOrUndefined(env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI) ||
+      trimOrUndefined(env.AWS_WEB_IDENTITY_TOKEN_FILE),
   );
 }
 
@@ -62,9 +63,9 @@ export function assertProductionPhotoConfig(
     throw new Error('PHOTO_S3_REGION is required when PHOTO_STORAGE_DRIVER=s3');
   }
 
-  if (env.PHOTO_MODERATION_AUTO_APPROVE === '1') {
+  if (parseBool(env.PHOTO_MODERATION_AUTO_APPROVE, false)) {
     throw new Error(
-      'PHOTO_MODERATION_AUTO_APPROVE cannot be "1" in production. ' +
+      'PHOTO_MODERATION_AUTO_APPROVE cannot be enabled in production. ' +
         'This would allow NSFW/inappropriate content to bypass moderation.',
     );
   }
