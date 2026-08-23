@@ -3,6 +3,8 @@
  * FE-03 Story 2: JWT on handshake (`auth.token`) + cookie fallback.
  */
 import { io, type Socket } from "socket.io-client";
+import { resolvePublicApiOrigin } from "@/lib/api-base";
+import { isMobile } from "@/lib/platform";
 import { AuthRefreshError } from "@/lib/auth/auth-refresh-coordinator";
 import { notifyAuthSessionRevoked } from "@/lib/auth/auth-session-revocation";
 import {
@@ -40,6 +42,9 @@ export function getMessagingSocketOrigin(): string {
     return explicit;
   }
   if (typeof window !== "undefined") {
+    if (isMobile()) {
+      return resolvePublicApiOrigin();
+    }
     const port =
       process.env.NEXT_PUBLIC_API_PORT?.trim() || DEFAULT_API_PORT;
     return `${window.location.protocol}//${window.location.hostname}:${port}`;

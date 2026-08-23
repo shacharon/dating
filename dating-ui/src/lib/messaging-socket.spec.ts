@@ -7,6 +7,8 @@ import {
   releaseMessagingSocket,
   resetMessagingSocketForTests,
 } from "./messaging-socket";
+import { MobileApiUrlMissingError } from "@/lib/api-base";
+import { setPlatformOverrideForTests } from "@/lib/platform";
 
 const reconnectAttemptHandlerRef = vi.hoisted(() => ({
   current: null as (() => void) | null,
@@ -72,6 +74,7 @@ describe("getMessagingSocketOrigin", () => {
   const originalInternal = process.env.INTERNAL_API_URL;
 
   afterEach(() => {
+    setPlatformOverrideForTests(null);
     if (originalApiUrl === undefined) {
       delete process.env.NEXT_PUBLIC_API_URL;
     } else {
@@ -95,6 +98,18 @@ describe("getMessagingSocketOrigin", () => {
     process.env.INTERNAL_API_URL = "http://127.0.0.1:4000";
     expect(getMessagingSocketOrigin()).toBe("http://127.0.0.1:4000");
     vi.unstubAllGlobals();
+  });
+
+  it("throws MobileApiUrlMissingError for Capacitor when env is unset", () => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    setPlatformOverrideForTests("capacitor");
+    expect(() => getMessagingSocketOrigin()).toThrow(MobileApiUrlMissingError);
+  });
+
+  it("uses explicit URL for mobile when env is set", () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://10.0.2.2:3001";
+    setPlatformOverrideForTests("capacitor");
+    expect(getMessagingSocketOrigin()).toBe("http://10.0.2.2:3001");
   });
 });
 
