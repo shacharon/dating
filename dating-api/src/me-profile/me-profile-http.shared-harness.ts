@@ -158,6 +158,10 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
     $transaction: jest.fn(),
     $queryRaw: jest.fn(async (sql: { values: unknown[]; strings?: readonly string[] }) => {
       const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
+      // Sprint 68 Story 1 — inbox list page (WITH inbox). Default empty; tests override.
+      if (/\bWITH inbox\b/i.test(sqlText) && /\bFROM inbox\b/i.test(sqlText)) {
+        return [];
+      }
       // Sprint 34 Story 1 — last SENT message batch (DISTINCT ON Message). Default empty.
       // Do NOT short-circuit UserProfileEvaluation DISTINCT ON (match list latest-eval batch).
       if (
@@ -167,7 +171,7 @@ export async function createMeProfileHttpHarness(): Promise<MeProfileHttpHarness
         return [];
       }
       // Sprint 28 Story 4 — inbox unread batch (UNNEST on Message). Default empty; tests override.
-      if (sqlText.includes('UNNEST') || sqlText.includes('"Message"')) {
+      if (sqlText.includes('UNNEST')) {
         return [];
       }
       // Latest UserProfileEvaluation batch (DISTINCT ON "profileId") + other raw helpers.

@@ -252,6 +252,24 @@ describe('MeConversationsService', () => {
     expect(prisma.mutualMatch.findMany).not.toHaveBeenCalled();
   });
 
+  it('list() does not call findActiveMatchesForUser or batchUnreadCounts', async () => {
+    wireListInboxPage([
+      {
+        id: 'mutual_1',
+        userId1: otherUserIdA,
+        userId2: sessionUserId,
+        createdAt: new Date('2026-05-31T10:00:00.000Z'),
+        ...listRowReadDefaults,
+      },
+    ]);
+    (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([]);
+
+    await service.list(sessionUserId);
+
+    expect(conversationsRepo.findActiveMatchesForUser).not.toHaveBeenCalled();
+    expect(conversationsRepo.batchUnreadCounts).not.toHaveBeenCalled();
+  });
+
   it('returns two conversations with correct other users and sort order', async () => {
     const older = new Date('2026-05-30T10:00:00.000Z');
     const newer = new Date('2026-05-31T14:00:00.000Z');

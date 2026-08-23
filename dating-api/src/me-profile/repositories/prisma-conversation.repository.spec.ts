@@ -7,6 +7,21 @@ import {
   batchLastMessagesByConversationId,
   batchUnreadCountsByConversationId,
 } from './prisma-conversation.repository';
+import { queryInboxListPage } from './inbox-list-page.query';
+
+jest.mock('./inbox-list-page.query', () => {
+  const actual = jest.requireActual<typeof import('./inbox-list-page.query')>(
+    './inbox-list-page.query',
+  );
+  return {
+    ...actual,
+    queryInboxListPage: jest.fn(actual.queryInboxListPage),
+  };
+});
+
+const queryInboxListPageMock = queryInboxListPage as jest.MockedFunction<
+  typeof queryInboxListPage
+>;
 
 describe('PrismaConversationRepository', () => {
   const mutualMatch = {
@@ -105,6 +120,26 @@ describe('PrismaConversationRepository', () => {
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
     expect(map.get('c0')).toBe(2);
     expect(map.get(`c${UNREAD_COUNT_BATCH_SIZE}`)).toBe(1);
+  });
+
+  it('listInboxPage delegates to queryInboxListPage', async () => {
+    queryInboxListPageMock.mockResolvedValue({
+      rows: [],
+      hasMore: false,
+    });
+
+    const result = await repo.listInboxPage({
+      sessionUserId: 'u1',
+      cursor: null,
+      limit: 20,
+    });
+
+    expect(queryInboxListPageMock).toHaveBeenCalledWith(prisma, {
+      sessionUserId: 'u1',
+      cursor: null,
+      limit: 20,
+    });
+    expect(result).toEqual({ rows: [], hasMore: false });
   });
 
   it('batchLastMessagesByConversationId chunks at LAST_MESSAGE_BATCH_SIZE', async () => {
