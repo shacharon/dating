@@ -46,4 +46,13 @@ describe("resolvePushNotificationPath", () => {
       }),
     ).toBe("/dating/conversations/a%2Fb");
   });
+
+  it("keeps traversal segments inside a single dynamic route param", () => {
+    expect(
+      resolvePushNotificationPath({
+        type: "new_message",
+        conversationId: "../../../evil",
+      }),
+    ).toBe("/dating/conversations/..%2F..%2F..%2Fevil");
+  });
 });
