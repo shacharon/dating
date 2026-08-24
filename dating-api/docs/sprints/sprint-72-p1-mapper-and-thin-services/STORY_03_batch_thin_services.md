@@ -52,7 +52,7 @@ Accept list: [ACCEPT_LIST_STORY_03.md](./ACCEPT_LIST_STORY_03.md) — extraction
 - `628ce76` — refactor: batch-thin conversation, match-quality, and photo moderation services
 - `fae3fff` — test: add LOC policy specs for sprint 72 story 3 thinned services
 
-**Shipped on main:** _(filled after merge)_  
+**Shipped on main:** `8bbb2aa`  
 **Feature tip ahead of main:** 0
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
