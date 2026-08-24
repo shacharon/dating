@@ -1,6 +1,6 @@
 # Sprint 69 — P0 Test Splitting (Remaining Giants)
 
-**Status:** In progress  
+**Status:** Backend complete — FE Sprint 07 pending  
 **Depends on:** Sprints 65, 67–68 Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md) · [ROUND3_AGENT_COMMANDS.md](../ROUND3_AGENT_COMMANDS.md)  
@@ -27,8 +27,8 @@ Sprint 65 cleared the worst offenders. These **5 backend + 1 frontend** files we
 | ~~`me-profile/me-profile-http-crud.integration.spec.ts`~~ | ~~1390~~ | 4 CRUD route-family specs | ✅ Story 02 (`feature/sprint-69-story-2`) |
 | ~~`me-profile/me-profile-http-conversations.integration.spec.ts`~~ | ~~1283~~ | 4 conversations route-family specs | ✅ Story 02 |
 | ~~`me-profile/me-profile.service.spec.ts`~~ | ~~1347~~ | Method-family describes | ✅ Story 03 (`feature/sprint-69-story-3`) |
-| `me-profile/me-matches-eligibility.spec-support.ts` | 1212 | Extract fixtures | Story 04 |
-| `evaluate/evaluate.service.spec.ts` | 1005 | Runner/pipeline describes | Story 04 |
+| ~~`me-profile/me-matches-eligibility.spec-support.ts`~~ | ~~1212~~ | fixtures + prisma-mock + harness | ✅ Story 04 (`feature/sprint-69-story-4`) |
+| ~~`evaluate/evaluate.service.spec.ts`~~ | ~~1005~~ | Topic specs (orchestration/chips/…) | ✅ Story 04 |
 | `dating-ui/.../match-why-section.spec.tsx` | 1059 | Expansion chip tranches | FE Sprint 07 |
 
 ---
@@ -39,8 +39,8 @@ Sprint 65 cleared the worst offenders. These **5 backend + 1 frontend** files we
 |---|-------|--------|------|--------|
 | 01 | Split compute-friction.spec | 1–2 days | ⚡ LOW | Done (`feature/sprint-69-story-1`) |
 | 02 | Split me-profile HTTP giants | 2 days | ⚡ LOW | Done (`feature/sprint-69-story-2`) |
-| 03 | [Split me-profile.service.spec](./STORY_03_split_me_profile_service_spec.md) | 1–2 days | ⚡ LOW | Done |
-| 04 | [Thin evaluate spec + eligibility harness](./STORY_04_split_evaluate_and_harness.md) | 1–2 days | ⚡ LOW | Ready |
+| 03 | [Split me-profile.service.spec](./STORY_03_split_me_profile_service_spec.md) | 1–2 days | ⚡ LOW | Done (`feature/sprint-69-story-3`) |
+| 04 | [Thin evaluate spec + eligibility harness](./STORY_04_split_evaluate_and_harness.md) | 1–2 days | ⚡ LOW | Done (`feature/sprint-69-story-4`) |
 
 **Order:** 01 → 02 → 03 → 04.
 
@@ -48,10 +48,10 @@ Sprint 65 cleared the worst offenders. These **5 backend + 1 frontend** files we
 
 ## Success Criteria
 
-- [ ] No backend spec file >1000 LOC (non-empty lines)
-- [ ] `me-matches-eligibility.spec-support.ts` ≤600 LOC (fixtures only, no test cases)
-- [x] Test count unchanged per split (Stories 01–03)
-- [x] Policy guards for service + HTTP families (Stories 02–03)
+- [x] No backend spec file >1000 LOC (non-empty lines) — **on merged story branches**
+- [x] `me-matches-eligibility.spec-support.ts` ≤600 LOC (barrel **18** LOC)
+- [x] Test count unchanged per split (Stories 01–04)
+- [x] Policy + wiring guards for evaluate, eligibility, service + HTTP families
 - [ ] `npm test` green in `dating-api` (global green blocked by pre-existing failures)
 - [ ] FE: `match-why-section` split ≤400 LOC per file (FE Sprint 07)
 
@@ -64,3 +64,9 @@ Sprint 65 cleared the worst offenders. These **5 backend + 1 frontend** files we
 - ❌ Not microservices / new architecture
 
 **Architecture stays modular monolith.** We're reducing file size for velocity.
+
+---
+
+## Merge notes
+
+Backend stories land on parallel branches — merge in order **01 → 02 → 03 → 04** (minimal overlap). After merge, proceed to [Sprint 70 directory organization](../sprint-70-p0-directory-organization/README.md).
