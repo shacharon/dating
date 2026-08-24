@@ -56,28 +56,65 @@ describe('lib/ directory layout (Sprint 73 Story 02)', () => {
     expect(countFiles(path.join(libDir, 'matches'))).toBe(19);
   });
 
-  it('does not leave moved api-base or token-storage at root', () => {
-    for (const name of ['api-base.ts', 'token-storage.ts', 'me-profile-api.ts']) {
+  it('does not leave moved modules at root', () => {
+    for (const name of [
+      'api-base.ts',
+      'token-storage.ts',
+      'me-profile-api.ts',
+      'conversations-api.ts',
+      'messaging-socket.ts',
+      'capacitor-build.ts',
+    ]) {
       expect(fs.existsSync(path.join(libDir, name))).toBe(false);
     }
   });
 
-  it('has no stale root-level @/lib/api-base imports in dating-ui/src', () => {
-    const out = execSync(
-      'git grep -n "@/lib/api-base" -- dating-ui/src || exit 0',
-      {
-        cwd: path.join(uiRoot, '..'),
-        encoding: 'utf8',
-      },
-    )
-      .trim()
-      .split(/\r?\n/)
-      .filter(
-        (line) =>
-          line.length > 0 &&
-          !line.includes('@/lib/api/api-base') &&
-          !line.includes('lib-directory.wiring'),
-      );
-    expect(out).toEqual([]);
+  it('does not add new barrels under moved feature folders', () => {
+    for (const dir of [
+      'api',
+      'admin',
+      'messaging',
+      'profile',
+      'platform',
+      'query',
+      'moderation',
+      'referral',
+    ] as const) {
+      expect(fs.existsSync(path.join(libDir, dir, 'index.ts'))).toBe(false);
+    }
+    expect(fs.existsSync(path.join(libDir, 'matches', 'index.ts'))).toBe(true);
+  });
+
+  it('has no stale root-level @/lib imports for high-traffic modules', () => {
+    const modules = [
+      'api-base',
+      'token-storage',
+      'me-profile-api',
+      'conversations-api',
+      'messaging-socket',
+      'query-keys',
+    ];
+    for (const mod of modules) {
+      const out = execSync(
+        `git grep -n "@/lib/${mod}" -- dating-ui/src dating-ui/next.config.ts || exit 0`,
+        {
+          cwd: path.join(uiRoot, '..'),
+          encoding: 'utf8',
+        },
+      )
+        .trim()
+        .split(/\r?\n/)
+        .filter((line) => {
+          if (line.length === 0) return false;
+          if (line.includes('lib-directory.wiring')) return false;
+          if (
+            new RegExp(`@/lib/[\\w-]+/${mod}(?![\\w./-])`).test(line)
+          ) {
+            return false;
+          }
+          return true;
+        });
+      expect({ mod, out }).toEqual({ mod, out: [] });
+    }
   });
 });
