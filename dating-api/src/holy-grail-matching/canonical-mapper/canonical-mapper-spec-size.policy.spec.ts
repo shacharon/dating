@@ -46,7 +46,7 @@ describe('canonical mapper spec size policy', () => {
   ];
 
   it.each(sliceFiles)(
-    '%s has at most %i non-empty lines',
+    `%s has at most ${MAX_SLICE_NON_EMPTY_LINES} non-empty lines`,
     (fileName) => {
       const count = nonEmptyLineCount(path.join(dir, fileName));
       expect(count).toBeLessThanOrEqual(MAX_SLICE_NON_EMPTY_LINES);
