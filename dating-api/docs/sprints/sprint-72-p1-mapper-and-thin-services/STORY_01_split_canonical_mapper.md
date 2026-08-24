@@ -57,7 +57,7 @@ Public path `profile-to-canonical.mapper.ts` is a thin re-export (callers unchan
 - `23bac44` — refactor: split profile-to-canonical mapper by input slice
 - `fe7dd45` — test: polish canonical-mapper LOC policy titles
 
-**Shipped on main:** *(filled after merge)*  
+**Shipped on main:** `6248313`  
 **Feature tip ahead of main:** 0
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
