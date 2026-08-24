@@ -1,3 +1,8 @@
+/**
+ * QUARANTINE (Sprint 53 Story 02) — LAB / ADMIN ONLY.
+ * Not a product HTTP surface. Product profile analysis: /api/v1/me/*.
+ * See docs/ops/LEGACY_HTTP_QUARANTINE.md. Scheduled for deletion (not this PR).
+ */
 import {
   BadRequestException,
   Body,
@@ -51,6 +56,10 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Evaluation failed';
 }
 
+/**
+ * @deprecated Lab/admin only (Sprint 53 Story 02). Not product HTTP.
+ * Product profile analysis: `/api/v1/me/*`. See `docs/ops/LEGACY_HTTP_QUARANTINE.md`.
+ */
 @Controller('api/evaluate')
 @UseGuards(AuthGuard, AdminGuard)
 export class EvaluateController {

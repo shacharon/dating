@@ -1,3 +1,11 @@
+/**
+ * QUARANTINE (Sprint 53 Story 02) — LAB / ADMIN ONLY.
+ * Not a product HTTP surface. Product matches: /api/v1/me/*.
+ * See docs/ops/LEGACY_HTTP_QUARANTINE.md. Scheduled for deletion (not this PR).
+ *
+ * HTTP consumers of this adapter (`/api/evaluate`, `/api/matches`) are lab-only.
+ * The adapter itself remains for Nest DI until those routes are deleted.
+ */
 import { Injectable } from '@nestjs/common';
 import { ContradictionService } from '../contradiction/contradiction.service';
 import { EvaluateService } from '../evaluate/evaluate.service';

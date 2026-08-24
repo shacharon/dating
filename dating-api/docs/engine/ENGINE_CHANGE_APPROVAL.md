@@ -6,6 +6,8 @@ Copy this file to `docs/engine/approvals/YYYY-MM-DD-<short-title>.md` or fill in
 
 **Example (sanitized):** [examples/2026-06-10-no-op-week.md](./examples/2026-06-10-no-op-week.md)
 
+**Related:** [Engine vs HG ownership](../ops/ENGINE_VS_HG_OWNERSHIP.md) (Sprint 53 — product SoT after PairMatchPolicy).
+
 ---
 
 ## When to use
