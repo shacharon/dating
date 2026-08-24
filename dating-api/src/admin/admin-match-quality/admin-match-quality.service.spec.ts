@@ -5,7 +5,9 @@ import type { MeMatchesService } from '../../me-profile/matches/core/me-matches.
 import type { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { AdminMatchQualityService } from './admin-match-quality.service';
+import { MatchQualityCandidateAuditService } from './match-quality-candidate-audit.service';
 import { serializeMatchQualityExportCsv } from './match-quality-export-csv';
+import { MatchQualityMetricsQueryService } from './match-quality-metrics-query.service';
 import {
   computeCompareDeltas,
   computePositiveRate,
@@ -104,7 +106,13 @@ describe('AdminMatchQualityService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new AdminMatchQualityService(prisma, obs, meMatches);
+    const metricsQuery = new MatchQualityMetricsQueryService(prisma, obs);
+    const candidateAudit = new MatchQualityCandidateAuditService(
+      prisma,
+      obs,
+      meMatches,
+    );
+    service = new AdminMatchQualityService(metricsQuery, candidateAudit, obs);
   });
 
   it('getSummary returns zeros and null positiveRate when empty', async () => {

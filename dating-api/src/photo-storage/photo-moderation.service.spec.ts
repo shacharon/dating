@@ -2,6 +2,8 @@ import { UserProfilePhotoStatus } from '@prisma/client';
 import type { PhotoRejectionEmailService } from '../notifications/photo-rejection-email.service';
 import type { StructuredObservabilityService } from '../logging/structured-observability.service';
 import type { IProfilePhotoRepository } from '../me-profile/repositories/profile-photo.repository';
+import { PhotoModerationApplyService } from './photo-moderation-apply.service';
+import { PhotoModerationDecisionService } from './photo-moderation-decision.service';
 import type { PhotoStorage } from './photo-storage.types';
 import {
   PhotoModerationService,
@@ -47,12 +49,19 @@ describe('PhotoModerationService', () => {
       detectFaces: jest.fn(),
     };
 
-    service = new PhotoModerationService(
+    const decision = new PhotoModerationDecisionService(
+      photoStorage,
+      rekognition,
+    );
+    const apply = new PhotoModerationApplyService(
       photos as unknown as IProfilePhotoRepository,
       obs,
-      photoStorage,
       rejectionEmail,
-      rekognition,
+    );
+    service = new PhotoModerationService(
+      photos as unknown as IProfilePhotoRepository,
+      decision,
+      apply,
     );
   });
 

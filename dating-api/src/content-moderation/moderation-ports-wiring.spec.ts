@@ -9,7 +9,11 @@ describe('moderation ports wiring (sprint-61 story 3)', () => {
   const srcRoot = path.join(__dirname, '..');
 
   const textConsumers = [
-    path.join('me-profile', 'me-conversation-messages.service.ts'),
+    path.join(
+      'me-profile',
+      'conversations',
+      'me-conversation-message-send.service.ts',
+    ),
     path.join('me-profile', 'profile', 'profile-moderation.service.ts'),
   ];
 
@@ -23,9 +27,13 @@ describe('moderation ports wiring (sprint-61 story 3)', () => {
     }
   });
 
-  it('PhotoModerationService injects REKOGNITION and never constructs RekognitionClient', () => {
+  it('PhotoModerationDecisionService injects REKOGNITION and never constructs RekognitionClient', () => {
     const src = fs.readFileSync(
-      path.join(srcRoot, 'photo-storage', 'photo-moderation.service.ts'),
+      path.join(
+        srcRoot,
+        'photo-storage',
+        'photo-moderation-decision.service.ts',
+      ),
       'utf8',
     );
     expect(src).toContain('REKOGNITION');

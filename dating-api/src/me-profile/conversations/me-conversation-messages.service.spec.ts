@@ -7,6 +7,9 @@ import {
 import { MessageStatus } from '@prisma/client';
 import { ErrorCodes } from '../../logging/error-codes';
 import { MeConversationMessagesService } from './me-conversation-messages.service';
+import { MeConversationMessageListService } from './me-conversation-message-list.service';
+import { MeConversationMessageSendService } from './me-conversation-message-send.service';
+import { MeConversationMessageFanoutService } from './me-conversation-message-fanout.service';
 import { parseMessageListLimit } from './me-conversation-messages.dto';
 import type { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import type { MeConversationsService } from './me-conversations.service';
@@ -207,18 +210,28 @@ describe('MeConversationMessagesService', () => {
     jest
       .spyOn(contentModerationTypes, 'isContentModerationEnabled')
       .mockReturnValue(true);
-    service = new MeConversationMessagesService(
+    const listService = new MeConversationMessageListService(
+      conversationsRepo,
+      conversations,
+      obs,
+    );
+    const fanoutService = new MeConversationMessageFanoutService(
+      realtime,
+      newMessageEmail,
+      obs,
+      pushQueue as never,
+    );
+    const sendService = new MeConversationMessageSendService(
       conversationsRepo,
       conversations,
       obs,
       messageRateLimit,
-      realtime,
-      newMessageEmail,
       analytics,
       moderation as unknown as ContentModerationPort,
       contentViolations as unknown as ContentViolationService,
-      pushQueue as never,
+      fanoutService,
     );
+    service = new MeConversationMessagesService(listService, sendService);
     (
       conversations.assertActiveConversationParticipant as jest.Mock
     ).mockResolvedValue({
