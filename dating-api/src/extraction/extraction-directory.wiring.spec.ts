@@ -27,11 +27,24 @@ describe('extraction/ directory layout (Sprint 73 Story 01)', () => {
   it('keeps each feature folder at or below 25 files', () => {
     for (const dir of FEATURE_FOLDERS) {
       const fileCount = countFiles(path.join(extractionDir, dir));
-      expect({ dir, fileCount }).toEqual({
-        dir,
-        fileCount: expect.any(Number),
-      });
       expect(fileCount).toBeLessThanOrEqual(25);
+    }
+  });
+
+  it('locks expected feature folder file counts', () => {
+    expect(countFiles(path.join(extractionDir, 'core'))).toBe(13);
+    expect(countFiles(path.join(extractionDir, 'prompt'))).toBe(2);
+    expect(countFiles(path.join(extractionDir, 'expansion'))).toBe(24);
+    expect(countFiles(path.join(extractionDir, 'shadow'))).toBe(4);
+    expect(countFiles(path.join(extractionDir, 'pipeline'))).toBe(5);
+  });
+
+  it('does not introduce barrels under extraction/', () => {
+    expect(fs.existsSync(path.join(extractionDir, 'index.ts'))).toBe(false);
+    for (const dir of FEATURE_FOLDERS) {
+      expect(fs.existsSync(path.join(extractionDir, dir, 'index.ts'))).toBe(
+        false,
+      );
     }
   });
 
@@ -66,8 +79,17 @@ describe('extraction/ directory layout (Sprint 73 Story 01)', () => {
         cwd: apiRoot,
         encoding: 'utf8',
       },
-    ).trim();
-    expect(out).toBe('');
+    )
+      .trim()
+      .split(/\r?\n/)
+      .filter(
+        (line) =>
+          line.length > 0 &&
+          !line.replace(/\\/g, '/').endsWith(
+            'extraction/extraction-directory.wiring.spec.ts',
+          ),
+      );
+    expect(out).toEqual([]);
   });
 
   it('has no stale root-level expansion-manifest import paths in src', () => {
@@ -77,8 +99,17 @@ describe('extraction/ directory layout (Sprint 73 Story 01)', () => {
         cwd: apiRoot,
         encoding: 'utf8',
       },
-    ).trim();
+    )
+      .trim()
+      .split(/\r?\n/)
+      .filter(
+        (line) =>
+          line.length > 0 &&
+          !line.replace(/\\/g, '/').endsWith(
+            'extraction/extraction-directory.wiring.spec.ts',
+          ),
+      );
     // Comment-only mentions may remain in docs; src should use expansion/ path
-    expect(out).toBe('');
+    expect(out).toEqual([]);
   });
 });
