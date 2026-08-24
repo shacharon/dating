@@ -1,17 +1,12 @@
-import { UserStatus } from '@prisma/client';
-import { MessagingWsSessionService } from './messaging-ws-session.service';
-import type { PrismaService } from '../prisma/prisma.service';
 import type { TokenService } from '../auth/token.service';
+import type { ISessionConnectionReadRepository } from '../session/repositories/session-connection-read.repository';
+import { MessagingWsSessionService } from './messaging-ws-session.service';
 
 describe('MessagingWsSessionService', () => {
-  const prisma = {
-    userSession: {
-      findUnique: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-  } as unknown as PrismaService;
+  const connectionRead: jest.Mocked<ISessionConnectionReadRepository> = {
+    isSessionRowActive: jest.fn(),
+    isUserActiveForConnection: jest.fn(),
+  };
 
   const tokens = {
     verifyAccessToken: jest.fn(),
@@ -21,96 +16,48 @@ describe('MessagingWsSessionService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MessagingWsSessionService(prisma, tokens);
+    service = new MessagingWsSessionService(connectionRead, tokens);
   });
 
   describe('isSessionActive', () => {
-    it('returns false when session id is empty', async () => {
-      await expect(service.isSessionActive('  ')).resolves.toBe(false);
-      expect(prisma.userSession.findUnique).not.toHaveBeenCalled();
-    });
-
-    it('returns false when session row is missing', async () => {
-      (prisma.userSession.findUnique as jest.Mock).mockResolvedValue(null);
-      await expect(service.isSessionActive('sess_1')).resolves.toBe(false);
-    });
-
-    it('returns false when session is revoked', async () => {
-      (prisma.userSession.findUnique as jest.Mock).mockResolvedValue({
-        revokedAt: new Date('2026-01-01T00:00:00.000Z'),
-        expiresAt: new Date('2038-01-01T00:00:00.000Z'),
-      });
-      await expect(service.isSessionActive('sess_1')).resolves.toBe(false);
-    });
-
-    it('returns false when session is expired', async () => {
-      (prisma.userSession.findUnique as jest.Mock).mockResolvedValue({
-        revokedAt: null,
-        expiresAt: new Date('2020-01-01T00:00:00.000Z'),
-      });
-      await expect(service.isSessionActive('sess_1')).resolves.toBe(false);
-    });
-
-    it('returns true for active session', async () => {
-      (prisma.userSession.findUnique as jest.Mock).mockResolvedValue({
-        revokedAt: null,
-        expiresAt: new Date('2038-01-01T00:00:00.000Z'),
-      });
+    it('delegates to connection read port', async () => {
+      connectionRead.isSessionRowActive.mockResolvedValue(true);
       await expect(service.isSessionActive('sess_1')).resolves.toBe(true);
+      expect(connectionRead.isSessionRowActive).toHaveBeenCalledWith('sess_1');
     });
   });
 
   describe('isConnectionAllowed', () => {
-    beforeEach(() => {
-      (prisma.userSession.findUnique as jest.Mock).mockResolvedValue({
-        revokedAt: null,
-        expiresAt: new Date('2038-01-01T00:00:00.000Z'),
-      });
-    });
-
-    it('returns false when session is revoked', async () => {
-      (prisma.userSession.findUnique as jest.Mock).mockResolvedValue({
-        revokedAt: new Date('2026-01-01T00:00:00.000Z'),
-        expiresAt: new Date('2038-01-01T00:00:00.000Z'),
-      });
+    it('returns false when session row is inactive', async () => {
+      connectionRead.isSessionRowActive.mockResolvedValue(false);
       await expect(
         service.isConnectionAllowed('sess_1', 'user_1'),
       ).resolves.toBe(false);
-      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(connectionRead.isUserActiveForConnection).not.toHaveBeenCalled();
     });
 
     it('returns false when userId is empty', async () => {
+      connectionRead.isSessionRowActive.mockResolvedValue(true);
       await expect(service.isConnectionAllowed('sess_1', '  ')).resolves.toBe(
         false,
       );
-      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(connectionRead.isUserActiveForConnection).not.toHaveBeenCalled();
     });
 
-    it('returns false when user is soft-deleted', async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        deletedAt: new Date('2026-01-01T00:00:00.000Z'),
-        status: UserStatus.ACTIVE,
-      });
+    it('returns false when user is not active for connection', async () => {
+      connectionRead.isSessionRowActive.mockResolvedValue(true);
+      connectionRead.isUserActiveForConnection.mockResolvedValue(false);
       await expect(
         service.isConnectionAllowed('sess_1', 'user_1'),
       ).resolves.toBe(false);
-    });
-
-    it('returns false when user is disabled', async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        deletedAt: null,
-        status: UserStatus.DISABLED,
-      });
-      await expect(
-        service.isConnectionAllowed('sess_1', 'user_1'),
-      ).resolves.toBe(false);
+      expect(connectionRead.isUserActiveForConnection).toHaveBeenCalledWith(
+        'user_1',
+      );
     });
 
     it('returns true when session and user are allowed', async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        deletedAt: null,
-        status: UserStatus.ACTIVE,
-      });
+      connectionRead.isSessionRowActive.mockResolvedValue(true);
+      connectionRead.isUserActiveForConnection.mockResolvedValue(true);
       await expect(
         service.isConnectionAllowed('sess_1', 'user_1'),
       ).resolves.toBe(true);
@@ -123,7 +70,7 @@ describe('MessagingWsSessionService', () => {
       await expect(
         service.isBearerConnectionAllowed('user_1', 'bad-token'),
       ).resolves.toBe(false);
-      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(connectionRead.isUserActiveForConnection).not.toHaveBeenCalled();
     });
 
     it('returns false when token userId mismatches', async () => {
@@ -135,14 +82,11 @@ describe('MessagingWsSessionService', () => {
       ).resolves.toBe(false);
     });
 
-    it('returns false when user is disabled', async () => {
+    it('returns false when user is not active for connection', async () => {
       (tokens.verifyAccessToken as jest.Mock).mockResolvedValue({
         userId: 'user_1',
       });
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        deletedAt: null,
-        status: UserStatus.DISABLED,
-      });
+      connectionRead.isUserActiveForConnection.mockResolvedValue(false);
       await expect(
         service.isBearerConnectionAllowed('user_1', 'token'),
       ).resolves.toBe(false);
@@ -152,10 +96,7 @@ describe('MessagingWsSessionService', () => {
       (tokens.verifyAccessToken as jest.Mock).mockResolvedValue({
         userId: 'user_1',
       });
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        deletedAt: null,
-        status: UserStatus.ACTIVE,
-      });
+      connectionRead.isUserActiveForConnection.mockResolvedValue(true);
       await expect(
         service.isBearerConnectionAllowed('user_1', 'token'),
       ).resolves.toBe(true);

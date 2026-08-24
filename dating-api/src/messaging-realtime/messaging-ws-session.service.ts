@@ -1,18 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { USER_STATUS_ACTIVE } from '../auth/auth.constants';
+import { Inject, Injectable } from '@nestjs/common';
 import { TokenService } from '../auth/token.service';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  SESSION_CONNECTION_READ,
+  type ISessionConnectionReadRepository,
+} from '../session/repositories/session-connection-read.repository';
 
 @Injectable()
 export class MessagingWsSessionService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(SESSION_CONNECTION_READ)
+    private readonly connectionRead: ISessionConnectionReadRepository,
     private readonly tokens: TokenService,
   ) {}
 
   /** Session row only (revoked / expired). Prefer {@link isConnectionAllowed} for revalidate. */
-  async isSessionActive(sessionId: string): Promise<boolean> {
-    return this.sessionRowActive(sessionId);
+  isSessionActive(sessionId: string): Promise<boolean> {
+    return this.connectionRead.isSessionRowActive(sessionId);
   }
 
   /**
@@ -23,7 +26,7 @@ export class MessagingWsSessionService {
     sessionId: string,
     userId: string,
   ): Promise<boolean> {
-    if (!(await this.sessionRowActive(sessionId))) {
+    if (!(await this.connectionRead.isSessionRowActive(sessionId))) {
       return false;
     }
     return this.isUserActive(userId);
@@ -47,34 +50,6 @@ export class MessagingWsSessionService {
       return false;
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: uid },
-      select: { deletedAt: true, status: true },
-    });
-
-    if (!user || user.deletedAt != null) {
-      return false;
-    }
-    return user.status === USER_STATUS_ACTIVE;
-  }
-
-  private async sessionRowActive(sessionId: string): Promise<boolean> {
-    const id = sessionId.trim();
-    if (!id) {
-      return false;
-    }
-
-    const row = await this.prisma.userSession.findUnique({
-      where: { id },
-      select: { revokedAt: true, expiresAt: true },
-    });
-
-    if (!row) {
-      return false;
-    }
-    if (row.revokedAt != null) {
-      return false;
-    }
-    return row.expiresAt.getTime() > Date.now();
+    return this.connectionRead.isUserActiveForConnection(uid);
   }
 }

@@ -1,12 +1,11 @@
 import { MatchNarrativeCacheService } from './match-narrative-cache.service';
+import type { IMatchNarrativeCacheRepository } from '../../me-profile/repositories/match-narrative-cache.repository';
 
 describe('MatchNarrativeCacheService', () => {
-  const findUnique = jest.fn();
+  const find = jest.fn();
   const upsert = jest.fn();
-  const prisma = {
-    matchNarrativeCache: { findUnique, upsert },
-  };
-  const service = new MatchNarrativeCacheService(prisma as never);
+  const cache: IMatchNarrativeCacheRepository = { find, upsert };
+  const service = new MatchNarrativeCacheService(cache);
 
   const key = {
     viewerProfileId: 'vp',
@@ -17,37 +16,23 @@ describe('MatchNarrativeCacheService', () => {
   };
 
   beforeEach(() => {
-    findUnique.mockReset();
+    find.mockReset();
     upsert.mockReset();
   });
 
-  it('find returns narrative on hit', async () => {
-    findUnique.mockResolvedValue({ narrative: 'cached' });
+  it('find delegates to narrative cache repository', async () => {
+    find.mockResolvedValue('cached');
     await expect(service.find(key)).resolves.toBe('cached');
-    expect(findUnique).toHaveBeenCalledWith({
-      where: {
-        viewerProfileId_candidateProfileId_viewerEvaluationId_candidateEvaluationId_promptVersion:
-          key,
-      },
-      select: { narrative: true },
-    });
+    expect(find).toHaveBeenCalledWith(key);
   });
 
-  it('find returns null on miss', async () => {
-    findUnique.mockResolvedValue(null);
-    await expect(service.find(key)).resolves.toBeNull();
-  });
-
-  it('upsert writes create/update payload', async () => {
-    upsert.mockResolvedValue({});
+  it('upsert delegates to narrative cache repository', async () => {
+    upsert.mockResolvedValue(undefined);
     await service.upsert({ ...key, narrative: 'llm text', model: 'gpt-test' });
     expect(upsert).toHaveBeenCalledWith({
-      where: {
-        viewerProfileId_candidateProfileId_viewerEvaluationId_candidateEvaluationId_promptVersion:
-          key,
-      },
-      create: { ...key, narrative: 'llm text', model: 'gpt-test' },
-      update: { narrative: 'llm text', model: 'gpt-test' },
+      ...key,
+      narrative: 'llm text',
+      model: 'gpt-test',
     });
   });
 });

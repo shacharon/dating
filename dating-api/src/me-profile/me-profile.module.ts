@@ -64,6 +64,8 @@ import { MATCH_LIST_RANK_REBUILD_PORT } from '../workers/match-list-rank.ports';
 import { MatchingPolicyModule } from '../matching-policy/matching-policy.module';
 import { MATCH_FEEDBACK_REPOSITORY } from './repositories/match-feedback.repository';
 import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedback.repository';
+import { MATCH_NARRATIVE_CACHE_REPOSITORY } from './repositories/match-narrative-cache.repository';
+import { PrismaMatchNarrativeCacheRepository } from './repositories/prisma-match-narrative-cache.repository';
 
 /**
  * Product me-profile module.
@@ -115,6 +117,10 @@ import { PrismaMatchFeedbackRepository } from './repositories/prisma-match-feedb
     {
       provide: MATCH_FEEDBACK_REPOSITORY,
       useClass: PrismaMatchFeedbackRepository,
+    },
+    {
+      provide: MATCH_NARRATIVE_CACHE_REPOSITORY,
+      useClass: PrismaMatchNarrativeCacheRepository,
     },
     {
       provide: CONVERSATION_REPOSITORY,

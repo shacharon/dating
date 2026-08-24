@@ -4,7 +4,6 @@ import { AuthSessionConfigModule } from '../config/auth-session-config.module';
 import { SimpleLoggerModule } from '../logger/simple-logger.module';
 import { StructuredLoggingModule } from '../logging/structured-logging.module';
 import { MeProfileModule } from '../me-profile/me-profile.module';
-import { PrismaModule } from '../prisma/prisma.module';
 import { SessionModule } from '../session/session.module';
 import { UsersModule } from '../users/users.module';
 import { MessagingGateway } from './messaging.gateway';
@@ -18,7 +17,6 @@ import { MessagingRealtimeHealthService } from './messaging-realtime-health.serv
 
 @Module({
   imports: [
-    PrismaModule,
     SessionModule,
     UsersModule,
     AuthSessionConfigModule,
