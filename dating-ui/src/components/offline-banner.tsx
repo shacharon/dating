@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppLocale } from "@/lib/i18n";
-import { useOnlineStatus } from "@/lib/use-online-status";
+import { useOnlineStatus } from "@/lib/platform/use-online-status";
 
 export function OfflineBanner() {
   const online = useOnlineStatus();

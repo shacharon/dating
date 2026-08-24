@@ -1,5 +1,5 @@
-import type { MeMatchDetailDto, MeMatchItemDto, TeaserMode } from '@/lib/me-matches-api';
-import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
+import type { MeMatchDetailDto, MeMatchItemDto, TeaserMode } from '@/lib/api/me-matches-api';
+import { formatSharedInterestNote } from '@/lib/matches/enrichment-display-v1';
 
 /** QA preview override — client display only (Sprint 44 Story 3). */
 export const TEASER_MODE_PREVIEW_STORAGE_KEY = 'dating.teaserModePreview';

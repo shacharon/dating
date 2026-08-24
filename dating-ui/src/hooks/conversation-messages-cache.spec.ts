@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import type { MessageDto } from '@/lib/api-types/conversations';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 import {
   appendUniqueMessages,
   appendMessagesInCache,

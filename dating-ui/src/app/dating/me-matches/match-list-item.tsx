@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { MatchPhoto } from '@/components/match-photo';
-import { type MeMatchItemDto } from '@/lib/me-matches-api';
-import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
+import { type MeMatchItemDto } from '@/lib/api/me-matches-api';
+import { formatSharedInterestNote } from '@/lib/matches/enrichment-display-v1';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n';
 import {
   matchListPrimaryLabel,

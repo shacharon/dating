@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { groupMatchesByPriority, resolvePriorityTier } from './match-priority';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto } from '@/lib/api/me-matches-api';
 
 const base = {
   id: 'p1',

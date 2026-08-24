@@ -5,11 +5,11 @@ import {
   unregisterDeviceToken,
 } from "./device-tokens-api";
 
-vi.mock("@/lib/authenticated-fetch", () => ({
+vi.mock("@/lib/auth/authenticated-fetch", () => ({
   authenticatedFetch: vi.fn(),
 }));
 
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { authenticatedFetch } from "@/lib/auth/authenticated-fetch";
 
 const mockFetch = vi.mocked(authenticatedFetch);
 

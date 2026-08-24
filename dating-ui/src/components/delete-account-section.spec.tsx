@@ -8,7 +8,7 @@ const { deleteMyAccountMock, refreshMock, replaceMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
 }));
 
-vi.mock('@/lib/delete-account-api', () => ({
+vi.mock('@/lib/api/delete-account-api', () => ({
   deleteMyAccount: deleteMyAccountMock,
 }));
 

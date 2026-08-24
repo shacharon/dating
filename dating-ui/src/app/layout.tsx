@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 import "./globals.css";
 import { getLocaleDirection, DEFAULT_LOCALE } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/i18n/server-locale";
-import { isCapacitorBuild } from "@/lib/capacitor-build";
+import { isCapacitorBuild } from "@/lib/platform/capacitor-build";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description: "Find your match",
 };
 
-export { viewport } from "@/lib/app-viewport";
+export { viewport } from "@/lib/platform/app-viewport";
 
 export default async function RootLayout({
   children,

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { upsertMatchFeedback } from '@/lib/me-matches-api';
+import { upsertMatchFeedback } from '@/lib/api/me-matches-api';
 
 type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | null;
 

@@ -1,9 +1,9 @@
-import { getApiBase } from "@/lib/api-base";
+import { getApiBase } from "@/lib/api/api-base";
 import type { AuthUser } from "@/lib/auth/types";
 import {
   clearStoredReferralRef,
   readStoredReferralRef,
-} from "@/lib/referral-attribution";
+} from "@/lib/referral/referral-attribution";
 import {
   emitProductLog,
   getObservabilityRoute,

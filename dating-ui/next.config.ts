@@ -2,8 +2,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isCapacitorBuild } from "./src/lib/capacitor-build";
-import { buildImageRemotePatterns } from "./src/lib/image-remote-patterns";
+import { isCapacitorBuild } from "./src/lib/platform/capacitor-build";
+import { buildImageRemotePatterns } from "./src/lib/platform/image-remote-patterns";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 

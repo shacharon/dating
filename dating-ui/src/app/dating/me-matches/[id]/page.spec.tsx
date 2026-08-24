@@ -39,7 +39,7 @@ vi.mock('@/lib/api-sdk', () => ({
   },
 }));
 
-vi.mock('@/lib/me-matches-api', () => ({
+vi.mock('@/lib/api/me-matches-api', () => ({
   fetchMyMatchById,
   fetchMatchAction,
   fetchMatchFeedback,

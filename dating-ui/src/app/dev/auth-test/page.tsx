@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { isAuthTestPageEnabled } from "@/lib/auth-test-gate";
+import { isAuthTestPageEnabled } from "@/lib/auth/auth-test-gate";
 import { DevAuthTestClient } from "./dev-auth-test-client";
 
 export default function DevAuthTestPage() {

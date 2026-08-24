@@ -3,7 +3,7 @@ import type {
   ConversationLastMessageDto,
   ConversationListItemDto,
   ConversationOtherUserDto,
-} from '@/lib/conversations-api';
+} from '@/lib/api/conversations-api';
 
 export const CONVERSATION_PREVIEW_MAX_CHARS = 60;
 

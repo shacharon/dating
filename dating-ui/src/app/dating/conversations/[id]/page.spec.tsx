@@ -74,7 +74,7 @@ vi.mock('@/lib/api-sdk', () => ({
   },
 }));
 
-vi.mock('@/lib/conversations-api', () => ({
+vi.mock('@/lib/api/conversations-api', () => ({
   fetchMyConversationById,
   fetchConversationMessages,
   markConversationAsRead,
@@ -83,7 +83,7 @@ vi.mock('@/lib/conversations-api', () => ({
   conversationPhotoSrc: (url: string | null) => url,
 }));
 
-vi.mock('@/lib/realtime-mode', () => ({
+vi.mock('@/lib/platform/realtime-mode', () => ({
   getRealtimeMode,
 }));
 
@@ -91,11 +91,11 @@ const { setActiveConversationId } = vi.hoisted(() => ({
   setActiveConversationId: vi.fn(),
 }));
 
-vi.mock('@/lib/conversation-focus', () => ({
+vi.mock('@/lib/messaging/conversation-focus', () => ({
   setActiveConversationId,
 }));
 
-vi.mock('@/lib/messaging-socket', () => ({
+vi.mock('@/lib/messaging/messaging-socket', () => ({
   acquireMessagingSocket,
   releaseMessagingSocket,
   MESSAGING_EVENT_MESSAGE_NEW: 'message.new',
@@ -625,7 +625,7 @@ describe('ConversationDetailPage', () => {
 
   it('shows moderation alert when send is rejected for content policy', async () => {
     const { ContentModerationApiError } = await import(
-      '@/lib/content-moderation-error'
+      '@/lib/moderation/content-moderation-error'
     );
     sendConversationMessage.mockRejectedValue(
       new ContentModerationApiError(

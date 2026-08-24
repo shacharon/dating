@@ -10,7 +10,7 @@ import {
   MATCH_QUALITY_RUNBOOK_DOC_PATH,
   type MatchQualitySummary,
   type NegativeCandidateRow,
-} from '@/lib/admin-match-quality-api';
+} from '@/lib/admin/admin-match-quality-api';
 
 const WINDOW_OPTIONS = [7, 30] as const;
 type WindowDays = (typeof WINDOW_OPTIONS)[number];

@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { MessageDto } from '@/lib/conversations-api';
+import type { MessageDto } from '@/lib/api/conversations-api';
 import { useMessagingSocket } from './use-messaging-socket';
 
 const {
@@ -52,8 +52,8 @@ const {
   };
 });
 
-vi.mock('@/lib/messaging-socket', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/messaging-socket')>();
+vi.mock('@/lib/messaging/messaging-socket', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/messaging/messaging-socket')>();
   return {
     ...actual,
     acquireMessagingSocket,
@@ -62,8 +62,8 @@ vi.mock('@/lib/messaging-socket', async (importOriginal) => {
   };
 });
 
-vi.mock('@/lib/conversations-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/conversations-api')>();
+vi.mock('@/lib/api/conversations-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/conversations-api')>();
   return {
     ...actual,
     fetchConversationMessages,

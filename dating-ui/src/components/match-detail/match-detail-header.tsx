@@ -1,7 +1,7 @@
 'use client';
 
 import { MatchPhoto } from '@/components/match-photo';
-import type { MeMatchDetailDto } from '@/lib/me-matches-api';
+import type { MeMatchDetailDto } from '@/lib/api/me-matches-api';
 import {
   matchDetailSubtitle,
   matchDetailTitle,

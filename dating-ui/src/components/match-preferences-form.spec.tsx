@@ -24,7 +24,7 @@ vi.mock('@/lib/api-sdk', () => ({
 }));
 
 import { MatchPreferencesForm } from '@/components/match-preferences-form';
-import type { MeProfileDto } from '@/lib/me-profile-api';
+import type { MeProfileDto } from '@/lib/api/me-profile-api';
 
 const mockProfile: MeProfileDto = {
   id: 'p1',

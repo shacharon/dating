@@ -10,7 +10,7 @@ import {
   parseAuthTokenLoginResponse,
   refreshAccessToken,
 } from './auth-api';
-import { REFERRAL_STORAGE_KEY } from '@/lib/referral-attribution';
+import { REFERRAL_STORAGE_KEY } from '@/lib/referral/referral-attribution';
 
 describe('auth-api', () => {
   const originalFetch = globalThis.fetch;

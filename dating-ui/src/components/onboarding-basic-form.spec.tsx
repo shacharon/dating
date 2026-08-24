@@ -28,8 +28,8 @@ const { listMyProfilePhotos } = vi.hoisted(() => ({
   listMyProfilePhotos: vi.fn(),
 }));
 
-vi.mock('@/lib/me-photos-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/me-photos-api')>();
+vi.mock('@/lib/api/me-photos-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/me-photos-api')>();
   return {
     ...actual,
     listMyProfilePhotos,
@@ -52,7 +52,7 @@ import { OnboardingBasicForm } from '@/components/onboarding-basic-form';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
-import type { MeProfileDto } from '@/lib/me-profile-api';
+import type { MeProfileDto } from '@/lib/api/me-profile-api';
 
 const basicProfile: MeProfileDto = {
   id: 'p1',

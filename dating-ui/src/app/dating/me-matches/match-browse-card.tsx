@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { MatchPhoto } from '@/components/match-photo';
-import type { MeMatchItemDto, TeaserMode } from '@/lib/me-matches-api';
+import type { MeMatchItemDto, TeaserMode } from '@/lib/api/me-matches-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { emitProductLog } from '@/lib/observability/product-logger';
 import {

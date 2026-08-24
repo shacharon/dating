@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { datingApi, type DatingApiClient } from '@/lib/api-sdk';
 
-vi.mock('@/lib/authenticated-fetch', () => ({
+vi.mock('@/lib/auth/authenticated-fetch', () => ({
   authenticatedFetch: vi.fn(),
 }));
 
-import { authenticatedFetch } from '@/lib/authenticated-fetch';
+import { authenticatedFetch } from '@/lib/auth/authenticated-fetch';
 
 const mockFetch = vi.mocked(authenticatedFetch);
 
@@ -82,21 +82,21 @@ describe('legacy shims re-export SDK functions', () => {
     mockFetch.mockResolvedValue(
       jsonResponse({ status: 'not_ready', reason: 'no_profile' }),
     );
-    const { fetchMyMatches } = await import('@/lib/me-matches-api');
+    const { fetchMyMatches } = await import('@/lib/api/me-matches-api');
     const dto = await fetchMyMatches();
     expect(dto.status).toBe('not_ready');
     expect(mockFetch).toHaveBeenCalled();
   });
 
   it('conversations-api shim re-exports types and conversationPhotoSrc', async () => {
-    const mod = await import('@/lib/conversations-api');
+    const mod = await import('@/lib/api/conversations-api');
     expect(typeof mod.fetchMyConversations).toBe('function');
     expect(typeof mod.conversationPhotoSrc).toBe('function');
     expect(mod.conversationPhotoSrc('/photos/x.jpg')).toBe('/photos/x.jpg');
   });
 
   it('me-profile-api shim re-exports profile type constants', async () => {
-    const { ME_PROFILE_GENDERS } = await import('@/lib/me-profile-api');
+    const { ME_PROFILE_GENDERS } = await import('@/lib/api/me-profile-api');
     expect(ME_PROFILE_GENDERS).toContain('MALE');
     expect(ME_PROFILE_GENDERS).toContain('FEMALE');
   });

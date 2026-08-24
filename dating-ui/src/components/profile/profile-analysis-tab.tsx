@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { AnalysisProgressPanel } from '@/components/analysis-progress-panel';
-import { mapEvaluationToViewModel } from '@/lib/analysis-presentation';
+import { mapEvaluationToViewModel } from '@/lib/matches/analysis-presentation';
 import { useAppLocale } from '@/lib/i18n';
 import { useAnalysisPage } from '@/app/dating/analysis/use-analysis-page';
 

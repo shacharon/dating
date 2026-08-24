@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { listMyProfilePhotos } from '@/lib/me-photos-api';
+import { listMyProfilePhotos } from '@/lib/api/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
 
 /**

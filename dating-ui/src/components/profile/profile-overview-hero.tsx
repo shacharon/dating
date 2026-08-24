@@ -18,7 +18,7 @@ import {
   fetchMyProfilePhotoBlob,
   listMyProfilePhotos,
   type MeProfilePhotoDto,
-} from '@/lib/me-photos-api';
+} from '@/lib/api/me-photos-api';
 
 type Props = {
   draft: ProfileDraft;

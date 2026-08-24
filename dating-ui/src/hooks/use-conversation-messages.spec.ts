@@ -9,7 +9,7 @@ import {
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
 import * as messagingSocket from '@/hooks/use-messaging-socket';
-import * as realtimeMode from '@/lib/realtime-mode';
+import * as realtimeMode from '@/lib/platform/realtime-mode';
 
 const {
   fetchConversationMessages,
@@ -36,7 +36,7 @@ vi.mock('@/contexts/auth-context', () => ({
 }));
 
 vi.mock('@/hooks/use-messaging-socket');
-vi.mock('@/lib/realtime-mode');
+vi.mock('@/lib/platform/realtime-mode');
 
 const mockFetchConversationMessages = vi.mocked(fetchConversationMessages);
 const mockMarkConversationAsRead = vi.mocked(markConversationAsRead);
@@ -226,7 +226,7 @@ describe('useConversationMessages', () => {
 
   it('should expose moderation details on send moderation failure', async () => {
     const { ContentModerationApiError } = await import(
-      '@/lib/content-moderation-error'
+      '@/lib/moderation/content-moderation-error'
     );
     mockFetchConversationMessages.mockResolvedValue({
       messages: mockMessages,

@@ -4,7 +4,7 @@ import {
   formatHardBlockReasonMessage,
   type HardBlockReasonCopy,
 } from './hard-block-display';
-import type { HardBlockReasonDto } from '@/lib/me-matches-api';
+import type { HardBlockReasonDto } from '@/lib/api/me-matches-api';
 
 const copy: HardBlockReasonCopy = {
   smokingExcludedViewerToThem:

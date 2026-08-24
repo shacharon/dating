@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { datingApi } from '@/lib/api-sdk';
 import type { MessageDto } from '@/lib/api-types/conversations';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 import {
   CONVERSATION_MESSAGES_STALE_TIME_MS,
   messageListToCache,

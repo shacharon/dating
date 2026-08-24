@@ -9,7 +9,7 @@ import {
   fetchMyConversations,
   type ConversationListItemDto,
   type ConversationListResponseDto,
-} from '@/lib/conversations-api';
+} from '@/lib/api/conversations-api';
 import {
   CONVERSATION_LIST_CONTROLS_STORAGE_KEY,
   DEFAULT_CONVERSATION_LIST_CONTROLS,
@@ -17,10 +17,10 @@ import {
   parseStoredConversationListControls,
   type ConversationFilterType,
   type ConversationSortBy,
-} from '@/lib/conversation-list-controls';
+} from '@/lib/messaging/conversation-list-controls';
 import { useAppLocale } from '@/lib/i18n';
-import { queryKeys } from '@/lib/query-keys';
-import { getRealtimeMode } from '@/lib/realtime-mode';
+import { queryKeys } from '@/lib/query/query-keys';
+import { getRealtimeMode } from '@/lib/platform/realtime-mode';
 
 const SEARCH_DEBOUNCE_MS = 300;
 

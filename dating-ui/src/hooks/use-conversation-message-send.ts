@@ -2,12 +2,12 @@
 
 import { useCallback, useState } from 'react';
 import { useSendConversationMessage } from '@/hooks/use-conversation-message-send-mutation';
-import { SEND_COOLDOWN_MS } from '@/lib/conversation-message-limits';
+import { SEND_COOLDOWN_MS } from '@/lib/messaging/conversation-message-limits';
 import {
   ContentModerationApiError,
   MessagingMutedError,
   type ContentModerationDetails,
-} from '@/lib/content-moderation-error';
+} from '@/lib/moderation/content-moderation-error';
 
 export type UseConversationMessageSendResult = {
   sendMessage: (content: string) => Promise<void>;

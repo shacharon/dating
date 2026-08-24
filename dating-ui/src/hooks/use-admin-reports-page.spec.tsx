@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAdminReportsPage } from './use-admin-reports-page';
-import * as api from '@/lib/admin-reports-api';
+import * as api from '@/lib/admin/admin-reports-api';
 import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
-vi.mock('@/lib/admin-reports-api');
+vi.mock('@/lib/admin/admin-reports-api');
 
 const listAdminReports = vi.mocked(api.listAdminReports);
 const getAdminReport = vi.mocked(api.getAdminReport);

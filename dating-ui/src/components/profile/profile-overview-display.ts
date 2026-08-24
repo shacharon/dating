@@ -4,7 +4,7 @@ import type { AppCopySchema } from '@/lib/i18n/types';
 import type {
   MeProfilePhotoDto,
   MeProfilePhotoStatus,
-} from '@/lib/me-photos-api';
+} from '@/lib/api/me-photos-api';
 
 export type GalleryDotKind = 'approved' | 'pending' | 'empty';
 

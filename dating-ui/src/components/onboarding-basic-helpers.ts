@@ -1,4 +1,4 @@
-import type { MeProfileGender } from '@/lib/me-profile-api';
+import type { MeProfileGender } from '@/lib/api/me-profile-api';
 
 export function ageFromBirthInput(iso: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;

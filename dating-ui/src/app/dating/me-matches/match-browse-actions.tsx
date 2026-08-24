@@ -1,7 +1,7 @@
 'use client';
 
 import { useMatchActions } from '@/hooks/use-match-actions';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto } from '@/lib/api/me-matches-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 export type MatchBrowseActionsProps = {

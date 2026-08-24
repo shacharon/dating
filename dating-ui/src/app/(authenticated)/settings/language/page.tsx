@@ -1,5 +1,5 @@
 import SettingsLanguagePageClient from './language-page-client';
-import { buildPageMetadata } from '@/lib/page-metadata';
+import { buildPageMetadata } from '@/lib/platform/page-metadata';
 
 export async function generateMetadata() {
   return buildPageMetadata({

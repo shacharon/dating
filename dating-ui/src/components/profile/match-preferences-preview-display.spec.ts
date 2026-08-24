@@ -4,7 +4,7 @@ import {
   matchPreferencesPreviewHasValues,
   matchPreferencesPreviewLines,
 } from '@/components/profile/match-preferences-preview-display';
-import { emptyMatchPreferencesFormState } from '@/lib/match-preferences-form';
+import { emptyMatchPreferencesFormState } from '@/lib/matches/match-preferences-form';
 
 describe('matchPreferencesPreviewLines', () => {
   it('builds age, distance, and gender lines', () => {

@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { MessageDto, MessageListDto } from '@/lib/api-types/conversations';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 
 export const CONVERSATION_MESSAGES_STALE_TIME_MS = 300_000;
 export const OPTIMISTIC_MESSAGE_ID_PREFIX = 'pending-';

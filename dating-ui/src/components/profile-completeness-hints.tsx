@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ProfileDraft } from '@/app/dating/_lib/types';
-import { listMyProfilePhotos } from '@/lib/me-photos-api';
+import { listMyProfilePhotos } from '@/lib/api/me-photos-api';
 import {
   basicsComplete,
   storyComplete,
-} from '@/lib/profile-completeness';
+} from '@/lib/profile/profile-completeness';
 import { useAppLocale } from '@/lib/i18n';
 
 export function ProfileCompletenessHints({ draft }: { draft: ProfileDraft }) {

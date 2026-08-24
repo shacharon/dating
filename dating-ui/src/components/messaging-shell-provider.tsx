@@ -17,18 +17,18 @@ import {
 } from '@/contexts/conversation-unread-context';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
 import { useAppLocale } from '@/lib/i18n';
-import { type MessageDto } from '@/lib/conversations-api';
+import { type MessageDto } from '@/lib/api/conversations-api';
 import {
   shouldBumpUnreadForMessage,
   shouldShowMessageToast,
-} from '@/lib/message-in-app-notify';
-import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/message-toast.constants';
+} from '@/lib/messaging/message-in-app-notify';
+import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/messaging/message-toast.constants';
 import {
   buildPeerLabelIndex,
   resolvePeerLabel,
   type PeerLabelIndex,
-} from '@/lib/message-toast-labels';
-import { getRealtimeMode } from '@/lib/realtime-mode';
+} from '@/lib/messaging/message-toast-labels';
+import { getRealtimeMode } from '@/lib/platform/realtime-mode';
 
 type ToastState = {
   senderLabel: string;

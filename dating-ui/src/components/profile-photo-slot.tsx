@@ -1,6 +1,6 @@
 'use client';
 
-import type { MeProfilePhotoDto } from '@/lib/me-photos-api';
+import type { MeProfilePhotoDto } from '@/lib/api/me-photos-api';
 import type { getCopy } from '@/lib/i18n';
 import { statusBadgeClass, statusText } from '@/components/profile-photo-status';
 

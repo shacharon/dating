@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, type RefObject } from 'react';
-import type { MessageDto } from '@/lib/conversations-api';
+import type { MessageDto } from '@/lib/api/conversations-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { ConversationMessageBubble } from '@/components/conversation/conversation-message-bubble';
 

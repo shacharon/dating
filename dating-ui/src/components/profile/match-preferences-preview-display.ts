@@ -1,6 +1,6 @@
-import type { MatchPreferencesFormState } from '@/lib/match-preferences-form';
+import type { MatchPreferencesFormState } from '@/lib/matches/match-preferences-form';
 import type { AppCopySchema } from '@/lib/i18n/types';
-import type { MeProfileGender } from '@/lib/me-profile-api';
+import type { MeProfileGender } from '@/lib/api/me-profile-api';
 
 export type PrefPreviewLine = { key: string; text: string };
 

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import { ContentModerationErrorAlert } from './content-moderation-error-alert';
-import type { ContentModerationDetails } from '@/lib/content-moderation-error';
+import type { ContentModerationDetails } from '@/lib/moderation/content-moderation-error';
 
 const labels = {
   fieldLabel: 'Field',

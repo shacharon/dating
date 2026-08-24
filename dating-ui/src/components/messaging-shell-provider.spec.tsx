@@ -22,15 +22,15 @@ const {
   };
 });
 
-vi.mock('@/lib/conversations-api', () => ({
+vi.mock('@/lib/api/conversations-api', () => ({
   fetchConversationsUnreadTotal,
 }));
 
-vi.mock('@/lib/realtime-mode', () => ({
+vi.mock('@/lib/platform/realtime-mode', () => ({
   getRealtimeMode,
 }));
 
-vi.mock('@/lib/conversation-focus', () => ({
+vi.mock('@/lib/messaging/conversation-focus', () => ({
   getActiveConversationId,
 }));
 
@@ -51,8 +51,8 @@ vi.mock('next/navigation', () => ({
 
 import { MessagingShellProvider } from '@/components/messaging-shell-provider';
 import { useConversationUnread } from '@/contexts/conversation-unread-context';
-import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/message-toast.constants';
-import { setInAppNotificationsEnabledPreference } from '@/lib/message-in-app-notify';
+import { MESSAGE_TOAST_AUTO_DISMISS_MS } from '@/lib/messaging/message-toast.constants';
+import { setInAppNotificationsEnabledPreference } from '@/lib/messaging/message-in-app-notify';
 import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
 const peerMessage = {

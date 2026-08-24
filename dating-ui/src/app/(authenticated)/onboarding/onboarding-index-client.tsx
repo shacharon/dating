@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppLocale } from "@/lib/i18n";
-import { onboardingResumePath } from "@/lib/onboarding-path";
+import { onboardingResumePath } from "@/lib/profile/onboarding-path";
 import { useProfile } from "@/hooks/use-profile";
 
 /**

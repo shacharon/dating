@@ -1,4 +1,4 @@
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { authenticatedFetch } from "@/lib/auth/authenticated-fetch";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json",

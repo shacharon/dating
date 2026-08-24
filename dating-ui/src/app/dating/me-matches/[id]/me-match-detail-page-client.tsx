@@ -8,7 +8,7 @@ import {
   fetchMatchFeedback,
   fetchMyMatchById,
   type MeMatchDetailDto,
-} from '@/lib/me-matches-api';
+} from '@/lib/api/me-matches-api';
 import { useAppLocale } from '@/lib/i18n';
 import { useMatchActions } from '@/hooks/use-match-actions';
 import { useMatchFeedback } from '@/hooks/use-match-feedback';

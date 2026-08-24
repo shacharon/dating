@@ -8,7 +8,7 @@ import {
 } from "@/lib/push/capacitor-push";
 import { registerDeviceToken } from "@/lib/push/device-tokens-api";
 import { resolvePushNotificationPath } from "@/lib/push/push-notification-routing";
-import { isCapacitor } from "@/lib/platform";
+import { isCapacitor } from "@/lib/platform/platform";
 import {
   emitProductLog,
   getObservabilityRoute,

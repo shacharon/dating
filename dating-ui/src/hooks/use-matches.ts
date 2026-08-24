@@ -17,7 +17,7 @@ import type {
   MeMatchItemDto,
   MeMatchesListDto,
 } from '@/lib/api-types/matches';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 
 export const MATCHES_PAGE_LIMIT = 20;
 export const MATCHES_LIST_STALE_TIME_MS = 300_000;

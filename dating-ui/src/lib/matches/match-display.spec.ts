@@ -12,7 +12,7 @@ import {
   formatBrowseAge,
   matchBrowseLocation,
 } from './match-display';
-import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchDetailDto, MeMatchItemDto } from '@/lib/api/me-matches-api';
 
 const baseItem = {
   id: 'p1',

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, type RefObject } from 'react';
-import { MAX_MESSAGE_TEXT_LENGTH } from '@/lib/conversation-message-limits';
+import { MAX_MESSAGE_TEXT_LENGTH } from '@/lib/messaging/conversation-message-limits';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
-import type { ContentModerationDetails } from '@/lib/content-moderation-error';
+import type { ContentModerationDetails } from '@/lib/moderation/content-moderation-error';
 import type { AppCopySchema } from '@/lib/i18n/types';
 import { scrollListToBottom } from '@/components/conversation/conversation-message-list';
 

@@ -8,13 +8,13 @@ import { useConversationUnread } from '@/contexts/conversation-unread-context';
 import {
   fetchMyConversationById,
   type ConversationDetailDto,
-} from '@/lib/conversations-api';
+} from '@/lib/api/conversations-api';
 import { conversationPrimaryLabel } from '@/app/dating/conversations/conversation-display';
 import { useAppLocale } from '@/lib/i18n';
-import { setActiveConversationId } from '@/lib/conversation-focus';
+import { setActiveConversationId } from '@/lib/messaging/conversation-focus';
 import { useConversationMessages } from '@/hooks/use-conversation-messages';
 import { useConversationActions } from '@/hooks/use-conversation-actions';
-import { getRealtimeMode } from '@/lib/realtime-mode';
+import { getRealtimeMode } from '@/lib/platform/realtime-mode';
 import { ConversationHeader } from '@/components/conversation/conversation-header';
 import { ConversationMessageList } from '@/components/conversation/conversation-message-list';
 import { ConversationMessageComposer } from '@/components/conversation/conversation-message-composer';

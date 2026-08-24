@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Post-deployment smoke test — legacy matches UI removal
 #
-# Repository facts (see next.config.ts, src/lib/api-base.ts):
+# Repository facts (see next.config.ts, src/lib/api/api-base.ts):
 # - Next rewrites /api/* to API_PROXY_TARGET (default http://localhost:3001).
 # - When NEXT_PUBLIC_API_URL is unset, the browser uses same-origin /api (rewrites apply).
 #

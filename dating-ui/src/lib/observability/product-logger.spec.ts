@@ -56,7 +56,7 @@ describe('product-logger', () => {
     process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3001';
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     resetRequestIdContextForTests();
-    const { fetchMyProfile } = await import('@/lib/me-profile-api');
+    const { fetchMyProfile } = await import('@/lib/api/me-profile-api');
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -90,7 +90,7 @@ describe('product-logger', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     resetRequestIdContextForTests();
     vi.resetModules();
-    const { patchMyProfile } = await import('@/lib/me-profile-api');
+    const { patchMyProfile } = await import('@/lib/api/me-profile-api');
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({

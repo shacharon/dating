@@ -6,7 +6,7 @@ const { getCandidateAudit } = vi.hoisted(() => ({
   getCandidateAudit: vi.fn(),
 }));
 
-vi.mock('@/lib/admin-match-quality-api', () => ({
+vi.mock('@/lib/admin/admin-match-quality-api', () => ({
   getCandidateAudit,
 }));
 

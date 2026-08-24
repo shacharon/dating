@@ -10,7 +10,7 @@ import * as authApi from "./auth-api";
 import {
   ACCESS_TOKEN_STORAGE_KEY,
   REFRESH_TOKEN_STORAGE_KEY,
-} from "@/lib/token-storage";
+} from "@/lib/auth/token-storage";
 
 describe("auth-refresh-coordinator", () => {
   beforeEach(() => {

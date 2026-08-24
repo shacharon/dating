@@ -2,7 +2,7 @@
  * Minimal fetch client for dating-api UserProfile CRUD (/api/v1/user-profiles).
  */
 
-import { apiUrl } from '@/lib/api-base';
+import { apiUrl } from '@/lib/api/api-base';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json' };
 

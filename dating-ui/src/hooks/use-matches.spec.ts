@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createElement } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { MeMatchesListDto } from '@/lib/api-types/matches';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 import {
   QueryClientTestProvider,
   createTestQueryClient,

@@ -7,11 +7,11 @@ const { fetchConversationsUnreadTotal, getRealtimeMode } = vi.hoisted(() => ({
   getRealtimeMode: vi.fn(() => 'ws' as const),
 }));
 
-vi.mock('@/lib/conversations-api', () => ({
+vi.mock('@/lib/api/conversations-api', () => ({
   fetchConversationsUnreadTotal,
 }));
 
-vi.mock('@/lib/realtime-mode', () => ({
+vi.mock('@/lib/platform/realtime-mode', () => ({
   getRealtimeMode,
 }));
 

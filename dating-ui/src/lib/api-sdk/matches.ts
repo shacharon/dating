@@ -2,7 +2,7 @@
  * Authenticated match operations: GET `/api/v1/me/matches`, like/pass/block/undo/feedback.
  */
 
-import { getApiBase } from '@/lib/api-base';
+import { getApiBase } from '@/lib/api/api-base';
 import type {
   MatchActionDto,
   MatchActionStateDto,
@@ -11,7 +11,7 @@ import type {
   MeMatchDetailDto,
   MeMatchesListDto,
 } from '@/lib/api-types/matches';
-import { authenticatedFetch } from '@/lib/authenticated-fetch';
+import { authenticatedFetch } from '@/lib/auth/authenticated-fetch';
 import {
   JSON_HEADERS,
   apiUnreachableMessage,

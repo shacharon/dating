@@ -2,7 +2,7 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PushNotificationsRegistration } from "./push-notifications-registration";
-import { setPlatformOverrideForTests } from "@/lib/platform";
+import { setPlatformOverrideForTests } from "@/lib/platform/platform";
 
 const setupCapacitorPush = vi.fn().mockResolvedValue(undefined);
 const teardownCapacitorPush = vi.fn().mockResolvedValue(undefined);

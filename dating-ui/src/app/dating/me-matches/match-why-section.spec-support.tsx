@@ -1,4 +1,4 @@
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto } from '@/lib/api/me-matches-api';
 
 export function baseMatch(
   explainability: MeMatchItemDto['explainability'],

@@ -6,9 +6,9 @@ import {
   getAdminReport,
   listAdminReports,
   updateAdminReport,
-} from '@/lib/admin-reports-api';
-import { messageFromAdminFetchError } from '@/lib/admin-fetch-error';
-import { queryKeys } from '@/lib/query-keys';
+} from '@/lib/admin/admin-reports-api';
+import { messageFromAdminFetchError } from '@/lib/admin/admin-fetch-error';
+import { queryKeys } from '@/lib/query/query-keys';
 
 const LIST_STATUS = 'OPEN';
 const FORBIDDEN = 'You are not authorized to view the admin report queue.';

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { datingApi } from '@/lib/api-sdk';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 
 export interface UseConversationActionsReturn {
   unmatch: () => Promise<void>;

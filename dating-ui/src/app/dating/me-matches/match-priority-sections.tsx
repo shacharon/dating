@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto } from '@/lib/api/me-matches-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 import { emitProductLog } from '@/lib/observability/product-logger';
 import { MatchBrowseCard } from './match-browse-card';

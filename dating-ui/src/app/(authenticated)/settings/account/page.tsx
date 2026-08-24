@@ -1,5 +1,5 @@
 import SettingsAccountPageClient from './account-page-client';
-import { buildPageMetadata } from '@/lib/page-metadata';
+import { buildPageMetadata } from '@/lib/platform/page-metadata';
 
 export async function generateMetadata() {
   return buildPageMetadata({

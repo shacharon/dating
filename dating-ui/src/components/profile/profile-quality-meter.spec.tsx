@@ -6,9 +6,9 @@ const { fetchProfileQualityMock } = vi.hoisted(() => ({
   fetchProfileQualityMock: vi.fn(),
 }));
 
-vi.mock('@/lib/profile-quality-api', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/profile-quality-api')>(
-    '@/lib/profile-quality-api',
+vi.mock('@/lib/api/profile-quality-api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/profile-quality-api')>(
+    '@/lib/api/profile-quality-api',
   );
   return {
     ...actual,
