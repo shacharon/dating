@@ -51,12 +51,13 @@ Root **2** files (≤25). Imports use `@/lib/<domain>/<module>`.
 
 ## Shipped
 
-`feature/sprint-73-story-2` @ `a29d680`
+`feature/sprint-73-story-2` @ `b76554b`
 
 - `4e949b8` — refactor: organize dating-ui src/lib into domain folders
 - `a29d680` — test: harden dating-ui lib directory wiring guards
+- `b76554b` — chore: close sprint 73 story 2
 
-**Shipped on main:** _(filled after merge)_  
+**Shipped on main:** `947540b`  
 **Feature tip ahead of main:** 0
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
