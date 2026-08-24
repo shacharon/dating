@@ -62,7 +62,7 @@ Public import paths unchanged. Spec file unsplit (out of scope).
 
 - `aa062bd` — refactor: thin openai.client and match-explainability modules
 
-**Shipped on main:** *(filled after merge)*  
+**Shipped on main:** `0dffad1`  
 **Feature tip ahead of main:** 0
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
