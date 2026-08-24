@@ -23,22 +23,13 @@ Sprint 65 cleared the worst offenders (`extraction.service.spec`, `match-engine.
 
 | File | LOC | Split strategy |
 |------|-----|----------------|
-| ~~`engine/compute-friction.spec.ts`~~ | ~~1408~~ | ✅ Split — core + 4 shadow tranches + policy (Story 01) |
-| `me-profile/me-profile-http-crud.integration.spec.ts` | 1390 | Route-family describes (profile CRUD, analysis, preferences, observability) |
-| `me-profile/me-profile.service.spec.ts` | 1347 | Method-family describes (submit, analysis, moderation, rank rebuild) |
-| `me-profile/me-profile-http-conversations.integration.spec.ts` | 1283 | Already has sprint-story describes — one file per route group |
-| `me-profile/me-matches-eligibility.spec-support.ts` | 1212 | Extract fixtures; keep as support, target ≤600 LOC |
-| `evaluate/evaluate.service.spec.ts` | 1005 | Runner/pipeline describes |
+| ~~`engine/compute-friction.spec.ts`~~ | ~~1408~~ | ✅ Story 01 (`feature/sprint-69-story-1`) |
+| ~~`me-profile/me-profile-http-crud.integration.spec.ts`~~ | ~~1390~~ | ✅ Story 02 — 4 CRUD route-family specs |
+| ~~`me-profile/me-profile-http-conversations.integration.spec.ts`~~ | ~~1283~~ | ✅ Story 02 — 4 conversations route-family specs |
+| `me-profile/me-profile.service.spec.ts` | 1347 | Method-family describes (Story 03) |
+| `me-profile/me-matches-eligibility.spec-support.ts` | 1212 | Extract fixtures (Story 04) |
+| `evaluate/evaluate.service.spec.ts` | 1005 | Runner/pipeline describes (Story 04) |
 | `dating-ui/.../match-why-section.spec.tsx` | 1059 | Expansion chip tranches (FE Sprint 07) |
-
----
-
-## Principles (mandatory)
-
-- **SRP:** One spec file = one test concern (route family, expansion tranche, or service method group).
-- **KISS:** Move describes verbatim — no assertion rewrites, no “while we’re here” refactors.
-- **DIP for tests:** Shared setup → `*.spec-support.ts` or existing harness files; specs import helpers, not copy-paste.
-- **Policy guards:** Add `*-spec-size.policy.spec.ts` where Sprint 65 did (max LOC + monolith absence).
 
 ---
 
@@ -46,14 +37,12 @@ Sprint 65 cleared the worst offenders (`extraction.service.spec`, `match-engine.
 
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
-| 01 | [Split compute-friction.spec](./STORY_01_split_compute_friction_spec.md) | 1–2 days | ⚡ LOW | Done |
-| 02 | [Split me-profile HTTP giants](./STORY_02_split_me_profile_http_remaining.md) | 2 days | ⚡ LOW | Ready |
+| 01 | Split compute-friction.spec | 1–2 days | ⚡ LOW | Done (`feature/sprint-69-story-1`) |
+| 02 | [Split me-profile HTTP giants](./STORY_02_split_me_profile_http_remaining.md) | 2 days | ⚡ LOW | Done |
 | 03 | [Split me-profile.service.spec](./STORY_03_split_me_profile_service_spec.md) | 1–2 days | ⚡ LOW | Ready |
 | 04 | [Thin evaluate spec + eligibility harness](./STORY_04_split_evaluate_and_harness.md) | 1–2 days | ⚡ LOW | Ready |
 
-**Order:** 01 → 02 → 03 → 04 (independent enough to parallelize 01 + 04 if needed).
-
-**Frontend P0:** [FE Sprint 07 — match-why-section split](../fe-sprint-07-p0-test-splitting/README.md) (Story 1).
+**Order:** 01 → 02 → 03 → 04.
 
 ---
 
@@ -61,9 +50,9 @@ Sprint 65 cleared the worst offenders (`extraction.service.spec`, `match-engine.
 
 - [ ] No backend spec file >1000 LOC (non-empty lines)
 - [ ] `me-matches-eligibility.spec-support.ts` ≤600 LOC (fixtures only, no test cases)
-- [ ] Test count unchanged per split (or documented intentional dedup)
-- [ ] Policy guards for new split families where applicable
-- [ ] `npm test` green in `dating-api`
+- [x] Test count unchanged per split (Stories 01–02)
+- [x] Policy guards for CRUD + conversations families (Story 02)
+- [ ] `npm test` green in `dating-api` (global green blocked by pre-existing failures)
 - [ ] FE: `match-why-section` split ≤400 LOC per file (FE Sprint 07)
 
 ---
