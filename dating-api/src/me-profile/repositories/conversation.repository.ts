@@ -1,4 +1,4 @@
-import type { ConversationListCursorPayload } from '../me-conversations-list-cursor';
+import type { ConversationListCursorPayload } from '../conversations/me-conversations-list-cursor';
 import type {
   ActiveMatchRow,
   ConversationProfileRow,

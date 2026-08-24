@@ -2,7 +2,7 @@ import type { HardBlockedDto } from '../../holy-grail-matching/hard-block-reason
 import type {
   MatchExplainabilityDto,
   MatchRecommendationDto,
-} from '../../matches/match-engine';
+} from '../../matches/engine/match-engine';
 
 export const MATCH_LIST_RANK_PRESENTATION_VERSION = 1 as const;
 

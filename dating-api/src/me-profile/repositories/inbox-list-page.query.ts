@@ -1,5 +1,5 @@
 import { MutualMatchStatus, Prisma, type PrismaClient } from '@prisma/client';
-import type { ConversationListCursorPayload } from '../me-conversations-list-cursor';
+import type { ConversationListCursorPayload } from '../conversations/me-conversations-list-cursor';
 import type { InboxListPageResult, InboxListPageRow } from './conversation.repository.types';
 
 type QueryRawClient = Pick<PrismaClient, '$queryRaw'>;

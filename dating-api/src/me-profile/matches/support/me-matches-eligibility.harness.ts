@@ -40,8 +40,9 @@ import { MeProfileValidationPipe } from '../../me-profile-validation.pipe';
 import { extractCookieValue } from './me-matches-eligibility.builders';
 import {
   configStub,
-  HarnessIdentity,
-  HarnessPhotoStatus,
+  type HarnessIdentity,
+  type HarnessPhotoRow,
+  type HarnessPhotoStatus,
   PEPPER,
   SESSION_COOKIE,
   VALID_EVAL_JSON,

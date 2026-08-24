@@ -21,9 +21,9 @@ Automatically chains agents until the story is Done or blocked. Eliminates manua
    - If story touches auth/permissions/PII/payments: insert Agent 2.5 (security)
    - If story touches frontend: insert Agent 3.5 (UI/UX)
    - If story touches eligibility/ranking: insert Agent 4 (E2E)
-5. Run Agent 3 (PM)
+5. Run Agent 3 (PM) — **includes merge to `main` + push when Done**
 6. If any agent verdict is "blocked" or "needs-fixes", **stop** and report to user
-7. If Agent 3 marks Done, **stop** (Agent 5 is manual, run days later)
+7. If Agent 3 marks Done, verify `git rev-list --count origin/main..<feature-branch>` is **0**, then **stop** (Agent 5 is manual, run days later)
 
 ## Detection rules
 
@@ -71,8 +71,10 @@ User can override with:
 
 - Writes handoffs after each agent
 - Git commits after Agent 1 (implementation) and Agent 2 (tests)
-- Never auto-merges to main or deploys to production
+- **Agent 3 merges to `main` and pushes `origin/main` when Done** (required — no stranded feature tips)
+- Never force-pushes `main`; never deploys to production
 - Stops on first failure (doesn't continue with broken code)
+- Does not start story `m+1` until story `m` tip is ancestor of `main`
 
 ## Limitations
 

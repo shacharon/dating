@@ -82,9 +82,14 @@ You run **one agent per message**, manually. Each agent has its own step skill f
 4. Resolve story + epic + required prior handoffs.
 5. Do the step. Write handoff using [handoff-template.md](./handoff-template.md).
 6. **Git commit + push** implementation/tests/fixes if agent is 1, 2, 2.5, 3.5, or 3 (see agent SKILLs for exact commands). **Handoffs are local only** (in `.gitignore`) and not committed.
-7. Reply with handoff path + suggested next command.
+7. **Agent 3 only (when Done):** **merge the story branch into `main` and push `origin/main`**, then verify `git rev-list --count origin/main..<feature-branch>` is **0**. Do not mark Done if the tip is still ahead of main. See [agent-3/SKILL.md](./agent-3/SKILL.md).
+8. Reply with handoff path + suggested next command (and main SHA if Agent 3 landed the story).
 
 **Do not auto-chain.** Wait for the user to invoke the next agent.
+
+### Hard rule — no stranded branches
+
+Every story that reaches **Done** must be **on `main`** before the next story starts. Feature branches may exist as history, but **ahead-of-main count must be 0**.
 
 ---
 

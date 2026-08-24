@@ -38,10 +38,11 @@ export function partnerGenderSourceForMeMatchesRow(
 }
 
 export function pickApprovedPrimaryPhotoId(
-  photos: ReadonlyArray<{ id: string; isPrimary: boolean }>,
+  photos: ReadonlyArray<{ id: string; isPrimary?: boolean }>,
 ): string | null {
-  const primary = photos.find((p) => p.isPrimary);
-  return primary?.id ?? null;
+  if (photos.length === 0) return null;
+  const primary = photos.find((p) => p.isPrimary === true);
+  return primary?.id ?? photos[0]!.id;
 }
 
 export function assertCandidateHasApprovedPhotosInRow(candidate: {

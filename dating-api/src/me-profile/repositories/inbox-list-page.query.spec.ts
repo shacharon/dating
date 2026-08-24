@@ -1,7 +1,7 @@
 import {
   isAfterConversationListCursor,
   paginateConversationList,
-} from '../me-conversations-list-cursor';
+} from '../conversations/me-conversations-list-cursor';
 import {
   buildSortedInboxRows,
   inboxListPageSqlRows,

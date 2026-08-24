@@ -19,7 +19,7 @@ import {
 import {
   PUSH_NOTIFICATION_QUEUE_PORT,
   type PushNotificationQueuePort,
-} from '../workers/push-notification.ports';
+} from '../../../workers/push-notification.ports';
 import {
   MATCH_ACTIONS_REPOSITORY,
   type IMatchActionsRepository,

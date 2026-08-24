@@ -37,6 +37,7 @@ Close stories, track DoD, coordinate the agent pipeline.
 - [ ] **Browser / runtime verification** (realtime/proxy stories) — see [dating-runtime-verification](../dating-runtime-verification/SKILL.md); do not mark Done if CR deferred Network smoke without explicit operator follow-up
 - [ ] **E2E verification** (eligibility/preference/ranking stories) — require `agent-4-e2e.md` handoff to exist with a passing verdict; see [dating-e2e-verification](../dating-e2e-verification/SKILL.md) / [dating-e2e-tester](../dating-e2e-tester/SKILL.md); do not mark Done if agent 4 was skipped or deferred without an explicit tracked follow-up
 - [ ] Story status = Done in README
+- [ ] **Landed on `main`** — feature tip ahead count is **0** (`git rev-list --count origin/main..<feature-branch>`); story lists `Shipped on main: <sha>`. **Do not mark Done if still ahead of main.**
 
 ## Do not
 

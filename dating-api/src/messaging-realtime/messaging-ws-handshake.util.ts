@@ -1,4 +1,7 @@
-import type { Handshake } from 'socket.io/dist/socket-types';
+import type { Socket } from 'socket.io';
+
+/** Socket.IO handshake shape (public package exports do not re-export Handshake). */
+export type Handshake = Socket['handshake'];
 
 /** Read JWT access token from Socket.IO handshake (auth object preferred over query). */
 export function readHandshakeAccessToken(handshake: Handshake): string | null {

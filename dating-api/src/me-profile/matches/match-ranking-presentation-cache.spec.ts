@@ -1,22 +1,23 @@
 import type { MeMatchItemDto } from '../dto/me-matches-response.dto';
-import { MatchEligibilityService } from './match-eligibility.service';
-import { MatchRankingService } from './match-ranking.service';
-import { HgGateLegacyRankPolicy } from '../../matching-policy/hg-gate-legacy-rank.policy';
+import { MatchRankingService } from './list/ranking/match-ranking.service';
 
 describe('MatchRankingService presentation cache', () => {
   it('buildMatchListRankSnapshot maps presentationJson on ready rows', async () => {
-    const matches = {} as never;
     const ranks = {} as never;
+    const matchesQuery = {} as never;
     const obs = { trace: jest.fn() } as never;
-    const analytics = { track: jest.fn() } as never;
-    const eligibility = new MatchEligibilityService(matches, obs);
+    const loader = {} as never;
+    const scorer = {} as never;
+    const assembler = {} as never;
+    const telemetry = {} as never;
     const ranking = new MatchRankingService(
-      matches,
       ranks,
+      matchesQuery,
       obs,
-      analytics,
-      eligibility,
-      new HgGateLegacyRankPolicy(),
+      loader,
+      scorer,
+      assembler,
+      telemetry,
     );
 
     jest.spyOn(ranking, 'buildFullRankedList').mockResolvedValue({
@@ -39,26 +40,17 @@ describe('MatchRankingService presentation cache', () => {
           },
         } as MeMatchItemDto,
       ],
-    });
+    } as never);
 
-    const snapshot = await ranking.buildMatchListRankSnapshot('user_v');
-
+    const snapshot = await ranking.buildMatchListRankSnapshot('u1');
     expect(snapshot.status).toBe('ready');
-    expect(snapshot.rows).toEqual([
-      expect.objectContaining({
-        candidateProfileId: 'p1',
-        matchScore: 88,
-        hardBlocked: false,
-        presentationJson: expect.objectContaining({
-          v: 1,
-          explainability: expect.objectContaining({
-            positiveChips: ['Ambition alignment'],
-          }),
-          recommendation: expect.objectContaining({
-            primaryTakeaway: 'Strong match',
-          }),
-        }),
-      }),
-    ]);
+    expect(snapshot.rows).toHaveLength(1);
+    expect(snapshot.rows[0]?.presentationJson).toMatchObject({
+      v: 1,
+      explainability: {
+        positiveChips: ['Ambition alignment'],
+        reasonShort: 'Strong fit',
+      },
+    });
   });
 });

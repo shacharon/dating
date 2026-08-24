@@ -71,13 +71,19 @@ export function parseStructuredJsonLogs(
 }
 
 export function extractCookieValue(
-  setCookie: string[] | undefined,
+  setCookie: string | string[] | undefined,
   name: string,
 ): string | undefined {
-  if (!setCookie?.length) {
+  const lines =
+    setCookie == null
+      ? []
+      : Array.isArray(setCookie)
+        ? setCookie
+        : [setCookie];
+  if (!lines.length) {
     return undefined;
   }
-  for (const line of setCookie) {
+  for (const line of lines) {
     if (line.startsWith(`${name}=`)) {
       return line.split(';')[0].slice(name.length + 1);
     }

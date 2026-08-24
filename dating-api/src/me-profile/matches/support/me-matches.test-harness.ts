@@ -68,6 +68,8 @@ export function createMeMatchesServiceForTest(
   const telemetry = new MatchListRankTelemetryService(deps.obs, deps.analytics);
   const ranking = new MatchRankingService(
     matches,
+    matches,
+    deps.obs,
     loader,
     scorer,
     assembler,

@@ -1,5 +1,5 @@
 import { UserStatus } from '@prisma/client';
-import type { Handshake } from 'socket.io/dist/socket-types';
+import type { Handshake } from './messaging-ws-handshake.util';
 import { MessagingWsAuthService } from './messaging-ws-auth.service';
 import type { AuthSessionConfigService } from '../config/auth-session-config.service';
 import type { SessionService } from '../session/session.service';

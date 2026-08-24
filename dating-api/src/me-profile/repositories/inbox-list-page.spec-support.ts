@@ -2,7 +2,7 @@ import {
   isAfterConversationListCursor,
   paginateConversationList,
   type ConversationListCursorPayload,
-} from '../me-conversations-list-cursor';
+} from '../conversations/me-conversations-list-cursor';
 import type { InboxListPageRow } from './conversation.repository.types';
 
 export type InboxListFixture = {

@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import type { Handshake } from 'socket.io/dist/socket-types';
 import { parseCookieHeader } from '../auth/auth-cookies.util';
 import { USER_STATUS_ACTIVE } from '../auth/auth.constants';
 import { TokenService } from '../auth/token.service';
 import { AuthSessionConfigService } from '../config/auth-session-config.service';
 import { SessionService } from '../session/session.service';
 import { UsersService } from '../users/users.service';
-import { readHandshakeAccessToken } from './messaging-ws-handshake.util';
+import {
+  readHandshakeAccessToken,
+  type Handshake,
+} from './messaging-ws-handshake.util';
 
 export type MessagingSocketData = {
   userId: string;

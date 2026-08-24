@@ -401,11 +401,24 @@ export class PrismaMatchRepository implements IMatchRepository {
                   candidateProfileId: row.candidateProfileId,
                 },
               },
-              create: { viewerUserId, ...row, builtAt },
+              create: {
+                viewerUserId,
+                candidateProfileId: row.candidateProfileId,
+                matchScore: row.matchScore,
+                hardBlocked: row.hardBlocked,
+                presentationJson:
+                  row.presentationJson === null
+                    ? Prisma.JsonNull
+                    : (row.presentationJson as Prisma.InputJsonValue),
+                builtAt,
+              },
               update: {
                 matchScore: row.matchScore,
                 hardBlocked: row.hardBlocked,
-                presentationJson: row.presentationJson,
+                presentationJson:
+                  row.presentationJson === null
+                    ? Prisma.JsonNull
+                    : (row.presentationJson as Prisma.InputJsonValue),
                 builtAt,
               },
             }),

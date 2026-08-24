@@ -122,6 +122,17 @@ git push  # (if applicable)
 
 Commit hash: `[paste after committing, or N/A for handoff-only agents]`
 
+### Agent 3 only — land on main (required when Done)
+
+```bash
+git checkout main && git pull origin main
+git merge --no-ff origin/feature/sprint-<s>-story-<m> -m "merge: sprint <s> story <m> into main"
+git push origin main
+git rev-list --count origin/main..origin/feature/sprint-<s>-story-<m>   # must be 0
+```
+
+Shipped on main: `<sha>` | Ahead of main: `0`
+
 ---
 
 ## Next agent

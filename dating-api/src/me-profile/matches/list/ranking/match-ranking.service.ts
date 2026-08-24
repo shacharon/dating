@@ -1,22 +1,38 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { StructuredObservabilityService } from '../../../../logging/structured-observability.service';
 import { toStoredMatchListScore } from '../../rank/match-list-rank-score';
 import type { MatchListRankSnapshot } from '../../rank/match-list-rank.types';
 import type { MeMatchesListResponseDto } from '../../../dto/me-matches-response.dto';
 import {
+  MATCH_QUERY_REPOSITORY,
   MATCH_RANK_REPOSITORY,
+  type IMatchQueryRepository,
   type IMatchRankRepository,
 } from '../../../repositories/match.repository';
-import { resolveMatchListCandidateCap, resolveMatchListRebuildCandidateCap } from '../match-list-candidate-cap';
+import type { RankPageRow } from '../../../repositories/match.repository.types';
+import {
+  resolveMatchListCandidateCap,
+  resolveMatchListRebuildCandidateCap,
+} from '../match-list-candidate-cap';
 import { MatchListCandidateLoaderService } from './match-list-candidate-loader.service';
 import { MatchListCandidateScorerService } from './match-list-candidate-scorer.service';
 import { MatchListResponseAssemblerService } from './match-list-response-assembler.service';
 import { MatchListRankTelemetryService } from './match-list-rank-telemetry.service';
+import {
+  hydrateMatchListPageFromRanks,
+  type MatchListPageHydrateGate,
+  type MatchListPageHydrateResult,
+} from '../../match-list-page-hydrate';
+import { toPresentationJson } from '../../match-list-rank-presentation.types';
 
 @Injectable()
 export class MatchRankingService {
   constructor(
     @Inject(MATCH_RANK_REPOSITORY)
     private readonly ranks: IMatchRankRepository,
+    @Inject(MATCH_QUERY_REPOSITORY)
+    private readonly matchesQuery: IMatchQueryRepository,
+    private readonly obs: StructuredObservabilityService,
     private readonly loader: MatchListCandidateLoaderService,
     private readonly scorer: MatchListCandidateScorerService,
     private readonly assembler: MatchListResponseAssemblerService,
@@ -55,6 +71,11 @@ export class MatchRankingService {
         candidateProfileId: m.id,
         matchScore: toStoredMatchListScore(m.matchScore),
         hardBlocked: Boolean(m.hardBlocked),
+        presentationJson: toPresentationJson({
+          explainability: m.explainability,
+          recommendation: m.recommendation,
+          hardBlocked: m.hardBlocked,
+        }),
       })),
     };
   }
@@ -75,6 +96,20 @@ export class MatchRankingService {
       viewerUserId,
       snapshot.rows,
       new Date(),
+    );
+  }
+
+  /** Sprint 68 — page hydrate from stored presentationJson (cache hit path). */
+  async hydrateMatchListPageFromRanks(
+    userId: string,
+    pageRanks: RankPageRow[],
+    gate: MatchListPageHydrateGate,
+  ): Promise<MatchListPageHydrateResult> {
+    return hydrateMatchListPageFromRanks(
+      { matches: this.matchesQuery, obs: this.obs },
+      userId,
+      pageRanks,
+      gate,
     );
   }
 

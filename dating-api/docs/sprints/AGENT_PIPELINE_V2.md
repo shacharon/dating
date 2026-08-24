@@ -1,11 +1,13 @@
 # Agent Pipeline V2 — Complete Flow
 
-**Version:** 2.0 (2026-08-08)  
+**Version:** 2.1 (2026-08-24)  
 **Orchestrator:** `.cursor/skills/dating-agent-run/SKILL.md`
 
 ## Overview
 
 Improved 8-agent pipeline with pre-flight validation, security review, UI/UX audit, post-deploy verification, and feedback loops.
+
+**Hard rule (v2.1):** A story is not **Done** until its feature tip is on **`main`** (ahead count = 0). Agent 3 merges + pushes. Agent -1 blocks the next story if the previous tip is still ahead.
 
 ## Engineering playbooks
 
@@ -208,9 +210,12 @@ If Agent -1 verdict is "needs-clarification":
 - ✅ Confirm Agent 4 handoff exists (matching)
 - ✅ Update story Status + DoD checkboxes
 - ✅ Update sprint README checklist
-- ✅ **Git commit + push** story status updates and handoff (triggers PR ready)
+- ✅ **Git commit + push** story status updates and handoff
+- ✅ **When Done: merge story branch → `main`, push `origin/main`, verify ahead = 0**
+- ✅ Record `Shipped on main: <sha>` on the story
 - ⛔ Don't implement code
 - ⛔ Don't mark Done if Agent 4 blocked
+- ⛔ Don't mark Done while `git rev-list --count origin/main..<feature>` > 0
 
 **Verdict:** `Done` | `Blocked`
 
@@ -249,6 +254,17 @@ If Agent -1 verdict is "needs-clarification":
 8. **No UX review** → Agent 3.5 for frontend work
 9. **No production feedback** → Agent 5 for post-deploy verification
 10. **No rollback plan** → Agent 5 tracks rollback need
+11. **Stranded feature branches** → Agent 3 must merge to `main` (ahead=0); Agent -1 blocks next story if previous tip still ahead
+
+## Land on main (required every story)
+
+```text
+Agent 1–2…  → push feature/sprint-S-story-M
+Agent 3 Done → merge into main → push origin/main → ahead count = 0
+Agent -1 next → fails preflight if previous tip still ahead of main
+```
+
+Sprint closeout: every `feature/sprint-<n>-*` tip must be an ancestor of `main` before starting the next sprint.
 
 ## When to Use Each Agent
 

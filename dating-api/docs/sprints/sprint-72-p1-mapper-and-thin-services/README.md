@@ -1,48 +1,44 @@
-# Sprint 72 — P1 Mapper + Remaining Thin Services (Preview)
+# Sprint 72 — P1 Mapper + Remaining Thin Services
 
-**Status:** Planned (after Sprint 71)  
+**Status:** Optional — after architecture finish  
 **Depends on:** Sprint 71 Done  
-**Repo:** `dating-api`
+**Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
+**Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md) · [ROUND3_AGENT_COMMANDS.md](../ROUND3_AGENT_COMMANDS.md)  
+**Repo:** `dating-api`  
+**See also:** [ARCHITECTURE_FINISH.md](../ARCHITECTURE_FINISH.md)
 
 ---
 
 ## Goal
 
-Tackle the next P1 tier: god **mapper** + services in the 200–348 LOC range.
+Split the last real god object (`profile-to-canonical.mapper.ts`, 704 LOC) and optionally thin services still in the 200–348 LOC band.
+
+**Not blocking launch.** Do when mapper PRs become painful.
 
 ---
 
-## Stories (draft)
+## Stories
 
-| # | Target | LOC | Approach |
-|---|--------|-----|----------|
-| 01 | `profile-to-canonical.mapper.ts` | 704 | Split by input slice: `rankingSignals`, `structuredFacts`, `structuredPreferences`, `searchOverrides` + thin `mapProfileToCanonical()` orchestrator |
-| 02 | `extraction.service.ts` | 348 | Already partially decomposed — extract retry/telemetry if still mixed |
-| 03 | `admin-match-quality.service.ts` | 348 | Split query vs export vs candidate audit |
-| 04 | Batch thin pass | 200–305 | `me-conversation-messages`, `me-profile-analysis`, `photo-moderation`, `messaging-socket-registry` — one story each only if still >250 after quick extract |
+| # | Story | Effort | Risk | Status |
+|---|-------|--------|------|--------|
+| 01 | [Split profile-to-canonical mapper](./STORY_01_split_canonical_mapper.md) | 2–3 days | ⚡ LOW | Optional |
+| 02 | [Thin openai.client + explainability](./STORY_02_thin_client_explainability.md) | 1–2 days | ⚡ LOW | Optional |
+| 03 | [Batch thin 200–348 LOC services](./STORY_03_batch_thin_services.md) | 2–3 days | ⚡ LOW | Optional |
 
----
-
-## Mapper split preview
-
-```
-holy-grail-matching/canonical-mapper/
-  profile-to-canonical.mapper.ts          # orchestrator ≤150 LOC
-  map-ranking-signals.slice.ts
-  map-structured-facts.slice.ts
-  map-structured-preferences.slice.ts
-  map-search-overrides.slice.ts
-  canonical-mapper.validation.ts          # assertPlainRecord, assertNoExtraKeys shared
-```
-
-**Freeze policy:** No new regex/keywords in mapper splits — move code only ([NO_NEW_REGEX_POLICY.md](../sprint-52-keyword-engine-freeze/NO_NEW_REGEX_POLICY.md)).
+**Order:** 01 first (highest value). 02–03 optional.
 
 ---
 
-## Success (when executed)
+## Success Criteria
 
-- [ ] No mapper file >200 LOC; no function >80 LOC
-- [ ] Services 200–348 LOC reduced to ≤250 or documented accept list
-- [ ] All HG + extraction tests green
+- [ ] Mapper orchestrator ≤150 LOC; no slice file >200 LOC
+- [ ] Freeze policy honored (no new regex/keywords)
+- [ ] Services in scope ≤250 LOC or on documented accept list
+- [ ] HG + extraction + evaluate tests green
+- [ ] **Each story tip merged to `main` (ahead = 0) before the next story / sprint close**
 
-**Agent commands:** to be added when Sprint 71 closes.
+---
+
+## Freeze reminder
+
+[NO_NEW_REGEX_POLICY.md](../sprint-52-keyword-engine-freeze/NO_NEW_REGEX_POLICY.md) — move code only in keyword extracts.

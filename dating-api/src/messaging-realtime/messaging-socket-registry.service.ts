@@ -69,6 +69,11 @@ export class MessagingSocketRegistry {
     }
   }
 
+  private cacheIfReady(): CacheSetsPort | null {
+    if (!this.redis?.isAvailable() || !this.cache) return null;
+    return this.cache;
+  }
+
   /**
    * Online check for email skip.
    * Redis up → SCARD(user). Redis unset → local Map. Redis error/down → false (fail-open).
@@ -77,11 +82,12 @@ export class MessagingSocketRegistry {
     if (!this.redisConfigured()) {
       return this.hasLocalConnection(userId);
     }
-    if (!this.redis?.isAvailable()) {
+    const cache = this.cacheIfReady();
+    if (!cache) {
       this.traceDegraded('unavailable');
       return false;
     }
-    const n = await this.cache.sCard(presenceUserKey(userId));
+    const n = await cache.sCard(presenceUserKey(userId));
     if (n == null) {
       this.traceDegraded('error');
       return false;
@@ -92,8 +98,9 @@ export class MessagingSocketRegistry {
   async disconnectByUserId(userId: string): Promise<void> {
     this.publisher?.disconnectUserSockets(userId);
 
-    const redisIds = this.redis?.isAvailable()
-      ? await this.cache.sMembers(presenceUserKey(userId))
+    const cache = this.cacheIfReady();
+    const redisIds = cache
+      ? await cache.sMembers(presenceUserKey(userId))
       : null;
 
     const local = this.byUserId.get(userId);
@@ -114,20 +121,20 @@ export class MessagingSocketRegistry {
       this.byUserId.delete(userId);
     }
 
-    if (redisIds && redisIds.length > 0) {
+    if (redisIds && redisIds.length > 0 && cache) {
       for (const socketId of redisIds) {
-        const meta = await this.cache!.getString(presenceMetaKey(socketId));
+        const meta = await cache.getString(presenceMetaKey(socketId));
         const decoded = decodePresenceMeta(meta);
         const sessionId = decoded?.sessionId;
         if (sessionId) {
           await this.clearRedisSocket(socketId, userId, sessionId);
         } else {
-          await this.cache!.sRem(presenceUserKey(userId), socketId);
-          await this.cache!.del(presenceMetaKey(socketId));
+          await cache.sRem(presenceUserKey(userId), socketId);
+          await cache.del(presenceMetaKey(socketId));
         }
       }
-    } else if (this.redis?.isAvailable()) {
-      await this.cache.del(presenceUserKey(userId));
+    } else if (cache) {
+      await cache.del(presenceUserKey(userId));
     }
 
     this.obs?.trace(
@@ -139,8 +146,9 @@ export class MessagingSocketRegistry {
   async disconnectBySessionId(sessionId: string): Promise<void> {
     this.publisher?.disconnectSessionSockets(sessionId);
 
-    const redisIds = this.redis?.isAvailable()
-      ? await this.cache.sMembers(presenceSessionKey(sessionId))
+    const cache = this.cacheIfReady();
+    const redisIds = cache
+      ? await cache.sMembers(presenceSessionKey(sessionId))
       : null;
 
     const local = this.bySession.get(sessionId);
@@ -155,20 +163,20 @@ export class MessagingSocketRegistry {
       this.bySession.delete(sessionId);
     }
 
-    if (redisIds && redisIds.length > 0) {
+    if (redisIds && redisIds.length > 0 && cache) {
       for (const socketId of redisIds) {
-        const meta = await this.cache!.getString(presenceMetaKey(socketId));
+        const meta = await cache.getString(presenceMetaKey(socketId));
         const decoded = decodePresenceMeta(meta);
         const userId = decoded?.userId;
         if (userId) {
           await this.clearRedisSocket(socketId, userId, sessionId);
         } else {
-          await this.cache!.sRem(presenceSessionKey(sessionId), socketId);
-          await this.cache!.del(presenceMetaKey(socketId));
+          await cache.sRem(presenceSessionKey(sessionId), socketId);
+          await cache.del(presenceMetaKey(socketId));
         }
       }
-    } else if (this.redis?.isAvailable()) {
-      await this.cache.del(presenceSessionKey(sessionId));
+    } else if (cache) {
+      await cache.del(presenceSessionKey(sessionId));
     }
 
     this.obs?.trace(
@@ -262,7 +270,8 @@ export class MessagingSocketRegistry {
 
   private async writeRedisPresence(client: Socket): Promise<boolean> {
     if (!this.redisConfigured()) return false;
-    if (!this.redis?.isAvailable()) {
+    const cache = this.cacheIfReady();
+    if (!cache) {
       this.traceDegraded('unavailable');
       return false;
     }
@@ -275,8 +284,8 @@ export class MessagingSocketRegistry {
     const ttl = PRESENCE_TTL_SECONDS;
 
     if (data.authKind === 'bearer' || !data.sessionId) {
-      const ok = await this.cache.sAdd(userKey, socketId, ttl);
-      await this.cache.setString(
+      const ok = await cache.sAdd(userKey, socketId, ttl);
+      await cache.setString(
         metaKey,
         encodePresenceMeta(data.userId),
         ttl,
@@ -289,9 +298,9 @@ export class MessagingSocketRegistry {
     }
 
     const sessionKey = presenceSessionKey(data.sessionId);
-    const a = await this.cache.sAdd(userKey, socketId, ttl);
-    const b = await this.cache.sAdd(sessionKey, socketId, ttl);
-    await this.cache.setString(
+    const a = await cache.sAdd(userKey, socketId, ttl);
+    const b = await cache.sAdd(sessionKey, socketId, ttl);
+    await cache.setString(
       metaKey,
       encodePresenceMeta(data.userId, data.sessionId),
       ttl,
@@ -307,13 +316,14 @@ export class MessagingSocketRegistry {
     socketId: string,
     userId: string,
   ): Promise<void> {
-    if (!this.redis?.isAvailable()) return;
+    const cache = this.cacheIfReady();
+    if (!cache) return;
     const userKey = presenceUserKey(userId);
-    await this.cache.sRem(userKey, socketId);
-    await this.cache.del(presenceMetaKey(socketId));
-    const userCount = await this.cache.sCard(userKey);
+    await cache.sRem(userKey, socketId);
+    await cache.del(presenceMetaKey(socketId));
+    const userCount = await cache.sCard(userKey);
     if (userCount === 0) {
-      await this.cache.del(userKey);
+      await cache.del(userKey);
     }
   }
 
@@ -322,19 +332,20 @@ export class MessagingSocketRegistry {
     userId: string,
     sessionId: string,
   ): Promise<void> {
-    if (!this.redis?.isAvailable()) return;
+    const cache = this.cacheIfReady();
+    if (!cache) return;
     const userKey = presenceUserKey(userId);
     const sessionKey = presenceSessionKey(sessionId);
-    await this.cache.sRem(userKey, socketId);
-    await this.cache.sRem(sessionKey, socketId);
-    await this.cache.del(presenceMetaKey(socketId));
-    const userCount = await this.cache.sCard(userKey);
+    await cache.sRem(userKey, socketId);
+    await cache.sRem(sessionKey, socketId);
+    await cache.del(presenceMetaKey(socketId));
+    const userCount = await cache.sCard(userKey);
     if (userCount === 0) {
-      await this.cache.del(userKey);
+      await cache.del(userKey);
     }
-    const sessionCount = await this.cache.sCard(sessionKey);
+    const sessionCount = await cache.sCard(sessionKey);
     if (sessionCount === 0) {
-      await this.cache.del(sessionKey);
+      await cache.del(sessionKey);
     }
   }
 

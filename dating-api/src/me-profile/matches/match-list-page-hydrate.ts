@@ -1,24 +1,24 @@
 import { ErrorCodes } from '../../logging/error-codes';
 import type { StructuredObservabilityService } from '../../logging/structured-observability.service';
 import { resolveMatchPrimaryPhotoUrl } from '../../photo-storage/cdn-url';
-import { buildMeMatchesParticipantReadModel } from '../me-profile-engine.mapper';
+import { buildMeMatchesParticipantReadModel } from '../profile/me-profile-engine.mapper';
 import {
   MatchListCandidateEvaluationMissingError,
   MatchListViewerEvaluationMissingError,
-} from '../me-matches.errors';
+} from './support/me-matches.errors';
 import {
   rebaseMeMatchListItemScore,
   toMeMatchListItem,
-} from '../me-matches-response.mapper';
+} from './core/me-matches-response.mapper';
 import type { MeMatchItemDto } from '../dto/me-matches-response.dto';
-import { buildProductProfileMatchingBridge } from '../user-profile-matching-bridge.contract';
+import { buildProductProfileMatchingBridge } from '../contracts/user-profile-matching-bridge.contract';
 import type { IMatchQueryRepository } from '../repositories/match-query.repository';
 import type { RankPageRow } from '../repositories/match.repository.types';
 import {
   matchActionToYourAction,
   partnerGenderSourceForMeMatchesRow,
   pickApprovedPrimaryPhotoId,
-} from './match-list.helpers';
+} from './list/match-list.helpers';
 
 export type MatchListPageHydrateGate = {
   viewerProfileId: string;
@@ -143,6 +143,8 @@ export async function hydrateMatchListPageFromRanks(
         aboutMe: null,
         aboutPartner: null,
         aboutRelationship: null,
+        city: null,
+        country: null,
       },
       asOf,
       partnerGenderSourceForMeMatchesRow(row, deps.obs),

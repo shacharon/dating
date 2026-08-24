@@ -1,5 +1,4 @@
 import type { MatchActionType } from '@prisma/client';
-import type { UserProfileEvaluation } from '@prisma/client';
 import type {
   DealbreakerTagOutcomeCounts,
 } from '../../../../holy-grail-matching/dealbreaker-telemetry';
@@ -13,6 +12,7 @@ import type {
 import type { ProductProfileMatchingBridge } from '../../../contracts/user-profile-matching-bridge.contract';
 import type { MeMatchItemDto, MeMatchesListResponseDto } from '../../../dto/me-matches-response.dto';
 import type { MeMatchesParticipantReadModel } from '../../../profile/me-profile-engine.mapper';
+import type { LatestEvaluationForMatchRow } from '../../../repositories/match.repository.types';
 import type { PendingHardBlockMatch } from '../match-list-hard-block-pending';
 
 export type ViewerDealbreakerSignals = ReturnType<
@@ -54,7 +54,7 @@ export type MatchListRankingContext = {
   filteredNoPhotoCandidates: number;
   candidateLoadMs: number;
   evalQueryMs: number;
-  latestEvalByProfile: Map<string, UserProfileEvaluation>;
+  latestEvalByProfile: Map<string, LatestEvaluationForMatchRow>;
   actionByTargetUserId: Map<string, MatchActionType>;
   mutualCounterpartUserIds: Set<string>;
 };

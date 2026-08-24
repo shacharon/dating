@@ -6,11 +6,24 @@
 **Orchestrator:** `.cursor/skills/dating-agent-run/SKILL.md`  
 **Scan:** [round-3-post-merge-scan canvas](../../../../../../Users/shachar/.cursor/projects/c-dev-piza-dating/canvases/round-3-post-merge-scan.canvas.tsx) (IDE)
 
+### Hard rule — land every story on `main`
+
+After **Agent 3** marks a story **Done**, that agent **must**:
+
+1. Merge `feature/sprint-<s>-story-<m>` into `main`
+2. `git push origin main`
+3. Verify `git rev-list --count origin/main..<feature-branch>` = **0**
+4. Write `Shipped on main: <sha>` on the story
+
+**Agent -1** blocks the next story if the previous tip is still ahead of `main`.  
+Do **not** start the next sprint while any `feature/sprint-<n>-*` tip is ahead of `main`.
+
 **Track order:** **57 → 58 → 59** (god services)  
 **Parallel track:** **60** (eliminate duplication)  
 **Leftovers:** **63** (enrichment verify, HTTP spec split, Prisma peel, match ISP + rate-limit)  
 **Android prep:** **64 → 65** (match-ranking, legacy cleanup, Prisma final → test velocity)  
-**Optional polish:** **66** (HG extracts, frozen data — not blocking mobile)
+**Optional polish:** **66** (HG extracts) · **69 Done on main** · **72 / 73** (finish leftovers — not blocking)  
+**Closeout:** [ARCHITECTURE_FINISH.md](./ARCHITECTURE_FINISH.md)
 
 | Sprint | Folder | Extra agents |
 |--------|--------|--------------|
@@ -24,14 +37,17 @@
 | 64 | [`sprint-64-mobile-backend-lightness`](./sprint-64-mobile-backend-lightness/) | 4 on S4 |
 | 65 | [`sprint-65-test-velocity`](./sprint-65-test-velocity/) | 4 on S2-3 |
 | 66 | [`sprint-66-optional-polish`](./sprint-66-optional-polish/) | Optional |
+| 69 | [`sprint-69-p0-test-splitting`](./sprint-69-p0-test-splitting/) | Optional |
+| 72 | [`sprint-72-p1-mapper-and-thin-services`](./sprint-72-p1-mapper-and-thin-services/) | Optional |
+| 73 | [`sprint-73-optional-finish`](./sprint-73-optional-finish/) | Optional |
 
 **Autorun (optional):** `--autorun sprint 57 story 1`
 
-**Freeze reminder:** Sprint 57 must not add regex/phrases — [NO_NEW_REGEX_POLICY.md](./sprint-52-keyword-engine-freeze/NO_NEW_REGEX_POLICY.md).
+**Freeze reminder:** Sprint 57 must not add regex/phrases â [NO_NEW_REGEX_POLICY.md](./sprint-52-keyword-engine-freeze/NO_NEW_REGEX_POLICY.md).
 
 ---
 
-## Sprint 57 — Enrichment-v2 decompose
+## Sprint 57 â Enrichment-v2 decompose
 
 ```text
 --agent -1 sprint 57 story 1
@@ -56,7 +72,7 @@
 
 ---
 
-## Sprint 58 — Extraction orchestration
+## Sprint 58 â Extraction orchestration
 
 ```text
 --agent -1 sprint 58 story 1
@@ -81,7 +97,7 @@
 
 ---
 
-## Sprint 59 — Evaluate decomposition
+## Sprint 59 â Evaluate decomposition
 
 ```text
 --agent -1 sprint 59 story 1
@@ -106,7 +122,7 @@
 
 ---
 
-## Sprint 60 — Eliminate duplication (parallel with 57–59)
+## Sprint 60 â Eliminate duplication (parallel with 57â59)
 
 ```text
 --agent -1 sprint 60 story 1
@@ -131,7 +147,7 @@
 
 ---
 
-## Sprint 61 — DIP infrastructure ports (Track 3)
+## Sprint 61 â DIP infrastructure ports (Track 3)
 
 ```text
 --agent -1 sprint 61 story 1
@@ -156,7 +172,7 @@
 
 ---
 
-## Sprint 62 — Prisma repositories (Track 4)
+## Sprint 62 â Prisma repositories (Track 4)
 
 ```text
 --agent -1 sprint 62 story 1
@@ -187,7 +203,7 @@
 
 ---
 
-## Sprint 63 — Finish Round 3 leftovers
+## Sprint 63 â Finish Round 3 leftovers
 
 ```text
 --agent -1 sprint 63 story 1
@@ -218,7 +234,7 @@
 
 ---
 
-## Sprint 64 — Mobile backend lightness (Android prep)
+## Sprint 64 â Mobile backend lightness (Android prep)
 
 ```text
 --agent -1 sprint 64 story 1
@@ -243,7 +259,7 @@
 
 ---
 
-## Sprint 65 — Test velocity (fast CI for mobile)
+## Sprint 65 â Test velocity (fast CI for mobile)
 
 ```text
 --agent -1 sprint 65 story 1
@@ -267,9 +283,96 @@
 
 ---
 
-## Sprint 66 — Optional polish (HG extracts)
+## Sprint 66 â Optional polish (HG extracts)
 
 **Not blocking for Android. Only do if you want every file <500 LOC.**
 
 See `sprint-66-optional-polish/README.md` for details.
+```
+
+---
+
+## Architecture finish (looking good)
+
+**Closeout:** [ARCHITECTURE_FINISH.md](./ARCHITECTURE_FINISH.md)
+
+Sprints **7071** shipped (directories + god service facades).  
+Optional only: **69** (specs), **72** (mapper), **73** (extraction / FE lib).
+
+---
+
+## Sprint 69  Optional: remaining giant specs
+
+```text
+--agent -1 sprint 69 story 1
+--agent 0 sprint 69 story 1
+--agent 1 sprint 69 story 1
+--agent 2 sprint 69 story 1
+--agent 3 sprint 69 story 1
+
+--agent -1 sprint 69 story 2
+--agent 0 sprint 69 story 2
+--agent 1 sprint 69 story 2
+--agent 2 sprint 69 story 2
+--agent 3 sprint 69 story 2
+
+--agent -1 sprint 69 story 3
+--agent 0 sprint 69 story 3
+--agent 1 sprint 69 story 3
+--agent 2 sprint 69 story 3
+--agent 3 sprint 69 story 3
+
+--agent -1 sprint 69 story 4
+--agent 0 sprint 69 story 4
+--agent 1 sprint 69 story 4
+--agent 2 sprint 69 story 4
+--agent 3 sprint 69 story 4
+```
+
+---
+
+## Sprint 72  Optional: mapper + thin services
+
+```text
+--agent -1 sprint 72 story 1
+--agent 0 sprint 72 story 1
+--agent 1 sprint 72 story 1
+--agent 2 sprint 72 story 1
+--agent 3 sprint 72 story 1
+
+--agent -1 sprint 72 story 2
+--agent 0 sprint 72 story 2
+--agent 1 sprint 72 story 2
+--agent 2 sprint 72 story 2
+--agent 3 sprint 72 story 2
+
+--agent -1 sprint 72 story 3
+--agent 0 sprint 72 story 3
+--agent 1 sprint 72 story 3
+--agent 2 sprint 72 story 3
+--agent 3 sprint 72 story 3
+```
+
+---
+
+## Sprint 73  Optional finish (extraction + FE lib)
+
+```text
+--agent -1 sprint 73 story 1
+--agent 0 sprint 73 story 1
+--agent 1 sprint 73 story 1
+--agent 2 sprint 73 story 1
+--agent 3 sprint 73 story 1
+
+--agent -1 sprint 73 story 2
+--agent 0 sprint 73 story 2
+--agent 1 sprint 73 story 2
+--agent 2 sprint 73 story 2
+--agent 3 sprint 73 story 2
+
+--agent -1 sprint 73 story 3
+--agent 0 sprint 73 story 3
+--agent 1 sprint 73 story 3
+--agent 2 sprint 73 story 3
+--agent 3 sprint 73 story 3
 ```

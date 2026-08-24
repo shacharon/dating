@@ -1,5 +1,4 @@
-import { readHandshakeAccessToken } from './messaging-ws-handshake.util';
-import type { Handshake } from 'socket.io/dist/socket-types';
+import { readHandshakeAccessToken, type Handshake } from './messaging-ws-handshake.util';
 
 describe('readHandshakeAccessToken', () => {
   it('prefers handshake.auth.token over query', () => {

@@ -1,4 +1,4 @@
-import type { MatchListRankPresentationJson } from './match-list-rank-presentation.types';
+import type { MatchListRankPresentationJson } from '../match-list-rank-presentation.types';
 
 /** Sprint 31 — rank rows for MatchListRank persistence (Story 2 + Sprint 68 presentation cache). */
 export type MatchListRankSnapshotRow = {

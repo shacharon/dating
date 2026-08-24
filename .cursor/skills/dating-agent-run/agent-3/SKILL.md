@@ -54,15 +54,45 @@ Agent 3 (PM)
 Status: [Done|Blocked]
 DoD: [summary]
 
-Ready for: [deploy to staging|blocked on X]
+Ready for: [land on main|blocked on X]
 "
 
-# Push (triggers PR ready for review)
-git push
+# Push feature branch
+git push -u origin HEAD
 ```
 
 **Note:** Handoffs are local only (in `.gitignore`). Only commit story status updates (README.md, STORY_*.md).
 
-If status is **Done**, the feature branch is now ready for PR/merge.
+## Land on `main` (mandatory when Status = Done)
 
-**Next story (when user is ready):** `--agent -1 story <m+1>` (V2) or `--agent 0 story <m+1>` (V1)
+**Do not leave the story branch ahead of `main`.** Stranded feature tips caused bulk catch-up merges — avoid forever.
+
+When status is **Done**:
+
+```bash
+# 1) Ensure feature tip is pushed
+git push -u origin HEAD
+
+# 2) Merge into main (prefer fast-forward or merge commit; no force-push)
+git fetch origin
+git checkout main
+git pull origin main
+git merge --no-ff origin/feature/sprint-<s>-story-<m> -m "merge: sprint <s> story <m> into main"
+# resolve conflicts if any, then:
+git push origin main
+
+# 3) Gate — must print 0
+git rev-list --count origin/main..origin/feature/sprint-<s>-story-<m>
+```
+
+Record in `agent-3-pm.md` and the story file:
+
+- `Shipped on main: <sha>`
+- `Feature tip ahead of main: 0`
+
+If merge is blocked (conflicts you cannot safely resolve, or user forbids pushing main), mark story **Blocked** with reason — **never** mark Done while tip is still ahead of `main`.
+
+Optional cleanup (after ahead=0): delete remote feature branch if the sprint README says so.
+
+**Next story (when user is ready):** `--agent -1 story <m+1>` (V2) or `--agent 0 story <m+1>` (V1)  
+**Pre-flight for next story must see previous tip as ancestor of `main`.**

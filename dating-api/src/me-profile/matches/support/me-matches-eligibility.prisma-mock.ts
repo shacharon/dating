@@ -43,8 +43,13 @@ export type EligibilityHarnessHost = {
 };
 
 export function buildEligibilityPrismaMock(host: EligibilityHarnessHost) {
-  const prismaMock = {
-    $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(host.prismaMock)),
+  // Self-referential: $transaction passes this mock as the tx client.
+  // eslint-disable-next-line prefer-const
+  let prismaMock: Record<string, unknown>;
+  prismaMock = {
+    $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn(prismaMock),
+    ),
     $queryRaw: jest.fn(async (sql: { values: unknown[] }) => {
       const rows: Array<{
         profileId: string;

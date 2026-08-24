@@ -16,6 +16,8 @@ Validate story readiness before Agent 0 starts design. **Prevent wasted work.**
 - [ ] Check story "Depends on" section
 - [ ] Verify dependent sprints/stories are marked Done in sprint README
 - [ ] Check git history for dependent commits merged to main
+- [ ] **Previous story tip on main:** for story `m > 1`, `git rev-list --count main..feature/sprint-<s>-story-<m-1>` must be **0**. If >0 → verdict **blocked** (“previous story not landed on main — run Agent 3 merge”)
+- [ ] Dependent sprint tips (if any) must also be ancestors of `main` (ahead = 0)
 
 ### 2. Story definition
 - [ ] Story has Why, What, AC, DoD sections
@@ -30,7 +32,7 @@ Validate story readiness before Agent 0 starts design. **Prevent wasted work.**
 
 ### 4. Sprint context
 - [ ] Is the sprint README present?
-- [ ] Are previous stories in this sprint Done (if order matters)?
+- [ ] Are previous stories in this sprint Done **and on main** (if order matters)?
 - [ ] Is sprint itself blocked (check README for blockers)?
 
 ### 5. Complexity estimate

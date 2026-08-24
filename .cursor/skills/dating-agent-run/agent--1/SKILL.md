@@ -24,9 +24,11 @@ Load and apply: [../../dating-preflight/SKILL.md](../../dating-preflight/SKILL.m
 ## Your job this step
 
 - [ ] Verify story dependencies are met (e.g., "Depends on Sprint X Done")
+- [ ] **Git land check:** if story `m > 1`, previous story tip `feature/sprint-<s>-story-<m-1>` (or documented tip) must be an **ancestor of `main`** (`git rev-list --count main..<tip>` = **0**). If still ahead → verdict **blocked** (“previous story not merged to main”)
+- [ ] If this is story 1 of a sprint that depends on another sprint Done, that sprint’s tip must likewise be on `main` (ahead = 0)
 - [ ] Check story is well-defined (AC, DoD, Why/What present)
 - [ ] Detect conflicting stories in progress (same files, same services)
-- [ ] Validate sprint context (is this sprint blocked? are previous stories done?)
+- [ ] Validate sprint context (is this sprint blocked? are previous stories done **and on main**?)
 - [ ] Flag missing epic links or broken references
 - [ ] Estimate story complexity (Small/Medium/Large/Split)
 - [ ] **Do not** design or implement anything

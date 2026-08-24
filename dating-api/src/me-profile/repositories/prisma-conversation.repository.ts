@@ -8,7 +8,7 @@ import {
 import { isPrismaUniqueConstraintViolation } from '../../auth/prisma-auth.errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { IConversationRepository } from './conversation.repository';
-import type { ConversationListCursorPayload } from '../me-conversations-list-cursor';
+import type { ConversationListCursorPayload } from '../conversations/me-conversations-list-cursor';
 import type {
   ActiveMatchRow,
   ConversationProfileRow,
