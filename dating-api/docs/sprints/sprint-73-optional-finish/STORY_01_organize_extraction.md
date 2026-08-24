@@ -50,7 +50,7 @@ Root **9** files (≤15). Public Nest/DTO paths unchanged.
 - `43d571b` — refactor: organize extraction/ into feature folders
 - `bd84d05` — test: harden extraction directory wiring guards
 
-**Shipped on main:** _(filled after merge)_  
+**Shipped on main:** `f2e6f3b`  
 **Feature tip ahead of main:** 0
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
