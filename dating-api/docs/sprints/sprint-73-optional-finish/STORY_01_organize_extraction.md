@@ -5,6 +5,8 @@
 **Risk:** ⚡ LOW  
 **Status:** Optional
 
+**Handoffs:** [preflight](./handoffs/STORY_01_organize_extraction/agent--1-preflight.md) · [architect](./handoffs/STORY_01_organize_extraction/agent-0-architect.md) · [dev](./handoffs/STORY_01_organize_extraction/agent-1-dev.md) · [CR](./handoffs/STORY_01_organize_extraction/agent-2-cr.md) · [PM](./handoffs/STORY_01_organize_extraction/agent-3-pm.md)
+
 ---
 
 ## Objective

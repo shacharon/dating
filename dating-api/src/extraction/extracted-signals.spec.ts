@@ -1,61 +1,61 @@
 import { COMPATIBILITY_SIGNAL_KEYS } from '../compatibility/compatibility-score';
-import { KEY_ALIASES } from './extraction-normalization';
-import { DOMAIN_ALLOWED_SIGNAL_KEYS } from './extraction-strict-validation';
+import { KEY_ALIASES } from './core/extraction-normalization';
+import { DOMAIN_ALLOWED_SIGNAL_KEYS } from './pipeline/extraction-strict-validation';
 import {
   EXPANSION_07_PROMOTION_CHIP_LABELS,
   EXPANSION_07_PROMOTION_DOMAINS,
   EXPANSION_07_PROMOTION_WEIGHTS,
   EXPANSION_07_SHADOW_SIGNAL_KEYS,
-} from './expansion-07-signal-definitions';
+} from './expansion/expansion-07-signal-definitions';
 import {
   EXPANSION_08_PROMOTION_CHIP_LABELS,
   EXPANSION_08_PROMOTION_DOMAINS,
   EXPANSION_08_PROMOTION_TIERS,
   EXPANSION_08_PROMOTION_WEIGHTS,
   EXPANSION_08_SHADOW_SIGNAL_KEYS,
-} from './expansion-08-signal-definitions';
+} from './expansion/expansion-08-signal-definitions';
 import {
   EXPANSION_10_PROMOTION_CHIP_LABELS,
   EXPANSION_10_PROMOTION_DOMAINS,
   EXPANSION_10_PROMOTION_TIERS,
   EXPANSION_10_PROMOTION_WEIGHTS,
   EXPANSION_10_SHADOW_SIGNAL_KEYS,
-} from './expansion-10-signal-definitions';
+} from './expansion/expansion-10-signal-definitions';
 import {
   EXPANSION_11_PROMOTION_CHIP_LABELS,
   EXPANSION_11_PROMOTION_DOMAINS,
   EXPANSION_11_PROMOTION_TIERS,
   EXPANSION_11_PROMOTION_WEIGHTS,
   EXPANSION_11_SHADOW_SIGNAL_KEYS,
-} from './expansion-11-signal-definitions';
+} from './expansion/expansion-11-signal-definitions';
 import {
   EXPANSION_12_PROMOTION_CHIP_LABELS,
   EXPANSION_12_PROMOTION_DOMAINS,
   EXPANSION_12_PROMOTION_TIERS,
   EXPANSION_12_PROMOTION_WEIGHTS,
   EXPANSION_12_SHADOW_SIGNAL_KEYS,
-} from './expansion-12-signal-definitions';
+} from './expansion/expansion-12-signal-definitions';
 import {
   EXPANSION_13_PROMOTION_CHIP_LABELS,
   EXPANSION_13_PROMOTION_DOMAINS,
   EXPANSION_13_PROMOTION_TIERS,
   EXPANSION_13_PROMOTION_WEIGHTS,
   EXPANSION_13_SHADOW_SIGNAL_KEYS,
-} from './expansion-13-signal-definitions';
+} from './expansion/expansion-13-signal-definitions';
 import {
   EXPANSION_14_PROMOTION_CHIP_LABELS,
   EXPANSION_14_PROMOTION_DOMAINS,
   EXPANSION_14_PROMOTION_TIERS,
   EXPANSION_14_PROMOTION_WEIGHTS,
   EXPANSION_14_SHADOW_SIGNAL_KEYS,
-} from './expansion-14-signal-definitions';
+} from './expansion/expansion-14-signal-definitions';
 import {
   EXPANSION_15_PROMOTION_CHIP_LABELS,
   EXPANSION_15_PROMOTION_DOMAINS,
   EXPANSION_15_PROMOTION_TIERS,
   EXPANSION_15_PROMOTION_WEIGHTS,
   EXPANSION_15_SHADOW_SIGNAL_KEYS,
-} from './expansion-15-signal-definitions';
+} from './expansion/expansion-15-signal-definitions';
 import {
   EXTRACTION_SIGNAL_KEYS,
   MAX_EVIDENCE_ITEMS,

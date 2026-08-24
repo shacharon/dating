@@ -9,25 +9,25 @@ import {
   type ExtractionDomain,
   type LLMUsageStats,
 } from './extracted-signals.interface';
-import { normalizeKeys, normalizeRawExtraction } from './extraction-normalization';
-import { validateExtraction } from './extraction-strict-validation';
-import { SYSTEM_PROMPT_HASH } from './extraction-prompt.builder';
+import { normalizeKeys, normalizeRawExtraction } from './core/extraction-normalization';
+import { validateExtraction } from './pipeline/extraction-strict-validation';
+import { SYSTEM_PROMPT_HASH } from './prompt/extraction-prompt.builder';
 import {
   logEmptyModelTextIfNeeded,
   runFirstLlmExtractionCall,
-} from './extraction-llm.runner';
-import { validateAndClean } from './extraction-output.cleaner';
+} from './core/extraction-llm.runner';
+import { validateAndClean } from './core/extraction-output.cleaner';
 import {
   emptyUsage,
   estimateCost,
   mergeUsage,
   parseOpenAIUsage,
-} from './extraction-usage';
+} from './core/extraction-usage';
 import {
   buildExtractionPipelineTrace,
   buildRawLlmPersistenceLogPayload,
   toExtractionSnapshot,
-} from './pipeline-trace';
+} from './pipeline/pipeline-trace';
 
 @Injectable()
 export class ExtractionService {

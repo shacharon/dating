@@ -16,7 +16,7 @@ Register a new expansion without editing core paste sites (`extraction.service` 
 
 | Concern | Path |
 |---------|------|
-| Prompts (self / partner / interest blocks) | `src/extraction/expansion-manifest.ts` |
+| Prompts (self / partner / interest blocks) | `src/extraction/expansion/expansion-manifest.ts` |
 | Chips / shadow breakdown builders | `src/matches/expansion-explainability-manifest.ts` |
 
 Use the **same** `id` string in both (e.g. `expansion-16`). Do **not** put explainability hooks into the extraction prompt manifest (keeps layering clean).
@@ -42,7 +42,7 @@ Use the **same** `id` string in both (e.g. `expansion-16`). Do **not** put expla
 
 ### Always (shadow or interest module)
 
-- [ ] `src/extraction/expansion-NN-signal-definitions.ts` (or interest module for 09-like work)
+- [ ] `src/extraction/expansion/expansion-NN-signal-definitions.ts` (or interest module for 09-like work)
 - [ ] One entry on `EXPANSION_PROMPT_MANIFEST` (append in numeric / id order)
 - [ ] Thin unit or rollout spec if that expansion family already uses one — **mirror the nearest sibling**; do not invent a new mega-suite
 
@@ -67,7 +67,7 @@ From `dating-api`:
 ```bash
 # Prompt registry
 npx jest --no-coverage --forceExit --runInBand \
-  src/extraction/expansion-manifest.spec.ts
+  src/extraction/expansion/expansion-manifest.spec.ts
 
 # If chips registered
 npx jest --no-coverage --forceExit --runInBand \
@@ -99,5 +99,5 @@ It does **not** include inventing new signal semantics, chip copy, scoring, or L
 ## Related
 
 - Sprint: [sprint-51-expansion-registry](./sprint-51-expansion-registry/README.md)
-- Prompt SoT: `src/extraction/expansion-manifest.ts`
-- Explainability SoT: `src/matches/expansion-explainability-manifest.ts`
+- Prompt SoT: `src/extraction/expansion/expansion-manifest.ts`
+- Explainability SoT: `src/matches/explainability/core/expansion-explainability-manifest.ts`
