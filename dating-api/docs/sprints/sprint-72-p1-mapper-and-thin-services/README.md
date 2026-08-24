@@ -1,6 +1,6 @@
 # Sprint 72 — P1 Mapper + Remaining Thin Services
 
-**Status:** Optional — after architecture finish  
+**Status:** Story 01 Done — Stories 02–03 still optional  
 **Depends on:** Sprint 71 Done  
 **Companion:** [`AGENT_COMMANDS.md`](./AGENT_COMMANDS.md)  
 **Pipeline:** [AGENT_PIPELINE_V2.md](../AGENT_PIPELINE_V2.md) · [ROUND3_AGENT_COMMANDS.md](../ROUND3_AGENT_COMMANDS.md)  
@@ -11,9 +11,9 @@
 
 ## Goal
 
-Split the last real god object (`profile-to-canonical.mapper.ts`, 704 LOC) and optionally thin services still in the 200–348 LOC band.
+Split the last real god object (`profile-to-canonical.mapper.ts`, ~~704~~ → slices) and optionally thin services still in the 200–348 LOC band.
 
-**Not blocking launch.** Do when mapper PRs become painful.
+**Not blocking launch.** Story 01 (mapper) shipped; 02–03 remain optional hygiene.
 
 ---
 
@@ -21,7 +21,7 @@ Split the last real god object (`profile-to-canonical.mapper.ts`, 704 LOC) and o
 
 | # | Story | Effort | Risk | Status |
 |---|-------|--------|------|--------|
-| 01 | [Split profile-to-canonical mapper](./STORY_01_split_canonical_mapper.md) | 2–3 days | ⚡ LOW | Optional |
+| 01 | [Split profile-to-canonical mapper](./STORY_01_split_canonical_mapper.md) | 2–3 days | ⚡ LOW | **Done** (`feature/sprint-72-story-1`) |
 | 02 | [Thin openai.client + explainability](./STORY_02_thin_client_explainability.md) | 1–2 days | ⚡ LOW | Optional |
 | 03 | [Batch thin 200–348 LOC services](./STORY_03_batch_thin_services.md) | 2–3 days | ⚡ LOW | Optional |
 
@@ -31,11 +31,11 @@ Split the last real god object (`profile-to-canonical.mapper.ts`, 704 LOC) and o
 
 ## Success Criteria
 
-- [ ] Mapper orchestrator ≤150 LOC; no slice file >200 LOC
-- [ ] Freeze policy honored (no new regex/keywords)
-- [ ] Services in scope ≤250 LOC or on documented accept list
-- [ ] HG + extraction + evaluate tests green
-- [ ] **Each story tip merged to `main` (ahead = 0) before the next story / sprint close**
+- [x] Mapper orchestrator ≤150 LOC; no slice file >200 LOC — **Story 01** (orchestrator **59**, max slice **195**)
+- [x] Freeze policy honored (no new regex/keywords) — **Story 01**
+- [ ] Services in scope ≤250 LOC or on documented accept list — Stories 02–03
+- [x] HG characterization + policy green for mapper split — **Story 01** (59 tests Agent 2)
+- [x] **Story 01 tip merged to `main` (ahead = 0)** before Story 02
 
 ---
 
