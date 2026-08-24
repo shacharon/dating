@@ -7,7 +7,7 @@ const { mockPostReferralLandingView, mockUseAuth } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
 }));
 
-vi.mock('@/lib/referral-attribution-api', () => ({
+vi.mock('@/lib/api/referral-attribution-api', () => ({
   postReferralLandingView: mockPostReferralLandingView,
 }));
 
@@ -31,11 +31,11 @@ vi.mock('next/link', () => ({
 }));
 
 import { PublicLandingClient } from './public-landing-client';
-import { REFERRAL_STORAGE_KEY } from '@/lib/referral-attribution';
+import { REFERRAL_STORAGE_KEY } from '@/lib/referral/referral-attribution';
 import {
   APP_LOCALE_STORAGE_KEY,
 } from '@/lib/i18n';
-import { getSessionCookieName } from '@/lib/session-cookie';
+import { getSessionCookieName } from '@/lib/auth/session-cookie';
 import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
 

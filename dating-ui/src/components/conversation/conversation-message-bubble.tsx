@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMessageTime } from '@/app/dating/conversations/conversation-display';
-import type { MessageDto } from '@/lib/conversations-api';
+import type { MessageDto } from '@/lib/api/conversations-api';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n/types';
 
 type Props = {

@@ -1,10 +1,10 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAdminContentViolationsPage } from './use-admin-content-violations';
-import * as api from '@/lib/admin-content-violations-api';
+import * as api from '@/lib/admin/admin-content-violations-api';
 import { QueryClientTestProvider } from '@/test/query-client-wrapper';
 
-vi.mock('@/lib/admin-content-violations-api');
+vi.mock('@/lib/admin/admin-content-violations-api');
 
 const listAdminBlockedUsers = vi.mocked(api.listAdminBlockedUsers);
 const listAdminContentViolations = vi.mocked(api.listAdminContentViolations);

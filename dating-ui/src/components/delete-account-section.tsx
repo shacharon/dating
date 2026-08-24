@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { deleteMyAccount } from '@/lib/delete-account-api';
+import { deleteMyAccount } from '@/lib/api/delete-account-api';
 import { useAppLocale } from '@/lib/i18n';
 
 const CONFIRMATION_TEXT = 'DELETE';

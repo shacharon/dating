@@ -10,9 +10,9 @@ const { listPendingPhotos, moderatePhoto, fetchAdminPhotoBlob } = vi.hoisted(
   }),
 );
 
-vi.mock('@/lib/admin-photos-api', async (importOriginal) => {
+vi.mock('@/lib/admin/admin-photos-api', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('@/lib/admin-photos-api')>();
+    await importOriginal<typeof import('@/lib/admin/admin-photos-api')>();
   return {
     ...actual,
     listPendingPhotos,

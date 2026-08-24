@@ -6,7 +6,7 @@ const { createUserReport } = vi.hoisted(() => ({
   createUserReport: vi.fn(),
 }));
 
-vi.mock('@/lib/report-user-api', () => ({
+vi.mock('@/lib/api/report-user-api', () => ({
   createUserReport,
 }));
 

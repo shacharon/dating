@@ -15,7 +15,7 @@ import type {
   MeProfileSubmitResult,
   PatchMeProfileBody,
 } from '@/lib/api-types/profile';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 
 export const PROFILE_STALE_TIME_MS = 300_000;
 

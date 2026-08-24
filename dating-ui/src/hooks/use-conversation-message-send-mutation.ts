@@ -5,7 +5,7 @@ import type { UseMutationResult } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { datingApi } from '@/lib/api-sdk';
 import type { MessageDto } from '@/lib/api-types/conversations';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 import {
   appendMessagesInCache,
   createOptimisticMessage,

@@ -1,4 +1,4 @@
-import type { AdminContentViolationStats } from '@/lib/admin-content-violations-api';
+import type { AdminContentViolationStats } from '@/lib/admin/admin-content-violations-api';
 import { AdminStatCard } from '@/components/admin/content-violations/admin-stat-card';
 
 export function ContentViolationsStatsGrid({

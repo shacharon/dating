@@ -30,8 +30,8 @@ vi.mock('next/image', () => ({
   },
 }));
 
-vi.mock('@/lib/match-photo', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/match-photo')>();
+vi.mock('@/lib/matches/match-photo', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/matches/match-photo')>();
   return {
     ...actual,
     matchPhotoSrc: (url: string | null) => url,

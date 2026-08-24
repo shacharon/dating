@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { enCopy } from '@/lib/i18n/en';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto } from '@/lib/api/me-matches-api';
 
 const { likeMatch, passMatch, undoMatchAction, fetchMatchAction, blockMatch, emitProductLog } = vi.hoisted(() => ({
   likeMatch: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('@/lib/api-sdk', () => ({
   },
 }));
 
-vi.mock('@/lib/me-matches-api', () => ({
+vi.mock('@/lib/api/me-matches-api', () => ({
   likeMatch,
   passMatch,
   undoMatchAction,

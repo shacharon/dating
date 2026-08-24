@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
-import type { MatchRecommendationDto } from '@/lib/me-matches-api';
+import type { MatchRecommendationDto } from '@/lib/api/me-matches-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
 
@@ -39,7 +39,7 @@ vi.mock('@/lib/api-sdk', () => ({
   },
 }));
 
-vi.mock('@/lib/me-matches-api', () => ({
+vi.mock('@/lib/api/me-matches-api', () => ({
   fetchMyMatches,
   likeMatch,
   passMatch,
@@ -48,7 +48,7 @@ vi.mock('@/lib/me-matches-api', () => ({
   blockMatch,
 }));
 
-vi.mock('@/lib/me-photos-api', () => ({
+vi.mock('@/lib/api/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
 

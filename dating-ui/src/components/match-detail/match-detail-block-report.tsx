@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { blockMatch } from '@/lib/me-matches-api';
+import { blockMatch } from '@/lib/api/me-matches-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {

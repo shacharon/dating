@@ -6,12 +6,12 @@ import {
   fetchAnalysisStatus,
   fetchMyLatestAnalysis,
   type MeLatestAnalysisDto,
-} from '@/lib/me-analysis-api';
+} from '@/lib/api/me-analysis-api';
 import {
   fetchMyProfile,
   submitMyProfileForAnalysis,
   type MeProfileDto,
-} from '@/lib/me-profile-api';
+} from '@/lib/api/me-profile-api';
 import {
   ANALYSIS_POLL_INITIAL_MS,
   ANALYSIS_POLL_MAX_DURATION_MS,

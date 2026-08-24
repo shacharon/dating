@@ -6,7 +6,7 @@ import {
   fetchProfileQuality,
   qualitySuggestionChips,
   type ProfileQualityDto,
-} from '@/lib/profile-quality-api';
+} from '@/lib/api/profile-quality-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 type Props = {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppLocale } from '@/lib/i18n';
-import { buildInviteUrl } from '@/lib/referral-attribution';
+import { buildInviteUrl } from '@/lib/referral/referral-attribution';
 import { useProfile } from '@/hooks/use-profile';
 
 export function MatchListEmptyState() {

@@ -2,14 +2,14 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useConversationListRealtime } from './use-conversation-list-realtime';
 import * as messagingSocket from '@/hooks/use-messaging-socket';
-import * as conversationFocus from '@/lib/conversation-focus';
+import * as conversationFocus from '@/lib/messaging/conversation-focus';
 import type {
   ConversationListItemDto,
   MessageDto,
-} from '@/lib/conversations-api';
+} from '@/lib/api/conversations-api';
 
 vi.mock('@/hooks/use-messaging-socket');
-vi.mock('@/lib/conversation-focus');
+vi.mock('@/lib/messaging/conversation-focus');
 
 const mockUseMessagingSocket = vi.mocked(messagingSocket.useMessagingSocket);
 const mockGetActiveConversationId = vi.mocked(

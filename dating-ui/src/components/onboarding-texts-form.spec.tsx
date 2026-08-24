@@ -40,7 +40,7 @@ import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
-import type { MeProfileDto } from '@/lib/me-profile-api';
+import type { MeProfileDto } from '@/lib/api/me-profile-api';
 
 const textsProfile: MeProfileDto = {
   id: 'p1',
@@ -184,7 +184,7 @@ describe('OnboardingTextsForm', () => {
 
   it('shows moderation alert (not only flat string) on save failure', async () => {
     const { ContentModerationApiError } = await import(
-      '@/lib/content-moderation-error'
+      '@/lib/moderation/content-moderation-error'
     );
     patchMyProfile.mockRejectedValue(
       new ContentModerationApiError(

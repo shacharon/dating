@@ -13,9 +13,9 @@ import type { ProfileDraft } from '@/app/dating/_lib/types';
 import {
   emptyProfileFormState,
   profileToFormFields,
-} from '@/lib/profile-form';
-import { buildCompletenessFlags } from '@/lib/profile-completeness';
-import { listMyProfilePhotos } from '@/lib/me-photos-api';
+} from '@/lib/profile/profile-form';
+import { buildCompletenessFlags } from '@/lib/profile/profile-completeness';
+import { listMyProfilePhotos } from '@/lib/api/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
 import { useProfile } from '@/hooks/use-profile';
 

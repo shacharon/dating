@@ -10,8 +10,8 @@ const {
   listNegativeCandidates: vi.fn(),
 }));
 
-vi.mock('@/lib/admin-match-quality-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/admin-match-quality-api')>();
+vi.mock('@/lib/admin/admin-match-quality-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/admin/admin-match-quality-api')>();
   return {
     ...actual,
     getMatchQualitySummary,

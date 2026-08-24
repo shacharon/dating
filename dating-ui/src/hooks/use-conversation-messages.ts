@@ -1,7 +1,7 @@
 'use client';
 
 import type { MessageDto } from '@/lib/api-types/conversations';
-import type { ContentModerationDetails } from '@/lib/content-moderation-error';
+import type { ContentModerationDetails } from '@/lib/moderation/content-moderation-error';
 import { useConversationMessageSend } from '@/hooks/use-conversation-message-send';
 import { useConversationMessagesSync } from '@/hooks/use-conversation-messages-sync';
 import { useConversationMessagesThread } from '@/hooks/use-conversation-messages-thread';

@@ -7,7 +7,7 @@ import {
   setupCapacitorPush,
   teardownCapacitorPush,
 } from "./capacitor-push";
-import { setPlatformOverrideForTests } from "@/lib/platform";
+import { setPlatformOverrideForTests } from "@/lib/platform/platform";
 
 const addListener = vi.fn();
 const requestPermissions = vi.fn();

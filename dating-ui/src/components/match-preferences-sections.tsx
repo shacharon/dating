@@ -6,12 +6,12 @@ import type { AppCopySchema } from '@/lib/i18n';
 import {
   toggleArrayValue,
   type MatchPreferencesFormState,
-} from '@/lib/match-preferences-form';
+} from '@/lib/matches/match-preferences-form';
 import {
   ME_PARTNER_GENDER_CHOICES,
   type InferredDealbreakerDto,
   type MeProfileGender,
-} from '@/lib/me-profile-api';
+} from '@/lib/api/me-profile-api';
 
 type MpCopy = AppCopySchema['matchPreferences'];
 type FormSetter = Dispatch<SetStateAction<MatchPreferencesFormState>>;

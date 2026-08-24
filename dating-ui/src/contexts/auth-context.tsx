@@ -25,19 +25,19 @@ import {
 import { createRefreshScheduler } from "@/lib/auth/auth-token-scheduler";
 import { registerAuthSessionRevokedHandler } from "@/lib/auth/auth-session-revocation";
 import type { AuthStatus, AuthUser } from "@/lib/auth/types";
-import { setInAppNotificationsEnabledPreference } from "@/lib/message-in-app-notify";
+import { setInAppNotificationsEnabledPreference } from "@/lib/messaging/message-in-app-notify";
 import {
   emitProductLog,
   getObservabilityRoute,
 } from "@/lib/observability/product-logger";
 import { UiErrorCodes } from "@/lib/observability/ui-error-codes";
-import { isCapacitor } from "@/lib/platform";
+import { isCapacitor } from "@/lib/platform/platform";
 import {
   clearLastRegisteredPushToken,
   getLastRegisteredPushToken,
 } from "@/lib/push/capacitor-push";
 import { unregisterDeviceToken } from "@/lib/push/device-tokens-api";
-import { tokenStorage } from "@/lib/token-storage";
+import { tokenStorage } from "@/lib/auth/token-storage";
 import { useRouter } from "next/navigation";
 
 type AuthContextValue = {

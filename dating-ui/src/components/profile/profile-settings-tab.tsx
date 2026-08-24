@@ -13,7 +13,7 @@ import {
   emptyMatchPreferencesFormState,
   profileToMatchPreferencesForm,
   type MatchPreferencesFormState,
-} from '@/lib/match-preferences-form';
+} from '@/lib/matches/match-preferences-form';
 import { useProfile } from '@/hooks/use-profile';
 
 /** Profile hub Settings tab: notifications + match-prefs preview. */

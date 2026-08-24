@@ -12,7 +12,7 @@ import {
 import { ProfileOverviewTab } from '@/components/profile/profile-overview-tab';
 import { ProfileQualityMeter } from '@/components/profile/profile-quality-meter';
 import { ProfileSettingsTab } from '@/components/profile/profile-settings-tab';
-import { profileToFormFields } from '@/lib/profile-form';
+import { profileToFormFields } from '@/lib/profile/profile-form';
 import { useAppLocale } from '@/lib/i18n';
 import { useProfile } from '@/hooks/use-profile';
 

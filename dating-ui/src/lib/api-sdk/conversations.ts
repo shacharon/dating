@@ -2,7 +2,7 @@
  * Authenticated conversations: list, detail, messages, unread total.
  */
 
-import { getApiBase } from '@/lib/api-base';
+import { getApiBase } from '@/lib/api/api-base';
 import type {
   ConversationDetailDto,
   ConversationListResponseDto,
@@ -11,7 +11,7 @@ import type {
   MessageDto,
   MessageListDto,
 } from '@/lib/api-types/conversations';
-import { authenticatedFetch } from '@/lib/authenticated-fetch';
+import { authenticatedFetch } from '@/lib/auth/authenticated-fetch';
 import {
   conversationsApiUnreachableMessage,
   readJson,
@@ -20,7 +20,7 @@ import {
 import {
   parseContentModerationErrorBody,
   parseMessagingMutedErrorBody,
-} from '@/lib/content-moderation-error';
+} from '@/lib/moderation/content-moderation-error';
 import { captureRequestIdFromResponse } from '@/lib/observability/request-id';
 
 export async function fetchMyConversations(opts?: {

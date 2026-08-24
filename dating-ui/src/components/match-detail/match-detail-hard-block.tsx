@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { HardBlockedDto } from '@/lib/me-matches-api';
+import type { HardBlockedDto } from '@/lib/api/me-matches-api';
 import { formatHardBlockReason } from '@/lib/matches/hard-block-display';
 import type { AppCopySchema } from '@/lib/i18n/types';
 

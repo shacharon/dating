@@ -6,7 +6,7 @@ import {
   matchPhotoPlaceholderInitial,
   matchPhotoSrc,
   shouldOptimizePhotoSrc,
-} from '@/lib/match-photo';
+} from '@/lib/matches/match-photo';
 
 export type MatchPhotoVariant =
   | 'list'

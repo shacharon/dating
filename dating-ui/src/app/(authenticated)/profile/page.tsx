@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import ProfileHubClient from './profile-hub-client';
-import { buildPageMetadata } from '@/lib/page-metadata';
+import { buildPageMetadata } from '@/lib/platform/page-metadata';
 
 export async function generateMetadata() {
   return buildPageMetadata({

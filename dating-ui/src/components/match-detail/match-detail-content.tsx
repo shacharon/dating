@@ -1,8 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { MeMatchDetailDto } from '@/lib/me-matches-api';
-import { formatSharedInterestNote } from '@/lib/enrichment-display-v1';
+import type { MeMatchDetailDto } from '@/lib/api/me-matches-api';
+import { formatSharedInterestNote } from '@/lib/matches/enrichment-display-v1';
 import {
   resolveDetailProse,
   splitNarrativeParagraphs,

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { MeMatchItemDto } from '@/lib/me-matches-api';
+import type { MeMatchItemDto } from '@/lib/api/me-matches-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 import { matchBrowseWhyBody } from '@/lib/matches/match-display';
 import { markMatchesScrollForRestore } from './me-matches-scroll';

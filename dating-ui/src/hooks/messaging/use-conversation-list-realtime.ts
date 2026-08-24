@@ -8,9 +8,9 @@ import {
 import type {
   ConversationListItemDto,
   MessageDto,
-} from '@/lib/conversations-api';
-import { getActiveConversationId } from '@/lib/conversation-focus';
-import { applyIncomingMessageToConversationList } from '@/lib/conversation-list-unread';
+} from '@/lib/api/conversations-api';
+import { getActiveConversationId } from '@/lib/messaging/conversation-focus';
+import { applyIncomingMessageToConversationList } from '@/lib/messaging/conversation-list-unread';
 import { useMessagingSocket } from '@/hooks/use-messaging-socket';
 
 export type UseConversationListRealtimeOptions = {

@@ -3,7 +3,7 @@
  * Optional HG fields: use `tryHolyGrailMatchDiagnosticsApi` before rendering a diagnostic block.
  */
 
-import type { ProfileFormState } from '@/lib/profile-form';
+import type { ProfileFormState } from '@/lib/profile/profile-form';
 
 /** Mirrors `MatchExplainabilityDto` from dating-api match engine (strict FE contract). */
 export interface MatchExplainabilityDto {

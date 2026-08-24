@@ -3,7 +3,7 @@
 import type {
   ConversationFilterType,
   ConversationSortBy,
-} from '@/lib/conversation-list-controls';
+} from '@/lib/messaging/conversation-list-controls';
 
 export type ConversationListFiltersCopy = {
   searchPlaceholder: string;

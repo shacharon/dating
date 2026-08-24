@@ -12,7 +12,7 @@ import {
   useMessagingSocket,
   type MessagingConnectionStatus,
 } from '@/hooks/use-messaging-socket';
-import { getRealtimeMode } from '@/lib/realtime-mode';
+import { getRealtimeMode } from '@/lib/platform/realtime-mode';
 
 const POLL_INTERVAL_MS = 3000;
 const MARK_READ_DEBOUNCE_MS = 15_000;

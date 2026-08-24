@@ -1,9 +1,9 @@
-import type { MeProfileGender } from '@/lib/me-profile-api';
-import { ME_PROFILE_GENDERS } from '@/lib/me-profile-api';
+import type { MeProfileGender } from '@/lib/api/me-profile-api';
+import { ME_PROFILE_GENDERS } from '@/lib/api/me-profile-api';
 import {
   emptyProfileFormState,
   isProfileFormEmpty,
-} from '@/lib/profile-form';
+} from '@/lib/profile/profile-form';
 import type { ProfileDraft } from './types';
 
 const STORAGE_KEY = 'dating-onboarding-draft';

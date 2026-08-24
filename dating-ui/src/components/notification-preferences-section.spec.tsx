@@ -7,7 +7,7 @@ const { patchNotificationPreferences, refreshMock } = vi.hoisted(() => ({
   refreshMock: vi.fn(),
 }));
 
-vi.mock('@/lib/notification-preferences-api', () => ({
+vi.mock('@/lib/api/notification-preferences-api', () => ({
   patchNotificationPreferences,
 }));
 

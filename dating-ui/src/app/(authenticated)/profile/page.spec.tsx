@@ -30,15 +30,15 @@ vi.mock('@/lib/api-sdk', () => ({
   },
 }));
 
-vi.mock('@/lib/me-photos-api', () => ({
+vi.mock('@/lib/api/me-photos-api', () => ({
   listMyProfilePhotos,
   fetchMyProfilePhotoBlob,
 }));
 
-vi.mock('@/lib/profile-quality-api', async () => {
+vi.mock('@/lib/api/profile-quality-api', async () => {
   const actual = await vi.importActual<
-    typeof import('@/lib/profile-quality-api')
-  >('@/lib/profile-quality-api');
+    typeof import('@/lib/api/profile-quality-api')
+  >('@/lib/api/profile-quality-api');
   return {
     ...actual,
     fetchProfileQuality,

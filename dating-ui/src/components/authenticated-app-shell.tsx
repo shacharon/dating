@@ -9,7 +9,7 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { MessagingShellProvider } from "@/components/messaging-shell-provider";
 import { PushNotificationsRegistration } from "@/components/push-notifications-registration";
 import { useAuth } from "@/contexts/auth-context";
-import { hasSessionCookie } from "@/lib/session-cookie";
+import { hasSessionCookie } from "@/lib/auth/session-cookie";
 import { isNavHrefCurrent } from "@/components/nav/nav-active";
 import {
   getLocaleDirection,

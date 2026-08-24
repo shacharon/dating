@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppLocale } from '@/lib/i18n';
-import { patchNotificationPreferences } from '@/lib/notification-preferences-api';
+import { patchNotificationPreferences } from '@/lib/api/notification-preferences-api';
 
 export function NotificationPreferencesSection() {
   const { user, refresh } = useAuth();

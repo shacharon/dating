@@ -13,9 +13,9 @@ import {
   fetchConversationsUnreadTotal,
   type ConversationListItemDto,
   type ConversationsUnreadTotalDto,
-} from '@/lib/conversations-api';
-import { bumpUnreadTotal } from '@/lib/conversation-unread-total';
-import { queryKeys } from '@/lib/query-keys';
+} from '@/lib/api/conversations-api';
+import { bumpUnreadTotal } from '@/lib/messaging/conversation-unread-total';
+import { queryKeys } from '@/lib/query/query-keys';
 
 export type ConversationUnreadContextValue = {
   totalUnread: number;

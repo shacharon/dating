@@ -1,6 +1,6 @@
 'use client';
 
-import type { ContentModerationDetails } from '@/lib/content-moderation-error';
+import type { ContentModerationDetails } from '@/lib/moderation/content-moderation-error';
 
 export type ContentModerationErrorAlertProps = {
   details: ContentModerationDetails;

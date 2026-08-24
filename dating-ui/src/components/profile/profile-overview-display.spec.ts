@@ -7,7 +7,7 @@ import {
   pickHeroPhoto,
 } from '@/components/profile/profile-overview-display';
 import type { ProfileDraft } from '@/app/dating/_lib/types';
-import type { MeProfilePhotoDto } from '@/lib/me-photos-api';
+import type { MeProfilePhotoDto } from '@/lib/api/me-photos-api';
 
 function draft(partial: Partial<ProfileDraft>): ProfileDraft {
   return {

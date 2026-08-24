@@ -1,4 +1,4 @@
-import { isCapacitor } from "@/lib/platform";
+import { isCapacitor } from "@/lib/platform/platform";
 import type { PushNotificationData } from "@/lib/push/push-notification-routing";
 
 type PluginListenerHandle = {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ConversationListFilters } from '@/components/conversation-list-filters';
 import { InlineError } from '@/components/errors';
 import { useConversationsListPage } from '@/hooks/use-conversations-list-page';
-import { conversationPhotoSrc } from '@/lib/conversations-api';
+import { conversationPhotoSrc } from '@/lib/api/conversations-api';
 import {
   conversationPrimaryLabel,
   formatConversationPreview,

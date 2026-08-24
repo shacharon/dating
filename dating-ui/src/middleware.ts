@@ -1,8 +1,8 @@
 import { emitProductLog } from '@/lib/observability/product-logger';
 import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
-import { isAdminRouteBlocked } from '@/lib/admin-routes-gate';
-import { isInternalRouteBlocked } from '@/lib/internal-routes-gate';
-import { getSessionCookieName } from '@/lib/session-cookie';
+import { isAdminRouteBlocked } from '@/lib/admin/admin-routes-gate';
+import { isInternalRouteBlocked } from '@/lib/admin/internal-routes-gate';
+import { getSessionCookieName } from '@/lib/auth/session-cookie';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 

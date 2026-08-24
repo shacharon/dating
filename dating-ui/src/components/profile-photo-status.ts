@@ -1,5 +1,5 @@
 import { getCopy } from '@/lib/i18n';
-import type { MeProfilePhotoDto } from '@/lib/me-photos-api';
+import type { MeProfilePhotoDto } from '@/lib/api/me-photos-api';
 
 export function statusBadgeClass(status: MeProfilePhotoDto['status']): string {
   if (status === 'APPROVED') {

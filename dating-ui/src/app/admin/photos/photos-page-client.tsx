@@ -9,7 +9,7 @@ import {
   moderatePhoto,
   type PendingPhotoListItem,
   type RejectionReasonCode,
-} from '@/lib/admin-photos-api';
+} from '@/lib/admin/admin-photos-api';
 
 type RowState = PendingPhotoListItem & { previewUrl?: string };
 

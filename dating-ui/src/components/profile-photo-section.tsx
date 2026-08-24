@@ -8,14 +8,14 @@ import {
   setPrimaryMyProfilePhoto,
   uploadMyProfilePhoto,
   type MeProfilePhotoDto,
-} from '@/lib/me-photos-api';
+} from '@/lib/api/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
-import { isCapacitor } from '@/lib/platform';
+import { isCapacitor } from '@/lib/platform/platform';
 import {
   pickProfilePhotoFile,
   ProfilePhotoPermissionDeniedError,
   ProfilePhotoPickCancelledError,
-} from '@/lib/pick-profile-photo';
+} from '@/lib/matches/pick-profile-photo';
 import {
   ProfilePhotoEmptySlot,
   ProfilePhotoFilledSlot,

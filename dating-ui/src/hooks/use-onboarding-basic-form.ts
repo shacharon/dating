@@ -8,14 +8,14 @@ import {
   type MeDatingChapter,
   type MeProfileGender,
   type PatchMeProfileBody,
-} from '@/lib/me-profile-api';
+} from '@/lib/api/me-profile-api';
 import {
   ContentModerationApiError,
   type ContentModerationDetails,
-} from '@/lib/content-moderation-error';
+} from '@/lib/moderation/content-moderation-error';
 import { useAppLocale } from '@/lib/i18n';
-import { onboardingResumePath } from '@/lib/onboarding-path';
-import { validateOnboardingBasicAdvance } from '@/lib/onboarding-basic-validation';
+import { onboardingResumePath } from '@/lib/profile/onboarding-path';
+import { validateOnboardingBasicAdvance } from '@/lib/profile/onboarding-basic-validation';
 import type { DatingChapterValue } from '@/components/dating-chapter-fields';
 import {
   ageFromBirthInput,

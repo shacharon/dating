@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useAppLocale } from '@/lib/i18n';
-import { createUserReport } from '@/lib/report-user-api';
+import { createUserReport } from '@/lib/api/report-user-api';
 import {
   USER_REPORT_REASON_VALUES,
   type UserReportContextType,
   type UserReportReason,
-} from '@/lib/report-user-options';
+} from '@/lib/api/report-user-options';
 
 const MAX_DETAILS_LENGTH = 1000;
 

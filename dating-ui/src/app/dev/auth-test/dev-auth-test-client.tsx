@@ -3,7 +3,7 @@
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { exchangeGoogleIdToken, fetchAuthMe } from "@/lib/auth/auth-api";
 import { useAuth } from "@/contexts/auth-context";
-import { getApiBase } from "@/lib/api-base";
+import { getApiBase } from "@/lib/api/api-base";
 import { useCallback, useMemo, useState } from "react";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";

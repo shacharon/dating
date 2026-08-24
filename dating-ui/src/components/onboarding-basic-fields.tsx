@@ -4,7 +4,7 @@ import {
   ME_PARTNER_GENDER_CHOICES,
   ME_PROFILE_GENDERS,
   type MeProfileGender,
-} from '@/lib/me-profile-api';
+} from '@/lib/api/me-profile-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
 
 const inputClass =

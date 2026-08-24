@@ -6,7 +6,7 @@ const { listMyProfilePhotos } = vi.hoisted(() => ({
   listMyProfilePhotos: vi.fn(),
 }));
 
-vi.mock('@/lib/me-photos-api', () => ({
+vi.mock('@/lib/api/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
 

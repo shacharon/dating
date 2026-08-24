@@ -4,14 +4,14 @@ import { useEffect } from 'react';
 import {
   fetchConversationMessages,
   type MessageDto,
-} from '@/lib/conversations-api';
+} from '@/lib/api/conversations-api';
 import {
   acquireMessagingSocket,
   MESSAGING_EVENT_CONVERSATION_SUBSCRIBE,
   MESSAGING_EVENT_CONVERSATION_UNSUBSCRIBE,
   MESSAGING_EVENT_MESSAGE_NEW,
   releaseMessagingSocket,
-} from '@/lib/messaging-socket';
+} from '@/lib/messaging/messaging-socket';
 
 export type MessagingConnectionStatus = 'connected' | 'reconnecting';
 

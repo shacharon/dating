@@ -2,20 +2,20 @@
  * Authenticated product profile: GET / POST / PATCH `/api/v1/me/profile`, submit.
  */
 
-import { getApiBase } from '@/lib/api-base';
+import { getApiBase } from '@/lib/api/api-base';
 import type {
   CreateMeProfileBody,
   MeProfileDto,
   MeProfileSubmitResult,
   PatchMeProfileBody,
 } from '@/lib/api-types/profile';
-import { authenticatedFetch } from '@/lib/authenticated-fetch';
+import { authenticatedFetch } from '@/lib/auth/authenticated-fetch';
 import {
   JSON_HEADERS,
   apiUnreachableMessage,
   readJson,
 } from '@/lib/api-sdk/internal';
-import { parseContentModerationErrorBody } from '@/lib/content-moderation-error';
+import { parseContentModerationErrorBody } from '@/lib/moderation/content-moderation-error';
 import {
   emitProductLog,
   getObservabilityRoute,

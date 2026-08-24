@@ -1,4 +1,4 @@
-import type { HardBlockReasonDto } from '@/lib/me-matches-api';
+import type { HardBlockReasonDto } from '@/lib/api/me-matches-api';
 
 /** Shared hard-block copy for list + detail (primary lines + optional evidence). */
 export type HardBlockReasonCopy = {

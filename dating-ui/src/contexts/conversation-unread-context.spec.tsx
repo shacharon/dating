@@ -10,7 +10,7 @@ const { fetchConversationsUnreadTotal } = vi.hoisted(() => ({
   fetchConversationsUnreadTotal: vi.fn(),
 }));
 
-vi.mock('@/lib/conversations-api', () => ({
+vi.mock('@/lib/api/conversations-api', () => ({
   fetchConversationsUnreadTotal,
 }));
 

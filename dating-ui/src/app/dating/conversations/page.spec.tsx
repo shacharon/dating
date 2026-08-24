@@ -39,22 +39,22 @@ const {
   };
 });
 
-vi.mock('@/lib/conversations-api', () => ({
+vi.mock('@/lib/api/conversations-api', () => ({
   fetchMyConversations,
   conversationPhotoSrc: (url: string | null) => url,
 }));
 
-vi.mock('@/lib/realtime-mode', () => ({
+vi.mock('@/lib/platform/realtime-mode', () => ({
   getRealtimeMode,
 }));
 
-vi.mock('@/lib/messaging-socket', () => ({
+vi.mock('@/lib/messaging/messaging-socket', () => ({
   acquireMessagingSocket,
   releaseMessagingSocket,
   MESSAGING_EVENT_MESSAGE_NEW: 'message.new',
 }));
 
-vi.mock('@/lib/conversation-focus', () => ({
+vi.mock('@/lib/messaging/conversation-focus', () => ({
   setActiveConversationId,
   getActiveConversationId,
 }));
@@ -90,7 +90,7 @@ vi.mock('@/contexts/conversation-unread-context', () => ({
 
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
-import { queryKeys } from '@/lib/query-keys';
+import { queryKeys } from '@/lib/query/query-keys';
 import {
   QueryClientTestProvider,
   createTestQueryClient,

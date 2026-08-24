@@ -7,9 +7,9 @@ import {
   listAdminBlockedUsers,
   listAdminContentViolations,
   unblockAdminContentUser,
-} from '@/lib/admin-content-violations-api';
-import { messageFromAdminFetchError } from '@/lib/admin-fetch-error';
-import { queryKeys } from '@/lib/query-keys';
+} from '@/lib/admin/admin-content-violations-api';
+import { messageFromAdminFetchError } from '@/lib/admin/admin-fetch-error';
+import { queryKeys } from '@/lib/query/query-keys';
 
 const FORBIDDEN = 'You are not authorized to view content violations.';
 const LOAD_FALLBACK = 'Failed to load violations';

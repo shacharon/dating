@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMatchFeedback } from './use-match-feedback';
-import * as api from '@/lib/me-matches-api';
+import * as api from '@/lib/api/me-matches-api';
 
-vi.mock('@/lib/me-matches-api');
+vi.mock('@/lib/api/me-matches-api');
 
 describe('useMatchFeedback', () => {
   const mockMatchId = 'match-123';

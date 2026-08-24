@@ -13,8 +13,8 @@ const { pickProfilePhotoFileMock } = vi.hoisted(() => ({
   pickProfilePhotoFileMock: vi.fn(),
 }));
 
-vi.mock('@/lib/me-photos-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/me-photos-api')>();
+vi.mock('@/lib/api/me-photos-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/me-photos-api')>();
   return {
     ...actual,
     listMyProfilePhotos: listMyProfilePhotosMock,
@@ -22,8 +22,8 @@ vi.mock('@/lib/me-photos-api', async (importOriginal) => {
   };
 });
 
-vi.mock('@/lib/pick-profile-photo', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/pick-profile-photo')>();
+vi.mock('@/lib/matches/pick-profile-photo', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/matches/pick-profile-photo')>();
   return {
     ...actual,
     pickProfilePhotoFile: pickProfilePhotoFileMock,
@@ -34,8 +34,8 @@ import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import {
   ProfilePhotoPermissionDeniedError,
   ProfilePhotoPickCancelledError,
-} from '@/lib/pick-profile-photo';
-import { setPlatformOverrideForTests } from '@/lib/platform';
+} from '@/lib/matches/pick-profile-photo';
+import { setPlatformOverrideForTests } from '@/lib/platform/platform';
 
 describe('ProfilePhotoSection (requiredForMatching)', () => {
   afterEach(() => {

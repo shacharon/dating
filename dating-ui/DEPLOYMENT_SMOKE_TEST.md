@@ -11,7 +11,7 @@
 | File | Role |
 |------|------|
 | `dating-ui/next.config.ts` | Rewrites `/api/:path*` → `${API_PROXY_TARGET}/api/:path*` (default `http://localhost:3001`) |
-| `dating-ui/src/lib/api-base.ts` | Empty `NEXT_PUBLIC_API_URL` → browser uses same-origin `/api/...` |
+| `dating-ui/src/lib/api/api-base.ts` | Empty `NEXT_PUBLIC_API_URL` → browser uses same-origin `/api/...` |
 | `dating-ui/.env.example` | Documents `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_API_URL` |
 | `dating-ui/package.json` | `dev`, `build`, `start` |
 | `dating-api/package.json` | `build`, `start:dev`, `start:prod` |

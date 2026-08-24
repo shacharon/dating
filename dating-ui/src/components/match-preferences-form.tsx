@@ -10,8 +10,8 @@ import {
   validateMatchPreferencesForm,
   type MatchPreferencesFormState,
   type MatchPreferencesValidationError,
-} from '@/lib/match-preferences-form';
-import type { InferredDealbreakerDto } from '@/lib/me-profile-api';
+} from '@/lib/matches/match-preferences-form';
+import type { InferredDealbreakerDto } from '@/lib/api/me-profile-api';
 import {
   MatchPreferencesAgeSection,
   MatchPreferencesDistanceSection,

@@ -23,7 +23,7 @@ vi.mock('@/lib/api-sdk', () => ({
   },
 }));
 
-vi.mock('@/lib/me-photos-api', () => ({
+vi.mock('@/lib/api/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
 

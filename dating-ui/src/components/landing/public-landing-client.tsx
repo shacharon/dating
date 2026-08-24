@@ -16,9 +16,9 @@ import { UiErrorCodes } from "@/lib/observability/ui-error-codes";
 import {
   captureReferralFromSearchParams,
   readStoredReferralRef,
-} from "@/lib/referral-attribution";
-import { postReferralLandingView } from "@/lib/referral-attribution-api";
-import { hasSessionCookie } from "@/lib/session-cookie";
+} from "@/lib/referral/referral-attribution";
+import { postReferralLandingView } from "@/lib/api/referral-attribution-api";
+import { hasSessionCookie } from "@/lib/auth/session-cookie";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LandingBenefits } from "./landing-benefits";

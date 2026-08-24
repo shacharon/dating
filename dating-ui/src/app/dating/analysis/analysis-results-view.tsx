@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import type { AppCopySchema, AppLocale } from '@/lib/i18n';
-import type { AnalysisViewModel } from '@/lib/analysis-presentation';
-import type { MeLatestAnalysisDto } from '@/lib/me-analysis-api';
-import type { MeProfileDto } from '@/lib/me-profile-api';
+import type { AnalysisViewModel } from '@/lib/matches/analysis-presentation';
+import type { MeLatestAnalysisDto } from '@/lib/api/me-analysis-api';
+import type { MeProfileDto } from '@/lib/api/me-profile-api';
 
 type PageCopy = AppCopySchema['analysisPage'];
 

@@ -1,5 +1,5 @@
 import { refreshAccessToken } from "@/lib/auth/auth-api";
-import { tokenStorage } from "@/lib/token-storage";
+import { tokenStorage } from "@/lib/auth/token-storage";
 
 export class AuthRefreshError extends Error {
   readonly status: number;

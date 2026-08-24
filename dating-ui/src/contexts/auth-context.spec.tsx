@@ -13,7 +13,7 @@ import * as coordinator from "@/lib/auth/auth-refresh-coordinator";
 import {
   ACCESS_TOKEN_STORAGE_KEY,
   REFRESH_TOKEN_STORAGE_KEY,
-} from "@/lib/token-storage";
+} from "@/lib/auth/token-storage";
 
 const routerReplace = vi.fn();
 

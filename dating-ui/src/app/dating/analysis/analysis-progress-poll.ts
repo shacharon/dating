@@ -1,4 +1,4 @@
-import type { MeProfileDto } from '@/lib/me-profile-api';
+import type { MeProfileDto } from '@/lib/api/me-profile-api';
 import { isAnalysisInFlight } from './analysis-run-ux';
 
 export const ANALYSIS_POLL_INITIAL_MS = 3_000;

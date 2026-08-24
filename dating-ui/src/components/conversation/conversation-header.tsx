@@ -1,7 +1,7 @@
 'use client';
 
-import type { ConversationDetailDto } from '@/lib/conversations-api';
-import { conversationPhotoSrc } from '@/lib/conversations-api';
+import type { ConversationDetailDto } from '@/lib/api/conversations-api';
+import { conversationPhotoSrc } from '@/lib/api/conversations-api';
 import {
   conversationPrimaryLabel,
   conversationSecondaryMeta,

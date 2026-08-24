@@ -2,13 +2,13 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { PatchMeProfileBody } from '@/lib/me-profile-api';
+import type { PatchMeProfileBody } from '@/lib/api/me-profile-api';
 import {
   ContentModerationApiError,
   type ContentModerationDetails,
-} from '@/lib/content-moderation-error';
+} from '@/lib/moderation/content-moderation-error';
 import { useAppLocale } from '@/lib/i18n';
-import { onboardingResumePath } from '@/lib/onboarding-path';
+import { onboardingResumePath } from '@/lib/profile/onboarding-path';
 import {
   usePatchProfile,
   useProfile,

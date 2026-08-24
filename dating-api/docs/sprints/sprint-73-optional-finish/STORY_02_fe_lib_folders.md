@@ -6,6 +6,8 @@
 **Status:** Optional  
 **Repo:** `dating-ui`
 
+**Handoffs:** [preflight](./handoffs/STORY_02_fe_lib_folders/agent--1-preflight.md) · [architect](./handoffs/STORY_02_fe_lib_folders/agent-0-architect.md) · [dev](./handoffs/STORY_02_fe_lib_folders/agent-1-dev.md) · [CR](./handoffs/STORY_02_fe_lib_folders/agent-2-cr.md) · [PM](./handoffs/STORY_02_fe_lib_folders/agent-3-pm.md)
+
 ---
 
 ## Objective

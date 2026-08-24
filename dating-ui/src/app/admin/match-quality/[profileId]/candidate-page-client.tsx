@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { getCandidateAudit, type CandidateAuditResponse } from '@/lib/admin-match-quality-api';
+import { getCandidateAudit, type CandidateAuditResponse } from '@/lib/admin/admin-match-quality-api';
 import { enCopy } from '@/lib/i18n/en';
 import { chipToEvidence } from '@/app/dating/me-matches/chip-evidence';
 

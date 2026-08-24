@@ -1,4 +1,4 @@
-import type { AdminContentViolationListItem } from '@/lib/admin-content-violations-api';
+import type { AdminContentViolationListItem } from '@/lib/admin/admin-content-violations-api';
 import { CopyableConversationId } from '@/components/admin/content-violations/copyable-conversation-id';
 
 type Props = {
