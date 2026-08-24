@@ -1,8 +1,8 @@
 import type { MatchActionType } from '@prisma/client';
 import type {
-  MatchActionRow,
   MutualMatchDetectResult,
   MutualMatchRow,
+  UpsertActionDetectResult,
 } from './match.repository.types';
 
 export const MATCH_ACTIONS_REPOSITORY = Symbol('MATCH_ACTIONS_REPOSITORY');
@@ -21,14 +21,16 @@ export interface IMatchActionsRepository {
     targetUserId: string;
     targetProfileIdSnapshot: string;
     action: MatchActionType;
-  }): Promise<{
-    row: MatchActionRow;
-    detectResult: MutualMatchDetectResult | null;
-  }>;
+  }): Promise<UpsertActionDetectResult>;
+  /**
+   * Deletes the actor→target action. When `softUnmatchIfLike`, also soft-unmatches
+   * an ACTIVE MutualMatch for the pair (Sprint 67 Story 2).
+   */
   deleteActionByActorTarget(
     actorUserId: string,
     targetUserId: string,
-  ): Promise<void>;
+    softUnmatchIfLike?: boolean,
+  ): Promise<{ unmatchedExisting: boolean }>;
   detectAndCreateMutualMatch(
     actorUserId: string,
     targetUserId: string,

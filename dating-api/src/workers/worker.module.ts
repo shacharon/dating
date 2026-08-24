@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ContentModerationModule } from '../content-moderation/content-moderation.module';
+import { MessagingSocketRegistryModule } from '../messaging-realtime/messaging-socket-registry.module';
 import { PhotoModerationService } from '../photo-storage/photo-moderation.service';
 import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -9,6 +10,8 @@ import { ProfileAnalysisQueueService } from './profile-analysis.worker';
 import { PhotoModerationQueueService } from './photo-moderation.worker';
 import { MatchListRankQueueService } from './match-list-rank.worker';
 import { MATCH_LIST_RANK_QUEUE_PORT } from './match-list-rank.ports';
+import { PushNotificationQueueService } from './push-notification.worker';
+import { PUSH_NOTIFICATION_QUEUE_PORT } from './push-notification.ports';
 import { PhotoSlaEnforcer } from './photo-sla.cron';
 import { MuteExpiryEnforcer } from './mute-expiry.cron';
 
@@ -25,6 +28,7 @@ import { MuteExpiryEnforcer } from './mute-expiry.cron';
     PrismaModule,
     PhotoStorageModule,
     NotificationsModule,
+    MessagingSocketRegistryModule,
     ContentModerationModule,
     forwardRef(() => MeProfileModule),
   ],
@@ -37,6 +41,11 @@ import { MuteExpiryEnforcer } from './mute-expiry.cron';
       provide: MATCH_LIST_RANK_QUEUE_PORT,
       useExisting: MatchListRankQueueService,
     },
+    PushNotificationQueueService,
+    {
+      provide: PUSH_NOTIFICATION_QUEUE_PORT,
+      useExisting: PushNotificationQueueService,
+    },
     PhotoSlaEnforcer,
     MuteExpiryEnforcer,
   ],
@@ -45,6 +54,8 @@ import { MuteExpiryEnforcer } from './mute-expiry.cron';
     PhotoModerationQueueService,
     MatchListRankQueueService,
     MATCH_LIST_RANK_QUEUE_PORT,
+    PushNotificationQueueService,
+    PUSH_NOTIFICATION_QUEUE_PORT,
     PhotoModerationService,
   ],
 })

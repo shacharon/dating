@@ -21,11 +21,11 @@ export class GoogleAuthService {
   constructor(private readonly cfg: AuthSessionConfigService) {}
 
   /**
-   * Verifies a Google-issued `id_token` against `GOOGLE_CLIENT_ID` (audience) and
+   * Verifies a Google-issued `id_token` against configured client IDs (audience) and
    * returns a normalized {@link GoogleIdentity}.
    *
    * @throws UnauthorizedException invalid/missing token, unverified email, or malformed claims
-   * @throws InternalServerErrorException `GOOGLE_CLIENT_ID` not configured
+   * @throws InternalServerErrorException no Google client IDs configured
    */
   async verifyIdToken(
     idToken: string | undefined | null,
@@ -35,19 +35,19 @@ export class GoogleAuthService {
       throw new UnauthorizedException('Missing id_token');
     }
 
-    const audience = this.cfg.googleClientId;
-    if (!audience) {
+    const audiences = this.cfg.googleClientIds;
+    if (audiences.length === 0) {
       throw new InternalServerErrorException(
-        'GOOGLE_CLIENT_ID is not configured; cannot verify Google id tokens.',
+        'GOOGLE_CLIENT_ID or GOOGLE_CLIENT_IDS is not configured; cannot verify Google id tokens.',
       );
     }
 
-    const client = new OAuth2Client(audience);
+    const client = new OAuth2Client();
     let ticket;
     try {
       ticket = await client.verifyIdToken({
         idToken: raw,
-        audience,
+        audience: audiences,
       });
     } catch {
       throw new UnauthorizedException('Invalid Google id_token');

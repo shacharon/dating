@@ -70,37 +70,52 @@ export async function listFromMaterializedRanks(
   const hasMore = rankRows.length > limit;
   const pageRanks = hasMore ? rankRows.slice(0, limit) : rankRows;
   const pageIds = pageRanks.map((r) => r.candidateProfileId);
-
-  const hydrated = await deps.ranking.buildFullRankedList(userId, {
-    candidateProfileIds: pageIds,
-    emitListAnalytics: false,
-  });
-
-  if (hydrated.status !== 'ready') {
-    recordMatchListLoadTimeMs(Date.now() - started);
-    return {
-      ...hydrated,
-      nextCursor: null,
-      hasMore: false,
-    };
-  }
-
-  const byId = new Map((hydrated.matches ?? []).map((m) => [m.id, m]));
-  const matches: MeMatchItemDto[] = [];
   const viewerTeaserCtx = {
     datingChapter: gate.viewerDatingChapter,
     ageYears: gate.viewerAgeYears,
   };
-  // Materialized `MatchListRank.matchScore` is list source of truth for score/tier
-  // (hydrate may re-compare for explainability). Unscored ranks use -1.
-  for (const rank of pageRanks) {
-    const item = byId.get(rank.candidateProfileId);
-    if (!item) continue;
-    const matchScore =
-      Number.isFinite(rank.matchScore) && rank.matchScore >= 0
-        ? rank.matchScore
-        : item.matchScore;
-    matches.push(rebaseMeMatchListItemScore(item, matchScore, viewerTeaserCtx));
+
+  let matches: MeMatchItemDto[] = [];
+  let listSource = 'materialized_cache_hit';
+
+  const cachedHydrate = await deps.ranking.hydrateMatchListPageFromRanks(
+    userId,
+    pageRanks,
+    {
+      viewerProfileId: gate.viewerProfileId,
+      viewerDatingChapter: gate.viewerDatingChapter,
+      viewerAgeYears: gate.viewerAgeYears,
+    },
+  );
+
+  if (cachedHydrate.cacheMiss) {
+    listSource = 'materialized_cache_miss_fallback';
+    const hydrated = await deps.ranking.buildFullRankedList(userId, {
+      candidateProfileIds: pageIds,
+      emitListAnalytics: false,
+    });
+
+    if (hydrated.status !== 'ready') {
+      recordMatchListLoadTimeMs(Date.now() - started);
+      return {
+        ...hydrated,
+        nextCursor: null,
+        hasMore: false,
+      };
+    }
+
+    const byId = new Map((hydrated.matches ?? []).map((m) => [m.id, m]));
+    for (const rank of pageRanks) {
+      const item = byId.get(rank.candidateProfileId);
+      if (!item) continue;
+      const matchScore =
+        Number.isFinite(rank.matchScore) && rank.matchScore >= 0
+          ? rank.matchScore
+          : item.matchScore;
+      matches.push(rebaseMeMatchListItemScore(item, matchScore, viewerTeaserCtx));
+    }
+  } else {
+    matches = cachedHydrate.matches;
   }
 
   const lastRank = pageRanks[pageRanks.length - 1]!;
@@ -123,7 +138,7 @@ export async function listFromMaterializedRanks(
 
   recordMatchListLoadTimeMs(Date.now() - started);
   deps.obs.trace(
-    `me matches list source=materialized profileId=${gate.viewerProfileId} pageSize=${matches.length} hasMore=${hasMore}`,
+    `me matches list source=${listSource} profileId=${gate.viewerProfileId} pageSize=${matches.length} hasMore=${hasMore}`,
     ErrorCodes.ME_MATCHES_LIST_OK,
   );
 

@@ -88,11 +88,13 @@ describe('MeMatchesService MatchListRank persist', () => {
           candidateProfileId: 'prof_a',
           matchScore: -1,
           hardBlocked: false,
+          presentationJson: null,
         },
         {
           candidateProfileId: 'prof_b',
           matchScore: 80,
           hardBlocked: true,
+          presentationJson: null,
         },
       ],
     });
@@ -130,6 +132,7 @@ describe('MeMatchesService MatchListRank persist', () => {
         candidateProfileId: `prof_${i}`,
         matchScore: i,
         hardBlocked: false,
+        presentationJson: null,
       }),
     );
     const result = await svc.persistMatchListRankSnapshot('user_v', {

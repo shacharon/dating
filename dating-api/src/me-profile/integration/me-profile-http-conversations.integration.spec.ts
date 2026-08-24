@@ -14,6 +14,7 @@ import {
   ME_PROFILE_HTTP_USER_ID,
   parseStructuredJsonLogs,
 } from './me-profile-http.shared-harness';
+import { createConversationsQueryRawMock } from './repositories/inbox-list-page.spec-support';
 
 describe('me profile HTTP — conversations (integration)', () => {
   let h: MeProfileHttpHarness;
@@ -62,7 +63,9 @@ describe('me profile HTTP — conversations (integration)', () => {
 
     it('returns 200 with empty list when no ACTIVE mutual matches', async () => {
       const raw = await loginAndCookie();
-      prismaMock.mutualMatch.findMany.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockImplementation(
+        createConversationsQueryRawMock({ inboxFixtures: [] }),
+      );
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -74,29 +77,26 @@ describe('me profile HTTP — conversations (integration)', () => {
         nextCursor: null,
         hasMore: false,
       });
-      expect(prismaMock.mutualMatch.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            status: 'ACTIVE',
-            OR: [{ userId1: USER_ID }, { userId2: USER_ID }],
-          }),
-        }),
-      );
+      expect(prismaMock.mutualMatch.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.$queryRaw).toHaveBeenCalled();
     });
 
     it('returns other user profile info for ACTIVE mutual match', async () => {
       const raw = await loginAndCookie();
       const matchedAt = new Date('2026-05-31T14:00:00.000Z');
-      prismaMock.mutualMatch.findMany.mockResolvedValue([
-        {
-          id: 'mutual_row_list_1',
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAt,
-          user1LastReadAt: null,
-          user2LastReadAt: null,
-        },
-      ]);
+      prismaMock.$queryRaw.mockImplementation(
+        createConversationsQueryRawMock({
+          inboxFixtures: [
+            {
+              id: 'mutual_row_list_1',
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt,
+              unreadCount: 0,
+            },
+          ],
+        }),
+      );
       prismaMock.userProfile.findMany.mockResolvedValue([
         {
           id: 'prof_action_cand',
@@ -214,29 +214,20 @@ describe('me profile HTTP — conversations (integration)', () => {
 
     it('returns unreadCount 3 when peer messages exist and lastReadAt is null', async () => {
       const raw = await loginAndCookie();
-      prismaMock.mutualMatch.findMany.mockResolvedValue([
-        {
-          id: CONVERSATION_ID,
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAtNewer,
-          user1LastReadAt: null,
-          user2LastReadAt: null,
-        },
-      ]);
-      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
       prismaMock.$queryRaw.mockImplementation(
-        async (sql: { strings?: readonly string[] }) => {
-          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
-          if (sqlText.includes('DISTINCT ON')) {
-            return [];
-          }
-          if (sqlText.includes('UNNEST')) {
-            return [{ conversationId: CONVERSATION_ID, cnt: 3 }];
-          }
-          return [];
-        },
+        createConversationsQueryRawMock({
+          inboxFixtures: [
+            {
+              id: CONVERSATION_ID,
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt: matchedAtNewer,
+              unreadCount: 3,
+            },
+          ],
+        }),
       );
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -261,16 +252,6 @@ describe('me profile HTTP — conversations (integration)', () => {
         user1LastReadAt: null,
         user2LastReadAt,
       }));
-      prismaMock.mutualMatch.findMany.mockImplementation(async () => [
-        {
-          id: CONVERSATION_ID,
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAtNewer,
-          user1LastReadAt: null,
-          user2LastReadAt,
-        },
-      ]);
       prismaMock.mutualMatch.update.mockImplementation(
         async (args: { data: { user2LastReadAt?: Date } }) => {
           if (args.data.user2LastReadAt) {
@@ -280,20 +261,21 @@ describe('me profile HTTP — conversations (integration)', () => {
         },
       );
       prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
-      prismaMock.$queryRaw.mockImplementation(
-        async (sql: { strings?: readonly string[] }) => {
-          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
-          if (sqlText.includes('DISTINCT ON')) {
-            return [];
-          }
-          if (sqlText.includes('UNNEST')) {
-            return user2LastReadAt == null
-              ? [{ conversationId: CONVERSATION_ID, cnt: 3 }]
-              : [];
-          }
-          return [];
-        },
-      );
+      prismaMock.$queryRaw.mockImplementation(async (sql) => {
+        const handler = createConversationsQueryRawMock({
+          inboxFixtures: [
+            {
+              id: CONVERSATION_ID,
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt: matchedAtNewer,
+              user2LastReadAt,
+              unreadCount: user2LastReadAt == null ? 3 : 0,
+            },
+          ],
+        });
+        return handler(sql);
+      });
 
       const before = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -315,37 +297,28 @@ describe('me profile HTTP — conversations (integration)', () => {
 
     it('sorts conversations with unread before read', async () => {
       const raw = await loginAndCookie();
-      prismaMock.mutualMatch.findMany.mockResolvedValue([
-        {
-          id: CONVERSATION_READ_ID,
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAtNewer,
-          user1LastReadAt: null,
-          user2LastReadAt: new Date('2026-06-01T12:00:00.000Z'),
-        },
-        {
-          id: CONVERSATION_ID,
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAtOlder,
-          user1LastReadAt: null,
-          user2LastReadAt: null,
-        },
-      ]);
-      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
       prismaMock.$queryRaw.mockImplementation(
-        async (sql: { strings?: readonly string[] }) => {
-          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
-          if (sqlText.includes('DISTINCT ON')) {
-            return [];
-          }
-          if (sqlText.includes('UNNEST')) {
-            return [{ conversationId: CONVERSATION_ID, cnt: 2 }];
-          }
-          return [];
-        },
+        createConversationsQueryRawMock({
+          inboxFixtures: [
+            {
+              id: CONVERSATION_READ_ID,
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt: matchedAtNewer,
+              user2LastReadAt: new Date('2026-06-01T12:00:00.000Z'),
+              unreadCount: 0,
+            },
+            {
+              id: CONVERSATION_ID,
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt: matchedAtOlder,
+              unreadCount: 2,
+            },
+          ],
+        }),
       );
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -412,26 +385,20 @@ describe('me profile HTTP — conversations (integration)', () => {
 
     it('returns lastMessage null when no SENT messages', async () => {
       const raw = await loginAndCookie();
-      prismaMock.mutualMatch.findMany.mockResolvedValue([
-        {
-          id: CONVERSATION_ID,
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAt,
-          user1LastReadAt: null,
-          user2LastReadAt: null,
-        },
-      ]);
-      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
       prismaMock.$queryRaw.mockImplementation(
-        async (sql: { strings?: readonly string[] }) => {
-          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
-          if (sqlText.includes('DISTINCT ON') || sqlText.includes('UNNEST')) {
-            return [];
-          }
-          return [];
-        },
+        createConversationsQueryRawMock({
+          inboxFixtures: [
+            {
+              id: CONVERSATION_ID,
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt,
+              unreadCount: 0,
+            },
+          ],
+        }),
       );
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -445,36 +412,28 @@ describe('me profile HTTP — conversations (integration)', () => {
     it('returns lastMessage for newest SENT row', async () => {
       const raw = await loginAndCookie();
       const sentAt = new Date('2026-08-01T16:00:00.000Z');
-      prismaMock.mutualMatch.findMany.mockResolvedValue([
-        {
-          id: CONVERSATION_ID,
-          userId1: CANDIDATE_USER_ID,
-          userId2: USER_ID,
-          createdAt: matchedAt,
-          user1LastReadAt: null,
-          user2LastReadAt: null,
-        },
-      ]);
-      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
       prismaMock.$queryRaw.mockImplementation(
-        async (sql: { strings?: readonly string[] }) => {
-          const sqlText = Array.isArray(sql.strings) ? sql.strings.join(' ') : '';
-          if (sqlText.includes('DISTINCT ON')) {
-            return [
-              {
-                conversationId: CONVERSATION_ID,
-                text: 'latest preview',
-                senderId: USER_ID,
-                createdAt: sentAt,
-              },
-            ];
-          }
-          if (sqlText.includes('UNNEST')) {
-            return [{ conversationId: CONVERSATION_ID, cnt: 1 }];
-          }
-          return [];
-        },
+        createConversationsQueryRawMock({
+          inboxFixtures: [
+            {
+              id: CONVERSATION_ID,
+              userId1: CANDIDATE_USER_ID,
+              userId2: USER_ID,
+              matchedAt,
+              unreadCount: 1,
+            },
+          ],
+          lastMessageRows: [
+            {
+              conversationId: CONVERSATION_ID,
+              text: 'latest preview',
+              senderId: USER_ID,
+              createdAt: sentAt,
+            },
+          ],
+        }),
       );
+      prismaMock.userProfile.findMany.mockResolvedValue([listProfile]);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/me/conversations')
@@ -744,6 +703,7 @@ describe('me profile HTTP — conversations (integration)', () => {
         conversationId: CONVERSATION_ID,
         senderId: USER_ID,
         text: 'Hello!',
+        clientMessageId: null,
         createdAt,
         status: 'SENT',
       });
@@ -759,6 +719,7 @@ describe('me profile HTTP — conversations (integration)', () => {
         conversationId: CONVERSATION_ID,
         senderId: USER_ID,
         text: 'Hello!',
+        clientMessageId: null,
         createdAt: createdAt.toISOString(),
         status: 'SENT',
       });
@@ -767,6 +728,7 @@ describe('me profile HTTP — conversations (integration)', () => {
           conversationId: CONVERSATION_ID,
           senderId: USER_ID,
           text: 'Hello!',
+          clientMessageId: null,
           status: 'SENT',
         },
         select: expect.any(Object),
@@ -888,6 +850,206 @@ describe('me profile HTTP — conversations (integration)', () => {
         data: expect.objectContaining({ text: 'Hi' }),
         select: expect.any(Object),
       });
+    });
+  });
+
+  describe('Sprint 68 Story 2: message send idempotency', () => {
+    const CANDIDATE_USER_ID = 'user_match_action_cand_1';
+    const CONVERSATION_ID = 'mutual_row_message_idem_1';
+    const CLIENT_MESSAGE_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+    const activeMatch = {
+      id: CONVERSATION_ID,
+      userId1: CANDIDATE_USER_ID,
+      userId2: USER_ID,
+      status: 'ACTIVE' as const,
+      createdAt: new Date('2026-05-31T10:00:00.000Z'),
+    };
+
+    type StoredMessage = {
+      id: string;
+      conversationId: string;
+      senderId: string;
+      text: string;
+      clientMessageId: string | null;
+      createdAt: Date;
+      status: 'SENT';
+    };
+
+    const storedByClientKey = new Map<string, StoredMessage>();
+
+    function clientKey(
+      conversationId: string,
+      senderId: string,
+      clientMessageId: string,
+    ): string {
+      return `${conversationId}:${senderId}:${clientMessageId}`;
+    }
+
+    function installIdempotentMessageMocks(): void {
+      storedByClientKey.clear();
+      prismaMock.message.findFirst.mockImplementation(
+        async (args: {
+          where?: {
+            conversationId?: string;
+            senderId?: string;
+            clientMessageId?: string;
+          };
+        }) => {
+          const where = args?.where;
+          if (
+            where?.conversationId &&
+            where?.senderId &&
+            where?.clientMessageId
+          ) {
+            return (
+              storedByClientKey.get(
+                clientKey(
+                  where.conversationId,
+                  where.senderId,
+                  where.clientMessageId,
+                ),
+              ) ?? null
+            );
+          }
+          return null;
+        },
+      );
+      prismaMock.message.create.mockImplementation(
+        async (args: {
+          data: {
+            conversationId: string;
+            senderId: string;
+            text: string;
+            clientMessageId?: string | null;
+            status: string;
+          };
+        }) => {
+          const row: StoredMessage = {
+            id: `msg_idem_${storedByClientKey.size + 1}`,
+            conversationId: args.data.conversationId,
+            senderId: args.data.senderId,
+            text: args.data.text,
+            clientMessageId: args.data.clientMessageId ?? null,
+            createdAt: new Date('2026-05-31T16:00:00.000Z'),
+            status: 'SENT',
+          };
+          if (args.data.clientMessageId) {
+            storedByClientKey.set(
+              clientKey(
+                args.data.conversationId,
+                args.data.senderId,
+                args.data.clientMessageId,
+              ),
+              row,
+            );
+          }
+          return row;
+        },
+      );
+    }
+
+    beforeEach(async () => {
+      installIdempotentMessageMocks();
+      prismaMock.mutualMatch.findUnique.mockResolvedValue(activeMatch);
+      await app.get(ConversationMessageRateLimitService).resetForTests();
+    });
+
+    it('returns 201 on idempotent replay with same clientMessageId and one insert', async () => {
+      const raw = await loginAndCookie();
+      const body = { text: 'Hello!', clientMessageId: CLIENT_MESSAGE_ID };
+
+      const first = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(body)
+        .expect(201);
+
+      const second = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(body)
+        .expect(201);
+
+      expect(second.body).toEqual(first.body);
+      expect(second.body.clientMessageId).toBe(CLIENT_MESSAGE_ID);
+      expect(prismaMock.message.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 400 when clientMessageId is not a UUID v4', async () => {
+      const raw = await loginAndCookie();
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Hello!', clientMessageId: 'not-a-uuid' })
+        .expect(400);
+
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 409 when clientMessageId matches but text differs', async () => {
+      const raw = await loginAndCookie();
+      storedByClientKey.set(clientKey(CONVERSATION_ID, USER_ID, CLIENT_MESSAGE_ID), {
+        id: 'msg_conflict',
+        conversationId: CONVERSATION_ID,
+        senderId: USER_ID,
+        text: 'Original',
+        clientMessageId: CLIENT_MESSAGE_ID,
+        createdAt: new Date('2026-05-31T16:00:00.000Z'),
+        status: 'SENT',
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Different', clientMessageId: CLIENT_MESSAGE_ID })
+        .expect(409);
+
+      expect(res.body).toMatchObject({
+        error: 'message_idempotency_conflict',
+      });
+      expect(prismaMock.message.create).not.toHaveBeenCalled();
+    });
+
+    it('does not consume rate limit on idempotent replay', async () => {
+      const raw = await loginAndCookie();
+      const idempotentBody = {
+        text: 'Hello!',
+        clientMessageId: CLIENT_MESSAGE_ID,
+      };
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(idempotentBody)
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send(idempotentBody)
+        .expect(201);
+
+      for (let i = 0; i < 8; i++) {
+        await request(app.getHttpServer())
+          .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+          .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+          .send({ text: `Unique ${i}` })
+          .expect(201);
+      }
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Tenth unique' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/me/conversations/${CONVERSATION_ID}/messages`)
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ text: 'Eleventh unique' })
+        .expect(429);
     });
   });
 

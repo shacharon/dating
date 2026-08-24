@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthSessionConfigModule } from './config/auth-session-config.module';
+import { ProductionValidationService } from './config/production-validation.service';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -60,6 +61,6 @@ import { ContentModerationModule } from './content-moderation/content-moderation
     LegacyBackendModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ProductionValidationService],
 })
 export class AppModule {}

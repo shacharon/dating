@@ -29,6 +29,7 @@ describe('MatchListRank schema contract', () => {
     expect(modelBlock).toContain('candidateProfileId');
     expect(modelBlock).toContain('matchScore');
     expect(modelBlock).toContain('hardBlocked');
+    expect(modelBlock).toContain('presentationJson');
     expect(modelBlock).toContain('builtAt');
     expect(modelBlock).toContain('@@unique([viewerUserId, candidateProfileId])');
     expect(modelBlock).toContain(

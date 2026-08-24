@@ -8,6 +8,7 @@ describe('GoogleAuthService', () => {
   let verifySpy: jest.SpyInstance;
 
   const cfg = {
+    googleClientIds: ['test-client-id.apps.googleusercontent.com'],
     googleClientId: 'test-client-id.apps.googleusercontent.com',
   };
 
@@ -46,7 +47,39 @@ describe('GoogleAuthService', () => {
     });
     expect(verifySpy).toHaveBeenCalledWith({
       idToken: 'raw.jwt.here',
-      audience: cfg.googleClientId,
+      audience: cfg.googleClientIds,
+    });
+  });
+
+  it('passes multi-audience array to verifyIdToken', async () => {
+    const multiCfg = {
+      googleClientIds: [
+        'web-id.apps.googleusercontent.com',
+        'android-id.apps.googleusercontent.com',
+      ],
+      googleClientId: 'web-id.apps.googleusercontent.com',
+    };
+    const mod = await Test.createTestingModule({
+      providers: [
+        GoogleAuthService,
+        { provide: AuthSessionConfigService, useValue: multiCfg },
+      ],
+    }).compile();
+    const multiService = mod.get(GoogleAuthService);
+
+    verifySpy = jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
+      getPayload: () => ({
+        sub: 'sub-android',
+        email: 'user@example.com',
+        email_verified: true,
+      }),
+    } as never);
+
+    await multiService.verifyIdToken('android-token');
+
+    expect(verifySpy).toHaveBeenCalledWith({
+      idToken: 'android-token',
+      audience: multiCfg.googleClientIds,
     });
   });
 
@@ -75,11 +108,14 @@ describe('GoogleAuthService', () => {
     });
   });
 
-  it('rejects missing GOOGLE_CLIENT_ID', async () => {
+  it('rejects missing Google client IDs', async () => {
     const mod = await Test.createTestingModule({
       providers: [
         GoogleAuthService,
-        { provide: AuthSessionConfigService, useValue: { googleClientId: undefined } },
+        {
+          provide: AuthSessionConfigService,
+          useValue: { googleClientIds: [], googleClientId: undefined },
+        },
       ],
     }).compile();
     const bare = mod.get(GoogleAuthService);

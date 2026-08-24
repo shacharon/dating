@@ -246,7 +246,7 @@ describe('me profile HTTP — matches mutual/unmatch (integration)', () => {
       expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
     });
 
-    it('does not invoke mutual detection on PASS', async () => {
+    it('Sprint 67.2: PASS soft-unmatches ACTIVE MutualMatch (sorted ids)', async () => {
       const raw = await loginAndCookie();
       mockEligibleMatchDetail();
       prismaMock.matchAction.upsert.mockResolvedValue({
@@ -257,18 +257,35 @@ describe('me profile HTTP — matches mutual/unmatch (integration)', () => {
         action: 'PASS',
         createdAt: new Date('2026-05-31T11:00:00.000Z'),
       });
-      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+      prismaMock.mutualMatch.updateMany.mockResolvedValue({ count: 1 });
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post('/api/v1/me/matches/prof_action_cand/actions')
         .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
         .send({ action: 'PASS' })
         .expect(201);
 
+      expect(res.body).toMatchObject({
+        action: 'PASS',
+        mutualMatch: false,
+        conversationId: null,
+      });
       expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          status: 'ACTIVE',
+        },
+        data: {
+          status: 'UNMATCHED',
+          unmatchedAt: expect.any(Date),
+          unmatchedByUserId: USER_ID,
+        },
+      });
     });
 
-    it('does not change MutualMatch when BLOCK overwrites LIKE (deferred Story 1 behavior)', async () => {
+    it('Sprint 67.2: BLOCK soft-unmatches ACTIVE MutualMatch', async () => {
       const raw = await loginAndCookie();
       mockEligibleMatchDetail();
       prismaMock.matchAction.upsert.mockResolvedValue({
@@ -279,6 +296,7 @@ describe('me profile HTTP — matches mutual/unmatch (integration)', () => {
         action: 'BLOCK',
         createdAt: new Date('2026-05-31T12:00:00.000Z'),
       });
+      prismaMock.mutualMatch.updateMany.mockResolvedValue({ count: 1 });
 
       await request(app.getHttpServer())
         .post('/api/v1/me/matches/prof_action_cand/actions')
@@ -287,6 +305,64 @@ describe('me profile HTTP — matches mutual/unmatch (integration)', () => {
         .expect(201);
 
       expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId1: CANDIDATE_USER_ID,
+          userId2: USER_ID,
+          status: 'ACTIVE',
+        },
+        data: {
+          status: 'UNMATCHED',
+          unmatchedAt: expect.any(Date),
+          unmatchedByUserId: USER_ID,
+        },
+      });
+    });
+
+    it('Sprint 67.2: rematch LIKE reactivates UNMATCHED MutualMatch', async () => {
+      const raw = await loginAndCookie();
+      mockEligibleMatchDetail();
+      mockLikeUpsert();
+      prismaMock.matchAction.findUnique.mockResolvedValue({ action: 'LIKE' });
+      prismaMock.mutualMatch.findUnique.mockResolvedValue({
+        id: 'mutual_row_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'UNMATCHED',
+        createdAt: new Date('2026-05-31T09:00:00.000Z'),
+        unmatchedAt: new Date('2026-05-31T11:00:00.000Z'),
+        unmatchedByUserId: USER_ID,
+      });
+      prismaMock.mutualMatch.update.mockResolvedValue({
+        id: 'mutual_row_1',
+        userId1: CANDIDATE_USER_ID,
+        userId2: USER_ID,
+        status: 'ACTIVE',
+        createdAt: new Date('2026-05-31T09:00:00.000Z'),
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/me/matches/prof_action_cand/actions')
+        .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
+        .send({ action: 'LIKE' })
+        .expect(201);
+
+      expect(prismaMock.mutualMatch.create).not.toHaveBeenCalled();
+      expect(prismaMock.mutualMatch.update).toHaveBeenCalledWith({
+        where: { id: 'mutual_row_1' },
+        data: {
+          status: 'ACTIVE',
+          unmatchedAt: null,
+          unmatchedByUserId: null,
+        },
+      });
+      expect(res.body).toMatchObject({
+        action: 'LIKE',
+        mutualMatch: true,
+        conversationId: 'mutual_row_1',
+      });
     });
   });
 

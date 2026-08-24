@@ -87,6 +87,7 @@ model User {
   profile  UserProfile?
   sessions      UserSession[]
   refreshTokens RefreshToken[]
+  deviceTokens  DeviceToken[]
   matchActionsAsActor  MatchAction[] @relation("MatchActionsByActor")
   matchActionsAsTarget MatchAction[] @relation("MatchActionsByTarget")
   mutualMatchesAsUser1 MutualMatch[] @relation("MutualMatchUser1")
@@ -104,6 +105,20 @@ model User {
 
   @@index([deletedAt])
   @@index([referredByUserId])
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
 }
 
 model UserContentViolation {
@@ -305,15 +320,17 @@ model MutualMatch {
 }
 
 model Message {
-  id             String        @id @default(cuid())
-  conversationId String
-  conversation   MutualMatch   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  text           String        @db.Text
-  createdAt      DateTime      @default(now())
-  status         MessageStatus @default(SENT)
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    MutualMatch   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text            String        @db.Text
+  clientMessageId String?
+  createdAt       DateTime      @default(now())
+  status          MessageStatus @default(SENT)
 
+  @@unique([conversationId, senderId, clientMessageId], map: "Message_idempotency_key")
   @@index([conversationId, createdAt])
   @@index([senderId])
   @@index([conversationId, senderId, status, createdAt])
@@ -379,8 +396,8 @@ model MatchFeedback {
   @@index([sentiment, createdAt])
 }
 
-/// Sprint 31 — durable match-list order (viewer × candidate). Thin rank row only;
-/// hydrate DTO fields on read (Story 04). Redis `match:list:{userId}` remains list SoT until Story 04/05.
+/// Sprint 31 — durable match-list order (viewer × candidate). Score + cached list presentation;
+/// profile fields hydrated on read. Redis `match:list:{userId}` legacy path unchanged.
 /// Unscored engine pairs store matchScore = -1 (never SQL null). No row TTL — rebuild replaces/deletes.
 model MatchListRank {
   id                  String   @id @default(cuid())
@@ -391,6 +408,8 @@ model MatchListRank {
   /// Engine final score 0–100, or -1 when unscored (cursor `s` encoding).
   matchScore          Float
   hardBlocked         Boolean  @default(false)
+  /// Cached explainability + recommendation (+ hard-block detail) from rebuild; null until backfill/rebuild.
+  presentationJson    Json?
   builtAt             DateTime
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

@@ -1,6 +1,9 @@
+import type { ConversationListCursorPayload } from '../me-conversations-list-cursor';
 import type {
   ActiveMatchRow,
   ConversationProfileRow,
+  CreateSentMessageResult,
+  InboxListPageResult,
   LastMessageRow,
   MatchRow,
   MessageRow,
@@ -10,6 +13,11 @@ import type {
 export const CONVERSATION_REPOSITORY = Symbol('CONVERSATION_REPOSITORY');
 
 export interface IConversationRepository {
+  listInboxPage(args: {
+    sessionUserId: string;
+    cursor: ConversationListCursorPayload | null;
+    limit: number;
+  }): Promise<InboxListPageResult>;
   findActiveMatchesForUser(userId: string): Promise<ActiveMatchRow[]>;
   findMatchById(conversationId: string): Promise<MatchRow | null>;
   updateLastReadAt(
@@ -51,5 +59,11 @@ export interface IConversationRepository {
     conversationId: string;
     senderId: string;
     text: string;
-  }): Promise<MessageRow>;
+    clientMessageId?: string | null;
+  }): Promise<CreateSentMessageResult>;
+  findSentMessageByClientKey(args: {
+    conversationId: string;
+    senderId: string;
+    clientMessageId: string;
+  }): Promise<MessageRow | null>;
 }

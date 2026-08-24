@@ -5,6 +5,7 @@ import {
 import { ProductAnalyticsEvents } from '../../../analytics/product-analytics.events';
 import * as matchEngine from '../../../matches/engine/match-engine';
 import * as holyGrailPair from '../../../matches/holy-grail/holy-grail-pair-directions';
+import { toPresentationJson } from '../match-list-rank-presentation.types';
 import { MatchListInvalidCursorError } from '../support/me-matches.errors';
 import { MeMatchesService, matchListRankAfterCursorWhere } from '../core/me-matches.service';
 import { createMeMatchesServiceForTest } from '../support/me-matches.test-harness';
@@ -89,6 +90,32 @@ function makeCandidate(id: string, userId: string) {
   };
 }
 
+function makeCachedRank(
+  candidateProfileId: string,
+  matchScore: number,
+  chips: string[] = ['Ambition alignment'],
+) {
+  return {
+    candidateProfileId,
+    matchScore,
+    hardBlocked: false,
+    presentationJson: toPresentationJson({
+      explainability: {
+        positiveChips: chips,
+        reasonShort: 'Cached explainability',
+      },
+      recommendation: {
+        explainability: {
+          positiveChips: chips,
+          reasonShort: 'Cached explainability',
+        },
+        primaryTakeaway: 'Cached takeaway',
+        suggestedNextAction: 'Start a conversation',
+      },
+    }),
+  };
+}
+
 describe('matchListRankAfterCursorWhere', () => {
   it('returns viewer-only filter without cursor', () => {
     expect(matchListRankAfterCursorWhere('u1', null)).toEqual({
@@ -130,8 +157,12 @@ describe('MeMatchesService materialized list', () => {
   };
   let matchListRankQueue: { enqueueRebuild: jest.Mock };
   let analytics: { track: jest.Mock };
+  let obs: { trace: jest.Mock; error: jest.Mock };
   let service: MeMatchesService;
   let buildSpy: jest.SpyInstance;
+  let hydrateSpy: jest.SpyInstance;
+  let scoreCpuMsSpy: jest.SpyInstance;
+  let compareSpy: jest.SpyInstance;
 
   beforeEach(() => {
     prevFlag = process.env[MATCH_LIST_MATERIALIZED_ENV];
@@ -180,10 +211,11 @@ describe('MeMatchesService materialized list', () => {
       enqueueRebuild: jest.fn().mockResolvedValue('inline:v'),
     };
     analytics = { track: jest.fn() };
+    obs = { trace: jest.fn(), error: jest.fn() };
 
     service = createMeMatchesServiceForTest({
       prisma: prisma as never,
-      obs: { trace: jest.fn(), error: jest.fn() } as never,
+      obs: obs as never,
       photoStorage: {} as never,
       mutualMatches: { findActiveByUserPair: jest.fn() } as never,
       analytics: analytics as never,
@@ -194,7 +226,7 @@ describe('MeMatchesService materialized list', () => {
     });
 
     jest.spyOn(holyGrailPair, 'evaluateHolyGrailPairDirections').mockReturnValue(null);
-    jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
+    compareSpy = jest.spyOn(matchEngine, 'compareWithStatus').mockReturnValue({
       finalScore: 77,
       explainability: { summary: 'ok' } as never,
       recommendation: { label: 'good' } as never,
@@ -204,6 +236,11 @@ describe('MeMatchesService materialized list', () => {
       MatchRankingService.prototype,
       'buildFullRankedList',
     );
+    hydrateSpy = jest.spyOn(
+      MatchRankingService.prototype,
+      'hydrateMatchListPageFromRanks',
+    );
+    scoreCpuMsSpy = jest.spyOn(customMetrics, 'recordMatchListScoreCpuMs');
   });
 
   afterEach(() => {
@@ -289,7 +326,7 @@ describe('MeMatchesService materialized list', () => {
     expect(matchListRankQueue.enqueueRebuild).not.toHaveBeenCalled();
   });
 
-  it('flag on pages ranks and hydrates only page ids', async () => {
+  it('flag on pages ranks and falls back to live hydrate when presentationJson is missing', async () => {
     prisma.userProfile.findUnique.mockResolvedValue(
       makeViewer(viewerUserId, viewerProfileId),
     );
@@ -341,6 +378,55 @@ describe('MeMatchesService materialized list', () => {
       expect.objectContaining({ source: 'materialized', matchCount: 3 }),
     );
     expect(cache.get).not.toHaveBeenCalled();
+  });
+
+  describe('Sprint 68 Story 3: presentation cache', () => {
+    it('uses cached presentationJson without live page scoring', async () => {
+      prisma.userProfile.findUnique.mockResolvedValue(
+        makeViewer(viewerUserId, viewerProfileId),
+      );
+      const ranks = [
+        makeCachedRank('p1', 90),
+        makeCachedRank('p2', 80),
+        makeCachedRank('p3', 70),
+      ];
+      prisma.matchListRank.findMany.mockResolvedValue(ranks);
+      prisma.matchListRank.count.mockResolvedValue(3);
+      prisma.userProfile.findMany.mockResolvedValue([
+        makeCandidate('p1', 'u1'),
+        makeCandidate('p2', 'u2'),
+      ]);
+      prisma.$queryRaw.mockImplementation(async (sql: { values: unknown[] }) =>
+        (sql.values as string[]).map((profileId) => ({
+          profileId,
+          evaluationJson: {
+            self: { signals: { ambition: 0.5 } },
+            partner: { signals: {} },
+            relationship: { signals: {} },
+          },
+          createdAt: new Date('2026-04-01'),
+          version: 'v1',
+        })),
+      );
+
+      const result = await service.list(viewerUserId, { limit: 2 });
+
+      expect(hydrateSpy).toHaveBeenCalled();
+      expect(buildSpy).not.toHaveBeenCalled();
+      expect(compareSpy).not.toHaveBeenCalled();
+      expect(scoreCpuMsSpy).not.toHaveBeenCalled();
+      expect(result.matches?.map((m) => m.id)).toEqual(['p1', 'p2']);
+      expect(result.matches?.[0]?.explainability?.positiveChips).toEqual([
+        'Ambition alignment',
+      ]);
+      expect(result.matches?.[0]?.recommendation?.primaryTakeaway).toBe(
+        'Cached takeaway',
+      );
+      expect(obs.trace).toHaveBeenCalledWith(
+        expect.stringContaining('source=materialized_cache_hit'),
+        expect.any(String),
+      );
+    });
   });
 
   it('invalid cursor throws MatchListInvalidCursorError', async () => {

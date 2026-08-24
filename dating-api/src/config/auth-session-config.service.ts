@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { parseGoogleClientIds } from './google-oauth.config';
 
 const DEFAULT_SESSION_COOKIE_NAME = 'dating_session';
 const DEFAULT_SESSION_TTL_DAYS = 14;
@@ -21,9 +22,17 @@ function trimOrUndefined(raw: string | undefined): string | undefined {
 export class AuthSessionConfigService {
   constructor(private readonly config: ConfigService) {}
 
-  /** Google OAuth client ID (public); required once Google auth is enabled. */
+  /** All allowed JWT audiences (web + native). Empty when Google auth is not configured. */
+  get googleClientIds(): string[] {
+    return parseGoogleClientIds({
+      GOOGLE_CLIENT_ID: this.config.get<string>('GOOGLE_CLIENT_ID'),
+      GOOGLE_CLIENT_IDS: this.config.get<string>('GOOGLE_CLIENT_IDS'),
+    });
+  }
+
+  /** First allowed client id — backward compat for single-id callers and docs. */
   get googleClientId(): string | undefined {
-    return trimOrUndefined(this.config.get<string>('GOOGLE_CLIENT_ID'));
+    return this.googleClientIds[0];
   }
 
   /** HttpOnly session cookie name. */

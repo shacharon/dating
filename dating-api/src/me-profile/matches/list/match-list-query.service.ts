@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { AnalyticsService } from '../../../analytics/analytics.service';
 import { ProductAnalyticsEvents } from '../../../analytics/product-analytics.events';
 import type { MatchListCursorPayload } from '../../../cache/match-list-cache';
+import type { RankPageRow } from '../../repositories/match.repository.types';
 import { ErrorCodes } from '../../../logging/error-codes';
 import { StructuredObservabilityService } from '../../../logging/structured-observability.service';
 import { MatchListViewerEvaluationMissingError } from '../support/me-matches.errors';
@@ -102,13 +103,7 @@ export class MatchListQueryService {
     viewerUserId: string,
     cursor: MatchListCursorPayload | null,
     take: number,
-  ): Promise<
-    Array<{
-      candidateProfileId: string;
-      matchScore: number;
-      hardBlocked: boolean;
-    }>
-  > {
+  ): Promise<RankPageRow[]> {
     return this.ranks.fetchMatchListRankPage(viewerUserId, cursor, take);
   }
 }

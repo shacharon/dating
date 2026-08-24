@@ -17,6 +17,10 @@ import {
   type MatchListRankQueuePort,
 } from '../../../workers/match-list-rank.ports';
 import {
+  PUSH_NOTIFICATION_QUEUE_PORT,
+  type PushNotificationQueuePort,
+} from '../workers/push-notification.ports';
+import {
   MATCH_ACTIONS_REPOSITORY,
   type IMatchActionsRepository,
 } from '../../repositories/match.repository';
@@ -31,6 +35,8 @@ export class MeMatchActionsService {
     private readonly analytics: AnalyticsService,
     @Inject(MATCH_LIST_RANK_QUEUE_PORT)
     private readonly matchListRankQueue: MatchListRankQueuePort,
+    @Inject(PUSH_NOTIFICATION_QUEUE_PORT)
+    private readonly pushQueue: PushNotificationQueuePort,
   ) {}
 
   async getActionState(
@@ -78,13 +84,13 @@ export class MeMatchActionsService {
       throw new BadRequestException('Cannot act on yourself');
     }
 
-    const { row, detectResult } =
+    const { row, detectResult, unmatchedExisting } =
       await this.matches.upsertActionAndDetectMutual({
         actorUserId,
         targetUserId,
         targetProfileIdSnapshot: profileId,
         action,
-    });
+      });
 
     const mutualFields =
       action === MatchActionType.LIKE
@@ -95,6 +101,9 @@ export class MeMatchActionsService {
       void this.mutualMatchEmail.notifyNewMutualMatchBestEffort(
         detectResult.mutualMatch,
       );
+      void this.pushQueue.enqueueMutualMatchBestEffort({
+        match: detectResult.mutualMatch,
+      });
       const { id: mutualMatchId } = detectResult.mutualMatch;
       this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_MUTUAL_CREATED, {
         mutualMatchId,
@@ -113,6 +122,14 @@ export class MeMatchActionsService {
 
     await this.meMatches.invalidateMatchListCache(actorUserId);
     await this.matchListRankQueue.enqueueRebuild(actorUserId, 'match_action');
+
+    if (unmatchedExisting || detectResult?.created) {
+      await this.meMatches.invalidateMatchListCache(targetUserId);
+      await this.matchListRankQueue.enqueueRebuild(
+        targetUserId,
+        unmatchedExisting ? 'unmatch' : 'match_action',
+      );
+    }
 
     return {
       id: row.id,
@@ -157,7 +174,11 @@ export class MeMatchActionsService {
       throw new ForbiddenException('Blocked matches cannot be undone');
     }
 
-    await this.matches.deleteActionByActorTarget(actorUserId, targetUserId);
+    const { unmatchedExisting } = await this.matches.deleteActionByActorTarget(
+      actorUserId,
+      targetUserId,
+      row.action === MatchActionType.LIKE,
+    );
 
     this.analytics.track(actorUserId, ProductAnalyticsEvents.MATCH_ACTION, {
       action: 'undo',
@@ -166,5 +187,10 @@ export class MeMatchActionsService {
 
     await this.meMatches.invalidateMatchListCache(actorUserId);
     await this.matchListRankQueue.enqueueRebuild(actorUserId, 'match_action');
+
+    if (unmatchedExisting) {
+      await this.meMatches.invalidateMatchListCache(targetUserId);
+      await this.matchListRankQueue.enqueueRebuild(targetUserId, 'unmatch');
+    }
   }
 }

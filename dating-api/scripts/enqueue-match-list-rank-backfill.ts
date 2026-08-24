@@ -1,5 +1,6 @@
 /**
  * Sprint 31 Story 5 — enqueue MatchListRank rebuilds for all list-ready viewers.
+ * Sprint 68 Story 3 — rebuild populates presentationJson; run after deploy to backfill.
  *
  * Usage:
  *   npx ts-node --project tsconfig.json scripts/enqueue-match-list-rank-backfill.ts --dry-run

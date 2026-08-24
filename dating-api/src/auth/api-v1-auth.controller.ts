@@ -20,6 +20,8 @@ import type {
   RefreshTokenBodyDto,
 } from './auth.dto';
 import { AuthGuard } from './auth.guard';
+import { AuthLoginRateLimitGuard } from './auth-login-rate-limit.guard';
+import { AuthRefreshRateLimitGuard } from './auth-refresh-rate-limit.guard';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 
@@ -31,6 +33,7 @@ export class ApiV1AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('google')
+  @UseGuards(AuthLoginRateLimitGuard)
   @HttpCode(HttpStatus.OK)
   async googleLogin(
     @Req() req: Request,
@@ -41,6 +44,7 @@ export class ApiV1AuthController {
   }
 
   @Post('refresh')
+  @UseGuards(AuthRefreshRateLimitGuard)
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Body() body: RefreshTokenBodyDto,

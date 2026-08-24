@@ -5,16 +5,21 @@ import {
   Prisma,
   type PrismaClient,
 } from '@prisma/client';
+import { isPrismaUniqueConstraintViolation } from '../../auth/prisma-auth.errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { IConversationRepository } from './conversation.repository';
+import type { ConversationListCursorPayload } from '../me-conversations-list-cursor';
 import type {
   ActiveMatchRow,
   ConversationProfileRow,
+  CreateSentMessageResult,
+  InboxListPageResult,
   LastMessageRow,
   MatchRow,
   MessageRow,
   UnreadCountSpec,
 } from './conversation.repository.types';
+import { queryInboxListPage } from './inbox-list-page.query';
 
 const profileSelect = {
   id: true,
@@ -37,6 +42,7 @@ const messageSelect = {
   conversationId: true,
   senderId: true,
   text: true,
+  clientMessageId: true,
   createdAt: true,
   status: true,
 } as const;
@@ -111,6 +117,14 @@ export async function batchLastMessagesByConversationId(
 @Injectable()
 export class PrismaConversationRepository implements IConversationRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  listInboxPage(args: {
+    sessionUserId: string;
+    cursor: ConversationListCursorPayload | null;
+    limit: number;
+  }): Promise<InboxListPageResult> {
+    return queryInboxListPage(this.prisma, args);
+  }
 
   findActiveMatchesForUser(userId: string): Promise<ActiveMatchRow[]> {
     return this.prisma.mutualMatch.findMany({
@@ -267,14 +281,65 @@ export class PrismaConversationRepository implements IConversationRepository {
     });
   }
 
-  createSentMessage(args: {
+  findSentMessageByClientKey(args: {
+    conversationId: string;
+    senderId: string;
+    clientMessageId: string;
+  }): Promise<MessageRow | null> {
+    return this.prisma.message.findFirst({
+      where: {
+        conversationId: args.conversationId,
+        senderId: args.senderId,
+        clientMessageId: args.clientMessageId,
+        status: MessageStatus.SENT,
+      },
+      select: messageSelect,
+    });
+  }
+
+  async createSentMessage(args: {
     conversationId: string;
     senderId: string;
     text: string;
-  }): Promise<MessageRow> {
-    return this.prisma.message.create({
-      data: { ...args, status: MessageStatus.SENT },
-      select: messageSelect,
-    });
+    clientMessageId?: string | null;
+  }): Promise<CreateSentMessageResult> {
+    const clientMessageId = args.clientMessageId?.trim() || null;
+
+    if (clientMessageId) {
+      const existing = await this.findSentMessageByClientKey({
+        conversationId: args.conversationId,
+        senderId: args.senderId,
+        clientMessageId,
+      });
+      if (existing) {
+        return { row: existing, created: false };
+      }
+    }
+
+    try {
+      const row = await this.prisma.message.create({
+        data: {
+          conversationId: args.conversationId,
+          senderId: args.senderId,
+          text: args.text,
+          clientMessageId,
+          status: MessageStatus.SENT,
+        },
+        select: messageSelect,
+      });
+      return { row, created: true };
+    } catch (error) {
+      if (clientMessageId && isPrismaUniqueConstraintViolation(error)) {
+        const existing = await this.findSentMessageByClientKey({
+          conversationId: args.conversationId,
+          senderId: args.senderId,
+          clientMessageId,
+        });
+        if (existing) {
+          return { row: existing, created: false };
+        }
+      }
+      throw error;
+    }
   }
 }

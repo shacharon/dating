@@ -16,6 +16,8 @@ describe('PrismaMatchRepository', () => {
     findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
   };
   const matchListRank = {
     upsert: jest.fn(),
@@ -89,9 +91,10 @@ describe('PrismaMatchRepository', () => {
       mutualMatch: expect.objectContaining({ id: 'mm1' }),
       created: true,
     });
+    expect(result.unmatchedExisting).toBe(false);
   });
 
-  it('upsertActionAndDetectMutual skips mutual detect for BLOCK', async () => {
+  it('upsertActionAndDetectMutual soft-unmatches ACTIVE pair on BLOCK', async () => {
     const row = {
       id: 'a1',
       actorUserId: 'u1',
@@ -101,6 +104,7 @@ describe('PrismaMatchRepository', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     };
     matchAction.upsert.mockResolvedValue(row);
+    mutualMatch.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await repo.upsertActionAndDetectMutual({
       actorUserId: 'u1',
@@ -110,8 +114,119 @@ describe('PrismaMatchRepository', () => {
     });
 
     expect(result.detectResult).toBeNull();
+    expect(result.unmatchedExisting).toBe(true);
     expect(matchAction.findUnique).not.toHaveBeenCalled();
     expect(mutualMatch.create).not.toHaveBeenCalled();
+    expect(mutualMatch.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId1: 'u1',
+        userId2: 'u2',
+        status: MutualMatchStatus.ACTIVE,
+      },
+      data: {
+        status: MutualMatchStatus.UNMATCHED,
+        unmatchedAt: expect.any(Date),
+        unmatchedByUserId: 'u1',
+      },
+    });
+  });
+
+  it('upsertActionAndDetectMutual reactivates UNMATCHED on mutual LIKE', async () => {
+    const row = {
+      id: 'a1',
+      actorUserId: 'u1',
+      targetUserId: 'u2',
+      targetProfileIdSnapshot: 'p2',
+      action: MatchActionType.LIKE,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    matchAction.upsert.mockResolvedValue(row);
+    matchAction.findUnique.mockResolvedValue({ action: MatchActionType.LIKE });
+    mutualMatch.findUnique.mockResolvedValue({
+      id: 'mm1',
+      userId1: 'u1',
+      userId2: 'u2',
+      status: MutualMatchStatus.UNMATCHED,
+      unmatchedAt: new Date('2026-01-01'),
+      unmatchedByUserId: 'u1',
+    });
+    mutualMatch.update.mockResolvedValue({
+      id: 'mm1',
+      userId1: 'u1',
+      userId2: 'u2',
+      status: MutualMatchStatus.ACTIVE,
+      unmatchedAt: null,
+      unmatchedByUserId: null,
+    });
+
+    const result = await repo.upsertActionAndDetectMutual({
+      actorUserId: 'u1',
+      targetUserId: 'u2',
+      targetProfileIdSnapshot: 'p2',
+      action: MatchActionType.LIKE,
+    });
+
+    expect(mutualMatch.create).not.toHaveBeenCalled();
+    expect(mutualMatch.update).toHaveBeenCalledWith({
+      where: { id: 'mm1' },
+      data: {
+        status: MutualMatchStatus.ACTIVE,
+        unmatchedAt: null,
+        unmatchedByUserId: null,
+      },
+    });
+    expect(result.detectResult).toEqual({
+      mutualMatch: expect.objectContaining({
+        id: 'mm1',
+        status: MutualMatchStatus.ACTIVE,
+      }),
+      created: true,
+    });
+    expect(result.unmatchedExisting).toBe(false);
+  });
+
+  it('upsertActionAndDetectMutual soft-unmatches on PASS (idempotent when none)', async () => {
+    const row = {
+      id: 'a1',
+      actorUserId: 'u2',
+      targetUserId: 'u1',
+      targetProfileIdSnapshot: 'p1',
+      action: MatchActionType.PASS,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    matchAction.upsert.mockResolvedValue(row);
+    mutualMatch.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await repo.upsertActionAndDetectMutual({
+      actorUserId: 'u2',
+      targetUserId: 'u1',
+      targetProfileIdSnapshot: 'p1',
+      action: MatchActionType.PASS,
+    });
+
+    expect(result.unmatchedExisting).toBe(false);
+    expect(mutualMatch.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId1: 'u1',
+        userId2: 'u2',
+        status: MutualMatchStatus.ACTIVE,
+      },
+      data: expect.objectContaining({
+        status: MutualMatchStatus.UNMATCHED,
+        unmatchedByUserId: 'u2',
+      }),
+    });
+  });
+
+  it('deleteActionByActorTarget soft-unmatches when softUnmatchIfLike', async () => {
+    matchAction.delete.mockResolvedValue({});
+    mutualMatch.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await repo.deleteActionByActorTarget('u1', 'u2', true);
+
+    expect(result).toEqual({ unmatchedExisting: true });
+    expect(matchAction.delete).toHaveBeenCalled();
+    expect(mutualMatch.updateMany).toHaveBeenCalled();
   });
 
   it('replaceRankSnapshot chunks upserts then deletes stale ranks', async () => {
@@ -119,6 +234,7 @@ describe('PrismaMatchRepository', () => {
       candidateProfileId: `c${i}`,
       matchScore: 1 - i * 0.001,
       hardBlocked: false,
+      presentationJson: null,
     }));
     matchListRank.deleteMany.mockResolvedValue({ count: 3 });
 
@@ -184,5 +300,45 @@ describe('PrismaMatchRepository', () => {
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
       version: 'v1',
     });
+  });
+
+  it('fetchMatchListRankPage parses presentationJson from stored rows', async () => {
+    matchListRank.findMany.mockResolvedValue([
+      {
+        candidateProfileId: 'p1',
+        matchScore: 90,
+        hardBlocked: false,
+        presentationJson: {
+          v: 1,
+          explainability: {
+            positiveChips: ['Ambition alignment'],
+            reasonShort: 'Strong fit',
+          },
+          recommendation: {
+            explainability: {
+              positiveChips: ['Ambition alignment'],
+              reasonShort: 'Strong fit',
+            },
+            primaryTakeaway: 'Strong match',
+            suggestedNextAction: 'Start a conversation',
+          },
+        },
+      },
+    ]);
+
+    const rows = await repo.fetchMatchListRankPage('viewer', null, 10);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        candidateProfileId: 'p1',
+        matchScore: 90,
+        presentationJson: expect.objectContaining({
+          v: 1,
+          explainability: expect.objectContaining({
+            positiveChips: ['Ambition alignment'],
+          }),
+        }),
+      }),
+    ]);
   });
 });

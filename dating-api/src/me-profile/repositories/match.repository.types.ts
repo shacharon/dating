@@ -90,13 +90,24 @@ export type MutualMatchRow = MutualMatch;
 
 export type MutualMatchDetectResult = {
   mutualMatch: MutualMatch;
+  /** true = newly created OR reactivated from UNMATCHED (notify email/push) */
   created: boolean;
 };
+
+export type UpsertActionDetectResult = {
+  row: MatchActionRow;
+  detectResult: MutualMatchDetectResult | null;
+  /** true iff an ACTIVE MutualMatch was transitioned to UNMATCHED in this call */
+  unmatchedExisting: boolean;
+};
+
+import type { MatchListRankPresentationJson } from '../matches/match-list-rank-presentation.types';
 
 export type RankPersistRow = {
   candidateProfileId: string;
   matchScore: number;
   hardBlocked: boolean;
+  presentationJson: MatchListRankPresentationJson | null;
 };
 
 export type RankPageRow = RankPersistRow;

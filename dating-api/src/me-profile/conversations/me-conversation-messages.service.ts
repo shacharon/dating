@@ -28,6 +28,7 @@ import {
 import { buildModerationUserFacingDetails } from '../../content-moderation/moderation-user-facing';
 import { ConversationMessageRateLimitService } from './conversation-message-rate-limit.service';
 import { MeConversationsService } from './me-conversations.service';
+import { MessageIdempotencyConflictError } from './me-conversations.errors';
 import { NewMessageEmailService } from '../../notifications/new-message-email.service';
 import {
   type MessageDto,
@@ -38,7 +39,11 @@ import {
   CONVERSATION_REPOSITORY,
   type IConversationRepository,
 } from '../repositories/conversation.repository';
-
+import {
+  PUSH_NOTIFICATION_QUEUE_PORT,
+  type PushNotificationQueuePort,
+} from '../../workers/push-notification.ports';
+import { truncatePushPreview } from '../../workers/push-notification.queue';
 const MAX_AFTER_POLL_LIMIT = 100;
 
 @Injectable()
@@ -55,6 +60,8 @@ export class MeConversationMessagesService {
     @Inject(CONTENT_MODERATION)
     private readonly moderation: ContentModerationPort,
     private readonly contentViolations: ContentViolationService,
+    @Inject(PUSH_NOTIFICATION_QUEUE_PORT)
+    private readonly pushQueue: PushNotificationQueuePort,
   ) {}
 
   private async assertMessagingAllowed(userId: string): Promise<void> {
@@ -260,16 +267,32 @@ export class MeConversationMessagesService {
   async sendMessage(
     sessionUserId: string,
     conversationId: string,
-    text: string,
+    input: { text: string; clientMessageId?: string },
   ): Promise<MessageDto> {
     const match = await this.conversations.assertActiveConversationParticipant(
       sessionUserId,
       conversationId,
     );
 
-    const trimmed = text.trim();
+    const trimmed = input.text.trim();
     if (!trimmed) {
       throw new BadRequestException('Message text is required');
+    }
+
+    const clientMessageId = input.clientMessageId?.trim() || undefined;
+
+    if (clientMessageId) {
+      const existing = await this.conversationsRepo.findSentMessageByClientKey(
+        {
+          conversationId,
+          senderId: sessionUserId,
+          clientMessageId,
+        },
+      );
+      if (existing) {
+        this.assertIdempotentTextMatch(existing.text, trimmed);
+        return toMessageDto(existing);
+      }
     }
 
     if (isContentModerationEnabled()) {
@@ -287,11 +310,17 @@ export class MeConversationMessagesService {
 
     await this.messageRateLimit.consumeSendSlot(sessionUserId);
 
-    const row = await this.conversationsRepo.createSentMessage({
+    const { row, created } = await this.conversationsRepo.createSentMessage({
       conversationId,
       senderId: sessionUserId,
       text: trimmed,
+      clientMessageId: clientMessageId ?? null,
     });
+
+    if (!created) {
+      this.assertIdempotentTextMatch(row.text, trimmed);
+      return toMessageDto(row);
+    }
 
     this.obs.trace(
       `me conversations message send conversationId=${conversationId} userId=${sessionUserId}`,
@@ -318,8 +347,20 @@ export class MeConversationMessagesService {
       senderUserId: sessionUserId,
       messageId: dto.id,
     });
+    void this.pushQueue.enqueueNewMessageBestEffort({
+      recipientUserId,
+      senderUserId: sessionUserId,
+      conversationId,
+      messagePreview: truncatePushPreview(trimmed),
+    });
 
     return dto;
+  }
+
+  private assertIdempotentTextMatch(existingText: string, trimmed: string): void {
+    if (existingText !== trimmed) {
+      throw new MessageIdempotencyConflictError();
+    }
   }
 
   private publishMessageNewBestEffort(
