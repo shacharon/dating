@@ -5,6 +5,8 @@
 **Risk:** ⚡ LOW  
 **Status:** Optional
 
+**Handoffs:** [preflight](./handoffs/STORY_03_batch_thin_services/agent--1-preflight.md) · [architect](./handoffs/STORY_03_batch_thin_services/agent-0-architect.md) · [dev](./handoffs/STORY_03_batch_thin_services/agent-1-dev.md) · [CR](./handoffs/STORY_03_batch_thin_services/agent-2-cr.md) · [PM](./handoffs/STORY_03_batch_thin_services/agent-3-pm.md)
+
 ---
 
 ## Candidates (pick top pain only)

@@ -17,6 +17,8 @@ import { AdminPhotosController } from './admin-photos/admin-photos.controller';
 import { AdminPhotosService } from './admin-photos/admin-photos.service';
 import { AdminMatchQualityController } from './admin-match-quality/admin-match-quality.controller';
 import { AdminMatchQualityService } from './admin-match-quality/admin-match-quality.service';
+import { MatchQualityCandidateAuditService } from './admin-match-quality/match-quality-candidate-audit.service';
+import { MatchQualityMetricsQueryService } from './admin-match-quality/match-quality-metrics-query.service';
 import { AdminReportsController } from './admin-reports/admin-reports.controller';
 import { AdminReportsService } from './admin-reports/admin-reports.service';
 
@@ -43,6 +45,8 @@ import { AdminReportsService } from './admin-reports/admin-reports.service';
   providers: [
     AdminPhotosService,
     AdminReportsService,
+    MatchQualityMetricsQueryService,
+    MatchQualityCandidateAuditService,
     AdminMatchQualityService,
     AdminContentViolationsService,
     MeProfileValidationPipe,

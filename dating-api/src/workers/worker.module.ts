@@ -2,6 +2,8 @@ import { Module, forwardRef } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ContentModerationModule } from '../content-moderation/content-moderation.module';
 import { MessagingSocketRegistryModule } from '../messaging-realtime/messaging-socket-registry.module';
+import { PhotoModerationApplyService } from '../photo-storage/photo-moderation-apply.service';
+import { PhotoModerationDecisionService } from '../photo-storage/photo-moderation-decision.service';
 import { PhotoModerationService } from '../photo-storage/photo-moderation.service';
 import { PhotoStorageModule } from '../photo-storage/photo-storage.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -33,6 +35,8 @@ import { MuteExpiryEnforcer } from './mute-expiry.cron';
     forwardRef(() => MeProfileModule),
   ],
   providers: [
+    PhotoModerationDecisionService,
+    PhotoModerationApplyService,
     PhotoModerationService,
     ProfileAnalysisQueueService,
     PhotoModerationQueueService,

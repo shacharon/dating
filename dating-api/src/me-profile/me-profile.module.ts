@@ -19,6 +19,9 @@ import { ConversationMessageRateLimitService } from './conversations/conversatio
 import { MessageRateLimitStoreProvider } from './conversations/conversation-message-rate-limit-store.provider';
 import { MESSAGE_RATE_LIMIT_STORE } from './conversations/conversation-message-rate-limit.tokens';
 import { MeConversationMessagesService } from './conversations/me-conversation-messages.service';
+import { MeConversationMessageListService } from './conversations/me-conversation-message-list.service';
+import { MeConversationMessageSendService } from './conversations/me-conversation-message-send.service';
+import { MeConversationMessageFanoutService } from './conversations/me-conversation-message-fanout.service';
 import { ConversationListService } from './conversations/conversation-list.service';
 import { ConversationReadStateService } from './conversations/conversation-read-state.service';
 import { ConversationLifecycleService } from './conversations/conversation-lifecycle.service';
@@ -160,6 +163,9 @@ import { PrismaMatchNarrativeCacheRepository } from './repositories/prisma-match
       useExisting: MessageRateLimitStoreProvider,
     },
     ConversationMessageRateLimitService,
+    MeConversationMessageListService,
+    MeConversationMessageFanoutService,
+    MeConversationMessageSendService,
     MeConversationMessagesService,
     MutualMatchesService,
     MeProfileValidationPipe,

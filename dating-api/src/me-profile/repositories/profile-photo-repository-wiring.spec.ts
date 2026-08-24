@@ -13,6 +13,7 @@ describe('profile photo repository wiring (sprint-62 story 4)', () => {
     path.join(meProfileRoot, 'profile', 'profile-photo.service.ts'),
     path.join(srcRoot, 'admin', 'admin-photos', 'admin-photos.service.ts'),
     path.join(srcRoot, 'photo-storage', 'photo-moderation.service.ts'),
+    path.join(srcRoot, 'photo-storage', 'photo-moderation-apply.service.ts'),
     path.join(srcRoot, 'workers', 'photo-sla.cron.ts'),
   ];
 
@@ -39,20 +40,28 @@ describe('profile photo repository wiring (sprint-62 story 4)', () => {
     expect(src).toMatch(/exports:\s*\[[\s\S]*PROFILE_PHOTO_REPOSITORY/);
   });
 
-  it('ProfilePhotoService keeps PHOTO_STORAGE; PhotoModerationService keeps REKOGNITION', () => {
+  it('ProfilePhotoService keeps PHOTO_STORAGE; photo moderation decision/apply keep REKOGNITION + conditional updates', () => {
     const me = fs.readFileSync(
       path.join(meProfileRoot, 'profile', 'profile-photo.service.ts'),
       'utf8',
     );
-    const mod = fs.readFileSync(
-      path.join(srcRoot, 'photo-storage', 'photo-moderation.service.ts'),
+    const decision = fs.readFileSync(
+      path.join(
+        srcRoot,
+        'photo-storage',
+        'photo-moderation-decision.service.ts',
+      ),
+      'utf8',
+    );
+    const apply = fs.readFileSync(
+      path.join(srcRoot, 'photo-storage', 'photo-moderation-apply.service.ts'),
       'utf8',
     );
     expect(me).toContain('PHOTO_STORAGE');
     expect(me).toContain('setPrimaryExclusive');
-    expect(mod).toContain('REKOGNITION');
-    expect(mod).toContain('conditionalApproveAndMaybeSetPrimary');
-    expect(mod).toContain('conditionalUpdateModeration');
+    expect(decision).toContain('REKOGNITION');
+    expect(apply).toContain('conditionalApproveAndMaybeSetPrimary');
+    expect(apply).toContain('conditionalUpdateModeration');
   });
 
   it('MATCH_QUERY_REPOSITORY still owns photo gate methods (not folded into photo repo)', () => {
