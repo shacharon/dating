@@ -55,12 +55,13 @@ me-profile/matches/support/
 
 ## Shipped
 
-`feature/sprint-73-story-3` @ _(filled after close commit)_
+`feature/sprint-73-story-3` @ `8c41d52`
 
 - `c422b9c` — docs: add holy-grail-matching and evaluate READMEs
 - `0103624` — test: add README wiring guards for HG and evaluate modules
+- `8c41d52` — chore: close sprint 73 story 3
 
-**Shipped on main:** _(filled after merge)_  
+**Shipped on main:** `f4cdb6d`  
 **Feature tip ahead of main:** 0
 
 **Pipeline:** `-1 → 0 → 1 → 2 → 3` (Agents 2.5, 3.5, 4 N/A)
