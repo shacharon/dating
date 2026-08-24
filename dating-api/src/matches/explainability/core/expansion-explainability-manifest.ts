@@ -4,7 +4,7 @@
  *
  * Sprint 51 paired registries — shared expansion ids.
  * Add Expansion-N: see docs/sprints/ADD_EXPANSION_PLAYBOOK.md
- *   (1) prompt entry in extraction/expansion-manifest.ts
+ *   (1) prompt entry in extraction/expansion/expansion-manifest.ts
  *   (2) explainability: add row in expansion-explainability-config.ts;
  *       standard → thin shim; custom → builder file + manifest import.
  *

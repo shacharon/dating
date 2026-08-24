@@ -6,7 +6,7 @@ import {
   PIPELINE_TRACE_RAW_TEXT_LOG_MAX,
   buildRawLlmLogFields,
   safeJsonClone,
-} from '../extraction/pipeline-trace';
+} from '../extraction/pipeline/pipeline-trace';
 
 export interface EvaluateJsonStageDiff {
   fromStage: string;
