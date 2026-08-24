@@ -12,7 +12,7 @@ Inventory for freeze / consolidate work. **Not** a redesign — documents where 
 
 Three parallel keyword systems grow via additive regex and allowlists:
 
-1. Enrichment closed-code mapping (`enrichment-v2`)
+1. Enrichment closed-code mapping (`enrichment-v2`, live via v4 aliases)
 2. Holy Grail free-text extractors (`*-text.extract.ts`)
 3. LLM structured extraction (`src/extraction/`)
 
@@ -24,7 +24,7 @@ This document is the SoT for **who owns what** and **where domains collide**, so
 
 | Engine | SoT path | Primary export(s) | Primary consumers | Writes / side effects? | Specs |
 |--------|----------|-------------------|-------------------|------------------------|-------|
-| `enrichment-v2` | `src/evaluate/enrichment-v2.ts` | `mapEnrichmentV2FromText`, `buildEnrichmentSignalsV2`, `EnrichmentMappedSignals` | `evaluate-batch.orchestrator` / `enrichment-signals` via `buildEnrichmentSignalsV2` → sanitize/persist enrichment blob | Yes — enrichment fields persisted on evaluate path (no scoring side effects inside the mapper itself) | `enrichment-v2.spec.ts`, `enrichment-v2.phrases.spec.ts` (+ legacy v3/v4 fixture specs retargeted to V2) |
+| `enrichment-v2` | Facade `src/evaluate/enrichment-v2.ts` + structural manifest `enrichment-keyword-manifest.ts` + domain modules `enrichment-keyword-helpers.ts`, `enrichment-interest-keywords.ts`, `enrichment-rhythm-keywords.ts`, `enrichment-conflict-keywords.ts` (aliases: `enrichment-v3.ts`, `enrichment-v4.ts` re-export facade). **Sprint 57:** structural split + manifest complete; vocabulary freeze unchanged. | `mapEnrichmentV2FromText`, `buildEnrichmentSignalsV2`, `EnrichmentMappedSignals` | `evaluate.service.ts` via `buildEnrichmentSignalsV4` → sanitize/persist enrichment blob | Yes — enrichment fields persisted on evaluate path (no scoring side effects inside the mapper itself) | `enrichment-v2.spec.ts`, `enrichment-v2.phrases.spec.ts`, `enrichment-keyword-manifest.spec.ts` (+ v3/v4 phrase specs) |
 | `hg-dealbreaker-text` | `src/holy-grail-matching/dealbreaker-signals-text.extract.ts` (+ taxonomy in `dealbreaker-taxonomy`) | `extractDealbreakerSignalsFromFreeText`, `extractSelfFactHintsFromFreeText`, `DealbreakerSignal` | `match-eligibility.service`, `match-ranking.service`, `match-detail.service`, `match-list-hard-block-pending`, `profile-write.helpers`, `match-quality-audit`, `holy-grail-structured-db-json`, `hard-block-reasons` / guardrails | Read-only extract; consumers apply to eligibility / hard-block / hints | `dealbreaker-signals-text.extract.spec.ts` (+ guardrail/eligibility specs) |
 | `hg-lifestyle-text` | `src/holy-grail-matching/lifestyle-signals-text.extract.ts` | `LIFESTYLE_SIGNAL_TAGS` / `TAG_SET`, `extractLifestyleSignalsFromFreeText` | `holy-grail-structured-db-json` (canonical merge), `profile-to-canonical.mapper` (allowlist validation), barrel `holy-grail-matching/index.ts` | Read-only extract into HG mapping input | `lifestyle-signals-text.extract.spec.ts` |
 | `hg-interest-text` | `src/holy-grail-matching/interest-tags-text.extract.ts` | `INTEREST_TAGS` / `INTEREST_TAG_SET`, `extractInterestTagsV1FromFreeText` | Same merge hub + mapper as lifestyle | Read-only extract into HG mapping input | `interest-tags-text.extract.spec.ts` |
@@ -33,7 +33,7 @@ This document is the SoT for **who owns what** and **where domains collide**, so
 
 **Merge / consumer hub (not a separate engine):** `src/holy-grail-matching/retrieval/holy-grail-structured-db-json.ts` merges HG text extracts (personality / lifestyle / interest / dealbreaker) with optional `extractionV2` slices for the canonical matching path.
 
-**Enrichment:** implementation lives only in `enrichment-v2.ts` (v3/v4 alias modules removed in Sprint 60 Story 1).
+**Enrichment aliases:** do not treat v3/v4 as separate keyword engines — public API lives on `enrichment-v2.ts`; keyword bodies + composition registry live in the sibling modules / manifest above.
 
 ---
 

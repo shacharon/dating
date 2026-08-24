@@ -2,6 +2,8 @@
 
 **Status:** FROZEN as of Sprint 52 Story 02 (2026-08-20) · branch `feature/sprint-52-story-2`
 
+**Sprint 57:** Structural split + manifest done (`enrichment-keyword-*.ts`, `enrichment-keyword-manifest.ts`, thin `enrichment-v2.ts` facade). **Freeze still applies** — no new regex/phrases/allowlist ids without RFC.
+
 Ownership map: [KEYWORD_INVENTORY.md](./KEYWORD_INVENTORY.md).  
 Agent/PR policy: [NO_NEW_REGEX_POLICY.md](./NO_NEW_REGEX_POLICY.md).
 
@@ -42,7 +44,12 @@ Copy into the PR description (or append under an “Approved exceptions” secti
 
 | Engine / surface | Path |
 |------------------|------|
-| `enrichment-v2` | `src/evaluate/enrichment-v2.ts` |
+| `enrichment-v2` (facade) | `src/evaluate/enrichment-v2.ts` |
+| `enrichment-v2` (manifest) | `src/evaluate/enrichment-keyword-manifest.ts` |
+| `enrichment-v2` (helpers) | `src/evaluate/enrichment-keyword-helpers.ts` |
+| `enrichment-v2` (interest) | `src/evaluate/enrichment-interest-keywords.ts` |
+| `enrichment-v2` (rhythm) | `src/evaluate/enrichment-rhythm-keywords.ts` |
+| `enrichment-v2` (conflict) | `src/evaluate/enrichment-conflict-keywords.ts` |
 | `explicit-extended-lists` | `src/evaluate/explicit-extended-lists.ts` |
 | `hg-dealbreaker-text` | `src/holy-grail-matching/dealbreaker-signals-text.extract.ts` |
 | Dealbreaker taxonomy | `src/holy-grail-matching/dealbreaker-taxonomy.ts` |
@@ -53,7 +60,7 @@ Copy into the PR description (or append under an “Approved exceptions” secti
 **Not frozen as regex dumps** (different growth path):
 
 - `src/extraction/` — LLM signals / canonical interests via expansion playbook; **no** new regex fallbacks for interests.
-- `enrichment-v2.ts` — enrichment keyword freeze SoT (Sprint 60 Story 1 removed v3/v4 alias shims).
+- `enrichment-v3.ts` / `enrichment-v4.ts` — aliases only; freeze lives in the enrichment-v2 facade + keyword modules + manifest.
 
 ---
 
