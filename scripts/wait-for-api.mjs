@@ -27,7 +27,7 @@ async function main() {
   const start = Date.now();
   process.stdout.write(`[wait-for-api] Waiting for ${url}\n`);
 
-  while Date.now() - start < timeoutMs) {
+  while (Date.now() - start < timeoutMs) {
     try {
       if (await probe()) {
         console.log("[wait-for-api] API is up");
