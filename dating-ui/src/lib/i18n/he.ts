@@ -456,6 +456,11 @@ export const heCopy: AppCopySchema = {
       cancel: "ביטול",
       confirm: "יציאה",
     },
+    tabs: {
+      basic: "בסיס",
+      story: "סיפור",
+      other: "אחר",
+    },
     basicForm: {
       sectionTitle: "בסיס",
       googleNameLabel: "שם ב-Google",
@@ -482,6 +487,13 @@ export const heCopy: AppCopySchema = {
       locationLabelLabel: "תווית מיקום",
       locationLabelPlaceholder: "למשל תל אביב, ישראל",
       continueToStory: "המשך לסיפור",
+      basicTabTitle: "עליך",
+      storyTabTitle: "מסע הדייטים שלך",
+      otherTabTitle: "פרטים נוספים",
+      otherTabSubtitle: "אופציונלי אך מומלץ",
+      skipButton: "דלג לעת עתה",
+      continueButton: "המשך",
+      finishButton: "השלם פרופיל",
       datingChapter: {
         question: "איפה את/ה בסיפור הדייטים שלך?",
         helper: "זה משנה רק איך מציגים לך התאמות — לא את מי מציגים.",

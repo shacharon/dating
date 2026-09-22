@@ -22,6 +22,7 @@ import {
   normalizeNicknameValue,
   togglePartnerGender,
 } from '@/components/onboarding-basic-helpers';
+import { onboardingTabFromSearchParams } from '@/components/onboarding/onboarding-step';
 import {
   listPlaceCities,
   listPlaceCountries,
@@ -54,6 +55,9 @@ function seedBasicFieldsFromProfile(
     setUsStateCode: (v: string) => void;
     setCityId: (v: string) => void;
     setDatingChapter: (v: DatingChapterValue | null) => void;
+    setAboutMe: (v: string) => void;
+    setAboutPartner: (v: string) => void;
+    setAboutRelationship: (v: string) => void;
   },
 ) {
   setters.setHasProfile(true);
@@ -81,6 +85,9 @@ function seedBasicFieldsFromProfile(
       ? chapter
       : null,
   );
+  setters.setAboutMe(profile.aboutMe ?? '');
+  setters.setAboutPartner(profile.aboutPartner ?? '');
+  setters.setAboutRelationship(profile.aboutRelationship ?? '');
 }
 
 export function useOnboardingBasicForm({
@@ -119,6 +126,9 @@ export function useOnboardingBasicForm({
   const [datingChapter, setDatingChapter] = useState<DatingChapterValue | null>(
     null,
   );
+  const [aboutMe, setAboutMe] = useState('');
+  const [aboutPartner, setAboutPartner] = useState('');
+  const [aboutRelationship, setAboutRelationship] = useState('');
 
   const [hasProfile, setHasProfile] = useState(false);
   const [profileSyncing, setProfileSyncing] = useState(true);
@@ -136,7 +146,7 @@ export function useOnboardingBasicForm({
 
   useEffect(() => {
     let cancelled = false;
-    listPlaceCountries()
+    listPlaceCountries(variant === 'onboarding' ? 'onboarding' : undefined)
       .then((res) => {
         if (!cancelled) setCountries(res.countries);
       })
@@ -153,7 +163,7 @@ export function useOnboardingBasicForm({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [variant]);
 
   useEffect(() => {
     if (!countryCode) {
@@ -233,6 +243,9 @@ export function useOnboardingBasicForm({
       setUsStateCode,
       setCityId,
       setDatingChapter,
+      setAboutMe,
+      setAboutPartner,
+      setAboutRelationship,
     });
     loadHandledRef.current = true;
     setProfileSyncing(false);
@@ -268,6 +281,9 @@ export function useOnboardingBasicForm({
           }
         : {}),
       datingChapter: datingChapter as MeDatingChapter | null,
+      aboutMe: aboutMe.trim() ? aboutMe : null,
+      aboutPartner: aboutPartner.trim() ? aboutPartner : null,
+      aboutRelationship: aboutRelationship.trim() ? aboutRelationship : null,
       onboardingStep: advanceToTexts ? ('TEXTS' as const) : ('BASIC' as const),
     };
 
@@ -343,6 +359,27 @@ export function useOnboardingBasicForm({
   }
 
   async function handleContinueToTexts() {
+    const tab = onboardingTabFromSearchParams(searchParams);
+
+    // Story → Basic: save texts, no required-field gate
+    if (!isHub && tab === 'story') {
+      const ok = await persist(false);
+      if (!ok) return;
+      onSaved?.();
+      router.push('/onboarding/basic?tab=basic');
+      return;
+    }
+
+    // Basic → Other: validate gender / partner / location
+    if (!isHub && tab === 'basic') {
+      const ok = await persist(true);
+      if (!ok) return;
+      onSaved?.();
+      router.push('/onboarding/basic?tab=other');
+      return;
+    }
+
+    // Other (or hub): validate + advance to texts finish page
     const ok = await persist(true);
     if (!ok) return;
     onSaved?.();
@@ -397,6 +434,12 @@ export function useOnboardingBasicForm({
     locationError,
     datingChapter,
     setDatingChapter,
+    aboutMe,
+    setAboutMe,
+    aboutPartner,
+    setAboutPartner,
+    aboutRelationship,
+    setAboutRelationship,
     profileSyncing,
     loadError,
     saveError,

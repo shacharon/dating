@@ -475,6 +475,11 @@ export const enCopy: AppCopySchema = {
       cancel: "Cancel",
       confirm: "Leave",
     },
+    tabs: {
+      basic: "Basic",
+      story: "Story",
+      other: "Other",
+    },
     basicForm: {
       sectionTitle: "Basics",
       googleNameLabel: "Google name",
@@ -501,6 +506,13 @@ export const enCopy: AppCopySchema = {
       locationLabelLabel: "Location label",
       locationLabelPlaceholder: "e.g. Tel Aviv, Israel",
       continueToStory: "Continue to story",
+      basicTabTitle: "About you",
+      storyTabTitle: "Your dating journey",
+      otherTabTitle: "Additional details",
+      otherTabSubtitle: "Optional but recommended",
+      skipButton: "Skip for now",
+      continueButton: "Continue",
+      finishButton: "Complete profile",
       datingChapter: {
         question: "Where are you in your dating story?",
         helper:

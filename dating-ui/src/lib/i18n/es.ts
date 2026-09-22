@@ -482,6 +482,11 @@ export const esCopy: AppCopySchema = {
       cancel: "Cancelar",
       confirm: "Salir",
     },
+    tabs: {
+      basic: "Basico",
+      story: "Historia",
+      other: "Otro",
+    },
     basicForm: {
       sectionTitle: "Basico",
       googleNameLabel: "Nombre de Google",
@@ -508,6 +513,13 @@ export const esCopy: AppCopySchema = {
       locationLabelLabel: "Etiqueta de ubicacion",
       locationLabelPlaceholder: "p. ej. Tel Aviv, Israel",
       continueToStory: "Continuar a la historia",
+      basicTabTitle: "Sobre ti",
+      storyTabTitle: "Tu viaje de citas",
+      otherTabTitle: "Detalles adicionales",
+      otherTabSubtitle: "Opcional pero recomendado",
+      skipButton: "Omitir por ahora",
+      continueButton: "Continuar",
+      finishButton: "Completar perfil",
       datingChapter: {
         question: "En que punto de tu historia de citas estas?",
         helper:

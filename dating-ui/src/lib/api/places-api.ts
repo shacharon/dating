@@ -15,8 +15,9 @@ async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function listPlaceCountries() {
-  return getJson<{ countries: PlaceCountry[] }>('/api/v1/places/countries');
+export function listPlaceCountries(filter?: 'onboarding') {
+  const params = filter ? `?filter=${filter}` : '';
+  return getJson<{ countries: PlaceCountry[] }>(`/api/v1/places/countries${params}`);
 }
 
 export function listPlaceUsStates() {

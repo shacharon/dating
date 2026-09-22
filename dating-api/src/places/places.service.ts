@@ -15,11 +15,32 @@ export type PlaceWriteBody = {
 export class PlacesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listCountries() {
-    return this.prisma.country.findMany({
+  async listCountries(filter?: 'onboarding') {
+    const ONBOARDING_COUNTRIES = new Set([
+      'US', 'AU', 'CA', 'GB', 'IE', 'NZ',
+      'AR', 'CL', 'CO', 'ES', 'MX', 'PE',
+      'AT', 'BE', 'CZ', 'DK', 'FI', 'FR', 'DE', 'GR',
+      'HU', 'IT', 'NL', 'PL', 'PT', 'RO', 'SE',
+    ]);
+
+    const where = filter === 'onboarding'
+      ? { code: { in: Array.from(ONBOARDING_COUNTRIES) } }
+      : undefined;
+
+    const countries = await this.prisma.country.findMany({
+      where,
       orderBy: { nameEn: 'asc' },
       select: { code: true, nameEn: true },
     });
+
+    // Move US to front if present
+    const usIndex = countries.findIndex((c) => c.code === 'US');
+    if (usIndex > 0) {
+      const [us] = countries.splice(usIndex, 1);
+      countries.unshift(us);
+    }
+
+    return countries;
   }
 
   async listUsStates() {

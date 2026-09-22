@@ -1,10 +1,24 @@
-export type OnboardingUiStep = 'basic' | 'texts';
+export type OnboardingUiStep = 'basic' | 'story' | 'other' | 'texts';
+
+export type OnboardingTab = 'basic' | 'story' | 'other';
+
+export function onboardingTabFromSearchParams(
+  searchParams: { get: (key: string) => string | null },
+): OnboardingTab {
+  const tab = searchParams.get('tab');
+  if (tab === 'basic' || tab === 'other') return tab;
+  return 'story';
+}
 
 export function onboardingUiStepFromPathname(
   pathname: string,
+  searchParams?: { get: (key: string) => string | null },
 ): OnboardingUiStep | null {
   if (pathname.startsWith('/onboarding/texts')) return 'texts';
-  if (pathname.startsWith('/onboarding/basic')) return 'basic';
+  if (pathname.startsWith('/onboarding/basic')) {
+    if (!searchParams) return 'story';
+    return onboardingTabFromSearchParams(searchParams);
+  }
   return null;
 }
 
@@ -14,16 +28,31 @@ export function isOnboardingStepFilled(
   current: OnboardingUiStep | null,
 ): boolean {
   if (!current) return false;
-  if (step === 'basic') return true;
-  return current === 'texts';
+  const order: OnboardingUiStep[] = ['story', 'basic', 'other', 'texts'];
+  const currentIdx = order.indexOf(current);
+  const stepIdx = order.indexOf(step);
+  if (currentIdx < 0 || stepIdx < 0) return false;
+  return stepIdx <= currentIdx;
 }
 
 /**
- * Only allow stepping back to Basic from Texts (not forward via stepper).
+ * Allow free navigation among Basic / Story / Other on the basic page.
+ * Texts page can still step back to Basic.
  */
 export function canNavigateOnboardingStep(
   target: OnboardingUiStep,
   current: OnboardingUiStep | null,
 ): boolean {
-  return target === 'basic' && current === 'texts';
+  if (target === 'texts') return false;
+  if (!current) return target === 'story';
+  if (current === 'texts') {
+    return target === 'basic' || target === 'story' || target === 'other';
+  }
+  return target === 'basic' || target === 'story' || target === 'other';
+}
+
+export function onboardingTabHref(tab: OnboardingTab, editMode: boolean): string {
+  const base = `/onboarding/basic?tab=${tab}`;
+  if (!editMode) return base;
+  return `${base}&edit=1`;
 }
