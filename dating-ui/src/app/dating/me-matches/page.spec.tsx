@@ -211,6 +211,31 @@ describe('MeMatchesPage (not_ready photo gate)', () => {
   });
 });
 
+describe('MeMatchesPage (not_ready no profile gate)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('stays on Matches and shows profile gate when reason is no_profile', async () => {
+    fetchMyMatches.mockResolvedValue({
+      status: 'not_ready',
+      reason: 'no_profile',
+    });
+
+    const { unmount } = renderPage(<MeMatchesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('match-list-no-profile-gate')).toBeTruthy();
+    });
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId('match-no-profile-gate-cta').getAttribute('href'),
+    ).toBe('/onboarding/basic');
+    expect(screen.getByText('Finish your profile to see matches')).toBeTruthy();
+    unmount();
+  });
+});
+
 describe('MeMatchesPage (not_ready analysis redirect)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
