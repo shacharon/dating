@@ -455,6 +455,39 @@ model UserSession {
   @@index([expiresAt])
 }
 
+model Country {
+  code   String @id @db.Char(2)
+  nameEn String @map("name_en")
+  cities City[]
+
+  @@map("country")
+}
+
+model UsState {
+  code   String @id @db.VarChar(2)
+  nameEn String @map("name_en")
+  cities City[]
+
+  @@map("us_state")
+}
+
+model City {
+  id          String  @id @default(cuid())
+  countryCode String  @map("country_code") @db.Char(2)
+  usStateCode String? @map("us_state_code") @db.VarChar(2)
+  nameEn      String  @map("name_en")
+  nameHe      String? @map("name_he")
+  lat         Decimal @db.Decimal(9, 6)
+  lng         Decimal @db.Decimal(9, 6)
+  country     Country @relation(fields: [countryCode], references: [code])
+  usState     UsState? @relation(fields: [usStateCode], references: [code])
+
+  @@unique([countryCode, usStateCode, nameEn])
+  @@index([countryCode])
+  @@index([countryCode, usStateCode])
+  @@map("city")
+}
+
 model RefreshToken {
   id        String    @id @default(cuid())
   userId    String
