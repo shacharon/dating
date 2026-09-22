@@ -1,8 +1,8 @@
 # Story 3: No profile means no photos, not a 404
 
 **Status:** Done (local Basics check pending operator)  
-**Shipped on main:** pending merge SHA  
-**Feature tip ahead of main:** pending  
+**Shipped on main:** `a20d534`  
+**Feature tip ahead of main:** 0  
 **Depends on:** Story 1 (local account with no profile, for the check)
 
 ## Why
