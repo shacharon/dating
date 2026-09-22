@@ -1,8 +1,8 @@
 # Story 4: Skip and Exit leave Basics
 
 **Status:** Done (local Skip/Exit check pending operator)  
-**Shipped on main:** pending merge  
-**Feature tip ahead of main:** pending merge  
+**Shipped on main:** `aaf14ee`  
+**Feature tip ahead of main:** 0  
 **Depends on:** Story 1 (local account with no profile, for the check)
 
 ## Why
