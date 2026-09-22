@@ -156,10 +156,28 @@ resource "aws_lb_listener_rule" "api_paths" {
       values = [
         "/api",
         "/api/*",
-        "/socket.io",
-        "/socket.io/*",
         "/health",
         "/health/*",
+      ]
+    }
+  }
+}
+
+# ALB allows max 5 values per path-pattern condition.
+resource "aws_lb_listener_rule" "api_socket" {
+  listener_arn = local.listener_arn
+  priority     = 11
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+
+  condition {
+    path_pattern {
+      values = [
+        "/socket.io",
+        "/socket.io/*",
       ]
     }
   }

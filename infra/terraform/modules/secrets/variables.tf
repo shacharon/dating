@@ -264,6 +264,12 @@ variable "generate_session_pepper" {
   default     = true
 }
 
+variable "generate_jwt_secret" {
+  description = "Generate JWT_SECRET with random_password (Secrets Manager; required for Google login token signing)"
+  type        = bool
+  default     = true
+}
+
 variable "generate_email_unsubscribe_secret" {
   description = "Generate EMAIL_UNSUBSCRIBE_SECRET with random_password"
   type        = bool

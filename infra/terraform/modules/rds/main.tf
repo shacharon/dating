@@ -79,7 +79,7 @@ resource "aws_db_instance" "this" {
 resource "aws_db_parameter_group" "this" {
   name_prefix = "${var.name_prefix}-pg16-"
   family      = "postgres16"
-  description = "dating Postgres 16 — require SSL"
+  description = "dating Postgres 16 - require SSL"
 
   parameter {
     name         = "rds.force_ssl"

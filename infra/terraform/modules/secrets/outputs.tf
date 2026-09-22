@@ -14,6 +14,7 @@ output "secret_arns" {
     { for k, s in aws_secretsmanager_secret.operator : k => s.arn },
     {
       SESSION_SECRET_PEPPER    = aws_secretsmanager_secret.session_pepper.arn
+      JWT_SECRET               = aws_secretsmanager_secret.jwt_secret.arn
       EMAIL_UNSUBSCRIBE_SECRET = aws_secretsmanager_secret.email_unsubscribe.arn
     },
     var.database_url_secret_arn == null ? {

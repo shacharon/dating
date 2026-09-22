@@ -82,7 +82,7 @@ module "s3_photos" {
   source = "../modules/s3_photos"
 
   name_prefix   = local.name_prefix
-  bucket_prefix = "${local.name_prefix}-photos-"
+  bucket        = "dating-dev-photos"
   force_destroy = true
   tags          = local.common_tags
 }

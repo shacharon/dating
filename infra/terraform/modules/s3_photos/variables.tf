@@ -3,8 +3,14 @@ variable "name_prefix" {
   type        = string
 }
 
+variable "bucket" {
+  description = "Exact S3 bucket name (globally unique). Empty = use bucket_prefix."
+  type        = string
+  default     = ""
+}
+
 variable "bucket_prefix" {
-  description = "S3 bucket name prefix (AWS appends unique suffix)"
+  description = "S3 bucket name prefix (AWS appends unique suffix). Ignored if bucket is set."
   type        = string
   default     = "dating-dev-photos-"
 }

@@ -1,5 +1,6 @@
 resource "aws_s3_bucket" "photos" {
-  bucket_prefix = var.bucket_prefix
+  bucket        = var.bucket != "" ? var.bucket : null
+  bucket_prefix = var.bucket == "" ? var.bucket_prefix : null
 
   force_destroy = var.force_destroy
 

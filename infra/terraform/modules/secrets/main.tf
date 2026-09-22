@@ -47,6 +47,11 @@ locals {
 
   api_config_all = merge(local.api_config, local.cookie_domain_map)
 
+  # SSM PutParameter rejects empty strings
+  api_config_ssm = {
+    for k, v in local.api_config_all : k => v if v != ""
+  }
+
   # Secrets Manager shells (values set out-of-band or via optional TF_VAR_*)
   # DATABASE_URL comes from Story 02 RDS secret when database_url_secret_arn is set.
   operator_secret_names = {
@@ -85,7 +90,7 @@ locals {
 # =============================================================================
 
 resource "aws_ssm_parameter" "api_config" {
-  for_each = local.api_config_all
+  for_each = local.api_config_ssm
 
   name        = "${local.param_prefix}/${each.key}"
   description = "dating-api ${each.key} (${var.environment})"
@@ -129,6 +134,15 @@ resource "aws_secretsmanager_secret_version" "operator" {
   secret_string = local.operator_secret_values[each.key]
 }
 
+# API process refuses to boot without OPENAI_API_KEY in the environment.
+# Empty operator key still needs a Secrets Manager version so ECS can inject a stub.
+resource "aws_secretsmanager_secret_version" "openai_bootstrap" {
+  count = var.openai_api_key == "" ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.operator["OPENAI_API_KEY"].id
+  secret_string = "not-configured"
+}
+
 resource "random_password" "session_pepper" {
   count = var.generate_session_pepper ? 1 : 0
 
@@ -153,6 +167,32 @@ resource "aws_secretsmanager_secret_version" "session_pepper" {
 
   secret_id     = aws_secretsmanager_secret.session_pepper.id
   secret_string = random_password.session_pepper[0].result
+}
+
+resource "random_password" "jwt_secret" {
+  count = var.generate_jwt_secret ? 1 : 0
+
+  length  = 64
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "jwt_secret" {
+  name_prefix             = "${local.secret_prefix}/JWT_SECRET-"
+  description             = "dating-api JWT_SECRET (${var.environment})"
+  recovery_window_in_days = var.secret_recovery_window_days
+
+  tags = merge(var.tags, {
+    Name      = "${var.name_prefix}-secret-JWT_SECRET"
+    App       = "dating-api"
+    SecretKey = "JWT_SECRET"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_secret" {
+  count = var.generate_jwt_secret ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.jwt_secret.id
+  secret_string = random_password.jwt_secret[0].result
 }
 
 resource "random_password" "email_unsubscribe" {
@@ -202,7 +242,9 @@ resource "aws_secretsmanager_secret" "database_url_fallback" {
 # =============================================================================
 
 resource "aws_ssm_parameter" "ui_build" {
-  for_each = var.create_ui_build_params ? local.ui_build_params : {}
+  for_each = var.create_ui_build_params ? {
+    for k, v in local.ui_build_params : k => v if v != ""
+  } : {}
 
   name        = "${local.ui_prefix}/build/${each.key}"
   description = "dating-ui build-arg ${each.key} (${var.environment}) — changing NEXT_PUBLIC_* requires image rebuild"

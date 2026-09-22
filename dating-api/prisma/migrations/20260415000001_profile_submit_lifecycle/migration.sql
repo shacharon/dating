@@ -68,6 +68,21 @@ CREATE TABLE IF NOT EXISTS "UserProfile" (
   CONSTRAINT "UserProfile_pkey" PRIMARY KEY ("id")
 );
 
+-- Fresh DBs already created UserProfile in 20260324065255 without userId.
+-- CREATE TABLE IF NOT EXISTS above is then a no-op; add missing columns before indexing.
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "userId" TEXT;
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "status" "UserProfileStatus" NOT NULL DEFAULT 'DRAFT';
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "onboardingStep" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "birthDate" TIMESTAMP(3);
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "gender" "ProfileGender";
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "desiredPartnerGenders" JSONB;
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "city" TEXT;
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "country" TEXT;
+ALTER TABLE "UserProfile" ADD COLUMN IF NOT EXISTS "locationLabel" TEXT;
+
+UPDATE "UserProfile" SET "userId" = "id" WHERE "userId" IS NULL;
+ALTER TABLE "UserProfile" ALTER COLUMN "userId" SET NOT NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS "UserProfile_userId_key" ON "UserProfile"("userId");
 
 DO $$ BEGIN

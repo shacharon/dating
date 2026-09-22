@@ -8,16 +8,19 @@ output "secrets_execution_role_policy_arn" {
 output "secrets_ecs_api_secrets" {
   description = "Full API secrets[] (SSM + Secrets Manager) — use only if ECS env does not duplicate keys"
   value       = module.secrets.ecs_api_secrets
+  sensitive   = true
 }
 
 output "secrets_ecs_secretsmanager_only" {
   description = "API secrets[] for Secrets Manager only (preferred with Story 02 ECS environment block)"
   value       = module.secrets.ecs_secrets_from_secretsmanager_only
+  sensitive   = true
 }
 
 output "secrets_database_url_value_from" {
   description = "DATABASE_URL ECS valueFrom"
   value       = module.secrets.database_url_value_from
+  sensitive   = true
 }
 
 output "secrets_ssm_parameter_names" {

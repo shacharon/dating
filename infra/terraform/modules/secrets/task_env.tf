@@ -45,6 +45,10 @@ locals {
         name      = "SESSION_SECRET_PEPPER"
         valueFrom = aws_secretsmanager_secret.session_pepper.arn
       },
+      {
+        name      = "JWT_SECRET"
+        valueFrom = aws_secretsmanager_secret.jwt_secret.arn
+      },
     ],
     var.generate_email_unsubscribe_secret || var.inject_email_unsubscribe_secret ? [
       {
@@ -92,6 +96,7 @@ locals {
 
   secretsmanager_arns = compact(concat(
     [aws_secretsmanager_secret.session_pepper.arn],
+    [aws_secretsmanager_secret.jwt_secret.arn],
     [aws_secretsmanager_secret.email_unsubscribe.arn],
     [for s in aws_secretsmanager_secret.operator : s.arn],
     var.database_url_secret_arn != null ? [var.database_url_secret_arn] : [aws_secretsmanager_secret.database_url_fallback[0].arn],

@@ -19,7 +19,7 @@ data "aws_iam_policy_document" "ecs_tasks_assume" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_role" "task" {
-  name_prefix        = "${var.name_prefix}-task-"
+  name               = "${var.name_prefix}-task"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
   description        = "ECS task role for dating-api (S3 + Rekognition)"
 
@@ -57,8 +57,8 @@ data "aws_iam_policy_document" "task" {
 }
 
 resource "aws_iam_role_policy" "task" {
-  name_prefix = "${var.name_prefix}-task-"
-  role        = aws_iam_role.task.id
+  name   = "${var.name_prefix}-task"
+  role   = aws_iam_role.task.id
   policy      = data.aws_iam_policy_document.task.json
 }
 
@@ -67,7 +67,7 @@ resource "aws_iam_role_policy" "task" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_role" "execution" {
-  name_prefix        = "${var.name_prefix}-exec-"
+  name               = "${var.name_prefix}-exec"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
   description        = "ECS execution role for dating (ECR + secrets + logs)"
 
@@ -112,7 +112,7 @@ data "aws_iam_policy_document" "execution_secrets" {
 }
 
 resource "aws_iam_role_policy" "execution_secrets" {
-  name_prefix = "${var.name_prefix}-exec-secrets-"
-  role        = aws_iam_role.execution.id
+  name   = "${var.name_prefix}-exec-secrets"
+  role   = aws_iam_role.execution.id
   policy      = data.aws_iam_policy_document.execution_secrets.json
 }

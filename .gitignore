@@ -16,3 +16,7 @@ docs/sprints/**/handoffs/
 node_modules/
 **/.vite/
 .vite/
+
+# Terraform plan output (contains live values; never commit)
+**/tfplan.json
+**/*.tfplan
