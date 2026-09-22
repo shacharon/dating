@@ -1,8 +1,8 @@
 # Story 2: API health check must not use wget
 
 **Status:** Done  
-**Shipped on main:** pending merge SHA  
-**Feature tip ahead of main:** pending  
+**Shipped on main:** `9d2090f`  
+**Feature tip ahead of main:** 0  
 **Depends on:** none
 
 ## Why
