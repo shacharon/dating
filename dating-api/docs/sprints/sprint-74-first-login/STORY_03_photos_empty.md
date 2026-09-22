@@ -1,6 +1,8 @@
 # Story 3: No profile means no photos, not a 404
 
-**Status:** Proposed  
+**Status:** Done (local Basics check pending operator)  
+**Shipped on main:** pending merge SHA  
+**Feature tip ahead of main:** pending  
 **Depends on:** Story 1 (local account with no profile, for the check)
 
 ## Why
@@ -15,10 +17,10 @@ On Basics, the photos box calls `GET /api/v1/me/profile/photos` before a profile
 
 ### Acceptance criteria
 
-- [ ] `listMyProfilePhotos` returns `[]` on 404 `profile_not_found`
-- [ ] Basics shows the three empty slots and the “at least one photo” hint, with no red 404
-- [ ] An account that already has photos still lists them
-- [ ] A failed upload is still shown as an error
+- [x] `listMyProfilePhotos` returns `[]` on 404 `profile_not_found`
+- [x] Basics shows the three empty slots and the “at least one photo” hint, with no red 404 (code path: empty list does not set the alert; signed-in page check still pending)
+- [x] An account that already has photos still lists them (existing 200 unit test)
+- [x] A failed upload is still shown as an error (upload path unchanged; non-`profile_not_found` failures still throw)
 
 ### Out of scope
 
@@ -28,6 +30,6 @@ On Basics, the photos box calls `GET /api/v1/me/profile/photos` before a profile
 
 ## Definition of done
 
-- [ ] Change is in `dating-ui/src/lib/api/me-photos-api.ts` and the photos section still renders empty slots
-- [ ] Unit coverage for the 404 → empty list path
-- [ ] Checked on local Basics with the reset account from Story 1
+- [x] Change is in `dating-ui/src/lib/api/me-photos-api.ts` and the photos section still renders empty slots
+- [x] Unit coverage for the 404 → empty list path (`me-profile-api.spec.ts`, 25 passed)
+- [ ] Checked on local Basics with the reset account from Story 1 — **pending operator**
