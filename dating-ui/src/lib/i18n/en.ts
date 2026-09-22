@@ -92,6 +92,11 @@ export const enCopy: AppCopySchema = {
           "Your photo is still under review. Once it's approved, matches will appear here.",
         cta: "Go to photos",
       },
+      noProfileGate: {
+        title: "Finish your profile to see matches",
+        body: "Add the basics and we can look for people here.",
+        cta: "Continue profile",
+      },
       actionBadge: {
         liked: { label: "Liked", ariaLabel: "You liked this match" },
         passed: { label: "Passed", ariaLabel: "You passed on this match" },

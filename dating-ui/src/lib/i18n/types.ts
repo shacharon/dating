@@ -99,6 +99,11 @@ export type AppCopySchema = {
         bodyPending: string;
         cta: string;
       };
+      noProfileGate: {
+        title: string;
+        body: string;
+        cta: string;
+      };
       actionBadge: {
         liked: { label: string; ariaLabel: string };
         passed: { label: string; ariaLabel: string };
