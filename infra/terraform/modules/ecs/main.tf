@@ -174,7 +174,11 @@ resource "aws_ecs_task_definition" "api" {
       }
 
       healthCheck = {
-        command     = ["CMD-SHELL", "wget -qO- http://127.0.0.1:${var.api_port}/health || exit 1"]
+        # Same check as dating-api/Dockerfile. node:22-slim has no wget.
+        command = [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
         interval    = 30
         timeout     = 5
         retries     = 3
