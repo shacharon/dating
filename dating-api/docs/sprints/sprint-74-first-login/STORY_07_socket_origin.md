@@ -1,8 +1,8 @@
 # Story 7: Socket uses the public site, not port 3001
 
 **Status:** Done (UI image and live check pending)  
-**Shipped on main:** pending merge  
-**Feature tip ahead of main:** pending merge  
+**Shipped on main:** `40707e1`  
+**Feature tip ahead of main:** 0  
 **Depends on:** none (ship with the UI image)
 
 ## Why
