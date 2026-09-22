@@ -20,6 +20,7 @@ import { LegacyBackendModule } from './legacy/legacy-backend.module';
 import { MatchesModule } from './matches/matches.module';
 import { MessagingRealtimeModule } from './messaging-realtime/messaging-realtime.module';
 import { MeProfileModule } from './me-profile/me-profile.module';
+import { PlacesModule } from './places/places.module';
 import { MeAccountModule } from './me-account/me-account.module';
 import { ReportsModule } from './reports/reports.module';
 import { ProfilesModule } from './profiles/profiles.module';
@@ -50,6 +51,7 @@ import { ContentModerationModule } from './content-moderation/content-moderation
     ContradictionModule,
     ProfilesModule,
     MeProfileModule,
+    PlacesModule,
     AdminModule,
     ReportsModule,
     MeAccountModule,

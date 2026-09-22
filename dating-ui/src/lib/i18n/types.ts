@@ -383,6 +383,8 @@ export type AppCopySchema = {
       partnerGendersRequiredError: string;
       genderRequiredError: (preferNotToSay: string) => string;
       cityLabel: string;
+      stateLabel: string;
+      locationRequiredError: string;
       cityPlaceholder: string;
       countryLabel: string;
       countryPlaceholder: string;

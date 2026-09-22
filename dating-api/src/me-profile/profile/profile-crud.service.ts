@@ -31,6 +31,7 @@ import {
   USER_PROFILE_REPOSITORY,
   type IUserProfileRepository,
 } from '../repositories/user-profile.repository';
+import { PlacesService } from '../../places/places.service';
 import { ProfileModerationService } from './profile-moderation.service';
 import {
   applyOnboardingCompletionToWriteData,
@@ -53,6 +54,7 @@ export class ProfileCrudService {
     private readonly matchListRankQueue: MatchListRankQueuePort,
     private readonly meMatches: MeMatchesService,
     private readonly analytics: AnalyticsService,
+    private readonly places: PlacesService,
   ) {}
 
   async requireProfileForUser(userId: string): Promise<UserProfile> {
@@ -118,6 +120,7 @@ export class ProfileCrudService {
 
     try {
       const writable = toPrismaWritableData(body);
+      await this.places.applyPlaceSelection(body, writable, 'create');
       if (body.gender === undefined) {
         writable.gender = ProfileGender.PREFER_NOT_TO_SAY;
       }
@@ -195,6 +198,7 @@ export class ProfileCrudService {
     assertOnboardingStepCoherent(existing, body);
 
     const data = toPrismaWritableData(body);
+    await this.places.applyPlaceSelection(body, data, 'update');
     if (body.nickname !== undefined) {
       const nextNickname = normalizeNicknameValue(body.nickname);
       const currentNickname = normalizeNicknameValue(existing.nickname);

@@ -7,6 +7,13 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingBasicAdvance({
         gender: '',
         desiredPartnerGenders: [],
+        location: {
+          countryCode: '',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
       }),
     ).toEqual({ ok: false, error: 'genderInvalidForAdvance' });
   });
@@ -16,6 +23,13 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingBasicAdvance({
         gender: 'MALE',
         desiredPartnerGenders: [],
+        location: {
+          countryCode: 'JP',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
       }),
     ).toEqual({ ok: false, error: 'partnerGendersRequired' });
   });
@@ -25,6 +39,13 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingBasicAdvance({
         gender: 'MALE',
         desiredPartnerGenders: ['FEMALE'],
+        location: {
+          countryCode: 'JP',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
       }),
     ).toEqual({ ok: true });
   });

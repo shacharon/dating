@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import {
   ME_PROFILE_GENDERS,
@@ -23,6 +23,14 @@ import {
   togglePartnerGender,
 } from '@/components/onboarding-basic-helpers';
 import {
+  listPlaceCities,
+  listPlaceCountries,
+  listPlaceUsStates,
+  type PlaceCity,
+  type PlaceCountry,
+  type PlaceUsState,
+} from '@/lib/api/places-api';
+import {
   useCreateProfile,
   usePatchProfile,
   useProfile,
@@ -42,9 +50,9 @@ function seedBasicFieldsFromProfile(
     setBirthDate: (v: string) => void;
     setGender: (v: string) => void;
     setDesiredPartnerGenders: (v: MeProfileGender[]) => void;
-    setCity: (v: string) => void;
-    setCountry: (v: string) => void;
-    setLocationLabel: (v: string) => void;
+    setCountryCode: (v: string) => void;
+    setUsStateCode: (v: string) => void;
+    setCityId: (v: string) => void;
     setDatingChapter: (v: DatingChapterValue | null) => void;
   },
 ) {
@@ -61,9 +69,10 @@ function seedBasicFieldsFromProfile(
         typeof x === 'string' && allowed.has(x),
     ),
   );
-  setters.setCity(profile.city ?? '');
-  setters.setCountry(profile.country ?? '');
-  setters.setLocationLabel(profile.locationLabel ?? '');
+  const country = profile.country ?? '';
+  setters.setCountryCode(/^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : '');
+  setters.setUsStateCode(profile.usStateCode ?? '');
+  setters.setCityId(profile.cityId ?? '');
   const chapter = profile.datingChapter;
   setters.setDatingChapter(
     chapter === 'first_chapter' ||
@@ -81,7 +90,7 @@ export function useOnboardingBasicForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { copy } = useAppLocale();
+  const { copy, locale } = useAppLocale();
   const ob = copy.onboarding;
   const bf = ob.basicForm;
   const mod = copy.contentModeration;
@@ -100,9 +109,13 @@ export function useOnboardingBasicForm({
   const [desiredPartnerGenders, setDesiredPartnerGenders] = useState<
     MeProfileGender[]
   >([]);
-  const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
-  const [locationLabel, setLocationLabel] = useState('');
+  const [countryCode, setCountryCode] = useState('');
+  const [usStateCode, setUsStateCode] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [countries, setCountries] = useState<PlaceCountry[]>([]);
+  const [usStates, setUsStates] = useState<PlaceUsState[]>([]);
+  const [cities, setCities] = useState<PlaceCity[]>([]);
+  const [citiesLoaded, setCitiesLoaded] = useState(false);
   const [datingChapter, setDatingChapter] = useState<DatingChapterValue | null>(
     null,
   );
@@ -116,9 +129,62 @@ export function useOnboardingBasicForm({
   const [savedFlash, setSavedFlash] = useState(false);
   const [partnerError, setPartnerError] = useState<string | null>(null);
   const [genderStepError, setGenderStepError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const loadHandledRef = useRef(false);
 
   const birthDateMax = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listPlaceCountries()
+      .then((res) => {
+        if (!cancelled) setCountries(res.countries);
+      })
+      .catch(() => {
+        if (!cancelled) setCountries([]);
+      });
+    listPlaceUsStates()
+      .then((res) => {
+        if (!cancelled) setUsStates(res.states);
+      })
+      .catch(() => {
+        if (!cancelled) setUsStates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!countryCode) {
+      setCities([]);
+      setCitiesLoaded(true);
+      return;
+    }
+    if (countryCode === 'US' && !usStateCode) {
+      setCities([]);
+      setCitiesLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setCitiesLoaded(false);
+    listPlaceCities(
+      countryCode,
+      countryCode === 'US' ? usStateCode : undefined,
+    )
+      .then((res) => {
+        if (!cancelled) setCities(res.cities);
+      })
+      .catch(() => {
+        if (!cancelled) setCities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCitiesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [countryCode, usStateCode]);
   const derivedAge = useMemo(() => ageFromBirthInput(birthDate), [birthDate]);
 
   const resumeOptions = useMemo(
@@ -163,9 +229,9 @@ export function useOnboardingBasicForm({
       setBirthDate,
       setGender,
       setDesiredPartnerGenders,
-      setCity,
-      setCountry,
-      setLocationLabel,
+      setCountryCode,
+      setUsStateCode,
+      setCityId,
       setDatingChapter,
     });
     loadHandledRef.current = true;
@@ -194,9 +260,13 @@ export function useOnboardingBasicForm({
       gender: (gender || null) as MeProfileGender | null,
       desiredPartnerGenders:
         desiredPartnerGenders.length > 0 ? desiredPartnerGenders : null,
-      city: city.trim() ? city.trim() : null,
-      country: country.trim() ? country.trim() : null,
-      locationLabel: locationLabel.trim() ? locationLabel.trim() : null,
+      ...(countryCode
+        ? {
+            country: countryCode,
+            usStateCode: countryCode === 'US' ? usStateCode || null : null,
+            cityId: cityId || null,
+          }
+        : {}),
       datingChapter: datingChapter as MeDatingChapter | null,
       onboardingStep: advanceToTexts ? ('TEXTS' as const) : ('BASIC' as const),
     };
@@ -212,18 +282,29 @@ export function useOnboardingBasicForm({
     setSaveError(null);
     setPartnerError(null);
     setGenderStepError(null);
+    setLocationError(null);
     if (advanceToTexts) {
+      const selectedState = usStates.find((state) => state.code === usStateCode);
       const advanceResult = validateOnboardingBasicAdvance({
         gender,
         desiredPartnerGenders,
+        location: {
+          countryCode,
+          usStateCode,
+          cityId,
+          countryHasCities: citiesLoaded ? cities.length > 0 : true,
+          stateHasCities: selectedState?.hasCities ?? cities.length > 0,
+        },
       });
       if (!advanceResult.ok) {
         if (advanceResult.error === 'genderInvalidForAdvance') {
           setGenderStepError(
             bf.genderRequiredError(genderCopy.PREFER_NOT_TO_SAY),
           );
-        } else {
+        } else if (advanceResult.error === 'partnerGendersRequired') {
           setPartnerError(bf.partnerGendersRequiredError);
+        } else {
+          setLocationError(bf.locationRequiredError);
         }
         return false;
       }
@@ -294,12 +375,26 @@ export function useOnboardingBasicForm({
     desiredPartnerGenders,
     partnerError,
     setPartnerGender,
-    city,
-    setCity,
-    country,
-    setCountry,
-    locationLabel,
-    setLocationLabel,
+    countries,
+    usStates,
+    cities,
+    countryCode,
+    setCountryCode: (value: string) => {
+      setCountryCode(value);
+      setUsStateCode('');
+      setCityId('');
+      setLocationError(null);
+    },
+    usStateCode,
+    setUsStateCode: (value: string) => {
+      setUsStateCode(value);
+      setCityId('');
+      setLocationError(null);
+    },
+    cityId,
+    setCityId,
+    locale,
+    locationError,
     datingChapter,
     setDatingChapter,
     profileSyncing,

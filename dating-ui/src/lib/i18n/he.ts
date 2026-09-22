@@ -474,6 +474,8 @@ export const heCopy: AppCopySchema = {
       genderRequiredError: (preferNotToSay: string) =>
         `בחר/י מגדר (שונה מ-"${preferNotToSay}") לפני שממשיכים — נדרש לשליחה לניתוח.`,
       cityLabel: "עיר",
+      stateLabel: "מדינה בארה״ב",
+      locationRequiredError: "בחרו מיקום לפני שממשיכים.",
       cityPlaceholder: "למשל תל אביב",
       countryLabel: "מדינה",
       countryPlaceholder: "למשל IL",

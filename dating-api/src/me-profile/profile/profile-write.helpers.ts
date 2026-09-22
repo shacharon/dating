@@ -214,6 +214,8 @@ export function toResponse(
     city: row.city ?? null,
     country: row.country ?? null,
     locationLabel: row.locationLabel ?? null,
+    cityId: row.cityId ?? null,
+    usStateCode: row.usStateCode ?? null,
     submittedAt: row.submittedAt ?? null,
     analyzedAt: row.analyzedAt ?? null,
     lastAnalysisError: row.lastAnalysisError ?? null,

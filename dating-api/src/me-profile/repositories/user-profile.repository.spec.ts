@@ -20,6 +20,7 @@ describe('ProfileCrudService with IUserProfileRepository double', () => {
       { enqueueRebuild: jest.fn() } as never,
       { invalidateMatchListCache: jest.fn() } as never,
       { track: jest.fn() } as never,
+      { applyPlaceSelection: jest.fn() } as never,
     );
 
     await expect(crud.getForUser('user_x')).resolves.toBeNull();
@@ -42,6 +43,7 @@ describe('ProfileCrudService with IUserProfileRepository double', () => {
       { enqueueRebuild: jest.fn() } as never,
       { invalidateMatchListCache: jest.fn() } as never,
       { track: jest.fn() } as never,
+      { applyPlaceSelection: jest.fn() } as never,
     );
 
     await expect(crud.requireProfileForUser('user_1')).resolves.toEqual(row);

@@ -92,6 +92,17 @@ export class MeProfileWritableFieldsDto {
   @IsOptional()
   @ValidateIf((_, v) => v !== null && v !== undefined)
   @IsString()
+  cityId?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsString()
+  @MaxLength(2)
+  usStateCode?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsString()
   @MaxLength(80, { message: 'nickname must be at most 80 characters' })
   nickname?: string | null;
 
