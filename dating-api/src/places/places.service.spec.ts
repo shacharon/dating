@@ -80,4 +80,144 @@ describe('PlacesService', () => {
     expect(data.locationLabel).toBe('Tel Aviv, IL');
     expect(data.placeCity).toEqual({ connect: { id: 'city_IL_na_tel_aviv' } });
   });
+
+  describe('listCountries with filter', () => {
+    it('returns all countries without filter', async () => {
+      const findMany = jest.fn().mockResolvedValue(
+        Array.from({ length: 249 }, (_, i) => ({
+          code: `C${i}`,
+          nameEn: `Country ${i}`,
+        })),
+      );
+      const places = serviceWith({ country: { findMany } });
+
+      const countries = await places.listCountries();
+
+      expect(countries).toHaveLength(249);
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: undefined,
+          orderBy: { nameEn: 'asc' },
+        }),
+      );
+    });
+
+    it('returns 28 countries with onboarding filter', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        { code: 'AU', nameEn: 'Australia' },
+        { code: 'CA', nameEn: 'Canada' },
+        { code: 'GB', nameEn: 'United Kingdom' },
+        { code: 'US', nameEn: 'United States' },
+        { code: 'ES', nameEn: 'Spain' },
+        { code: 'FR', nameEn: 'France' },
+        { code: 'DE', nameEn: 'Germany' },
+      ]);
+      const places = serviceWith({ country: { findMany } });
+
+      const countries = await places.listCountries('onboarding');
+
+      expect(countries.length).toBeGreaterThan(0);
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            code: {
+              in: expect.arrayContaining([
+                'US',
+                'GB',
+                'CA',
+                'AU',
+                'ES',
+                'FR',
+                'DE',
+              ]),
+            },
+          },
+        }),
+      );
+    });
+
+    it('moves US to first position when present', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        { code: 'AU', nameEn: 'Australia' },
+        { code: 'CA', nameEn: 'Canada' },
+        { code: 'GB', nameEn: 'United Kingdom' },
+        { code: 'US', nameEn: 'United States' },
+      ]);
+      const places = serviceWith({ country: { findMany } });
+
+      const countries = await places.listCountries('onboarding');
+
+      expect(countries[0].code).toBe('US');
+      expect(countries[0].nameEn).toBe('United States');
+    });
+
+    it('includes expected English-speaking countries in filter', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        { code: 'US', nameEn: 'United States' },
+        { code: 'GB', nameEn: 'United Kingdom' },
+        { code: 'CA', nameEn: 'Canada' },
+        { code: 'AU', nameEn: 'Australia' },
+        { code: 'NZ', nameEn: 'New Zealand' },
+        { code: 'IE', nameEn: 'Ireland' },
+      ]);
+      const places = serviceWith({ country: { findMany } });
+
+      const countries = await places.listCountries('onboarding');
+
+      const codes = countries.map((c) => c.code);
+      expect(codes).toContain('GB');
+      expect(codes).toContain('CA');
+      expect(codes).toContain('AU');
+      expect(codes).toContain('NZ');
+      expect(codes).toContain('IE');
+    });
+
+    it('includes expected Spanish-speaking countries in filter', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        { code: 'US', nameEn: 'United States' },
+        { code: 'ES', nameEn: 'Spain' },
+        { code: 'MX', nameEn: 'Mexico' },
+        { code: 'AR', nameEn: 'Argentina' },
+        { code: 'CO', nameEn: 'Colombia' },
+        { code: 'PE', nameEn: 'Peru' },
+        { code: 'CL', nameEn: 'Chile' },
+      ]);
+      const places = serviceWith({ country: { findMany } });
+
+      const countries = await places.listCountries('onboarding');
+
+      const codes = countries.map((c) => c.code);
+      expect(codes).toContain('ES');
+      expect(codes).toContain('MX');
+      expect(codes).toContain('AR');
+      expect(codes).toContain('CO');
+      expect(codes).toContain('PE');
+      expect(codes).toContain('CL');
+    });
+
+    it('includes expected EU countries in filter', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        { code: 'US', nameEn: 'United States' },
+        { code: 'FR', nameEn: 'France' },
+        { code: 'DE', nameEn: 'Germany' },
+        { code: 'IT', nameEn: 'Italy' },
+        { code: 'NL', nameEn: 'Netherlands' },
+        { code: 'BE', nameEn: 'Belgium' },
+        { code: 'SE', nameEn: 'Sweden' },
+        { code: 'PL', nameEn: 'Poland' },
+      ]);
+      const places = serviceWith({ country: { findMany } });
+
+      const countries = await places.listCountries('onboarding');
+
+      const codes = countries.map((c) => c.code);
+      expect(codes).toContain('FR');
+      expect(codes).toContain('DE');
+      expect(codes).toContain('IT');
+      expect(codes).toContain('NL');
+      expect(codes).toContain('BE');
+      expect(codes).toContain('SE');
+      expect(codes).toContain('PL');
+    });
+  });
 });

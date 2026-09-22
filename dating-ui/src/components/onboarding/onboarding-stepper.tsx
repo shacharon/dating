@@ -5,12 +5,15 @@ import type { AppCopySchema } from '@/lib/i18n';
 import {
   canNavigateOnboardingStep,
   isOnboardingStepFilled,
+  onboardingTabHref,
+  type OnboardingTab,
   type OnboardingUiStep,
 } from './onboarding-step';
 
-const STEPS: { id: OnboardingUiStep; href: string }[] = [
-  { id: 'basic', href: '/onboarding/basic' },
-  { id: 'texts', href: '/onboarding/texts' },
+const STEPS: { id: OnboardingTab; labelKey: 'basic' | 'story' | 'other' }[] = [
+  { id: 'story', labelKey: 'story' },
+  { id: 'basic', labelKey: 'basic' },
+  { id: 'other', labelKey: 'other' },
 ];
 
 export function OnboardingStepper({
@@ -22,19 +25,23 @@ export function OnboardingStepper({
   editMode: boolean;
   copy: AppCopySchema['onboarding'];
 }) {
-  const labels: Record<OnboardingUiStep, string> = {
-    basic: copy.stepBasic,
-    texts: copy.stepTexts,
+  const labels: Record<OnboardingTab, string> = {
+    basic: copy.tabs.basic,
+    story: copy.tabs.story,
+    other: copy.tabs.other,
   };
+
+  /** Map legacy texts route to story for highlight. */
+  const highlight: OnboardingUiStep | null =
+    current === 'texts' ? 'story' : current;
 
   return (
     <ol className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-2">
       {STEPS.map((step, index) => {
-        const filled = isOnboardingStepFilled(step.id, current);
-        const isCurrent = current === step.id;
+        const filled = isOnboardingStepFilled(step.id, highlight);
+        const isCurrent = highlight === step.id;
         const navigable = canNavigateOnboardingStep(step.id, current);
-        const href =
-          editMode && navigable ? `${step.href}?edit=1` : step.href;
+        const href = onboardingTabHref(step.id, editMode);
 
         const node = (
           <span className="flex flex-col items-center gap-0.5">
@@ -63,7 +70,7 @@ export function OnboardingStepper({
             {index > 0 ? (
               <span
                 className={`mb-4 h-0.5 w-6 sm:w-10 ${
-                  current === 'texts'
+                  filled || isCurrent
                     ? 'bg-zinc-900 dark:bg-zinc-100'
                     : 'bg-zinc-300 dark:bg-zinc-600'
                 }`}

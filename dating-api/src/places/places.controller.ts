@@ -8,8 +8,9 @@ export class PlacesController {
   constructor(private readonly places: PlacesService) {}
 
   @Get('countries')
-  async countries() {
-    const countries = await this.places.listCountries();
+  async countries(@Query('filter') filter?: string) {
+    const onboardingFilter = filter === 'onboarding' ? 'onboarding' : undefined;
+    const countries = await this.places.listCountries(onboardingFilter);
     return { countries };
   }
 

@@ -368,6 +368,11 @@ export type AppCopySchema = {
       cancel: string;
       confirm: string;
     };
+    tabs: {
+      basic: string;
+      story: string;
+      other: string;
+    };
     basicForm: {
       sectionTitle: string;
       googleNameLabel: string;
@@ -391,6 +396,13 @@ export type AppCopySchema = {
       locationLabelLabel: string;
       locationLabelPlaceholder: string;
       continueToStory: string;
+      basicTabTitle: string;
+      storyTabTitle: string;
+      otherTabTitle: string;
+      otherTabSubtitle: string;
+      skipButton: string;
+      continueButton: string;
+      finishButton: string;
       datingChapter: {
         question: string;
         helper: string;

@@ -77,7 +77,51 @@ export function OnboardingBasicFields({
   if (part === 'rest') {
     return (
       <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-        <div className="mb-4 rounded border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label htmlFor="onb-nickname" className={labelClass}>
+              {bf.nicknameLabel}
+            </label>
+            <input
+              id="onb-nickname"
+              type="text"
+              value={nickname}
+              onChange={(e) => onNicknameChange(e.target.value)}
+              className={inputClass}
+              placeholder={bf.nicknamePlaceholder}
+              autoComplete="off"
+              maxLength={80}
+            />
+          </div>
+          <div>
+            <label htmlFor="onb-birth" className={labelClass}>
+              {bf.birthDateLabel}
+            </label>
+            <input
+              id="onb-birth"
+              type="date"
+              max={birthDateMax}
+              value={birthDate}
+              onChange={(e) => onBirthDateChange(e.target.value)}
+              className={inputClass}
+            />
+            {derivedAge !== null ? (
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {bf.ageDisplay(derivedAge)}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const cityLabel = (city: { nameEn: string; nameHe: string | null }) =>
+    locale === 'he' && city.nameHe ? city.nameHe : city.nameEn;
+
+  return (
+    <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
+      <div className="mb-4 rounded border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
         <span className="font-medium text-zinc-600 dark:text-zinc-400">
           {bf.googleNameLabel}
         </span>
@@ -87,50 +131,6 @@ export function OnboardingBasicFields({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label htmlFor="onb-nickname" className={labelClass}>
-            {bf.nicknameLabel}
-          </label>
-          <input
-            id="onb-nickname"
-            type="text"
-            value={nickname}
-            onChange={(e) => onNicknameChange(e.target.value)}
-            className={inputClass}
-            placeholder={bf.nicknamePlaceholder}
-            autoComplete="off"
-            maxLength={80}
-          />
-        </div>
-        <div>
-          <label htmlFor="onb-birth" className={labelClass}>
-            {bf.birthDateLabel}
-          </label>
-          <input
-            id="onb-birth"
-            type="date"
-            max={birthDateMax}
-            value={birthDate}
-            onChange={(e) => onBirthDateChange(e.target.value)}
-            className={inputClass}
-          />
-          {derivedAge !== null ? (
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              {bf.ageDisplay(derivedAge)}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </section>
-    );
-  }
-
-  const cityLabel = (city: { nameEn: string; nameHe: string | null }) =>
-    locale === 'he' && city.nameHe ? city.nameHe : city.nameEn;
-
-  return (
-    <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="onb-gender" className={labelClass}>
