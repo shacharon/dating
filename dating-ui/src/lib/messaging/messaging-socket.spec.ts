@@ -95,9 +95,34 @@ describe("getMessagingSocketOrigin", () => {
   it("uses UI hostname and port for web when env is unset", () => {
     delete process.env.NEXT_PUBLIC_API_URL;
     delete process.env.NEXT_PUBLIC_API_PORT;
-    expect(getMessagingSocketOrigin()).toBe(
-      `${window.location.protocol}//${window.location.hostname}:3001`,
-    );
+    expect(window.location.hostname).toBe("localhost");
+    expect(getMessagingSocketOrigin()).toBe("http://localhost:3001");
+  });
+
+  it("uses the page origin on the public site and does not add port 3001", () => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    vi.stubGlobal("window", {
+      location: {
+        protocol: "https:",
+        hostname: "findyouraidate.com",
+        origin: "https://findyouraidate.com",
+      },
+    });
+    expect(getMessagingSocketOrigin()).toBe("https://findyouraidate.com");
+    vi.unstubAllGlobals();
+  });
+
+  it("lets NEXT_PUBLIC_API_URL override the public page origin", () => {
+    process.env.NEXT_PUBLIC_API_URL = "https://api.example.com/";
+    vi.stubGlobal("window", {
+      location: {
+        protocol: "https:",
+        hostname: "findyouraidate.com",
+        origin: "https://findyouraidate.com",
+      },
+    });
+    expect(getMessagingSocketOrigin()).toBe("https://api.example.com");
+    vi.unstubAllGlobals();
   });
 
   it("falls back to INTERNAL_API_URL on the server", () => {

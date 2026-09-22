@@ -27,6 +27,14 @@ export const MESSAGING_EVENT_CONVERSATION_UNSUBSCRIBE =
 
 const DEFAULT_API_PORT = "3001";
 
+function isLocalDevHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]"
+  );
+}
+
 /** Brief delay before tearing down socket when last consumer leaves (HMR / Strict Mode). */
 const RELEASE_DISCONNECT_MS = 300;
 
@@ -45,9 +53,12 @@ export function getMessagingSocketOrigin(): string {
     if (isMobile()) {
       return resolvePublicApiOrigin();
     }
-    const port =
-      process.env.NEXT_PUBLIC_API_PORT?.trim() || DEFAULT_API_PORT;
-    return `${window.location.protocol}//${window.location.hostname}:${port}`;
+    if (isLocalDevHost(window.location.hostname)) {
+      const port =
+        process.env.NEXT_PUBLIC_API_PORT?.trim() || DEFAULT_API_PORT;
+      return `${window.location.protocol}//${window.location.hostname}:${port}`;
+    }
+    return window.location.origin;
   }
   return (
     process.env.INTERNAL_API_URL?.trim().replace(/\/$/, "") ??
