@@ -449,6 +449,46 @@ describe('me-profile-api', () => {
     );
   });
 
+  it('listMyProfilePhotos returns [] on 404 profile_not_found', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () =>
+          JSON.stringify({
+            error: 'profile_not_found',
+            message: 'No profile exists for this account.',
+          }),
+      }),
+    );
+    await expect(listMyProfilePhotos()).resolves.toEqual([]);
+  });
+
+  it('listMyProfilePhotos throws on 404 with a different error code', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify({ error: 'something_else' }),
+      }),
+    );
+    await expect(listMyProfilePhotos()).rejects.toThrow(/404/);
+  });
+
+  it('listMyProfilePhotos throws on 500', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => '',
+      }),
+    );
+    await expect(listMyProfilePhotos()).rejects.toThrow(/500/);
+  });
+
   it('uploadMyProfilePhoto POSTs multipart form data', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       mockResponse({
