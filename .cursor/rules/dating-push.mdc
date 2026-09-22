@@ -1,0 +1,6 @@
+---
+description: When the user says push in Dating — git + both Docker images to ECR + ECS.
+alwaysApply: false
+---
+
+If the user says **push** (push to git, docker, aws) in this repo, read and follow `.cursor/skills/dating-push/SKILL.md`. Do not use Going2Eat / `food-*` / angular-piza cook.

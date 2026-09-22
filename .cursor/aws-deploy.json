@@ -1,0 +1,32 @@
+{
+  "appName": "dating",
+  "awsProfile": "pizza",
+  "region": "eu-central-1",
+  "backend": {
+    "ecrRepository": "dating-api",
+    "ecrRegistry": "907390934996.dkr.ecr.eu-central-1.amazonaws.com",
+    "dockerfile": "dating-api/Dockerfile",
+    "buildContext": "dating-api",
+    "ecsCluster": "dating-dev-cluster",
+    "ecsService": "dating-dev-api",
+    "taskFamily": "dating-dev-api",
+    "containerName": "dating-api",
+    "logGroup": "/ecs/dating-dev/dating-api"
+  },
+  "notes": {
+    "uiEcrRepository": "dating-ui",
+    "uiDockerfile": "dating-ui/Dockerfile",
+    "uiBuildContext": "dating-ui",
+    "uiService": "dating-dev-ui",
+    "uiTaskFamily": "dating-dev-ui",
+    "uiContainerName": "dating-ui",
+    "uiLogGroup": "/ecs/dating-dev/dating-ui",
+    "uiBuildArgs": {
+      "API_PROXY_TARGET": "http://dating-api.internal:3001",
+      "NEXT_PUBLIC_ADMIN_ENABLED": "0"
+    },
+    "googleClientIdFrom": "infra/terraform/dev/terraform.tfvars google_client_id",
+    "publicUrl": "https://findyouraidate.com",
+    "never": "food-* Going2Eat eu-north-1 food-backend"
+  }
+}

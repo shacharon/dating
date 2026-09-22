@@ -1,0 +1,7 @@
+---
+description: Dating first AWS upload uses the four --upload-agent roles, not Going2Eat deploy.
+globs: docs/DATING_FIRST_UPLOAD_PLAN.md,infra/terraform/**/*
+alwaysApply: false
+---
+
+When the user is doing Dating first upload / `--upload-agent`, load `.cursor/skills/dating-first-upload-run/SKILL.md`. Do not use Going2Eat (`food-*`, angular-piza aws-deploy) in the same apply.
