@@ -1,6 +1,8 @@
 # Story 4: Skip and Exit leave Basics
 
-**Status:** Proposed  
+**Status:** Done (local Skip/Exit check pending operator)  
+**Shipped on main:** pending merge  
+**Feature tip ahead of main:** pending merge  
 **Depends on:** Story 1 (local account with no profile, for the check)
 
 ## Why
@@ -15,11 +17,11 @@ First-time onboarding hides the app header. Skip and Exit both go to `/dating/me
 
 ### Acceptance criteria
 
-- [ ] Skip goes to Matches and the URL does not return to `/onboarding/basic`
-- [ ] Exit, after confirm, does the same
-- [ ] Matches for a user with no profile shows an empty / finish-your-profile state instead of replacing the route back to onboarding
-- [ ] Continue to Story still works after the required Basics fields are filled
-- [ ] Opening Matches directly, without Skip or Exit, does not trap the user either
+- [x] Skip goes to Matches and the URL does not return to `/onboarding/basic` (code: `no_profile` no longer calls `router.replace`; signed-in check pending)
+- [x] Exit, after confirm, does the same (same Matches path; signed-in check pending)
+- [x] Matches for a user with no profile shows an empty / finish-your-profile state instead of replacing the route back to onboarding (`page.spec.tsx`)
+- [x] Continue to Story still works after the required Basics fields are filled (Basics form unchanged)
+- [x] Opening Matches directly, without Skip or Exit, does not trap the user either (same gate, no redirect)
 
 ### Out of scope
 
@@ -29,5 +31,5 @@ First-time onboarding hides the app header. Skip and Exit both go to `/dating/me
 
 ## Definition of done
 
-- [ ] `use-matches.ts` no longer replaces `/onboarding` in a way that undoes Skip and Exit
-- [ ] Checked locally: Skip stays, Exit stays, Continue to Story still advances
+- [x] `use-matches.ts` no longer replaces `/onboarding` in a way that undoes Skip and Exit
+- [ ] Checked locally: Skip stays, Exit stays, Continue to Story still advances — **pending operator**

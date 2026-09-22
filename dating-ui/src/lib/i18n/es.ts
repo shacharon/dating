@@ -95,6 +95,11 @@ export const esCopy: AppCopySchema = {
           "Tu foto sigue en revision. Cuando se apruebe, las coincidencias apareceran aqui.",
         cta: "Ir a fotos",
       },
+      noProfileGate: {
+        title: "Termina tu perfil para ver coincidencias",
+        body: "Agrega lo basico y podremos buscar personas aqui.",
+        cta: "Continuar perfil",
+      },
       actionBadge: {
         liked: { label: "Me gusta", ariaLabel: "Te gusto esta coincidencia" },
         passed: { label: "Paso", ariaLabel: "Pasaste esta coincidencia" },

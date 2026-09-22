@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSubmitProfileForAnalysis } from '@/hooks/use-profile';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
+import { MatchListNoProfileGate } from '@/components/match-list-no-profile-gate';
 import { useAppLocale } from '@/lib/i18n';
 import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
 import { useInfiniteMatches } from '@/hooks/use-matches';
@@ -192,6 +193,11 @@ export default function MeMatchesPageClient() {
           !error &&
           data?.status === 'not_ready' &&
           data.reason === 'no_photo' && <MatchListPhotoGate />}
+
+        {!loading &&
+          !error &&
+          data?.status === 'not_ready' &&
+          data.reason === 'no_profile' && <MatchListNoProfileGate />}
 
         {!loading &&
           !error &&
