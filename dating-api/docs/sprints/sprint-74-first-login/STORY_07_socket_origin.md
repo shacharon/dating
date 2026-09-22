@@ -1,6 +1,8 @@
 # Story 7: Socket uses the public site, not port 3001
 
-**Status:** Proposed  
+**Status:** Done (UI image and live check pending)  
+**Shipped on main:** pending merge  
+**Feature tip ahead of main:** pending merge  
 **Depends on:** none (ship with the UI image)
 
 ## Why
@@ -15,10 +17,10 @@ On findyouraidate.com the browser calls `https://findyouraidate.com:3001/socket.
 
 ### Acceptance criteria
 
-- [ ] Deployed UI does not open `findyouraidate.com:3001`
-- [ ] The socket origin on the live site is `https://findyouraidate.com` on port 443
-- [ ] Local dev still uses `http://localhost:3001` directly, because the Next dev proxy breaks the WebSocket upgrade
-- [ ] After connect, DevTools shows a websocket upgrade (101), not a polling request every few seconds
+- [ ] Deployed UI does not open `findyouraidate.com:3001` — **pending UI image**
+- [ ] The socket origin on the live site is `https://findyouraidate.com` on port 443 — **pending UI image**
+- [x] Local dev still uses `http://localhost:3001` directly, because the Next dev proxy breaks the WebSocket upgrade
+- [ ] After connect, DevTools shows a websocket upgrade (101), not a polling request every few seconds — **Agent 5 after the image rolls**
 
 ### Out of scope
 
@@ -27,6 +29,6 @@ On findyouraidate.com the browser calls `https://findyouraidate.com:3001/socket.
 
 ## Definition of done
 
-- [ ] `getMessagingSocketOrigin()` keeps port 3001 for local dev and uses the page origin on the deployed site
-- [ ] Rebuilt UI image is what `dating-dev-ui` runs
-- [ ] Checked in the browser on findyouraidate.com
+- [x] `getMessagingSocketOrigin()` keeps port 3001 for local dev and uses the page origin on the deployed site
+- [ ] Rebuilt UI image is what `dating-dev-ui` runs — **pending deploy**
+- [ ] Checked in the browser on findyouraidate.com — **Agent 5**
