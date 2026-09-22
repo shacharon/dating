@@ -1,7 +1,7 @@
 # Sprint 74 — First login
 
 **Epic:** [First login stories](../../../../docs/work-items/first-login/stories/README.md)  
-**Status:** Story 1–5 Done — Stories 6–7 not started  
+**Status:** Story 1–6 Done — Story 7 not started  
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)  
 **Pipeline:** `.cursor/skills/dating-agent-run/SKILL.md`  
 **Repo:** `dating-api` + `dating-ui` + `infra/terraform`
@@ -19,7 +19,7 @@ A new account can get through Basics on localhost and on findyouraidate.com, and
 | 3 | [No profile means no photos, not a 404](./STORY_03_photos_empty.md) | **Done** (local Basics check pending) | 1 |
 | 4 | [Skip and Exit leave Basics](./STORY_04_basics_trap.md) | **Done** (local Skip/Exit check pending) | 1 |
 | 5 | [Fill the MVP place tables](./STORY_05_place_tables.md) | **Done** | — |
-| 6 | [Reorder Basics](./STORY_06_basics_order.md) | Proposed | 5 |
+| 6 | [Reorder Basics](./STORY_06_basics_order.md) | **Done** (local Basics check pending) | 5 |
 | 7 | [Socket uses the public site, not port 3001](./STORY_07_socket_origin.md) | Proposed | — |
 
 **Order:** 1 (done) → 2 → 3 → 4 → 5 → 6 → 7. Land each story on `main` (ahead = 0) before the next.

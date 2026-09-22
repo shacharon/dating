@@ -1,6 +1,8 @@
 # Story 6: Reorder Basics
 
-**Status:** Proposed  
+**Status:** Done (local Basics and profile-edit check pending operator)  
+**Shipped on main:** pending merge  
+**Feature tip ahead of main:** pending merge  
 **Depends on:** Story 5 (city list)
 
 ## Why
@@ -26,13 +28,13 @@ Profile edit uses the same field order inside Basics. Photos stay on the Photos 
 
 ### Acceptance criteria
 
-- [ ] Onboarding Basics shows dating-story choices, then gender, open to, and location, then photos, then nickname and birth date
-- [ ] Location is a dropdown of Story 5 cities, after a country choice
-- [ ] Israel cities show `name_he` when the UI locale is Hebrew, and `name_en` otherwise
-- [ ] Continue is blocked until gender, open to, and location are set
-- [ ] Continue is not blocked by an empty nickname or birth date
-- [ ] Profile edit Basics uses the same field order
-- [ ] Profile edit still has Photos as its own section, not inside the Basics form
+- [x] Onboarding Basics shows dating-story choices, then gender, open to, and location, then photos, then nickname and birth date
+- [x] Location is a dropdown of Story 5 cities, after a country choice
+- [x] Israel cities show `name_he` when the UI locale is Hebrew, and `name_en` otherwise
+- [x] Continue is blocked until gender, open to, and location are set
+- [x] Continue is not blocked by an empty nickname or birth date
+- [x] Profile edit Basics uses the same field order
+- [x] Profile edit still has Photos as its own section, not inside the Basics form
 
 ### Out of scope
 
@@ -43,6 +45,6 @@ Profile edit uses the same field order inside Basics. Photos stay on the Photos 
 
 ## Definition of done
 
-- [ ] Onboarding and profile-edit Basics match the order above
-- [ ] Chosen city id (or country, when that country has no cities) is what the form saves as location
-- [ ] Checked locally on the reset account and on profile edit for an account that already has a profile
+- [x] Onboarding and profile-edit Basics match the order above
+- [x] Chosen city id (or country, when that country has no cities) is what the form saves as location
+- [ ] Checked locally on the reset account and on profile edit for an account that already has a profile — **pending operator**
