@@ -1,6 +1,8 @@
 # Story 5: Fill the MVP place tables
 
-**Status:** Proposed  
+**Status:** Done  
+**Shipped on main:** pending merge  
+**Feature tip ahead of main:** pending merge  
 **Depends on:** none  
 **Blocks:** Story 6 (the location control reads these tables)
 
@@ -24,13 +26,13 @@ Proximity is a matching dimension, and profiles store `maxDistanceKm`. The check
 
 ### Acceptance criteria
 
-- [ ] Every ISO country is in `country`, English name only
-- [ ] All 50 US states plus DC are in `us_state`
-- [ ] Main cities, not every town, for these US states: California, Texas, Florida, New York, Pennsylvania, Illinois, Ohio, Georgia, North Carolina, Michigan
-- [ ] Israel’s main cities have `name_en` and `name_he`
-- [ ] Main cities for Britain, Spain, France, Germany, Italy, Poland, the Netherlands, and Portugal
-- [ ] Every city row has `lat` and `lng`
-- [ ] No Hebrew names except Israel cities
+- [x] Every ISO country is in `country`, English name only (249)
+- [x] All 50 US states plus DC are in `us_state` (51)
+- [x] Main cities, not every town, for these US states: California, Texas, Florida, New York, Pennsylvania, Illinois, Ohio, Georgia, North Carolina, Michigan (10 each)
+- [x] Israel’s main cities have `name_en` and `name_he` (15)
+- [x] Main cities for Britain, Spain, France, Germany, Italy, Poland, the Netherlands, and Portugal (10 each)
+- [x] Every city row has `lat` and `lng`
+- [x] No Hebrew names except Israel cities
 
 ### Out of scope
 
@@ -42,6 +44,6 @@ Proximity is a matching dimension, and profiles store `maxDistanceKm`. The check
 
 ## Definition of done
 
-- [ ] Migration creates the three tables
-- [ ] Seed data matches the lists above
-- [ ] A query can return cities for `IL` with Hebrew names and cities for `US` + `CA` with coordinates
+- [x] Migration creates the three tables (`20260922160000_place_tables`)
+- [x] Seed data matches the lists above (195 cities)
+- [x] A query can return cities for `IL` with Hebrew names and cities for `US` + `CA` with coordinates
