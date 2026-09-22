@@ -1,8 +1,8 @@
 # Story 6: Reorder Basics
 
 **Status:** Done (local Basics and profile-edit check pending operator)  
-**Shipped on main:** pending merge  
-**Feature tip ahead of main:** pending merge  
+**Shipped on main:** `961268f`  
+**Feature tip ahead of main:** 0  
 **Depends on:** Story 5 (city list)
 
 ## Why
