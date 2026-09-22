@@ -1,8 +1,8 @@
 # Story 5: Fill the MVP place tables
 
 **Status:** Done  
-**Shipped on main:** pending merge  
-**Feature tip ahead of main:** pending merge  
+**Shipped on main:** `e6a9a0f`  
+**Feature tip ahead of main:** 0  
 **Depends on:** none  
 **Blocks:** Story 6 (the location control reads these tables)
 
