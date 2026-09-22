@@ -163,6 +163,10 @@ model UserProfile {
   city                  String?
   country               String?
   locationLabel         String?
+  cityId                String?                   @map("city_id")
+  usStateCode           String?                   @map("us_state_code") @db.VarChar(2)
+  placeCity             City?                     @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  usState               UsState?                  @relation(fields: [usStateCode], references: [code], onDelete: SetNull)
   submittedAt           DateTime?
   analyzedAt            DateTime?
   lastAnalysisError     String?
@@ -199,6 +203,7 @@ model UserProfile {
 
   @@index([status, gender, birthDate])
   @@index([status, gender, city])
+  @@index([cityId])
   @@index([status, analyzedAt(sort: Desc)])
   @@index([status, userId])
 }
@@ -464,9 +469,10 @@ model Country {
 }
 
 model UsState {
-  code   String @id @db.VarChar(2)
-  nameEn String @map("name_en")
-  cities City[]
+  code     String        @id @db.VarChar(2)
+  nameEn   String        @map("name_en")
+  cities   City[]
+  profiles UserProfile[]
 
   @@map("us_state")
 }
@@ -479,8 +485,9 @@ model City {
   nameHe      String? @map("name_he")
   lat         Decimal @db.Decimal(9, 6)
   lng         Decimal @db.Decimal(9, 6)
-  country     Country @relation(fields: [countryCode], references: [code])
-  usState     UsState? @relation(fields: [usStateCode], references: [code])
+  country     Country       @relation(fields: [countryCode], references: [code])
+  usState     UsState?      @relation(fields: [usStateCode], references: [code])
+  profiles    UserProfile[]
 
   @@unique([countryCode, usStateCode, nameEn])
   @@index([countryCode])

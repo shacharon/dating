@@ -7,6 +7,13 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingBasicAdvance({
         gender: '',
         desiredPartnerGenders: [],
+        location: {
+          countryCode: '',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
       }),
     ).toEqual({ ok: false, error: 'genderInvalidForAdvance' });
   });
@@ -16,8 +23,74 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingBasicAdvance({
         gender: 'MALE',
         desiredPartnerGenders: [],
+        location: {
+          countryCode: 'JP',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
       }),
     ).toEqual({ ok: false, error: 'partnerGendersRequired' });
+  });
+
+  it('accepts a city, a country with no cities, and a US state with no cities', () => {
+    const gender = {
+      gender: 'MALE' as const,
+      desiredPartnerGenders: ['FEMALE' as const],
+    };
+    expect(
+      validateOnboardingBasicAdvance({
+        ...gender,
+        location: {
+          countryCode: 'IL',
+          usStateCode: '',
+          cityId: 'city_IL_na_tel_aviv',
+          countryHasCities: true,
+          stateHasCities: false,
+        },
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      validateOnboardingBasicAdvance({
+        ...gender,
+        location: {
+          countryCode: 'JP',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      validateOnboardingBasicAdvance({
+        ...gender,
+        location: {
+          countryCode: 'US',
+          usStateCode: 'WY',
+          cityId: '',
+          countryHasCities: true,
+          stateHasCities: false,
+        },
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it('blocks continue when location is missing', () => {
+    expect(
+      validateOnboardingBasicAdvance({
+        gender: 'MALE',
+        desiredPartnerGenders: ['FEMALE'],
+        location: {
+          countryCode: '',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
+      }),
+    ).toEqual({ ok: false, error: 'locationRequired' });
   });
 
   it('accepts valid advance fields', () => {
@@ -25,6 +98,13 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingBasicAdvance({
         gender: 'MALE',
         desiredPartnerGenders: ['FEMALE'],
+        location: {
+          countryCode: 'JP',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
       }),
     ).toEqual({ ok: true });
   });

@@ -31,7 +31,15 @@ export function OnboardingBasicForm({
         className={`space-y-6 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
+        <DatingChapterFields
+          copy={m.bf.datingChapter}
+          value={m.datingChapter}
+          onChange={m.setDatingChapter}
+          disabled={m.profileSyncing}
+        />
+
         <OnboardingBasicFields
+          part="required"
           bf={m.bf}
           genderCopy={m.genderCopy}
           googleName={m.googleName}
@@ -50,22 +58,53 @@ export function OnboardingBasicForm({
           desiredPartnerGenders={m.desiredPartnerGenders}
           partnerError={m.partnerError}
           onPartnerGenderChange={m.setPartnerGender}
-          city={m.city}
-          onCityChange={m.setCity}
-          country={m.country}
-          onCountryChange={m.setCountry}
-          locationLabel={m.locationLabel}
-          onLocationLabelChange={m.setLocationLabel}
-        />
-
-        <DatingChapterFields
-          copy={m.bf.datingChapter}
-          value={m.datingChapter}
-          onChange={m.setDatingChapter}
-          disabled={m.profileSyncing}
+          countries={m.countries}
+          usStates={m.usStates}
+          cities={m.cities}
+          countryCode={m.countryCode}
+          usStateCode={m.usStateCode}
+          cityId={m.cityId}
+          locale={m.locale}
+          locationError={m.locationError}
+          onCountryCodeChange={m.setCountryCode}
+          onUsStateCodeChange={m.setUsStateCode}
+          onCityIdChange={m.setCityId}
         />
 
         {!m.isHub ? <ProfilePhotoSection requiredForMatching /> : null}
+
+        <OnboardingBasicFields
+          part="rest"
+          bf={m.bf}
+          genderCopy={m.genderCopy}
+          googleName={m.googleName}
+          nickname={m.nickname}
+          onNicknameChange={m.setNickname}
+          birthDate={m.birthDate}
+          birthDateMax={m.birthDateMax}
+          derivedAge={m.derivedAge}
+          onBirthDateChange={m.setBirthDate}
+          gender={m.gender}
+          genderStepError={m.genderStepError}
+          onGenderChange={(value) => {
+            m.setGenderStepError(null);
+            m.setGender(value);
+          }}
+          desiredPartnerGenders={m.desiredPartnerGenders}
+          partnerError={m.partnerError}
+          onPartnerGenderChange={m.setPartnerGender}
+          countries={m.countries}
+          usStates={m.usStates}
+          cities={m.cities}
+          countryCode={m.countryCode}
+          usStateCode={m.usStateCode}
+          cityId={m.cityId}
+          locale={m.locale}
+          locationError={m.locationError}
+          onCountryCodeChange={m.setCountryCode}
+          onUsStateCodeChange={m.setUsStateCode}
+          onCityIdChange={m.setCityId}
+        />
 
         <div className="flex flex-wrap items-center gap-3">
           <button

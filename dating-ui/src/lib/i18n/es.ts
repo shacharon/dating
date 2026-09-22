@@ -500,6 +500,8 @@ export const esCopy: AppCopySchema = {
       genderRequiredError: (preferNotToSay: string) =>
         `Elige un genero (distinto de "${preferNotToSay}") antes de continuar — es obligatorio para el analisis.`,
       cityLabel: "Ciudad",
+      stateLabel: "Estado",
+      locationRequiredError: "Elige una ubicación antes de continuar.",
       cityPlaceholder: "p. ej. Tel Aviv",
       countryLabel: "Pais",
       countryPlaceholder: "p. ej. IL",

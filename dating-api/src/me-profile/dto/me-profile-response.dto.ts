@@ -37,6 +37,8 @@ export class MeProfileResponseDto {
   city!: string | null;
   country!: string | null;
   locationLabel!: string | null;
+  cityId!: string | null;
+  usStateCode!: string | null;
   submittedAt!: Date | null;
   analyzedAt!: Date | null;
   lastAnalysisError!: string | null;

@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { RedisCacheModule } from '../cache/redis-cache.module';
 import { WorkerModule } from '../workers/worker.module';
 import { ContentModerationModule } from '../content-moderation/content-moderation.module';
+import { PlacesModule } from '../places/places.module';
 import {
   MatchNarrativeCacheService,
   MatchNarrativeGenerator,
@@ -90,6 +91,7 @@ import { PrismaMatchNarrativeCacheRepository } from './repositories/prisma-match
     NotificationsModule,
     forwardRef(() => WorkerModule),
     ContentModerationModule,
+    PlacesModule,
     MatchingPolicyModule,
   ],
   controllers: [MeProfileController],

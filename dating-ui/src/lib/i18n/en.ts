@@ -493,6 +493,8 @@ export const enCopy: AppCopySchema = {
       genderRequiredError: (preferNotToSay: string) =>
         `Choose a gender (other than "${preferNotToSay}") before continuing — it is required when you submit for analysis.`,
       cityLabel: "City",
+      stateLabel: "State",
+      locationRequiredError: "Choose a location before continuing.",
       cityPlaceholder: "e.g. Tel Aviv",
       countryLabel: "Country",
       countryPlaceholder: "e.g. IL",

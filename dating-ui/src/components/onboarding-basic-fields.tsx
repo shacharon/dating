@@ -31,12 +31,18 @@ export type OnboardingBasicFieldsProps = {
   desiredPartnerGenders: MeProfileGender[];
   partnerError: string | null;
   onPartnerGenderChange: (g: MeProfileGender, checked: boolean) => void;
-  city: string;
-  onCityChange: (value: string) => void;
-  country: string;
-  onCountryChange: (value: string) => void;
-  locationLabel: string;
-  onLocationLabelChange: (value: string) => void;
+  part: 'required' | 'rest';
+  countries: { code: string; nameEn: string }[];
+  usStates: { code: string; nameEn: string; hasCities: boolean }[];
+  cities: { id: string; nameEn: string; nameHe: string | null }[];
+  countryCode: string;
+  usStateCode: string;
+  cityId: string;
+  locale: string;
+  locationError: string | null;
+  onCountryCodeChange: (value: string) => void;
+  onUsStateCodeChange: (value: string) => void;
+  onCityIdChange: (value: string) => void;
 };
 
 export function OnboardingBasicFields({
@@ -55,20 +61,23 @@ export function OnboardingBasicFields({
   desiredPartnerGenders,
   partnerError,
   onPartnerGenderChange,
-  city,
-  onCityChange,
-  country,
-  onCountryChange,
-  locationLabel,
-  onLocationLabelChange,
+  part,
+  countries,
+  usStates,
+  cities,
+  countryCode,
+  usStateCode,
+  cityId,
+  locale,
+  locationError,
+  onCountryCodeChange,
+  onUsStateCodeChange,
+  onCityIdChange,
 }: OnboardingBasicFieldsProps) {
-  return (
-    <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-      <h2 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-        {bf.sectionTitle}
-      </h2>
-
-      <div className="mb-4 rounded border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
+  if (part === 'rest') {
+    return (
+      <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
+        <div className="mb-4 rounded border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
         <span className="font-medium text-zinc-600 dark:text-zinc-400">
           {bf.googleNameLabel}
         </span>
@@ -112,6 +121,17 @@ export function OnboardingBasicFields({
             </p>
           ) : null}
         </div>
+      </div>
+    </section>
+    );
+  }
+
+  const cityLabel = (city: { nameEn: string; nameHe: string | null }) =>
+    locale === 'he' && city.nameHe ? city.nameHe : city.nameEn;
+
+  return (
+    <section className="rounded border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="onb-gender" className={labelClass}>
             {bf.genderLabel}
@@ -169,47 +189,69 @@ export function OnboardingBasicFields({
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="onb-city" className={labelClass}>
-            {bf.cityLabel}
-          </label>
-          <input
-            id="onb-city"
-            type="text"
-            value={city}
-            onChange={(e) => onCityChange(e.target.value)}
-            className={inputClass}
-            placeholder={bf.cityPlaceholder}
-            autoComplete="address-level2"
-          />
-        </div>
-        <div>
           <label htmlFor="onb-country" className={labelClass}>
             {bf.countryLabel}
           </label>
-          <input
+          <select
             id="onb-country"
-            type="text"
-            value={country}
-            onChange={(e) => onCountryChange(e.target.value)}
+            value={countryCode}
+            onChange={(e) => onCountryCodeChange(e.target.value)}
             className={inputClass}
-            placeholder={bf.countryPlaceholder}
-            autoComplete="country-name"
-          />
+          >
+            <option value="">{bf.genderSelectPlaceholder}</option>
+            {countries.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.nameEn}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="sm:col-span-2">
-          <label htmlFor="onb-loc-label" className={labelClass}>
-            {bf.locationLabelLabel}
-          </label>
-          <input
-            id="onb-loc-label"
-            type="text"
-            value={locationLabel}
-            onChange={(e) => onLocationLabelChange(e.target.value)}
-            className={inputClass}
-            placeholder={bf.locationLabelPlaceholder}
-          />
-        </div>
+        {countryCode === 'US' ? (
+          <div>
+            <label htmlFor="onb-state" className={labelClass}>
+              {bf.stateLabel}
+            </label>
+            <select
+              id="onb-state"
+              value={usStateCode}
+              onChange={(e) => onUsStateCodeChange(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">{bf.genderSelectPlaceholder}</option>
+              {usStates.map((state) => (
+                <option key={state.code} value={state.code}>
+                  {state.nameEn}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        {cities.length > 0 ? (
+          <div>
+            <label htmlFor="onb-city" className={labelClass}>
+              {bf.cityLabel}
+            </label>
+            <select
+              id="onb-city"
+              value={cityId}
+              onChange={(e) => onCityIdChange(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">{bf.genderSelectPlaceholder}</option>
+              {cities.map((city) => (
+                <option key={city.id} value={city.id}>
+                  {cityLabel(city)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
+      {locationError ? (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+          {locationError}
+        </p>
+      ) : null}
     </section>
   );
 }

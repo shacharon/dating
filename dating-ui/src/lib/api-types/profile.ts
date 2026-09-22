@@ -66,6 +66,8 @@ export interface MeProfileDto {
   city?: string | null;
   country?: string | null;
   locationLabel?: string | null;
+  cityId?: string | null;
+  usStateCode?: string | null;
   submittedAt?: string | null;
   analyzedAt?: string | null;
   lastAnalysisError?: string | null;
@@ -90,6 +92,8 @@ export interface CreateMeProfileBody {
   city?: string | null;
   country?: string | null;
   locationLabel?: string | null;
+  cityId?: string | null;
+  usStateCode?: string | null;
   partnerAgeMin?: number | null;
   partnerAgeMax?: number | null;
   maxDistanceKm?: number | null;

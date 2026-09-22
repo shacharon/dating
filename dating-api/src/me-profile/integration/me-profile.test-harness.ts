@@ -61,6 +61,7 @@ export function createMeProfileServiceForTest(
     deps.matchListRankQueue,
     deps.meMatches,
     deps.analytics,
+    { applyPlaceSelection: async () => undefined } as never,
   );
   const photos = new ProfilePhotoService(
     deps.profilePhotos ?? new PrismaProfilePhotoRepository(deps.prisma),
