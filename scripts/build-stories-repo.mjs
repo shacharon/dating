@@ -104,10 +104,11 @@ const areas = [
   },
 ];
 
-if (fs.existsSync(storiesRoot)) {
-  fs.rmSync(storiesRoot, { recursive: true, force: true });
-}
 fs.mkdirSync(storiesRoot, { recursive: true });
+for (const ent of fs.readdirSync(storiesRoot)) {
+  if (ent === ".git") continue;
+  fs.rmSync(path.join(storiesRoot, ent), { recursive: true, force: true });
+}
 
 const areaIndexes = [];
 
