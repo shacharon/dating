@@ -71,6 +71,21 @@ export async function listMyProfilePhotos(): Promise<MeProfilePhotoDto[]> {
     throw new Error(apiUnreachableMessage(base, path));
   }
   captureRequestIdFromResponse(res);
+  if (res.status === 404) {
+    const text = await res.text();
+    let errorCode: string | undefined;
+    try {
+      const body = text
+        ? (JSON.parse(text) as { error?: unknown })
+        : null;
+      errorCode = typeof body?.error === 'string' ? body.error : undefined;
+    } catch {
+      errorCode = undefined;
+    }
+    if (errorCode === 'profile_not_found') {
+      return [];
+    }
+  }
   if (!res.ok) {
     throw new Error(`GET ${path} failed: ${res.status} ${res.statusText}`);
   }
