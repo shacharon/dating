@@ -133,6 +133,40 @@ describe('onboarding-basic-validation', () => {
     ).toEqual({ ok: true });
   });
 
+  it('blocks PREFER_NOT_TO_SAY gender on facts advance', () => {
+    expect(
+      validateOnboardingFactsAdvance({
+        gender: 'PREFER_NOT_TO_SAY',
+        desiredPartnerGenders: ['FEMALE'],
+        location: {
+          countryCode: 'JP',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
+        birthDate: '1990-05-01',
+      }),
+    ).toEqual({ ok: false, error: 'genderInvalidForAdvance' });
+  });
+
+  it('treats unloaded cities as requiring a city (no early continue)', () => {
+    expect(
+      validateOnboardingFactsAdvance({
+        gender: 'MALE',
+        desiredPartnerGenders: ['FEMALE'],
+        location: {
+          countryCode: 'IL',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: true,
+          stateHasCities: false,
+        },
+        birthDate: '1990-05-01',
+      }),
+    ).toEqual({ ok: false, error: 'locationRequired' });
+  });
+
   it('listFactsMissing lists all empty keys', () => {
     expect(
       listFactsMissing({

@@ -14,6 +14,9 @@ describe('looking-for', () => {
       'NON_BINARY',
       'OTHER',
     ]);
+    expect(partnerGendersFromLookingFor('everyone')).not.toContain(
+      'PREFER_NOT_TO_SAY',
+    );
   });
 
   it('infers tile from saved partners', () => {

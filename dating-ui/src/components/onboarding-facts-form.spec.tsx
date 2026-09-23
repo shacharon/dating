@@ -179,6 +179,94 @@ describe('OnboardingFactsForm', () => {
           onboardingStep: 'TEXTS',
         }),
       );
+      expect(patchMyProfile.mock.calls[0][0].onboardingStep).not.toBe(
+        'COMPLETED',
+      );
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/photos');
+    });
+  });
+
+  it('Continue with everyone sends all partner genders (no PREFER_NOT_TO_SAY)', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      gender: 'FEMALE',
+      desiredPartnerGenders: ['MALE', 'FEMALE', 'NON_BINARY', 'OTHER'],
+      birthDate: '1992-01-15',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('onboarding-facts-continue') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+
+    fireEvent.click(screen.getByTestId('onboarding-facts-continue'));
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          desiredPartnerGenders: ['MALE', 'FEMALE', 'NON_BINARY', 'OTHER'],
+          onboardingStep: 'TEXTS',
+        }),
+      );
+      const partners = patchMyProfile.mock.calls[0][0]
+        .desiredPartnerGenders as string[];
+      expect(partners).not.toContain('PREFER_NOT_TO_SAY');
+    });
+  });
+
+  it('creates a profile when none exists yet', async () => {
+    fetchMyProfile.mockResolvedValue(null);
+
+    renderForm();
+    const ff = enCopy.onboarding.factsForm;
+    const bf = enCopy.onboarding.basicForm;
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: enCopy.gender.MALE })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: enCopy.gender.MALE }));
+    fireEvent.click(screen.getByRole('button', { name: ff.lookingForWomen }));
+    await waitFor(() => {
+      expect(screen.getByLabelText(bf.countryLabel)).toBeTruthy();
+    });
+    fireEvent.change(screen.getByLabelText(bf.countryLabel), {
+      target: { value: 'IL' },
+    });
+    fireEvent.change(screen.getByLabelText(ff.birthDateLabel), {
+      target: { value: '1990-05-01' },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Tel Aviv' })).toBeTruthy();
+    });
+    fireEvent.change(screen.getByLabelText(bf.cityLabel), {
+      target: { value: 'city_IL_na_tel_aviv' },
+    });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('onboarding-facts-continue') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+
+    fireEvent.click(screen.getByTestId('onboarding-facts-continue'));
+
+    await waitFor(() => {
+      expect(createMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gender: 'MALE',
+          desiredPartnerGenders: ['FEMALE'],
+          onboardingStep: 'TEXTS',
+        }),
+      );
+      expect(patchMyProfile).not.toHaveBeenCalled();
       expect(pushMock).toHaveBeenCalledWith('/onboarding/photos');
     });
   });

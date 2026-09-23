@@ -73,6 +73,7 @@ export function useOnboardingFactsForm() {
   const [countries, setCountries] = useState<PlaceCountry[]>([]);
   const [usStates, setUsStates] = useState<PlaceUsState[]>([]);
   const [cities, setCities] = useState<PlaceCity[]>([]);
+  const [citiesLoaded, setCitiesLoaded] = useState(false);
 
   const loadHandledRef = useRef(false);
   const countryGuessedRef = useRef(false);
@@ -82,9 +83,9 @@ export function useOnboardingFactsForm() {
     [lookingFor],
   );
 
-  const countryHasCities = cities.length > 0 || Boolean(cityId);
+  const countryHasCities = citiesLoaded ? cities.length > 0 : true;
   const selectedState = usStates.find((s) => s.code === usStateCode);
-  const stateHasCities = selectedState?.hasCities ?? false;
+  const stateHasCities = selectedState?.hasCities ?? cities.length > 0;
 
   const advanceFields = {
     gender,
@@ -93,10 +94,7 @@ export function useOnboardingFactsForm() {
       countryCode,
       usStateCode,
       cityId,
-      countryHasCities:
-        countryCode === 'US'
-          ? true
-          : cities.length > 0 || Boolean(cityId),
+      countryHasCities,
       stateHasCities,
     },
     birthDate,
@@ -195,13 +193,16 @@ export function useOnboardingFactsForm() {
   useEffect(() => {
     if (!countryCode) {
       setCities([]);
+      setCitiesLoaded(true);
       return;
     }
     if (countryCode === 'US' && !usStateCode) {
       setCities([]);
+      setCitiesLoaded(true);
       return;
     }
     let cancelled = false;
+    setCitiesLoaded(false);
     void (async () => {
       try {
         const res = await listPlaceCities(
@@ -211,6 +212,8 @@ export function useOnboardingFactsForm() {
         if (!cancelled) setCities(res.cities);
       } catch {
         if (!cancelled) setCities([]);
+      } finally {
+        if (!cancelled) setCitiesLoaded(true);
       }
     })();
     return () => {
