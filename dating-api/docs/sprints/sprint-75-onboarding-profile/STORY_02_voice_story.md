@@ -1,8 +1,8 @@
 # Story 2: Record your story by voice
 
 **Status:** Done (live mic check pending operator; Agent 2.5 deferred)  
-**Shipped on main:** _(set after merge)_  
-**Feature tip ahead of main:** _(set after merge)_  
+**Shipped on main:** `3620c74`  
+**Feature tip ahead of main:** 0  
 **Depends on:** Story 1
 
 ## Why
