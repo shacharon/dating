@@ -7,14 +7,10 @@ import {
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
 
-const {
-  fetchMyProfile,
-  patchMyProfile,
-  submitMyProfileForAnalysis,
-} = vi.hoisted(() => ({
+const { fetchMyProfile, patchMyProfile, createMyProfile } = vi.hoisted(() => ({
   fetchMyProfile: vi.fn(),
   patchMyProfile: vi.fn(),
-  submitMyProfileForAnalysis: vi.fn(),
+  createMyProfile: vi.fn(),
 }));
 
 vi.mock('@/lib/api-sdk', () => ({
@@ -22,8 +18,8 @@ vi.mock('@/lib/api-sdk', () => ({
     profile: {
       fetchMyProfile,
       patchMyProfile,
-      createMyProfile: vi.fn(),
-      submitMyProfileForAnalysis,
+      createMyProfile,
+      submitMyProfileForAnalysis: vi.fn(),
     },
   },
 }));
@@ -42,15 +38,15 @@ import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
 import type { MeProfileDto } from '@/lib/api/me-profile-api';
 
-const textsProfile: MeProfileDto = {
+const storyProfile: MeProfileDto = {
   id: 'p1',
   userId: 'u1',
   status: 'DRAFT',
-  onboardingStep: 'TEXTS',
+  onboardingStep: 'BASIC',
   aboutMe: 'Hello',
   aboutPartner: 'Kind',
   aboutRelationship: 'Long term',
-  gender: 'MALE',
+  gender: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-02T00:00:00.000Z',
 };
@@ -69,15 +65,15 @@ describe('OnboardingTextsForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
-    fetchMyProfile.mockResolvedValue(textsProfile);
+    fetchMyProfile.mockResolvedValue(storyProfile);
     patchMyProfile.mockImplementation(async (body) => ({
-      ...textsProfile,
+      ...storyProfile,
       ...body,
     }));
-    submitMyProfileForAnalysis.mockResolvedValue({
-      analysisJobId: 'job-1',
-      profile: textsProfile,
-    });
+    createMyProfile.mockImplementation(async (body) => ({
+      ...storyProfile,
+      ...body,
+    }));
   });
 
   afterEach(() => {
@@ -96,13 +92,15 @@ describe('OnboardingTextsForm', () => {
     });
   });
 
-  it('renders Hebrew finish and back links when locale is he', async () => {
+  it('renders Hebrew continue and back links when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: heCopy.onboarding.textsForm.finishAndAnalyze }),
+        screen.getByRole('button', {
+          name: heCopy.onboarding.basicForm.continueButton,
+        }),
       ).toBeTruthy();
       expect(
         screen.getByRole('link', { name: heCopy.onboarding.textsForm.backToBasics }),
@@ -110,33 +108,28 @@ describe('OnboardingTextsForm', () => {
     });
   });
 
-  it('shows localized gender-missing error when finish is blocked', async () => {
-    let fetchCount = 0;
-    fetchMyProfile.mockImplementation(async () => {
-      fetchCount += 1;
-      if (fetchCount === 1) return textsProfile;
-      return { ...textsProfile, gender: 'PREFER_NOT_TO_SAY' };
+  it('Continue saves and navigates to /onboarding/basic (empty texts OK)', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...storyProfile,
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
     });
-
     renderForm();
 
+    const primary = await screen.findByTestId('onboarding-story-primary');
     await waitFor(() => {
-      expect(
-        (screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel) as HTMLTextAreaElement)
-          .value,
-      ).toBe('Hello');
+      expect((primary as HTMLButtonElement).disabled).toBe(false);
     });
 
-    fireEvent.click(
-      screen.getByRole('button', { name: enCopy.onboarding.textsForm.finishAndAnalyze }),
-    );
+    fireEvent.click(primary);
 
     await waitFor(() => {
-      expect(submitMyProfileForAnalysis).not.toHaveBeenCalled();
-      expect(screen.getByRole('alert').textContent).toContain(
-        enCopy.onboarding.textsForm.genderMissingError,
-      );
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/basic');
     });
+    expect(
+      patchMyProfile.mock.calls.length + createMyProfile.mock.calls.length,
+    ).toBeGreaterThan(0);
   });
 
   it('shows writing help with word count and collapsed examples under each field', async () => {

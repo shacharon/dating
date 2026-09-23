@@ -224,7 +224,8 @@ export function useOnboardingBasicForm({
 
     if (!isHub) {
       const path = onboardingResumePath(profile, resumeOptions);
-      if (path !== '/onboarding/basic') {
+      /** Allow BASIC on facts even when resume prefers story (no gender yet). */
+      if (path === '/profile') {
         loadHandledRef.current = true;
         setProfileSyncing(false);
         router.replace(path);
@@ -361,12 +362,9 @@ export function useOnboardingBasicForm({
   async function handleContinueToTexts() {
     const tab = onboardingTabFromSearchParams(searchParams);
 
-    // Story → Basic: save texts, no required-field gate
+    // Legacy ?tab=story → real story route (texts no longer live on this page)
     if (!isHub && tab === 'story') {
-      const ok = await persist(false);
-      if (!ok) return;
-      onSaved?.();
-      router.push('/onboarding/basic?tab=basic');
+      router.push('/onboarding/story');
       return;
     }
 
@@ -379,7 +377,8 @@ export function useOnboardingBasicForm({
       return;
     }
 
-    // Other (or hub): validate + advance to texts finish page
+    // Other (or hub): validate + advance. Texts finish page is gone — land on matches
+    // (not_analyzed gate → /onboarding/story if story still empty).
     const ok = await persist(true);
     if (!ok) return;
     onSaved?.();
@@ -389,7 +388,7 @@ export function useOnboardingBasicForm({
       document.getElementById('story')?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
-    router.push('/onboarding/texts');
+    router.push('/dating/me-matches');
   }
 
   return {

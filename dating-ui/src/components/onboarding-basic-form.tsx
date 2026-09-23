@@ -6,14 +6,8 @@ import { InlineError } from '@/components/errors';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { OnboardingBasicFields } from '@/components/onboarding-basic-fields';
 import { DatingChapterFields } from '@/components/dating-chapter-fields';
-import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text-field-help';
 import { useOnboardingBasicForm } from '@/hooks/use-onboarding-basic-form';
 import { onboardingTabFromSearchParams } from '@/components/onboarding/onboarding-step';
-
-const inputClass =
-  'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
-const labelClass =
-  'mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
 export function OnboardingBasicForm({
   variant = 'onboarding',
@@ -58,7 +52,6 @@ export function OnboardingBasicForm({
         className={`space-y-6 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
-        {/* Basic tab */}
         {(m.isHub || activeTab === 'basic') && (
           <div className="space-y-6">
             {!m.isHub ? (
@@ -102,78 +95,21 @@ export function OnboardingBasicForm({
           </div>
         )}
 
-        {/* Story tab — about me / partner / relationship */}
-        {(m.isHub || activeTab === 'story') && (
-          <div className="space-y-6">
-            {!m.isHub ? (
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {m.bf.storyTabTitle}
-              </h2>
-            ) : null}
+        {/* Story tab removed — texts live only at /onboarding/story (Sprint 75 Story 1). */}
+        {!m.isHub && activeTab === 'story' ? (
+          <div className="space-y-3 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {m.ob.textsForm.intro}
             </p>
-            <div>
-              <label htmlFor="onb-about-me" className={labelClass}>
-                {m.ob.textsForm.aboutMeLabel}
-              </label>
-              <textarea
-                id="onb-about-me"
-                value={m.aboutMe}
-                onChange={(e) => m.setAboutMe(e.target.value)}
-                rows={4}
-                className={`${inputClass} min-h-[6rem]`}
-                placeholder={m.ob.textsForm.aboutMePlaceholder}
-              />
-              <OnboardingTextFieldHelp
-                value={m.aboutMe}
-                field={m.ob.writingPrompts.aboutMe}
-                chrome={m.ob.textsForm.writingHelp}
-                testIdPrefix="onb-about-me"
-              />
-            </div>
-            <div>
-              <label htmlFor="onb-about-partner" className={labelClass}>
-                {m.ob.textsForm.aboutPartnerLabel}
-              </label>
-              <textarea
-                id="onb-about-partner"
-                value={m.aboutPartner}
-                onChange={(e) => m.setAboutPartner(e.target.value)}
-                rows={4}
-                className={`${inputClass} min-h-[6rem]`}
-                placeholder={m.ob.textsForm.aboutPartnerPlaceholder}
-              />
-              <OnboardingTextFieldHelp
-                value={m.aboutPartner}
-                field={m.ob.writingPrompts.aboutPartner}
-                chrome={m.ob.textsForm.writingHelp}
-                testIdPrefix="onb-about-partner"
-              />
-            </div>
-            <div>
-              <label htmlFor="onb-about-rel" className={labelClass}>
-                {m.ob.textsForm.aboutRelationshipLabel}
-              </label>
-              <textarea
-                id="onb-about-rel"
-                value={m.aboutRelationship}
-                onChange={(e) => m.setAboutRelationship(e.target.value)}
-                rows={4}
-                className={`${inputClass} min-h-[6rem]`}
-                placeholder={m.ob.textsForm.aboutRelationshipPlaceholder}
-              />
-              <OnboardingTextFieldHelp
-                value={m.aboutRelationship}
-                field={m.ob.writingPrompts.aboutRelationship}
-                chrome={m.ob.textsForm.writingHelp}
-                testIdPrefix="onb-about-rel"
-              />
-            </div>
+            <a
+              href="/onboarding/story"
+              className="inline-block text-sm font-medium text-zinc-900 underline dark:text-zinc-100"
+            >
+              {m.bf.storyTabTitle}
+            </a>
           </div>
-        )}
+        ) : null}
 
-        {/* Other tab — nickname, birth, dating journey */}
         {(m.isHub || activeTab === 'other') && (
           <div className="space-y-6">
             {!m.isHub ? (

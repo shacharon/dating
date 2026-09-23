@@ -114,29 +114,29 @@ describe('OnboardingBasicForm', () => {
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
   });
 
-  it('renders Story tab content by default', async () => {
+  it('renders Basic tab content by default (story is its own route)', async () => {
     renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: enCopy.onboarding.basicForm.storyTabTitle }),
+        screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
       ).toBeTruthy();
       expect(
         screen.getByRole('button', { name: enCopy.onboarding.saveProgress }),
       ).toBeTruthy();
       expect(
-        screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
-      ).toBeTruthy();
+        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+      ).toBeNull();
     });
   });
 
-  it('renders Hebrew story tab title when locale is he', async () => {
+  it('renders Hebrew basic tab title when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: heCopy.onboarding.basicForm.storyTabTitle }),
+        screen.getByRole('heading', { name: heCopy.onboarding.basicForm.basicTabTitle }),
       ).toBeTruthy();
       expect(
         screen.getByRole('button', { name: heCopy.onboarding.saveProgress }),
@@ -235,10 +235,26 @@ describe('OnboardingBasicForm', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.storyTabTitle }),
+          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
         ).toBeTruthy();
       });
       expect(screen.queryByText(enCopy.onboarding.basicForm.skipButton)).toBeNull();
+    });
+
+    it('does not render story textareas on the basic page', async () => {
+      renderForm();
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
+        ).toBeTruthy();
+      });
+      expect(
+        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+      ).toBeNull();
+      expect(
+        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutPartnerLabel),
+      ).toBeNull();
     });
   });
 });

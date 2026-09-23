@@ -9,11 +9,11 @@ export type OnboardingResumeOptions = {
 
 /**
  * Where `/onboarding` should send the user based on `GET /api/v1/me/profile`.
- * `404` / `null` profile → start at basics.
+ * `404` / `null` profile → start at story (screen 1).
  *
- * With `{ edit: true, page }`, completed users may re-open that step without being sent to `/dating/profile`.
- * Story (`texts`) deep-links from the nav always open the story step when a profile row exists; only missing
- * profile sends the user to basics. Finish/submit still validates required basics (e.g. gender) on the texts step.
+ * With `{ edit: true, page }`, completed users may re-open that step without being sent to `/profile`.
+ * Story deep-links always open `/onboarding/story` when a profile row exists; only missing
+ * profile sends the user to basics.
  */
 export function onboardingResumePath(
   profile: MeProfileDto | null,
@@ -30,19 +30,29 @@ export function onboardingResumePath(
     if (!profile) {
       return '/onboarding/basic';
     }
-    return '/onboarding/texts';
+    return '/onboarding/story';
   }
 
   if (!profile) {
-    return '/onboarding/basic';
+    return '/onboarding/story';
   }
   switch (profile.onboardingStep) {
     case 'COMPLETED':
       return '/profile';
     case 'TEXTS':
-      return '/onboarding/texts';
-    case 'BASIC':
-    default:
       return '/onboarding/basic';
+    case 'BASIC':
+    default: {
+      /**
+       * BASIC is shared by "still on story" and "story continue → facts".
+       * If gender is set, they have started facts — resume to basic.
+       * Otherwise start at story.
+       */
+      const gender = profile.gender;
+      if (gender && gender !== 'PREFER_NOT_TO_SAY') {
+        return '/onboarding/basic';
+      }
+      return '/onboarding/story';
+    }
   }
 }

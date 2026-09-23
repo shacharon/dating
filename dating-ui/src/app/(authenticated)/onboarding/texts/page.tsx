@@ -1,19 +1,24 @@
-import type { Metadata } from 'next';
-import { OnboardingPageHeading } from '@/components/onboarding-page-heading';
-import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Your story',
-  description: 'About you, your partner, and what you want.',
-};
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function OnboardingTextsPage() {
+/**
+ * Legacy `/onboarding/texts` → `/onboarding/story` (Sprint 75 Story 1).
+ * Preserves `?edit=1` and any other query params.
+ */
+export default function OnboardingTextsRedirectPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const qs = searchParams.toString();
+    router.replace(qs ? `/onboarding/story?${qs}` : '/onboarding/story');
+  }, [router, searchParams]);
+
   return (
-    <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
-      <div className="mx-auto max-w-xl space-y-6 py-4">
-        <OnboardingPageHeading step="texts" />
-        <OnboardingTextsForm />
-      </div>
-    </div>
+    <p className="p-6 text-sm text-zinc-600 dark:text-zinc-400" role="status">
+      Redirecting…
+    </p>
   );
 }

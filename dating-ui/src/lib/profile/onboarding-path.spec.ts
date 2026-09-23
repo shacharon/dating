@@ -17,14 +17,20 @@ function row(step: MeProfileDto['onboardingStep']): MeProfileDto {
 }
 
 describe('onboardingResumePath', () => {
-  it('sends null profile to basics', () => {
-    expect(onboardingResumePath(null)).toBe('/onboarding/basic');
+  it('sends null profile to story (screen 1)', () => {
+    expect(onboardingResumePath(null)).toBe('/onboarding/story');
   });
 
   it('maps onboarding steps', () => {
-    expect(onboardingResumePath(row('BASIC'))).toBe('/onboarding/basic');
-    expect(onboardingResumePath(row('TEXTS'))).toBe('/onboarding/texts');
+    expect(onboardingResumePath(row('BASIC'))).toBe('/onboarding/story');
+    expect(onboardingResumePath(row('TEXTS'))).toBe('/onboarding/basic');
     expect(onboardingResumePath(row('COMPLETED'))).toBe('/profile');
+  });
+
+  it('BASIC with gender resumes to facts (after story continue)', () => {
+    expect(
+      onboardingResumePath({ ...row('BASIC'), gender: 'MALE' }),
+    ).toBe('/onboarding/basic');
   });
 
   it('edit=basic allows COMPLETED users to stay on basics', () => {
@@ -33,16 +39,13 @@ describe('onboardingResumePath', () => {
     ).toBe('/onboarding/basic');
   });
 
-  it('edit=texts sends COMPLETED users to story step', () => {
+  it('edit=texts sends users with a profile to /onboarding/story', () => {
     expect(
       onboardingResumePath(row('COMPLETED'), { edit: true, page: 'texts' }),
-    ).toBe('/onboarding/texts');
-  });
-
-  it('edit=texts opens story when a profile exists; only null profile goes to basics', () => {
+    ).toBe('/onboarding/story');
     expect(
       onboardingResumePath(row('BASIC'), { edit: true, page: 'texts' }),
-    ).toBe('/onboarding/texts');
+    ).toBe('/onboarding/story');
     expect(onboardingResumePath(null, { edit: true, page: 'texts' })).toBe(
       '/onboarding/basic',
     );

@@ -35,8 +35,14 @@ export function OnboardingTextsForm({
   const labelClass =
     'mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
+  const primaryLabel =
+    m.isHub || m.editMode
+      ? m.ob.saveProgress
+      : m.ob.basicForm.continueButton;
+  const busy = m.continuing || m.profileSyncing;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="onboarding-story-form">
       {m.loadError ? <InlineError>{m.loadError}</InlineError> : null}
 
       {m.profileSyncing ? (
@@ -124,30 +130,35 @@ export function OnboardingTextsForm({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {!m.isHub && !m.editMode ? (
+            <button
+              type="button"
+              onClick={() => void m.handleSaveProgress()}
+              disabled={busy}
+              className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {m.ob.saveProgress}
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => void m.handleSaveProgress()}
-            disabled={m.finishing || m.profileSyncing}
-            className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            {m.ob.saveProgress}
-          </button>
-          <button
-            type="button"
-            onClick={() => void m.handleFinish()}
-            disabled={m.finishing || m.profileSyncing}
+            data-testid="onboarding-story-primary"
+            onClick={() => void m.handleContinue()}
+            disabled={busy}
             className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {m.finishing ? m.tf.submitting : m.tf.finishAndAnalyze}
+            {m.continuing ? m.tf.submitting : primaryLabel}
           </button>
-          <Link
-            href={m.editBasicsHref}
-            prefetch
-            className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${m.profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
-            aria-disabled={m.profileSyncing}
-          >
-            {m.tf.backToBasics}
-          </Link>
+          {!m.isHub ? (
+            <Link
+              href={m.editBasicsHref}
+              prefetch
+              className={`text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${m.profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
+              aria-disabled={m.profileSyncing}
+            >
+              {m.tf.backToBasics}
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -167,7 +178,6 @@ export function OnboardingTextsForm({
         />
       ) : null}
       {m.saveError ? <InlineError>{m.saveError}</InlineError> : null}
-      {m.finishError ? <InlineError>{m.finishError}</InlineError> : null}
     </div>
   );
 }

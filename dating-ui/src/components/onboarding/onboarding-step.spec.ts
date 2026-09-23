@@ -3,13 +3,15 @@ import {
   canNavigateOnboardingStep,
   isOnboardingStepFilled,
   onboardingTabFromSearchParams,
+  onboardingTabHref,
   onboardingUiStepFromPathname,
 } from './onboarding-step';
 
 describe('onboardingUiStepFromPathname', () => {
-  it('maps basic and texts paths', () => {
-    expect(onboardingUiStepFromPathname('/onboarding/basic')).toBe('story');
-    expect(onboardingUiStepFromPathname('/onboarding/texts')).toBe('texts');
+  it('maps story and basic paths', () => {
+    expect(onboardingUiStepFromPathname('/onboarding/story')).toBe('story');
+    expect(onboardingUiStepFromPathname('/onboarding/texts')).toBe('story');
+    expect(onboardingUiStepFromPathname('/onboarding/basic')).toBe('basic');
     expect(onboardingUiStepFromPathname('/onboarding')).toBeNull();
   });
 
@@ -24,8 +26,15 @@ describe('onboardingUiStepFromPathname', () => {
 });
 
 describe('onboardingTabFromSearchParams', () => {
-  it('defaults to story', () => {
-    expect(onboardingTabFromSearchParams(new URLSearchParams())).toBe('story');
+  it('defaults to basic (story is its own route)', () => {
+    expect(onboardingTabFromSearchParams(new URLSearchParams())).toBe('basic');
+  });
+});
+
+describe('onboardingTabHref', () => {
+  it('points story tab at /onboarding/story', () => {
+    expect(onboardingTabHref('story', false)).toBe('/onboarding/story');
+    expect(onboardingTabHref('story', true)).toBe('/onboarding/story?edit=1');
   });
 });
 

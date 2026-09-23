@@ -1,20 +1,18 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PatchMeProfileBody } from '@/lib/api/me-profile-api';
 import {
   ContentModerationApiError,
   type ContentModerationDetails,
 } from '@/lib/moderation/content-moderation-error';
 import { useAppLocale } from '@/lib/i18n';
-import { onboardingResumePath } from '@/lib/profile/onboarding-path';
 import {
+  useCreateProfile,
   usePatchProfile,
   useProfile,
-  useSubmitProfileForAnalysis,
 } from '@/hooks/use-profile';
-import { datingApi } from '@/lib/api-sdk';
 
 export type UseOnboardingTextsFormOptions = {
   variant?: 'onboarding' | 'profileHub';
@@ -34,40 +32,33 @@ export function useOnboardingTextsForm({
   const prompts = ob.writingPrompts;
   const mod = copy.contentModeration;
   const isHub = variant === 'profileHub';
+  const editMode = searchParams.get('edit') === '1';
 
   const { profile, isLoading, error: profileLoadError } = useProfile();
   const patchMutation = usePatchProfile();
-  const submitMutation = useSubmitProfileForAnalysis();
+  const createMutation = useCreateProfile();
 
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
+  const [hasProfile, setHasProfile] = useState(false);
   const [profileSyncing, setProfileSyncing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [finishError, setFinishError] = useState<string | null>(null);
   const [moderationDetails, setModerationDetails] =
     useState<ContentModerationDetails | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
-  const [finishing, setFinishing] = useState(false);
+  const [continuing, setContinuing] = useState(false);
   const loadHandledRef = useRef(false);
 
   const aboutMeRef = useRef<HTMLTextAreaElement>(null);
   const aboutPartnerRef = useRef<HTMLTextAreaElement>(null);
   const aboutRelationshipRef = useRef<HTMLTextAreaElement>(null);
 
-  const resumeOptions = useMemo(
-    () =>
-      searchParams.get('edit') === '1'
-        ? ({ edit: true, page: 'texts' } as const)
-        : undefined,
-    [searchParams],
-  );
-
   const editBasicsHref =
     isHub
       ? '/profile?tab=edit#basic'
-      : searchParams.get('edit') === '1'
+      : editMode
         ? '/onboarding/basic?edit=1'
         : '/onboarding/basic';
 
@@ -82,14 +73,13 @@ export function useOnboardingTextsForm({
     }
 
     if (!isHub) {
-      const path = onboardingResumePath(profile, resumeOptions);
-      if (path !== '/onboarding/texts') {
+      if (profile?.onboardingStep === 'COMPLETED' && !editMode) {
         loadHandledRef.current = true;
         setProfileSyncing(false);
-        router.replace(path);
+        router.replace('/profile');
         return;
       }
-      if (!profile) {
+      if (!profile && editMode) {
         loadHandledRef.current = true;
         setProfileSyncing(false);
         router.replace('/onboarding/basic');
@@ -103,9 +93,12 @@ export function useOnboardingTextsForm({
     }
 
     if (profile) {
+      setHasProfile(true);
       setAboutMe(profile.aboutMe ?? '');
       setAboutPartner(profile.aboutPartner ?? '');
       setAboutRelationship(profile.aboutRelationship ?? '');
+    } else {
+      setHasProfile(false);
     }
     loadHandledRef.current = true;
     setProfileSyncing(false);
@@ -114,9 +107,9 @@ export function useOnboardingTextsForm({
     isLoading,
     profileLoadError,
     router,
-    resumeOptions,
     ob.loadFailed,
     isHub,
+    editMode,
   ]);
 
   useEffect(() => {
@@ -147,7 +140,6 @@ export function useOnboardingTextsForm({
     if (e instanceof ContentModerationApiError) {
       setModerationDetails(e.details);
       setSaveError(null);
-      setFinishError(null);
       return;
     }
     clearModeration();
@@ -167,51 +159,48 @@ export function useOnboardingTextsForm({
     };
   }
 
-  async function handleSaveProgress() {
+  async function persistTexts(advance: boolean): Promise<boolean> {
     setSaveError(null);
     clearModeration();
+    /** Stay on BASIC — API requires partner genders before TEXTS. Facts screen advances later. */
+    const body = textsPatchBody(advance ? 'BASIC' : undefined);
     try {
-      await patchMutation.mutateAsync(textsPatchBody());
-      onSaved?.();
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 2000);
+      if (hasProfile) {
+        await patchMutation.mutateAsync(body);
+      } else {
+        await createMutation.mutateAsync({
+          ...body,
+          onboardingStep: 'BASIC',
+        });
+        setHasProfile(true);
+      }
+      return true;
     } catch (e) {
       applyCaughtError(e, setSaveError, ob.saveFailed);
+      return false;
     }
   }
 
-  async function handleFinish() {
-    setFinishError(null);
-    clearModeration();
-    try {
-      const latest = await datingApi.profile.fetchMyProfile();
-      if (!latest?.gender || latest.gender === 'PREFER_NOT_TO_SAY') {
-        setFinishError(tf.genderMissingError);
-        return;
-      }
-    } catch {
-      setFinishError(tf.verifyFailedError);
+  async function handleSaveProgress() {
+    const ok = await persistTexts(false);
+    if (!ok) return;
+    onSaved?.();
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+  }
+
+  /** First-time Continue: save (empty OK) and go to facts. Edit/hub: save only. */
+  async function handleContinue() {
+    if (isHub || editMode) {
+      await handleSaveProgress();
       return;
     }
-
-    setFinishing(true);
-    try {
-      await patchMutation.mutateAsync(
-        textsPatchBody('COMPLETED'),
-      );
-      await submitMutation.mutateAsync();
-      onSaved?.();
-      if (isHub) {
-        setFinishing(false);
-        setSavedFlash(true);
-        setTimeout(() => setSavedFlash(false), 2000);
-        return;
-      }
-      router.replace('/profile?tab=analysis');
-    } catch (e) {
-      setFinishing(false);
-      applyCaughtError(e, setFinishError, tf.finishFailedError);
-    }
+    setContinuing(true);
+    const ok = await persistTexts(true);
+    setContinuing(false);
+    if (!ok) return;
+    onSaved?.();
+    router.push('/onboarding/basic');
   }
 
   const moderationLabels = {
@@ -226,6 +215,7 @@ export function useOnboardingTextsForm({
 
   return {
     isHub,
+    editMode,
     ob,
     tf,
     wh,
@@ -243,14 +233,13 @@ export function useOnboardingTextsForm({
     profileSyncing,
     loadError,
     saveError,
-    finishError,
     moderationDetails,
     savedFlash,
-    finishing,
+    continuing,
     editBasicsHref,
     clearModeration,
     handleSaveProgress,
-    handleFinish,
+    handleContinue,
     moderationLabels,
   };
 }
