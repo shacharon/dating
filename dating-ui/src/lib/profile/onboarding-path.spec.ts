@@ -33,6 +33,15 @@ describe('onboardingResumePath', () => {
     ).toBe('/onboarding/basic');
   });
 
+  it('BASIC with PREFER_NOT_TO_SAY still resumes to story', () => {
+    expect(
+      onboardingResumePath({
+        ...row('BASIC'),
+        gender: 'PREFER_NOT_TO_SAY',
+      }),
+    ).toBe('/onboarding/story');
+  });
+
   it('edit=basic allows COMPLETED users to stay on basics', () => {
     expect(
       onboardingResumePath(row('COMPLETED'), { edit: true, page: 'basic' }),

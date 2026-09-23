@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import { InlineError } from '@/components/errors';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
@@ -17,11 +18,19 @@ export function OnboardingBasicForm({
   /** Called after a successful persist (hub quality meter refresh). */
   onSaved?: () => void;
 } = {}) {
+  const router = useRouter();
   const m = useOnboardingBasicForm({ variant, onSaved });
   const searchParams = useSearchParams();
   const activeTab = m.isHub
     ? 'basic'
     : onboardingTabFromSearchParams(searchParams);
+
+  /** Legacy `?tab=story` bookmarks → real story route (texts are not on this page). */
+  useEffect(() => {
+    if (!m.isHub && activeTab === 'story') {
+      router.replace('/onboarding/story');
+    }
+  }, [m.isHub, activeTab, router]);
 
   const hasValidationErrors = Boolean(
     m.genderStepError || m.partnerError || m.locationError,
@@ -29,6 +38,14 @@ export function OnboardingBasicForm({
 
   const continueLabel =
     activeTab === 'other' ? m.bf.finishButton : m.bf.continueButton;
+
+  if (!m.isHub && activeTab === 'story') {
+    return (
+      <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
+        {m.ob.syncingProfile}
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -94,21 +111,6 @@ export function OnboardingBasicForm({
             {!m.isHub ? <ProfilePhotoSection requiredForMatching /> : null}
           </div>
         )}
-
-        {/* Story tab removed — texts live only at /onboarding/story (Sprint 75 Story 1). */}
-        {!m.isHub && activeTab === 'story' ? (
-          <div className="space-y-3 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {m.ob.textsForm.intro}
-            </p>
-            <a
-              href="/onboarding/story"
-              className="inline-block text-sm font-medium text-zinc-900 underline dark:text-zinc-100"
-            >
-              {m.bf.storyTabTitle}
-            </a>
-          </div>
-        ) : null}
 
         {(m.isHub || activeTab === 'other') && (
           <div className="space-y-6">

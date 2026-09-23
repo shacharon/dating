@@ -241,6 +241,18 @@ describe('OnboardingBasicForm', () => {
       expect(screen.queryByText(enCopy.onboarding.basicForm.skipButton)).toBeNull();
     });
 
+    it('redirects legacy ?tab=story to /onboarding/story', async () => {
+      searchParamsMock.mockReturnValue(new URLSearchParams('tab=story'));
+      renderForm();
+
+      await waitFor(() => {
+        expect(replaceMock).toHaveBeenCalledWith('/onboarding/story');
+      });
+      expect(
+        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+      ).toBeNull();
+    });
+
     it('does not render story textareas on the basic page', async () => {
       renderForm();
 

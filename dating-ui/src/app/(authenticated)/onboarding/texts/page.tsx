@@ -1,24 +1,27 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+type SearchParams = Record<string, string | string[] | undefined>;
 
 /**
  * Legacy `/onboarding/texts` → `/onboarding/story` (Sprint 75 Story 1).
- * Preserves `?edit=1` and any other query params.
+ * Server redirect preserves query (e.g. `?edit=1`).
  */
-export default function OnboardingTextsRedirectPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const qs = searchParams.toString();
-    router.replace(qs ? `/onboarding/story?${qs}` : '/onboarding/story');
-  }, [router, searchParams]);
-
-  return (
-    <p className="p-6 text-sm text-zinc-600 dark:text-zinc-400" role="status">
-      Redirecting…
-    </p>
-  );
+export default async function OnboardingTextsRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams> | SearchParams;
+}) {
+  const params = await Promise.resolve(searchParams);
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (typeof value === 'string') {
+      qs.set(key, value);
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        qs.append(key, item);
+      }
+    }
+  }
+  const q = qs.toString();
+  redirect(q ? `/onboarding/story?${q}` : '/onboarding/story');
 }

@@ -132,6 +132,25 @@ describe('OnboardingTextsForm', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('Continue creates a profile when none exists', async () => {
+    fetchMyProfile.mockResolvedValue(null);
+    renderForm();
+
+    const primary = await screen.findByTestId('onboarding-story-primary');
+    await waitFor(() => {
+      expect((primary as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    fireEvent.click(primary);
+
+    await waitFor(() => {
+      expect(createMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ onboardingStep: 'BASIC' }),
+      );
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/basic');
+    });
+  });
+
   it('shows writing help with word count and collapsed examples under each field', async () => {
     renderForm();
 
