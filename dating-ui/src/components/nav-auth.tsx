@@ -53,7 +53,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
   useEffect(() => {
     if (!menuOpen) return;
     router.prefetch("/profile?tab=edit#basic");
-    router.prefetch("/onboarding/texts?edit=1");
+    router.prefetch("/onboarding/story?edit=1");
     router.prefetch("/settings/account");
     router.prefetch("/settings/language");
   }, [menuOpen, router]);

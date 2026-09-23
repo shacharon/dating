@@ -241,7 +241,7 @@ describe('MeMatchesPage (not_ready analysis redirect)', () => {
     vi.clearAllMocks();
   });
 
-  it('redirects to hub analysis when not_ready reason is not_analyzed', async () => {
+  it('redirects to story when not_ready reason is not_analyzed', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'not_ready',
       reason: 'not_analyzed',
@@ -250,7 +250,7 @@ describe('MeMatchesPage (not_ready analysis redirect)', () => {
     const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/profile?tab=analysis');
+      expect(replaceMock).toHaveBeenCalledWith('/onboarding/story');
     });
     unmount();
   });

@@ -526,7 +526,7 @@ export const enCopy: AppCopySchema = {
     },
     textsForm: {
       intro:
-        "A few short paragraphs help us understand you. You can save and come back, or finish to run analysis.",
+        "A few short paragraphs help us understand you. You can save and come back, or continue without writing yet.",
       aboutMeLabel: "About me",
       aboutMePlaceholder: "Describe yourself…",
       aboutPartnerLabel: "About partner",

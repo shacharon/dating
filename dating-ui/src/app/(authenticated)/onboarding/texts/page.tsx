@@ -1,19 +1,27 @@
-import type { Metadata } from 'next';
-import { OnboardingPageHeading } from '@/components/onboarding-page-heading';
-import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Your story',
-  description: 'About you, your partner, and what you want.',
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export default function OnboardingTextsPage() {
-  return (
-    <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
-      <div className="mx-auto max-w-xl space-y-6 py-4">
-        <OnboardingPageHeading step="texts" />
-        <OnboardingTextsForm />
-      </div>
-    </div>
-  );
+/**
+ * Legacy `/onboarding/texts` → `/onboarding/story` (Sprint 75 Story 1).
+ * Server redirect preserves query (e.g. `?edit=1`).
+ */
+export default async function OnboardingTextsRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams> | SearchParams;
+}) {
+  const params = await Promise.resolve(searchParams);
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (typeof value === 'string') {
+      qs.set(key, value);
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        qs.append(key, item);
+      }
+    }
+  }
+  const q = qs.toString();
+  redirect(q ? `/onboarding/story?${q}` : '/onboarding/story');
 }

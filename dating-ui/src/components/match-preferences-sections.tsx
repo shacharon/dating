@@ -179,7 +179,7 @@ export function MatchPreferencesInferredDealbreakersSection({
       )}
       <p className="mt-3 text-sm">
         <Link
-          href="/onboarding/texts?edit=1"
+          href="/onboarding/story?edit=1"
           className="text-emerald-700 underline dark:text-emerald-400"
         >
           {mp.inferredDealbreakers.editStoryCta}

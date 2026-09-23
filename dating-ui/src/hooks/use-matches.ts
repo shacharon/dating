@@ -136,6 +136,11 @@ export function useInfiniteMatches(
   const handleNotReadyRedirect = useCallback(
     (dto: MeMatchesListDto) => {
       if (dto.reason === 'no_profile') return;
+      /** Story is the unlock for analysis — send there, not the analysis hub. */
+      if (dto.reason === 'not_analyzed') {
+        router.replace('/onboarding/story');
+        return;
+      }
       router.replace('/profile?tab=analysis');
     },
     [router],
