@@ -2,8 +2,8 @@
 
 **Status:** Done  
 **Depends on:** —  
-**Shipped on main:** (pending merge)  
-**Feature tip ahead of main:** (pending merge)
+**Shipped on main:** `f53dccb0`  
+**Feature tip ahead of main:** 0
 
 ## Why
 
