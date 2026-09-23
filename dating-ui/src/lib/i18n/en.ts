@@ -452,10 +452,11 @@ export const enCopy: AppCopySchema = {
     PREFER_NOT_TO_SAY: "Prefer not to say",
   },
   onboarding: {
-    basicsTitle: "Step 1 — Basics",
-    basicsSubtitle: "Save anytime; your answers reload from the server when you return.",
-    storyTitle: "Step 2 — Your story",
-    storySubtitle: "Save a draft, or finish to submit your profile for analysis.",
+    basicsTitle: "Step 2 — About you",
+    basicsSubtitle:
+      "Gender, who you are looking for, where you are, and your birth date. Continue when all four are filled.",
+    storyTitle: "Step 1 — Your story",
+    storySubtitle: "Save a draft, or continue — you can write more later.",
     syncingProfile: "Syncing profile…",
     loadFailed: "Failed to load profile",
     saveFailed: "Save failed",

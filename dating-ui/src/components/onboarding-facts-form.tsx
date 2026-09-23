@@ -5,14 +5,14 @@ import { useOnboardingFactsForm } from '@/hooks/use-onboarding-facts-form';
 import type { LookingForTile } from '@/lib/profile/looking-for';
 
 const tileClass = (active: boolean) =>
-  `inline-flex min-h-11 items-center justify-center rounded border px-4 py-2.5 text-sm font-medium transition-colors ${
+  `inline-flex min-h-11 items-center justify-center rounded border px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:focus-visible:outline-zinc-100 ${
     active
       ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
       : 'border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'
   }`;
 
 const inputClass =
-  'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100';
+  'min-h-11 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100';
 const labelClass =
   'mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
@@ -31,12 +31,15 @@ export function OnboardingFactsForm() {
     birthDate: m.ff.missingBirthDate,
   };
 
+  const missingId = 'onboarding-facts-missing';
+  const showMissing = !m.canContinue && m.missing.length > 0;
+
   return (
     <div className="space-y-8" data-testid="onboarding-facts-form">
       {m.loadError ? <InlineError>{m.loadError}</InlineError> : null}
       {m.profileSyncing ? (
-        <p className="text-xs text-zinc-500" aria-live="polite">
-          …
+        <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
+          {m.syncingLabel}
         </p>
       ) : null}
 
@@ -44,8 +47,8 @@ export function OnboardingFactsForm() {
         className={`space-y-8 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
-        <section>
-          <p className={labelClass}>{m.ff.iAmLabel}</p>
+        <fieldset>
+          <legend className={labelClass}>{m.ff.iAmLabel}</legend>
           <div className="flex flex-wrap gap-2">
             {m.selfGenders.map((g) => (
               <button
@@ -59,10 +62,10 @@ export function OnboardingFactsForm() {
               </button>
             ))}
           </div>
-        </section>
+        </fieldset>
 
-        <section>
-          <p className={labelClass}>{m.ff.lookingForLabel}</p>
+        <fieldset>
+          <legend className={labelClass}>{m.ff.lookingForLabel}</legend>
           <div className="flex flex-wrap gap-2">
             {lookingTiles.map((t) => (
               <button
@@ -76,12 +79,12 @@ export function OnboardingFactsForm() {
               </button>
             ))}
           </div>
-        </section>
+        </fieldset>
 
-        <section className="space-y-3">
-          <p className={labelClass}>{m.ff.whereLabel}</p>
+        <fieldset className="space-y-3">
+          <legend className={labelClass}>{m.ff.whereLabel}</legend>
           <div>
-            <label htmlFor="facts-country" className="sr-only">
+            <label htmlFor="facts-country" className={labelClass}>
               {m.bf.countryLabel}
             </label>
             <select
@@ -100,7 +103,7 @@ export function OnboardingFactsForm() {
           </div>
           {m.countryCode === 'US' ? (
             <div>
-              <label htmlFor="facts-state" className="sr-only">
+              <label htmlFor="facts-state" className={labelClass}>
                 {m.bf.stateLabel}
               </label>
               <select
@@ -120,7 +123,7 @@ export function OnboardingFactsForm() {
           ) : null}
           {m.countryCode && (m.countryCode !== 'US' || m.usStateCode) ? (
             <div className="space-y-2">
-              <label htmlFor="facts-city-search" className="sr-only">
+              <label htmlFor="facts-city-search" className={labelClass}>
                 {m.ff.citySearchPlaceholder}
               </label>
               <input
@@ -131,7 +134,7 @@ export function OnboardingFactsForm() {
                 value={m.cityQuery}
                 onChange={(e) => m.setCityQuery(e.target.value)}
               />
-              <label htmlFor="facts-city" className="sr-only">
+              <label htmlFor="facts-city" className={labelClass}>
                 {m.bf.cityLabel}
               </label>
               <select
@@ -149,9 +152,9 @@ export function OnboardingFactsForm() {
               </select>
             </div>
           ) : null}
-        </section>
+        </fieldset>
 
-        <section>
+        <div>
           <label htmlFor="facts-birth" className={labelClass}>
             {m.ff.birthDateLabel}
           </label>
@@ -163,20 +166,25 @@ export function OnboardingFactsForm() {
             max={m.birthDateMax}
             onChange={(e) => m.setBirthDate(e.target.value)}
           />
-        </section>
+        </div>
 
         <div className="space-y-2">
           <button
             type="button"
             data-testid="onboarding-facts-continue"
             disabled={!m.canContinue || m.continuing}
+            aria-describedby={showMissing ? missingId : undefined}
             onClick={() => void m.handleContinue()}
-            className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
           >
             {m.continuing ? '…' : m.ff.continueButton}
           </button>
-          {!m.canContinue && m.missing.length > 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
+          {showMissing ? (
+            <p
+              id={missingId}
+              className="text-sm text-zinc-600 dark:text-zinc-400"
+              role="status"
+            >
               {m.ff.missingHeading}{' '}
               {m.missing.map((k) => missingLabels[k]).join(', ')}
             </p>

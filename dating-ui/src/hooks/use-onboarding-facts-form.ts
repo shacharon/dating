@@ -269,6 +269,7 @@ export function useOnboardingFactsForm() {
   return {
     ff,
     bf,
+    syncingLabel: copy.onboarding.syncingProfile,
     genderCopy,
     selfGenders: SELF_GENDERS,
     gender,
