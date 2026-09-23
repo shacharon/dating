@@ -12,6 +12,8 @@ describe('onboardingUiStepFromPathname', () => {
     expect(onboardingUiStepFromPathname('/onboarding/story')).toBe('story');
     expect(onboardingUiStepFromPathname('/onboarding/texts')).toBe('story');
     expect(onboardingUiStepFromPathname('/onboarding/basic')).toBe('basic');
+    expect(onboardingUiStepFromPathname('/onboarding/basics')).toBe('basic');
+    expect(onboardingUiStepFromPathname('/onboarding/photos')).toBe('basic');
     expect(onboardingUiStepFromPathname('/onboarding')).toBeNull();
   });
 
@@ -35,6 +37,11 @@ describe('onboardingTabHref', () => {
   it('points story tab at /onboarding/story', () => {
     expect(onboardingTabHref('story', false)).toBe('/onboarding/story');
     expect(onboardingTabHref('story', true)).toBe('/onboarding/story?edit=1');
+  });
+
+  it('points basic tab at /onboarding/basics', () => {
+    expect(onboardingTabHref('basic', false)).toBe('/onboarding/basics');
+    expect(onboardingTabHref('basic', true)).toBe('/onboarding/basics?edit=1');
   });
 });
 

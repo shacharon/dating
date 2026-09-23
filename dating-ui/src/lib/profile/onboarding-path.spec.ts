@@ -23,14 +23,14 @@ describe('onboardingResumePath', () => {
 
   it('maps onboarding steps', () => {
     expect(onboardingResumePath(row('BASIC'))).toBe('/onboarding/story');
-    expect(onboardingResumePath(row('TEXTS'))).toBe('/onboarding/basic');
+    expect(onboardingResumePath(row('TEXTS'))).toBe('/onboarding/photos');
     expect(onboardingResumePath(row('COMPLETED'))).toBe('/profile');
   });
 
   it('BASIC with gender resumes to facts (after story continue)', () => {
     expect(
       onboardingResumePath({ ...row('BASIC'), gender: 'MALE' }),
-    ).toBe('/onboarding/basic');
+    ).toBe('/onboarding/basics');
   });
 
   it('BASIC with PREFER_NOT_TO_SAY still resumes to story', () => {
@@ -45,7 +45,7 @@ describe('onboardingResumePath', () => {
   it('edit=basic allows COMPLETED users to stay on basics', () => {
     expect(
       onboardingResumePath(row('COMPLETED'), { edit: true, page: 'basic' }),
-    ).toBe('/onboarding/basic');
+    ).toBe('/onboarding/basics?edit=1');
   });
 
   it('edit=texts sends users with a profile to /onboarding/story', () => {
@@ -56,7 +56,7 @@ describe('onboardingResumePath', () => {
       onboardingResumePath(row('BASIC'), { edit: true, page: 'texts' }),
     ).toBe('/onboarding/story');
     expect(onboardingResumePath(null, { edit: true, page: 'texts' })).toBe(
-      '/onboarding/basic',
+      '/onboarding/basics',
     );
   });
 });

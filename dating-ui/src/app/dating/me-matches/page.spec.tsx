@@ -230,7 +230,7 @@ describe('MeMatchesPage (not_ready no profile gate)', () => {
     expect(replaceMock).not.toHaveBeenCalled();
     expect(
       screen.getByTestId('match-no-profile-gate-cta').getAttribute('href'),
-    ).toBe('/onboarding/basic');
+    ).toBe('/onboarding/basics');
     expect(screen.getByText('Finish your profile to see matches')).toBeTruthy();
     unmount();
   });

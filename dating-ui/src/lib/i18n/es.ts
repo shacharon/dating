@@ -580,6 +580,25 @@ export const esCopy: AppCopySchema = {
         timerLabel: (seconds) => `${seconds}s / 120s`,
       },
     },
+    factsForm: {
+      iAmLabel: 'Soy',
+      lookingForLabel: 'Busco',
+      lookingForMen: 'Hombres',
+      lookingForWomen: 'Mujeres',
+      lookingForEveryone: 'Todos',
+      whereLabel: 'Donde estoy',
+      birthDateLabel: 'Fecha de nacimiento',
+      citySearchPlaceholder: 'Buscar ciudad…',
+      continueButton: 'Continuar',
+      missingHeading: 'Aun falta:',
+      missingGender: 'Quien eres',
+      missingLookingFor: 'A quien buscas',
+      missingLocation: 'Donde estas',
+      missingBirthDate: 'Fecha de nacimiento',
+      photosStubTitle: 'Anade una foto',
+      photosStubBody:
+        'Sube al menos una foto. Terminar el registro sera el siguiente paso.',
+    },
     writingPrompts: {
       aboutMe: {
         questions: [

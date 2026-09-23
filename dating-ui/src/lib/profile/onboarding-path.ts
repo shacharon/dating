@@ -11,9 +11,7 @@ export type OnboardingResumeOptions = {
  * Where `/onboarding` should send the user based on `GET /api/v1/me/profile`.
  * `404` / `null` profile → start at story (screen 1).
  *
- * With `{ edit: true, page }`, completed users may re-open that step without being sent to `/profile`.
- * Story deep-links always open `/onboarding/story` when a profile row exists; only missing
- * profile sends the user to basics.
+ * Sprint 75 Story 3: facts live at `/onboarding/basics`; TEXTS → photos stub.
  */
 export function onboardingResumePath(
   profile: MeProfileDto | null,
@@ -23,12 +21,12 @@ export function onboardingResumePath(
   const page = options?.page;
 
   if (edit && page === 'basic') {
-    return '/onboarding/basic';
+    return '/onboarding/basics?edit=1';
   }
 
   if (edit && page === 'texts') {
     if (!profile) {
-      return '/onboarding/basic';
+      return '/onboarding/basics';
     }
     return '/onboarding/story';
   }
@@ -40,17 +38,12 @@ export function onboardingResumePath(
     case 'COMPLETED':
       return '/profile';
     case 'TEXTS':
-      return '/onboarding/basic';
+      return '/onboarding/photos';
     case 'BASIC':
     default: {
-      /**
-       * BASIC is shared by "still on story" and "story continue → facts".
-       * If gender is set, they have started facts — resume to basic.
-       * Otherwise start at story.
-       */
       const gender = profile.gender;
       if (gender && gender !== 'PREFER_NOT_TO_SAY') {
-        return '/onboarding/basic';
+        return '/onboarding/basics';
       }
       return '/onboarding/story';
     }

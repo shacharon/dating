@@ -572,6 +572,25 @@ export const enCopy: AppCopySchema = {
         timerLabel: (seconds) => `${seconds}s / 120s`,
       },
     },
+    factsForm: {
+      iAmLabel: 'I am',
+      lookingForLabel: "I'm looking for",
+      lookingForMen: 'Men',
+      lookingForWomen: 'Women',
+      lookingForEveryone: 'Everyone',
+      whereLabel: 'Where I am',
+      birthDateLabel: 'Birth date',
+      citySearchPlaceholder: 'Search city…',
+      continueButton: 'Continue',
+      missingHeading: 'Still needed:',
+      missingGender: 'Who you are',
+      missingLookingFor: 'Who you are looking for',
+      missingLocation: 'Where you are',
+      missingBirthDate: 'Birth date',
+      photosStubTitle: 'Add a photo',
+      photosStubBody:
+        'Upload at least one photo. Finishing sign-up comes in the next step.',
+    },
     writingPrompts: {
       aboutMe: {
         questions: [

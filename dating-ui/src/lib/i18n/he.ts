@@ -552,6 +552,25 @@ export const heCopy: AppCopySchema = {
         timerLabel: (seconds) => `${seconds} שנ׳ / 120 שנ׳`,
       },
     },
+    factsForm: {
+      iAmLabel: 'אני',
+      lookingForLabel: 'אני מחפש/ת',
+      lookingForMen: 'גברים',
+      lookingForWomen: 'נשים',
+      lookingForEveryone: 'כולם',
+      whereLabel: 'איפה אני',
+      birthDateLabel: 'תאריך לידה',
+      citySearchPlaceholder: 'חיפוש עיר…',
+      continueButton: 'המשך',
+      missingHeading: 'עדיין חסר:',
+      missingGender: 'מי את/ה',
+      missingLookingFor: 'את מי את/ה מחפש/ת',
+      missingLocation: 'איפה את/ה',
+      missingBirthDate: 'תאריך לידה',
+      photosStubTitle: 'הוסיפו תמונה',
+      photosStubBody:
+        'העלו לפחות תמונה אחת. סיום ההרשמה יגיע בשלב הבא.',
+    },
     writingPrompts: {
       aboutMe: {
         questions: [

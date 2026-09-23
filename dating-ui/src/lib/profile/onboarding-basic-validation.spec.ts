@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { validateOnboardingBasicAdvance } from '@/lib/profile/onboarding-basic-validation';
+import {
+  listFactsMissing,
+  validateOnboardingBasicAdvance,
+  validateOnboardingFactsAdvance,
+} from '@/lib/profile/onboarding-basic-validation';
 
 describe('onboarding-basic-validation', () => {
   it('returns gender error before partner genders error', () => {
@@ -107,5 +111,42 @@ describe('onboarding-basic-validation', () => {
         },
       }),
     ).toEqual({ ok: true });
+  });
+
+  it('facts advance requires birth date', () => {
+    const base = {
+      gender: 'MALE' as const,
+      desiredPartnerGenders: ['FEMALE' as const],
+      location: {
+        countryCode: 'JP',
+        usStateCode: '',
+        cityId: '',
+        countryHasCities: false,
+        stateHasCities: false,
+      },
+    };
+    expect(
+      validateOnboardingFactsAdvance({ ...base, birthDate: '' }),
+    ).toEqual({ ok: false, error: 'birthDateRequired' });
+    expect(
+      validateOnboardingFactsAdvance({ ...base, birthDate: '1990-05-01' }),
+    ).toEqual({ ok: true });
+  });
+
+  it('listFactsMissing lists all empty keys', () => {
+    expect(
+      listFactsMissing({
+        gender: '',
+        desiredPartnerGenders: [],
+        location: {
+          countryCode: '',
+          usStateCode: '',
+          cityId: '',
+          countryHasCities: false,
+          stateHasCities: false,
+        },
+        birthDate: '',
+      }),
+    ).toEqual(['gender', 'lookingFor', 'location', 'birthDate']);
   });
 });
