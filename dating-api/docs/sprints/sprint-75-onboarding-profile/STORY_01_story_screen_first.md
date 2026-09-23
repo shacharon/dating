@@ -1,8 +1,8 @@
 # Story 1: Story screen first, delete the duplicate
 
 **Status:** Done (local first-login check pending operator)  
-**Shipped on main:** _(set after merge)_  
-**Feature tip ahead of main:** _(set after merge)_  
+**Shipped on main:** `54b25e9`  
+**Feature tip ahead of main:** 0  
 **Depends on:** —
 
 ## Why
