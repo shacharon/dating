@@ -20,7 +20,7 @@ export class PlacesService {
       'US', 'AU', 'CA', 'GB', 'IE', 'NZ',
       'AR', 'CL', 'CO', 'ES', 'MX', 'PE',
       'AT', 'BE', 'CZ', 'DK', 'FI', 'FR', 'DE', 'GR',
-      'HU', 'IT', 'NL', 'PL', 'PT', 'RO', 'SE',
+      'HU', 'IL', 'IT', 'NL', 'PL', 'PT', 'RO', 'SE',
     ]);
 
     const where = filter === 'onboarding'

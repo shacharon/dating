@@ -452,6 +452,24 @@ export type AppCopySchema = {
         timerLabel: (seconds: number) => string;
       };
     };
+    factsForm: {
+      iAmLabel: string;
+      lookingForLabel: string;
+      lookingForMen: string;
+      lookingForWomen: string;
+      lookingForEveryone: string;
+      whereLabel: string;
+      birthDateLabel: string;
+      citySearchPlaceholder: string;
+      continueButton: string;
+      missingHeading: string;
+      missingGender: string;
+      missingLookingFor: string;
+      missingLocation: string;
+      missingBirthDate: string;
+      photosStubTitle: string;
+      photosStubBody: string;
+    };
     writingPrompts: {
       aboutMe: OnboardingWritingPromptField;
       aboutPartner: OnboardingWritingPromptField;

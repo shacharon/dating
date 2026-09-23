@@ -457,12 +457,11 @@ export const esCopy: AppCopySchema = {
     PREFER_NOT_TO_SAY: "Prefiero no decirlo",
   },
   onboarding: {
-    basicsTitle: "Paso 1 — Basico",
+    basicsTitle: "Paso 2 — Sobre ti",
     basicsSubtitle:
-      "Guarda en cualquier momento; tus respuestas se recargan desde el servidor al volver.",
-    storyTitle: "Paso 2 — Tu historia",
-    storySubtitle:
-      "Guarda un borrador o finaliza para enviar tu perfil a analisis.",
+      "Genero, a quien buscas, donde estas y tu fecha de nacimiento. Continua cuando los cuatro esten listos.",
+    storyTitle: "Paso 1 — Tu historia",
+    storySubtitle: "Guarda un borrador o continua — puedes escribir mas despues.",
     syncingProfile: "Sincronizando perfil…",
     loadFailed: "No se pudo cargar el perfil",
     saveFailed: "Error al guardar",
@@ -579,6 +578,25 @@ export const esCopy: AppCopySchema = {
           'No se pudo crear un borrador con esa grabacion. Puedes escribir en su lugar.',
         timerLabel: (seconds) => `${seconds}s / 120s`,
       },
+    },
+    factsForm: {
+      iAmLabel: 'Soy',
+      lookingForLabel: 'Busco',
+      lookingForMen: 'Hombres',
+      lookingForWomen: 'Mujeres',
+      lookingForEveryone: 'Todos',
+      whereLabel: 'Donde estoy',
+      birthDateLabel: 'Fecha de nacimiento',
+      citySearchPlaceholder: 'Buscar ciudad…',
+      continueButton: 'Continuar',
+      missingHeading: 'Aun falta:',
+      missingGender: 'Quien eres',
+      missingLookingFor: 'A quien buscas',
+      missingLocation: 'Donde estas',
+      missingBirthDate: 'Fecha de nacimiento',
+      photosStubTitle: 'Anade una foto',
+      photosStubBody:
+        'Sube al menos una foto. Terminar el registro sera el siguiente paso.',
     },
     writingPrompts: {
       aboutMe: {

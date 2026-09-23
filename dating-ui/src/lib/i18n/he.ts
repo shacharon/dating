@@ -433,10 +433,11 @@ export const heCopy: AppCopySchema = {
     PREFER_NOT_TO_SAY: "מעדיפ/ה לא לומר",
   },
   onboarding: {
-    basicsTitle: "שלב 1 — בסיס",
-    basicsSubtitle: "אפשר לשמור בכל עת; התשובות נטענות מחדש מהשרת בחזרה.",
-    storyTitle: "שלב 2 — הסיפור שלך",
-    storySubtitle: "שמרו טיוטה, או סיימו כדי לשלוח את הפרופיל לניתוח.",
+    basicsTitle: "שלב 2 — עליך",
+    basicsSubtitle:
+      "מגדר, את מי את/ה מחפש/ת, איפה את/ה, ותאריך לידה. המשיכו כשארבעת השדות מלאים.",
+    storyTitle: "שלב 1 — הסיפור שלך",
+    storySubtitle: "שמרו טיוטה, או המשיכו — אפשר לכתוב עוד אחר כך.",
     syncingProfile: "מסנכרן פרופיל…",
     loadFailed: "טעינת הפרופיל נכשלה",
     saveFailed: "השמירה נכשלה",
@@ -551,6 +552,25 @@ export const heCopy: AppCopySchema = {
           'לא הצלחנו ליצור טיוטה מההקלטה. אפשר להקליד במקום.',
         timerLabel: (seconds) => `${seconds} שנ׳ / 120 שנ׳`,
       },
+    },
+    factsForm: {
+      iAmLabel: 'אני',
+      lookingForLabel: 'אני מחפש/ת',
+      lookingForMen: 'גברים',
+      lookingForWomen: 'נשים',
+      lookingForEveryone: 'כולם',
+      whereLabel: 'איפה אני',
+      birthDateLabel: 'תאריך לידה',
+      citySearchPlaceholder: 'חיפוש עיר…',
+      continueButton: 'המשך',
+      missingHeading: 'עדיין חסר:',
+      missingGender: 'מי את/ה',
+      missingLookingFor: 'את מי את/ה מחפש/ת',
+      missingLocation: 'איפה את/ה',
+      missingBirthDate: 'תאריך לידה',
+      photosStubTitle: 'הוסיפו תמונה',
+      photosStubBody:
+        'העלו לפחות תמונה אחת. סיום ההרשמה יגיע בשלב הבא.',
     },
     writingPrompts: {
       aboutMe: {

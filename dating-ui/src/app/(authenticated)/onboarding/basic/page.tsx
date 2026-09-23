@@ -1,19 +1,26 @@
-import type { Metadata } from 'next';
-import { OnboardingBasicForm } from '@/components/onboarding-basic-form';
-import { OnboardingPageHeading } from '@/components/onboarding-page-heading';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Profile basics',
-  description: 'Name, location, and matching preferences.',
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export default function OnboardingBasicPage() {
-  return (
-    <div className="min-h-screen bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
-      <div className="mx-auto max-w-xl space-y-6 py-4">
-        <OnboardingPageHeading step="basic" />
-        <OnboardingBasicForm />
-      </div>
-    </div>
-  );
+/**
+ * Legacy `/onboarding/basic` → `/onboarding/basics` (Sprint 75 Story 3).
+ */
+export default async function OnboardingBasicRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams> | SearchParams;
+}) {
+  const params = await Promise.resolve(searchParams);
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (typeof value === 'string') {
+      qs.set(key, value);
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        qs.append(key, item);
+      }
+    }
+  }
+  const q = qs.toString();
+  redirect(q ? `/onboarding/basics?${q}` : '/onboarding/basics');
 }

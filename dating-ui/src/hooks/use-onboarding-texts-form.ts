@@ -65,8 +65,8 @@ export function useOnboardingTextsForm({
     isHub
       ? '/profile?tab=edit#basic'
       : editMode
-        ? '/onboarding/basic?edit=1'
-        : '/onboarding/basic';
+        ? '/onboarding/basics?edit=1'
+        : '/onboarding/basics';
 
   useLayoutEffect(() => {
     if (isLoading || loadHandledRef.current) return;
@@ -88,7 +88,7 @@ export function useOnboardingTextsForm({
       if (!profile && editMode) {
         loadHandledRef.current = true;
         setProfileSyncing(false);
-        router.replace('/onboarding/basic');
+        router.replace('/onboarding/basics');
         return;
       }
     } else if (!profile) {
@@ -211,7 +211,7 @@ export function useOnboardingTextsForm({
     setContinuing(false);
     if (!ok) return;
     onSaved?.();
-    router.push('/onboarding/basic');
+    router.push('/onboarding/basics');
   }
 
   function applyVoiceDraft(draft: {

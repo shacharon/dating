@@ -134,7 +134,7 @@ describe('OnboardingTextsForm', () => {
     });
   });
 
-  it('Continue saves and navigates to /onboarding/basic (empty texts OK)', async () => {
+  it('Continue saves and navigates to /onboarding/basics (empty texts OK)', async () => {
     fetchMyProfile.mockResolvedValue({
       ...storyProfile,
       aboutMe: null,
@@ -151,7 +151,7 @@ describe('OnboardingTextsForm', () => {
     fireEvent.click(primary);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/basic');
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/basics');
     });
     expect(
       patchMyProfile.mock.calls.length + createMyProfile.mock.calls.length,
@@ -173,7 +173,7 @@ describe('OnboardingTextsForm', () => {
       expect(createMyProfile).toHaveBeenCalledWith(
         expect.objectContaining({ onboardingStep: 'BASIC' }),
       );
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/basic');
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/basics');
     });
   });
 

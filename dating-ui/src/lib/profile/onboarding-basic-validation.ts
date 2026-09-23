@@ -20,10 +20,18 @@ export type OnboardingBasicAdvanceFields = {
   location: OnboardingLocationAdvance;
 };
 
+export type OnboardingFactsAdvanceFields = OnboardingBasicAdvanceFields & {
+  birthDate: string;
+};
+
 export type OnboardingBasicAdvanceValidationError =
   | 'genderInvalidForAdvance'
   | 'partnerGendersRequired'
   | 'locationRequired';
+
+export type OnboardingFactsAdvanceValidationError =
+  | OnboardingBasicAdvanceValidationError
+  | 'birthDateRequired';
 
 export function locationSatisfied(location: OnboardingLocationAdvance): boolean {
   if (!location.countryCode) return false;
@@ -34,6 +42,10 @@ export function locationSatisfied(location: OnboardingLocationAdvance): boolean 
   }
   if (location.countryHasCities) return Boolean(location.cityId);
   return true;
+}
+
+export function birthDateSatisfied(birthDate: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(birthDate.trim());
 }
 
 export function validateOnboardingBasicAdvance(
@@ -51,4 +63,41 @@ export function validateOnboardingBasicAdvance(
     return { ok: false, error: 'locationRequired' };
   }
   return { ok: true };
+}
+
+/** Sprint 75 Story 3 — facts screen requires birth date as well. */
+export function validateOnboardingFactsAdvance(
+  fields: OnboardingFactsAdvanceFields,
+): { ok: true } | { ok: false; error: OnboardingFactsAdvanceValidationError } {
+  const base = validateOnboardingBasicAdvance(fields);
+  if (!base.ok) return base;
+  if (!birthDateSatisfied(fields.birthDate)) {
+    return { ok: false, error: 'birthDateRequired' };
+  }
+  return { ok: true };
+}
+
+export type FactsMissingKey =
+  | 'gender'
+  | 'lookingFor'
+  | 'location'
+  | 'birthDate';
+
+export function listFactsMissing(
+  fields: OnboardingFactsAdvanceFields,
+): FactsMissingKey[] {
+  const missing: FactsMissingKey[] = [];
+  if (!validateGenderForOnboardingAdvance(fields.gender).ok) {
+    missing.push('gender');
+  }
+  if (!validatePartnerGendersNonEmpty(fields.desiredPartnerGenders).ok) {
+    missing.push('lookingFor');
+  }
+  if (!locationSatisfied(fields.location)) {
+    missing.push('location');
+  }
+  if (!birthDateSatisfied(fields.birthDate)) {
+    missing.push('birthDate');
+  }
+  return missing;
 }

@@ -129,6 +129,7 @@ describe('PlacesService', () => {
                 'ES',
                 'FR',
                 'DE',
+                'IL',
               ]),
             },
           },

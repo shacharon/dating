@@ -21,6 +21,12 @@ export function onboardingUiStepFromPathname(
   ) {
     return 'story';
   }
+  if (
+    pathname.startsWith('/onboarding/basics') ||
+    pathname.startsWith('/onboarding/photos')
+  ) {
+    return 'basic';
+  }
   if (pathname.startsWith('/onboarding/basic')) {
     if (!searchParams) return 'basic';
     return onboardingTabFromSearchParams(searchParams);
@@ -60,6 +66,9 @@ export function canNavigateOnboardingStep(
 export function onboardingTabHref(tab: OnboardingTab, editMode: boolean): string {
   if (tab === 'story') {
     return editMode ? '/onboarding/story?edit=1' : '/onboarding/story';
+  }
+  if (tab === 'basic') {
+    return editMode ? '/onboarding/basics?edit=1' : '/onboarding/basics';
   }
   const base = `/onboarding/basic?tab=${tab}`;
   if (!editMode) return base;

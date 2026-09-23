@@ -1,7 +1,9 @@
 # Story 3: One facts screen, four fields
 
-**Status:** Proposed
-**Depends on:** —
+**Status:** Done  
+**Depends on:** —  
+**Shipped on main:** (pending merge)  
+**Feature tip ahead of main:** (pending merge)
 
 ## Why
 
@@ -35,12 +37,12 @@ Four small fields belong on one screen.
 
 ### Acceptance criteria
 
-- [ ] All four fields are on one screen, in the order above
-- [ ] Country is pre-selected from the time zone and can be changed
-- [ ] City is a searchable list filtered by country/state, Hebrew names when locale is `he`
-- [ ] Continue is disabled until all four are set, and shows which are missing
-- [ ] Continue persists and routes to `/onboarding/photos`
-- [ ] No nickname and no dating chapter anywhere on this screen
+- [x] All four fields are on one screen, in the order above
+- [x] Country is pre-selected from the time zone and can be changed
+- [x] City is a searchable list filtered by country/state, Hebrew names when locale is `he`
+- [x] Continue is disabled until all four are set, and shows which are missing
+- [x] Continue persists and routes to `/onboarding/photos`
+- [x] No nickname and no dating chapter anywhere on this screen
 
 ## Out of scope
 
@@ -50,5 +52,19 @@ Four small fields belong on one screen.
 
 ## Definition of done
 
-- [ ] A user with a fresh account can complete screen 2 without opening the country dropdown when their time zone is mapped
-- [ ] Nothing on this screen can produce a 422 from the API
+- [x] A user with a fresh account can complete screen 2 without opening the country dropdown when their time zone is mapped
+- [x] Nothing on this screen can produce a 422 from the API
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | approved (`19167a9`) |
+| 2 CR | approved (`e83a20c`) |
+| 3.5 UX | approved (`9bc3139`) |
+| 2.5 / 4 | N/A |
+| 3 PM | Done |
+
+**Handoffs:** [preflight](./handoffs/STORY_03_facts_screen/agent--1-preflight.md) · [architect](./handoffs/STORY_03_facts_screen/agent-0-architect.md) · [dev](./handoffs/STORY_03_facts_screen/agent-1-dev.md) · [CR](./handoffs/STORY_03_facts_screen/agent-2-cr.md) · [UX](./handoffs/STORY_03_facts_screen/agent-3.5-ux.md) · [PM](./handoffs/STORY_03_facts_screen/agent-3-pm.md)

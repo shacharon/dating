@@ -452,10 +452,11 @@ export const enCopy: AppCopySchema = {
     PREFER_NOT_TO_SAY: "Prefer not to say",
   },
   onboarding: {
-    basicsTitle: "Step 1 — Basics",
-    basicsSubtitle: "Save anytime; your answers reload from the server when you return.",
-    storyTitle: "Step 2 — Your story",
-    storySubtitle: "Save a draft, or finish to submit your profile for analysis.",
+    basicsTitle: "Step 2 — About you",
+    basicsSubtitle:
+      "Gender, who you are looking for, where you are, and your birth date. Continue when all four are filled.",
+    storyTitle: "Step 1 — Your story",
+    storySubtitle: "Save a draft, or continue — you can write more later.",
     syncingProfile: "Syncing profile…",
     loadFailed: "Failed to load profile",
     saveFailed: "Save failed",
@@ -571,6 +572,25 @@ export const enCopy: AppCopySchema = {
           'Could not create a draft from that recording. You can type instead.',
         timerLabel: (seconds) => `${seconds}s / 120s`,
       },
+    },
+    factsForm: {
+      iAmLabel: 'I am',
+      lookingForLabel: "I'm looking for",
+      lookingForMen: 'Men',
+      lookingForWomen: 'Women',
+      lookingForEveryone: 'Everyone',
+      whereLabel: 'Where I am',
+      birthDateLabel: 'Birth date',
+      citySearchPlaceholder: 'Search city…',
+      continueButton: 'Continue',
+      missingHeading: 'Still needed:',
+      missingGender: 'Who you are',
+      missingLookingFor: 'Who you are looking for',
+      missingLocation: 'Where you are',
+      missingBirthDate: 'Birth date',
+      photosStubTitle: 'Add a photo',
+      photosStubBody:
+        'Upload at least one photo. Finishing sign-up comes in the next step.',
     },
     writingPrompts: {
       aboutMe: {
