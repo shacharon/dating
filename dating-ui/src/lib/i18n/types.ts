@@ -438,6 +438,19 @@ export type AppCopySchema = {
         toneHeading: string;
         wordCountLine: (words: number) => string;
       };
+      voice: {
+        recordPrompt: string;
+        recordButton: string;
+        stopButton: string;
+        working: string;
+        draftBadge: string;
+        reRecordConfirm: string;
+        tooShort: string;
+        micDenied: string;
+        unsupported: string;
+        genericError: string;
+        timerLabel: (seconds: number) => string;
+      };
     };
     writingPrompts: {
       aboutMe: OnboardingWritingPromptField;

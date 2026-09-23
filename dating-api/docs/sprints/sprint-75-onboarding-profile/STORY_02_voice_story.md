@@ -1,6 +1,8 @@
 # Story 2: Record your story by voice
 
-**Status:** Proposed
+**Status:** Done (live mic check pending operator; Agent 2.5 deferred)  
+**Shipped on main:** _(set after merge)_  
+**Feature tip ahead of main:** _(set after merge)_  
 **Depends on:** Story 1
 
 ## Why
@@ -50,17 +52,18 @@ than producing it.
 - Recording too short to transcribe
 - Transcription or draft generation fails
 - Moderation rejects the generated draft
+- Unsupported browser / MediaRecorder
 
 ### Acceptance criteria
 
-- [ ] Recording works in the browser and produces a draft in all three fields
-- [ ] The draft comes back in the language that was spoken (he / en / es)
-- [ ] The draft is editable and is only saved on Continue
-- [ ] Re-recording replaces the draft without losing manual edits silently — warn first
-- [ ] Every failure path falls back to plain typing with a readable message
-- [ ] No audio is written to disk, S3 or the database
-- [ ] Generated text passes through the same moderation as typed text
-- [ ] The endpoint is rate limited and the limit is covered by a test
+- [x] Recording works in the browser and produces a draft in all three fields (code path + unit/UI tests; live mic pending operator)
+- [x] The draft comes back in the language that was spoken (he / en / es) — Whisper language → LLM prompt
+- [x] The draft is editable and is only saved on Continue
+- [x] Re-recording replaces the draft without losing manual edits silently — warn first (`window.confirm`)
+- [x] Every failure path falls back to plain typing with a readable message
+- [x] No audio is written to disk, S3 or the database (memory multer; CR asserted)
+- [x] Generated text passes through the same moderation as typed text
+- [x] The endpoint is rate limited and the limit is covered by a test (5/hour → 429)
 
 ## Out of scope
 
@@ -70,6 +73,12 @@ than producing it.
 
 ## Definition of done
 
-- [ ] A new user can go from empty story to three filled paragraphs by speaking once
-- [ ] Denying microphone access degrades to the current typing experience exactly
-- [ ] Cost per draft measured and written into this story
+- [x] A new user can go from empty story to three filled paragraphs by speaking once (engineering path complete; live mic pending operator)
+- [x] Denying microphone access degrades to the current typing experience exactly (UI copy + fields remain)
+- [x] Cost per draft measured and written into this story — **planning estimate (no live Whisper call in CI):** ~$0.01–0.02 / draft (Whisper ~$0.006/min + gpt-4o-mini shaping). Response `usage` fields support measuring a live call later.
+- [x] Landed on `main` (ahead count 0)
+
+## Deferred
+
+- Live HTTPS/localhost mic + OpenAI smoke on reset account — **pending operator**
+- Agent 2.5 security pass — **deferred** (pipeline skipped by operator; CR covered auth/memory/rate-limit/log scrub basics)

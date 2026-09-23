@@ -40,6 +40,6 @@ import type { LLMClient } from './interfaces/llm-client';
     },
     LLMRouterService,
   ],
-  exports: [LLMRouterService],
+  exports: [LLMRouterService, OPENAI_LLM_CLIENT],
 })
 export class LlmModule {}

@@ -12,12 +12,22 @@ describe('rate-limit store DI wiring (sprint-61/63)', () => {
   const sharedRateLimit = path.join(__dirname, 'rate-limit');
 
   const serviceFiles = [
-    path.join(meProfile, 'conversation-message-rate-limit.service.ts'),
+    path.join(meProfile, 'conversations', 'conversation-message-rate-limit.service.ts'),
+    path.join(meProfile, 'profile', 'story-voice-draft-rate-limit.service.ts'),
     path.join(messaging, 'messaging-ws-rate-limit.service.ts'),
   ];
 
   const providerFiles = [
-    path.join(meProfile, 'conversation-message-rate-limit-store.provider.ts'),
+    path.join(
+      meProfile,
+      'conversations',
+      'conversation-message-rate-limit-store.provider.ts',
+    ),
+    path.join(
+      meProfile,
+      'profile',
+      'story-voice-draft-rate-limit-store.provider.ts',
+    ),
     path.join(messaging, 'messaging-ws-rate-limit-store.provider.ts'),
   ];
 
@@ -85,6 +95,8 @@ describe('rate-limit store DI wiring (sprint-61/63)', () => {
     expect(meProfileMod).toContain('MESSAGE_RATE_LIMIT_STORE');
     expect(meProfileMod).toContain('MessageRateLimitStoreProvider');
     expect(meProfileMod).toContain('useExisting: MessageRateLimitStoreProvider');
+    expect(meProfileMod).toContain('StoryVoiceDraftRateLimitStoreProvider');
+    expect(meProfileMod).toContain('StoryVoiceDraftRateLimitService');
     expect(messagingMod).toContain('WS_RATE_LIMIT_STORE');
     expect(messagingMod).toContain('WsRateLimitStoreProvider');
     expect(messagingMod).toContain('useExisting: WsRateLimitStoreProvider');

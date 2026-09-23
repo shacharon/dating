@@ -53,6 +53,9 @@ import { ProfileCrudService } from './profile/profile-crud.service';
 import { ProfileModerationService } from './profile/profile-moderation.service';
 import { ProfilePhotoService } from './profile/profile-photo.service';
 import { ProfilePreferenceService } from './profile/profile-preference.service';
+import { StoryVoiceDraftService } from './profile/story-voice-draft.service';
+import { StoryVoiceDraftRateLimitService } from './profile/story-voice-draft-rate-limit.service';
+import { StoryVoiceDraftRateLimitStoreProvider } from './profile/story-voice-draft-rate-limit-store.provider';
 import { PrismaUserProfileRepository } from './repositories/prisma-user-profile.repository';
 import { USER_PROFILE_REPOSITORY } from './repositories/user-profile.repository';
 import { PrismaMatchRepository } from './repositories/prisma-match.repository';
@@ -135,6 +138,9 @@ import { PrismaMatchNarrativeCacheRepository } from './repositories/prisma-match
     ProfilePhotoService,
     ProfileAnalysisSubmitService,
     ProfileQualityService,
+    StoryVoiceDraftRateLimitStoreProvider,
+    StoryVoiceDraftRateLimitService,
+    StoryVoiceDraftService,
     MeProfileAnalysisService,
     MeProfileMatchesService,
     MatchListQueryService,

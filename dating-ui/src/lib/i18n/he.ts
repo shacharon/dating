@@ -532,6 +532,25 @@ export const heCopy: AppCopySchema = {
         wordCountLine: (words) =>
           `${words} מילים · מומלץ בערך 50–150`,
       },
+      voice: {
+        recordPrompt:
+          'דברו כדקה — מי אתם, את מי אתם מחפשים, ומה אתם רוצים.',
+        recordButton: 'הקלטה',
+        stopButton: 'עצירה',
+        working: 'הופכים את ההקלטה לטיוטה…',
+        draftBadge: 'טיוטה — ערכו לפני שממשיכים',
+        reRecordConfirm:
+          'להתחיל הקלטה חדשה? זה יחליף את הטקסט בשדות הסיפור.',
+        tooShort:
+          'זה היה קצר מדי. דברו עוד כמה שניות, או הקלידו במקום.',
+        micDenied:
+          'הגישה למיקרופון נדחתה. אפשר עדיין להקליד את הסיפור למטה.',
+        unsupported:
+          'הקלטה קולית אינה נתמכת בדפדפן הזה. אפשר להקליד את הסיפור למטה.',
+        genericError:
+          'לא הצלחנו ליצור טיוטה מההקלטה. אפשר להקליד במקום.',
+        timerLabel: (seconds) => `${seconds} שנ׳ / 120 שנ׳`,
+      },
     },
     writingPrompts: {
       aboutMe: {

@@ -560,6 +560,25 @@ export const esCopy: AppCopySchema = {
         wordCountLine: (words) =>
           `${words} palabras · Unas 50–150 recomendadas`,
       },
+      voice: {
+        recordPrompt:
+          'Habla un minuto — quien eres, a quien buscas y que quieres.',
+        recordButton: 'Grabar',
+        stopButton: 'Parar',
+        working: 'Convirtiendo tu voz en un borrador…',
+        draftBadge: 'Borrador — editalo antes de continuar',
+        reRecordConfirm:
+          'Empezar una nueva grabacion? Esto reemplazara el texto de los campos de la historia.',
+        tooShort:
+          'Fue demasiado corto. Habla unos segundos mas, o escribe en su lugar.',
+        micDenied:
+          'Se denego el acceso al microfono. Aun puedes escribir tu historia abajo.',
+        unsupported:
+          'La grabacion de voz no es compatible con este navegador. Puedes escribir tu historia abajo.',
+        genericError:
+          'No se pudo crear un borrador con esa grabacion. Puedes escribir en su lugar.',
+        timerLabel: (seconds) => `${seconds}s / 120s`,
+      },
     },
     writingPrompts: {
       aboutMe: {

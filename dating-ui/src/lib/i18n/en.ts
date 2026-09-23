@@ -553,6 +553,24 @@ export const enCopy: AppCopySchema = {
         wordCountLine: (words) =>
           `${words} words · About 50–150 recommended`,
       },
+      voice: {
+        recordPrompt:
+          "Talk for a minute — who you are, who you're looking for, what you want.",
+        recordButton: 'Record',
+        stopButton: 'Stop',
+        working: 'Turning your voice into a draft…',
+        draftBadge: 'Draft — edit before you continue',
+        reRecordConfirm:
+          'Start a new recording? This will replace the text in the story fields.',
+        tooShort: 'That was too short. Speak for at least a few seconds, or type instead.',
+        micDenied:
+          'Microphone access was denied. You can still type your story below.',
+        unsupported:
+          'Voice recording is not supported in this browser. You can type your story below.',
+        genericError:
+          'Could not create a draft from that recording. You can type instead.',
+        timerLabel: (seconds) => `${seconds}s / 120s`,
+      },
     },
     writingPrompts: {
       aboutMe: {

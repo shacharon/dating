@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import { InlineError } from '@/components/errors';
 import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text-field-help';
+import { StoryVoiceRecorder } from '@/components/onboarding/story-voice-recorder';
 import { useOnboardingTextsForm } from '@/hooks/use-onboarding-texts-form';
 
 function fieldLabelFor(
@@ -56,6 +57,13 @@ export function OnboardingTextsForm({
         aria-busy={m.profileSyncing}
       >
         <p className="text-sm text-zinc-600 dark:text-zinc-400">{m.tf.intro}</p>
+
+        <StoryVoiceRecorder
+          copy={m.tf.voice}
+          fieldsDirtyForRerecord={m.fieldsDirtyForRerecord}
+          onDraft={(draft) => m.applyVoiceDraft(draft)}
+          onModerationError={(err) => m.applyVoiceModerationError(err)}
+        />
 
         <div>
           <label htmlFor="ot-about-me" className={labelClass}>
