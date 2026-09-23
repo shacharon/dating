@@ -533,7 +533,7 @@ export const esCopy: AppCopySchema = {
     },
     textsForm: {
       intro:
-        "Unos parrafos cortos nos ayudan a entenderte. Puedes guardar y volver, o finalizar para ejecutar el analisis.",
+        "Unos parrafos cortos nos ayudan a entenderte. Puedes guardar y volver, o continuar sin escribir todavia.",
       aboutMeLabel: "Sobre mi",
       aboutMePlaceholder: "Describe quien eres…",
       aboutPartnerLabel: "Sobre la pareja",

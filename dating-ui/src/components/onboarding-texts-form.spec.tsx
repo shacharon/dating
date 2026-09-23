@@ -26,10 +26,11 @@ vi.mock('@/lib/api-sdk', () => ({
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
+const searchParamsMock = vi.fn(() => new URLSearchParams());
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: replaceMock }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParamsMock(),
 }));
 
 import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
@@ -65,6 +66,7 @@ describe('OnboardingTextsForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
+    searchParamsMock.mockReturnValue(new URLSearchParams());
     fetchMyProfile.mockResolvedValue(storyProfile);
     patchMyProfile.mockImplementation(async (body) => ({
       ...storyProfile,
@@ -92,7 +94,7 @@ describe('OnboardingTextsForm', () => {
     });
   });
 
-  it('renders Hebrew continue and back links when locale is he', async () => {
+  it('renders Hebrew continue without back-to-basics on first-time story', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     renderForm();
 
@@ -102,8 +104,19 @@ describe('OnboardingTextsForm', () => {
           name: heCopy.onboarding.basicForm.continueButton,
         }),
       ).toBeTruthy();
+    });
+    expect(
+      screen.queryByRole('link', { name: heCopy.onboarding.textsForm.backToBasics }),
+    ).toBeNull();
+  });
+
+  it('shows back-to-basics only in edit mode', async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams('edit=1'));
+    renderForm();
+
+    await waitFor(() => {
       expect(
-        screen.getByRole('link', { name: heCopy.onboarding.textsForm.backToBasics }),
+        screen.getByRole('link', { name: enCopy.onboarding.textsForm.backToBasics }),
       ).toBeTruthy();
     });
   });
