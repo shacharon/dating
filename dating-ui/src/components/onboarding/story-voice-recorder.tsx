@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   postStoryVoiceDraft,
   StoryVoiceApiError,
@@ -20,6 +20,7 @@ export type StoryVoiceRecorderCopy = {
   reRecordConfirm: string;
   tooShort: string;
   micDenied: string;
+  unsupported: string;
   genericError: string;
   timerLabel: (seconds: number) => string;
 };
@@ -47,6 +48,7 @@ export function StoryVoiceRecorder({
   onDraft,
   onModerationError,
 }: Props) {
+  const errorId = useId();
   const [phase, setPhase] = useState<
     'idle' | 'recording' | 'working' | 'error'
   >('idle');
@@ -114,6 +116,12 @@ export function StoryVoiceRecorder({
   async function startRecording() {
     if (phase === 'working' || phase === 'recording') return;
 
+    if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setError(copy.unsupported);
+      setPhase('error');
+      return;
+    }
+
     if (
       (hasDraft || fieldsDirtyForRerecord) &&
       !window.confirm(copy.reRecordConfirm)
@@ -136,9 +144,19 @@ export function StoryVoiceRecorder({
 
     streamRef.current = stream;
     const mimeType = pickMimeType();
-    const recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
+
+    let recorder: MediaRecorder;
+    try {
+      recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+    } catch {
+      stopTracks();
+      setError(copy.unsupported);
+      setPhase('error');
+      return;
+    }
+
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (ev) => {
@@ -177,10 +195,13 @@ export function StoryVoiceRecorder({
     }, MAX_SECONDS * 1000);
   }
 
+  const busy = phase === 'working';
+
   return (
     <div
       className="space-y-2 rounded border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/50"
       data-testid="story-voice-recorder"
+      aria-busy={busy}
     >
       <p className="text-sm text-zinc-700 dark:text-zinc-300">
         {copy.recordPrompt}
@@ -192,6 +213,8 @@ export function StoryVoiceRecorder({
             onClick={() => finishRecording()}
             className="inline-flex min-h-11 items-center rounded bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700"
             data-testid="story-voice-stop"
+            aria-pressed="true"
+            aria-describedby={error ? errorId : undefined}
           >
             {copy.stopButton}
           </button>
@@ -199,9 +222,11 @@ export function StoryVoiceRecorder({
           <button
             type="button"
             onClick={() => void startRecording()}
-            disabled={phase === 'working'}
+            disabled={busy}
             className="inline-flex min-h-11 items-center rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
             data-testid="story-voice-record"
+            aria-pressed="false"
+            aria-describedby={error ? errorId : undefined}
           >
             {copy.recordButton}
           </button>
@@ -223,13 +248,20 @@ export function StoryVoiceRecorder({
           </span>
         ) : null}
         {hasDraft && phase !== 'working' ? (
-          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          <span
+            className="text-xs font-medium text-emerald-700 dark:text-emerald-400"
+            role="status"
+          >
             {copy.draftBadge}
           </span>
         ) : null}
       </div>
       {error ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+        <p
+          id={errorId}
+          className="text-sm text-red-600 dark:text-red-400"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

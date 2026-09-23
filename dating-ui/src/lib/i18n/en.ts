@@ -565,6 +565,8 @@ export const enCopy: AppCopySchema = {
         tooShort: 'That was too short. Speak for at least a few seconds, or type instead.',
         micDenied:
           'Microphone access was denied. You can still type your story below.',
+        unsupported:
+          'Voice recording is not supported in this browser. You can type your story below.',
         genericError:
           'Could not create a draft from that recording. You can type instead.',
         timerLabel: (seconds) => `${seconds}s / 120s`,

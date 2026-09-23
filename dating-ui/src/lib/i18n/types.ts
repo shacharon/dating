@@ -447,6 +447,7 @@ export type AppCopySchema = {
         reRecordConfirm: string;
         tooShort: string;
         micDenied: string;
+        unsupported: string;
         genericError: string;
         timerLabel: (seconds: number) => string;
       };

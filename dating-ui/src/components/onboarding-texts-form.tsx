@@ -65,15 +65,6 @@ export function OnboardingTextsForm({
           onModerationError={(err) => m.applyVoiceModerationError(err)}
         />
 
-        {m.voiceDraftApplied ? (
-          <p
-            className="text-xs font-medium text-emerald-700 dark:text-emerald-400"
-            role="status"
-          >
-            {m.tf.voice.draftBadge}
-          </p>
-        ) : null}
-
         <div>
           <label htmlFor="ot-about-me" className={labelClass}>
             {m.tf.aboutMeLabel}

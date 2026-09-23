@@ -573,6 +573,8 @@ export const esCopy: AppCopySchema = {
           'Fue demasiado corto. Habla unos segundos mas, o escribe en su lugar.',
         micDenied:
           'Se denego el acceso al microfono. Aun puedes escribir tu historia abajo.',
+        unsupported:
+          'La grabacion de voz no es compatible con este navegador. Puedes escribir tu historia abajo.',
         genericError:
           'No se pudo crear un borrador con esa grabacion. Puedes escribir en su lugar.',
         timerLabel: (seconds) => `${seconds}s / 120s`,
