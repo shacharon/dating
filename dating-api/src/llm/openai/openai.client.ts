@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import { ZodError } from 'zod';
 
 import type { CompleteJSONArgs } from '../interfaces/llm-client';
@@ -63,6 +63,57 @@ export class OpenAIClient implements LLMClient {
       baseURL: config.openai.baseURL,
       fetch: instrumentedFetch as typeof fetch,
     });
+  }
+
+  /**
+   * Whisper transcription. Does not log transcript text.
+   * Prefer response_format verbose_json for language + duration.
+   */
+  async transcribeAudio(args: {
+    buffer: Buffer;
+    filename: string;
+    mimetype: string;
+    requestId: string;
+  }): Promise<{ text: string; language?: string; duration?: number }> {
+    const { buffer, filename, mimetype, requestId } = args;
+    const start = Date.now();
+    try {
+      const file = await toFile(buffer, filename, { type: mimetype });
+      const result = await this.client.audio.transcriptions.create({
+        file,
+        model: 'whisper-1',
+        response_format: 'verbose_json',
+      });
+      const latencyMs = Date.now() - start;
+      this.logger.log(
+        `requestId=${requestId} purpose=story_voice_whisper model=whisper-1 provider=openai latencyMs=${latencyMs} ok=true`,
+      );
+      const text =
+        typeof result === 'string'
+          ? result
+          : typeof (result as { text?: unknown }).text === 'string'
+            ? (result as { text: string }).text
+            : '';
+      const language =
+        typeof result === 'object' &&
+        result &&
+        typeof (result as { language?: unknown }).language === 'string'
+          ? (result as { language: string }).language
+          : undefined;
+      const duration =
+        typeof result === 'object' &&
+        result &&
+        typeof (result as { duration?: unknown }).duration === 'number'
+          ? (result as { duration: number }).duration
+          : undefined;
+      return { text, language, duration };
+    } catch (err) {
+      const latencyMs = Date.now() - start;
+      this.logger.log(
+        `requestId=${requestId} purpose=story_voice_whisper model=whisper-1 provider=openai latencyMs=${latencyMs} ok=false`,
+      );
+      throw err;
+    }
   }
 
   async completeJSON<T>(

@@ -79,5 +79,9 @@ export function createMeProfileServiceForTest(
     deps.analysisQueue,
     deps.meMatches,
   );
-  return new MeProfileService(crud, photos, analysisSubmit);
+  return new MeProfileService(crud, photos, analysisSubmit, {
+    createDraftForUser: async () => {
+      throw new Error('story voice draft not configured in test harness');
+    },
+  } as never);
 }

@@ -12,12 +12,17 @@ import { ProfilePhotoService } from './profile-photo.service';
 import { ProfileAnalysisSubmitService } from './profile-analysis-submit.service';
 import type { UploadedPhotoFile } from './profile-photo.constants';
 import type { MeProfileSubmitResponseDto } from './me-profile-submit.dto';
+import { StoryVoiceDraftService } from './story-voice-draft.service';
+import type {
+  StoryVoiceDraftResponseDto,
+  UploadedStoryVoiceFile,
+} from './story-voice-draft.dto';
 
 export type { MeProfileSubmitResponseDto };
 
 /**
  * Controller-facing facade over the profile collaborators (Sprint 38 Story 4).
- * Holds no logic — each method delegates to Crud, Photo, or AnalysisSubmit.
+ * Holds no logic — each method delegates to Crud, Photo, AnalysisSubmit, or voice draft.
  */
 @Injectable()
 export class MeProfileService {
@@ -25,6 +30,7 @@ export class MeProfileService {
     private readonly crud: ProfileCrudService,
     private readonly photos: ProfilePhotoService,
     private readonly analysisSubmit: ProfileAnalysisSubmitService,
+    private readonly storyVoiceDraft: StoryVoiceDraftService,
   ) {}
 
   async getForUser(userId: string): Promise<MeProfileResponseDto | null> {
@@ -91,5 +97,17 @@ export class MeProfileService {
     userId: string,
   ): Promise<MeLatestAnalysisResponseDto> {
     return this.analysisSubmit.getLatestAnalysisForUser(userId);
+  }
+
+  async createStoryVoiceDraftForUser(
+    userId: string,
+    file: UploadedStoryVoiceFile | undefined,
+    durationSeconds: unknown,
+  ): Promise<StoryVoiceDraftResponseDto> {
+    return this.storyVoiceDraft.createDraftForUser(
+      userId,
+      file,
+      durationSeconds,
+    );
   }
 }

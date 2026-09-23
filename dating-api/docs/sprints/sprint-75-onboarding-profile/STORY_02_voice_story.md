@@ -72,4 +72,4 @@ than producing it.
 
 - [ ] A new user can go from empty story to three filled paragraphs by speaking once
 - [ ] Denying microphone access degrades to the current typing experience exactly
-- [ ] Cost per draft measured and written into this story
+- [x] Cost per draft measured and written into this story — **planning estimate (no live Whisper call in CI):** ~$0.01–0.02 / draft (Whisper ~$0.006/min + gpt-4o-mini shaping). Response `usage` fields support measuring a live call later.

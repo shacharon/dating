@@ -370,6 +370,31 @@ export class MeProfileController {
     return this.meProfile.submitForUser(user.id);
   }
 
+  @Post('profile/story/voice-draft')
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: memoryStorage(),
+      limits: { fileSize: 8 * 1024 * 1024 },
+    }),
+  )
+  createStoryVoiceDraft(
+    @CurrentUser() user: AuthMeResponseDto,
+    @UploadedFile()
+    file?: {
+      mimetype: string;
+      size: number;
+      originalname?: string;
+      buffer: Buffer;
+    },
+    @Body() body?: { durationSeconds?: string },
+  ) {
+    return this.meProfile.createStoryVoiceDraftForUser(
+      user.id,
+      file,
+      body?.durationSeconds,
+    );
+  }
+
   @Post('profile/photos')
   @UseInterceptors(
     FileInterceptor('file', {

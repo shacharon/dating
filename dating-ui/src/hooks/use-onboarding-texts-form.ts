@@ -49,7 +49,13 @@ export function useOnboardingTextsForm({
     useState<ContentModerationDetails | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [continuing, setContinuing] = useState(false);
+  const [voiceDraftApplied, setVoiceDraftApplied] = useState(false);
   const loadHandledRef = useRef(false);
+  const lastVoiceDraftRef = useRef<{
+    aboutMe: string;
+    aboutPartner: string;
+    aboutRelationship: string;
+  } | null>(null);
 
   const aboutMeRef = useRef<HTMLTextAreaElement>(null);
   const aboutPartnerRef = useRef<HTMLTextAreaElement>(null);
@@ -146,6 +152,11 @@ export function useOnboardingTextsForm({
     setFlat(e instanceof Error ? e.message : flatFallback);
   }
 
+  function applyVoiceModerationError(e: ContentModerationApiError) {
+    setModerationDetails(e.details);
+    setSaveError(null);
+  }
+
   function textsPatchBody(
     onboardingStep?: PatchMeProfileBody['onboardingStep'],
   ): PatchMeProfileBody {
@@ -203,6 +214,39 @@ export function useOnboardingTextsForm({
     router.push('/onboarding/basic');
   }
 
+  function applyVoiceDraft(draft: {
+    aboutMe: string;
+    aboutPartner: string;
+    aboutRelationship: string;
+  }) {
+    clearModeration();
+    setAboutMe(draft.aboutMe ?? '');
+    setAboutPartner(draft.aboutPartner ?? '');
+    setAboutRelationship(draft.aboutRelationship ?? '');
+    lastVoiceDraftRef.current = {
+      aboutMe: draft.aboutMe ?? '',
+      aboutPartner: draft.aboutPartner ?? '',
+      aboutRelationship: draft.aboutRelationship ?? '',
+    };
+    setVoiceDraftApplied(true);
+  }
+
+  const fieldsDirtyForRerecord = (() => {
+    const last = lastVoiceDraftRef.current;
+    if (last) {
+      return (
+        aboutMe !== last.aboutMe ||
+        aboutPartner !== last.aboutPartner ||
+        aboutRelationship !== last.aboutRelationship
+      );
+    }
+    return (
+      aboutMe.trim().length > 0 ||
+      aboutPartner.trim().length > 0 ||
+      aboutRelationship.trim().length > 0
+    );
+  })();
+
   const moderationLabels = {
     fieldLabel: mod.fieldLabel,
     flaggedLabel: mod.flaggedLabel,
@@ -240,6 +284,10 @@ export function useOnboardingTextsForm({
     clearModeration,
     handleSaveProgress,
     handleContinue,
+    applyVoiceDraft,
+    applyVoiceModerationError,
+    fieldsDirtyForRerecord,
+    voiceDraftApplied,
     moderationLabels,
   };
 }
