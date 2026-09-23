@@ -23,7 +23,7 @@ export function httpStoryVoiceDraftRateLimitRedisKey(userId: string): string {
 
 export function isAllowedStoryVoiceMime(mimetype: string): boolean {
   const base = mimetype.split(';')[0]?.trim().toLowerCase() ?? '';
-  return STORY_VOICE_ALLOWED_MIME_PREFIXES.some(
-    (allowed) => base === allowed || base.startsWith(`${allowed}`),
+  return (STORY_VOICE_ALLOWED_MIME_PREFIXES as readonly string[]).includes(
+    base,
   );
 }

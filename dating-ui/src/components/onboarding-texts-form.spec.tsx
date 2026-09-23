@@ -94,6 +94,19 @@ describe('OnboardingTextsForm', () => {
     });
   });
 
+  it('renders story voice recorder on the story form', async () => {
+    renderForm();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('story-voice-recorder')).toBeTruthy();
+    });
+    expect(
+      screen.getByRole('button', {
+        name: enCopy.onboarding.textsForm.voice.recordButton,
+      }),
+    ).toBeTruthy();
+  });
+
   it('renders Hebrew continue without back-to-basics on first-time story', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     renderForm();
