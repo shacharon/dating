@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const mockPush = vi.fn();
-const mockPathname = vi.fn(() => '/onboarding/basic');
+const mockPathname = vi.fn(() => '/onboarding/basics');
 const mockSearchParams = vi.fn(() => new URLSearchParams());
 
 vi.mock('next/navigation', () => ({
@@ -16,11 +16,17 @@ vi.mock('next/link', () => ({
   default({
     children,
     href,
+    ...rest
   }: {
     children: React.ReactNode;
     href: string;
+    [key: string]: unknown;
   }) {
-    return <a href={href}>{children}</a>;
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
   },
 }));
 
@@ -30,7 +36,7 @@ import { enCopy } from '@/lib/i18n/en';
 describe('OnboardingHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPathname.mockReturnValue('/onboarding/basic');
+    mockPathname.mockReturnValue('/onboarding/basics');
     mockSearchParams.mockReturnValue(new URLSearchParams());
   });
 
@@ -44,11 +50,21 @@ describe('OnboardingHeader', () => {
     expect(screen.getByTestId('onboarding-skip')).toBeTruthy();
   });
 
-  it('shows Basic, Story, and Other steps', () => {
+  it('shows Story, Facts, and Photos steps', () => {
     render(<OnboardingHeader />);
-    expect(screen.getByText(enCopy.onboarding.tabs.basic)).toBeTruthy();
     expect(screen.getByText(enCopy.onboarding.tabs.story)).toBeTruthy();
-    expect(screen.getByText(enCopy.onboarding.tabs.other)).toBeTruthy();
+    expect(screen.getByText(enCopy.onboarding.tabs.facts)).toBeTruthy();
+    expect(screen.getByText(enCopy.onboarding.tabs.photos)).toBeTruthy();
+  });
+
+  it('highlights Photos on the photos route', () => {
+    mockPathname.mockReturnValue('/onboarding/photos');
+    render(<OnboardingHeader />);
+    const photosLink = screen.getByRole('link', {
+      name: new RegExp(enCopy.onboarding.tabs.photos, 'i'),
+    });
+    expect(photosLink.getAttribute('aria-current')).toBe('step');
+    expect(photosLink.getAttribute('href')).toBe('/onboarding/photos');
   });
 
   it('skips immediately to matches', () => {

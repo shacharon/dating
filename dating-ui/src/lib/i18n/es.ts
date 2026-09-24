@@ -482,9 +482,9 @@ export const esCopy: AppCopySchema = {
       confirm: "Salir",
     },
     tabs: {
-      basic: "Basico",
       story: "Historia",
-      other: "Otro",
+      facts: "Datos",
+      photos: "Fotos",
     },
     basicForm: {
       sectionTitle: "Basico",
@@ -519,6 +519,8 @@ export const esCopy: AppCopySchema = {
       skipButton: "Omitir por ahora",
       continueButton: "Continuar",
       finishButton: "Completar perfil",
+      hubSaveButton: "Guardar cambios",
+      requiredFieldsBanner: "Completa los campos obligatorios antes de guardar.",
       datingChapter: {
         question: "En que punto de tu historia de citas estas?",
         helper:

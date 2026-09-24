@@ -369,9 +369,9 @@ export type AppCopySchema = {
       confirm: string;
     };
     tabs: {
-      basic: string;
       story: string;
-      other: string;
+      facts: string;
+      photos: string;
     };
     basicForm: {
       sectionTitle: string;
@@ -403,6 +403,8 @@ export type AppCopySchema = {
       skipButton: string;
       continueButton: string;
       finishButton: string;
+      hubSaveButton: string;
+      requiredFieldsBanner: string;
       datingChapter: {
         question: string;
         helper: string;

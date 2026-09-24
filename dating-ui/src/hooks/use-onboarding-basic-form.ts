@@ -22,7 +22,6 @@ import {
   normalizeNicknameValue,
   togglePartnerGender,
 } from '@/components/onboarding-basic-helpers';
-import { onboardingTabFromSearchParams } from '@/components/onboarding/onboarding-step';
 import {
   listPlaceCities,
   listPlaceCountries,
@@ -91,7 +90,7 @@ function seedBasicFieldsFromProfile(
 }
 
 export function useOnboardingBasicForm({
-  variant = 'onboarding',
+  variant = 'profileHub',
   onSaved,
 }: UseOnboardingBasicFormOptions = {}) {
   const router = useRouter();
@@ -359,36 +358,13 @@ export function useOnboardingBasicForm({
     }
   }
 
-  async function handleContinueToTexts() {
-    const tab = onboardingTabFromSearchParams(searchParams);
-
-    // Legacy ?tab=story → real story route (texts no longer live on this page)
-    if (!isHub && tab === 'story') {
-      router.push('/onboarding/story');
-      return;
-    }
-
-    // Basic → Other: validate gender / partner / location
-    if (!isHub && tab === 'basic') {
-      const ok = await persist(true);
-      if (!ok) return;
-      onSaved?.();
-      router.push('/onboarding/basic?tab=other');
-      return;
-    }
-
-    // Other (or hub): validate + advance. Texts finish page is gone — land on matches
-    // (not_analyzed gate → /onboarding/story if story still empty).
+  async function handleHubSave() {
     const ok = await persist(true);
     if (!ok) return;
     onSaved?.();
-    if (isHub) {
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 2000);
-      document.getElementById('story')?.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-    router.push('/dating/me-matches');
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+    document.getElementById('story')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   return {
@@ -446,6 +422,6 @@ export function useOnboardingBasicForm({
     setModerationDetails,
     savedFlash,
     handleSaveProgress,
-    handleContinueToTexts,
+    handleHubSave,
   };
 }

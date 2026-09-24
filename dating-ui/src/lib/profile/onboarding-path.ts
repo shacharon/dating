@@ -11,7 +11,8 @@ export type OnboardingResumeOptions = {
  * Where `/onboarding` should send the user based on `GET /api/v1/me/profile`.
  * `404` / `null` profile → start at story (screen 1).
  *
- * Sprint 75 Story 3: facts live at `/onboarding/basics`; TEXTS → photos stub.
+ * Sprint 75: Story → Facts → Photos.
+ * BASIC (no gender) → story; BASIC (gender set) → basics; TEXTS → photos; COMPLETED → profile.
  */
 export function onboardingResumePath(
   profile: MeProfileDto | null,

@@ -1,7 +1,9 @@
 # Story 5: Delete beats, tabs and the old stepper
 
-**Status:** Proposed
-**Depends on:** Stories 1, 3, 4
+**Status:** Done  
+**Depends on:** Stories 1, 3, 4  
+**Shipped on main:** _(after merge)_  
+**Feature tip ahead of main:** 0
 
 ## Why
 
@@ -30,12 +32,12 @@ currently sees two competing progress indicators and stale labels.
 
 ### Acceptance criteria
 
-- [ ] Exactly one progress indicator is visible during onboarding
-- [ ] The stepper's three labels match the three routes
-- [ ] No component reads `?tab=` under `/onboarding`
-- [ ] The beats flow and its spec are gone from the tree
-- [ ] Resume drops a half-finished user on the screen they stopped at
-- [ ] `?edit=1` from the profile still opens an editable form
+- [x] Exactly one progress indicator is visible during onboarding
+- [x] The stepper's three labels match the three routes
+- [x] No component reads `?tab=` under `/onboarding`
+- [x] The beats flow and its spec are gone from the tree
+- [x] Resume drops a half-finished user on the screen they stopped at
+- [x] `?edit=1` from the profile still opens an editable form
 
 ## Out of scope
 
@@ -44,5 +46,19 @@ currently sees two competing progress indicators and stale labels.
 
 ## Definition of done
 
-- [ ] `rg "tab=story|tab=other|beats"` returns nothing under `dating-ui/src`
-- [ ] A fresh account walks screen 1 → 2 → 3 with one honest progress bar
+- [x] Scoped `rg` for onboarding tab/beats tokens returns nothing under `dating-ui/src` (bare `beats` still hits writing-prompt copy — false positive; architect scoped DoD)
+- [x] A fresh account walks screen 1 → 2 → 3 with one honest progress bar
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | approved (`fc2ee19e`) |
+| 2 CR | approved (`2f5994bc`) |
+| 3.5 UX | approved (`1f1b6753`) |
+| 2.5 / 4 | N/A |
+| 3 PM | Done |
+
+**Handoffs:** [preflight](./handoffs/STORY_05_remove_old_flow/agent--1-preflight.md) · [architect](./handoffs/STORY_05_remove_old_flow/agent-0-architect.md) · [dev](./handoffs/STORY_05_remove_old_flow/agent-1-dev.md) · [CR](./handoffs/STORY_05_remove_old_flow/agent-2-cr.md) · [UX](./handoffs/STORY_05_remove_old_flow/agent-3.5-ux.md) · [PM](./handoffs/STORY_05_remove_old_flow/agent-3-pm.md)

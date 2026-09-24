@@ -477,9 +477,9 @@ export const enCopy: AppCopySchema = {
       confirm: "Leave",
     },
     tabs: {
-      basic: "Basic",
       story: "Story",
-      other: "Other",
+      facts: "Facts",
+      photos: "Photos",
     },
     basicForm: {
       sectionTitle: "Basics",
@@ -514,6 +514,8 @@ export const enCopy: AppCopySchema = {
       skipButton: "Skip for now",
       continueButton: "Continue",
       finishButton: "Complete profile",
+      hubSaveButton: "Save changes",
+      requiredFieldsBanner: "Please complete required fields before saving.",
       datingChapter: {
         question: "Where are you in your dating story?",
         helper:

@@ -1,51 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import { InlineError } from '@/components/errors';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { OnboardingBasicFields } from '@/components/onboarding-basic-fields';
 import { DatingChapterFields } from '@/components/dating-chapter-fields';
 import { useOnboardingBasicForm } from '@/hooks/use-onboarding-basic-form';
-import { onboardingTabFromSearchParams } from '@/components/onboarding/onboarding-step';
 
+/**
+ * Profile-hub basics editor (nickname, dating chapter, location, photos).
+ * First-login facts live on `/onboarding/basics` via `OnboardingFactsForm`.
+ */
 export function OnboardingBasicForm({
-  variant = 'onboarding',
+  variant = 'profileHub',
   onSaved,
 }: {
   variant?: 'onboarding' | 'profileHub';
   /** Called after a successful persist (hub quality meter refresh). */
   onSaved?: () => void;
 } = {}) {
-  const router = useRouter();
   const m = useOnboardingBasicForm({ variant, onSaved });
-  const searchParams = useSearchParams();
-  const activeTab = m.isHub
-    ? 'basic'
-    : onboardingTabFromSearchParams(searchParams);
-
-  /** Legacy `?tab=story` bookmarks → real story route (texts are not on this page). */
-  useEffect(() => {
-    if (!m.isHub && activeTab === 'story') {
-      router.replace('/onboarding/story');
-    }
-  }, [m.isHub, activeTab, router]);
 
   const hasValidationErrors = Boolean(
     m.genderStepError || m.partnerError || m.locationError,
   );
-
-  const continueLabel =
-    activeTab === 'other' ? m.bf.finishButton : m.bf.continueButton;
-
-  if (!m.isHub && activeTab === 'story') {
-    return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
-        {m.ob.syncingProfile}
-      </p>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -57,10 +35,10 @@ export function OnboardingBasicForm({
         </p>
       ) : null}
 
-      {!m.isHub && hasValidationErrors ? (
+      {hasValidationErrors ? (
         <div className="rounded border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950">
           <p className="text-sm text-red-700 dark:text-red-300">
-            Please complete required fields in the Basic tab before continuing.
+            {m.bf.requiredFieldsBanner}
           </p>
         </div>
       ) : null}
@@ -69,133 +47,102 @@ export function OnboardingBasicForm({
         className={`space-y-6 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
-        {(m.isHub || activeTab === 'basic') && (
-          <div className="space-y-6">
-            {!m.isHub ? (
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {m.bf.basicTabTitle}
-              </h2>
-            ) : null}
-            <OnboardingBasicFields
-              part="required"
-              bf={m.bf}
-              genderCopy={m.genderCopy}
-              googleName={m.googleName}
-              nickname={m.nickname}
-              onNicknameChange={m.setNickname}
-              birthDate={m.birthDate}
-              birthDateMax={m.birthDateMax}
-              derivedAge={m.derivedAge}
-              onBirthDateChange={m.setBirthDate}
-              gender={m.gender}
-              genderStepError={m.genderStepError}
-              onGenderChange={(value) => {
-                m.setGenderStepError(null);
-                m.setGender(value);
-              }}
-              desiredPartnerGenders={m.desiredPartnerGenders}
-              partnerError={m.partnerError}
-              onPartnerGenderChange={m.setPartnerGender}
-              countries={m.countries}
-              usStates={m.usStates}
-              cities={m.cities}
-              countryCode={m.countryCode}
-              usStateCode={m.usStateCode}
-              cityId={m.cityId}
-              locale={m.locale}
-              locationError={m.locationError}
-              onCountryCodeChange={m.setCountryCode}
-              onUsStateCodeChange={m.setUsStateCode}
-              onCityIdChange={m.setCityId}
-            />
-            {!m.isHub ? <ProfilePhotoSection requiredForMatching /> : null}
-          </div>
-        )}
+        <div className="space-y-6">
+          <OnboardingBasicFields
+            part="required"
+            bf={m.bf}
+            genderCopy={m.genderCopy}
+            googleName={m.googleName}
+            nickname={m.nickname}
+            onNicknameChange={m.setNickname}
+            birthDate={m.birthDate}
+            birthDateMax={m.birthDateMax}
+            derivedAge={m.derivedAge}
+            onBirthDateChange={m.setBirthDate}
+            gender={m.gender}
+            genderStepError={m.genderStepError}
+            onGenderChange={(value) => {
+              m.setGenderStepError(null);
+              m.setGender(value);
+            }}
+            desiredPartnerGenders={m.desiredPartnerGenders}
+            partnerError={m.partnerError}
+            onPartnerGenderChange={m.setPartnerGender}
+            countries={m.countries}
+            usStates={m.usStates}
+            cities={m.cities}
+            countryCode={m.countryCode}
+            usStateCode={m.usStateCode}
+            cityId={m.cityId}
+            locale={m.locale}
+            locationError={m.locationError}
+            onCountryCodeChange={m.setCountryCode}
+            onUsStateCodeChange={m.setUsStateCode}
+            onCityIdChange={m.setCityId}
+          />
+        </div>
 
-        {(m.isHub || activeTab === 'other') && (
-          <div className="space-y-6">
-            {!m.isHub ? (
-              <>
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                  {m.bf.otherTabTitle}
-                </h2>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {m.bf.otherTabSubtitle}
-                </p>
-              </>
-            ) : null}
-            <OnboardingBasicFields
-              part="rest"
-              bf={m.bf}
-              genderCopy={m.genderCopy}
-              googleName={m.googleName}
-              nickname={m.nickname}
-              onNicknameChange={m.setNickname}
-              birthDate={m.birthDate}
-              birthDateMax={m.birthDateMax}
-              derivedAge={m.derivedAge}
-              onBirthDateChange={m.setBirthDate}
-              gender={m.gender}
-              genderStepError={m.genderStepError}
-              onGenderChange={(value) => {
-                m.setGenderStepError(null);
-                m.setGender(value);
-              }}
-              desiredPartnerGenders={m.desiredPartnerGenders}
-              partnerError={m.partnerError}
-              onPartnerGenderChange={m.setPartnerGender}
-              countries={m.countries}
-              usStates={m.usStates}
-              cities={m.cities}
-              countryCode={m.countryCode}
-              usStateCode={m.usStateCode}
-              cityId={m.cityId}
-              locale={m.locale}
-              locationError={m.locationError}
-              onCountryCodeChange={m.setCountryCode}
-              onUsStateCodeChange={m.setUsStateCode}
-              onCityIdChange={m.setCityId}
-            />
-            <DatingChapterFields
-              copy={m.bf.datingChapter}
-              value={m.datingChapter}
-              onChange={m.setDatingChapter}
-              disabled={m.profileSyncing}
-            />
-          </div>
-        )}
+        <div className="space-y-6">
+          <OnboardingBasicFields
+            part="rest"
+            bf={m.bf}
+            genderCopy={m.genderCopy}
+            googleName={m.googleName}
+            nickname={m.nickname}
+            onNicknameChange={m.setNickname}
+            birthDate={m.birthDate}
+            birthDateMax={m.birthDateMax}
+            derivedAge={m.derivedAge}
+            onBirthDateChange={m.setBirthDate}
+            gender={m.gender}
+            genderStepError={m.genderStepError}
+            onGenderChange={(value) => {
+              m.setGenderStepError(null);
+              m.setGender(value);
+            }}
+            desiredPartnerGenders={m.desiredPartnerGenders}
+            partnerError={m.partnerError}
+            onPartnerGenderChange={m.setPartnerGender}
+            countries={m.countries}
+            usStates={m.usStates}
+            cities={m.cities}
+            countryCode={m.countryCode}
+            usStateCode={m.usStateCode}
+            cityId={m.cityId}
+            locale={m.locale}
+            locationError={m.locationError}
+            onCountryCodeChange={m.setCountryCode}
+            onUsStateCodeChange={m.setUsStateCode}
+            onCityIdChange={m.setCityId}
+          />
+          <DatingChapterFields
+            copy={m.bf.datingChapter}
+            value={m.datingChapter}
+            onChange={m.setDatingChapter}
+            disabled={m.profileSyncing}
+          />
+        </div>
 
-        {m.isHub ? <ProfilePhotoSection requiredForMatching /> : null}
+        <ProfilePhotoSection requiredForMatching />
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => void m.handleSaveProgress()}
             disabled={m.profileSyncing}
-            className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="inline-flex min-h-11 items-center rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:focus-visible:outline-zinc-100"
           >
             {m.ob.saveProgress}
           </button>
-          {!m.isHub ? (
-            <button
-              type="button"
-              onClick={() => void m.handleContinueToTexts()}
-              disabled={m.profileSyncing}
-              className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              {continueLabel}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void m.handleContinueToTexts()}
-              disabled={m.profileSyncing}
-              data-testid="profile-hub-basic-save"
-              className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              {m.ob.saveProgress}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void m.handleHubSave()}
+            disabled={m.profileSyncing}
+            data-testid="profile-hub-basic-save"
+            className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
+          >
+            {m.bf.hubSaveButton}
+          </button>
         </div>
       </div>
 
