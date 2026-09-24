@@ -1,7 +1,9 @@
 # Story 7: Profile tabs become routes
 
-**Status:** Proposed
-**Depends on:** —
+**Status:** Done  
+**Depends on:** —  
+**Shipped on main:** *(pending merge)*  
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -37,12 +39,12 @@ Each of these is a page. It should be a route.
 
 ### Acceptance criteria
 
-- [ ] Four routes render their panel as a server-rendered page
-- [ ] Browser back moves between profile sections
-- [ ] Each route has its own title
-- [ ] Every old `?tab=` URL redirects, hash included, covered by tests
-- [ ] No component imports all four panels at once
-- [ ] `rg "profile\?tab="` returns only the redirect shim and its tests
+- [x] Four routes render their panel as a server-rendered page
+- [x] Browser back moves between profile sections
+- [x] Each route has its own title
+- [x] Every old `?tab=` URL redirects, hash included, covered by tests
+- [x] No component imports all four panels at once
+- [x] `rg "profile\?tab="` returns only the redirect shim and its tests
 
 ## Out of scope
 
@@ -51,5 +53,19 @@ Each of these is a page. It should be a route.
 
 ## Definition of done
 
-- [ ] Deep-linking to `/profile/analysis` loads only that panel
-- [ ] Old bookmarks and in-app links all land in the right place
+- [x] Deep-linking to `/profile/analysis` loads only that panel
+- [x] Old bookmarks and in-app links all land in the right place
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | approved (`17a48812`) |
+| 2 CR | approved (`9cd71864`) |
+| 3.5 UX | approved (`47037f7c`) |
+| 2.5 / 4 | N/A |
+| 3 PM | Done |
+
+**Handoffs:** [preflight](./handoffs/STORY_07_profile_routes/agent--1-preflight.md) · [architect](./handoffs/STORY_07_profile_routes/agent-0-architect.md) · [dev](./handoffs/STORY_07_profile_routes/agent-1-dev.md) · [CR](./handoffs/STORY_07_profile_routes/agent-2-cr.md) · [UX](./handoffs/STORY_07_profile_routes/agent-3.5-ux.md) · [PM](./handoffs/STORY_07_profile_routes/agent-3-pm.md)
