@@ -37,12 +37,10 @@ describe('ProfileHubNav', () => {
   it('marks edit as current page and uses route hrefs', () => {
     mockPathname = '/profile/edit';
     render(createElement(ProfileHubNav, { copy: enCopy.profile.hub }));
-    expect(
-      screen.getByTestId('profile-tab-edit').getAttribute('aria-current'),
-    ).toBe('page');
-    expect(screen.getByTestId('profile-tab-edit').getAttribute('href')).toBe(
-      '/profile/edit',
-    );
+    const edit = screen.getByTestId('profile-tab-edit');
+    expect(edit.getAttribute('aria-current')).toBe('page');
+    expect(edit.getAttribute('href')).toBe('/profile/edit');
+    expect(edit.className).toMatch(/focus-visible:outline/);
     expect(
       screen.getByTestId('profile-tab-overview').getAttribute('aria-current'),
     ).toBeNull();

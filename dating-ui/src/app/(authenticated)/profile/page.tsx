@@ -13,8 +13,12 @@ export default function ProfileOverviewPage() {
   return (
     <Suspense
       fallback={
-        <p className="text-sm text-zinc-500" role="status">
-          …
+        <p
+          className="text-sm text-zinc-500"
+          role="status"
+          aria-live="polite"
+        >
+          Loading…
         </p>
       }
     >

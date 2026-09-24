@@ -28,7 +28,9 @@ function ProfileHubShellInner({ children }: { children: ReactNode }) {
 
         <ProfileQualityMeter copy={hub} refreshKey={refreshKey} />
         <ProfileHubNav copy={hub} />
-        {children}
+        <main id="profile-main" className="min-w-0">
+          {children}
+        </main>
       </div>
     </div>
   );

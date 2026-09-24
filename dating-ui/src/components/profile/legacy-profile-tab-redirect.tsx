@@ -34,7 +34,11 @@ export function LegacyProfileTabRedirect({
 
   if (redirecting || tab) {
     return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
+      <p
+        className="text-sm text-zinc-500 dark:text-zinc-400"
+        role="status"
+        aria-live="polite"
+      >
         {copy.common.loading}
       </p>
     );

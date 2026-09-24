@@ -6,7 +6,9 @@ export default function ProfileLayout({ children }: { children: ReactNode }) {
     <Suspense
       fallback={
         <div className="min-h-screen bg-zinc-50 p-6 dark:bg-zinc-950">
-          <p className="text-sm text-zinc-500">…</p>
+          <p className="text-sm text-zinc-500" role="status" aria-live="polite">
+            Loading…
+          </p>
         </div>
       }
     >
