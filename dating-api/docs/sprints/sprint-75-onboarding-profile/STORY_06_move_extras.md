@@ -1,7 +1,9 @@
 # Story 6: Nickname and dating chapter move to settings
 
-**Status:** Proposed
-**Depends on:** Story 3
+**Status:** Done  
+**Depends on:** Story 3  
+**Shipped on main:** _(after merge)_  
+**Feature tip ahead of main:** 0
 
 ## Why
 
@@ -25,11 +27,11 @@ so. Asking for them before a user has seen the product is pure friction.
 
 ### Acceptance criteria
 
-- [ ] Neither field appears anywhere under `/onboarding`
-- [ ] Both are editable in profile settings with the same rules as today
-- [ ] A user with an existing nickname still sees it and can change it
-- [ ] `nickname_taken` still surfaces as a field error, not a console error
-- [ ] The "Other" tab is gone
+- [x] Neither field appears anywhere under `/onboarding`
+- [x] Both are editable in profile settings with the same rules as today
+- [x] A user with an existing nickname still sees it and can change it
+- [x] `nickname_taken` still surfaces as a field error, not a console error
+- [x] The "Other" tab is gone
 
 ## Out of scope
 
@@ -38,5 +40,19 @@ so. Asking for them before a user has seen the product is pure friction.
 
 ## Definition of done
 
-- [ ] Sign-up never asks for nickname or dating chapter
-- [ ] Both round-trip correctly from profile settings
+- [x] Sign-up never asks for nickname or dating chapter
+- [x] Both round-trip correctly from profile settings
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | approved (`42fa2f33`) |
+| 2 CR | approved (`0a33d6ad`) |
+| 3.5 UX | approved (`9f3e1b4e`) |
+| 2.5 / 4 | N/A |
+| 3 PM | Done |
+
+**Handoffs:** [preflight](./handoffs/STORY_06_move_extras/agent--1-preflight.md) · [architect](./handoffs/STORY_06_move_extras/agent-0-architect.md) · [dev](./handoffs/STORY_06_move_extras/agent-1-dev.md) · [CR](./handoffs/STORY_06_move_extras/agent-2-cr.md) · [UX](./handoffs/STORY_06_move_extras/agent-3.5-ux.md) · [PM](./handoffs/STORY_06_move_extras/agent-3-pm.md)
