@@ -4,6 +4,7 @@ import {
   buildCompletenessFlags,
   completenessScorePercent,
   suggestionChips,
+  suggestionHref,
 } from './profile-completeness';
 
 function draft(partial: Partial<ProfileDraft> = {}): ProfileDraft {
@@ -85,5 +86,7 @@ describe('profile-completeness', () => {
       label: 'Add a nickname',
       href: '/profile?tab=settings#nickname',
     });
+    expect(suggestionHref('nickname')).toBe('/profile?tab=settings#nickname');
+    expect(suggestionHref('basics')).toBe('/profile?tab=edit#basic');
   });
 });

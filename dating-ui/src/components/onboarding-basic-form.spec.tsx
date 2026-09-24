@@ -181,4 +181,32 @@ describe('OnboardingBasicForm (profile hub)', () => {
       expect(listPlaceCountries).toHaveBeenCalled();
     });
   });
+
+  it('hub save progress PATCH omits nickname and datingChapter', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...basicProfile,
+      nickname: 'ShouldStay',
+      datingChapter: 'first_chapter',
+      desiredPartnerGenders: ['FEMALE'],
+    });
+    renderHubForm();
+
+    await waitFor(() => {
+      expect(
+        (document.getElementById('onb-gender') as HTMLSelectElement).value,
+      ).toBe('MALE');
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: enCopy.onboarding.saveProgress }),
+    );
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalled();
+    });
+    const body = patchMyProfile.mock.calls[0][0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty('nickname');
+    expect(body).not.toHaveProperty('datingChapter');
+    expect(body.onboardingStep).toBe('BASIC');
+  });
 });

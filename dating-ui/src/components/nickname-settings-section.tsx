@@ -9,7 +9,7 @@ import { normalizeNicknameValue } from '@/components/onboarding-basic-helpers';
 function isNicknameTakenError(e: unknown): boolean {
   return (
     e instanceof Error &&
-    /nickname is already taken|nicknameTaken|already taken/i.test(e.message)
+    /nickname is already taken|nickname_taken/i.test(e.message)
   );
 }
 

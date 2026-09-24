@@ -17,7 +17,7 @@ import {
 } from '@/lib/matches/match-preferences-form';
 import { useProfile } from '@/hooks/use-profile';
 
-/** Profile hub Settings tab: notifications + match-prefs preview. */
+/** Profile hub Settings tab: notifications, nickname, dating chapter, match-prefs preview. */
 export function ProfileSettingsTab() {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;

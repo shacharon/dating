@@ -124,5 +124,31 @@ describe('NicknameSettingsSection', () => {
         ns.nicknameTakenError,
       );
     });
+    expect(screen.getByLabelText(ns.nicknameLabel).getAttribute('aria-invalid')).toBe(
+      'true',
+    );
+  });
+
+  it('clears nickname with blank save (PATCH null)', async () => {
+    renderSection();
+    const ns = enCopy.profile.nicknameSettings;
+
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText(ns.nicknameLabel) as HTMLInputElement).value,
+      ).toBe('Noa');
+    });
+
+    fireEvent.change(screen.getByLabelText(ns.nicknameLabel), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('nickname-settings-save'));
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith({ nickname: null });
+    });
+    expect(
+      (screen.getByLabelText(ns.nicknameLabel) as HTMLInputElement).value,
+    ).toBe('');
   });
 });
