@@ -18,6 +18,7 @@ import type {
   MeMatchesListDto,
 } from '@/lib/api-types/matches';
 import { queryKeys } from '@/lib/query/query-keys';
+import { PROFILE_HREF } from '@/lib/profile/profile-hub-paths';
 
 export const MATCHES_PAGE_LIMIT = 20;
 export const MATCHES_LIST_STALE_TIME_MS = 300_000;
@@ -141,7 +142,7 @@ export function useInfiniteMatches(
         router.replace('/onboarding/story');
         return;
       }
-      router.replace('/profile/analysis');
+      router.replace(PROFILE_HREF.analysis);
     },
     [router],
   );

@@ -108,6 +108,7 @@ describe('Profile overview route', () => {
     vi.clearAllMocks();
     mockSearch = '';
     mockPathname = '/profile';
+    window.location.hash = '';
     localStorage.clear();
     listMyProfilePhotos.mockResolvedValue([
       {
@@ -153,6 +154,7 @@ describe('Profile overview route', () => {
 
   afterEach(() => {
     cleanup();
+    window.location.hash = '';
   });
 
   it('shows overview, meter, and nav with aria-current', async () => {
@@ -189,6 +191,24 @@ describe('Profile overview route', () => {
       expect(replaceMock).toHaveBeenCalledWith('/profile/edit#photos');
     });
     window.location.hash = '';
+  });
+
+  it('redirects settings tab with hash', async () => {
+    mockSearch = 'tab=settings';
+    window.location.hash = '#nickname';
+    renderOverview();
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/profile/settings#nickname');
+    });
+  });
+
+  it('strips unknown tab to /profile', async () => {
+    mockSearch = 'tab=nope';
+    window.location.hash = '';
+    renderOverview();
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/profile');
+    });
   });
 
   it('renders Hebrew hub title when locale is he', async () => {

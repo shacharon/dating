@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAppLocale } from '@/lib/i18n';
+import { PROFILE_HREF, profileEditHash } from '@/lib/profile/profile-hub-paths';
 
 export function AnalysisProgressPanel({
   profileStatus,
@@ -63,13 +64,13 @@ export function AnalysisProgressPanel({
       ) : null}
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
         <Link
-          href="/profile/edit"
+          href={PROFILE_HREF.edit}
           className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
         >
           {copy.editProfileLink}
         </Link>
         <Link
-          href="/profile/edit#photos"
+          href={profileEditHash('photos')}
           className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
         >
           {copy.addPhotoLink}

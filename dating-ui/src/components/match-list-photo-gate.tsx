@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { listMyProfilePhotos } from '@/lib/api/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
+import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 
 /**
  * Blocking empty state when matches return `not_ready` / `no_photo`.
@@ -44,7 +45,7 @@ export function MatchListPhotoGate() {
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/profile/edit#photos"
+          href={profileEditHash('photos')}
           data-testid="match-photo-gate-cta"
           className="rounded bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 dark:bg-amber-700 dark:hover:bg-amber-600"
         >

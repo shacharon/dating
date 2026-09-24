@@ -9,6 +9,7 @@ import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { MatchListNoProfileGate } from '@/components/match-list-no-profile-gate';
 import { useAppLocale } from '@/lib/i18n';
+import { PROFILE_HREF, profileEditHash } from '@/lib/profile/profile-hub-paths';
 import { useCelebrationFlow } from '@/hooks/use-celebration-flow';
 import { useInfiniteMatches } from '@/hooks/use-matches';
 import { MatchListItem } from './match-list-item';
@@ -113,13 +114,13 @@ export default function MeMatchesPageClient() {
       <div className="mx-auto max-w-2xl space-y-8 px-6 py-10">
         <nav className="flex flex-wrap gap-4 text-sm">
           <Link
-            href="/profile/analysis"
+            href={PROFILE_HREF.analysis}
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             {listCopy.backToAnalysis}
           </Link>
           <Link
-            href="/profile/edit#basic"
+            href={profileEditHash('basic')}
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             {listCopy.editProfile}
