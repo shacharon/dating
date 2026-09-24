@@ -114,16 +114,22 @@ describe('OnboardingBasicForm (profile hub)', () => {
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
   });
 
-  it('renders required fields, nickname, and dating chapter together', async () => {
+  it('renders required fields without nickname or dating chapter', async () => {
     renderHubForm();
 
     await waitFor(() => {
       expect(screen.getByLabelText(enCopy.onboarding.basicForm.genderLabel)).toBeTruthy();
-      expect(screen.getByLabelText(enCopy.onboarding.basicForm.nicknameLabel)).toBeTruthy();
-      expect(
-        screen.getByText(enCopy.onboarding.basicForm.datingChapter.question),
-      ).toBeTruthy();
+      expect(screen.getByLabelText(enCopy.onboarding.basicForm.birthDateLabel)).toBeTruthy();
     });
+    expect(
+      screen.queryByLabelText(enCopy.onboarding.basicForm.nicknameLabel),
+    ).toBeNull();
+    expect(
+      screen.queryByText(enCopy.onboarding.basicForm.datingChapter.question),
+    ).toBeNull();
+    expect(
+      screen.queryByText(enCopy.onboarding.basicForm.googleNameLabel),
+    ).toBeNull();
     expect(
       screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
     ).toBeNull();

@@ -4,11 +4,11 @@ import { ContentModerationErrorAlert } from '@/components/content-moderation-err
 import { InlineError } from '@/components/errors';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { OnboardingBasicFields } from '@/components/onboarding-basic-fields';
-import { DatingChapterFields } from '@/components/dating-chapter-fields';
 import { useOnboardingBasicForm } from '@/hooks/use-onboarding-basic-form';
 
 /**
- * Profile-hub basics editor (nickname, dating chapter, location, photos).
+ * Profile-hub basics editor (location, birth date, photos).
+ * Nickname and dating chapter live on `/profile?tab=settings`.
  * First-login facts live on `/onboarding/basics` via `OnboardingFactsForm`.
  */
 export function OnboardingBasicForm({
@@ -52,9 +52,6 @@ export function OnboardingBasicForm({
             part="required"
             bf={m.bf}
             genderCopy={m.genderCopy}
-            googleName={m.googleName}
-            nickname={m.nickname}
-            onNicknameChange={m.setNickname}
             birthDate={m.birthDate}
             birthDateMax={m.birthDateMax}
             derivedAge={m.derivedAge}
@@ -87,9 +84,6 @@ export function OnboardingBasicForm({
             part="rest"
             bf={m.bf}
             genderCopy={m.genderCopy}
-            googleName={m.googleName}
-            nickname={m.nickname}
-            onNicknameChange={m.setNickname}
             birthDate={m.birthDate}
             birthDateMax={m.birthDateMax}
             derivedAge={m.derivedAge}
@@ -114,12 +108,6 @@ export function OnboardingBasicForm({
             onCountryCodeChange={m.setCountryCode}
             onUsStateCodeChange={m.setUsStateCode}
             onCityIdChange={m.setCityId}
-          />
-          <DatingChapterFields
-            copy={m.bf.datingChapter}
-            value={m.datingChapter}
-            onChange={m.setDatingChapter}
-            disabled={m.profileSyncing}
           />
         </div>
 

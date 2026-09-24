@@ -64,4 +64,26 @@ describe('profile-completeness', () => {
     expect(chips.map((c) => c.id)).toEqual(['photo', 'basics']);
     expect(chips[0]?.href).toBe('/profile?tab=edit#photos');
   });
+
+  it('points nickname suggestion to settings', () => {
+    const flags = buildCompletenessFlags(
+      draft({
+        birthDate: '1990-01-01',
+        gender: 'WOMAN',
+        desiredPartnerGenders: ['MAN'],
+        city: 'Tel Aviv',
+      }),
+      true,
+    );
+    const chips = suggestionChips(
+      flags,
+      { nickname: 'Add a nickname' },
+      2,
+    );
+    expect(chips[0]).toEqual({
+      id: 'nickname',
+      label: 'Add a nickname',
+      href: '/profile?tab=settings#nickname',
+    });
+  });
 });
