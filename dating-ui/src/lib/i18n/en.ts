@@ -514,6 +514,8 @@ export const enCopy: AppCopySchema = {
       skipButton: "Skip for now",
       continueButton: "Continue",
       finishButton: "Complete profile",
+      hubSaveButton: "Save changes",
+      requiredFieldsBanner: "Please complete required fields before saving.",
       datingChapter: {
         question: "Where are you in your dating story?",
         helper:

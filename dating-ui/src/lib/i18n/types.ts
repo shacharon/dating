@@ -403,6 +403,8 @@ export type AppCopySchema = {
       skipButton: string;
       continueButton: string;
       finishButton: string;
+      hubSaveButton: string;
+      requiredFieldsBanner: string;
       datingChapter: {
         question: string;
         helper: string;

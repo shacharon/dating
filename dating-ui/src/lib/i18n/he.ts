@@ -495,6 +495,8 @@ export const heCopy: AppCopySchema = {
       skipButton: "דלג לעת עתה",
       continueButton: "המשך",
       finishButton: "השלם פרופיל",
+      hubSaveButton: "שמירת שינויים",
+      requiredFieldsBanner: "נא למלא את השדות הנדרשים לפני השמירה.",
       datingChapter: {
         question: "איפה את/ה בסיפור הדייטים שלך?",
         helper: "זה משנה רק איך מציגים לך התאמות — לא את מי מציגים.",

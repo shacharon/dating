@@ -46,7 +46,7 @@ export function OnboardingHeader() {
             type="button"
             data-testid="onboarding-skip"
             onClick={() => router.push(dest)}
-            className="inline-flex min-h-11 shrink-0 items-center justify-end rounded-md px-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            className="inline-flex min-h-11 shrink-0 items-center justify-end rounded-md px-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
           >
             {copy.header.skip}
           </button>

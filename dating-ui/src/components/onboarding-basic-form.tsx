@@ -38,7 +38,7 @@ export function OnboardingBasicForm({
       {hasValidationErrors ? (
         <div className="rounded border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950">
           <p className="text-sm text-red-700 dark:text-red-300">
-            Please complete required fields before saving.
+            {m.bf.requiredFieldsBanner}
           </p>
         </div>
       ) : null}
@@ -130,7 +130,7 @@ export function OnboardingBasicForm({
             type="button"
             onClick={() => void m.handleSaveProgress()}
             disabled={m.profileSyncing}
-            className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="inline-flex min-h-11 items-center rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:focus-visible:outline-zinc-100"
           >
             {m.ob.saveProgress}
           </button>
@@ -139,9 +139,9 @@ export function OnboardingBasicForm({
             onClick={() => void m.handleHubSave()}
             disabled={m.profileSyncing}
             data-testid="profile-hub-basic-save"
-            className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
           >
-            {m.ob.saveProgress}
+            {m.bf.hubSaveButton}
           </button>
         </div>
       </div>
