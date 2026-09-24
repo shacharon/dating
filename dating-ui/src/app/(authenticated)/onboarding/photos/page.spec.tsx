@@ -142,4 +142,37 @@ describe('OnboardingPhotosPage (Story 4)', () => {
 
     expect(screen.getByText(pf.pendingNote)).toBeTruthy();
   });
+
+  it('enables Finish when the only photo is REJECTED', async () => {
+    listMyProfilePhotos.mockResolvedValue([
+      {
+        id: 'ph1',
+        status: 'REJECTED',
+        position: 0,
+        isPrimary: true,
+      },
+    ]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('onboarding-photos-finish') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+  });
+
+  it('redirects already-COMPLETED users to matches', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...textsProfile,
+      onboardingStep: 'COMPLETED',
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/dating/me-matches');
+    });
+  });
 });
