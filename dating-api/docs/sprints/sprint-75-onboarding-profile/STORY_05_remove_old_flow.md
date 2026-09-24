@@ -2,7 +2,7 @@
 
 **Status:** Done  
 **Depends on:** Stories 1, 3, 4  
-**Shipped on main:** _(after merge)_  
+**Shipped on main:** `b3d2fe27`  
 **Feature tip ahead of main:** 0
 
 ## Why
