@@ -141,7 +141,7 @@ export function useInfiniteMatches(
         router.replace('/onboarding/story');
         return;
       }
-      router.replace('/profile?tab=analysis');
+      router.replace('/profile/analysis');
     },
     [router],
   );

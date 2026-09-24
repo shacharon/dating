@@ -135,7 +135,7 @@ export function ProfileOverviewHero({ draft }: Props) {
         >
           <p>{vp.subtitle}</p>
           <Link
-            href="/profile?tab=edit#story"
+            href="/profile/edit#story"
             className="inline-block font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
           >
             {hub.editProfileCta}
@@ -159,7 +159,7 @@ export function ProfileOverviewHero({ draft }: Props) {
 
       <div className="flex justify-center pt-1">
         <Link
-          href="/profile?tab=edit"
+          href="/profile/edit"
           data-testid="profile-overview-edit"
           className="inline-flex rounded-lg bg-blue-600 px-8 py-3 text-base font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
         >

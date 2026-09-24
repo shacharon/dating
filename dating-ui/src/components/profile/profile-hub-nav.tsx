@@ -1,55 +1,44 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { AppCopySchema } from '@/lib/i18n/types';
-
-export type ProfileHubTabId = 'overview' | 'edit' | 'analysis' | 'settings';
-
-const TAB_IDS: ProfileHubTabId[] = [
-  'overview',
-  'edit',
-  'analysis',
-  'settings',
-];
-
-/** Maps `?tab=` query values to a hub tab id (default overview). */
-export function parseProfileHubTab(raw: string | null): ProfileHubTabId {
-  if (raw && TAB_IDS.includes(raw as ProfileHubTabId)) {
-    return raw as ProfileHubTabId;
-  }
-  return 'overview';
-}
+import {
+  PROFILE_HREF,
+  type ProfileHubSectionId,
+  profileSectionFromPathname,
+} from '@/lib/profile/profile-hub-paths';
 
 type Props = {
-  activeTab: ProfileHubTabId;
   copy: AppCopySchema['profile']['hub'];
 };
 
-/** Tablist for `/profile?tab=…` (overview, edit, analysis, settings). */
-export function ProfileHubTabs({ activeTab, copy }: Props) {
-  const tabs: { id: ProfileHubTabId; label: string }[] = [
-    { id: 'overview', label: copy.tabOverview },
-    { id: 'edit', label: copy.tabEdit },
-    { id: 'analysis', label: copy.tabAnalysis },
-    { id: 'settings', label: copy.tabSettings },
+/** Section nav for profile routes (overview / edit / analysis / settings). */
+export function ProfileHubNav({ copy }: Props) {
+  const pathname = usePathname() || PROFILE_HREF.overview;
+  const active = profileSectionFromPathname(pathname);
+
+  const tabs: { id: ProfileHubSectionId; label: string; href: string }[] = [
+    { id: 'overview', label: copy.tabOverview, href: PROFILE_HREF.overview },
+    { id: 'edit', label: copy.tabEdit, href: PROFILE_HREF.edit },
+    { id: 'analysis', label: copy.tabAnalysis, href: PROFILE_HREF.analysis },
+    { id: 'settings', label: copy.tabSettings, href: PROFILE_HREF.settings },
   ];
 
   return (
     <div className="border-b border-zinc-200 dark:border-zinc-800">
       <nav
         className="-mb-px flex flex-wrap gap-1 sm:gap-6"
-        role="tablist"
         aria-label={copy.tablistAria}
         data-testid="profile-hub-tabs"
       >
         {tabs.map((tab) => {
-          const selected = activeTab === tab.id;
+          const selected = active === tab.id;
           return (
             <Link
               key={tab.id}
-              href={`/profile?tab=${tab.id}`}
-              role="tab"
-              aria-selected={selected}
+              href={tab.href}
+              aria-current={selected ? 'page' : undefined}
               id={`profile-tab-${tab.id}`}
               data-testid={`profile-tab-${tab.id}`}
               className={`min-h-11 border-b-2 px-2 py-3 text-sm transition-colors ${

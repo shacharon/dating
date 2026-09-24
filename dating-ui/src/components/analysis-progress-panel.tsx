@@ -63,13 +63,13 @@ export function AnalysisProgressPanel({
       ) : null}
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
         <Link
-          href="/profile?tab=edit"
+          href="/profile/edit"
           className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
         >
           {copy.editProfileLink}
         </Link>
         <Link
-          href="/profile?tab=edit#photos"
+          href="/profile/edit#photos"
           className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
         >
           {copy.addPhotoLink}

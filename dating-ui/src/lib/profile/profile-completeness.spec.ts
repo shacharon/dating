@@ -63,7 +63,7 @@ describe('profile-completeness', () => {
       2,
     );
     expect(chips.map((c) => c.id)).toEqual(['photo', 'basics']);
-    expect(chips[0]?.href).toBe('/profile?tab=edit#photos');
+    expect(chips[0]?.href).toBe('/profile/edit#photos');
   });
 
   it('points nickname suggestion to settings', () => {
@@ -84,9 +84,9 @@ describe('profile-completeness', () => {
     expect(chips[0]).toEqual({
       id: 'nickname',
       label: 'Add a nickname',
-      href: '/profile?tab=settings#nickname',
+      href: '/profile/settings#nickname',
     });
-    expect(suggestionHref('nickname')).toBe('/profile?tab=settings#nickname');
-    expect(suggestionHref('basics')).toBe('/profile?tab=edit#basic');
+    expect(suggestionHref('nickname')).toBe('/profile/settings#nickname');
+    expect(suggestionHref('basics')).toBe('/profile/edit#basic');
   });
 });

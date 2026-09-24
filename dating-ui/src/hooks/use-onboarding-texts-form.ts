@@ -63,7 +63,7 @@ export function useOnboardingTextsForm({
 
   const editBasicsHref =
     isHub
-      ? '/profile?tab=edit#basic'
+      ? '/profile/edit#basic'
       : editMode
         ? '/onboarding/basics?edit=1'
         : '/onboarding/basics';

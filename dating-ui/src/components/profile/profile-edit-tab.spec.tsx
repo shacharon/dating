@@ -64,7 +64,7 @@ function renderEditTab() {
 describe('ProfileEditTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.history.replaceState(null, '', '/profile?tab=edit');
+    window.history.replaceState(null, '', '/profile/edit');
     listMyProfilePhotos.mockResolvedValue([
       { id: 'p1', status: 'APPROVED', isPrimary: true, position: 0 },
     ]);
@@ -154,7 +154,7 @@ describe('ProfileEditTab', () => {
   });
 
   it('opens photos pane from #photos hash', async () => {
-    window.history.replaceState(null, '', '/profile?tab=edit#photos');
+    window.history.replaceState(null, '', '/profile/edit#photos');
     renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(

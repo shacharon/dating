@@ -82,12 +82,12 @@ describe('profile-quality-api', () => {
       {
         id: 'photo',
         label: 'Add a photo',
-        href: '/profile?tab=edit#photos',
+        href: '/profile/edit#photos',
       },
       {
         id: 'basics',
         label: 'Complete basic info',
-        href: '/profile?tab=edit#basic',
+        href: '/profile/edit#basic',
       },
     ]);
   });

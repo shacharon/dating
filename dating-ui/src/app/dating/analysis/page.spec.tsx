@@ -13,8 +13,8 @@ describe('/dating/analysis page', () => {
     redirect.mockClear();
   });
 
-  it('redirects to /profile?tab=analysis', () => {
+  it('redirects to /profile/analysis', () => {
     DatingAnalysisRedirectPage();
-    expect(redirect).toHaveBeenCalledWith('/profile?tab=analysis');
+    expect(redirect).toHaveBeenCalledWith('/profile/analysis');
   });
 });

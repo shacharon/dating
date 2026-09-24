@@ -13,8 +13,8 @@ describe('/settings/profile/story page', () => {
     redirect.mockClear();
   });
 
-  it('redirects to /profile?tab=edit#story', () => {
+  it('redirects to /profile/edit#story', () => {
     SettingsProfileStoryRedirectPage();
-    expect(redirect).toHaveBeenCalledWith('/profile?tab=edit#story');
+    expect(redirect).toHaveBeenCalledWith('/profile/edit#story');
   });
 });

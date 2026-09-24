@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import ProfileHubClient from './profile-hub-client';
+import { ProfileOverviewPageClient } from './profile-overview-page-client';
 import { buildPageMetadata } from '@/lib/platform/page-metadata';
 
 export async function generateMetadata() {
@@ -9,16 +9,16 @@ export async function generateMetadata() {
   });
 }
 
-export default function ProfileHubPage() {
+export default function ProfileOverviewPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-zinc-50 p-6 dark:bg-zinc-950">
-          <p className="text-sm text-zinc-500">…</p>
-        </div>
+        <p className="text-sm text-zinc-500" role="status">
+          …
+        </p>
       }
     >
-      <ProfileHubClient />
+      <ProfileOverviewPageClient />
     </Suspense>
   );
 }

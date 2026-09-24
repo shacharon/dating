@@ -113,13 +113,13 @@ export default function MeMatchesPageClient() {
       <div className="mx-auto max-w-2xl space-y-8 px-6 py-10">
         <nav className="flex flex-wrap gap-4 text-sm">
           <Link
-            href="/profile?tab=analysis"
+            href="/profile/analysis"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             {listCopy.backToAnalysis}
           </Link>
           <Link
-            href="/profile?tab=edit#basic"
+            href="/profile/edit#basic"
             className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             {listCopy.editProfile}

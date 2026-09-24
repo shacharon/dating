@@ -52,7 +52,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
 
   useEffect(() => {
     if (!menuOpen) return;
-    router.prefetch("/profile?tab=edit#basic");
+    router.prefetch("/profile/edit#basic");
     router.prefetch("/onboarding/story?edit=1");
     router.prefetch("/settings/account");
     router.prefetch("/settings/language");
@@ -175,20 +175,20 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             {copy.nav.accountSettings}
           </Link>
           <Link
-            href="/profile?tab=edit#basic"
+            href="/profile/edit#basic"
             prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => onAvatarMenuNavigate("/profile?tab=edit#basic")}
+            onClick={() => onAvatarMenuNavigate("/profile/edit#basic")}
           >
             {copy.nav.editBasicProfile}
           </Link>
           <Link
-            href="/profile?tab=edit#story"
+            href="/profile/edit#story"
             prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => onAvatarMenuNavigate("/profile?tab=edit#story")}
+            onClick={() => onAvatarMenuNavigate("/profile/edit#story")}
           >
             {copy.nav.editStoryProfile}
           </Link>
