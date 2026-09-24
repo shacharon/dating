@@ -100,14 +100,16 @@ describe('OnboardingPhotosPage (Story 4)', () => {
     const pf = enCopy.onboarding.photosForm;
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: pf.title })).toBeTruthy();
+      expect(screen.getByText(pf.finishHint)).toBeTruthy();
     });
 
     const finish = screen.getByTestId(
       'onboarding-photos-finish',
     ) as HTMLButtonElement;
     expect(finish.disabled).toBe(true);
-    expect(screen.getByText(pf.finishHint)).toBeTruthy();
+    expect(finish.getAttribute('aria-describedby')).toContain(
+      'onboarding-photos-finish-status',
+    );
   });
 
   it('Finish patches COMPLETED only and goes to matches (PENDING photo OK)', async () => {

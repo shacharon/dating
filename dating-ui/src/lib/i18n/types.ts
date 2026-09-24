@@ -473,6 +473,7 @@ export type AppCopySchema = {
       body: string;
       finishButton: string;
       finishHint: string;
+      uploadingHint: string;
       pendingNote: string;
     };
     writingPrompts: {

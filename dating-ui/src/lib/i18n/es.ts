@@ -600,6 +600,7 @@ export const esCopy: AppCopySchema = {
       body: 'Anade al menos una foto para terminar. Puedes subir hasta tres y elegir una principal.',
       finishButton: 'Terminar',
       finishHint: 'Sube una foto para terminar el registro.',
+      uploadingHint: 'Espera a que termine la subida…',
       pendingNote:
         'Las fotos en revision estan bien — puedes terminar ahora. Las coincidencias esperan a que se apruebe una foto.',
     },

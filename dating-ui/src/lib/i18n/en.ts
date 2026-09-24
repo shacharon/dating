@@ -594,6 +594,7 @@ export const enCopy: AppCopySchema = {
       body: 'Add at least one photo to finish. You can upload up to three and choose a primary.',
       finishButton: 'Finish',
       finishHint: 'Upload a photo to finish sign-up.',
+      uploadingHint: 'Wait for the upload to finish…',
       pendingNote:
         'Photos under review are fine — you can finish now. Matching waits until a photo is approved.',
     },

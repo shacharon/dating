@@ -27,6 +27,15 @@ export function useOnboardingPhotosForm() {
 
   const canFinish = photoCount >= 1 && !finishing && !uploading && !profileSyncing;
 
+  /** Status under Finish — never show "upload a photo" while syncing or uploading. */
+  const finishStatus: string | null = profileSyncing
+    ? null
+    : uploading
+      ? pf.uploadingHint
+      : photoCount < 1
+        ? pf.finishHint
+        : pf.pendingNote;
+
   useLayoutEffect(() => {
     if (isLoading || loadHandledRef.current) return;
 
@@ -74,6 +83,7 @@ export function useOnboardingPhotosForm() {
     uploading,
     setUploading,
     profileSyncing,
+    finishStatus,
     loadError,
     saveError,
     onPhotosChange,
