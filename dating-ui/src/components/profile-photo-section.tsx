@@ -31,10 +31,16 @@ type UploadingPreview = {
 export function ProfilePhotoSection({
   requiredForMatching = false,
   onMutated,
+  onPhotosChange,
+  onUploadingChange,
 }: {
   requiredForMatching?: boolean;
   /** Called after successful upload/delete (hub quality meter refresh). */
   onMutated?: () => void;
+  /** Called whenever the photo list is refreshed (load / upload / delete / primary). */
+  onPhotosChange?: (photos: MeProfilePhotoDto[]) => void;
+  /** True while a local upload is in flight. */
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const { copy } = useAppLocale();
   const photoGateCopy = copy.photoGate;
@@ -53,6 +59,7 @@ export function ProfilePhotoSection({
     const rows = await listMyProfilePhotos();
     rows.sort((a, b) => a.position - b.position);
     setPhotos(rows);
+    onPhotosChange?.(rows);
   }
 
   useEffect(() => {
@@ -120,6 +127,7 @@ export function ProfilePhotoSection({
   async function uploadPickedFile(file: File) {
     const localUrl = URL.createObjectURL(file);
     setUploading({ id: `up-${Date.now()}`, url: localUrl });
+    onUploadingChange?.(true);
     try {
       await uploadMyProfilePhoto(file);
       await refreshPhotos();
@@ -129,6 +137,7 @@ export function ProfilePhotoSection({
     } finally {
       URL.revokeObjectURL(localUrl);
       setUploading(null);
+      onUploadingChange?.(false);
     }
   }
 

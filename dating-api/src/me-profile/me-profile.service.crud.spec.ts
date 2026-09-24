@@ -208,16 +208,62 @@ describe('MeProfileService — crud', () => {
     expect(prisma.userProfile.update).not.toHaveBeenCalled();
   });
 
-  it('patchForUser rejects COMPLETED onboarding when text fields are incomplete', async () => {
+  it('patchForUser rejects COMPLETED onboarding without partner genders', async () => {
     prisma.userProfile.findUnique.mockResolvedValueOnce(profileRow(baseRow));
     await expect(
       service.patchForUser(userId, {
         onboardingStep: UserProfileOnboardingStep.COMPLETED,
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ error: 'onboarding_texts_incomplete' }),
+      response: expect.objectContaining({
+        error: 'onboarding_partner_genders_required',
+      }),
     });
     expect(prisma.userProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('patchForUser persists COMPLETED onboarding with empty story texts', async () => {
+    const withPartners = {
+      ...baseRow,
+      aboutMe: null,
+      aboutPartner: null,
+      aboutRelationship: null,
+      desiredPartnerGenders: ['FEMALE'],
+    };
+    const completedAt = new Date('2026-01-10T12:00:00.000Z');
+    jest.useFakeTimers({ now: completedAt });
+    prisma.userProfile.findUnique
+      .mockResolvedValueOnce(profileRow(withPartners))
+      .mockResolvedValueOnce({
+        ...withPartners,
+        desiredPartnerGenders: withPartners.desiredPartnerGenders,
+      })
+      .mockResolvedValueOnce(
+        profileRow({
+          ...withPartners,
+          onboardingStep: UserProfileOnboardingStep.COMPLETED,
+          onboardingCompletedAt: completedAt,
+        }),
+      );
+    prisma.userProfile.update.mockResolvedValue({
+      ...withPartners,
+      onboardingStep: UserProfileOnboardingStep.COMPLETED,
+      onboardingCompletedAt: completedAt,
+    });
+
+    const r = await service.patchForUser(userId, {
+      onboardingStep: UserProfileOnboardingStep.COMPLETED,
+    });
+    jest.useRealTimers();
+
+    expect(r.onboardingStep).toBe(UserProfileOnboardingStep.COMPLETED);
+    expect(prisma.userProfile.update).toHaveBeenCalledWith({
+      where: { userId },
+      data: expect.objectContaining({
+        onboardingStep: UserProfileOnboardingStep.COMPLETED,
+        onboardingCompletedAt: completedAt,
+      }),
+    });
   });
 
   it('patchForUser persists COMPLETED onboarding with completion timestamp', async () => {
@@ -226,6 +272,7 @@ describe('MeProfileService — crud', () => {
       aboutMe: 'me',
       aboutPartner: 'them',
       aboutRelationship: 'us',
+      desiredPartnerGenders: ['FEMALE'],
     };
     const completedAt = new Date('2026-01-10T12:00:00.000Z');
     jest.useFakeTimers({ now: completedAt });

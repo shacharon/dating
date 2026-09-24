@@ -588,9 +588,14 @@ export const enCopy: AppCopySchema = {
       missingLookingFor: 'Who you are looking for',
       missingLocation: 'Where you are',
       missingBirthDate: 'Birth date',
-      photosStubTitle: 'Add a photo',
-      photosStubBody:
-        'Upload at least one photo. Finishing sign-up comes in the next step.',
+    },
+    photosForm: {
+      title: 'Step 3 — Photos',
+      body: 'Add at least one photo to finish. You can upload up to three and choose a primary.',
+      finishButton: 'Finish',
+      finishHint: 'Upload a photo to finish sign-up.',
+      pendingNote:
+        'Photos under review are fine — you can finish now. Matching waits until a photo is approved.',
     },
     writingPrompts: {
       aboutMe: {

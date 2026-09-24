@@ -467,8 +467,13 @@ export type AppCopySchema = {
       missingLookingFor: string;
       missingLocation: string;
       missingBirthDate: string;
-      photosStubTitle: string;
-      photosStubBody: string;
+    };
+    photosForm: {
+      title: string;
+      body: string;
+      finishButton: string;
+      finishHint: string;
+      pendingNote: string;
     };
     writingPrompts: {
       aboutMe: OnboardingWritingPromptField;

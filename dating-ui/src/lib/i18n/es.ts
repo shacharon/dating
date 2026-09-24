@@ -594,9 +594,14 @@ export const esCopy: AppCopySchema = {
       missingLookingFor: 'A quien buscas',
       missingLocation: 'Donde estas',
       missingBirthDate: 'Fecha de nacimiento',
-      photosStubTitle: 'Anade una foto',
-      photosStubBody:
-        'Sube al menos una foto. Terminar el registro sera el siguiente paso.',
+    },
+    photosForm: {
+      title: 'Paso 3 — Fotos',
+      body: 'Anade al menos una foto para terminar. Puedes subir hasta tres y elegir una principal.',
+      finishButton: 'Terminar',
+      finishHint: 'Sube una foto para terminar el registro.',
+      pendingNote:
+        'Las fotos en revision estan bien — puedes terminar ahora. Las coincidencias esperan a que se apruebe una foto.',
     },
     writingPrompts: {
       aboutMe: {

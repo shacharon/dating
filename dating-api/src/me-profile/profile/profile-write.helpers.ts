@@ -110,8 +110,9 @@ export function isNonEmptyTrimmedText(
 }
 
 /**
- * Enforces two-step onboarding: TEXTS requires partner genders; COMPLETED requires all three text fields.
- * BASIC is always allowed (partial saves). Analysis still only runs on profile submit.
+ * Enforces onboarding step coherence: TEXTS and COMPLETED require partner genders.
+ * Story texts are optional (skip allowed). BASIC is always allowed (partial saves).
+ * Analysis still only runs on profile submit.
  */
 export function assertOnboardingStepCoherent(
   existing: UserProfile | null,
@@ -123,36 +124,16 @@ export function assertOnboardingStepCoherent(
   if (body.onboardingStep === UserProfileOnboardingStep.BASIC) {
     return;
   }
-  if (body.onboardingStep === UserProfileOnboardingStep.TEXTS) {
+  if (
+    body.onboardingStep === UserProfileOnboardingStep.TEXTS ||
+    body.onboardingStep === UserProfileOnboardingStep.COMPLETED
+  ) {
     const genders = mergedDesiredPartnerGendersForOnboarding(existing, body);
     if (!genders?.length) {
       const ex = new UnprocessableEntityException({
         error: 'onboarding_partner_genders_required',
         message:
-          'Set at least one desiredPartnerGenders value before moving onboarding to TEXTS.',
-      });
-      markHttpExceptionObservabilityLogged(ex);
-      throw ex;
-    }
-    return;
-  }
-  if (body.onboardingStep === UserProfileOnboardingStep.COMPLETED) {
-    const aboutMe = mergedTextForOnboarding(existing, body, 'aboutMe');
-    const aboutPartner = mergedTextForOnboarding(existing, body, 'aboutPartner');
-    const aboutRelationship = mergedTextForOnboarding(
-      existing,
-      body,
-      'aboutRelationship',
-    );
-    if (
-      !isNonEmptyTrimmedText(aboutMe) ||
-      !isNonEmptyTrimmedText(aboutPartner) ||
-      !isNonEmptyTrimmedText(aboutRelationship)
-    ) {
-      const ex = new UnprocessableEntityException({
-        error: 'onboarding_texts_incomplete',
-        message:
-          'aboutMe, aboutPartner, and aboutRelationship must all be non-empty before onboarding can be COMPLETED.',
+          'Set at least one desiredPartnerGenders value before moving onboarding past BASIC.',
       });
       markHttpExceptionObservabilityLogged(ex);
       throw ex;
