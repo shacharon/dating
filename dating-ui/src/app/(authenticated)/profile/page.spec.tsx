@@ -12,11 +12,13 @@ const {
   listMyProfilePhotos,
   fetchMyProfilePhotoBlob,
   fetchProfileQuality,
+  fetchMyLatestAnalysis,
 } = vi.hoisted(() => ({
   fetchMyProfile: vi.fn(),
   listMyProfilePhotos: vi.fn(),
   fetchMyProfilePhotoBlob: vi.fn(),
   fetchProfileQuality: vi.fn(),
+  fetchMyLatestAnalysis: vi.fn(),
 }));
 
 const replaceMock = vi.hoisted(() => vi.fn());
@@ -46,6 +48,11 @@ vi.mock('@/lib/api/profile-quality-api', async () => {
     fetchProfileQuality,
   };
 });
+
+vi.mock('@/lib/api/me-analysis-api', () => ({
+  fetchMyLatestAnalysis,
+  fetchAnalysisStatus: vi.fn(),
+}));
 
 vi.mock('@/contexts/auth-context', () => ({
   useAuth: () => ({
@@ -132,6 +139,7 @@ describe('Profile overview route', () => {
       },
       suggestions: [{ id: 'aboutRelationship', points: 15 }],
     });
+    fetchMyLatestAnalysis.mockResolvedValue(null);
     fetchMyProfile.mockResolvedValue({
       id: 'p1',
       userId: 'u1',
@@ -157,19 +165,37 @@ describe('Profile overview route', () => {
     window.location.hash = '';
   });
 
-  it('shows overview, meter, and nav with aria-current', async () => {
+  it('shows overview, status strip score, and nav with aria-current', async () => {
     renderOverview();
     await waitFor(() => {
       expect(screen.getByTestId('profile-hub')).toBeTruthy();
       expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
-      expect(screen.getByTestId('profile-quality-meter')).toBeTruthy();
+      expect(screen.getByTestId('profile-overview-status-strip')).toBeTruthy();
+      expect(screen.getByTestId('profile-overview-score').textContent).toContain(
+        '80%',
+      );
     });
+    expect(screen.queryByTestId('profile-quality-meter')).toBeNull();
     expect(
       screen.getByTestId('profile-tab-overview').getAttribute('aria-current'),
     ).toBe('page');
     expect(screen.getByTestId('profile-tab-edit').getAttribute('href')).toBe(
       '/profile/edit',
     );
+    expect(
+      screen.getByTestId('profile-overview-strip-photos').getAttribute('href'),
+    ).toBe('/profile/edit#photos');
+    expect(
+      screen
+        .getByTestId('profile-overview-strip-matching')
+        .getAttribute('href'),
+    ).toBe('/profile/settings');
+    expect(
+      screen.getByTestId('profile-overview-strip-analysis').getAttribute('href'),
+    ).toBe('/profile/analysis');
+    expect(
+      screen.getByTestId('profile-overview-strip-story').getAttribute('href'),
+    ).toBe('/profile/edit');
   });
 
   it('renders overview hero card and edit CTA', async () => {
