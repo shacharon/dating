@@ -568,9 +568,15 @@ export const heCopy: AppCopySchema = {
       missingLookingFor: 'את מי את/ה מחפש/ת',
       missingLocation: 'איפה את/ה',
       missingBirthDate: 'תאריך לידה',
-      photosStubTitle: 'הוסיפו תמונה',
-      photosStubBody:
-        'העלו לפחות תמונה אחת. סיום ההרשמה יגיע בשלב הבא.',
+    },
+    photosForm: {
+      title: 'שלב 3 — תמונות',
+      body: 'הוסיפו לפחות תמונה אחת כדי לסיים. אפשר עד שלוש ולבחור תמונה ראשית.',
+      finishButton: 'סיום',
+      finishHint: 'העלו תמונה כדי לסיים את ההרשמה.',
+      uploadingHint: 'ממתינים לסיום ההעלאה…',
+      pendingNote:
+        'תמונות בבדיקה בסדר — אפשר לסיים עכשיו. ההתאמות מחכות עד שתאושר תמונה.',
     },
     writingPrompts: {
       aboutMe: {

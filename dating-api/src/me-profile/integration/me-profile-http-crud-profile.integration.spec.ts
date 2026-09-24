@@ -355,29 +355,40 @@ describe('me profile HTTP — crud profile (integration)', () => {
     expect(prismaMock.userProfile.create).not.toHaveBeenCalled();
   });
 
-  it('PATCH /api/v1/me/profile returns 422 when onboardingStep COMPLETED without all texts', async () => {
+  it('PATCH /api/v1/me/profile accepts COMPLETED with empty story texts when partners set', async () => {
     const raw = await loginAndCookie();
-    prismaMock.userProfile.findUnique.mockResolvedValue({
+    const existing = {
       id: 'prof_inc',
       userId: USER_ID,
       status: UserProfileStatus.DRAFT,
-      onboardingStep: 'TEXTS',
-      aboutMe: 'only me',
+      onboardingStep: 'TEXTS' as const,
+      aboutMe: null,
       aboutPartner: null,
       aboutRelationship: null,
       gender: 'MALE' as const,
       desiredPartnerGenders: ['FEMALE'] as unknown,
       preference: null,
-    });
+      onboardingCompletedAt: null,
+    };
+    const completed = {
+      ...existing,
+      onboardingStep: 'COMPLETED' as const,
+      onboardingCompletedAt: new Date('2026-01-10T12:00:00.000Z'),
+    };
+    prismaMock.userProfile.findUnique
+      .mockResolvedValueOnce(existing) // PATCH load
+      .mockResolvedValueOnce({ ...existing, desiredPartnerGenders: ['FEMALE'] }) // preference snapshot
+      .mockResolvedValueOnce({ ...completed, preference: null }); // refetch
+    prismaMock.userProfile.update.mockResolvedValue(completed);
 
     const res = await request(app.getHttpServer())
       .patch('/api/v1/me/profile')
       .set('Cookie', [`${SESSION_COOKIE}=${raw}`])
       .send({ onboardingStep: 'COMPLETED' })
-      .expect(422);
+      .expect(200);
 
-    expect(res.body).toMatchObject({ error: 'onboarding_texts_incomplete' });
-    expect(prismaMock.userProfile.update).not.toHaveBeenCalled();
+    expect(res.body.onboardingStep).toBe('COMPLETED');
+    expect(prismaMock.userProfile.update).toHaveBeenCalled();
   });
 
   it('PATCH /api/v1/me/profile returns 400 when partnerAgeMin exceeds partnerAgeMax', async () => {

@@ -31,10 +31,16 @@ type UploadingPreview = {
 export function ProfilePhotoSection({
   requiredForMatching = false,
   onMutated,
+  onPhotosChange,
+  onUploadingChange,
 }: {
   requiredForMatching?: boolean;
   /** Called after successful upload/delete (hub quality meter refresh). */
   onMutated?: () => void;
+  /** Called whenever the photo list is refreshed (load / upload / delete / primary). */
+  onPhotosChange?: (photos: MeProfilePhotoDto[]) => void;
+  /** True while a local upload is in flight. */
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const { copy } = useAppLocale();
   const photoGateCopy = copy.photoGate;
@@ -53,6 +59,7 @@ export function ProfilePhotoSection({
     const rows = await listMyProfilePhotos();
     rows.sort((a, b) => a.position - b.position);
     setPhotos(rows);
+    onPhotosChange?.(rows);
   }
 
   useEffect(() => {
@@ -120,6 +127,7 @@ export function ProfilePhotoSection({
   async function uploadPickedFile(file: File) {
     const localUrl = URL.createObjectURL(file);
     setUploading({ id: `up-${Date.now()}`, url: localUrl });
+    onUploadingChange?.(true);
     try {
       await uploadMyProfilePhoto(file);
       await refreshPhotos();
@@ -129,6 +137,7 @@ export function ProfilePhotoSection({
     } finally {
       URL.revokeObjectURL(localUrl);
       setUploading(null);
+      onUploadingChange?.(false);
     }
   }
 
@@ -169,7 +178,7 @@ export function ProfilePhotoSection({
     }
   }
 
-  const uploadControlClassName = `rounded border px-3 py-1.5 text-xs font-medium ${canUpload ? 'cursor-pointer border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800' : 'cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'}`;
+  const uploadControlClassName = `inline-flex min-h-11 items-center rounded border px-4 py-2.5 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:focus-visible:outline-zinc-100 ${canUpload ? 'cursor-pointer border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800' : 'cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'}`;
 
   async function onDelete(photoId: string) {
     setBusyPhotoId(photoId);

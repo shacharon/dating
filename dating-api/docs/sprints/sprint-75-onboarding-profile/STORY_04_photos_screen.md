@@ -1,7 +1,9 @@
 # Story 4: Photos screen and finish
 
-**Status:** Proposed
-**Depends on:** Story 3
+**Status:** Done  
+**Depends on:** Story 3  
+**Shipped on main:** _(after merge)_  
+**Feature tip ahead of main:** 0
 
 ## Why
 
@@ -28,11 +30,11 @@ Uploading is the user's job. Waiting for review is ours.
 
 ### Acceptance criteria
 
-- [ ] Finish is enabled on successful upload, without waiting for `APPROVED`
-- [ ] Finish sets `COMPLETED` and routes to the match list
-- [ ] A user whose only photo is `PENDING` sees the existing photo gate on matches, not an error
-- [ ] Upload failure keeps the user on the screen with a readable message
-- [ ] No path through this screen produces `photo_required` in the console
+- [x] Finish is enabled on successful upload, without waiting for `APPROVED`
+- [x] Finish sets `COMPLETED` and routes to the match list
+- [x] A user whose only photo is `PENDING` sees the existing photo gate on matches, not an error
+- [x] Upload failure keeps the user on the screen with a readable message
+- [x] No path through this screen produces `photo_required` in the console
 
 ## Out of scope
 
@@ -41,5 +43,19 @@ Uploading is the user's job. Waiting for review is ours.
 
 ## Definition of done
 
-- [ ] Sign-up can be completed end to end while a photo is still under review
-- [ ] `photo_required` no longer appears in UI logs during normal sign-up
+- [x] Sign-up can be completed end to end while a photo is still under review
+- [x] `photo_required` no longer appears in UI logs during normal sign-up
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | approved (`53269f5c`) |
+| 2 CR | approved (`1786684d`) |
+| 3.5 UX | approved (`17933a0c`) |
+| 2.5 / 4 | N/A |
+| 3 PM | Done |
+
+**Handoffs:** [preflight](./handoffs/STORY_04_photos_screen/agent--1-preflight.md) · [architect](./handoffs/STORY_04_photos_screen/agent-0-architect.md) · [dev](./handoffs/STORY_04_photos_screen/agent-1-dev.md) · [CR](./handoffs/STORY_04_photos_screen/agent-2-cr.md) · [UX](./handoffs/STORY_04_photos_screen/agent-3.5-ux.md) · [PM](./handoffs/STORY_04_photos_screen/agent-3-pm.md)

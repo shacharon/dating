@@ -1,6 +1,6 @@
 # Sprint 75 — Three-screen onboarding and profile routes
 
-**Status:** In progress — Stories 1–3 Done; Stories 4–8 not started
+**Status:** In progress — Stories 1–4 Done; Stories 5–8 not started
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Pipeline:** `.cursor/skills/dating-agent-run/SKILL.md`
 **Repo:** `dating-api` + `dating-ui`
@@ -45,7 +45,7 @@ sign-up. Nickname and dating chapter leave onboarding entirely.
 | 1 | [Story screen first, delete the duplicate](./STORY_01_story_screen_first.md) | **Done** | M | — |
 | 2 | [Record your story by voice](./STORY_02_voice_story.md) | **Done** | L | 1 |
 | 3 | [One facts screen, four fields](./STORY_03_facts_screen.md) | **Done** | M | — |
-| 4 | [Photos screen and finish](./STORY_04_photos_screen.md) | Proposed | S | 3 |
+| 4 | [Photos screen and finish](./STORY_04_photos_screen.md) | **Done** | S | 3 |
 | 5 | [Delete beats, tabs and the old stepper](./STORY_05_remove_old_flow.md) | Proposed | M | 1, 3, 4 |
 | 6 | [Nickname and dating chapter move to settings](./STORY_06_move_extras.md) | Proposed | S | 3 |
 | 7 | [Profile tabs become routes](./STORY_07_profile_routes.md) | Proposed | M | — |
