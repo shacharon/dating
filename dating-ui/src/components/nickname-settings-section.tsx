@@ -83,15 +83,17 @@ export function NicknameSettingsSection() {
       >
         {ns.settingsTitle}
       </h2>
-      <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-        {ns.settingsSubtitle}
-      </p>
 
       {loading ? (
-        <p className="text-xs text-zinc-500">{copy.common.loading}</p>
+        <p className="text-xs text-zinc-500" aria-live="polite">
+          {copy.common.loading}
+        </p>
       ) : (
         <div className="space-y-4">
-          <div className="rounded border border-dashed border-zinc-300 bg-zinc-50/80 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40">
+          <div
+            className="rounded border border-dashed border-zinc-300 bg-zinc-50/80 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950/40"
+            aria-label={ns.googleNameLabel}
+          >
             <span className="font-medium text-zinc-600 dark:text-zinc-400">
               {ns.googleNameLabel}
             </span>
@@ -117,13 +119,20 @@ export function NicknameSettingsSection() {
                 setFieldError(null);
               }}
               disabled={saving}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400"
+              className={`min-h-11 w-full rounded border bg-white px-3 py-2 text-base text-zinc-900 placeholder-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-60 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400 dark:focus-visible:outline-zinc-100 sm:text-sm ${
+                fieldError
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-zinc-300 dark:border-zinc-600'
+              }`}
               placeholder={ns.nicknamePlaceholder}
               autoComplete="off"
               maxLength={80}
               aria-invalid={Boolean(fieldError)}
+              aria-busy={saving}
               aria-describedby={
-                fieldError ? 'settings-nickname-error' : undefined
+                fieldError
+                  ? 'settings-nickname-error'
+                  : 'settings-nickname-hint'
               }
             />
             {fieldError ? (
@@ -134,7 +143,14 @@ export function NicknameSettingsSection() {
               >
                 {fieldError}
               </p>
-            ) : null}
+            ) : (
+              <p
+                id="settings-nickname-hint"
+                className="mt-1 text-xs text-zinc-500 dark:text-zinc-400"
+              >
+                {ns.settingsSubtitle}
+              </p>
+            )}
           </div>
 
           <button
@@ -142,9 +158,10 @@ export function NicknameSettingsSection() {
             data-testid="nickname-settings-save"
             onClick={() => void handleSave()}
             disabled={saving || !dirty}
+            aria-busy={saving}
             className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
           >
-            {saving ? '…' : ns.saveButton}
+            {saving ? copy.common.loading : ns.saveButton}
           </button>
         </div>
       )}
