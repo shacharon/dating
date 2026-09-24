@@ -15,7 +15,8 @@ export function onboardingUiStepFromPathname(pathname: string): OnboardingUiStep
   }
   if (
     pathname.startsWith('/onboarding/basics') ||
-    pathname.startsWith('/onboarding/basic')
+    pathname === '/onboarding/basic' ||
+    pathname.startsWith('/onboarding/basic/')
   ) {
     return 'facts';
   }

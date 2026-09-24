@@ -15,6 +15,10 @@ describe('onboardingUiStepFromPathname', () => {
     expect(onboardingUiStepFromPathname('/onboarding/photos')).toBe('photos');
     expect(onboardingUiStepFromPathname('/onboarding')).toBeNull();
   });
+
+  it('does not map photos to facts', () => {
+    expect(onboardingUiStepFromPathname('/onboarding/photos')).not.toBe('facts');
+  });
 });
 
 describe('onboardingStepHref', () => {
