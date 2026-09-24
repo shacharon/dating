@@ -737,6 +737,20 @@ export const enCopy: AppCopySchema = {
       newChapterSubtext:
         "Divorced, separated, or dating again later in life",
     },
+    nicknameSettings: {
+      settingsTitle: "Display name",
+      settingsSubtitle: "How you appear to others. Optional.",
+      googleNameLabel: "Google name",
+      googleNameHelp:
+        "From your Google account (read-only). Use nickname below for how you appear here.",
+      nicknameLabel: "Nickname",
+      nicknamePlaceholder: "How you want to be called",
+      saveButton: "Save nickname",
+      saveError: "Could not save nickname. Please try again.",
+      savedFlash: "Nickname saved.",
+      nicknameTakenError:
+        "This nickname is already taken. Choose a different one or leave it blank.",
+    },
     matchPreferencesLink: "Match preferences",
     matchPreferencesLinkHelp:
       "Who you're open to, partner age range, and max distance.",

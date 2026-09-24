@@ -2,10 +2,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useAuth } from '@/contexts/auth-context';
 import {
   ME_PROFILE_GENDERS,
-  type MeDatingChapter,
   type MeProfileGender,
   type PatchMeProfileBody,
 } from '@/lib/api/me-profile-api';
@@ -16,12 +14,7 @@ import {
 import { useAppLocale } from '@/lib/i18n';
 import { onboardingResumePath } from '@/lib/profile/onboarding-path';
 import { validateOnboardingBasicAdvance } from '@/lib/profile/onboarding-basic-validation';
-import type { DatingChapterValue } from '@/components/dating-chapter-fields';
-import {
-  ageFromBirthInput,
-  normalizeNicknameValue,
-  togglePartnerGender,
-} from '@/components/onboarding-basic-helpers';
+import { ageFromBirthInput, togglePartnerGender } from '@/components/onboarding-basic-helpers';
 import {
   listPlaceCities,
   listPlaceCountries,
@@ -45,23 +38,18 @@ function seedBasicFieldsFromProfile(
   profile: NonNullable<ReturnType<typeof useProfile>['profile']>,
   setters: {
     setHasProfile: (v: boolean) => void;
-    setLoadedNickname: (v: string | null) => void;
-    setNickname: (v: string) => void;
     setBirthDate: (v: string) => void;
     setGender: (v: string) => void;
     setDesiredPartnerGenders: (v: MeProfileGender[]) => void;
     setCountryCode: (v: string) => void;
     setUsStateCode: (v: string) => void;
     setCityId: (v: string) => void;
-    setDatingChapter: (v: DatingChapterValue | null) => void;
     setAboutMe: (v: string) => void;
     setAboutPartner: (v: string) => void;
     setAboutRelationship: (v: string) => void;
   },
 ) {
   setters.setHasProfile(true);
-  setters.setLoadedNickname(profile.nickname ?? null);
-  setters.setNickname(profile.nickname ?? '');
   const bd = profile.birthDate?.slice(0, 10) ?? '';
   setters.setBirthDate(/^\d{4}-\d{2}-\d{2}$/.test(bd) ? bd : '');
   setters.setGender(profile.gender ?? '');
@@ -76,14 +64,6 @@ function seedBasicFieldsFromProfile(
   setters.setCountryCode(/^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : '');
   setters.setUsStateCode(profile.usStateCode ?? '');
   setters.setCityId(profile.cityId ?? '');
-  const chapter = profile.datingChapter;
-  setters.setDatingChapter(
-    chapter === 'first_chapter' ||
-      chapter === 'ready_again' ||
-      chapter === 'new_chapter'
-      ? chapter
-      : null,
-  );
   setters.setAboutMe(profile.aboutMe ?? '');
   setters.setAboutPartner(profile.aboutPartner ?? '');
   setters.setAboutRelationship(profile.aboutRelationship ?? '');
@@ -95,21 +75,17 @@ export function useOnboardingBasicForm({
 }: UseOnboardingBasicFormOptions = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
   const { copy, locale } = useAppLocale();
   const ob = copy.onboarding;
   const bf = ob.basicForm;
   const mod = copy.contentModeration;
   const genderCopy = copy.gender;
-  const googleName = user?.displayName?.trim() || '—';
   const isHub = variant === 'profileHub';
 
   const { profile, isLoading, error: profileLoadError } = useProfile();
   const patchMutation = usePatchProfile();
   const createMutation = useCreateProfile();
 
-  const [nickname, setNickname] = useState('');
-  const [loadedNickname, setLoadedNickname] = useState<string | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState('');
   const [desiredPartnerGenders, setDesiredPartnerGenders] = useState<
@@ -122,9 +98,6 @@ export function useOnboardingBasicForm({
   const [usStates, setUsStates] = useState<PlaceUsState[]>([]);
   const [cities, setCities] = useState<PlaceCity[]>([]);
   const [citiesLoaded, setCitiesLoaded] = useState(false);
-  const [datingChapter, setDatingChapter] = useState<DatingChapterValue | null>(
-    null,
-  );
   const [aboutMe, setAboutMe] = useState('');
   const [aboutPartner, setAboutPartner] = useState('');
   const [aboutRelationship, setAboutRelationship] = useState('');
@@ -234,15 +207,12 @@ export function useOnboardingBasicForm({
 
     seedBasicFieldsFromProfile(profile, {
       setHasProfile,
-      setLoadedNickname,
-      setNickname,
       setBirthDate,
       setGender,
       setDesiredPartnerGenders,
       setCountryCode,
       setUsStateCode,
       setCityId,
-      setDatingChapter,
       setAboutMe,
       setAboutPartner,
       setAboutRelationship,
@@ -262,13 +232,9 @@ export function useOnboardingBasicForm({
     setDesiredPartnerGenders((prev) => togglePartnerGender(prev, g, checked));
   }
 
+  /** Hub PATCH must not include nickname or datingChapter (settings-owned). */
   function basicBody(advanceToTexts: boolean): PatchMeProfileBody {
-    const nextNickname = nickname.trim() ? nickname.trim() : null;
-    const nicknameChanged =
-      normalizeNicknameValue(nextNickname) !==
-      normalizeNicknameValue(loadedNickname);
-
-    const body: PatchMeProfileBody = {
+    return {
       birthDate: birthDate.trim() ? birthDate.trim() : null,
       gender: (gender || null) as MeProfileGender | null,
       desiredPartnerGenders:
@@ -280,18 +246,11 @@ export function useOnboardingBasicForm({
             cityId: cityId || null,
           }
         : {}),
-      datingChapter: datingChapter as MeDatingChapter | null,
       aboutMe: aboutMe.trim() ? aboutMe : null,
       aboutPartner: aboutPartner.trim() ? aboutPartner : null,
       aboutRelationship: aboutRelationship.trim() ? aboutRelationship : null,
       onboardingStep: advanceToTexts ? ('TEXTS' as const) : ('BASIC' as const),
     };
-
-    if (!hasProfile || nicknameChanged) {
-      body.nickname = nextNickname;
-    }
-
-    return body;
   }
 
   async function persist(advanceToTexts: boolean): Promise<boolean> {
@@ -329,9 +288,6 @@ export function useOnboardingBasicForm({
     try {
       if (hasProfile) {
         await patchMutation.mutateAsync(body);
-        setLoadedNickname(
-          normalizeNicknameValue(nickname.trim() ? nickname.trim() : null),
-        );
       } else {
         await createMutation.mutateAsync(body);
         setHasProfile(true);
@@ -373,9 +329,6 @@ export function useOnboardingBasicForm({
     bf,
     mod,
     genderCopy,
-    googleName,
-    nickname,
-    setNickname,
     birthDate,
     setBirthDate,
     birthDateMax,
@@ -407,8 +360,6 @@ export function useOnboardingBasicForm({
     setCityId,
     locale,
     locationError,
-    datingChapter,
-    setDatingChapter,
     aboutMe,
     setAboutMe,
     aboutPartner,

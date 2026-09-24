@@ -114,16 +114,22 @@ describe('OnboardingBasicForm (profile hub)', () => {
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
   });
 
-  it('renders required fields, nickname, and dating chapter together', async () => {
+  it('renders required fields without nickname or dating chapter', async () => {
     renderHubForm();
 
     await waitFor(() => {
       expect(screen.getByLabelText(enCopy.onboarding.basicForm.genderLabel)).toBeTruthy();
-      expect(screen.getByLabelText(enCopy.onboarding.basicForm.nicknameLabel)).toBeTruthy();
-      expect(
-        screen.getByText(enCopy.onboarding.basicForm.datingChapter.question),
-      ).toBeTruthy();
+      expect(screen.getByLabelText(enCopy.onboarding.basicForm.birthDateLabel)).toBeTruthy();
     });
+    expect(
+      screen.queryByLabelText(enCopy.onboarding.basicForm.nicknameLabel),
+    ).toBeNull();
+    expect(
+      screen.queryByText(enCopy.onboarding.basicForm.datingChapter.question),
+    ).toBeNull();
+    expect(
+      screen.queryByText(enCopy.onboarding.basicForm.googleNameLabel),
+    ).toBeNull();
     expect(
       screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
     ).toBeNull();
@@ -174,5 +180,33 @@ describe('OnboardingBasicForm (profile hub)', () => {
     await waitFor(() => {
       expect(listPlaceCountries).toHaveBeenCalled();
     });
+  });
+
+  it('hub save progress PATCH omits nickname and datingChapter', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...basicProfile,
+      nickname: 'ShouldStay',
+      datingChapter: 'first_chapter',
+      desiredPartnerGenders: ['FEMALE'],
+    });
+    renderHubForm();
+
+    await waitFor(() => {
+      expect(
+        (document.getElementById('onb-gender') as HTMLSelectElement).value,
+      ).toBe('MALE');
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: enCopy.onboarding.saveProgress }),
+    );
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalled();
+    });
+    const body = patchMyProfile.mock.calls[0][0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty('nickname');
+    expect(body).not.toHaveProperty('datingChapter');
+    expect(body.onboardingStep).toBe('BASIC');
   });
 });

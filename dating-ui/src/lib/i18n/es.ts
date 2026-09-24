@@ -745,6 +745,20 @@ export const esCopy: AppCopySchema = {
       newChapterSubtext:
         "Divorciado/a, separado/a, o volviendo a citas mas adelante",
     },
+    nicknameSettings: {
+      settingsTitle: "Nombre visible",
+      settingsSubtitle: "Como apareces ante otros. Opcional.",
+      googleNameLabel: "Nombre de Google",
+      googleNameHelp:
+        "De tu cuenta de Google (solo lectura). Usa el apodo abajo para como apareces aqui.",
+      nicknameLabel: "Apodo",
+      nicknamePlaceholder: "Como quieres que te llamen",
+      saveButton: "Guardar apodo",
+      saveError: "No se pudo guardar el apodo. Intentalo de nuevo.",
+      savedFlash: "Apodo guardado.",
+      nicknameTakenError:
+        "Este apodo ya esta en uso. Elige otro o dejalo en blanco.",
+    },
     matchPreferencesLink: "Preferencias de coincidencias",
     matchPreferencesLinkHelp:
       "A quien estas abierto, rango de edad y distancia maxima.",

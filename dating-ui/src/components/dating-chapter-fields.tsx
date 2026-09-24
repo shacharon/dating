@@ -53,20 +53,20 @@ export function DatingChapterFields({
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{copy.helper}</p>
       <div className="space-y-2">
         {DATING_CHAPTER_VALUES.map((option) => (
-          <label
-            key={option}
-            className="flex cursor-pointer items-start gap-3 text-sm text-zinc-900 dark:text-zinc-100"
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option}
-              data-testid={`dating-chapter-${option}`}
-              checked={value === option}
-              disabled={disabled}
-              onChange={() => onChange(option)}
-              className="mt-0.5 border-zinc-400 text-zinc-900 dark:border-zinc-500"
-            />
+            <label
+              key={option}
+              className="flex min-h-11 cursor-pointer items-start gap-3 py-1 text-sm text-zinc-900 dark:text-zinc-100"
+            >
+              <input
+                type="radio"
+                name={name}
+                value={option}
+                data-testid={`dating-chapter-${option}`}
+                checked={value === option}
+                disabled={disabled}
+                onChange={() => onChange(option)}
+                className="mt-1 h-4 w-4 shrink-0 border-zinc-400 text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-500 dark:focus-visible:outline-zinc-100"
+              />
             <span>
               <span className="font-medium">{copy[option]}</span>
               {option === 'new_chapter' ? (
@@ -84,7 +84,7 @@ export function DatingChapterFields({
           data-testid="dating-chapter-clear"
           disabled={disabled || value == null}
           onClick={() => onChange(null)}
-          className="text-xs font-medium text-zinc-500 underline-offset-2 hover:underline disabled:opacity-40 dark:text-zinc-400"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-zinc-500 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-40 dark:text-zinc-400 dark:focus-visible:outline-zinc-100"
         >
           {clearLabel}
         </button>

@@ -28,6 +28,12 @@ vi.mock('@/components/notification-preferences-section', () => ({
   ),
 }));
 
+vi.mock('@/components/nickname-settings-section', () => ({
+  NicknameSettingsSection: () => (
+    <div data-testid="mock-nickname-settings">nickname</div>
+  ),
+}));
+
 vi.mock('@/components/dating-chapter-preferences-section', () => ({
   DatingChapterPreferencesSection: () => (
     <div data-testid="mock-dating-chapter">dating chapter</div>
@@ -77,6 +83,10 @@ describe('ProfileSettingsTab', () => {
       expect(screen.getByTestId('profile-settings-tab')).toBeTruthy();
     });
     expect(screen.getByTestId('mock-notifications')).toBeTruthy();
+    expect(screen.getByTestId('mock-nickname-settings')).toBeTruthy();
+    expect(screen.getByTestId('mock-dating-chapter')).toBeTruthy();
+    expect(document.getElementById('nickname')).toBeTruthy();
+    expect(document.getElementById('dating-chapter')).toBeTruthy();
     expect(screen.queryByText(/Account/i)).toBeNull();
     expect(screen.queryByRole('link', { name: /language/i })).toBeNull();
     expect(

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { NotificationPreferencesSection } from '@/components/notification-preferences-section';
+import { NicknameSettingsSection } from '@/components/nickname-settings-section';
 import { DatingChapterPreferencesSection } from '@/components/dating-chapter-preferences-section';
 import { MatchPreferencesPreviewCard } from '@/components/profile/match-preferences-preview-card';
 import {
@@ -16,7 +17,7 @@ import {
 } from '@/lib/matches/match-preferences-form';
 import { useProfile } from '@/hooks/use-profile';
 
-/** Profile hub Settings tab: notifications + match-prefs preview. */
+/** Profile hub Settings tab: notifications, nickname, dating chapter, match-prefs preview. */
 export function ProfileSettingsTab() {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
@@ -59,6 +60,10 @@ export function ProfileSettingsTab() {
           {hub.settingsNotificationsHeading}
         </h2>
         <NotificationPreferencesSection />
+      </section>
+
+      <section id="nickname" className="scroll-mt-24 space-y-3">
+        <NicknameSettingsSection />
       </section>
 
       <section id="dating-chapter" className="scroll-mt-24 space-y-3">

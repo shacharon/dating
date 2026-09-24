@@ -511,6 +511,18 @@ export type AppCopySchema = {
       new_chapter: string;
       newChapterSubtext: string;
     };
+    nicknameSettings: {
+      settingsTitle: string;
+      settingsSubtitle: string;
+      googleNameLabel: string;
+      googleNameHelp: string;
+      nicknameLabel: string;
+      nicknamePlaceholder: string;
+      saveButton: string;
+      saveError: string;
+      savedFlash: string;
+      nicknameTakenError: string;
+    };
     matchPreferencesLink: string;
     matchPreferencesLinkHelp: string;
     viewPage: {

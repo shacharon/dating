@@ -68,7 +68,7 @@ export function completenessScorePercent(flags: ProfileCompletenessFlags): numbe
 
 const SUGGESTION_HREF: Record<ProfileSuggestionId, string> = {
   photo: '/profile?tab=edit#photos',
-  nickname: '/profile?tab=edit#basic',
+  nickname: '/profile?tab=settings#nickname',
   location: '/profile?tab=edit#basic',
   basics: '/profile?tab=edit#basic',
   aboutMe: '/profile?tab=edit#story',

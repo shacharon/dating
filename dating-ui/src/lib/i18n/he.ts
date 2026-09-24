@@ -715,6 +715,20 @@ export const heCopy: AppCopySchema = {
       newChapterSubtext:
         "גרוש/ה, פרוד/ה, או חוזר/ת לדייטים בשלב מאוחר יותר",
     },
+    nicknameSettings: {
+      settingsTitle: "שם תצוגה",
+      settingsSubtitle: "איך תופיעו לאחרים. אופציונלי.",
+      googleNameLabel: "שם ב-Google",
+      googleNameHelp:
+        "מחשבון Google (קריאה בלבד). השתמשו בכינוי למטה לאיך שתופיעו כאן.",
+      nicknameLabel: "כינוי",
+      nicknamePlaceholder: "איך לקרוא לך",
+      saveButton: "שמירת כינוי",
+      saveError: "לא ניתן לשמור את הכינוי. נסו שוב.",
+      savedFlash: "הכינוי נשמר.",
+      nicknameTakenError:
+        "הכינוי כבר תפוס. בחרו אחר או השאירו ריק.",
+    },
     matchPreferencesLink: "העדפות התאמה",
     matchPreferencesLinkHelp:
       "למי אתם פתוחים, טווח גיל ומרחק מרבי.",
