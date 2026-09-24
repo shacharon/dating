@@ -186,8 +186,16 @@ describe('Profile overview route', () => {
       screen.getByTestId('profile-overview-strip-photos').getAttribute('href'),
     ).toBe('/profile/edit#photos');
     expect(
+      screen
+        .getByTestId('profile-overview-strip-matching')
+        .getAttribute('href'),
+    ).toBe('/profile/settings');
+    expect(
       screen.getByTestId('profile-overview-strip-analysis').getAttribute('href'),
     ).toBe('/profile/analysis');
+    expect(
+      screen.getByTestId('profile-overview-strip-story').getAttribute('href'),
+    ).toBe('/profile/edit');
   });
 
   it('renders overview hero card and edit CTA', async () => {

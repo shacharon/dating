@@ -70,6 +70,8 @@ export function ProfileOverviewHero({ draft, photos }: Props) {
   }, [hero]);
 
   const showPhoto = Boolean(hero && heroUrl);
+  /** Dots only when we actually have a renderable hero (not meta-only / failed blob). */
+  const showDots = showPhoto && photos.length > 0;
 
   return (
     <div className="space-y-4" data-testid="profile-overview-hero">
@@ -102,22 +104,24 @@ export function ProfileOverviewHero({ draft, photos }: Props) {
           </div>
         )}
 
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-20 sm:px-6 sm:pb-5"
-          data-testid="profile-overview-hero-overlay"
-        >
-          <p className="truncate text-base font-semibold text-white drop-shadow sm:text-lg">
-            {title}
-          </p>
-          {location && (
-            <p className="mt-0.5 truncate text-sm text-white/90 drop-shadow">
-              {location}
+        {(showPhoto || title) && (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-20 sm:px-6 sm:pb-5"
+            data-testid="profile-overview-hero-overlay"
+          >
+            <p className="truncate text-base font-semibold text-white drop-shadow sm:text-lg">
+              {title}
             </p>
-          )}
-        </div>
+            {location && (
+              <p className="mt-0.5 truncate text-sm text-white/90 drop-shadow">
+                {location}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {photos.length > 0 && (
+      {showDots && (
         <div
           className="flex items-center justify-center gap-2"
           data-testid="profile-overview-gallery-dots"
