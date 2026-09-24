@@ -1,7 +1,9 @@
 # Story 8: Redesign the profile overview
 
-**Status:** Proposed
-**Depends on:** Story 7
+**Status:** Done  
+**Depends on:** Story 7  
+**Shipped on main:** *(pending merge)*  
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -48,13 +50,13 @@ and fixable*, never broken.
 
 ### Acceptance criteria
 
-- [ ] Overview renders as a photo-led card with name, age, city and story prose
-- [ ] Analysis traits appear as chips when an evaluation exists
-- [ ] The four-item status strip renders and every item routes correctly
-- [ ] The standalone quality meter box is gone; the percentage lives in the strip
-- [ ] A brand-new profile with no photo and no story renders a designed empty state — no grey rectangle, no bare "?"
-- [ ] Works in `he` RTL and in dark mode
-- [ ] Mobile layout checked at 375px
+- [x] Overview renders as a photo-led card with name, age, city and story prose
+- [x] Analysis traits appear as chips when an evaluation exists
+- [x] The four-item status strip renders and every item routes correctly
+- [x] The standalone quality meter box is gone; the percentage lives in the strip
+- [x] A brand-new profile with no photo and no story renders a designed empty state — no grey rectangle, no bare "?"
+- [x] Works in `he` RTL and in dark mode
+- [x] Mobile layout checked at 375px
 
 ## Out of scope
 
@@ -75,3 +77,17 @@ and fixable*, never broken.
 **100% complete** (photo card, story prose, trait chips, strip):
 
 ![Overview at 100% complete](./assets/story-08/overview-100.png)
+
+## Pipeline
+
+| Agent | Verdict |
+|-------|---------|
+| -1 preflight | ready |
+| 0 architect | ready |
+| 1 dev | approved (`ad2cd45e`) |
+| 2 CR | approved (`38f4d897`) |
+| 3.5 UX | approved (`4e71e7c9`) |
+| 2.5 / 4 | N/A |
+| 3 PM | Done |
+
+**Handoffs:** [preflight](./handoffs/STORY_08_overview_redesign/agent--1-preflight.md) · [architect](./handoffs/STORY_08_overview_redesign/agent-0-architect.md) · [dev](./handoffs/STORY_08_overview_redesign/agent-1-dev.md) · [CR](./handoffs/STORY_08_overview_redesign/agent-2-cr.md) · [UX](./handoffs/STORY_08_overview_redesign/agent-3.5-ux.md) · [PM](./handoffs/STORY_08_overview_redesign/agent-3-pm.md)
