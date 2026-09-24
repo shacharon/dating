@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  formatOverviewTemplate,
   galleryDotKinds,
   overviewLocationLine,
   overviewPartnerLine,
+  overviewPhotoStripSummary,
+  overviewStoryIsEmpty,
+  overviewStoryWordCount,
   overviewTitleLine,
   pickHeroPhoto,
 } from '@/components/profile/profile-overview-display';
@@ -48,8 +52,20 @@ function photo(
 describe('profile-overview-display', () => {
   it('builds title with age', () => {
     expect(
-      overviewTitleLine(draft({ nickname: 'Ada', birthDate: '1990-06-15' })),
+      overviewTitleLine(
+        draft({ nickname: 'Ada', birthDate: '1990-06-15' }),
+        'Add a nickname',
+      ),
     ).toMatch(/^Ada, \d+$/);
+  });
+
+  it('uses empty name label when nickname missing (never ?)', () => {
+    expect(overviewTitleLine(draft({}), 'Add a nickname')).toBe(
+      'Add a nickname',
+    );
+    expect(
+      overviewTitleLine(draft({ birthDate: '1990-06-15' }), 'Add a nickname'),
+    ).toMatch(/^\d+$/);
   });
 
   it('prefers locationLabel over city', () => {
@@ -68,6 +84,40 @@ describe('profile-overview-display', () => {
         NON_BINARY: 'Non-binary',
       } as never),
     ).toBe('Male, Female');
+  });
+
+  it('counts story words across three fields', () => {
+    expect(
+      overviewStoryWordCount(
+        draft({
+          aboutMe: 'one two',
+          aboutPartner: 'three',
+          aboutRelationship: '',
+        }),
+      ),
+    ).toBe(3);
+    expect(overviewStoryIsEmpty(draft({}))).toBe(true);
+    expect(overviewStoryIsEmpty(draft({ aboutMe: 'hi' }))).toBe(false);
+  });
+
+  it('summarizes photo strip slots', () => {
+    expect(overviewPhotoStripSummary([])).toEqual({
+      filled: 0,
+      max: 3,
+      review: 'none',
+    });
+    expect(
+      overviewPhotoStripSummary([
+        photo({ id: '1', status: 'APPROVED', position: 0 }),
+        photo({ id: '2', status: 'PENDING', position: 1 }),
+      ]),
+    ).toEqual({ filled: 2, max: 3, review: 'pending' });
+  });
+
+  it('formats strip templates', () => {
+    expect(
+      formatOverviewTemplate('{filled}/{max} photos', { filled: 1, max: 3 }),
+    ).toBe('1/3 photos');
   });
 
   it('picks primary then approved photo', () => {

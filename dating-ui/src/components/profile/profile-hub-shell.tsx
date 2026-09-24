@@ -2,17 +2,14 @@
 
 import type { ReactNode } from 'react';
 import { ProfileHubNav } from '@/components/profile/profile-hub-nav';
-import { ProfileQualityMeter } from '@/components/profile/profile-quality-meter';
 import {
   ProfileQualityRefreshProvider,
-  useProfileQualityRefresh,
 } from '@/components/profile/profile-quality-refresh-context';
 import { useAppLocale } from '@/lib/i18n';
 
 function ProfileHubShellInner({ children }: { children: ReactNode }) {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
-  const { refreshKey } = useProfileQualityRefresh();
 
   return (
     <div
@@ -26,7 +23,6 @@ function ProfileHubShellInner({ children }: { children: ReactNode }) {
           </h1>
         </header>
 
-        <ProfileQualityMeter copy={hub} refreshKey={refreshKey} />
         <ProfileHubNav copy={hub} />
         <main id="profile-main" className="min-w-0">
           {children}
@@ -36,7 +32,7 @@ function ProfileHubShellInner({ children }: { children: ReactNode }) {
   );
 }
 
-/** Shared profile chrome: title, quality meter, section nav. */
+/** Shared profile chrome: title + section nav (quality lives on overview strip). */
 export function ProfileHubShell({ children }: { children: ReactNode }) {
   return (
     <ProfileQualityRefreshProvider>

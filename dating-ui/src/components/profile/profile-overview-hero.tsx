@@ -8,21 +8,20 @@ import {
   galleryDotKinds,
   overviewDisplayName,
   overviewLocationLine,
-  overviewPartnerLine,
   overviewTitleLine,
   pickHeroPhoto,
   type GalleryDotKind,
 } from '@/components/profile/profile-overview-display';
 import { useAppLocale } from '@/lib/i18n';
-import { PROFILE_HREF, profileEditHash } from '@/lib/profile/profile-hub-paths';
+import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 import {
   fetchMyProfilePhotoBlob,
-  listMyProfilePhotos,
   type MeProfilePhotoDto,
 } from '@/lib/api/me-photos-api';
 
 type Props = {
   draft: ProfileDraft;
+  photos: MeProfilePhotoDto[];
 };
 
 const DOT_CLASS: Record<GalleryDotKind, string> = {
@@ -32,43 +31,24 @@ const DOT_CLASS: Record<GalleryDotKind, string> = {
 };
 
 /**
- * Overview hero match card: primary photo + identity overlay, story teaser,
- * gallery dots, and Edit CTA. Upload stays on the Edit tab.
+ * Overview dating card: primary photo + identity overlay (no story teaser).
+ * Empty photo uses a designed placeholder — never MatchPhoto grey/`?`.
  */
-export function ProfileOverviewHero({ draft }: Props) {
+export function ProfileOverviewHero({ draft, photos }: Props) {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
-  const bf = copy.onboarding.basicForm;
-  const vp = copy.profile.viewPage;
 
-  const [photos, setPhotos] = useState<MeProfilePhotoDto[]>([]);
   const [heroUrl, setHeroUrl] = useState<string | null>(null);
 
-  const title = overviewTitleLine(draft);
-  const displayName = overviewDisplayName(draft);
+  const displayName = overviewDisplayName(draft) ?? hub.overviewNameEmpty;
+  const title = overviewTitleLine(draft, hub.overviewNameEmpty);
   const location = overviewLocationLine(draft);
-  const partner = overviewPartnerLine(draft.desiredPartnerGenders, copy.gender);
-  const about = draft.aboutMe?.trim() ?? '';
   const dots = galleryDotKinds(photos);
-
-  useEffect(() => {
-    let cancelled = false;
-    listMyProfilePhotos()
-      .then((list) => {
-        if (!cancelled) setPhotos(list);
-      })
-      .catch(() => {
-        if (!cancelled) setPhotos([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const hero = pickHeroPhoto(photos);
 
   useEffect(() => {
     let cancelled = false;
     let objectUrl: string | null = null;
-    const hero = pickHeroPhoto(photos);
     if (!hero) {
       setHeroUrl(null);
       return;
@@ -87,86 +67,71 @@ export function ProfileOverviewHero({ draft }: Props) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [photos]);
+  }, [hero]);
+
+  const showPhoto = Boolean(hero && heroUrl);
 
   return (
-    <div className="space-y-6" data-testid="profile-overview-hero">
-      <div className="relative w-full overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
-        <div className="block w-full [&_>div]:!block [&_>div]:!w-full">
-          <MatchPhoto
-            variant="hero"
-            photoUrl={heroUrl}
-            displayName={displayName}
-            testId="profile-overview-hero-photo"
-            priority
-            className="w-full"
-          />
-        </div>
+    <div className="space-y-4" data-testid="profile-overview-hero">
+      <div className="relative w-full overflow-hidden rounded-2xl">
+        {showPhoto ? (
+          <div className="block w-full [&_>div]:!block [&_>div]:!w-full">
+            <MatchPhoto
+              variant="hero"
+              photoUrl={heroUrl}
+              displayName={displayName}
+              testId="profile-overview-hero-photo"
+              priority
+              className="!aspect-[3/4] w-full"
+            />
+          </div>
+        ) : (
+          <div
+            className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 bg-gradient-to-b from-zinc-200 to-zinc-300 px-6 text-center dark:from-zinc-800 dark:to-zinc-900"
+            data-testid="profile-overview-photo-empty"
+          >
+            <p className="max-w-xs text-base font-medium text-zinc-800 dark:text-zinc-100">
+              {hub.overviewPhotoEmptyTitle}
+            </p>
+            <Link
+              href={profileEditHash('photos')}
+              className="inline-flex min-h-11 items-center rounded-lg bg-zinc-900 px-5 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
+            >
+              {hub.overviewPhotoEmptyCta}
+            </Link>
+          </div>
+        )}
+
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-4 pt-16 sm:px-6 sm:pb-5"
+          className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-20 sm:px-6 sm:pb-5"
           data-testid="profile-overview-hero-overlay"
         >
           <p className="truncate text-base font-semibold text-white drop-shadow sm:text-lg">
-            {title === '?' ? vp.emptyValue : title}
+            {title}
           </p>
           {location && (
             <p className="mt-0.5 truncate text-sm text-white/90 drop-shadow">
               {location}
             </p>
           )}
-          {partner && (
-            <p className="mt-0.5 truncate text-sm text-white/85 drop-shadow">
-              {bf.partnerGendersLegend}: {partner}
-            </p>
-          )}
         </div>
       </div>
 
-      {about ? (
-        <p
-          className="line-clamp-2 text-base leading-relaxed text-zinc-700 md:line-clamp-3 dark:text-zinc-300"
-          data-testid="profile-overview-story-teaser"
-        >
-          {about}
-        </p>
-      ) : (
+      {photos.length > 0 && (
         <div
-          className="space-y-2 py-2 text-center text-sm text-zinc-500 dark:text-zinc-400"
-          data-testid="profile-overview-story-empty"
+          className="flex items-center justify-center gap-2"
+          data-testid="profile-overview-gallery-dots"
+          aria-hidden
         >
-          <p>{vp.subtitle}</p>
-          <Link
-            href={profileEditHash('story')}
-            className="inline-block font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-          >
-            {hub.editProfileCta}
-          </Link>
+          {dots.map((kind, i) => (
+            <span
+              key={i}
+              className={`h-2 w-2 rounded-full ${DOT_CLASS[kind]}`}
+              data-dot={kind}
+            />
+          ))}
         </div>
       )}
-
-      <div
-        className="flex items-center justify-center gap-2"
-        data-testid="profile-overview-gallery-dots"
-        aria-hidden
-      >
-        {dots.map((kind, i) => (
-          <span
-            key={i}
-            className={`h-2 w-2 rounded-full ${DOT_CLASS[kind]}`}
-            data-dot={kind}
-          />
-        ))}
-      </div>
-
-      <div className="flex justify-center pt-1">
-        <Link
-          href={PROFILE_HREF.edit}
-          data-testid="profile-overview-edit"
-          className="inline-flex rounded-lg bg-blue-600 px-8 py-3 text-base font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-        >
-          {hub.editProfileCta}
-        </Link>
-      </div>
     </div>
   );
 }
