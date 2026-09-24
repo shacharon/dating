@@ -458,9 +458,9 @@ export const heCopy: AppCopySchema = {
       confirm: "יציאה",
     },
     tabs: {
-      basic: "בסיס",
       story: "סיפור",
-      other: "אחר",
+      facts: "עובדות",
+      photos: "תמונות",
     },
     basicForm: {
       sectionTitle: "בסיס",

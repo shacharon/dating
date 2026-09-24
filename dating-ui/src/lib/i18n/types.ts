@@ -369,9 +369,9 @@ export type AppCopySchema = {
       confirm: string;
     };
     tabs: {
-      basic: string;
       story: string;
-      other: string;
+      facts: string;
+      photos: string;
     };
     basicForm: {
       sectionTitle: string;

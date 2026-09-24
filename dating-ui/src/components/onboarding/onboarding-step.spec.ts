@@ -2,78 +2,67 @@ import { describe, expect, it } from 'vitest';
 import {
   canNavigateOnboardingStep,
   isOnboardingStepFilled,
-  onboardingTabFromSearchParams,
-  onboardingTabHref,
+  onboardingStepHref,
   onboardingUiStepFromPathname,
 } from './onboarding-step';
 
 describe('onboardingUiStepFromPathname', () => {
-  it('maps story and basic paths', () => {
+  it('maps the three real routes', () => {
     expect(onboardingUiStepFromPathname('/onboarding/story')).toBe('story');
     expect(onboardingUiStepFromPathname('/onboarding/texts')).toBe('story');
-    expect(onboardingUiStepFromPathname('/onboarding/basic')).toBe('basic');
-    expect(onboardingUiStepFromPathname('/onboarding/basics')).toBe('basic');
-    expect(onboardingUiStepFromPathname('/onboarding/photos')).toBe('basic');
+    expect(onboardingUiStepFromPathname('/onboarding/basic')).toBe('facts');
+    expect(onboardingUiStepFromPathname('/onboarding/basics')).toBe('facts');
+    expect(onboardingUiStepFromPathname('/onboarding/photos')).toBe('photos');
     expect(onboardingUiStepFromPathname('/onboarding')).toBeNull();
   });
-
-  it('maps tab query on basic path', () => {
-    expect(
-      onboardingUiStepFromPathname('/onboarding/basic', new URLSearchParams('tab=basic')),
-    ).toBe('basic');
-    expect(
-      onboardingUiStepFromPathname('/onboarding/basic', new URLSearchParams('tab=other')),
-    ).toBe('other');
-  });
 });
 
-describe('onboardingTabFromSearchParams', () => {
-  it('defaults to basic (story is its own route)', () => {
-    expect(onboardingTabFromSearchParams(new URLSearchParams())).toBe('basic');
-  });
-});
-
-describe('onboardingTabHref', () => {
-  it('points story tab at /onboarding/story', () => {
-    expect(onboardingTabHref('story', false)).toBe('/onboarding/story');
-    expect(onboardingTabHref('story', true)).toBe('/onboarding/story?edit=1');
-  });
-
-  it('points basic tab at /onboarding/basics', () => {
-    expect(onboardingTabHref('basic', false)).toBe('/onboarding/basics');
-    expect(onboardingTabHref('basic', true)).toBe('/onboarding/basics?edit=1');
+describe('onboardingStepHref', () => {
+  it('points each step at its route', () => {
+    expect(onboardingStepHref('story', false)).toBe('/onboarding/story');
+    expect(onboardingStepHref('story', true)).toBe('/onboarding/story?edit=1');
+    expect(onboardingStepHref('facts', false)).toBe('/onboarding/basics');
+    expect(onboardingStepHref('facts', true)).toBe('/onboarding/basics?edit=1');
+    expect(onboardingStepHref('photos', false)).toBe('/onboarding/photos');
+    expect(onboardingStepHref('photos', true)).toBe('/onboarding/photos?edit=1');
   });
 });
 
 describe('isOnboardingStepFilled', () => {
   it('fills none when current is null', () => {
     expect(isOnboardingStepFilled('story', null)).toBe(false);
-    expect(isOnboardingStepFilled('basic', null)).toBe(false);
+    expect(isOnboardingStepFilled('facts', null)).toBe(false);
   });
 
   it('fills only story on story step', () => {
     expect(isOnboardingStepFilled('story', 'story')).toBe(true);
-    expect(isOnboardingStepFilled('basic', 'story')).toBe(false);
+    expect(isOnboardingStepFilled('facts', 'story')).toBe(false);
+    expect(isOnboardingStepFilled('photos', 'story')).toBe(false);
   });
 
-  it('fills prior steps on basic', () => {
-    expect(isOnboardingStepFilled('story', 'basic')).toBe(true);
-    expect(isOnboardingStepFilled('basic', 'basic')).toBe(true);
-    expect(isOnboardingStepFilled('other', 'basic')).toBe(false);
+  it('fills prior steps on facts', () => {
+    expect(isOnboardingStepFilled('story', 'facts')).toBe(true);
+    expect(isOnboardingStepFilled('facts', 'facts')).toBe(true);
+    expect(isOnboardingStepFilled('photos', 'facts')).toBe(false);
+  });
+
+  it('fills all on photos', () => {
+    expect(isOnboardingStepFilled('story', 'photos')).toBe(true);
+    expect(isOnboardingStepFilled('facts', 'photos')).toBe(true);
+    expect(isOnboardingStepFilled('photos', 'photos')).toBe(true);
   });
 });
 
 describe('canNavigateOnboardingStep', () => {
-  it('allows free navigation among story/basic/other', () => {
-    expect(canNavigateOnboardingStep('basic', 'story')).toBe(true);
-    expect(canNavigateOnboardingStep('other', 'story')).toBe(true);
-    expect(canNavigateOnboardingStep('story', 'basic')).toBe(true);
-    expect(canNavigateOnboardingStep('texts', 'story')).toBe(false);
+  it('allows free navigation among story/facts/photos', () => {
+    expect(canNavigateOnboardingStep('facts', 'story')).toBe(true);
+    expect(canNavigateOnboardingStep('photos', 'story')).toBe(true);
+    expect(canNavigateOnboardingStep('story', 'facts')).toBe(true);
+    expect(canNavigateOnboardingStep('photos', 'facts')).toBe(true);
   });
 
-  it('allows back to story/basic/other from texts page', () => {
-    expect(canNavigateOnboardingStep('story', 'texts')).toBe(true);
-    expect(canNavigateOnboardingStep('basic', 'texts')).toBe(true);
-    expect(canNavigateOnboardingStep('other', 'texts')).toBe(true);
+  it('defaults to story when current is null', () => {
+    expect(canNavigateOnboardingStep('story', null)).toBe(true);
+    expect(canNavigateOnboardingStep('facts', null)).toBe(false);
   });
 });

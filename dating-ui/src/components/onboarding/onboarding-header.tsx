@@ -14,7 +14,7 @@ export function OnboardingHeader() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const editMode = searchParams.get('edit') === '1';
-  const current = onboardingUiStepFromPathname(pathname, searchParams);
+  const current = onboardingUiStepFromPathname(pathname);
   const { copy: appCopy } = useAppLocale();
 
   const copy = appCopy.onboarding;

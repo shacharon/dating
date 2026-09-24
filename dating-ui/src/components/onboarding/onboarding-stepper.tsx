@@ -5,15 +5,14 @@ import type { AppCopySchema } from '@/lib/i18n';
 import {
   canNavigateOnboardingStep,
   isOnboardingStepFilled,
-  onboardingTabHref,
-  type OnboardingTab,
+  onboardingStepHref,
   type OnboardingUiStep,
 } from './onboarding-step';
 
-const STEPS: { id: OnboardingTab; labelKey: 'basic' | 'story' | 'other' }[] = [
+const STEPS: { id: OnboardingUiStep; labelKey: OnboardingUiStep }[] = [
   { id: 'story', labelKey: 'story' },
-  { id: 'basic', labelKey: 'basic' },
-  { id: 'other', labelKey: 'other' },
+  { id: 'facts', labelKey: 'facts' },
+  { id: 'photos', labelKey: 'photos' },
 ];
 
 export function OnboardingStepper({
@@ -25,23 +24,19 @@ export function OnboardingStepper({
   editMode: boolean;
   copy: AppCopySchema['onboarding'];
 }) {
-  const labels: Record<OnboardingTab, string> = {
-    basic: copy.tabs.basic,
+  const labels: Record<OnboardingUiStep, string> = {
     story: copy.tabs.story,
-    other: copy.tabs.other,
+    facts: copy.tabs.facts,
+    photos: copy.tabs.photos,
   };
-
-  /** Map legacy texts route to story for highlight. */
-  const highlight: OnboardingUiStep | null =
-    current === 'texts' ? 'story' : current;
 
   return (
     <ol className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-2">
       {STEPS.map((step, index) => {
-        const filled = isOnboardingStepFilled(step.id, highlight);
-        const isCurrent = highlight === step.id;
+        const filled = isOnboardingStepFilled(step.id, current);
+        const isCurrent = current === step.id;
         const navigable = canNavigateOnboardingStep(step.id, current);
-        const href = onboardingTabHref(step.id, editMode);
+        const href = onboardingStepHref(step.id, editMode);
 
         const node = (
           <span className="flex flex-col items-center gap-0.5">

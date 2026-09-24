@@ -477,9 +477,9 @@ export const enCopy: AppCopySchema = {
       confirm: "Leave",
     },
     tabs: {
-      basic: "Basic",
       story: "Story",
-      other: "Other",
+      facts: "Facts",
+      photos: "Photos",
     },
     basicForm: {
       sectionTitle: "Basics",

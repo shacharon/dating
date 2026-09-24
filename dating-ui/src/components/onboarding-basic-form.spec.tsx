@@ -83,17 +83,17 @@ const basicProfile: MeProfileDto = {
   updatedAt: '2026-01-02T00:00:00.000Z',
 };
 
-function renderForm() {
+function renderHubForm() {
   return render(
     createElement(
       QueryClientTestProvider,
       { client: createTestQueryClient() },
-      createElement(OnboardingBasicForm),
+      createElement(OnboardingBasicForm, { variant: 'profileHub' }),
     ),
   );
 }
 
-describe('OnboardingBasicForm', () => {
+describe('OnboardingBasicForm (profile hub)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
@@ -114,39 +114,23 @@ describe('OnboardingBasicForm', () => {
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
   });
 
-  it('renders Basic tab content by default (story is its own route)', async () => {
-    renderForm();
+  it('renders required fields, nickname, and dating chapter together', async () => {
+    renderHubForm();
 
     await waitFor(() => {
+      expect(screen.getByLabelText(enCopy.onboarding.basicForm.genderLabel)).toBeTruthy();
+      expect(screen.getByLabelText(enCopy.onboarding.basicForm.nicknameLabel)).toBeTruthy();
       expect(
-        screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
-      ).toBeTruthy();
-      expect(
-        screen.getByRole('button', { name: enCopy.onboarding.saveProgress }),
-      ).toBeTruthy();
-      expect(
-        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
-      ).toBeNull();
-    });
-  });
-
-  it('renders Hebrew basic tab title when locale is he', async () => {
-    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    renderForm();
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { name: heCopy.onboarding.basicForm.basicTabTitle }),
-      ).toBeTruthy();
-      expect(
-        screen.getByRole('button', { name: heCopy.onboarding.saveProgress }),
+        screen.getByText(enCopy.onboarding.basicForm.datingChapter.question),
       ).toBeTruthy();
     });
+    expect(
+      screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+    ).toBeNull();
   });
 
-  it('shows localized partner-gender validation when continuing from Basic without selections', async () => {
-    searchParamsMock.mockReturnValue(new URLSearchParams('tab=basic'));
-    renderForm();
+  it('shows localized partner-gender validation on hub save', async () => {
+    renderHubForm();
 
     await waitFor(() => {
       expect(
@@ -154,9 +138,7 @@ describe('OnboardingBasicForm', () => {
       ).toBe('MALE');
     });
 
-    fireEvent.click(
-      screen.getByRole('button', { name: enCopy.onboarding.basicForm.continueButton }),
-    );
+    fireEvent.click(screen.getByTestId('profile-hub-basic-save'));
 
     await waitFor(() => {
       expect(patchMyProfile).not.toHaveBeenCalled();
@@ -168,8 +150,7 @@ describe('OnboardingBasicForm', () => {
 
   it('shows Hebrew partner-gender validation when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    searchParamsMock.mockReturnValue(new URLSearchParams('tab=basic'));
-    renderForm();
+    renderHubForm();
 
     await waitFor(() => {
       expect(
@@ -177,9 +158,7 @@ describe('OnboardingBasicForm', () => {
       ).toBe('MALE');
     });
 
-    fireEvent.click(
-      screen.getByRole('button', { name: heCopy.onboarding.basicForm.continueButton }),
-    );
+    fireEvent.click(screen.getByTestId('profile-hub-basic-save'));
 
     await waitFor(() => {
       expect(patchMyProfile).not.toHaveBeenCalled();
@@ -189,84 +168,11 @@ describe('OnboardingBasicForm', () => {
     });
   });
 
-  describe('URL tab content', () => {
-    it('shows basic fields when tab=basic', async () => {
-      searchParamsMock.mockReturnValue(new URLSearchParams('tab=basic'));
-      renderForm();
+  it('fetches countries for hub variant', async () => {
+    renderHubForm();
 
-      await waitFor(() => {
-        expect(
-          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
-        ).toBeTruthy();
-        expect(screen.getByLabelText(enCopy.onboarding.basicForm.genderLabel)).toBeTruthy();
-      });
-    });
-
-    it('shows other fields and dating journey when tab=other', async () => {
-      searchParamsMock.mockReturnValue(new URLSearchParams('tab=other'));
-      renderForm();
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.otherTabTitle }),
-        ).toBeTruthy();
-        expect(
-          screen.getByLabelText(enCopy.onboarding.basicForm.nicknameLabel),
-        ).toBeTruthy();
-        expect(
-          screen.getByText(enCopy.onboarding.basicForm.datingChapter.question),
-        ).toBeTruthy();
-        expect(
-          screen.getByText(enCopy.onboarding.basicForm.finishButton),
-        ).toBeTruthy();
-      });
-    });
-
-    it('fetches filtered countries for onboarding variant', async () => {
-      renderForm();
-
-      await waitFor(() => {
-        expect(listPlaceCountries).toHaveBeenCalledWith('onboarding');
-      });
-    });
-
-    it('does not show page-local Skip (header owns Skip)', async () => {
-      renderForm();
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
-        ).toBeTruthy();
-      });
-      expect(screen.queryByText(enCopy.onboarding.basicForm.skipButton)).toBeNull();
-    });
-
-    it('redirects legacy ?tab=story to /onboarding/story', async () => {
-      searchParamsMock.mockReturnValue(new URLSearchParams('tab=story'));
-      renderForm();
-
-      await waitFor(() => {
-        expect(replaceMock).toHaveBeenCalledWith('/onboarding/story');
-      });
-      expect(
-        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
-      ).toBeNull();
-    });
-
-    it('does not render story textareas on the basic page', async () => {
-      renderForm();
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('heading', { name: enCopy.onboarding.basicForm.basicTabTitle }),
-        ).toBeTruthy();
-      });
-      expect(
-        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
-      ).toBeNull();
-      expect(
-        screen.queryByLabelText(enCopy.onboarding.textsForm.aboutPartnerLabel),
-      ).toBeNull();
+    await waitFor(() => {
+      expect(listPlaceCountries).toHaveBeenCalled();
     });
   });
 });

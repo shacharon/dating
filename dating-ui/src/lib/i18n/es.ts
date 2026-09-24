@@ -482,9 +482,9 @@ export const esCopy: AppCopySchema = {
       confirm: "Salir",
     },
     tabs: {
-      basic: "Basico",
       story: "Historia",
-      other: "Otro",
+      facts: "Datos",
+      photos: "Fotos",
     },
     basicForm: {
       sectionTitle: "Basico",
