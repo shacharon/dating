@@ -8,6 +8,7 @@ import {
   type ContentModerationDetails,
 } from '@/lib/moderation/content-moderation-error';
 import { useAppLocale } from '@/lib/i18n';
+import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 import {
   useCreateProfile,
   usePatchProfile,
@@ -63,7 +64,7 @@ export function useOnboardingTextsForm({
 
   const editBasicsHref =
     isHub
-      ? '/profile?tab=edit#basic'
+      ? profileEditHash('basic')
       : editMode
         ? '/onboarding/basics?edit=1'
         : '/onboarding/basics';

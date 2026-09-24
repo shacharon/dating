@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { DeleteAccountSection } from '@/components/delete-account-section';
 import { useAppLocale } from '@/lib/i18n';
+import { profileSettingsHash } from '@/lib/profile/profile-hub-paths';
 
 export default function SettingsAccountPage() {
   const { copy: appCopy } = useAppLocale();
@@ -48,7 +49,7 @@ export default function SettingsAccountPage() {
           {copy.notificationsSectionTitle}
         </h2>
         <Link
-          href="/profile?tab=settings#notifications"
+          href={profileSettingsHash('notifications')}
           data-testid="account-link-notifications"
           className="text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
         >

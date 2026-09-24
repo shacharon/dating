@@ -64,7 +64,7 @@ describe('MatchListPhotoGate', () => {
       ).toBeTruthy();
     });
     expect(screen.getByTestId('match-photo-gate-cta').getAttribute('href')).toBe(
-      '/profile?tab=edit#photos',
+      '/profile/edit#photos',
     );
   });
 

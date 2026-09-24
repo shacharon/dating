@@ -8,7 +8,7 @@ import { useOnboardingBasicForm } from '@/hooks/use-onboarding-basic-form';
 
 /**
  * Profile-hub basics editor (location, birth date, photos).
- * Nickname and dating chapter live on `/profile?tab=settings`.
+ * Nickname and dating chapter live on `/profile/settings`.
  * First-login facts live on `/onboarding/basics` via `OnboardingFactsForm`.
  */
 export function OnboardingBasicForm({

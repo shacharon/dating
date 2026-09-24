@@ -22,9 +22,9 @@ describe('profile route redirects (Story 35.4)', () => {
     expect(redirect).toHaveBeenCalledWith('/profile');
   });
 
-  it('/dating/analysis → /profile?tab=analysis', () => {
+  it('/dating/analysis → /profile/analysis', () => {
     DatingAnalysisRedirectPage();
-    expect(redirect).toHaveBeenCalledWith('/profile?tab=analysis');
+    expect(redirect).toHaveBeenCalledWith('/profile/analysis');
   });
 
   it('/settings/profile → /profile', () => {
@@ -32,13 +32,13 @@ describe('profile route redirects (Story 35.4)', () => {
     expect(redirect).toHaveBeenCalledWith('/profile');
   });
 
-  it('/settings/profile/basic → /profile?tab=edit#basic', () => {
+  it('/settings/profile/basic → /profile/edit#basic', () => {
     SettingsProfileBasicRedirectPage();
-    expect(redirect).toHaveBeenCalledWith('/profile?tab=edit#basic');
+    expect(redirect).toHaveBeenCalledWith('/profile/edit#basic');
   });
 
-  it('/settings/profile/story → /profile?tab=edit#story', () => {
+  it('/settings/profile/story → /profile/edit#story', () => {
     SettingsProfileStoryRedirectPage();
-    expect(redirect).toHaveBeenCalledWith('/profile?tab=edit#story');
+    expect(redirect).toHaveBeenCalledWith('/profile/edit#story');
   });
 });

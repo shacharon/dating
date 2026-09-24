@@ -13,8 +13,8 @@ describe('/settings/profile/basic page', () => {
     redirect.mockClear();
   });
 
-  it('redirects to /profile?tab=edit#basic', () => {
+  it('redirects to /profile/edit#basic', () => {
     SettingsProfileBasicRedirectPage();
-    expect(redirect).toHaveBeenCalledWith('/profile?tab=edit#basic');
+    expect(redirect).toHaveBeenCalledWith('/profile/edit#basic');
   });
 });

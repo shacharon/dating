@@ -19,6 +19,8 @@ const {
   fetchProfileQuality: vi.fn(),
 }));
 
+const replaceMock = vi.hoisted(() => vi.fn());
+
 vi.mock('@/lib/api-sdk', () => ({
   datingApi: {
     profile: {
@@ -52,9 +54,17 @@ vi.mock('@/contexts/auth-context', () => ({
   }),
 }));
 
+let mockSearch = '';
+let mockPathname = '/profile';
+
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(mockSearch),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => mockPathname,
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: replaceMock,
+    prefetch: vi.fn(),
+  }),
 }));
 
 vi.mock('next/link', () => ({
@@ -74,38 +84,31 @@ vi.mock('next/link', () => ({
   },
 }));
 
-vi.mock('@/components/profile/profile-edit-tab', () => ({
-  ProfileEditTab: () => <div data-testid="profile-edit-tab">edit</div>,
-}));
-vi.mock('@/components/profile/profile-analysis-tab', () => ({
-  ProfileAnalysisTab: () => (
-    <div data-testid="profile-analysis-tab">analysis</div>
-  ),
-}));
-vi.mock('@/components/notification-preferences-section', () => ({
-  NotificationPreferencesSection: () => <div>notifications</div>,
-}));
-
-let mockSearch = '';
-
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
 import { heCopy } from '@/lib/i18n/he';
-import ProfileHubClient from './profile-hub-client';
+import { ProfileHubShell } from '@/components/profile/profile-hub-shell';
+import { ProfileOverviewPageClient } from './profile-overview-page-client';
 
-function renderHub() {
+function renderOverview() {
   return render(
     createElement(
       QueryClientTestProvider,
       { client: createTestQueryClient() },
-      createElement(ProfileHubClient),
+      createElement(
+        ProfileHubShell,
+        null,
+        createElement(ProfileOverviewPageClient),
+      ),
     ),
   );
 }
 
-describe('ProfileHubClient', () => {
+describe('Profile overview route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearch = '';
+    mockPathname = '/profile';
+    window.location.hash = '';
     localStorage.clear();
     listMyProfilePhotos.mockResolvedValue([
       {
@@ -151,53 +154,66 @@ describe('ProfileHubClient', () => {
 
   afterEach(() => {
     cleanup();
+    window.location.hash = '';
   });
 
-  it('defaults to overview tab and shows meter', async () => {
-    renderHub();
+  it('shows overview, meter, and nav with aria-current', async () => {
+    renderOverview();
     await waitFor(() => {
       expect(screen.getByTestId('profile-hub')).toBeTruthy();
       expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
       expect(screen.getByTestId('profile-quality-meter')).toBeTruthy();
     });
-    expect(screen.getByTestId('profile-tab-overview').getAttribute('aria-selected')).toBe(
-      'true',
+    expect(
+      screen.getByTestId('profile-tab-overview').getAttribute('aria-current'),
+    ).toBe('page');
+    expect(screen.getByTestId('profile-tab-edit').getAttribute('href')).toBe(
+      '/profile/edit',
     );
   });
 
   it('renders overview hero card and edit CTA', async () => {
-    renderHub();
+    renderOverview();
     await waitFor(() => {
       expect(screen.getByTestId('profile-overview-hero')).toBeTruthy();
       expect(screen.getByTestId('profile-overview-edit')).toBeTruthy();
-      expect(screen.getByTestId('profile-overview-story-prose')).toBeTruthy();
     });
     expect(screen.getByTestId('profile-overview-edit').getAttribute('href')).toBe(
-      '/profile?tab=edit',
+      '/profile/edit',
     );
-    expect(screen.queryByTestId('profile-analysis-link')).toBeNull();
-    expect(screen.queryByTestId('photos')).toBeNull();
   });
 
-  it('opens edit tab from ?tab=edit', async () => {
+  it('redirects legacy ?tab=edit preserving hash', async () => {
     mockSearch = 'tab=edit';
-    renderHub();
+    window.location.hash = '#photos';
+    renderOverview();
     await waitFor(() => {
-      expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
+      expect(replaceMock).toHaveBeenCalledWith('/profile/edit#photos');
+    });
+    window.location.hash = '';
+  });
+
+  it('redirects settings tab with hash', async () => {
+    mockSearch = 'tab=settings';
+    window.location.hash = '#nickname';
+    renderOverview();
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/profile/settings#nickname');
     });
   });
 
-  it('falls back invalid tab to overview', async () => {
+  it('strips unknown tab to /profile', async () => {
     mockSearch = 'tab=nope';
-    renderHub();
+    window.location.hash = '';
+    renderOverview();
     await waitFor(() => {
-      expect(screen.getByTestId('profile-overview-tab')).toBeTruthy();
+      expect(replaceMock).toHaveBeenCalledWith('/profile');
     });
   });
 
   it('renders Hebrew hub title when locale is he', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
-    renderHub();
+    renderOverview();
     await waitFor(() => {
       expect(
         screen.getByRole('heading', {

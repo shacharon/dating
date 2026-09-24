@@ -18,6 +18,7 @@ import { buildCompletenessFlags } from '@/lib/profile/profile-completeness';
 import { listMyProfilePhotos } from '@/lib/api/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
 import { useProfile } from '@/hooks/use-profile';
+import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 
 const SECTION_IDS: EditSectionId[] = ['basic', 'photos', 'story'];
 
@@ -102,7 +103,7 @@ export function ProfileEditTab({
   function navigate(id: EditSectionId) {
     setActive(id);
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `/profile?tab=edit#${id}`);
+      window.history.replaceState(null, '', profileEditHash(id));
     }
   }
 

@@ -1,4 +1,8 @@
 import type { ProfileDraft } from '@/app/dating/_lib/types';
+import {
+  profileEditHash,
+  profileSettingsHash,
+} from '@/lib/profile/profile-hub-paths';
 
 export type ProfileSuggestionId =
   | 'photo'
@@ -67,13 +71,13 @@ export function completenessScorePercent(flags: ProfileCompletenessFlags): numbe
 }
 
 const SUGGESTION_HREF: Record<ProfileSuggestionId, string> = {
-  photo: '/profile?tab=edit#photos',
-  nickname: '/profile?tab=settings#nickname',
-  location: '/profile?tab=edit#basic',
-  basics: '/profile?tab=edit#basic',
-  aboutMe: '/profile?tab=edit#story',
-  aboutPartner: '/profile?tab=edit#story',
-  aboutRelationship: '/profile?tab=edit#story',
+  photo: profileEditHash('photos'),
+  nickname: profileSettingsHash('nickname'),
+  location: profileEditHash('basic'),
+  basics: profileEditHash('basic'),
+  aboutMe: profileEditHash('story'),
+  aboutPartner: profileEditHash('story'),
+  aboutRelationship: profileEditHash('story'),
 };
 
 /** Prefer photo → basics → story field gaps; at most `limit` chips. */

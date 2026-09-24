@@ -1,6 +1,6 @@
 # Sprint 75 — Three-screen onboarding and profile routes
 
-**Status:** In progress — Stories 1–6 Done; Stories 7–8 not started
+**Status:** In progress — Stories 1–7 Done; Story 8 not started
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Pipeline:** `.cursor/skills/dating-agent-run/SKILL.md`
 **Repo:** `dating-api` + `dating-ui`
@@ -48,7 +48,7 @@ sign-up. Nickname and dating chapter leave onboarding entirely.
 | 4 | [Photos screen and finish](./STORY_04_photos_screen.md) | **Done** | S | 3 |
 | 5 | [Delete beats, tabs and the old stepper](./STORY_05_remove_old_flow.md) | **Done** | M | 1, 3, 4 |
 | 6 | [Nickname and dating chapter move to settings](./STORY_06_move_extras.md) | **Done** | S | 3 |
-| 7 | [Profile tabs become routes](./STORY_07_profile_routes.md) | Proposed | M | — |
+| 7 | [Profile tabs become routes](./STORY_07_profile_routes.md) | **Done** | M | — |
 | 8 | [Redesign the profile overview](./STORY_08_overview_redesign.md) | Proposed | L | 7 |
 
 **Order:** 1 → 3 → 4 → 5 → 6, then 7 → 8. Story 2 can run in parallel after 1.

@@ -8,6 +8,7 @@ import {
   type ProfileQualityDto,
 } from '@/lib/api/profile-quality-api';
 import type { AppCopySchema } from '@/lib/i18n/types';
+import { PROFILE_HREF } from '@/lib/profile/profile-hub-paths';
 
 type Props = {
   copy: AppCopySchema['profile']['hub'];
@@ -96,7 +97,7 @@ export function ProfileQualityMeter({ copy, refreshKey = 0 }: Props) {
           </span>
         </p>
         <Link
-          href="/profile?tab=edit"
+          href={PROFILE_HREF.edit}
           className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
           data-testid="profile-quality-improve"
         >

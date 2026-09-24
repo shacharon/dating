@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, getCopy, getLocaleDirection, type AppLocale } from "@/l
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { profileEditHash } from "@/lib/profile/profile-hub-paths";
 
 /** Match `href` (path + optional `?query`) to App Router location (no leading `?` in `search`). */
 function hrefMatchesLocation(
@@ -52,7 +53,7 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
 
   useEffect(() => {
     if (!menuOpen) return;
-    router.prefetch("/profile?tab=edit#basic");
+    router.prefetch(profileEditHash("basic"));
     router.prefetch("/onboarding/story?edit=1");
     router.prefetch("/settings/account");
     router.prefetch("/settings/language");
@@ -175,20 +176,20 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             {copy.nav.accountSettings}
           </Link>
           <Link
-            href="/profile?tab=edit#basic"
+            href={profileEditHash("basic")}
             prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => onAvatarMenuNavigate("/profile?tab=edit#basic")}
+            onClick={() => onAvatarMenuNavigate(profileEditHash("basic"))}
           >
             {copy.nav.editBasicProfile}
           </Link>
           <Link
-            href="/profile?tab=edit#story"
+            href={profileEditHash("story")}
             prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => onAvatarMenuNavigate("/profile?tab=edit#story")}
+            onClick={() => onAvatarMenuNavigate(profileEditHash("story"))}
           >
             {copy.nav.editStoryProfile}
           </Link>
