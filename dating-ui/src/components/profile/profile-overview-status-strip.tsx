@@ -111,6 +111,7 @@ export function ProfileOverviewStatusStrip({
           <span
             className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100"
             data-testid="profile-overview-score"
+            aria-label={`${hub.meterLabel} ${quality.score}%`}
           >
             {quality.score}%
           </span>
@@ -120,11 +121,16 @@ export function ProfileOverviewStatusStrip({
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div
+        className="flex flex-wrap gap-2"
+        role="navigation"
+        aria-label={hub.overviewStripNavAria}
+      >
         <Link
           href={PROFILE_HREF.edit}
           className={linkClass}
           data-testid="profile-overview-strip-story"
+          aria-label={`${hub.overviewStripStory}: ${storyDetail}`}
         >
           <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             {hub.overviewStripStory}
@@ -137,6 +143,7 @@ export function ProfileOverviewStatusStrip({
           href={profileEditHash('photos')}
           className={linkClass}
           data-testid="profile-overview-strip-photos"
+          aria-label={`${hub.overviewStripPhotos}: ${photoDetail}`}
         >
           <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             {hub.overviewStripPhotos}
@@ -149,6 +156,7 @@ export function ProfileOverviewStatusStrip({
           href={PROFILE_HREF.settings}
           className={linkClass}
           data-testid="profile-overview-strip-matching"
+          aria-label={`${hub.overviewStripMatching}: ${matchingDetail}`}
         >
           <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             {hub.overviewStripMatching}
@@ -161,6 +169,7 @@ export function ProfileOverviewStatusStrip({
           href={PROFILE_HREF.analysis}
           className={linkClass}
           data-testid="profile-overview-strip-analysis"
+          aria-label={`${hub.overviewStripAnalysis}: ${analysisDetail}`}
         >
           <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             {hub.overviewStripAnalysis}

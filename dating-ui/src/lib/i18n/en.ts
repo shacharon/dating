@@ -800,6 +800,7 @@ export const enCopy: AppCopySchema = {
       overviewStripMatchingEmpty: "Set who you’re open to",
       overviewStripNotRun: "Not run yet",
       overviewStripScoreLoading: "…",
+      overviewStripNavAria: "Profile status",
       overviewTraitsAria: "Your analysis traits",
       settingsNotificationsHeading: "Notifications",
       settingsMatchPrefsHeading: "Match preferences",

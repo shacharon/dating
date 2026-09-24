@@ -778,6 +778,7 @@ export const heCopy: AppCopySchema = {
       overviewStripMatchingEmpty: "הגדירו למי אתם פתוחים",
       overviewStripNotRun: "עדיין לא רץ",
       overviewStripScoreLoading: "…",
+      overviewStripNavAria: "מצב הפרופיל",
       overviewTraitsAria: "תכונות מהניתוח",
       settingsNotificationsHeading: "התראות",
       settingsMatchPrefsHeading: "העדפות התאמה",

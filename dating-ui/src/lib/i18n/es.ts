@@ -808,6 +808,7 @@ export const esCopy: AppCopySchema = {
       overviewStripMatchingEmpty: "Define a quién estás abierto",
       overviewStripNotRun: "Aún no ejecutado",
       overviewStripScoreLoading: "…",
+      overviewStripNavAria: "Estado del perfil",
       overviewTraitsAria: "Tus rasgos del análisis",
       settingsNotificationsHeading: "Notificaciones",
       settingsMatchPrefsHeading: "Preferencias de coincidencias",

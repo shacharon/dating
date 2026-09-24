@@ -570,6 +570,7 @@ export type AppCopySchema = {
       overviewStripMatchingEmpty: string;
       overviewStripNotRun: string;
       overviewStripScoreLoading: string;
+      overviewStripNavAria: string;
       overviewTraitsAria: string;
       settingsNotificationsHeading: string;
       settingsMatchPrefsHeading: string;

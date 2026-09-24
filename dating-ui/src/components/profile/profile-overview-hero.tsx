@@ -77,19 +77,34 @@ export function ProfileOverviewHero({ draft, photos }: Props) {
     <div className="space-y-4" data-testid="profile-overview-hero">
       <div className="relative w-full overflow-hidden rounded-2xl">
         {showPhoto ? (
-          <div className="block w-full [&_>div]:!block [&_>div]:!w-full">
-            <MatchPhoto
-              variant="hero"
-              photoUrl={heroUrl}
-              displayName={displayName}
-              testId="profile-overview-hero-photo"
-              priority
-              className="!aspect-[3/4] w-full"
-            />
-          </div>
+          <>
+            <div className="block w-full [&_>div]:!block [&_>div]:!w-full">
+              <MatchPhoto
+                variant="hero"
+                photoUrl={heroUrl}
+                displayName={displayName}
+                testId="profile-overview-hero-photo"
+                priority
+                className="!aspect-[3/4] w-full"
+              />
+            </div>
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-20 sm:px-6 sm:pb-5"
+              data-testid="profile-overview-hero-overlay"
+            >
+              <p className="truncate text-base font-semibold text-white drop-shadow sm:text-lg">
+                {title}
+              </p>
+              {location && (
+                <p className="mt-0.5 truncate text-sm text-white/90 drop-shadow">
+                  {location}
+                </p>
+              )}
+            </div>
+          </>
         ) : (
           <div
-            className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 bg-gradient-to-b from-zinc-200 to-zinc-300 px-6 text-center dark:from-zinc-800 dark:to-zinc-900"
+            className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 border border-dashed border-zinc-300 bg-zinc-50 px-6 text-center dark:border-zinc-600 dark:bg-zinc-900/50"
             data-testid="profile-overview-photo-empty"
           >
             <p className="max-w-xs text-base font-medium text-zinc-800 dark:text-zinc-100">
@@ -103,23 +118,23 @@ export function ProfileOverviewHero({ draft, photos }: Props) {
             </Link>
           </div>
         )}
-
-        {(showPhoto || title) && (
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-20 sm:px-6 sm:pb-5"
-            data-testid="profile-overview-hero-overlay"
-          >
-            <p className="truncate text-base font-semibold text-white drop-shadow sm:text-lg">
-              {title}
-            </p>
-            {location && (
-              <p className="mt-0.5 truncate text-sm text-white/90 drop-shadow">
-                {location}
-              </p>
-            )}
-          </div>
-        )}
       </div>
+
+      {!showPhoto && (
+        <div
+          className="px-1"
+          data-testid="profile-overview-hero-identity"
+        >
+          <p className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            {title}
+          </p>
+          {location && (
+            <p className="mt-0.5 truncate text-sm text-zinc-600 dark:text-zinc-400">
+              {location}
+            </p>
+          )}
+        </div>
+      )}
 
       {showDots && (
         <div

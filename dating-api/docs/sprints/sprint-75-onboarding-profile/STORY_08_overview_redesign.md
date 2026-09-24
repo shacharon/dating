@@ -63,5 +63,15 @@ and fixable*, never broken.
 
 ## Definition of done
 
-- [ ] Screenshot of the new overview at 0% and at 100% complete, both in the story
-- [ ] Nothing on the page resembles the current grey box
+- [x] Screenshot of the new overview at 0% and at 100% complete, both in the story
+- [x] Nothing on the page resembles the current grey box
+
+### Screenshots (375px layout reference)
+
+**0% complete** (designed empties + status strip, no grey meter box):
+
+![Overview at 0% complete](./assets/story-08/overview-0.png)
+
+**100% complete** (photo card, story prose, trait chips, strip):
+
+![Overview at 100% complete](./assets/story-08/overview-100.png)
