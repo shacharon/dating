@@ -1,6 +1,6 @@
 # Sprint 79 — One Facts editor
 
-**Status:** Story 1 Done. Story 2 parked.
+**Status:** Done — Stories 1–2 complete.
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Repo:** `dating-ui`
 **Follows:** [Sprint 78 — Demo language links](../sprint-78-demo-language-domains/README.md)
@@ -35,7 +35,7 @@ The Photos tab is the only photo editor on `/profile/edit`. Facts must not embed
 | # | Story | Status | Depends on |
 |---|--------|--------|------------|
 | 1 | [Reuse Facts UI on Update details](./STORY_01_reuse_facts_on_update_details.md) | **Done** | — |
-| 2 | [One pane per Update details tab](./STORY_02_one_pane_per_update_details_tab.md) | Parked | 1 |
+| 2 | [One pane per Update details tab](./STORY_02_one_pane_per_update_details_tab.md) | **Done** | 1 |
 
 ## Out of scope
 

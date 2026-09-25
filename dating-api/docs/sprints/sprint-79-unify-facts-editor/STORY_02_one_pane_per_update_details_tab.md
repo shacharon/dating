@@ -1,6 +1,6 @@
 # Story 2: One pane per Update details tab
 
-**Status:** Parked
+**Status:** Done
 **Depends on:** Story 1 (Facts label / Facts pane)
 **Repo:** `dating-ui`
 
@@ -23,11 +23,11 @@ Update details tabs are aligned with onboarding: each tab shows **only** that st
 
 ## Acceptance criteria
 
-- [ ] On Update details **Facts**, there is no Photos heading and no Upload control
-- [ ] On Update details **Photos**, photos and Upload are visible
-- [ ] Story and Preferences panes do not render the photo section
-- [ ] Clicking a tab does not leave another tab’s body on screen
-- [ ] No `router.replace` / login redirect; stay on Update details
+- [x] On Update details **Facts**, there is no Photos heading and no Upload control
+- [x] On Update details **Photos**, photos and Upload are visible
+- [x] Story and Preferences panes do not render the photo section
+- [x] Clicking a tab does not leave another tab’s body on screen
+- [x] No `router.replace` / login redirect; stay on Update details
 
 ## Affected files
 
@@ -43,4 +43,9 @@ From `dating-ui`:
 
 ## Definition of done
 
-Each Update details tab does one job. Photos only on Photos.
+- [x] Each Update details tab shows one editor
+- [x] Photos only on the Photos pane
+- [x] Hash stays `#basic` for Facts (no rename)
+- [x] Tests passing (`profile-edit-tab.spec.tsx` — 11 passed)
+- [x] UX review approved (Agent 3.5)
+- [x] Landed on `main` (SHA recorded after merge)
