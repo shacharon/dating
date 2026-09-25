@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { MeProfilePhotoDto } from '@/lib/api/me-photos-api';
+import { onboardingStepHref } from '@/components/onboarding/onboarding-step';
 import { useAppLocale } from '@/lib/i18n';
 import { usePatchProfile, useProfile } from '@/hooks/use-profile';
 
@@ -66,8 +67,12 @@ export function useOnboardingPhotosForm() {
     setSaveError(null);
     setFinishing(true);
     try {
-      await patchMutation.mutateAsync({ onboardingStep: 'COMPLETED' });
-      router.push('/dating/me-matches');
+      if (editMode) {
+        await patchMutation.mutateAsync({ onboardingStep: 'COMPLETED' });
+        router.push('/dating/me-matches');
+        return;
+      }
+      router.push(onboardingStepHref('preferences', false));
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : copy.onboarding.saveFailed);
     } finally {

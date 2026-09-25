@@ -14,8 +14,8 @@ import {
 const STEPS: { id: OnboardingUiStep; labelKey: OnboardingUiStep }[] = [
   { id: 'story', labelKey: 'story' },
   { id: 'facts', labelKey: 'facts' },
-  { id: 'preferences', labelKey: 'preferences' },
   { id: 'photos', labelKey: 'photos' },
+  { id: 'preferences', labelKey: 'preferences' },
 ];
 
 export function OnboardingStepper({

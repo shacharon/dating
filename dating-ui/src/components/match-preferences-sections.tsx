@@ -7,21 +7,28 @@ import type { MatchPreferencesFormState } from '@/lib/matches/match-preferences-
 type MpCopy = AppCopySchema['matchPreferences'];
 type FormSetter = Dispatch<SetStateAction<MatchPreferencesFormState>>;
 
+type SectionProps = {
+  mp: MpCopy;
+  form: MatchPreferencesFormState;
+  setForm: FormSetter;
+  onBlur?: () => void;
+};
+
+const fieldClass =
+  'mt-1 h-9 w-24 rounded border border-zinc-300 bg-white px-2 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100';
+
 export function MatchPreferencesAgeSection({
   mp,
   form,
   setForm,
-}: {
-  mp: MpCopy;
-  form: MatchPreferencesFormState;
-  setForm: FormSetter;
-}) {
+  onBlur,
+}: SectionProps) {
   return (
     <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
       <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
         {mp.sections.age}
       </h2>
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-3 flex flex-wrap gap-3">
         <label className="block text-sm">
           <span className="text-zinc-600 dark:text-zinc-400">{mp.fields.ageMin}</span>
           <input
@@ -33,7 +40,8 @@ export function MatchPreferencesAgeSection({
             onChange={(e) =>
               setForm((prev) => ({ ...prev, partnerAgeMin: e.target.value }))
             }
-            className="mt-1 min-h-11 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-base text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+            className={fieldClass}
+            onBlur={onBlur}
           />
         </label>
         <label className="block text-sm">
@@ -47,7 +55,8 @@ export function MatchPreferencesAgeSection({
             onChange={(e) =>
               setForm((prev) => ({ ...prev, partnerAgeMax: e.target.value }))
             }
-            className="mt-1 min-h-11 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-base text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+            className={fieldClass}
+            onBlur={onBlur}
           />
         </label>
       </div>
@@ -59,11 +68,8 @@ export function MatchPreferencesDistanceSection({
   mp,
   form,
   setForm,
-}: {
-  mp: MpCopy;
-  form: MatchPreferencesFormState;
-  setForm: FormSetter;
-}) {
+  onBlur,
+}: SectionProps) {
   return (
     <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
       <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
@@ -82,7 +88,8 @@ export function MatchPreferencesDistanceSection({
           onChange={(e) =>
             setForm((prev) => ({ ...prev, maxDistanceKm: e.target.value }))
           }
-          className="mt-1 min-h-11 w-full max-w-xs rounded border border-zinc-300 bg-white px-2 py-1.5 text-base text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+          className={`${fieldClass} w-28`}
+          onBlur={onBlur}
         />
       </label>
     </section>

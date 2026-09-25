@@ -1,12 +1,10 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   MatchPreferencesAgeSection,
   MatchPreferencesDistanceSection,
 } from '@/components/match-preferences-sections';
-import { onboardingStepHref } from '@/components/onboarding/onboarding-step';
 import { usePatchProfile, useProfile } from '@/hooks/use-profile';
 import { useAppLocale } from '@/lib/i18n';
 import {
@@ -17,14 +15,7 @@ import {
   type MatchPreferencesFormState,
 } from '@/lib/matches/match-preferences-form';
 
-const primaryButtonClass =
-  'inline-flex min-h-11 items-center justify-center rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900';
-const secondaryButtonClass =
-  'inline-flex min-h-11 items-center justify-center rounded border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100';
-
 export function OnboardingPreferencesForm() {
-  const router = useRouter();
-  const editMode = useSearchParams().get('edit') === '1';
   const { copy } = useAppLocale();
   const stepCopy = copy.onboarding.preferencesStep;
   const mp = copy.matchPreferences;
@@ -36,7 +27,10 @@ export function OnboardingPreferencesForm() {
   const [initialized, setInitialized] = useState(false);
   const [ageError, setAgeError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const formRef = useRef(form);
+  formRef.current = form;
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (isLoading || initialized) return;
@@ -46,25 +40,28 @@ export function OnboardingPreferencesForm() {
     setInitialized(true);
   }, [profile, isLoading, initialized]);
 
-  function goToPhotos() {
-    router.push(onboardingStepHref('photos', editMode));
-  }
-
-  async function onContinue() {
-    setSaveError(null);
-    if (matchPreferencesAgeRangeInvalid(form)) {
+  async function onFieldBlur() {
+    if (savingRef.current) return;
+    const current = formRef.current;
+    setSavedFlash(false);
+    if (matchPreferencesAgeRangeInvalid(current)) {
       setAgeError(mp.ageRangeInvalid);
+      setSaveError(null);
       return;
     }
     setAgeError(null);
-    setSaving(true);
+    setSaveError(null);
+    savingRef.current = true;
     try {
-      await patchMutation.mutateAsync(ageDistanceToPatchBody(form));
-      goToPhotos();
+      const updated = await patchMutation.mutateAsync(ageDistanceToPatchBody(current));
+      if (updated && typeof updated === 'object' && 'id' in updated) {
+        setForm(profileToMatchPreferencesForm(updated));
+      }
+      setSavedFlash(true);
     } catch {
       setSaveError(mp.saveError);
     } finally {
-      setSaving(false);
+      savingRef.current = false;
     }
   }
 
@@ -93,8 +90,18 @@ export function OnboardingPreferencesForm() {
         </p>
       ) : null}
 
-      <MatchPreferencesAgeSection mp={mp} form={form} setForm={setForm} />
-      <MatchPreferencesDistanceSection mp={mp} form={form} setForm={setForm} />
+      <MatchPreferencesAgeSection
+        mp={mp}
+        form={form}
+        setForm={setForm}
+        onBlur={() => void onFieldBlur()}
+      />
+      <MatchPreferencesDistanceSection
+        mp={mp}
+        form={form}
+        setForm={setForm}
+        onBlur={() => void onFieldBlur()}
+      />
 
       {ageError ? (
         <p className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -106,26 +113,11 @@ export function OnboardingPreferencesForm() {
           {saveError}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          data-testid="onboarding-preferences-skip"
-          className={secondaryButtonClass}
-          onClick={goToPhotos}
-        >
-          {stepCopy.skip}
-        </button>
-        <button
-          type="button"
-          data-testid="onboarding-preferences-continue"
-          className={primaryButtonClass}
-          disabled={saving}
-          onClick={() => void onContinue()}
-        >
-          {copy.onboarding.basicForm.continueButton}
-        </button>
-      </div>
+      {savedFlash ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
+          {copy.onboarding.savedFlash}
+        </p>
+      ) : null}
     </div>
   );
 }

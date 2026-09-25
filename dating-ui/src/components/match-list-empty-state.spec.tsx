@@ -57,16 +57,24 @@ describe('MatchListEmptyState', () => {
     cleanup();
   });
 
-  it('renders action links and copy invite button', async () => {
+  it('shows the invite button and hides profile edit links', async () => {
     renderEmptyState();
     expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
-    expect(screen.getByTestId('match-empty-edit-preferences').getAttribute('href')).toBe(
-      '/profile/edit#preferences',
-    );
-    expect(screen.getByTestId('match-empty-edit-profile').getAttribute('href')).toBe(
-      '/profile',
-    );
+    expect(screen.queryByTestId('match-empty-edit-preferences')).toBeNull();
+    expect(screen.queryByTestId('match-empty-edit-profile')).toBeNull();
+    expect(screen.queryByTestId('match-empty-update-profile')).toBeNull();
     expect(screen.getByTestId('match-empty-invite-copy')).toBeTruthy();
+  });
+
+  it('shows Update profile while analysis is running', async () => {
+    fetchMyProfile.mockResolvedValue({
+      locationLabel: 'Tel Aviv',
+      status: 'ANALYZING',
+    });
+    renderEmptyState();
+    const link = await screen.findByTestId('match-empty-update-profile');
+    expect(link.getAttribute('href')).toBe('/profile/edit');
+    expect(link.textContent).toBe('Update profile');
   });
 
   it('copies invite link with ref query param', async () => {

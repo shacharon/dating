@@ -749,8 +749,7 @@ export type AppCopySchema = {
       bodyWithPlace: (place: string) => string;
       bodyGeneric: string;
       filterHint: string;
-      editPreferences: string;
-      editProfile: string;
+      updateProfile: string;
       inviteCopyLink: string;
       inviteCopied: string;
     };

@@ -93,7 +93,7 @@ describe('ProfileEditTab', () => {
     cleanup();
   });
 
-  it('shows one pane at a time with Story → Basic → Preferences → Photos nav order', async () => {
+  it('shows one pane at a time with Story → Basic → Photos → Preferences nav order', async () => {
     renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
@@ -103,8 +103,8 @@ describe('ProfileEditTab', () => {
     const navButtons = [
       screen.getByTestId('profile-edit-nav-story'),
       screen.getByTestId('profile-edit-nav-basic'),
-      screen.getByTestId('profile-edit-nav-preferences'),
       screen.getByTestId('profile-edit-nav-photos'),
+      screen.getByTestId('profile-edit-nav-preferences'),
     ];
     expect(
       navButtons[0]!.compareDocumentPosition(navButtons[1]!) &

@@ -303,7 +303,7 @@ describe('OnboardingFactsForm', () => {
     fireEvent.click(continueButton);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences');
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/photos');
     });
   });
 
@@ -323,7 +323,7 @@ describe('OnboardingFactsForm', () => {
     fireEvent.click(continueButton);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences?edit=1');
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/photos?edit=1');
     });
   });
 

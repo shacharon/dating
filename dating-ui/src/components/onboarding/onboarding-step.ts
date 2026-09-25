@@ -1,6 +1,6 @@
 export type OnboardingUiStep = 'story' | 'facts' | 'preferences' | 'photos';
 
-const STEP_ORDER: OnboardingUiStep[] = ['story', 'facts', 'preferences', 'photos'];
+const STEP_ORDER: OnboardingUiStep[] = ['story', 'facts', 'photos', 'preferences'];
 
 const STEP_HREF: Record<OnboardingUiStep, string> = {
   story: '/onboarding/story',

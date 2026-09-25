@@ -60,17 +60,18 @@ describe('isOnboardingStepFilled', () => {
     expect(isOnboardingStepFilled('photos', 'facts')).toBe(false);
   });
 
-  it('fills story and facts on preferences', () => {
-    expect(isOnboardingStepFilled('story', 'preferences')).toBe(true);
-    expect(isOnboardingStepFilled('facts', 'preferences')).toBe(true);
-    expect(isOnboardingStepFilled('preferences', 'preferences')).toBe(true);
-    expect(isOnboardingStepFilled('photos', 'preferences')).toBe(false);
-  });
-
-  it('fills all on photos', () => {
+  it('fills story and facts on photos', () => {
     expect(isOnboardingStepFilled('story', 'photos')).toBe(true);
     expect(isOnboardingStepFilled('facts', 'photos')).toBe(true);
     expect(isOnboardingStepFilled('photos', 'photos')).toBe(true);
+    expect(isOnboardingStepFilled('preferences', 'photos')).toBe(false);
+  });
+
+  it('fills all on preferences', () => {
+    expect(isOnboardingStepFilled('story', 'preferences')).toBe(true);
+    expect(isOnboardingStepFilled('facts', 'preferences')).toBe(true);
+    expect(isOnboardingStepFilled('photos', 'preferences')).toBe(true);
+    expect(isOnboardingStepFilled('preferences', 'preferences')).toBe(true);
   });
 });
 

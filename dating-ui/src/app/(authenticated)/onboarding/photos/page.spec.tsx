@@ -112,7 +112,7 @@ describe('OnboardingPhotosPage (Story 4)', () => {
     );
   });
 
-  it('Finish patches COMPLETED only and goes to matches (PENDING photo OK)', async () => {
+  it('Finish opens Preferences and does not mark onboarding complete', async () => {
     listMyProfilePhotos.mockResolvedValue([
       {
         id: 'ph1',
@@ -135,11 +135,9 @@ describe('OnboardingPhotosPage (Story 4)', () => {
     fireEvent.click(screen.getByTestId('onboarding-photos-finish'));
 
     await waitFor(() => {
-      expect(patchMyProfile).toHaveBeenCalledWith({
-        onboardingStep: 'COMPLETED',
-      });
+      expect(patchMyProfile).not.toHaveBeenCalled();
       expect(submitMyProfileForAnalysis).not.toHaveBeenCalled();
-      expect(pushMock).toHaveBeenCalledWith('/dating/me-matches');
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences');
     });
 
     expect(screen.getByText(pf.pendingNote)).toBeTruthy();

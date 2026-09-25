@@ -82,7 +82,6 @@ describe('NavAuth account menu RTL', () => {
     expect(hrefs).toEqual([
       '/settings/account',
       '/profile/edit#story',
-      '/profile/edit#preferences',
       null,
     ]);
     for (const href of hrefs) {

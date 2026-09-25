@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { isAnalysisInFlight } from '@/app/dating/analysis/analysis-run-ux';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppLocale } from '@/lib/i18n';
 import { buildInviteUrl } from '@/lib/referral/referral-attribution';
 import { useProfile } from '@/hooks/use-profile';
-import { profileEditHash } from '@/lib/profile/profile-hub-paths';
+import { PROFILE_HREF } from '@/lib/profile/profile-hub-paths';
 
 export function MatchListEmptyState() {
   const { user } = useAuth();
@@ -58,20 +59,15 @@ export function MatchListEmptyState() {
         {copy.filterHint}
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href={profileEditHash('preferences')}
-          data-testid="match-empty-edit-preferences"
-          className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300"
-        >
-          {copy.editPreferences}
-        </Link>
-        <Link
-          href="/profile"
-          data-testid="match-empty-edit-profile"
-          className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300"
-        >
-          {copy.editProfile}
-        </Link>
+        {isAnalysisInFlight(profile?.status) ? (
+          <Link
+            href={PROFILE_HREF.edit}
+            data-testid="match-empty-update-profile"
+            className="inline-flex min-h-11 items-center rounded border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300"
+          >
+            {copy.updateProfile}
+          </Link>
+        ) : null}
         <button
           type="button"
           data-testid="match-empty-invite-copy"

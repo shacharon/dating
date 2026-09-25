@@ -209,7 +209,7 @@ export function OnboardingFactsForm() {
                 void (async () => {
                   const ok = await m.flushFacts();
                   if (!ok) return;
-                  router.push(onboardingStepHref('preferences', editMode));
+                  router.push(onboardingStepHref('photos', editMode));
                 })();
               }}
             >
