@@ -1,6 +1,6 @@
 # Story 4: Honest smoking hard-block copy
 
-**Status:** Parked
+**Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
 
@@ -21,9 +21,9 @@ Hard-block smoking lines must not say “your preferences” as if the user set 
 
 ## Acceptance criteria
 
-- [ ] Copy does not claim a smoking control on Preferences
-- [ ] Age / gender hard-block copy unchanged unless a string is shared by mistake
-- [ ] Specs that asserted the old sentence are updated
+- [x] Copy does not claim a smoking control on Preferences
+- [x] Age / gender hard-block copy unchanged unless a string is shared by mistake
+- [x] Specs that asserted the old sentence are updated
 
 ## Affected files
 
@@ -39,4 +39,8 @@ From `dating-ui`:
 
 ## Definition of done
 
-Copy matches the engine. No new filter.
+- [x] Copy matches the engine (what was written, not a smoking preference)
+- [x] No new filter
+- [x] Tests passing (hard-block display, matches list, match detail — 68 passed)
+- [x] UX review approved (Agent 3.5)
+- [x] Landed on `main` (SHA recorded after merge)
