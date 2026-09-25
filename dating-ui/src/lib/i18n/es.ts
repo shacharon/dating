@@ -495,6 +495,7 @@ export const esCopy: AppCopySchema = {
       title: "Preferencias",
       optionalHint: "Opcional. Deja ambos vacíos si quieres.",
       skip: "Omitir",
+      done: "Listo",
     },
     basicForm: {
       sectionTitle: "Basico",

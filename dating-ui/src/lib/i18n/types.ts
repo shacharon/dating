@@ -382,6 +382,7 @@ export type AppCopySchema = {
       title: string;
       optionalHint: string;
       skip: string;
+      done: string;
     };
     basicForm: {
       sectionTitle: string;

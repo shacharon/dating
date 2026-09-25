@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   MatchPreferencesAgeSection,
   MatchPreferencesDistanceSection,
@@ -16,6 +17,7 @@ import {
 } from '@/lib/matches/match-preferences-form';
 
 export function OnboardingPreferencesForm() {
+  const router = useRouter();
   const { copy } = useAppLocale();
   const stepCopy = copy.onboarding.preferencesStep;
   const mp = copy.matchPreferences;
@@ -31,6 +33,7 @@ export function OnboardingPreferencesForm() {
   const formRef = useRef(form);
   formRef.current = form;
   const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isLoading || initialized) return;
@@ -40,29 +43,39 @@ export function OnboardingPreferencesForm() {
     setInitialized(true);
   }, [profile, isLoading, initialized]);
 
-  async function onFieldBlur() {
-    if (savingRef.current) return;
+  async function persistCurrent(): Promise<boolean> {
+    if (savingRef.current) return false;
     const current = formRef.current;
     setSavedFlash(false);
     if (matchPreferencesAgeRangeInvalid(current)) {
       setAgeError(mp.ageRangeInvalid);
       setSaveError(null);
-      return;
+      return false;
     }
     setAgeError(null);
     setSaveError(null);
     savingRef.current = true;
+    setSaving(true);
     try {
       const updated = await patchMutation.mutateAsync(ageDistanceToPatchBody(current));
       if (updated && typeof updated === 'object' && 'id' in updated) {
         setForm(profileToMatchPreferencesForm(updated));
       }
       setSavedFlash(true);
+      return true;
     } catch {
       setSaveError(mp.saveError);
+      return false;
     } finally {
       savingRef.current = false;
+      setSaving(false);
     }
+  }
+
+  async function onDone() {
+    const ok = await persistCurrent();
+    if (!ok) return;
+    router.push('/dating/me-matches');
   }
 
   if (isLoading || !initialized) {
@@ -94,13 +107,13 @@ export function OnboardingPreferencesForm() {
         mp={mp}
         form={form}
         setForm={setForm}
-        onBlur={() => void onFieldBlur()}
+        onBlur={() => void persistCurrent()}
       />
       <MatchPreferencesDistanceSection
         mp={mp}
         form={form}
         setForm={setForm}
-        onBlur={() => void onFieldBlur()}
+        onBlur={() => void persistCurrent()}
       />
 
       {ageError ? (
@@ -118,6 +131,16 @@ export function OnboardingPreferencesForm() {
           {copy.onboarding.savedFlash}
         </p>
       ) : null}
+
+      <button
+        type="button"
+        data-testid="onboarding-preferences-done"
+        disabled={saving}
+        onClick={() => void onDone()}
+        className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
+      >
+        {stepCopy.done}
+      </button>
     </div>
   );
 }
