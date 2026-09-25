@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { HardBlockedDto } from '@/lib/api/me-matches-api';
 import { formatHardBlockReason } from '@/lib/matches/hard-block-display';
 import type { AppCopySchema } from '@/lib/i18n/types';
+import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 
 type Props = {
   hardBlocked: HardBlockedDto;
@@ -54,7 +55,7 @@ export function MatchDetailHardBlock({
         })}
       </ul>
       <Link
-        href="/settings/preferences"
+        href={profileEditHash('preferences')}
         className="mt-3 inline-block text-sm font-medium text-amber-900 underline-offset-4 hover:underline dark:text-amber-100"
       >
         {detailCopy.hardBlocked.reviewPreferences}

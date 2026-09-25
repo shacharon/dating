@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { PrefPreviewLine } from '@/components/profile/match-preferences-preview-display';
+import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 
 type Props = {
   heading: string;
@@ -50,7 +51,7 @@ export function MatchPreferencesPreviewCard({
         )}
         <div className="mt-4">
           <Link
-            href="/settings/preferences"
+            href={profileEditHash('preferences')}
             data-testid="profile-match-preferences-link"
             className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
           >

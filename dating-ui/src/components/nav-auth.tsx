@@ -183,11 +183,11 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             {copy.nav.editStoryProfile}
           </Link>
           <Link
-            href="/settings/preferences"
+            href={profileEditHash('preferences')}
             prefetch
             className={menuItemClass}
             role="menuitem"
-            onClick={() => onAvatarMenuNavigate('/settings/preferences')}
+            onClick={() => onAvatarMenuNavigate(profileEditHash('preferences'))}
           >
             {copy.profile.matchPreferencesLink}
           </Link>
