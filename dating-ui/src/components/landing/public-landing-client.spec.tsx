@@ -155,6 +155,7 @@ describe('PublicLandingClient i18n', () => {
       screen.getByRole('heading', { name: heCopy.landing.title }),
     ).toBeTruthy();
     expect(localStorage.getItem(APP_LOCALE_STORAGE_KEY)).toBe('he');
+    expectPlainAnalysisHint(heCopy.landing.analysisHint);
 
     const main = screen.getByRole('main');
     expect(main.getAttribute('dir')).toBe('rtl');
@@ -198,6 +199,37 @@ describe('PublicLandingClient i18n', () => {
     render(<PublicLandingClient />);
 
     expect(screen.queryByText(enCopy.landing.analysisHint)).toBeNull();
+  });
+
+  it('keeps the analysis hint while the Google control is visible after an auth error', () => {
+    mockUseAuth.mockReturnValue({
+      status: 'error',
+      signInWithGoogleIdToken: vi.fn(),
+      lastError: 'Could not reach the API',
+      clearLastError: vi.fn(),
+      refresh: vi.fn(),
+    });
+
+    render(<PublicLandingClient />);
+
+    expectPlainAnalysisHint(enCopy.landing.analysisHint);
+    expect(screen.getByText(enCopy.landing.googleSignIn)).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  it('hides the analysis hint while auth is loading and no session cookie is set', () => {
+    mockUseAuth.mockReturnValue({
+      status: 'loading',
+      signInWithGoogleIdToken: vi.fn(),
+      lastError: null,
+      clearLastError: vi.fn(),
+      refresh: vi.fn(),
+    });
+
+    render(<PublicLandingClient />);
+
+    expect(screen.queryByText(enCopy.landing.analysisHint)).toBeNull();
+    expect(screen.queryByText(enCopy.landing.googleSignIn)).toBeNull();
   });
 });
 
