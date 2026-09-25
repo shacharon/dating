@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** `a7e4c5a2`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -42,4 +44,4 @@ From `dating-ui`:
 - [x] Helpers and Facts validation kept
 - [x] Tests passing (facts form + profile edit tab — 25 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`a7e4c5a2`). Feature tip ahead of main: 0
