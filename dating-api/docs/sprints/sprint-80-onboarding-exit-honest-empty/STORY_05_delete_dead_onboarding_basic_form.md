@@ -1,6 +1,6 @@
 # Story 5: Delete dead Basic form
 
-**Status:** Parked
+**Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
 
@@ -20,9 +20,9 @@ Sprint 79 story 1 shipped Facts on `/profile/edit`. Nothing mounts `OnboardingBa
 
 ## Acceptance criteria
 
-- [ ] No `OnboardingBasicForm` in `dating-ui/src`
-- [ ] `/onboarding/basics` and `/profile/edit` Facts still work
-- [ ] `npx vitest` on profile-edit + facts specs pass
+- [x] No `OnboardingBasicForm` in `dating-ui/src`
+- [x] `/onboarding/basics` and `/profile/edit` Facts still work
+- [x] `npx vitest` on profile-edit + facts specs pass
 
 ## Affected files
 
@@ -38,4 +38,8 @@ From `dating-ui`:
 
 ## Definition of done
 
-Dead Basic + embedded photos gone.
+- [x] `OnboardingBasicForm`, its spec, and `use-onboarding-basic-form.ts` are absent. Removal shipped in sprint 79 as `c2b59bbb`, already on `main`.
+- [x] Helpers and Facts validation kept
+- [x] Tests passing (facts form + profile edit tab — 25 passed)
+- [x] UX review approved (Agent 3.5)
+- [x] Landed on `main` (SHA recorded after merge)
