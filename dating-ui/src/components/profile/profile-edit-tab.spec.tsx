@@ -184,6 +184,20 @@ describe('ProfileEditTab', () => {
     const photos = screen.getByTestId('profile-edit-section-photos');
     expect(photos.querySelector('[data-testid="mock-photos"]')).toBeTruthy();
     expect(photos.querySelector('h2')?.textContent).toMatch(/Photos/);
+    expect(
+      screen.getByTestId('profile-edit-tab').querySelectorAll('[data-testid="mock-photos"]'),
+    ).toHaveLength(1);
+    expect(
+      screen.getByTestId('profile-edit-section-story').querySelector('[data-testid="mock-texts-form"]'),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId('profile-edit-section-basic').querySelector('[data-testid="mock-facts-form"]'),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByTestId('profile-edit-section-preferences')
+        .querySelector('[data-testid="profile-edit-preferences"]'),
+    ).toBeTruthy();
     for (const id of ['basic', 'story', 'preferences'] as const) {
       const pane = screen.getByTestId(`profile-edit-section-${id}`);
       expect(pane.querySelector('[data-testid="mock-photos"]')).toBeNull();
