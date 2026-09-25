@@ -490,6 +490,7 @@ export const enCopy: AppCopySchema = {
       title: "Preferences",
       optionalHint: "Optional. Leave both empty if you want.",
       skip: "Skip",
+      done: "Done",
     },
     basicForm: {
       sectionTitle: "Basics",

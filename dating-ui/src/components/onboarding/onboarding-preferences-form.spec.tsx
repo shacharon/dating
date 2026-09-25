@@ -172,4 +172,38 @@ describe('OnboardingPreferencesForm', () => {
     );
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it('Done with an empty form opens Matches', async () => {
+    renderForm();
+    fireEvent.click(await screen.findByTestId('onboarding-preferences-done'));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/dating/me-matches');
+    });
+    const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(body).toEqual({
+      partnerAgeMin: null,
+      partnerAgeMax: null,
+      maxDistanceKm: null,
+    });
+    expect(body).not.toHaveProperty('onboardingStep');
+  });
+
+  it('Done does not leave when the age range is invalid', async () => {
+    renderForm();
+    fireEvent.change(await screen.findByTestId('pref-age-min'), {
+      target: { value: '40' },
+    });
+    fireEvent.change(screen.getByTestId('pref-age-max'), {
+      target: { value: '25' },
+    });
+    fireEvent.click(screen.getByTestId('onboarding-preferences-done'));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe(
+      enCopy.matchPreferences.ageRangeInvalid,
+    );
+    expect(patchMyProfile).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
 });

@@ -471,6 +471,7 @@ export const heCopy: AppCopySchema = {
       title: "העדפות",
       optionalHint: "לא חובה. אפשר להשאיר את שניהם ריקים.",
       skip: "דילוג",
+      done: "סיום",
     },
     basicForm: {
       sectionTitle: "בסיס",

@@ -112,7 +112,7 @@ describe('OnboardingPhotosPage (Story 4)', () => {
     );
   });
 
-  it('Finish opens Preferences and does not mark onboarding complete', async () => {
+  it('Finish marks onboarding complete and opens Preferences', async () => {
     listMyProfilePhotos.mockResolvedValue([
       {
         id: 'ph1',
@@ -135,12 +135,40 @@ describe('OnboardingPhotosPage (Story 4)', () => {
     fireEvent.click(screen.getByTestId('onboarding-photos-finish'));
 
     await waitFor(() => {
-      expect(patchMyProfile).not.toHaveBeenCalled();
-      expect(submitMyProfileForAnalysis).not.toHaveBeenCalled();
+      expect(patchMyProfile).toHaveBeenCalledWith({ onboardingStep: 'COMPLETED' });
       expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences');
     });
-
+    expect(submitMyProfileForAnalysis).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
     expect(screen.getByText(pf.pendingNote)).toBeTruthy();
+  });
+
+  it('stays on Photos when Finish cannot save', async () => {
+    patchMyProfile.mockRejectedValue(new Error('nope'));
+    listMyProfilePhotos.mockResolvedValue([
+      {
+        id: 'ph1',
+        status: 'PENDING',
+        position: 0,
+        isPrimary: true,
+      },
+    ]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('onboarding-photos-finish') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    fireEvent.click(screen.getByTestId('onboarding-photos-finish'));
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalled();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 
   it('enables Finish when the only photo is REJECTED', async () => {

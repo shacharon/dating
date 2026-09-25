@@ -67,12 +67,12 @@ export function useOnboardingPhotosForm() {
     setSaveError(null);
     setFinishing(true);
     try {
-      if (editMode) {
-        await patchMutation.mutateAsync({ onboardingStep: 'COMPLETED' });
-        router.push('/dating/me-matches');
-        return;
-      }
-      router.push(onboardingStepHref('preferences', false));
+      await patchMutation.mutateAsync({ onboardingStep: 'COMPLETED' });
+      router.push(
+        editMode
+          ? '/dating/me-matches'
+          : onboardingStepHref('preferences', false),
+      );
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : copy.onboarding.saveFailed);
     } finally {
