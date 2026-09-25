@@ -1,8 +1,10 @@
 # Story 2: Update details Preferences section
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Story 1
 **Repo:** `dating-ui`
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -24,12 +26,12 @@ Update details (`/profile/edit`) is where someone changes Story, Basic, and Phot
 
 ### Acceptance criteria
 
-- [ ] Update details nav shows Preferences
-- [ ] `/profile/edit#preferences` opens that section
-- [ ] Saving a range and a distance round-trips after reload
-- [ ] Clearing both persists null and the section no longer shows as filled
-- [ ] Basic still edits who you're open to
-- [ ] Profile completeness does not require this section
+- [x] Update details nav shows Preferences
+- [x] `/profile/edit#preferences` opens that section
+- [x] Saving a range and a distance round-trips after reload
+- [x] Clearing both persists null and the section no longer shows as filled
+- [x] Basic still edits who you're open to
+- [x] Profile completeness does not require this section
 
 ## Out of scope
 
@@ -39,5 +41,5 @@ Update details (`/profile/edit`) is where someone changes Story, Basic, and Phot
 
 ## Definition of done
 
-- [ ] Someone who skipped Preferences in onboarding can fill it in from Update details
-- [ ] Someone who set them in onboarding can change or clear them here
+- [x] Someone who skipped Preferences in onboarding can fill it in from Update details
+- [x] Someone who set them in onboarding can change or clear them here

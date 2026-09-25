@@ -842,6 +842,7 @@ export const esCopy: AppCopySchema = {
       editSectionBasic: "Datos básicos",
       editSectionStory: "Tu historia",
       editSectionPhotos: "Fotos",
+      editSectionPreferences: "Preferencias",
       suggestionPhoto: "Añade una foto",
       suggestionBasics: "Completa los datos básicos",
       suggestionNickname: "Añade un apodo",

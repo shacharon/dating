@@ -1,18 +1,18 @@
 'use client';
 
-export type EditSectionId = 'basic' | 'photos' | 'story';
+export type EditSectionId = 'basic' | 'photos' | 'preferences' | 'story';
 
 type Props = {
   active: EditSectionId;
-  labels: { basic: string; photos: string; story: string };
-  complete: { basic: boolean; photos: boolean; story: boolean };
+  labels: { basic: string; photos: string; preferences: string; story: string };
+  complete: { basic: boolean; photos: boolean; preferences: boolean; story: boolean };
   onNavigate: (id: EditSectionId) => void;
 };
 
-const ORDER: EditSectionId[] = ['story', 'basic', 'photos'];
+const ORDER: EditSectionId[] = ['story', 'basic', 'preferences', 'photos'];
 
 /**
- * Sticky Story / Basic / Photos nav with completion progress dots.
+ * Sticky Story / Basic / Preferences / Photos nav with completion progress dots.
  */
 export function ProfileEditSectionNav({
   active,
@@ -40,10 +40,11 @@ export function ProfileEditSectionNav({
               data-testid={`profile-edit-nav-${id}`}
               data-section={id}
               onClick={() => onNavigate(id)}
-              className={`min-h-10 border-b-2 px-2 py-2 text-sm transition-colors ${
+              aria-current={selected ? 'page' : undefined}
+              className={`min-h-11 border-b-2 px-2 py-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:focus-visible:outline-zinc-100 ${
                 selected
                   ? 'border-blue-600 font-semibold text-zinc-900 dark:border-blue-400 dark:text-zinc-100'
-                  : 'border-transparent font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  : 'border-transparent font-medium text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
               {labels[id]}
@@ -54,13 +55,14 @@ export function ProfileEditSectionNav({
       <div
         className="mt-2 flex items-center gap-2"
         data-testid="profile-edit-progress-dots"
-        aria-label={`${doneCount} of 3 sections complete`}
+        aria-label={`${doneCount} of 4 sections complete`}
       >
         {ORDER.map((id) => (
           <span
             key={id}
             data-testid={`profile-edit-progress-${id}`}
             data-complete={complete[id] ? 'true' : 'false'}
+            aria-hidden="true"
             className={`h-2 w-2 rounded-full ${
               complete[id]
                 ? 'bg-emerald-500 dark:bg-emerald-400'

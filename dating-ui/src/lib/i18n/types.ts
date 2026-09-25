@@ -601,6 +601,7 @@ export type AppCopySchema = {
       editSectionBasic: string;
       editSectionStory: string;
       editSectionPhotos: string;
+      editSectionPreferences: string;
       suggestionPhoto: string;
       suggestionBasics: string;
       suggestionNickname: string;
