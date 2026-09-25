@@ -2,9 +2,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 
-const { mockPostReferralLandingView, mockUseAuth } = vi.hoisted(() => ({
+const { mockPostReferralLandingView, mockUseAuth, landingSearch } = vi.hoisted(() => ({
   mockPostReferralLandingView: vi.fn(),
   mockUseAuth: vi.fn(),
+  landingSearch: { value: 'ref=c123456789012345678901234' },
 }));
 
 vi.mock('@/lib/api/referral-attribution-api', () => ({
@@ -17,7 +18,7 @@ vi.mock('@/contexts/auth-context', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams('ref=c123456789012345678901234'),
+  useSearchParams: () => new URLSearchParams(landingSearch.value),
 }));
 
 vi.mock('@/components/auth/google-sign-in-button', () => ({
@@ -50,6 +51,7 @@ function expectPlainAnalysisHint(text: string) {
 describe('PublicLandingClient i18n', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    landingSearch.value = 'ref=c123456789012345678901234';
     localStorage.clear();
     sessionStorage.clear();
     document.cookie.split(';').forEach((part) => {
@@ -231,11 +233,57 @@ describe('PublicLandingClient i18n', () => {
     expect(screen.queryByText(enCopy.landing.analysisHint)).toBeNull();
     expect(screen.queryByText(enCopy.landing.googleSignIn)).toBeNull();
   });
+
+  it('keeps the flag picker when DEMO links are off', () => {
+    render(<PublicLandingClient />);
+    expect(document.getElementById('landing-language-picker')).toBeTruthy();
+    expect(screen.queryByTestId('demo-language-links')).toBeNull();
+  });
+
+  it('shows English and Spanish links on the Hebrew host when DEMO is on', async () => {
+    process.env.NEXT_PUBLIC_DEMO = '1';
+    process.env.NEXT_PUBLIC_HEBREW_HOST = 'brand.example.il';
+    process.env.NEXT_PUBLIC_COM_HOST = 'brand.example.com';
+    const original = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...original, hostname: 'brand.example.il', pathname: '/' },
+    });
+    try {
+      render(<PublicLandingClient />);
+      const nav = await screen.findByTestId('demo-language-links');
+      const hrefs = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+      expect(hrefs).toEqual([
+        'https://brand.example.com/?locale=en',
+        'https://brand.example.com/?locale=es',
+      ]);
+      expect(document.getElementById('landing-language-picker')).toBeNull();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+      delete process.env.NEXT_PUBLIC_DEMO;
+      delete process.env.NEXT_PUBLIC_HEBREW_HOST;
+      delete process.env.NEXT_PUBLIC_COM_HOST;
+    }
+  });
+
+  it('saves ?locale=es and drops it from the address', async () => {
+    landingSearch.value = 'locale=es&ref=c123456789012345678901234';
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    render(<PublicLandingClient />);
+    await waitFor(() => {
+      expect(localStorage.getItem(APP_LOCALE_STORAGE_KEY)).toBe('es');
+    });
+    const url = String(replaceState.mock.calls.at(-1)?.[2] ?? '');
+    expect(url).not.toContain('locale=');
+    expect(url).toContain('ref=');
+    replaceState.mockRestore();
+  });
 });
 
 describe('PublicLandingClient referral capture', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    landingSearch.value = 'ref=c123456789012345678901234';
     localStorage.clear();
     sessionStorage.clear();
     mockUseAuth.mockReturnValue({
