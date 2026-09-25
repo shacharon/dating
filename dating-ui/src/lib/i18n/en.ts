@@ -13,6 +13,7 @@ export const enCopy: AppCopySchema = {
     title: "Match on meaning, not endless swiping.",
     subtitle:
       "Compatibility-first matching with moderated conversations.",
+    analysisHint: "Analysis reads your story and looks for people who fit.",
     checkingSession: "Checking sign-in…",
     googleSignIn: "Sign in with Google",
     signingIn: "Signing in…",

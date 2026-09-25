@@ -30,6 +30,7 @@ export type AppCopySchema = {
     brand: string;
     title: string;
     subtitle: string;
+    analysisHint: string;
     checkingSession: string;
     googleSignIn: string;
     signingIn: string;

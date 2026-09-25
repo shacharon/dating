@@ -37,7 +37,15 @@ import {
 } from '@/lib/i18n';
 import { getSessionCookieName } from '@/lib/auth/session-cookie';
 import { enCopy } from '@/lib/i18n/en';
+import { esCopy } from '@/lib/i18n/es';
 import { heCopy } from '@/lib/i18n/he';
+
+function expectPlainAnalysisHint(text: string) {
+  const hint = screen.getByText(text);
+  expect(hint.tagName).toBe('P');
+  expect(hint.querySelector('a, button')).toBeNull();
+  expect(hint.closest('a, button')).toBeNull();
+}
 
 describe('PublicLandingClient i18n', () => {
   beforeEach(() => {
@@ -79,6 +87,7 @@ describe('PublicLandingClient i18n', () => {
       screen.getByRole('heading', { name: enCopy.landing.title }),
     ).toBeTruthy();
     expect(screen.getByText(enCopy.landing.subtitle)).toBeTruthy();
+    expectPlainAnalysisHint(enCopy.landing.analysisHint);
     expect(screen.getByText(enCopy.landing.googleSignIn)).toBeTruthy();
     expect(
       screen.getByRole('heading', { name: enCopy.landing.how.title }),
@@ -101,11 +110,21 @@ describe('PublicLandingClient i18n', () => {
       screen.getByRole('heading', { name: heCopy.landing.title }),
     ).toBeTruthy();
     expect(screen.getByText(heCopy.landing.googleSignIn)).toBeTruthy();
+    expectPlainAnalysisHint(heCopy.landing.analysisHint);
 
     const heading = screen.getByRole('heading', { name: heCopy.landing.title });
     const main = heading.closest('main');
     expect(main?.getAttribute('dir')).toBe('rtl');
     expect(main?.getAttribute('lang')).toBe('he');
+  });
+
+  it('renders stored Spanish analysis hint on the logged-out landing', () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'es');
+
+    render(<PublicLandingClient />);
+
+    expectPlainAnalysisHint(esCopy.landing.analysisHint);
+    expect(screen.getByText(esCopy.landing.googleSignIn)).toBeTruthy();
   });
 
   it('shows language flags when Google CTA is visible', () => {
@@ -157,6 +176,7 @@ describe('PublicLandingClient i18n', () => {
     expect(
       screen.queryByRole('group', { name: enCopy.languageSettings.label }),
     ).toBeNull();
+    expect(screen.queryByText(enCopy.landing.analysisHint)).toBeNull();
     expect(
       screen.getByText(
         (content) =>
@@ -164,6 +184,20 @@ describe('PublicLandingClient i18n', () => {
           content === heCopy.landing.checkingSession,
       ),
     ).toBeTruthy();
+  });
+
+  it('hides the analysis hint after sign-in', () => {
+    mockUseAuth.mockReturnValue({
+      status: 'authenticated',
+      signInWithGoogleIdToken: vi.fn(),
+      lastError: null,
+      clearLastError: vi.fn(),
+      refresh: vi.fn(),
+    });
+
+    render(<PublicLandingClient />);
+
+    expect(screen.queryByText(enCopy.landing.analysisHint)).toBeNull();
   });
 });
 

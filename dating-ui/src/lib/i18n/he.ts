@@ -12,6 +12,7 @@ export const heCopy: AppCopySchema = {
     brand: "Dating",
     title: "התאמה שמתבססת על משמעות — לא על החלקה אינסופית.",
     subtitle: "התאמות לפי תאימות, עם שיחות מפוקחות.",
+    analysisHint: "הניתוח קורא את הסיפור ומחפש אנשים שמתאימים.",
     checkingSession: "בודקים התחברות…",
     googleSignIn: "התחברות עם Google",
     signingIn: "מתחברים…",
