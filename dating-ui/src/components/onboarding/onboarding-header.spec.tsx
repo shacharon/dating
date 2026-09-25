@@ -50,10 +50,11 @@ describe('OnboardingHeader', () => {
     expect(screen.queryByTestId('onboarding-skip')).toBeNull();
   });
 
-  it('shows Story, Facts, and Photos steps', () => {
+  it('shows Story, Facts, Preferences, and Photos steps', () => {
     render(<OnboardingHeader />);
     expect(screen.getByText(enCopy.onboarding.tabs.story)).toBeTruthy();
     expect(screen.getByText(enCopy.onboarding.tabs.facts)).toBeTruthy();
+    expect(screen.getByText(enCopy.onboarding.tabs.preferences)).toBeTruthy();
     expect(screen.getByText(enCopy.onboarding.tabs.photos)).toBeTruthy();
   });
 

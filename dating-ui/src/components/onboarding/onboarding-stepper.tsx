@@ -14,6 +14,7 @@ import {
 const STEPS: { id: OnboardingUiStep; labelKey: OnboardingUiStep }[] = [
   { id: 'story', labelKey: 'story' },
   { id: 'facts', labelKey: 'facts' },
+  { id: 'preferences', labelKey: 'preferences' },
   { id: 'photos', labelKey: 'photos' },
 ];
 
@@ -31,6 +32,7 @@ export function OnboardingStepper({
   const labels: Record<OnboardingUiStep, string> = {
     story: copy.tabs.story,
     facts: copy.tabs.facts,
+    preferences: copy.tabs.preferences,
     photos: copy.tabs.photos,
   };
 

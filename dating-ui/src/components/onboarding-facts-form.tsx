@@ -1,8 +1,10 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { InlineError } from '@/components/errors';
 import { useOnboardingAutosave } from '@/components/onboarding/onboarding-autosave';
+import { onboardingStepHref } from '@/components/onboarding/onboarding-step';
 import { useOnboardingFactsForm } from '@/hooks/use-onboarding-facts-form';
 import type { LookingForTile } from '@/lib/profile/looking-for';
 
@@ -20,6 +22,8 @@ const labelClass =
 
 export function OnboardingFactsForm() {
   const m = useOnboardingFactsForm();
+  const router = useRouter();
+  const editMode = useSearchParams().get('edit') === '1';
   const autosave = useOnboardingAutosave();
   const flushRef = useRef(m.flushFacts);
   flushRef.current = m.flushFacts;
@@ -196,6 +200,22 @@ export function OnboardingFactsForm() {
             </p>
           ) : null}
           {m.saveError ? <InlineError>{m.saveError}</InlineError> : null}
+          {m.canContinue ? (
+            <button
+              type="button"
+              data-testid="onboarding-facts-continue"
+              className="inline-flex min-h-11 items-center justify-center rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
+              onClick={() => {
+                void (async () => {
+                  const ok = await m.flushFacts();
+                  if (!ok) return;
+                  router.push(onboardingStepHref('preferences', editMode));
+                })();
+              }}
+            >
+              {m.bf.continueButton}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

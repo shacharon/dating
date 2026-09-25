@@ -52,6 +52,27 @@ export function profileToMatchPreferencesForm(
   };
 }
 
+export function matchPreferencesAgeRangeInvalid(
+  state: Pick<MatchPreferencesFormState, 'partnerAgeMin' | 'partnerAgeMax'>,
+): boolean {
+  const min = parseOptionalInt(state.partnerAgeMin);
+  const max = parseOptionalInt(state.partnerAgeMax);
+  return min != null && max != null && min > max;
+}
+
+export function ageDistanceToPatchBody(
+  state: Pick<
+    MatchPreferencesFormState,
+    'partnerAgeMin' | 'partnerAgeMax' | 'maxDistanceKm'
+  >,
+): Pick<PatchMeProfileBody, 'partnerAgeMin' | 'partnerAgeMax' | 'maxDistanceKm'> {
+  return {
+    partnerAgeMin: parseOptionalInt(state.partnerAgeMin),
+    partnerAgeMax: parseOptionalInt(state.partnerAgeMax),
+    maxDistanceKm: parseOptionalInt(state.maxDistanceKm),
+  };
+}
+
 export function validateMatchPreferencesForm(
   state: MatchPreferencesFormState,
 ): { ok: true } | { ok: false; error: MatchPreferencesValidationError } {

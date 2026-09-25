@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ageDistanceToPatchBody,
   emptyMatchPreferencesFormState,
+  matchPreferencesAgeRangeInvalid,
   matchPreferencesFormToPatchBody,
   profileToMatchPreferencesForm,
   toggleArrayValue,
@@ -87,6 +89,32 @@ describe('match-preferences-form', () => {
       partnerAgeMax: null,
       maxDistanceKm: null,
     });
+  });
+
+  it('matchPreferencesAgeRangeInvalid is true only when both ages exist and min is greater', () => {
+    expect(
+      matchPreferencesAgeRangeInvalid({ partnerAgeMin: '', partnerAgeMax: '' }),
+    ).toBe(false);
+    expect(
+      matchPreferencesAgeRangeInvalid({ partnerAgeMin: '25', partnerAgeMax: '40' }),
+    ).toBe(false);
+    expect(
+      matchPreferencesAgeRangeInvalid({ partnerAgeMin: '40', partnerAgeMax: '25' }),
+    ).toBe(true);
+  });
+
+  it('ageDistanceToPatchBody maps blanks to null and omits partner genders', () => {
+    const body = ageDistanceToPatchBody({
+      partnerAgeMin: '',
+      partnerAgeMax: '',
+      maxDistanceKm: '',
+    });
+    expect(body).toEqual({
+      partnerAgeMin: null,
+      partnerAgeMax: null,
+      maxDistanceKm: null,
+    });
+    expect(body).not.toHaveProperty('desiredPartnerGenders');
   });
 
   it('toggleArrayValue adds and removes values', () => {

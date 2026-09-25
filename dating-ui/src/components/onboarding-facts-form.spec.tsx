@@ -281,4 +281,29 @@ describe('OnboardingFactsForm', () => {
     });
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it('Continue opens preferences when the facts can continue', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      gender: 'MALE',
+      desiredPartnerGenders: ['FEMALE'],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+    const ff = enCopy.onboarding.factsForm;
+    const birth = await screen.findByLabelText(ff.birthDateLabel);
+    await waitFor(() => {
+      expect((birth as HTMLInputElement).value).toBe('1990-05-01');
+    });
+
+    const continueButton = await screen.findByTestId('onboarding-facts-continue');
+    fireEvent.click(continueButton);
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences');
+    });
+  });
 });
