@@ -1,7 +1,9 @@
 # Story 3: No nag anywhere else
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Story 2
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -27,7 +29,7 @@ field is not required yet.
 
 ### Acceptance criteria
 
-- [ ] Opening Matches with `not_analyzed` stays on Matches
-- [ ] The account menu has no analysis item
-- [ ] A facts save with no partner genders does not return the empty-array error
-- [ ] Tests cover the Matches stay and the empty partner-genders save
+- [x] Opening Matches with `not_analyzed` stays on Matches
+- [x] The account menu has no analysis item
+- [x] A facts save with no partner genders does not return the empty-array error
+- [x] Tests cover the Matches stay and the empty partner-genders save
