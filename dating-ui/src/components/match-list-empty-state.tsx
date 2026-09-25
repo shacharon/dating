@@ -53,7 +53,7 @@ export function MatchListEmptyState() {
         {copy.title}
       </p>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{body}</p>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
         {copy.filterHint}
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

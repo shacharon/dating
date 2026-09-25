@@ -242,17 +242,25 @@ describe('MeMatchesPage (not_ready stays on Matches)', () => {
   });
 
   it('stays on Matches when not_ready reason is not_analyzed', async () => {
+    fetchMyProfile.mockResolvedValue(null);
     fetchMyMatches.mockResolvedValue({
       status: 'not_ready',
       reason: 'not_analyzed',
     });
 
-    const { unmount } = renderPage(<MeMatchesPage />);
+    const { unmount, container } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('match-list-no-profile-gate')).toBeTruthy();
+      expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
     });
+    expect(screen.queryByTestId('match-list-no-profile-gate')).toBeNull();
     expect(replaceMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+    const hrefs = [...container.querySelectorAll('a')].map(
+      (el) => el.getAttribute('href') ?? '',
+    );
+    expect(hrefs.some((href) => href.includes('analysis'))).toBe(false);
+    expect(hrefs.some((href) => href.includes('/onboarding'))).toBe(false);
     unmount();
   });
 });
@@ -266,7 +274,7 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
     vi.clearAllMocks();
   });
 
-  it('renders banner and Refresh analysis when viewerProfileAnalysisStale is true', async () => {
+  it('does not render the stale analysis banner when viewerProfileAnalysisStale is true', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'ready',
       viewerProfileAnalysisStale: true,
@@ -277,67 +285,14 @@ describe('MeMatchesPage (viewer analysis stale)', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Your profile changed since the last analysis/),
-      ).toBeTruthy();
+        screen.getAllByRole('heading', { level: 1, name: /Your matches/i }).length,
+      ).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getAllByTestId('matches-refresh-analysis').length).toBeGreaterThanOrEqual(1);
-    unmount();
-  });
-
-  it('Refresh analysis calls submitMyProfileForAnalysis and refetches matches', async () => {
-    let submitted = false;
-    fetchMyMatches.mockImplementation(async () => {
-      if (!submitted) {
-        return {
-          status: 'ready' as const,
-          viewerProfileAnalysisStale: true,
-          matches: [baseMatch],
-        };
-      }
-      return {
-        status: 'ready' as const,
-        viewerProfileAnalysisStale: false,
-        matches: [baseMatch],
-      };
-    });
-    submitMyProfileForAnalysis.mockImplementation(async () => {
-      submitted = true;
-      return {
-        analysisJobId: 'job-1',
-        profile: {
-          id: 'p1',
-          userId: 'u1',
-          status: 'SUBMITTED',
-          onboardingStep: 'COMPLETED',
-          aboutMe: null,
-          aboutPartner: null,
-          aboutRelationship: null,
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      };
-    });
-
-    const { unmount } = renderPage(<MeMatchesPage />);
-
-    await waitFor(() => {
-      expect(screen.getAllByTestId('matches-refresh-analysis').length).toBeGreaterThanOrEqual(1);
-    });
-
-    const fetchCallsAfterLoad = fetchMyMatches.mock.calls.length;
-
-    fireEvent.click(screen.getAllByTestId('matches-refresh-analysis')[0]!);
-
-    await waitFor(() => {
-      expect(submitMyProfileForAnalysis).toHaveBeenCalledTimes(1);
-    });
-    await waitFor(() => {
-      expect(fetchMyMatches.mock.calls.length).toBeGreaterThan(fetchCallsAfterLoad);
-    });
-    await waitFor(() => {
-      const el = screen.getByTestId('matches-refresh-success');
-      expect(el.textContent).toMatch(/Refresh started — scores will update once analysis completes/);
-    });
+    expect(
+      screen.queryByText(/Your profile changed since the last analysis/),
+    ).toBeNull();
+    expect(screen.queryByTestId('matches-refresh-analysis')).toBeNull();
+    expect(submitMyProfileForAnalysis).not.toHaveBeenCalled();
     unmount();
   });
 

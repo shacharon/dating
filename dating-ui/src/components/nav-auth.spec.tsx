@@ -74,6 +74,22 @@ describe('NavAuth account menu RTL', () => {
     expect(menu.getAttribute('dir')).toBe('ltr');
   });
 
+  it('account menu has no analysis item', () => {
+    render(<NavAuth />);
+    openAccountMenu(enCopy.navAuth.accountMenuAria);
+    const items = screen.getAllByRole('menuitem');
+    const hrefs = items.map((item) => item.getAttribute('href'));
+    expect(hrefs).toEqual([
+      '/settings/account',
+      '/profile/edit#story',
+      '/settings/preferences',
+      null,
+    ]);
+    for (const href of hrefs) {
+      expect(href ?? '').not.toContain('analysis');
+    }
+  });
+
   it('uses text-start on menu items for logical alignment', () => {
     render(<NavAuth locale="he" />);
     openAccountMenu(heCopy.navAuth.accountMenuAria);
