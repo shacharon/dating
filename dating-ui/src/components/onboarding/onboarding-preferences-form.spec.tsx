@@ -187,6 +187,21 @@ describe('OnboardingPreferencesForm', () => {
       maxDistanceKm: null,
     });
     expect(body).not.toHaveProperty('onboardingStep');
+    expect(screen.getByTestId('onboarding-preferences-done').textContent).toBe(
+      enCopy.onboarding.preferencesStep.done,
+    );
+  });
+
+  it('Done stays on Preferences when the save fails', async () => {
+    patchMyProfile.mockRejectedValue(new Error('nope'));
+    renderForm();
+    fireEvent.click(await screen.findByTestId('onboarding-preferences-done'));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe(
+      enCopy.matchPreferences.saveError,
+    );
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('Done does not leave when the age range is invalid', async () => {

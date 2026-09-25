@@ -171,6 +171,35 @@ describe('OnboardingPhotosPage (Story 4)', () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
+  it('edit-mode Finish marks complete and opens Matches', async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams('edit=1'));
+    listMyProfilePhotos.mockResolvedValue([
+      {
+        id: 'ph1',
+        status: 'PENDING',
+        position: 0,
+        isPrimary: true,
+      },
+    ]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId('onboarding-photos-finish') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    fireEvent.click(screen.getByTestId('onboarding-photos-finish'));
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith({ onboardingStep: 'COMPLETED' });
+      expect(pushMock).toHaveBeenCalledWith('/dating/me-matches');
+    });
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(submitMyProfileForAnalysis).not.toHaveBeenCalled();
+  });
+
   it('enables Finish when the only photo is REJECTED', async () => {
     listMyProfilePhotos.mockResolvedValue([
       {
