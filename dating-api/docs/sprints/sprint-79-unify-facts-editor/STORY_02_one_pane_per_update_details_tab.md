@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** Story 1 (Facts label / Facts pane)
 **Repo:** `dating-ui`
+**Shipped on main:** `07f77115`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -48,4 +50,4 @@ From `dating-ui`:
 - [x] Hash stays `#basic` for Facts (no rename)
 - [x] Tests passing (`profile-edit-tab.spec.tsx` — 11 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`07f77115`). Feature tip ahead of main: 0
