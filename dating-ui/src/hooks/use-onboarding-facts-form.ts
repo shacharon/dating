@@ -97,6 +97,7 @@ export function useOnboardingFactsForm({
     countryCode,
     usStateCode,
     cityId,
+    locationReady: false,
     canContinue: false,
     hasProfile: false,
   });
