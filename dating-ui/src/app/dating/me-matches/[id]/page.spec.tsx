@@ -201,7 +201,7 @@ describe('MeMatchDetailPage (match actions)', () => {
     expect(screen.getByText('No longer a match')).toBeTruthy();
     expect(
       screen.getByText(
-        'This person smokes, while your preferences exclude smokers.',
+        'This person smokes. That conflicts with what you wrote.',
       ),
     ).toBeTruthy();
     const prefsLink = screen.getByRole('link', { name: 'Review preferences' });

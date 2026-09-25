@@ -114,13 +114,13 @@ export const enCopy: AppCopySchema = {
         youLikedThisProfile: "You liked this profile",
         moreReasonsCount: (count) => `+ ${count} more mismatch${count === 1 ? '' : 'es'}`,
         smokingExcludedViewerToThem:
-          "This person smokes, while your preferences exclude smokers.",
+          "This person smokes. That conflicts with what you wrote.",
         smokingExcludedThemToViewer:
-          "You smoke, while their preferences exclude smokers.",
+          "You smoke. That conflicts with what they wrote.",
         smokingRequiredViewerToThem:
-          "This person doesn't smoke, while you only want smokers.",
+          "This person doesn't smoke. That conflicts with what you wrote.",
         smokingRequiredThemToViewer:
-          "You don't smoke, while they only want smokers.",
+          "You don't smoke. That conflicts with what they wrote.",
         ageViewerToThem: "Their age is outside your preferred age range.",
         ageThemToViewer: "Your age is outside their preferred age range.",
         genderViewerToThem:
@@ -306,13 +306,13 @@ export const enCopy: AppCopySchema = {
           "Like and Pass are unavailable while this match is blocked by preferences.",
         youLikedThisProfile: "You liked this profile",
         smokingExcludedViewerToThem:
-          "This person smokes, while your preferences exclude smokers.",
+          "This person smokes. That conflicts with what you wrote.",
         smokingExcludedThemToViewer:
-          "You smoke, while their preferences exclude smokers.",
+          "You smoke. That conflicts with what they wrote.",
         smokingRequiredViewerToThem:
-          "This person doesn't smoke, while you only want smokers.",
+          "This person doesn't smoke. That conflicts with what you wrote.",
         smokingRequiredThemToViewer:
-          "You don't smoke, while they only want smokers.",
+          "You don't smoke. That conflicts with what they wrote.",
         ageViewerToThem: "Their age is outside your preferred age range.",
         ageThemToViewer: "Your age is outside their preferred age range.",
         genderViewerToThem:

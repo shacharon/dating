@@ -8,13 +8,13 @@ import type { HardBlockReasonDto } from '@/lib/api/me-matches-api';
 
 const copy: HardBlockReasonCopy = {
   smokingExcludedViewerToThem:
-    'This person smokes, while your preferences exclude smokers.',
+    'This person smokes. That conflicts with what you wrote.',
   smokingExcludedThemToViewer:
-    'You smoke, while their preferences exclude smokers.',
+    'You smoke. That conflicts with what they wrote.',
   smokingRequiredViewerToThem:
-    "This person doesn't smoke, while you only want smokers.",
+    "This person doesn't smoke. That conflicts with what you wrote.",
   smokingRequiredThemToViewer:
-    "You don't smoke, while they only want smokers.",
+    "You don't smoke. That conflicts with what they wrote.",
   ageViewerToThem: 'Their age is outside your preferred age range.',
   ageThemToViewer: 'Your age is outside their preferred age range.',
   genderViewerToThem:
@@ -46,7 +46,7 @@ describe('formatHardBlockReason', () => {
     };
     const formatted = formatHardBlockReason(reason, copy);
     expect(formatted.primary).toBe(
-      'This person smokes, while your preferences exclude smokers.',
+      'This person smokes. That conflicts with what you wrote.',
     );
     expect(formatted.evidence).toBe(
       "“I don't want smokers” · “I smoke”",
@@ -79,9 +79,22 @@ describe('formatHardBlockReason', () => {
     };
     const formatted = formatHardBlockReason(reason, copy);
     expect(formatted.primary).toBe(
-      'You smoke, while their preferences exclude smokers.',
+      'You smoke. That conflicts with what they wrote.',
     );
     expect(formatted.evidence).toBe('“I smoke” · “Non-smokers only”');
+  });
+
+  it('formats a required smoking block from what was written', () => {
+    const reason: HardBlockReasonDto = {
+      code: 'DB_SMOKING_REQUIRED_TRAIT_ABSENT',
+      dimension: 'only_smokers',
+      direction: 'viewer_to_them',
+      message: 'fallback',
+    };
+    expect(formatHardBlockReason(reason, copy).primary).toBe(
+      "This person doesn't smoke. That conflicts with what you wrote.",
+    );
+    expect(formatHardBlockReason(reason, copy).primary).not.toMatch(/preferences/i);
   });
 
   it('formats AGE without evidence', () => {

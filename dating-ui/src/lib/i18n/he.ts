@@ -107,13 +107,13 @@ export const heCopy: AppCopySchema = {
         youLikedThisProfile: "אהבת את הפרופיל הזה",
         moreReasonsCount: (count) => `+ ${count} אי התאמות נוספות`,
         smokingExcludedViewerToThem:
-          "האדם הזה מעשן, וההעדפות שלך מוציאות מעשנים.",
+          "האדם הזה מעשן. זה מתנגש עם מה שכתבת.",
         smokingExcludedThemToViewer:
-          "את/ה מעשן/ת, וההעדפות שלהם מוציאות מעשנים.",
+          "את/ה מעשן/ת. זה מתנגש עם מה שהם כתבו.",
         smokingRequiredViewerToThem:
-          "האדם הזה לא מעשן, ואת/ה מחפש/ת רק מעשנים.",
+          "האדם הזה לא מעשן. זה מתנגש עם מה שכתבת.",
         smokingRequiredThemToViewer:
-          "את/ה לא מעשן/ת, והם מחפשים רק מעשנים.",
+          "את/ה לא מעשן/ת. זה מתנגש עם מה שהם כתבו.",
         ageViewerToThem: "הגיל שלהם מחוץ לטווח הגילאים שהעדפת.",
         ageThemToViewer: "הגיל שלך מחוץ לטווח הגילאים שהם העדיפו.",
         genderViewerToThem: "המגדר שלהם לא כלול בהעדפות הזוגיות שלך.",
@@ -292,13 +292,13 @@ export const heCopy: AppCopySchema = {
           "אהבתי ודילוג אינם זמינים כשהעדפות חוסמות את ההתאמה הזו.",
         youLikedThisProfile: "אהבת את הפרופיל הזה",
         smokingExcludedViewerToThem:
-          "האדם הזה מעשן, וההעדפות שלך מוציאות מעשנים.",
+          "האדם הזה מעשן. זה מתנגש עם מה שכתבת.",
         smokingExcludedThemToViewer:
-          "את/ה מעשן/ת, וההעדפות שלהם מוציאות מעשנים.",
+          "את/ה מעשן/ת. זה מתנגש עם מה שהם כתבו.",
         smokingRequiredViewerToThem:
-          "האדם הזה לא מעשן, ואת/ה מחפש/ת רק מעשנים.",
+          "האדם הזה לא מעשן. זה מתנגש עם מה שכתבת.",
         smokingRequiredThemToViewer:
-          "את/ה לא מעשן/ת, והם מחפשים רק מעשנים.",
+          "את/ה לא מעשן/ת. זה מתנגש עם מה שהם כתבו.",
         ageViewerToThem: "הגיל שלהם מחוץ לטווח הגילאים שהעדפת.",
         ageThemToViewer: "הגיל שלך מחוץ לטווח הגילאים שהם העדיפו.",
         genderViewerToThem: "המגדר שלהם לא כלול בהעדפות הזוגיות שלך.",

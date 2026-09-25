@@ -1,6 +1,6 @@
 # Sprint 80 — First-run exit + honest empty Matches
 
-**Status:** Stories 1–3 Done. Stories 4–5 parked.
+**Status:** Stories 1–4 Done. Story 5 parked.
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Repo:** `dating-ui`
 **Follows:** [Sprint 79 — One Facts editor](../sprint-79-unify-facts-editor/README.md)
@@ -19,10 +19,11 @@ Done in story 2: `not_analyzed` shows an analysis gate. An empty ready list stil
 
 Done in story 3: first-login Facts still sets nickname. Update details Facts does not. Settings is the editor after that.
 
+Done in story 4: smoking hard-block lines say the conflict comes from what was written. They do not say the user set a smoking preference.
+
 Still wrong:
 
-1. Smoking hard-block copy says “your preferences.”
-2. Dead `OnboardingBasicForm` still embeds photos.
+1. Dead `OnboardingBasicForm` still embeds photos.
 
 ## Story checklist
 
@@ -31,7 +32,7 @@ Still wrong:
 | 1 | [Mark first-run complete + Preferences Done](./STORY_01_first_run_complete_and_preferences_done.md) | **Done** | — |
 | 2 | [Distinct empty Matches for not analyzed](./STORY_02_not_analyzed_empty_matches.md) | **Done** | — |
 | 3 | [One nickname editor](./STORY_03_one_nickname_editor.md) | **Done** | — |
-| 4 | [Honest smoking hard-block copy](./STORY_04_honest_smoking_hard_block_copy.md) | Parked | — |
+| 4 | [Honest smoking hard-block copy](./STORY_04_honest_smoking_hard_block_copy.md) | **Done** | — |
 | 5 | [Delete dead Basic form](./STORY_05_delete_dead_onboarding_basic_form.md) | Parked | — |
 
 ## Out of scope
