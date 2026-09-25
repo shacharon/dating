@@ -136,6 +136,33 @@ describe('OnboardingFactsForm', () => {
     expect(screen.queryByText(bf.datingChapter.question)).toBeNull();
   });
 
+  it('onboarding nickname change patches nickname', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      nickname: 'Noa',
+      gender: 'MALE',
+      desiredPartnerGenders: ['FEMALE'],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+    const input = await screen.findByLabelText(
+      enCopy.onboarding.basicForm.nicknameLabel,
+    );
+    await waitFor(() => {
+      expect((input as HTMLInputElement).value).toBe('Noa');
+    });
+    fireEvent.change(input, { target: { value: 'Noa2' } });
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ nickname: 'Noa2' }),
+      );
+    });
+  });
+
   it('shows missing hints and no Continue button', async () => {
     renderForm();
     const ff = enCopy.onboarding.factsForm;
