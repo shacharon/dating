@@ -1,7 +1,9 @@
 # Story 2: Top links when DEMO is on
 
-**Status:** Parked
+**Status:** Done
 **Depends on:** Story 1, and a decision on landing flags vs these links
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -17,12 +19,12 @@ When `DEMO` is on, the top of the page shows the two other languages. A click op
 
 ## Acceptance criteria
 
-- [ ] `DEMO` off on `.il`: no English/Spanish links; page stays Hebrew-capable only through the existing same-host control
-- [ ] `DEMO` off on `.com`: no cross-domain links
-- [ ] `DEMO` on, Hebrew `.il`: links to English `.com` and Spanish `.com`, and those URLs are absolute
-- [ ] `DEMO` on, English `.com`: links to Hebrew `.il` and Spanish `.com`
-- [ ] `DEMO` on, Spanish `.com`: links to Hebrew `.il` and English `.com`
-- [ ] Tests render the links and the hidden state without a real browser navigation
+- [x] `DEMO` off on `.il`: no English/Spanish links; page stays Hebrew-capable only through the existing same-host control
+- [x] `DEMO` off on `.com`: no cross-domain links
+- [x] `DEMO` on, Hebrew `.il`: links to English `.com` and Spanish `.com`, and those URLs are absolute
+- [x] `DEMO` on, English `.com`: links to Hebrew `.il` and Spanish `.com`
+- [x] `DEMO` on, Spanish `.com`: links to Hebrew `.il` and English `.com`
+- [x] Tests render the links and the hidden state without a real browser navigation
 
 ## Affected files
 
@@ -41,4 +43,4 @@ When `DEMO` is on, the top of the page shows the two other languages. A click op
 
 ## Definition of done
 
-The three host/locale cases and the off switch are tested. No matching or auth-cookie changes.
+- [x] The three host/locale cases and the off switch are tested. No matching or auth-cookie changes.

@@ -1,12 +1,15 @@
 "use client";
 
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { DemoLanguageLinks } from "@/components/landing/demo-language-links";
+import { demoLanguageLinks } from "@/lib/platform/demo-language-links";
 import { LanguagePicker } from "@/components/language-picker";
 import { useAuth } from "@/contexts/auth-context";
 import {
   getLocaleDirection,
   getLocaleHtmlLang,
   useAppLocale,
+  writeStoredLocale,
 } from "@/lib/i18n";
 import {
   emitProductLog,
@@ -65,6 +68,19 @@ export function PublicLandingClient() {
     }
   }, [status, router, nextPath]);
 
+  const localeQuery = searchParams.get("locale");
+  useEffect(() => {
+    if (localeQuery !== "en" && localeQuery !== "es" && localeQuery !== "he") {
+      return;
+    }
+    writeStoredLocale(localeQuery);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("locale");
+    const qs = next.toString();
+    const path = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    window.history.replaceState(null, "", path);
+  }, [localeQuery, searchParams]);
+
   useEffect(() => {
     captureReferralFromSearchParams(searchParams);
     void postReferralLandingView(readStoredReferralRef() != null);
@@ -96,13 +112,21 @@ export function PublicLandingClient() {
   const showCta =
     status === "unauthenticated" || status === "error" || signingIn;
 
-  const languageSlot = showCta ? (
+  const [hostname, setHostname] = useState("");
+  useEffect(() => {
+    setHostname(window.location.hostname);
+  }, []);
+  const showDemoLinks =
+    showCta && demoLanguageLinks({ hostname, locale }).length > 0;
+  const languageSlot = !showCta ? null : showDemoLinks ? (
+    <DemoLanguageLinks locale={locale} hostname={hostname} />
+  ) : (
     <LanguagePicker
       locale={locale}
       className="max-w-[11rem] rounded-md border border-zinc-200/80 bg-white/80 px-2 py-1 backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-950/80"
       id="landing-language-picker"
     />
-  ) : null;
+  );
 
   const ctaSlot = showBootstrapLoading ? (
     <p className="text-sm text-zinc-500">{copy.checkingSession}</p>
