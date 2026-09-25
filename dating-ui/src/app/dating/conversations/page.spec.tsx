@@ -143,6 +143,23 @@ describe('ConversationsPage', () => {
     vi.restoreAllMocks();
   });
 
+  it('does not link to analysis', async () => {
+    fetchMyConversations.mockResolvedValue({
+      conversations: [],
+      nextCursor: null,
+      hasMore: false,
+    });
+    const { unmount, container } = renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId('conversations-empty')).toBeTruthy();
+    });
+    const hrefs = [...container.querySelectorAll('a')].map(
+      (el) => el.getAttribute('href') ?? '',
+    );
+    expect(hrefs.some((href) => href.includes('analysis'))).toBe(false);
+    unmount();
+  });
+
   it('renders empty state when there are no conversations', async () => {
     fetchMyConversations.mockResolvedValue({ conversations: [], nextCursor: null, hasMore: false });
 

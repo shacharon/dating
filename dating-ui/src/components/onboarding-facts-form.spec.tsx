@@ -211,6 +211,32 @@ describe('OnboardingFactsForm', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it('omits desiredPartnerGenders when none are selected', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      gender: 'MALE',
+      desiredPartnerGenders: [],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+    const ff = enCopy.onboarding.factsForm;
+    const birth = await screen.findByLabelText(ff.birthDateLabel);
+    await waitFor(() => {
+      expect((birth as HTMLInputElement).value).toBe('1990-05-01');
+    });
+    fireEvent.change(birth, { target: { value: '1991-05-01' } });
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalled();
+    });
+    const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty('desiredPartnerGenders');
+    expect(body.birthDate).toBe('1991-05-01');
+  });
+
   it('creates a profile when none exists yet', async () => {
     fetchMyProfile.mockResolvedValue(null);
 

@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { useSubmitProfileForAnalysis } from '@/hooks/use-profile';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { MatchListNoProfileGate } from '@/components/match-list-no-profile-gate';
@@ -43,13 +42,8 @@ export default function MeMatchesPageClient() {
     loading,
     loadingMore,
     error,
-    reload,
     sentinelRef,
   } = useInfiniteMatches(listCopy.loadFailed);
-  const submitAnalysisMutation = useSubmitProfileForAnalysis();
-  const [refreshBusy, setRefreshBusy] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [refreshSuccess, setRefreshSuccess] = useState<string | null>(null);
   const [celebrationContext, setCelebrationContext] =
     useState<CelebrationContext | null>(null);
   const scrollRestoreDone = useRef(false);
@@ -71,21 +65,6 @@ export default function MeMatchesPageClient() {
       applyMatchesScrollY(y);
     });
   }, [loading, matches.length]);
-
-  const handleRefreshAnalysis = async () => {
-    setRefreshBusy(true);
-    setRefreshError(null);
-    setRefreshSuccess(null);
-    try {
-      await submitAnalysisMutation.mutateAsync();
-      setRefreshSuccess(listCopy.refreshStarted);
-      await reload();
-    } catch (e: unknown) {
-      setRefreshError(e instanceof Error ? e.message : listCopy.refreshFailed);
-    } finally {
-      setRefreshBusy(false);
-    }
-  };
 
   const handleMutualMatch = (
     matchId: string,
@@ -136,54 +115,18 @@ export default function MeMatchesPageClient() {
 
         {!loading &&
           !error &&
-          data?.status === 'ready' &&
-          data.viewerProfileAnalysisStale === true && (
-            <div
-              className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-800 dark:bg-amber-950/40"
-              role="region"
-              aria-label={listCopy.staleRegionAria}
-            >
-              <p className="text-sm text-amber-900 dark:text-amber-100">
-                {listCopy.staleMessage}
-              </p>
-              <button
-                type="button"
-                data-testid="matches-refresh-analysis"
-                className="mt-3 rounded-lg bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50 dark:bg-amber-700 dark:hover:bg-amber-600"
-                disabled={refreshBusy}
-                onClick={() => void handleRefreshAnalysis()}
-              >
-                {listCopy.refreshAnalysis}
-              </button>
-            </div>
-          )}
-
-        {!loading && !error && refreshSuccess && (
-          <p
-            className="text-sm text-emerald-800 dark:text-emerald-200"
-            role="status"
-            data-testid="matches-refresh-success"
-          >
-            {refreshSuccess}
-          </p>
-        )}
-        {!loading && !error && refreshError && (
-          <p className="text-sm text-red-700 dark:text-red-400" role="alert">
-            {refreshError}
-          </p>
-        )}
-
-        {!loading &&
-          !error &&
           data?.status === 'not_ready' &&
           data.reason === 'no_photo' && <MatchListPhotoGate />}
 
         {!loading &&
           !error &&
           data?.status === 'not_ready' &&
-          (data.reason === 'no_profile' || data.reason === 'not_analyzed') && (
-            <MatchListNoProfileGate />
-          )}
+          data.reason === 'no_profile' && <MatchListNoProfileGate />}
+
+        {!loading &&
+          !error &&
+          data?.status === 'not_ready' &&
+          data.reason === 'not_analyzed' && <MatchListEmptyState />}
 
         {!loading &&
           !error &&

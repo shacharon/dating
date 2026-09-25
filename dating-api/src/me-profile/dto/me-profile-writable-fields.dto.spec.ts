@@ -42,9 +42,13 @@ describe('MeProfileWritableFieldsDto / CreateMeProfileDto validation', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('rejects empty desiredPartnerGenders array when provided', async () => {
+  it('accepts empty desiredPartnerGenders as not provided', async () => {
     const errors = await validateCreate({ desiredPartnerGenders: [] });
-    expect(errors.length).toBeGreaterThan(0);
+    const messages = errors.flatMap((e) => Object.values(e.constraints ?? {}));
+    expect(
+      messages.some((message) => message.includes('non-empty array')),
+    ).toBe(false);
+    expect(errors).toHaveLength(0);
   });
 
   it('rejects invalid entry in desiredPartnerGenders', async () => {
