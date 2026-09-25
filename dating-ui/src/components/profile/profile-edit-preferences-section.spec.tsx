@@ -171,4 +171,32 @@ describe('ProfileEditPreferencesSection', () => {
     fireEvent.click(save);
     expect(patchMyProfile).not.toHaveBeenCalled();
   });
+
+  it('saves when only one age is filled', async () => {
+    renderSection();
+    fireEvent.change(await screen.findByTestId('pref-age-min'), {
+      target: { value: '25' },
+    });
+    fireEvent.click(screen.getByTestId('profile-edit-preferences-save'));
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith({
+        partnerAgeMin: 25,
+        partnerAgeMax: null,
+        maxDistanceKm: null,
+      });
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('stays on the page when the save fails', async () => {
+    const onSaved = vi.fn();
+    patchMyProfile.mockRejectedValue(new Error('nope'));
+    renderSection(onSaved);
+    fireEvent.click(await screen.findByTestId('profile-edit-preferences-save'));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe(
+      enCopy.matchPreferences.saveError,
+    );
+    expect(onSaved).not.toHaveBeenCalled();
+  });
 });

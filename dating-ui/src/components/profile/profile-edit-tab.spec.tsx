@@ -7,16 +7,17 @@ import {
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
 
-const { fetchMyProfile, listMyProfilePhotos } = vi.hoisted(() => ({
+const { fetchMyProfile, listMyProfilePhotos, patchMyProfile } = vi.hoisted(() => ({
   fetchMyProfile: vi.fn(),
   listMyProfilePhotos: vi.fn(),
+  patchMyProfile: vi.fn(),
 }));
 
 vi.mock('@/lib/api-sdk', () => ({
   datingApi: {
     profile: {
       fetchMyProfile,
-      patchMyProfile: vi.fn(),
+      patchMyProfile,
       createMyProfile: vi.fn(),
       submitMyProfileForAnalysis: vi.fn(),
     },
@@ -126,6 +127,9 @@ describe('ProfileEditTab', () => {
     expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
     expect(screen.getByTestId('mock-texts-form')).toBeTruthy();
     expect(screen.getByTestId('mock-basic-form')).toBeTruthy();
+    expect(screen.getByTestId('profile-edit-progress-dots').getAttribute('aria-label')).toMatch(
+      /of 4 sections complete/,
+    );
   });
 
   it('marks progress dots complete from profile + photos', async () => {
@@ -183,6 +187,97 @@ describe('ProfileEditTab', () => {
           .getByTestId('profile-edit-progress-preferences')
           .getAttribute('data-complete'),
       ).toBe('true');
+    });
+  });
+
+  it('marks Preferences filled when only distance is set', async () => {
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'DRAFT',
+      onboardingStep: 'BASIC',
+      nickname: 'Noa',
+      birthDate: '1990-01-01',
+      gender: 'FEMALE',
+      desiredPartnerGenders: ['MALE'],
+      city: 'Tel Aviv',
+      country: 'IL',
+      locationLabel: 'TLV',
+      aboutMe: '',
+      aboutPartner: '',
+      aboutRelationship: '',
+      partnerAgeMin: null,
+      partnerAgeMax: null,
+      maxDistanceKm: 20,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    });
+    renderEditTab();
+    await waitFor(() => {
+      expect(
+        screen
+          .getByTestId('profile-edit-progress-preferences')
+          .getAttribute('data-complete'),
+      ).toBe('true');
+    });
+  });
+
+  it('clearing Preferences saves null and the dot is no longer filled', async () => {
+    const saved = {
+      id: 'p1',
+      userId: 'u1',
+      status: 'DRAFT',
+      onboardingStep: 'BASIC',
+      nickname: 'Noa',
+      birthDate: '1990-01-01',
+      gender: 'FEMALE',
+      desiredPartnerGenders: ['MALE'],
+      city: 'Tel Aviv',
+      country: 'IL',
+      locationLabel: 'TLV',
+      aboutMe: 'Hello world',
+      aboutPartner: '',
+      aboutRelationship: '',
+      partnerAgeMin: 25 as number | null,
+      partnerAgeMax: 40 as number | null,
+      maxDistanceKm: 15 as number | null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    };
+    fetchMyProfile.mockResolvedValue(saved);
+    patchMyProfile.mockImplementation(async (body: Record<string, unknown>) => {
+      const next = { ...saved, ...body };
+      fetchMyProfile.mockResolvedValue(next);
+      return next;
+    });
+    window.history.replaceState(null, '', '/profile/edit#preferences');
+    renderEditTab();
+    const min = await screen.findByTestId('pref-age-min');
+    await waitFor(() => {
+      expect((min as HTMLInputElement).value).toBe('25');
+      expect(
+        screen
+          .getByTestId('profile-edit-progress-preferences')
+          .getAttribute('data-complete'),
+      ).toBe('true');
+    });
+    fireEvent.change(min, { target: { value: '' } });
+    fireEvent.change(screen.getByTestId('pref-age-max'), { target: { value: '' } });
+    fireEvent.change(screen.getByTestId('pref-max-distance'), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByTestId('profile-edit-preferences-save'));
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith({
+        partnerAgeMin: null,
+        partnerAgeMax: null,
+        maxDistanceKm: null,
+      });
+      expect(
+        screen
+          .getByTestId('profile-edit-progress-preferences')
+          .getAttribute('data-complete'),
+      ).toBe('false');
     });
   });
 
