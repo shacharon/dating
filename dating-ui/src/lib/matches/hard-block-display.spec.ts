@@ -84,6 +84,19 @@ describe('formatHardBlockReason', () => {
     expect(formatted.evidence).toBe('“I smoke” · “Non-smokers only”');
   });
 
+  it('formats a required smoking block from what was written', () => {
+    const reason: HardBlockReasonDto = {
+      code: 'DB_SMOKING_REQUIRED_TRAIT_ABSENT',
+      dimension: 'only_smokers',
+      direction: 'viewer_to_them',
+      message: 'fallback',
+    };
+    expect(formatHardBlockReason(reason, copy).primary).toBe(
+      "This person doesn't smoke. That conflicts with what you wrote.",
+    );
+    expect(formatHardBlockReason(reason, copy).primary).not.toMatch(/preferences/i);
+  });
+
   it('formats AGE without evidence', () => {
     const reason: HardBlockReasonDto = {
       code: 'AGE_BELOW_MIN',
