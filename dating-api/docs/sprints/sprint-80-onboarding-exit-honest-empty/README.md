@@ -1,6 +1,6 @@
 # Sprint 80 — First-run exit + honest empty Matches
 
-**Status:** Stories 1–4 Done. Story 5 parked.
+**Status:** Stories 1–5 Done.
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Repo:** `dating-ui`
 **Follows:** [Sprint 79 — One Facts editor](../sprint-79-unify-facts-editor/README.md)
@@ -21,9 +21,7 @@ Done in story 3: first-login Facts still sets nickname. Update details Facts doe
 
 Done in story 4: smoking hard-block lines say the conflict comes from what was written. They do not say the user set a smoking preference.
 
-Still wrong:
-
-1. Dead `OnboardingBasicForm` still embeds photos.
+Done in story 5: `OnboardingBasicForm` is already gone. Sprint 79 removed it in `c2b59bbb`. Update details Facts stays the Facts form. Photos stay on the Photos pane.
 
 ## Story checklist
 
@@ -33,7 +31,7 @@ Still wrong:
 | 2 | [Distinct empty Matches for not analyzed](./STORY_02_not_analyzed_empty_matches.md) | **Done** | — |
 | 3 | [One nickname editor](./STORY_03_one_nickname_editor.md) | **Done** | — |
 | 4 | [Honest smoking hard-block copy](./STORY_04_honest_smoking_hard_block_copy.md) | **Done** | — |
-| 5 | [Delete dead Basic form](./STORY_05_delete_dead_onboarding_basic_form.md) | Parked | — |
+| 5 | [Delete dead Basic form](./STORY_05_delete_dead_onboarding_basic_form.md) | **Done** | — |
 
 ## Out of scope
 
