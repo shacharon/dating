@@ -114,6 +114,48 @@ CI uses **OIDC only** (no static keys). Missing GitHub `dev` env vars = deploy f
 
 ---
 
+## Parked — demo language domains (Sprint 78)
+
+**Status:** Parked hostname. Code is in. Links stay hidden until `NEXT_PUBLIC_HEBREW_HOST` is set and `NEXT_PUBLIC_DEMO=1`.  
+**Plan:** `dating-api/docs/sprints/sprint-78-demo-language-domains/README.md`
+
+When `DEMO` is on, Hebrew `.il` links to English and Spanish on `.com`, and `.com` links back. When `DEMO` is off, no cross-domain links.
+
+Decisions still open:
+
+1. Exact `.il` hostname and exact `.com` hostname. The repo only knows `findyouraidate.com`.
+2. Demo links replace the landing flags while `DEMO` is on. Flags change language on the same host. Both at once will fight.
+3. Login and locale cookies do not cross `.il` and `.com`. The link must carry the language in the URL. A signed-in user arrives logged out.
+4. `NEXT_PUBLIC_DEMO=1` is baked at Docker build, same pattern as `NEXT_PUBLIC_ADMIN_ENABLED`. One image cannot be demo on `.il` and off on `.com` unless each domain is its own build, or the flag is read from the request host.
+
+---
+
+## Parked — Dating chapter (teach before go-live)
+
+**Status:** Parked for go-live teaching. Code stays. Do not treat this as self-explanatory.
+
+Dating chapter is **not** who you match with. It only changes **how match cards are written**. Unset uses age (≤34 / ≤45 / 45+). Settings → Dating chapter.
+
+Before first users:
+
+1. Show it in onboarding or first Matches with a one-line plain explanation.
+2. Do not ship it as a quiet settings radio with no teaching.
+3. Copy must say: this does not change who appears.
+
+---
+
+## Parked — Maximum distance (go-live)
+
+**Status:** Parked. Field can stay in the UI. Matching does **not** use km yet (`GEO_INSUFFICIENT_FOR_DISTANCE_KM`). Empty or filled, the list does not change.
+
+Do not teach distance as a working filter until we have real geo.
+
+**Who you match with (gender):** required in onboarding to continue. If it were empty, the algo would still run (no gender filter). We keep it required so people set who they want.
+
+**Partner age range:** optional. Empty = no age filter. Algo still runs.
+
+---
+
 ## Ordered go-live (when you proceed — new chat)
 
 1. Choose AWS account + region + hostname  

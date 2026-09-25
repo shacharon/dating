@@ -22,6 +22,8 @@ import {
 } from "@/lib/referral/referral-attribution";
 import { postReferralLandingView } from "@/lib/api/referral-attribution-api";
 import { hasSessionCookie } from "@/lib/auth/session-cookie";
+import { datingApi } from "@/lib/api-sdk";
+import { postLoginPath } from "@/lib/profile/onboarding-path";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LandingBenefits } from "./landing-benefits";
@@ -33,12 +35,10 @@ import { LandingTrustStrip } from "./landing-trust-strip";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 
-const DEFAULT_AFTER_LOGIN = "/dating/me-matches";
-
-function safeNextPath(raw: string | null): string {
+function safeNextPath(raw: string | null): string | null {
   const n = raw?.trim();
   if (n?.startsWith("/") && !n.startsWith("//")) return n;
-  return DEFAULT_AFTER_LOGIN;
+  return null;
 }
 
 /**
@@ -57,16 +57,25 @@ export function PublicLandingClient() {
   const dir = getLocaleDirection(locale);
   const lang = getLocaleHtmlLang(locale);
 
-  const nextPath = useMemo(
+  const requestedNext = useMemo(
     () => safeNextPath(searchParams.get("next")),
     [searchParams],
   );
 
+  const goAfterLogin = useCallback(async () => {
+    try {
+      const profile = await datingApi.profile.fetchMyProfile();
+      router.replace(postLoginPath(profile, requestedNext));
+    } catch {
+      router.replace(postLoginPath(null, requestedNext));
+    }
+  }, [requestedNext, router]);
+
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(nextPath);
+      void goAfterLogin();
     }
-  }, [status, router, nextPath]);
+  }, [status, goAfterLogin]);
 
   const localeQuery = searchParams.get("locale");
   useEffect(() => {
@@ -93,18 +102,18 @@ export function PublicLandingClient() {
         route: getObservabilityRoute(),
         message: "public landing: Google credential received",
         errorCode: UiErrorCodes.UI_LOGIN_CREDENTIAL_START,
-        meta: { nextPath },
+        meta: { nextPath: requestedNext },
       });
       clearLastError();
       setSigningIn(true);
       try {
         const ok = await signInWithGoogleIdToken(idToken);
-        if (ok) router.replace(nextPath);
+        if (ok) await goAfterLogin();
       } finally {
         setSigningIn(false);
       }
     },
-    [signInWithGoogleIdToken, router, nextPath, clearLastError],
+    [signInWithGoogleIdToken, goAfterLogin, requestedNext, clearLastError],
   );
 
   const showBootstrapLoading =

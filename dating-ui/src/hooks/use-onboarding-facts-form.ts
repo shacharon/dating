@@ -12,7 +12,7 @@ import {
   type PlaceCountry,
   type PlaceUsState,
 } from '@/lib/api/places-api';
-import { guessOnboardingCountryCode } from '@/lib/profile/country-from-timezone';
+import { defaultOnboardingCountryCode } from '@/lib/profile/country-from-timezone';
 import {
   lookingForFromPartnerGenders,
   partnerGendersFromLookingFor,
@@ -20,6 +20,7 @@ import {
 } from '@/lib/profile/looking-for';
 import {
   listFactsMissing,
+  locationSatisfied,
   validateOnboardingFactsAdvance,
 } from '@/lib/profile/onboarding-basic-validation';
 import {
@@ -133,6 +134,7 @@ export function useOnboardingFactsForm({
     countryCode,
     usStateCode,
     cityId,
+    locationReady: locationSatisfied(advanceFields.location),
     canContinue,
     hasProfile,
   };
@@ -202,7 +204,7 @@ export function useOnboardingFactsForm({
         if (!countryGuessedRef.current && !countryCode) {
           countryGuessedRef.current = true;
           const allowed = new Set(res.countries.map((c) => c.code));
-          const guess = guessOnboardingCountryCode(undefined, allowed);
+          const guess = defaultOnboardingCountryCode(locale, allowed);
           if (guess) setCountryCode(guess);
         }
       } catch {
@@ -212,7 +214,7 @@ export function useOnboardingFactsForm({
     return () => {
       cancelled = true;
     };
-  }, [countryCode, profileSyncing]);
+  }, [countryCode, locale, profileSyncing]);
 
   useEffect(() => {
     if (locale !== 'he' || countryCode === 'IL') return;
@@ -318,9 +320,13 @@ export function useOnboardingFactsForm({
         : { nickname: v.nickname.trim() ? v.nickname.trim() : null }),
       ...(partners.length > 0 ? { desiredPartnerGenders: partners } : {}),
       birthDate: v.birthDate || null,
-      country: v.countryCode || null,
-      usStateCode: v.countryCode === 'US' ? v.usStateCode || null : null,
-      cityId: v.cityId || null,
+      ...(v.locationReady
+        ? {
+            country: v.countryCode || null,
+            usStateCode: v.countryCode === 'US' ? v.usStateCode || null : null,
+            cityId: v.cityId || null,
+          }
+        : {}),
       ...(isHub
         ? {}
         : { onboardingStep: v.canContinue ? ('TEXTS' as const) : ('BASIC' as const) }),
@@ -368,6 +374,8 @@ export function useOnboardingFactsForm({
     countryCode,
     usStateCode,
     cityId,
+    citiesLoaded,
+    cities.length,
   ]);
 
   return {

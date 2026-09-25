@@ -48,6 +48,16 @@ export function countryCodeFromTimeZone(timeZone: string): string | null {
   return code ?? null;
 }
 
+/** Empty-country default: Hebrew → IL, English and Spanish → US. */
+export function defaultOnboardingCountryCode(
+  locale: string,
+  allowedCodes?: ReadonlySet<string>,
+): string | null {
+  const code = locale === 'he' ? 'IL' : 'US';
+  if (allowedCodes && !allowedCodes.has(code)) return null;
+  return code;
+}
+
 export function guessOnboardingCountryCode(
   timeZone?: string,
   allowedCodes?: ReadonlySet<string>,

@@ -50,3 +50,32 @@ export function onboardingResumePath(
     }
   }
 }
+
+const MATCHES_PATH = '/dating/me-matches';
+
+/** A run has been started at least once (including a finished or failed one). */
+export function analysisHasStarted(status: string | undefined): boolean {
+  return (
+    status === 'SUBMITTED' ||
+    status === 'ANALYZING' ||
+    status === 'ANALYZED' ||
+    status === 'FAILED'
+  );
+}
+
+/**
+ * Login destination. Onboarding until the first analysis run, then Matches.
+ * An explicit `next` path is used only after analysis has started.
+ */
+export function postLoginPath(
+  profile: MeProfileDto | null,
+  requestedNext?: string | null,
+): string {
+  if (!analysisHasStarted(profile?.status)) {
+    const resume = onboardingResumePath(profile);
+    return resume === '/profile' ? '/onboarding/preferences' : resume;
+  }
+  const next = requestedNext?.trim();
+  if (next?.startsWith('/') && !next.startsWith('//')) return next;
+  return MATCHES_PATH;
+}

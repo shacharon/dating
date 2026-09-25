@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MeProfileDto } from '@/lib/api/me-profile-api';
-import { onboardingResumePath } from '@/lib/profile/onboarding-path';
+import { onboardingResumePath, postLoginPath } from '@/lib/profile/onboarding-path';
 
 function row(step: MeProfileDto['onboardingStep']): MeProfileDto {
   return {
@@ -58,5 +58,32 @@ describe('onboardingResumePath', () => {
     expect(onboardingResumePath(null, { edit: true, page: 'texts' })).toBe(
       '/onboarding/basics',
     );
+  });
+});
+
+describe('postLoginPath', () => {
+  it('sends a new or draft profile to onboarding', () => {
+    expect(postLoginPath(null)).toBe('/onboarding/story');
+    expect(postLoginPath(row('COMPLETED'))).toBe('/onboarding/preferences');
+    expect(postLoginPath({ ...row('BASIC'), gender: 'FEMALE' })).toBe(
+      '/onboarding/basics',
+    );
+  });
+
+  it('sends Matches once analysis has started', () => {
+    for (const status of ['SUBMITTED', 'ANALYZING', 'ANALYZED', 'FAILED']) {
+      expect(postLoginPath({ ...row('BASIC'), status })).toBe(
+        '/dating/me-matches',
+      );
+    }
+  });
+
+  it('keeps an explicit next path only after analysis has started', () => {
+    expect(postLoginPath(row('BASIC'), '/dating/conversations')).toBe(
+      '/onboarding/story',
+    );
+    expect(
+      postLoginPath({ ...row('COMPLETED'), status: 'ANALYZED' }, '/dating/conversations'),
+    ).toBe('/dating/conversations');
   });
 });

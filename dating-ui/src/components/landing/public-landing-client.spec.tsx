@@ -12,6 +12,14 @@ vi.mock('@/lib/api/referral-attribution-api', () => ({
   postReferralLandingView: mockPostReferralLandingView,
 }));
 
+vi.mock('@/lib/api-sdk', () => ({
+  datingApi: {
+    profile: {
+      fetchMyProfile: vi.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
 vi.mock('@/contexts/auth-context', () => ({
   useAuth: () => mockUseAuth(),
 }));

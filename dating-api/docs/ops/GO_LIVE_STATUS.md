@@ -23,7 +23,8 @@
 - Google auth + session cookies
 - Full profile onboarding, photo upload, analysis pipeline
 - Match list with photos, scoring, holy-grail gates, priority tiers (Sprint 41)
-- Match card teaser modes by dating chapter (Sprint 44)
+- Match card teaser modes by dating chapter (Sprint 44) — **parked for go-live teaching** (not self-explanatory; see `docs/DATING_AWS_GOLIVE_READINESS.md`)
+- Max distance preference — **parked**; saved but not used in matching until geo exists
 - Mutual match + realtime messaging
 - Legal pages, account deletion, report user
 - Photo moderation admin queue (`/admin/photos`)

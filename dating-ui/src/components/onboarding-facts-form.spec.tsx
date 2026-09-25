@@ -39,8 +39,9 @@ vi.mock('@/lib/api/places-api', () => ({
 }));
 
 vi.mock('@/lib/profile/country-from-timezone', () => ({
-  guessOnboardingCountryCode: () => 'IL',
-  countryCodeFromTimeZone: () => 'IL',
+  defaultOnboardingCountryCode: () => 'US',
+  guessOnboardingCountryCode: () => 'US',
+  countryCodeFromTimeZone: () => 'US',
 }));
 
 const pushMock = vi.fn();
