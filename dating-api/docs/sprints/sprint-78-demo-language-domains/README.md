@@ -1,6 +1,6 @@
 # Sprint 78 — Demo language links across .il and .com
 
-**Status:** In progress — Story 1 done. Hebrew hostname stays parked in env.
+**Status:** Done — Stories 1–2 complete. Hebrew hostname stays parked in env.
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Repo:** `dating-ui`
 **Follows:** [Sprint 77 — Skippable preferences](../sprint-77-preferences-step/README.md)
@@ -42,7 +42,7 @@ A `DEMO` flag shows two cross-language links at the top of the site. Each link o
 | # | Story | Status | Depends on |
 |---|--------|--------|------------|
 | 1 | [DEMO flag and host map](./STORY_01_demo_flag_and_hosts.md) | **Done** | Host via `NEXT_PUBLIC_HEBREW_HOST` |
-| 2 | [Top links when DEMO is on](./STORY_02_demo_language_links.md) | Parked | 1, and the flag-vs-link decision |
+| 2 | [Top links when DEMO is on](./STORY_02_demo_language_links.md) | **Done** | 1, and the flag-vs-link decision |
 
 ## Out of scope
 
