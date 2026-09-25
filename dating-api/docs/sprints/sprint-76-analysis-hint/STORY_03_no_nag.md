@@ -2,8 +2,8 @@
 
 **Status:** Done
 **Depends on:** Story 2
-**Shipped on main:** *(pending merge)*
-**Feature tip ahead of main:** *(pending)*
+**Shipped on main:** `652993cc`
+**Feature tip ahead of main:** 0
 
 ## Why
 
