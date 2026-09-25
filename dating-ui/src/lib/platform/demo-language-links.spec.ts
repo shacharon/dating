@@ -64,6 +64,41 @@ describe('demoLanguageLinks', () => {
     ]);
   });
 
+  it('treats a Hebrew locale on .com as English', () => {
+    expect(
+      demoLanguageLinks({
+        hostname: 'BRAND.EXAMPLE.COM',
+        locale: 'he',
+        demo: '1',
+        ...hosts,
+      }),
+    ).toEqual([
+      { locale: 'he', href: 'https://brand.example.il/?locale=he' },
+      { locale: 'es', href: 'https://brand.example.com/?locale=es' },
+    ]);
+  });
+
+  it('uses findyouraidate.com when the .com host is omitted', () => {
+    const previous = process.env.NEXT_PUBLIC_COM_HOST;
+    delete process.env.NEXT_PUBLIC_COM_HOST;
+    try {
+      expect(
+        demoLanguageLinks({
+          hostname: 'findyouraidate.com',
+          locale: 'en',
+          demo: ' 1 ',
+          hebrewHost: 'brand.example.il',
+        }),
+      ).toEqual([
+        { locale: 'he', href: 'https://brand.example.il/?locale=he' },
+        { locale: 'es', href: 'https://findyouraidate.com/?locale=es' },
+      ]);
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_COM_HOST;
+      else process.env.NEXT_PUBLIC_COM_HOST = previous;
+    }
+  });
+
   it('unknown host returns nothing', () => {
     expect(
       demoLanguageLinks({ hostname: 'localhost', locale: 'en', demo: '1', ...hosts }),
