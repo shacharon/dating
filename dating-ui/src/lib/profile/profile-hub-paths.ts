@@ -4,7 +4,7 @@ export type ProfileHubSectionId =
   | 'analysis'
   | 'settings';
 
-export type ProfileEditHashId = 'basic' | 'photos' | 'story';
+export type ProfileEditHashId = 'basic' | 'photos' | 'preferences' | 'story';
 
 export type ProfileSettingsHashId =
   | 'nickname'

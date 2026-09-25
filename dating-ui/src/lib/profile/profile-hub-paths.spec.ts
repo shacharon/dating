@@ -19,6 +19,7 @@ describe('profile-hub-paths', () => {
 
   it('builds edit and settings hash hrefs', () => {
     expect(profileEditHash('photos')).toBe('/profile/edit#photos');
+    expect(profileEditHash('preferences')).toBe('/profile/edit#preferences');
     expect(profileSettingsHash('nickname')).toBe('/profile/settings#nickname');
   });
 

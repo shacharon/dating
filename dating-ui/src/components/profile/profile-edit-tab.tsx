@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { OnboardingBasicForm } from '@/components/onboarding-basic-form';
 import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
+import { ProfileEditPreferencesSection } from '@/components/profile/profile-edit-preferences-section';
 import {
   ProfileEditSectionNav,
   type EditSectionId,
@@ -18,9 +19,10 @@ import { buildCompletenessFlags } from '@/lib/profile/profile-completeness';
 import { listMyProfilePhotos } from '@/lib/api/me-photos-api';
 import { useAppLocale } from '@/lib/i18n';
 import { useProfile } from '@/hooks/use-profile';
+import type { MeProfileDto } from '@/lib/api/me-profile-api';
 import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 
-const SECTION_IDS: EditSectionId[] = ['story', 'basic', 'photos'];
+const SECTION_IDS: EditSectionId[] = ['story', 'basic', 'preferences', 'photos'];
 
 function sectionFromHash(): EditSectionId | null {
   if (typeof window === 'undefined') return null;
@@ -33,17 +35,22 @@ function sectionFromHash(): EditSectionId | null {
 function sectionComplete(
   draft: ProfileDraft,
   approvedPhotoCount: number,
+  profile: MeProfileDto | null,
 ): Record<EditSectionId, boolean> {
   const flags = buildCompletenessFlags(draft, approvedPhotoCount > 0);
   return {
     basic: flags.basicsComplete && flags.hasLocation,
     photos: approvedPhotoCount > 0,
+    preferences:
+      profile?.partnerAgeMin != null ||
+      profile?.partnerAgeMax != null ||
+      profile?.maxDistanceKm != null,
     story: flags.hasAboutMe,
   };
 }
 
 /**
- * Profile hub Edit tab: sticky section nav; one pane at a time (Story / Basic / Photos).
+ * Profile hub Edit tab: sticky section nav; one pane at a time.
  */
 export function ProfileEditTab({
   onProfileMutated,
@@ -93,7 +100,7 @@ export function ProfileEditTab({
     return () => window.removeEventListener('hashchange', syncFromHash);
   }, []);
 
-  const complete = sectionComplete(draft, approvedPhotoCount);
+  const complete = sectionComplete(draft, approvedPhotoCount, profile);
 
   function handleMutated() {
     onProfileMutated?.();
@@ -114,6 +121,7 @@ export function ProfileEditTab({
         labels={{
           basic: hub.editSectionBasic,
           photos: hub.editSectionPhotos,
+          preferences: hub.editSectionPreferences,
           story: hub.editSectionStory,
         }}
         complete={complete}
@@ -127,6 +135,15 @@ export function ProfileEditTab({
         active={active === 'basic'}
       >
         <OnboardingBasicForm variant="profileHub" onSaved={handleMutated} />
+      </ProfileEditSectionShell>
+
+      <ProfileEditSectionShell
+        id="preferences"
+        title={hub.editSectionPreferences}
+        complete={complete.preferences}
+        active={active === 'preferences'}
+      >
+        <ProfileEditPreferencesSection onSaved={handleMutated} />
       </ProfileEditSectionShell>
 
       <ProfileEditSectionShell

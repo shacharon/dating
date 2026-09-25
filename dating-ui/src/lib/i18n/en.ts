@@ -834,6 +834,7 @@ export const enCopy: AppCopySchema = {
       editSectionBasic: "Basic info",
       editSectionStory: "Your story",
       editSectionPhotos: "Photos",
+      editSectionPreferences: "Preferences",
       suggestionPhoto: "Add a photo",
       suggestionBasics: "Complete basic info",
       suggestionNickname: "Add a nickname",

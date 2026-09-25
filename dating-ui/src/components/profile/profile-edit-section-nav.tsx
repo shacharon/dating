@@ -1,18 +1,18 @@
 'use client';
 
-export type EditSectionId = 'basic' | 'photos' | 'story';
+export type EditSectionId = 'basic' | 'photos' | 'preferences' | 'story';
 
 type Props = {
   active: EditSectionId;
-  labels: { basic: string; photos: string; story: string };
-  complete: { basic: boolean; photos: boolean; story: boolean };
+  labels: { basic: string; photos: string; preferences: string; story: string };
+  complete: { basic: boolean; photos: boolean; preferences: boolean; story: boolean };
   onNavigate: (id: EditSectionId) => void;
 };
 
-const ORDER: EditSectionId[] = ['story', 'basic', 'photos'];
+const ORDER: EditSectionId[] = ['story', 'basic', 'preferences', 'photos'];
 
 /**
- * Sticky Story / Basic / Photos nav with completion progress dots.
+ * Sticky Story / Basic / Preferences / Photos nav with completion progress dots.
  */
 export function ProfileEditSectionNav({
   active,
@@ -54,7 +54,7 @@ export function ProfileEditSectionNav({
       <div
         className="mt-2 flex items-center gap-2"
         data-testid="profile-edit-progress-dots"
-        aria-label={`${doneCount} of 3 sections complete`}
+        aria-label={`${doneCount} of 4 sections complete`}
       >
         {ORDER.map((id) => (
           <span

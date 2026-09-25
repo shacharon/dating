@@ -810,6 +810,7 @@ export const heCopy: AppCopySchema = {
       editSectionBasic: "פרטים בסיסיים",
       editSectionStory: "הסיפור שלכם",
       editSectionPhotos: "תמונות",
+      editSectionPreferences: "העדפות",
       suggestionPhoto: "הוסיפו תמונה",
       suggestionBasics: "השלימו פרטים בסיסיים",
       suggestionNickname: "הוסיפו כינוי",

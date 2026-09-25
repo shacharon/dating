@@ -92,7 +92,7 @@ describe('ProfileEditTab', () => {
     cleanup();
   });
 
-  it('shows one pane at a time with Story → Basic → Photos nav order', async () => {
+  it('shows one pane at a time with Story → Basic → Preferences → Photos nav order', async () => {
     renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
@@ -102,6 +102,7 @@ describe('ProfileEditTab', () => {
     const navButtons = [
       screen.getByTestId('profile-edit-nav-story'),
       screen.getByTestId('profile-edit-nav-basic'),
+      screen.getByTestId('profile-edit-nav-preferences'),
       screen.getByTestId('profile-edit-nav-photos'),
     ];
     expect(
@@ -112,11 +113,19 @@ describe('ProfileEditTab', () => {
       navButtons[1]!.compareDocumentPosition(navButtons[2]!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(
+      navButtons[2]!.compareDocumentPosition(navButtons[3]!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     expect(screen.getByTestId('profile-edit-section-story').hidden).toBe(false);
     expect(screen.getByTestId('profile-edit-section-basic').hidden).toBe(true);
+    expect(screen.getByTestId('profile-edit-section-preferences').hidden).toBe(
+      true,
+    );
     expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
     expect(screen.getByTestId('mock-texts-form')).toBeTruthy();
+    expect(screen.getByTestId('mock-basic-form')).toBeTruthy();
   });
 
   it('marks progress dots complete from profile + photos', async () => {
@@ -137,6 +146,43 @@ describe('ProfileEditTab', () => {
           .getByTestId('profile-edit-progress-story')
           .getAttribute('data-complete'),
       ).toBe('true');
+      expect(
+        screen
+          .getByTestId('profile-edit-progress-preferences')
+          .getAttribute('data-complete'),
+      ).toBe('false');
+    });
+  });
+
+  it('marks Preferences filled when one age is set', async () => {
+    fetchMyProfile.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      status: 'DRAFT',
+      onboardingStep: 'BASIC',
+      nickname: 'Noa',
+      birthDate: '1990-01-01',
+      gender: 'FEMALE',
+      desiredPartnerGenders: ['MALE'],
+      city: 'Tel Aviv',
+      country: 'IL',
+      locationLabel: 'TLV',
+      aboutMe: 'Hello world',
+      aboutPartner: '',
+      aboutRelationship: '',
+      partnerAgeMin: 25,
+      partnerAgeMax: null,
+      maxDistanceKm: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    });
+    renderEditTab();
+    await waitFor(() => {
+      expect(
+        screen
+          .getByTestId('profile-edit-progress-preferences')
+          .getAttribute('data-complete'),
+      ).toBe('true');
     });
   });
 
@@ -151,6 +197,18 @@ describe('ProfileEditTab', () => {
     expect(screen.getByTestId('profile-edit-section-basic').hidden).toBe(true);
     expect(window.location.hash).toBe('#story');
     expect(screen.getByTestId('mock-texts-form')).toBeTruthy();
+  });
+
+  it('opens preferences pane from #preferences hash', async () => {
+    window.history.replaceState(null, '', '/profile/edit#preferences');
+    renderEditTab();
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-edit-section-preferences').hidden).toBe(
+        false,
+      );
+    });
+    expect(screen.getByTestId('profile-edit-section-basic').hidden).toBe(true);
+    expect(screen.queryByTestId('pref-gender-MALE')).toBeNull();
   });
 
   it('opens photos pane from #photos hash', async () => {
