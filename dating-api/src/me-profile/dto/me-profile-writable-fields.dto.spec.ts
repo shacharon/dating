@@ -43,12 +43,27 @@ describe('MeProfileWritableFieldsDto / CreateMeProfileDto validation', () => {
   });
 
   it('accepts empty desiredPartnerGenders as not provided', async () => {
-    const errors = await validateCreate({ desiredPartnerGenders: [] });
+    const dto = plainToInstance(CreateMeProfileDto, { desiredPartnerGenders: [] });
+    const errors = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
     const messages = errors.flatMap((e) => Object.values(e.constraints ?? {}));
     expect(
       messages.some((message) => message.includes('non-empty array')),
     ).toBe(false);
     expect(errors).toHaveLength(0);
+    expect(dto.desiredPartnerGenders).toBeUndefined();
+  });
+
+  it('accepts empty desiredPartnerGenders on patch as not provided', async () => {
+    const dto = plainToInstance(PatchMeProfileDto, { desiredPartnerGenders: [] });
+    const errors = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+    expect(dto.desiredPartnerGenders).toBeUndefined();
   });
 
   it('rejects invalid entry in desiredPartnerGenders', async () => {

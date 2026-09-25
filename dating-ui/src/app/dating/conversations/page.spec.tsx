@@ -160,6 +160,31 @@ describe('ConversationsPage', () => {
     unmount();
   });
 
+  it('does not link to analysis when the list has a conversation', async () => {
+    fetchMyConversations.mockResolvedValue({
+      conversations: [
+        {
+          id: 'mutual_1',
+          otherUser,
+          matchedAt: '2026-05-31T12:00:00.000Z',
+          unreadCount: 0,
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+    });
+    const { unmount, container } = renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId('conversations-list')).toBeTruthy();
+    });
+    const hrefs = [...container.querySelectorAll('a')].map(
+      (el) => el.getAttribute('href') ?? '',
+    );
+    expect(hrefs.some((href) => href.includes('analysis'))).toBe(false);
+    expect(hrefs).toContain('/dating/conversations/mutual_1');
+    unmount();
+  });
+
   it('renders empty state when there are no conversations', async () => {
     fetchMyConversations.mockResolvedValue({ conversations: [], nextCursor: null, hasMore: false });
 

@@ -255,6 +255,7 @@ describe('MeMatchesPage (not_ready stays on Matches)', () => {
     });
     expect(screen.queryByTestId('match-list-no-profile-gate')).toBeNull();
     expect(replaceMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
     const hrefs = [...container.querySelectorAll('a')].map(
       (el) => el.getAttribute('href') ?? '',
     );
