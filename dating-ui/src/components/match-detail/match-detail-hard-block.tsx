@@ -56,7 +56,7 @@ export function MatchDetailHardBlock({
       </ul>
       <Link
         href={profileEditHash('preferences')}
-        className="mt-3 inline-block text-sm font-medium text-amber-900 underline-offset-4 hover:underline dark:text-amber-100"
+        className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-amber-900 underline underline-offset-4 hover:text-amber-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-900 dark:text-amber-100 dark:hover:text-amber-50 dark:focus-visible:outline-amber-100"
       >
         {detailCopy.hardBlocked.reviewPreferences}
       </Link>
