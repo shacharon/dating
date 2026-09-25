@@ -7,6 +7,7 @@ import { ProfileOverviewHero } from '@/components/profile/profile-overview-hero'
 import { ProfileOverviewStoryProse } from '@/components/profile/profile-overview-story-prose';
 import { ProfileOverviewTraitChips } from '@/components/profile/profile-overview-trait-chips';
 import { ProfileAnalyzePrompt } from '@/components/profile/profile-analyze-prompt';
+import { ProfileOverviewStatusStrip } from '@/components/profile/profile-overview-status-strip';
 import { useProfileQualityRefresh } from '@/components/profile/profile-quality-refresh-context';
 import {
   fetchMyLatestAnalysis,
