@@ -2,7 +2,7 @@
 
 **Status:** Done
 **Depends on:** Story 1, and a decision on landing flags vs these links
-**Shipped on main:** *(pending merge)*
+**Shipped on main:** `ff13956b`
 **Feature tip ahead of main:** 0
 
 ## Goal
