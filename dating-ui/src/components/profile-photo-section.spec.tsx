@@ -88,6 +88,46 @@ describe('ProfilePhotoSection (requiredForMatching)', () => {
     });
   });
 
+  it('replaces Under review when moderation finishes', async () => {
+    const pending = {
+      id: 'photo_pending',
+      profileId: 'prof_1',
+      storageKey: 'k',
+      originalFileName: 'a.jpg',
+      mimeType: 'image/jpeg',
+      sizeBytes: 1,
+      position: 0,
+      isPrimary: false,
+      status: 'PENDING' as const,
+      moderationProvider: 'rekognition',
+      moderationResultJson: null,
+      rejectionReason: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    listMyProfilePhotosMock
+      .mockResolvedValueOnce([pending])
+      .mockResolvedValue([
+        {
+          ...pending,
+          status: 'APPROVED',
+        },
+      ]);
+
+    render(<ProfilePhotoSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Under review')).toBeTruthy();
+    });
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('Approved')).toBeTruthy();
+      },
+      { timeout: 4000 },
+    );
+  });
+
   it('shows rejected badge and reason', async () => {
     listMyProfilePhotosMock.mockResolvedValue([
       {

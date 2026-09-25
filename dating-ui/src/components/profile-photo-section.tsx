@@ -54,10 +54,16 @@ export function ProfilePhotoSection({
   const [uploading, setUploading] = useState<UploadingPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const photoSigRef = useRef('');
 
   async function refreshPhotos() {
     const rows = await listMyProfilePhotos();
     rows.sort((a, b) => a.position - b.position);
+    const sig = rows
+      .map((p) => `${p.id}:${p.status}:${p.rejectionReason ?? ''}`)
+      .join('|');
+    if (sig === photoSigRef.current) return;
+    photoSigRef.current = sig;
     setPhotos(rows);
     onPhotosChange?.(rows);
   }
@@ -79,6 +85,20 @@ export function ProfilePhotoSection({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!photos.some((p) => p.status === 'PENDING')) return;
+    let attempts = 0;
+    const id = window.setInterval(() => {
+      attempts += 1;
+      if (attempts > 20) {
+        window.clearInterval(id);
+        return;
+      }
+      void refreshPhotos().catch(() => undefined);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [photos]);
 
   useEffect(() => {
     let cancelled = false;
