@@ -1,8 +1,10 @@
 # Story 1: Onboarding Preferences step
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -29,14 +31,14 @@ Age range and max distance are optional pool limits. Today they live only on `/s
 
 ### Acceptance criteria
 
-- [ ] Onboarding stepper is Story → Facts → Preferences → Photos
-- [ ] Facts Continue opens `/onboarding/preferences`
-- [ ] The screen has age range and max distance only
-- [ ] Skip opens Photos and does not write a default age or distance
-- [ ] Continue with valid numbers persists them and opens Photos
-- [ ] Continue with min > max stays on the screen with an error
-- [ ] Who you're open to is unchanged on Facts and still required there
-- [ ] Resume rules in `onboarding-path.ts` are unchanged
+- [x] Onboarding stepper is Story → Facts → Preferences → Photos
+- [x] Facts Continue opens `/onboarding/preferences`
+- [x] The screen has age range and max distance only
+- [x] Skip opens Photos and does not write a default age or distance
+- [x] Continue with valid numbers persists them and opens Photos
+- [x] Continue with min > max stays on the screen with an error
+- [x] Who you're open to is unchanged on Facts and still required there
+- [x] Resume rules in `onboarding-path.ts` are unchanged
 
 ## Out of scope
 
@@ -46,5 +48,5 @@ Age range and max distance are optional pool limits. Today they live only on `/s
 
 ## Definition of done
 
-- [ ] A new user can finish onboarding without typing an age or a distance
-- [ ] A new user who fills them sees those values on the profile payload
+- [x] A new user can finish onboarding without typing an age or a distance
+- [x] A new user who fills them sees those values on the profile payload

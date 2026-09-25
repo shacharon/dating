@@ -488,7 +488,13 @@ export const esCopy: AppCopySchema = {
     tabs: {
       story: "Historia",
       facts: "Datos",
+      preferences: "Preferencias",
       photos: "Fotos",
+    },
+    preferencesStep: {
+      title: "Preferencias",
+      optionalHint: "Opcional. Deja ambos vacíos si quieres.",
+      skip: "Omitir",
     },
     basicForm: {
       sectionTitle: "Basico",

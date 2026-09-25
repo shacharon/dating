@@ -464,7 +464,13 @@ export const heCopy: AppCopySchema = {
     tabs: {
       story: "סיפור",
       facts: "עובדות",
+      preferences: "העדפות",
       photos: "תמונות",
+    },
+    preferencesStep: {
+      title: "העדפות",
+      optionalHint: "לא חובה. אפשר להשאיר את שניהם ריקים.",
+      skip: "דילוג",
     },
     basicForm: {
       sectionTitle: "בסיס",

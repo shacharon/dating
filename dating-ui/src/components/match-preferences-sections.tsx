@@ -88,7 +88,7 @@ export function MatchPreferencesAgeSection({
             onChange={(e) =>
               setForm((prev) => ({ ...prev, partnerAgeMin: e.target.value }))
             }
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
+            className="mt-1 min-h-11 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-base text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
           />
         </label>
         <label className="block text-sm">
@@ -102,7 +102,7 @@ export function MatchPreferencesAgeSection({
             onChange={(e) =>
               setForm((prev) => ({ ...prev, partnerAgeMax: e.target.value }))
             }
-            className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
+            className="mt-1 min-h-11 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-base text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
           />
         </label>
       </div>
@@ -137,7 +137,7 @@ export function MatchPreferencesDistanceSection({
           onChange={(e) =>
             setForm((prev) => ({ ...prev, maxDistanceKm: e.target.value }))
           }
-          className="mt-1 w-full max-w-xs rounded border border-zinc-300 px-2 py-1.5 dark:border-zinc-600 dark:bg-zinc-950"
+          className="mt-1 min-h-11 w-full max-w-xs rounded border border-zinc-300 bg-white px-2 py-1.5 text-base text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
         />
       </label>
     </section>

@@ -1,9 +1,16 @@
-export type OnboardingUiStep = 'story' | 'facts' | 'photos';
+export type OnboardingUiStep = 'story' | 'facts' | 'preferences' | 'photos';
 
-const STEP_ORDER: OnboardingUiStep[] = ['story', 'facts', 'photos'];
+const STEP_ORDER: OnboardingUiStep[] = ['story', 'facts', 'preferences', 'photos'];
+
+const STEP_HREF: Record<OnboardingUiStep, string> = {
+  story: '/onboarding/story',
+  facts: '/onboarding/basics',
+  preferences: '/onboarding/preferences',
+  photos: '/onboarding/photos',
+};
 
 /**
- * Map an onboarding pathname to the three-route stepper step.
+ * Map an onboarding pathname to the stepper step.
  * Legacy `/onboarding/texts` highlights Story; `/onboarding/basic` highlights Facts.
  */
 export function onboardingUiStepFromPathname(pathname: string): OnboardingUiStep | null {
@@ -19,6 +26,9 @@ export function onboardingUiStepFromPathname(pathname: string): OnboardingUiStep
     pathname.startsWith('/onboarding/basic/')
   ) {
     return 'facts';
+  }
+  if (pathname.startsWith('/onboarding/preferences')) {
+    return 'preferences';
   }
   if (pathname.startsWith('/onboarding/photos')) {
     return 'photos';
@@ -38,7 +48,7 @@ export function isOnboardingStepFilled(
   return stepIdx <= currentIdx;
 }
 
-/** Free navigation among Story / Facts / Photos during onboarding. */
+/** Free navigation among Story / Facts / Preferences / Photos during onboarding. */
 export function canNavigateOnboardingStep(
   target: OnboardingUiStep,
   current: OnboardingUiStep | null,
@@ -52,11 +62,6 @@ export function onboardingStepHref(
   step: OnboardingUiStep,
   editMode: boolean,
 ): string {
-  const base =
-    step === 'story'
-      ? '/onboarding/story'
-      : step === 'facts'
-        ? '/onboarding/basics'
-        : '/onboarding/photos';
+  const base = STEP_HREF[step];
   return editMode ? `${base}?edit=1` : base;
 }

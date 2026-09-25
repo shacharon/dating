@@ -375,7 +375,13 @@ export type AppCopySchema = {
     tabs: {
       story: string;
       facts: string;
+      preferences: string;
       photos: string;
+    };
+    preferencesStep: {
+      title: string;
+      optionalHint: string;
+      skip: string;
     };
     basicForm: {
       sectionTitle: string;
