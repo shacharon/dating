@@ -1,6 +1,6 @@
 # Sprint 76 — Skippable preferences on onboarding and Update details
 
-**Status:** In progress — Stories 1–2 done
+**Status:** Done — Stories 1–3 complete
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Repo:** `dating-ui` (profile fields already exist on the API)
 **Follows:** [Sprint 75 — Three-screen onboarding and profile routes](../sprint-75-onboarding-profile/README.md)
@@ -32,7 +32,7 @@ Onboarding order becomes Story → Facts → Preferences → Photos.
 |---|--------|--------|------|------------|
 | 1 | [Onboarding Preferences step](./STORY_01_onboarding_preferences_step.md) | **Done** | M | — |
 | 2 | [Update details Preferences section](./STORY_02_update_details_preferences.md) | **Done** | M | 1 |
-| 3 | [Retire `/settings/preferences`](./STORY_03_retire_settings_preferences.md) | Not started | S | 2 |
+| 3 | [Retire `/settings/preferences`](./STORY_03_retire_settings_preferences.md) | **Done** | S | 2 |
 
 **Order:** 1 → 2 → 3.
 
