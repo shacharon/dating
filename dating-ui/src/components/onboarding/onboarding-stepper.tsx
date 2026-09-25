@@ -59,7 +59,7 @@ export function OnboardingStepper({
               aria-hidden
             />
             <span
-              className={`max-w-[4.5rem] truncate text-xs font-medium sm:max-w-none ${
+              className={`max-w-[3.25rem] truncate text-xs font-medium min-[400px]:max-w-[4.5rem] sm:max-w-none ${
                 isCurrent
                   ? 'text-zinc-900 dark:text-zinc-100'
                   : 'text-zinc-500 dark:text-zinc-400'
@@ -77,7 +77,7 @@ export function OnboardingStepper({
           <li key={step.id} className="flex items-center gap-1 sm:gap-2">
             {index > 0 ? (
               <span
-                className={`mb-4 h-0.5 w-4 sm:w-10 ${
+                className={`mb-4 h-0.5 w-2 sm:w-10 ${
                   filled || isCurrent
                     ? 'bg-zinc-900 dark:bg-zinc-100'
                     : 'bg-zinc-300 dark:bg-zinc-600'
