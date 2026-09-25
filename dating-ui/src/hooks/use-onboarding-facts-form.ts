@@ -346,6 +346,7 @@ export function useOnboardingFactsForm() {
   ]);
 
   return {
+    locale,
     ff,
     bf,
     syncingLabel: copy.onboarding.syncingProfile,
