@@ -40,8 +40,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
-vi.mock('@/components/onboarding-basic-form', () => ({
-  OnboardingBasicForm: () => <div data-testid="mock-basic-form">basic</div>,
+vi.mock('@/components/onboarding-facts-form', () => ({
+  OnboardingFactsForm: () => <div data-testid="mock-facts-form">facts</div>,
 }));
 vi.mock('@/components/onboarding-texts-form', () => ({
   OnboardingTextsForm: () => <div data-testid="mock-texts-form">texts</div>,
@@ -93,7 +93,7 @@ describe('ProfileEditTab', () => {
     cleanup();
   });
 
-  it('shows one pane at a time with Story → Basic → Photos → Preferences nav order', async () => {
+  it('shows one pane at a time with Story → Facts → Photos → Preferences nav order', async () => {
     renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
@@ -126,7 +126,8 @@ describe('ProfileEditTab', () => {
     );
     expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
     expect(screen.getByTestId('mock-texts-form')).toBeTruthy();
-    expect(screen.getByTestId('mock-basic-form')).toBeTruthy();
+    expect(screen.getByTestId('mock-facts-form')).toBeTruthy();
+    expect(screen.getByTestId('profile-edit-nav-basic').textContent).toBe('Facts');
     expect(screen.getByTestId('profile-edit-progress-dots').getAttribute('aria-label')).toMatch(
       /of 4 sections complete/,
     );

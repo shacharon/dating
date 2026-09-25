@@ -839,7 +839,7 @@ export const esCopy: AppCopySchema = {
       settingsAccountHeading: "Cuenta",
       settingsAccountLink: "Ajustes de cuenta",
       settingsLanguageLink: "Idioma",
-      editSectionBasic: "Datos básicos",
+      editSectionBasic: "Datos",
       editSectionStory: "Tu historia",
       editSectionPhotos: "Fotos",
       editSectionPreferences: "Preferencias",

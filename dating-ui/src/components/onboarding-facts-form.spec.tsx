@@ -70,12 +70,12 @@ const emptyProfile: MeProfileDto = {
   updatedAt: '2026-01-02T00:00:00.000Z',
 };
 
-function renderForm() {
+function renderForm(props?: { variant?: 'onboarding' | 'profileHub' }) {
   return render(
     createElement(
       QueryClientTestProvider,
       { client: createTestQueryClient() },
-      createElement(OnboardingFactsForm),
+      createElement(OnboardingFactsForm, props),
     ),
   );
 }
@@ -351,5 +351,57 @@ describe('OnboardingFactsForm', () => {
       expect(patchMyProfile).toHaveBeenCalled();
     });
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('hub variant shows facts tiles, saves in place, and does not continue to photos', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      onboardingStep: 'COMPLETED',
+      gender: 'MALE',
+      desiredPartnerGenders: ['FEMALE'],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm({ variant: 'profileHub' });
+    const ff = enCopy.onboarding.factsForm;
+    const bf = enCopy.onboarding.basicForm;
+
+    const birth = await screen.findByLabelText(ff.birthDateLabel);
+    await waitFor(() => {
+      expect((birth as HTMLInputElement).value).toBe('1990-05-01');
+    });
+    expect(screen.getByText(ff.iAmLabel)).toBeTruthy();
+    expect(screen.getByText(ff.lookingForLabel)).toBeTruthy();
+    expect(screen.getByText(ff.whereLabel)).toBeTruthy();
+    expect(screen.queryByTestId('onboarding-facts-continue')).toBeNull();
+    expect(screen.queryByText(bf.partnerGendersLegend)).toBeNull();
+    expect(screen.queryByText(bf.partnerGendersRequiredHint)).toBeNull();
+    expect(replaceMock).not.toHaveBeenCalled();
+
+    fireEvent.change(birth, { target: { value: '1991-05-01' } });
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalled();
+    });
+    const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty('onboardingStep');
+    expect(body.desiredPartnerGenders).toEqual(['FEMALE']);
+    expect(body.birthDate).toBe('1991-05-01');
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(createMyProfile).not.toHaveBeenCalled();
+  });
+
+  it('hub variant does not create a profile when none is loaded', async () => {
+    fetchMyProfile.mockResolvedValue(null);
+
+    renderForm({ variant: 'profileHub' });
+
+    await waitFor(() => {
+      expect(screen.getByText(enCopy.onboarding.loadFailed)).toBeTruthy();
+    });
+    expect(createMyProfile).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('onboarding-facts-continue')).toBeNull();
   });
 });

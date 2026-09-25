@@ -20,8 +20,14 @@ const inputClass =
 const labelClass =
   'mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
-export function OnboardingFactsForm() {
-  const m = useOnboardingFactsForm();
+export function OnboardingFactsForm({
+  variant = 'onboarding',
+  onSaved,
+}: {
+  variant?: 'onboarding' | 'profileHub';
+  onSaved?: () => void;
+} = {}) {
+  const m = useOnboardingFactsForm({ variant, onSaved });
   const router = useRouter();
   const editMode = useSearchParams().get('edit') === '1';
   const autosave = useOnboardingAutosave();
@@ -200,7 +206,7 @@ export function OnboardingFactsForm() {
             </p>
           ) : null}
           {m.saveError ? <InlineError>{m.saveError}</InlineError> : null}
-          {m.canContinue ? (
+          {m.canContinue && !m.isHub ? (
             <button
               type="button"
               data-testid="onboarding-facts-continue"

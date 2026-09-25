@@ -831,7 +831,7 @@ export const enCopy: AppCopySchema = {
       settingsAccountHeading: "Account",
       settingsAccountLink: "Account settings",
       settingsLanguageLink: "Language",
-      editSectionBasic: "Basic info",
+      editSectionBasic: "Facts",
       editSectionStory: "Your story",
       editSectionPhotos: "Photos",
       editSectionPreferences: "Preferences",
