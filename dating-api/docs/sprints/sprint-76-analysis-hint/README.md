@@ -1,6 +1,6 @@
 # Sprint 76 — Tell people about analysis without nagging
 
-**Status:** In progress — Story 1 done
+**Status:** In progress — Stories 1–2 done
 **Commands:** [AGENT_COMMANDS.md](./AGENT_COMMANDS.md)
 **Pipeline:** `.cursor/skills/dating-agent-run/SKILL.md`
 **Repo:** `dating-ui` (copy only; no matching-engine change)
@@ -31,7 +31,7 @@ ready, and the result after it runs. Nowhere else should ask them to analyze.
 | # | Story | Status | Size | Depends on |
 |---|--------|--------|------|------------|
 | 1 | [Hint on the page before login](./STORY_01_landing_hint.md) | **Done** | S | — |
-| 2 | [Profile: hint, button, result](./STORY_02_profile_analyze_block.md) | Not started | M | — |
+| 2 | [Profile: hint, button, result](./STORY_02_profile_analyze_block.md) | **Done** | M | — |
 | 3 | [No nag anywhere else](./STORY_03_no_nag.md) | Not started | S | 2 |
 
 **Order:** 1 and 2 can run in parallel. 3 starts after 2 is on `main`.
