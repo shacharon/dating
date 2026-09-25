@@ -380,6 +380,7 @@ describe('OnboardingFactsForm', () => {
     expect(screen.getByText(ff.whereLabel)).toBeTruthy();
     expect(screen.queryByTestId('onboarding-facts-continue')).toBeNull();
     expect(document.getElementById('onb-gender')).toBeNull();
+    expect(screen.queryByLabelText(bf.nicknameLabel)).toBeNull();
     expect(screen.queryByText(bf.partnerGendersLegend)).toBeNull();
     expect(screen.queryByText(bf.partnerGendersRequiredHint)).toBeNull();
     expect(replaceMock).not.toHaveBeenCalled();
@@ -391,6 +392,7 @@ describe('OnboardingFactsForm', () => {
     });
     const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(body).not.toHaveProperty('onboardingStep');
+    expect(body).not.toHaveProperty('nickname');
     expect(body.desiredPartnerGenders).toEqual(['FEMALE']);
     expect(body.birthDate).toBe('1991-05-01');
     expect(pushMock).not.toHaveBeenCalled();
@@ -436,6 +438,7 @@ describe('OnboardingFactsForm', () => {
     const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(body.desiredPartnerGenders).toEqual(['MALE']);
     expect(body).not.toHaveProperty('onboardingStep');
+    expect(body).not.toHaveProperty('nickname');
     expect(onSaved).toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
     expect(replaceMock).not.toHaveBeenCalled();
