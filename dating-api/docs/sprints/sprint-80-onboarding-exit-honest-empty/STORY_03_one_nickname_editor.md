@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** `a74a378a`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -44,4 +46,4 @@ From `dating-ui`:
 - [x] No matcher change
 - [x] Tests passing (facts form, nickname settings, settings tab — 20 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`a74a378a`). Feature tip ahead of main: 0
