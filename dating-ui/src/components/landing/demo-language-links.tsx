@@ -26,14 +26,14 @@ export function DemoLanguageLinks({
   return (
     <nav
       aria-label={copy.label}
-      className="flex items-center justify-center gap-3 text-sm"
+      className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm"
       data-testid="demo-language-links"
     >
       {links.map((link) => (
         <a
           key={link.locale}
           href={link.href}
-          className="font-medium text-zinc-800 underline underline-offset-4 hover:text-zinc-950 dark:text-zinc-100 dark:hover:text-white"
+          className="inline-flex min-h-11 items-center font-medium text-zinc-800 underline underline-offset-4 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-800 dark:text-zinc-100 dark:hover:text-white dark:focus-visible:outline-zinc-100"
         >
           {copy[LABEL[link.locale]]}
         </a>
