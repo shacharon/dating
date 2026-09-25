@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** `0dce709c`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -46,4 +48,4 @@ From `dating-ui`:
 - [x] Matches still stays on Matches
 - [x] Tests passing (me-matches page spec + empty-state spec — 28 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`0dce709c`). Feature tip ahead of main: 0
