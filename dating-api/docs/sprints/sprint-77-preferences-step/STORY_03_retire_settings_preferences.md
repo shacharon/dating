@@ -1,8 +1,10 @@
 # Story 3: Retire `/settings/preferences`
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Story 2
 **Repo:** `dating-ui`
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -25,10 +27,10 @@ After Stories 1 and 2, age and distance have a home. Leaving `/settings/preferen
 
 ### Acceptance criteria
 
-- [ ] Opening `/settings/preferences` lands on `/profile/edit#preferences`
-- [ ] Avatar, settings preview, empty match list, and hard-block links go to `/profile/edit#preferences`
-- [ ] No screen still edits partner gender, age, and distance together
-- [ ] Age and distance remain editable on onboarding Preferences and Update details
+- [x] Opening `/settings/preferences` lands on `/profile/edit#preferences`
+- [x] Avatar, settings preview, empty match list, and hard-block links go to `/profile/edit#preferences`
+- [x] No screen still edits partner gender, age, and distance together
+- [x] Age and distance remain editable on onboarding Preferences and Update details
 
 ## Out of scope
 
@@ -37,4 +39,4 @@ After Stories 1 and 2, age and distance have a home. Leaving `/settings/preferen
 
 ## Definition of done
 
-- [ ] Search of `dating-ui/src` shows `/settings/preferences` only on the redirect
+- [x] Search of `dating-ui/src` shows `/settings/preferences` only on the redirect

@@ -97,10 +97,10 @@ describe('ProfileSettingsTab', () => {
     ).toBeNull();
   });
 
-  it('shows CTA to /settings/preferences with testid', async () => {
+  it('shows CTA to Update details Preferences with testid', async () => {
     renderSettingsTab();
     const cta = await screen.findByTestId('profile-match-preferences-link');
-    expect(cta.getAttribute('href')).toBe('/settings/preferences');
+    expect(cta.getAttribute('href')).toBe('/profile/edit#preferences');
   });
 
   it('renders age, distance, and partner gender preview lines', async () => {

@@ -61,7 +61,7 @@ describe('MatchListEmptyState', () => {
     renderEmptyState();
     expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
     expect(screen.getByTestId('match-empty-edit-preferences').getAttribute('href')).toBe(
-      '/settings/preferences',
+      '/profile/edit#preferences',
     );
     expect(screen.getByTestId('match-empty-edit-profile').getAttribute('href')).toBe(
       '/profile',

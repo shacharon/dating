@@ -205,7 +205,7 @@ describe('MeMatchDetailPage (match actions)', () => {
       ),
     ).toBeTruthy();
     const prefsLink = screen.getByRole('link', { name: 'Review preferences' });
-    expect(prefsLink.getAttribute('href')).toBe('/settings/preferences');
+    expect(prefsLink.getAttribute('href')).toBe('/profile/edit#preferences');
     expect(screen.queryByRole('button', { name: /^like$/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /^pass$/i })).toBeNull();
     expect(
