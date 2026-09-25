@@ -437,7 +437,7 @@ describe('MeMatchesPage (yourAction badges)', () => {
     expect(screen.getByText('You liked this profile')).toBeTruthy();
     expect(
       screen.getByText(
-        'This person smokes, while your preferences exclude smokers.',
+        'This person smokes. That conflicts with what you wrote.',
       ),
     ).toBeTruthy();
     expect(screen.getByText(/You: "I don't want smokers"/)).toBeTruthy();

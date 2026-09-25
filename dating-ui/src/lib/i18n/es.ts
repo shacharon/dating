@@ -117,13 +117,13 @@ export const esCopy: AppCopySchema = {
         youLikedThisProfile: "Te gusto este perfil",
         moreReasonsCount: (count) => `+ ${count} diferencia${count === 1 ? '' : 's'} más`,
         smokingExcludedViewerToThem:
-          "Esta persona fuma, y tus preferencias excluyen fumadores.",
+          "Esta persona fuma. Eso choca con lo que escribiste.",
         smokingExcludedThemToViewer:
-          "Tu fumas, y sus preferencias excluyen fumadores.",
+          "Tu fumas. Eso choca con lo que escribieron.",
         smokingRequiredViewerToThem:
-          "Esta persona no fuma, y tu solo quieres fumadores.",
+          "Esta persona no fuma. Eso choca con lo que escribiste.",
         smokingRequiredThemToViewer:
-          "Tu no fumas, y ellos solo quieren fumadores.",
+          "Tu no fumas. Eso choca con lo que escribieron.",
         ageViewerToThem: "Su edad esta fuera de tu rango preferido.",
         ageThemToViewer: "Tu edad esta fuera de su rango preferido.",
         genderViewerToThem:
@@ -311,13 +311,13 @@ export const esCopy: AppCopySchema = {
           "Me gusta y Paso no estan disponibles mientras las preferencias bloquean esta coincidencia.",
         youLikedThisProfile: "Te gusto este perfil",
         smokingExcludedViewerToThem:
-          "Esta persona fuma, y tus preferencias excluyen fumadores.",
+          "Esta persona fuma. Eso choca con lo que escribiste.",
         smokingExcludedThemToViewer:
-          "Tu fumas, y sus preferencias excluyen fumadores.",
+          "Tu fumas. Eso choca con lo que escribieron.",
         smokingRequiredViewerToThem:
-          "Esta persona no fuma, y tu solo quieres fumadores.",
+          "Esta persona no fuma. Eso choca con lo que escribiste.",
         smokingRequiredThemToViewer:
-          "Tu no fumas, y ellos solo quieren fumadores.",
+          "Tu no fumas. Eso choca con lo que escribieron.",
         ageViewerToThem: "Su edad esta fuera de tu rango preferido.",
         ageThemToViewer: "Tu edad esta fuera de su rango preferido.",
         genderViewerToThem:
