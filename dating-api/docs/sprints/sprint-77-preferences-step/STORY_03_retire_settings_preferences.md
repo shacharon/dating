@@ -3,8 +3,8 @@
 **Status:** Done
 **Depends on:** Story 2
 **Repo:** `dating-ui`
-**Shipped on main:** *(pending merge)*
-**Feature tip ahead of main:** *(pending)*
+**Shipped on main:** `a339746a`
+**Feature tip ahead of main:** 0
 
 ## Why
 
