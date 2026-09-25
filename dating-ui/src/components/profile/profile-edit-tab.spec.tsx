@@ -40,8 +40,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
-vi.mock('@/components/onboarding-basic-form', () => ({
-  OnboardingBasicForm: () => <div data-testid="mock-basic-form">basic</div>,
+vi.mock('@/components/onboarding-facts-form', () => ({
+  OnboardingFactsForm: () => <div data-testid="mock-facts-form">facts</div>,
 }));
 vi.mock('@/components/onboarding-texts-form', () => ({
   OnboardingTextsForm: () => <div data-testid="mock-texts-form">texts</div>,
@@ -51,6 +51,9 @@ vi.mock('@/components/profile-photo-section', () => ({
 }));
 
 import { ProfileEditTab } from '@/components/profile/profile-edit-tab';
+import { enCopy } from '@/lib/i18n/en';
+import { esCopy } from '@/lib/i18n/es';
+import { heCopy } from '@/lib/i18n/he';
 
 function renderEditTab() {
   return render(
@@ -93,7 +96,7 @@ describe('ProfileEditTab', () => {
     cleanup();
   });
 
-  it('shows one pane at a time with Story → Basic → Photos → Preferences nav order', async () => {
+  it('shows one pane at a time with Story → Facts → Photos → Preferences nav order', async () => {
     renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
@@ -126,7 +129,8 @@ describe('ProfileEditTab', () => {
     );
     expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
     expect(screen.getByTestId('mock-texts-form')).toBeTruthy();
-    expect(screen.getByTestId('mock-basic-form')).toBeTruthy();
+    expect(screen.getByTestId('mock-facts-form')).toBeTruthy();
+    expect(screen.getByTestId('profile-edit-nav-basic').textContent).toBe('Facts');
     expect(screen.getByTestId('profile-edit-progress-dots').getAttribute('aria-label')).toMatch(
       /of 4 sections complete/,
     );
@@ -136,6 +140,29 @@ describe('ProfileEditTab', () => {
     expect(
       screen.getByTestId('profile-edit-nav-preferences').hasAttribute('aria-current'),
     ).toBe(false);
+  });
+
+  it('opens Facts in place under the basic hash', async () => {
+    renderEditTab();
+    await screen.findByTestId('profile-edit-nav-basic');
+    fireEvent.click(screen.getByTestId('profile-edit-nav-basic'));
+
+    const basic = screen.getByTestId('profile-edit-section-basic');
+    expect(basic.hidden).toBe(false);
+    expect(basic.querySelector('h2')?.textContent).toMatch(/Facts/);
+    expect(basic.querySelector('[data-testid="mock-facts-form"]')).toBeTruthy();
+    expect(basic.querySelector('[data-testid="mock-photos"]')).toBeNull();
+    expect(window.location.pathname + window.location.hash).toBe(
+      '/profile/edit#basic',
+    );
+    expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
+  });
+
+  it('uses the onboarding Facts label in en, es, and he', () => {
+    expect(enCopy.profile.hub.editSectionBasic).toBe('Facts');
+    expect(enCopy.profile.hub.editSectionBasic).toBe(enCopy.onboarding.tabs.facts);
+    expect(esCopy.profile.hub.editSectionBasic).toBe(esCopy.onboarding.tabs.facts);
+    expect(heCopy.profile.hub.editSectionBasic).toBe(heCopy.onboarding.tabs.facts);
   });
 
   it('marks progress dots complete from profile + photos', async () => {

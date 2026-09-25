@@ -807,7 +807,7 @@ export const heCopy: AppCopySchema = {
       settingsAccountHeading: "חשבון",
       settingsAccountLink: "הגדרות חשבון",
       settingsLanguageLink: "שפה",
-      editSectionBasic: "פרטים בסיסיים",
+      editSectionBasic: "עובדות",
       editSectionStory: "הסיפור שלכם",
       editSectionPhotos: "תמונות",
       editSectionPreferences: "העדפות",

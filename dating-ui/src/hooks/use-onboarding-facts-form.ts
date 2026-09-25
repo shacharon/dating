@@ -43,13 +43,22 @@ function todayMaxBirthDate(): string {
   return `${y}-${m}-${day}`;
 }
 
-export function useOnboardingFactsForm() {
+export type UseOnboardingFactsFormOptions = {
+  variant?: 'onboarding' | 'profileHub';
+  onSaved?: () => void;
+};
+
+export function useOnboardingFactsForm({
+  variant = 'onboarding',
+  onSaved,
+}: UseOnboardingFactsFormOptions = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { copy, locale } = useAppLocale();
   const ff = copy.onboarding.factsForm;
   const bf = copy.onboarding.basicForm;
   const genderCopy = copy.gender;
+  const isHub = variant === 'profileHub';
   const editMode = searchParams.get('edit') === '1';
 
   const { profile, isLoading, error: profileLoadError } = useProfile();
@@ -138,7 +147,14 @@ export function useOnboardingFactsForm() {
       return;
     }
 
-    if (profile?.onboardingStep === 'COMPLETED' && !editMode) {
+    if (isHub && !profile) {
+      loadHandledRef.current = true;
+      setLoadError(copy.onboarding.loadFailed);
+      setProfileSyncing(false);
+      return;
+    }
+
+    if (!isHub && profile?.onboardingStep === 'COMPLETED' && !editMode) {
       loadHandledRef.current = true;
       setProfileSyncing(false);
       router.replace('/profile');
@@ -173,7 +189,7 @@ export function useOnboardingFactsForm() {
     loadHandledRef.current = true;
     setProfileSyncing(false);
     savedSnapRef.current = null;
-  }, [profile, isLoading, profileLoadError, router, editMode]);
+  }, [profile, isLoading, profileLoadError, router, editMode, isHub, copy.onboarding.loadFailed]);
 
   useEffect(() => {
     if (profileSyncing) return;
@@ -303,11 +319,17 @@ export function useOnboardingFactsForm() {
       country: v.countryCode || null,
       usStateCode: v.countryCode === 'US' ? v.usStateCode || null : null,
       cityId: v.cityId || null,
-      onboardingStep: v.canContinue ? 'TEXTS' : 'BASIC',
+      ...(isHub
+        ? {}
+        : { onboardingStep: v.canContinue ? ('TEXTS' as const) : ('BASIC' as const) }),
     };
     const pending = (async () => {
       setSaveError(null);
       try {
+        if (isHub && !v.hasProfile) {
+          setSaveError(copy.onboarding.loadFailed);
+          return false;
+        }
         if (v.hasProfile) {
           await patchMutation.mutateAsync(body);
         } else {
@@ -315,6 +337,7 @@ export function useOnboardingFactsForm() {
           setHasProfile(true);
         }
         savedSnapRef.current = snap;
+        if (isHub) onSaved?.();
         return true;
       } catch (e) {
         setSaveError(e instanceof Error ? e.message : copy.onboarding.saveFailed);
@@ -346,6 +369,7 @@ export function useOnboardingFactsForm() {
   ]);
 
   return {
+    isHub,
     locale,
     ff,
     bf,

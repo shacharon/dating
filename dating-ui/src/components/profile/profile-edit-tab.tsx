@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { OnboardingBasicForm } from '@/components/onboarding-basic-form';
+import { OnboardingFactsForm } from '@/components/onboarding-facts-form';
 import { OnboardingTextsForm } from '@/components/onboarding-texts-form';
 import { ProfilePhotoSection } from '@/components/profile-photo-section';
 import { ProfileEditPreferencesSection } from '@/components/profile/profile-edit-preferences-section';
@@ -134,7 +134,7 @@ export function ProfileEditTab({
         complete={complete.basic}
         active={active === 'basic'}
       >
-        <OnboardingBasicForm variant="profileHub" onSaved={handleMutated} />
+        <OnboardingFactsForm variant="profileHub" onSaved={handleMutated} />
       </ProfileEditSectionShell>
 
       <ProfileEditSectionShell
