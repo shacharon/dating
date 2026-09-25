@@ -7,11 +7,14 @@ import {
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
 
-const { fetchMyProfile, listMyProfilePhotos, patchMyProfile } = vi.hoisted(() => ({
-  fetchMyProfile: vi.fn(),
-  listMyProfilePhotos: vi.fn(),
-  patchMyProfile: vi.fn(),
-}));
+const { fetchMyProfile, listMyProfilePhotos, patchMyProfile, pushMock, replaceMock } =
+  vi.hoisted(() => ({
+    fetchMyProfile: vi.fn(),
+    listMyProfilePhotos: vi.fn(),
+    patchMyProfile: vi.fn(),
+    pushMock: vi.fn(),
+    replaceMock: vi.fn(),
+  }));
 
 vi.mock('@/lib/api-sdk', () => ({
   datingApi: {
@@ -37,7 +40,7 @@ vi.mock('@/contexts/auth-context', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push: pushMock, replace: replaceMock, prefetch: vi.fn() }),
 }));
 
 vi.mock('@/components/onboarding-facts-form', () => ({
@@ -156,6 +159,54 @@ describe('ProfileEditTab', () => {
       '/profile/edit#basic',
     );
     expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
+  });
+
+  it('shows one editor per tab and keeps photos on the Photos pane', async () => {
+    renderEditTab();
+    await screen.findByTestId('profile-edit-nav-story');
+    pushMock.mockClear();
+    replaceMock.mockClear();
+
+    const ids = ['story', 'basic', 'photos', 'preferences'] as const;
+    for (const id of ids) {
+      fireEvent.click(screen.getByTestId(`profile-edit-nav-${id}`));
+
+      for (const other of ids) {
+        expect(screen.getByTestId(`profile-edit-section-${other}`).hidden).toBe(
+          other !== id,
+        );
+      }
+      expect(window.location.pathname + window.location.hash).toBe(
+        `/profile/edit#${id}`,
+      );
+    }
+
+    const photos = screen.getByTestId('profile-edit-section-photos');
+    expect(photos.querySelector('[data-testid="mock-photos"]')).toBeTruthy();
+    expect(photos.querySelector('h2')?.textContent).toMatch(/Photos/);
+    expect(
+      screen.getByTestId('profile-edit-tab').querySelectorAll('[data-testid="mock-photos"]'),
+    ).toHaveLength(1);
+    expect(
+      screen.getByTestId('profile-edit-section-story').querySelector('[data-testid="mock-texts-form"]'),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId('profile-edit-section-basic').querySelector('[data-testid="mock-facts-form"]'),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByTestId('profile-edit-section-preferences')
+        .querySelector('[data-testid="profile-edit-preferences"]'),
+    ).toBeTruthy();
+    for (const id of ['basic', 'story', 'preferences'] as const) {
+      const pane = screen.getByTestId(`profile-edit-section-${id}`);
+      expect(pane.querySelector('[data-testid="mock-photos"]')).toBeNull();
+    }
+    expect(screen.getByTestId('profile-edit-section-basic').querySelector('h2')?.textContent).toMatch(
+      /Facts/,
+    );
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 
   it('uses the onboarding Facts label in en, es, and he', () => {
