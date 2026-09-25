@@ -1,6 +1,6 @@
 # Story 2: Distinct empty Matches for not analyzed
 
-**Status:** Parked
+**Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
 
@@ -22,10 +22,10 @@
 
 ## Acceptance criteria
 
-- [ ] `not_analyzed` does not show the pool-invite title/body as the only message
-- [ ] User can open Profile/analyze without being forced off Matches on load
-- [ ] Empty ready list still invites / “joining”
-- [ ] Specs: two empties are distinct; no auto `replace`
+- [x] `not_analyzed` does not show the pool-invite title/body as the only message
+- [x] User can open Profile/analyze without being forced off Matches on load
+- [x] Empty ready list still invites / “joining”
+- [x] Specs: two empties are distinct; no auto `replace`
 
 ## Affected files
 
@@ -42,4 +42,8 @@ From `dating-ui`:
 
 ## Definition of done
 
-Two different empties. Matches still stays on Matches.
+- [x] Two different empties
+- [x] Matches still stays on Matches
+- [x] Tests passing (me-matches page spec + empty-state spec — 28 passed)
+- [x] UX review approved (Agent 3.5)
+- [x] Landed on `main` (SHA recorded after merge)

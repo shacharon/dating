@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { MatchListEmptyState } from '@/components/match-list-empty-state';
+import { MatchListNotAnalyzedGate } from '@/components/match-list-not-analyzed-gate';
 import { MatchListPhotoGate } from '@/components/match-list-photo-gate';
 import { MatchListNoProfileGate } from '@/components/match-list-no-profile-gate';
 import { useAppLocale } from '@/lib/i18n';
@@ -126,7 +127,7 @@ export default function MeMatchesPageClient() {
         {!loading &&
           !error &&
           data?.status === 'not_ready' &&
-          data.reason === 'not_analyzed' && <MatchListEmptyState />}
+          data.reason === 'not_analyzed' && <MatchListNotAnalyzedGate />}
 
         {!loading &&
           !error &&

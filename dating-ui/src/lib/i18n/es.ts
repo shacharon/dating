@@ -101,6 +101,11 @@ export const esCopy: AppCopySchema = {
         body: "Agrega lo basico y podremos buscar personas aqui.",
         cta: "Continuar perfil",
       },
+      notAnalyzedGate: {
+        title: "Tu perfil necesita analisis",
+        body: "No podemos buscar personas hasta que tu perfil se analice.",
+        cta: "Ir al analisis",
+      },
       actionBadge: {
         liked: { label: "Me gusta", ariaLabel: "Te gusto esta coincidencia" },
         passed: { label: "Paso", ariaLabel: "Pasaste esta coincidencia" },

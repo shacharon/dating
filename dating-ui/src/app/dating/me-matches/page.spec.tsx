@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { MatchRecommendationDto } from '@/lib/api/me-matches-api';
 import { APP_LOCALE_STORAGE_KEY } from '@/lib/i18n';
+import { enCopy } from '@/lib/i18n/en';
 import { heCopy } from '@/lib/i18n/he';
 
 const { fetchMyMatches, submitMyProfileForAnalysis, fetchMyProfile, listMyProfilePhotos, replaceMock, pushMock, likeMatch, passMatch, undoMatchAction, fetchMatchAction, blockMatch, emitProductLog } = vi.hoisted(() => ({
@@ -156,9 +157,10 @@ describe('MeMatchesPage (empty list)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
     });
-    expect(screen.getByTestId('match-empty-edit-preferences')).toBeTruthy();
-    expect(screen.getByTestId('match-empty-edit-profile')).toBeTruthy();
     expect(screen.getByTestId('match-empty-invite-copy')).toBeTruthy();
+    expect(screen.getByText(enCopy.launch.emptyMatches.title)).toBeTruthy();
+    expect(screen.queryByTestId('match-list-not-analyzed-gate')).toBeNull();
+    expect(screen.queryByText(enCopy.matches.list.notAnalyzedGate.title)).toBeNull();
     unmount();
   });
 });
@@ -251,15 +253,26 @@ describe('MeMatchesPage (not_ready stays on Matches)', () => {
     const { unmount, container } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('match-list-empty-state')).toBeTruthy();
+      expect(screen.getByTestId('match-list-not-analyzed-gate')).toBeTruthy();
     });
+    expect(screen.queryByTestId('match-list-empty-state')).toBeNull();
+    expect(screen.queryByTestId('match-empty-invite-copy')).toBeNull();
     expect(screen.queryByTestId('match-list-no-profile-gate')).toBeNull();
+    expect(screen.getByText('Your profile needs analysis')).toBeTruthy();
+    expect(screen.getByText(enCopy.matches.list.notAnalyzedGate.body)).toBeTruthy();
+    expect(screen.queryByText('No matches to show right now')).toBeNull();
+    expect(screen.queryByText(enCopy.launch.emptyMatches.bodyGeneric)).toBeNull();
+    expect(screen.getByTestId('match-not-analyzed-gate-cta').textContent).toBe(
+      enCopy.matches.list.notAnalyzedGate.cta,
+    );
+    expect(
+      screen.getByTestId('match-not-analyzed-gate-cta').getAttribute('href'),
+    ).toBe('/profile/analysis');
     expect(replaceMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
     const hrefs = [...container.querySelectorAll('a')].map(
       (el) => el.getAttribute('href') ?? '',
     );
-    expect(hrefs.some((href) => href.includes('analysis'))).toBe(false);
     expect(hrefs.some((href) => href.includes('/onboarding'))).toBe(false);
     unmount();
   });
