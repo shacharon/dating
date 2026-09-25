@@ -142,6 +142,63 @@ describe('PhotoModerationService', () => {
   });
 
   describe('decideFromRekognition', () => {
+    it('approves swimwear and non-explicit labels when a face is present', async () => {
+      rekognition.detectModerationLabels.mockResolvedValue({
+        ModerationLabels: [
+          {
+            Name: 'Female Swimwear or Underwear',
+            ParentName: 'Swimwear or Underwear',
+            Confidence: 94.6,
+          },
+          {
+            Name: 'Partially Exposed Female Breast',
+            ParentName: 'Non-Explicit Nudity',
+            Confidence: 94.6,
+          },
+        ],
+        $metadata: {},
+      });
+      rekognition.detectFaces!.mockResolvedValue({
+        FaceDetails: [{}],
+        $metadata: {},
+      });
+
+      const out = await service.decideFromRekognition({
+        photoId: 'p-bikini',
+        storageKey: 'key/bikini.jpg',
+      });
+      expect(out.status).toBe('APPROVED');
+    });
+
+    it('still rejects explicit labels at the reject threshold', async () => {
+      rekognition.detectModerationLabels.mockResolvedValue({
+        ModerationLabels: [
+          {
+            Name: 'Explicit Nudity',
+            ParentName: 'Explicit',
+            Confidence: 94.6,
+          },
+          {
+            Name: 'Female Swimwear or Underwear',
+            ParentName: 'Swimwear or Underwear',
+            Confidence: 90,
+          },
+        ],
+        $metadata: {},
+      });
+      rekognition.detectFaces!.mockResolvedValue({
+        FaceDetails: [{}],
+        $metadata: {},
+      });
+
+      const out = await service.decideFromRekognition({
+        photoId: 'p-explicit',
+        storageKey: 'key/explicit.jpg',
+      });
+      expect(out.status).toBe('REJECTED');
+      expect(out.rejectionReasonCode).toBe('explicit_content');
+    });
+
     it('maps safe labels to approved', async () => {
       rekognition.detectModerationLabels.mockResolvedValue({
         ModerationLabels: [],

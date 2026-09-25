@@ -70,3 +70,27 @@ export function maxMlConfidence(labels: Array<{ Confidence?: number }>): number 
   }
   return max;
 }
+
+/** Swimwear and non-explicit nudity are allowed. Explicit labels still block. */
+const ALLOWED_SWIMWEAR_LABELS = new Set([
+  'swimwear or underwear',
+  'female swimwear or underwear',
+  'male swimwear or underwear',
+  'non-explicit nudity of intimate parts and kissing',
+  'non-explicit nudity',
+  'partially exposed female breast',
+  'partially exposed male breast',
+]);
+
+export function isAllowedSwimwearModerationLabel(
+  name: string | undefined,
+  parentName?: string,
+): boolean {
+  const nameKey = name?.trim().toLowerCase();
+  const parentKey = parentName?.trim().toLowerCase();
+  if (nameKey === 'explicit' || parentKey === 'explicit') return false;
+  if (nameKey?.startsWith('explicit ')) return false;
+  if (nameKey && ALLOWED_SWIMWEAR_LABELS.has(nameKey)) return true;
+  if (parentKey && ALLOWED_SWIMWEAR_LABELS.has(parentKey)) return true;
+  return false;
+}

@@ -5,6 +5,7 @@ import {
 } from './photo-moderation.config';
 import { REKOGNITION, type RekognitionPort } from './photo-moderation.ports';
 import {
+  isAllowedSwimwearModerationLabel,
   maxMlConfidence,
   parseModerationResultJson,
   REJECTION_REASON_USER_COPY_EN,
@@ -99,7 +100,10 @@ export class PhotoModerationDecisionService {
         Image: image,
         MinConfidence: this.thresholds.flagThreshold,
       });
-      const labels = mod.ModerationLabels ?? [];
+      const labels = (mod.ModerationLabels ?? []).filter(
+        (label) =>
+          !isAllowedSwimwearModerationLabel(label.Name, label.ParentName),
+      );
       const mlLabels = labels
         .map((l) => l.Name)
         .filter((n): n is string => typeof n === 'string' && n.length > 0);
