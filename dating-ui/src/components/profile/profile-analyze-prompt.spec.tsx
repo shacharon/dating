@@ -159,10 +159,30 @@ describe('ProfileAnalyzePrompt', () => {
     expect(screen.queryByTestId('profile-analyze-button')).toBeNull();
   });
 
-  it('submits the existing analysis job from the ready button', async () => {
+  it('keeps the button when the evaluation has no self highlights', () => {
     renderPrompt({
       profile: factsProfile(),
       draft: storyDraft(40),
+      analysis: {
+        userProfileId: 'p1',
+        evaluationId: 'ev-1',
+        createdAt: '2020-01-02T00:00:00.000Z',
+        evaluationJson: {
+          chips: { partner: [{ label: 'Partner only' }] },
+        },
+      },
+    });
+
+    expect(screen.queryByText('Partner only')).toBeNull();
+    expect(screen.getByTestId('profile-analyze-button')).toBeTruthy();
+  });
+
+  it('submits the existing analysis job from the ready button', async () => {
+    const onFinished = vi.fn();
+    renderPrompt({
+      profile: factsProfile(),
+      draft: storyDraft(40),
+      onFinished,
     });
 
     fireEvent.click(screen.getByTestId('profile-analyze-button'));
@@ -170,19 +190,23 @@ describe('ProfileAnalyzePrompt', () => {
     await waitFor(() => {
       expect(mutateAsync).toHaveBeenCalledTimes(1);
     });
+    expect(onFinished).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the button and shows the failure when submit rejects', async () => {
+    const onFinished = vi.fn();
     mutateAsync.mockRejectedValueOnce(new Error('submit failed'));
 
     renderPrompt({
       profile: factsProfile(),
       draft: storyDraft(40),
+      onFinished,
     });
 
     fireEvent.click(screen.getByTestId('profile-analyze-button'));
 
     expect((await screen.findByRole('alert')).textContent).toBe(hub.analyzeFailed);
     expect(screen.getByTestId('profile-analyze-button')).toBeTruthy();
+    expect(onFinished).not.toHaveBeenCalled();
   });
 });
