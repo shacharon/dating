@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** `4279f334`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -43,4 +45,4 @@ From `dating-ui`:
 - [x] No new filter
 - [x] Tests passing (hard-block display, matches list, match detail — 68 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`4279f334`). Feature tip ahead of main: 0
