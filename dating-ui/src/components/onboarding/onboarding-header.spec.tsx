@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 
 const mockPush = vi.fn();
 const mockPathname = vi.fn(() => '/onboarding/basics');
@@ -44,10 +44,10 @@ describe('OnboardingHeader', () => {
     cleanup();
   });
 
-  it('has no Exit button — Skip only', () => {
+  it('has no Exit or Skip button', () => {
     render(<OnboardingHeader />);
     expect(screen.queryByTestId('onboarding-exit')).toBeNull();
-    expect(screen.getByTestId('onboarding-skip')).toBeTruthy();
+    expect(screen.queryByTestId('onboarding-skip')).toBeNull();
   });
 
   it('shows Story, Facts, and Photos steps', () => {
@@ -67,15 +67,4 @@ describe('OnboardingHeader', () => {
     expect(photosLink.getAttribute('href')).toBe('/onboarding/photos');
   });
 
-  it('skips immediately to matches', () => {
-    render(<OnboardingHeader />);
-    fireEvent.click(screen.getByTestId('onboarding-skip'));
-    expect(mockPush).toHaveBeenCalledWith('/dating/me-matches');
-  });
-
-  it('hides skip in edit mode', () => {
-    mockSearchParams.mockReturnValue(new URLSearchParams('edit=1'));
-    render(<OnboardingHeader />);
-    expect(screen.queryByTestId('onboarding-skip')).toBeNull();
-  });
 });

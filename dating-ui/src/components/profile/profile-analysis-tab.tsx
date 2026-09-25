@@ -62,6 +62,15 @@ export function ProfileAnalysisTab() {
         />
       )}
 
+      {!loading && !error && !waitingPanel && !showResults && (
+        <p
+          className="text-sm text-zinc-600 dark:text-zinc-400"
+          data-testid="profile-analysis-empty"
+        >
+          {copy.profile.hub.overviewStripNotRun}
+        </p>
+      )}
+
       {!loading && !error && showResults && data && (
         <AnalysisResultsView
           data={data}

@@ -117,7 +117,7 @@ describe('OnboardingFactsForm', () => {
     localStorage.removeItem(APP_LOCALE_STORAGE_KEY);
   });
 
-  it('shows four field labels and no nickname / dating chapter', async () => {
+  it('shows nickname first, then the four facts, and no dating chapter', async () => {
     renderForm();
     const ff = enCopy.onboarding.factsForm;
     const bf = enCopy.onboarding.basicForm;
@@ -129,25 +129,22 @@ describe('OnboardingFactsForm', () => {
       expect(screen.getByLabelText(ff.birthDateLabel)).toBeTruthy();
     });
 
-    expect(screen.queryByLabelText(bf.nicknameLabel)).toBeNull();
+    expect(screen.getByLabelText(bf.nicknameLabel)).toBeTruthy();
     expect(screen.queryByText(bf.datingChapter.question)).toBeNull();
   });
 
-  it('keeps Continue disabled with missing hints until fields are filled', async () => {
+  it('shows missing hints and no Continue button', async () => {
     renderForm();
     const ff = enCopy.onboarding.factsForm;
 
     await waitFor(() => {
-      expect(
-        (screen.getByTestId('onboarding-facts-continue') as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.getByText(new RegExp(ff.missingHeading))).toBeTruthy();
     });
-    expect(screen.getByText(new RegExp(ff.missingHeading))).toBeTruthy();
+    expect(screen.queryByTestId('onboarding-facts-continue')).toBeNull();
     expect(screen.getByText(new RegExp(ff.missingGender))).toBeTruthy();
   });
 
-  it('Continue patches TEXTS with partners and navigates to photos', async () => {
+  it('saves complete facts when a field changes and stays on the page', async () => {
     fetchMyProfile.mockResolvedValue({
       ...emptyProfile,
       gender: 'MALE',
@@ -158,35 +155,31 @@ describe('OnboardingFactsForm', () => {
     });
 
     renderForm();
+    const ff = enCopy.onboarding.factsForm;
 
+    const birth = await screen.findByLabelText(ff.birthDateLabel);
     await waitFor(() => {
-      expect(
-        (screen.getByTestId('onboarding-facts-continue') as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
+      expect((birth as HTMLInputElement).value).toBe('1990-05-01');
     });
 
-    fireEvent.click(screen.getByTestId('onboarding-facts-continue'));
+    fireEvent.change(birth, { target: { value: '1991-05-01' } });
 
     await waitFor(() => {
       expect(patchMyProfile).toHaveBeenCalledWith(
         expect.objectContaining({
           gender: 'MALE',
           desiredPartnerGenders: ['FEMALE'],
-          birthDate: '1990-05-01',
+          birthDate: '1991-05-01',
           country: 'IL',
           cityId: 'city_IL_na_tel_aviv',
           onboardingStep: 'TEXTS',
         }),
       );
-      expect(patchMyProfile.mock.calls[0][0].onboardingStep).not.toBe(
-        'COMPLETED',
-      );
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/photos');
     });
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('Continue with everyone sends all partner genders (no PREFER_NOT_TO_SAY)', async () => {
+  it('saves everyone as all partner genders when a field changes', async () => {
     fetchMyProfile.mockResolvedValue({
       ...emptyProfile,
       gender: 'FEMALE',
@@ -197,15 +190,12 @@ describe('OnboardingFactsForm', () => {
     });
 
     renderForm();
-
+    const ff = enCopy.onboarding.factsForm;
+    const birth = await screen.findByLabelText(ff.birthDateLabel);
     await waitFor(() => {
-      expect(
-        (screen.getByTestId('onboarding-facts-continue') as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
+      expect((birth as HTMLInputElement).value).toBe('1992-01-15');
     });
-
-    fireEvent.click(screen.getByTestId('onboarding-facts-continue'));
+    fireEvent.change(birth, { target: { value: '1992-02-15' } });
 
     await waitFor(() => {
       expect(patchMyProfile).toHaveBeenCalledWith(
@@ -214,10 +204,11 @@ describe('OnboardingFactsForm', () => {
           onboardingStep: 'TEXTS',
         }),
       );
-      const partners = patchMyProfile.mock.calls[0][0]
-        .desiredPartnerGenders as string[];
-      expect(partners).not.toContain('PREFER_NOT_TO_SAY');
     });
+    const partners = patchMyProfile.mock.calls.at(-1)?.[0]
+      .desiredPartnerGenders as string[];
+    expect(partners).not.toContain('PREFER_NOT_TO_SAY');
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('creates a profile when none exists yet', async () => {
@@ -250,24 +241,18 @@ describe('OnboardingFactsForm', () => {
     });
 
     await waitFor(() => {
-      expect(
-        (screen.getByTestId('onboarding-facts-continue') as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
-    });
-
-    fireEvent.click(screen.getByTestId('onboarding-facts-continue'));
-
-    await waitFor(() => {
-      expect(createMyProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          gender: 'MALE',
-          desiredPartnerGenders: ['FEMALE'],
-          onboardingStep: 'TEXTS',
-        }),
+      const calls = [
+        ...createMyProfile.mock.calls,
+        ...patchMyProfile.mock.calls,
+      ];
+      const saved = calls.some(
+        (call) =>
+          call[0].gender === 'MALE' &&
+          call[0].cityId === 'city_IL_na_tel_aviv' &&
+          call[0].onboardingStep === 'TEXTS',
       );
-      expect(patchMyProfile).not.toHaveBeenCalled();
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/photos');
+      expect(saved).toBe(true);
     });
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

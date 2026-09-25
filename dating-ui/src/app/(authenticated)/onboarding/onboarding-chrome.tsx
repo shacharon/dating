@@ -3,22 +3,25 @@
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { OnboardingHeader } from '@/components/onboarding/onboarding-header';
+import { OnboardingAutosaveProvider } from '@/components/onboarding/onboarding-autosave';
 
 /**
- * First-time onboarding: fixed progress header, no AppNav (shell hides it).
- * Edit mode (`?edit=1`): no progress chrome — AppNav stays visible from the shell.
+ * Onboarding steps sit under the main app nav: Story, Facts, Photos.
+ * Edit mode (`?edit=1`): no progress chrome.
  */
 export function OnboardingChrome({ children }: { children: ReactNode }) {
   const editMode = useSearchParams().get('edit') === '1';
 
-  if (editMode) {
-    return <>{children}</>;
-  }
-
   return (
-    <>
-      <OnboardingHeader />
-      <main className="pt-20">{children}</main>
-    </>
+    <OnboardingAutosaveProvider>
+      {editMode ? (
+        children
+      ) : (
+        <>
+          <OnboardingHeader />
+          <main>{children}</main>
+        </>
+      )}
+    </OnboardingAutosaveProvider>
   );
 }

@@ -326,6 +326,9 @@ export type AppCopySchema = {
     matches: string;
     conversations: string;
     profile: string;
+    onboarding: string;
+    profileDetails: string;
+    updateDetails: string;
     analysis: string;
     accountSettings: string;
     editBasicProfile: string;
@@ -451,6 +454,7 @@ export type AppCopySchema = {
         micDenied: string;
         unsupported: string;
         genericError: string;
+        listening: string;
         timerLabel: (seconds: number) => string;
       };
     };

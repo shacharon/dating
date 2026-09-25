@@ -9,10 +9,10 @@ type Props = {
   onNavigate: (id: EditSectionId) => void;
 };
 
-const ORDER: EditSectionId[] = ['basic', 'photos', 'story'];
+const ORDER: EditSectionId[] = ['story', 'basic', 'photos'];
 
 /**
- * Sticky Basics / Photos / Story nav with completion progress dots.
+ * Sticky Story / Basic / Photos nav with completion progress dots.
  */
 export function ProfileEditSectionNav({
   active,

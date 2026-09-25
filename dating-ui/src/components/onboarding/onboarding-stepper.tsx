@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { AppCopySchema } from '@/lib/i18n';
+import { useOnboardingAutosave } from './onboarding-autosave';
 import {
   canNavigateOnboardingStep,
   isOnboardingStepFilled,
@@ -24,6 +26,8 @@ export function OnboardingStepper({
   editMode: boolean;
   copy: AppCopySchema['onboarding'];
 }) {
+  const router = useRouter();
+  const autosave = useOnboardingAutosave();
   const labels: Record<OnboardingUiStep, string> = {
     story: copy.tabs.story,
     facts: copy.tabs.facts,
@@ -85,6 +89,14 @@ export function OnboardingStepper({
                 className={stepClassName}
                 aria-current={isCurrent ? 'step' : undefined}
                 aria-label={stepName}
+                onClick={(event) => {
+                  if (isCurrent) return;
+                  event.preventDefault();
+                  void (async () => {
+                    await autosave?.flush();
+                    router.push(href);
+                  })();
+                }}
               >
                 {node}
               </Link>

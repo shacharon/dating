@@ -431,6 +431,9 @@ export const enCopy: AppCopySchema = {
     matches: "Matches",
     conversations: "Conversations",
     profile: "Profile",
+    onboarding: "Onboarding",
+    profileDetails: "Profile details",
+    updateDetails: "Update details",
     analysis: "Analysis",
     accountSettings: "Account Settings",
     editBasicProfile: "Edit Basic Profile",
@@ -572,6 +575,7 @@ export const enCopy: AppCopySchema = {
           'Voice recording is not supported in this browser. You can type your story below.',
         genericError:
           'Could not create a draft from that recording. You can type instead.',
+        listening: 'Listening…',
         timerLabel: (seconds) => `${seconds}s / 120s`,
       },
     },

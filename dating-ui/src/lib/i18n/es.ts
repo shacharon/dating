@@ -436,6 +436,9 @@ export const esCopy: AppCopySchema = {
     matches: "Coincidencias",
     conversations: "Conversaciones",
     profile: "Perfil",
+    onboarding: "Registro",
+    profileDetails: "Detalles del perfil",
+    updateDetails: "Actualizar datos",
     analysis: "Analisis",
     accountSettings: "Configuracion de cuenta",
     editBasicProfile: "Editar perfil basico",
@@ -578,6 +581,7 @@ export const esCopy: AppCopySchema = {
           'La grabacion de voz no es compatible con este navegador. Puedes escribir tu historia abajo.',
         genericError:
           'No se pudo crear un borrador con esa grabacion. Puedes escribir en su lugar.',
+        listening: 'Escuchando…',
         timerLabel: (seconds) => `${seconds}s / 120s`,
       },
     },

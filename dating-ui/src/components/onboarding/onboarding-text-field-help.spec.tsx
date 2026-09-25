@@ -36,6 +36,8 @@ describe('OnboardingTextFieldHelp', () => {
       chrome.wordCountLine(2),
     );
     expect(screen.getByText(chrome.ideasHeading)).toBeTruthy();
+    expect(screen.queryByText(field.questions[0])).toBeNull();
+    fireEvent.click(screen.getByTestId('ot-about-me-ideas-toggle'));
     expect(screen.getByText(field.questions[0])).toBeTruthy();
     expect(screen.queryByTestId('ot-about-me-examples-panel')).toBeNull();
     expect(screen.queryByTestId('ot-about-me-tips-panel')).toBeNull();

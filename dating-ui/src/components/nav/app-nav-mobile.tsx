@@ -1,13 +1,16 @@
 'use client';
 
 import { NavAuth } from '@/components/nav-auth';
+import { useProfile } from '@/hooks/use-profile';
+import { hasMinimumProfileFacts } from '@/lib/profile/minimum-profile';
 import type { AppNavChromeProps } from './app-nav-desktop';
 import {
   isConversationsActive,
+  isDetailsActive,
   isMatchesActive,
   isProfileActive,
 } from './nav-active';
-import { ConversationsIcon, MatchesIcon, ProfileIcon } from './nav-icons';
+import { ConversationsIcon, DetailsIcon, MatchesIcon, ProfileIcon } from './nav-icons';
 import { NavItem } from './nav-item';
 
 /** Fixed bottom tab bar for small viewports; shares chrome props with desktop. */
@@ -23,6 +26,13 @@ export function AppNavMobile({
   const matchesActive = isMatchesActive(pathname);
   const conversationsActive = isConversationsActive(pathname);
   const profileActive = isProfileActive(pathname);
+  const detailsActive = isDetailsActive(pathname);
+  const { profile, isLoading } = useProfile();
+  const profileReady = !isLoading && hasMinimumProfileFacts(profile);
+  const detailsHref = profileReady ? '/profile/edit' : '/onboarding';
+  const detailsLabel = profileReady
+    ? copy.nav.updateDetails
+    : copy.nav.onboarding;
 
   return (
     <>
@@ -79,11 +89,20 @@ export function AppNavMobile({
           />
           <NavItem
             variant="mobile"
-            href="/profile"
+            href="/profile/overview"
             label={copy.nav.profile}
             active={profileActive}
             icon={<ProfileIcon filled={profileActive} className="h-5 w-5" />}
-            onClick={() => onNavClick('/profile')}
+            onClick={() => onNavClick('/profile/overview')}
+            pending={navPending}
+          />
+          <NavItem
+            variant="mobile"
+            href={detailsHref}
+            label={detailsLabel}
+            active={detailsActive}
+            icon={<DetailsIcon filled={detailsActive} className="h-5 w-5" />}
+            onClick={() => onNavClick(detailsHref)}
             pending={navPending}
           />
         </div>

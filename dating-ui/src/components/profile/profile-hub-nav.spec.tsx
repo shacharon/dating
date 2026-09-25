@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { enCopy } from '@/lib/i18n/en';
 
-let mockPathname = '/profile';
+let mockPathname = '/profile/edit';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
@@ -41,22 +41,9 @@ describe('ProfileHubNav', () => {
     expect(edit.getAttribute('aria-current')).toBe('page');
     expect(edit.getAttribute('href')).toBe('/profile/edit');
     expect(edit.className).toMatch(/focus-visible:outline/);
-    expect(
-      screen.getByTestId('profile-tab-overview').getAttribute('aria-current'),
-    ).toBeNull();
+    expect(screen.queryByTestId('profile-tab-overview')).toBeNull();
     expect(
       screen.getByTestId('profile-tab-settings').getAttribute('href'),
     ).toBe('/profile/settings');
-  });
-
-  it('marks overview only for exact /profile', () => {
-    mockPathname = '/profile';
-    render(createElement(ProfileHubNav, { copy: enCopy.profile.hub }));
-    expect(
-      screen.getByTestId('profile-tab-overview').getAttribute('aria-current'),
-    ).toBe('page');
-    expect(
-      screen.getByTestId('profile-tab-edit').getAttribute('aria-current'),
-    ).toBeNull();
   });
 });

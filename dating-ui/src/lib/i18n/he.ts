@@ -412,6 +412,9 @@ export const heCopy: AppCopySchema = {
     matches: "התאמות",
     conversations: "שיחות",
     profile: "פרופיל",
+    onboarding: "הצטרפות",
+    profileDetails: "פרטי פרופיל",
+    updateDetails: "עדכון פרטים",
     analysis: "ניתוח",
     accountSettings: "הגדרות חשבון",
     editBasicProfile: "עריכת פרופיל בסיסי",
@@ -552,6 +555,7 @@ export const heCopy: AppCopySchema = {
           'הקלטה קולית אינה נתמכת בדפדפן הזה. אפשר להקליד את הסיפור למטה.',
         genericError:
           'לא הצלחנו ליצור טיוטה מההקלטה. אפשר להקליד במקום.',
+        listening: 'מקשיב…',
         timerLabel: (seconds) => `${seconds} שנ׳ / 120 שנ׳`,
       },
     },

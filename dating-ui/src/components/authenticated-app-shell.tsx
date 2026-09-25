@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Suspense, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AppNav } from "@/components/nav/app-nav";
 import { InlineError } from "@/components/errors";
 import { OfflineBanner } from "@/components/offline-banner";
@@ -168,34 +168,24 @@ function AuthenticatedProductChrome({
   navPending: boolean;
   setNavPending: (v: boolean) => void;
 }) {
-  const searchParams = useSearchParams();
-  const editOnboarding = searchParams.get('edit') === '1';
-  /** First-time onboarding only — edit profile keeps AppNav. */
-  const hideAppNav =
-    pathname.startsWith('/onboarding') && !editOnboarding;
-
   return (
     <>
       <OfflineBanner />
-      {hideAppNav ? null : (
-        <AppNav
-          pathname={pathname}
-          locale={locale}
-          copy={copy}
-          navPending={navPending}
-          onNavClick={(href) => {
-            if (isNavHrefCurrent(pathname, href)) {
-              setNavPending(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-              return;
-            }
-            setNavPending(true);
-          }}
-        />
-      )}
-      <div className={hideAppNav ? undefined : MOBILE_NAV_CONTENT_PAD}>
-        {children}
-      </div>
+      <AppNav
+        pathname={pathname}
+        locale={locale}
+        copy={copy}
+        navPending={navPending}
+        onNavClick={(href) => {
+          if (isNavHrefCurrent(pathname, href)) {
+            setNavPending(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+          }
+          setNavPending(true);
+        }}
+      />
+      <div className={MOBILE_NAV_CONTENT_PAD}>{children}</div>
     </>
   );
 }

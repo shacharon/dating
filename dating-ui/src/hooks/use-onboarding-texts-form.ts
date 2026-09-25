@@ -48,8 +48,6 @@ export function useOnboardingTextsForm({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [moderationDetails, setModerationDetails] =
     useState<ContentModerationDetails | null>(null);
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [continuing, setContinuing] = useState(false);
   const [voiceDraftApplied, setVoiceDraftApplied] = useState(false);
   const loadHandledRef = useRef(false);
   const lastVoiceDraftRef = useRef<{
@@ -61,6 +59,10 @@ export function useOnboardingTextsForm({
   const aboutMeRef = useRef<HTMLTextAreaElement>(null);
   const aboutPartnerRef = useRef<HTMLTextAreaElement>(null);
   const aboutRelationshipRef = useRef<HTMLTextAreaElement>(null);
+  const valuesRef = useRef({ aboutMe, aboutPartner, aboutRelationship });
+  valuesRef.current = { aboutMe, aboutPartner, aboutRelationship };
+  const savedSnapRef = useRef<string | null>(null);
+  const savingRef = useRef<Promise<boolean> | null>(null);
 
   const editBasicsHref =
     isHub
@@ -101,11 +103,26 @@ export function useOnboardingTextsForm({
 
     if (profile) {
       setHasProfile(true);
-      setAboutMe(profile.aboutMe ?? '');
-      setAboutPartner(profile.aboutPartner ?? '');
-      setAboutRelationship(profile.aboutRelationship ?? '');
+      const loaded = {
+        aboutMe: profile.aboutMe ?? '',
+        aboutPartner: profile.aboutPartner ?? '',
+        aboutRelationship: profile.aboutRelationship ?? '',
+      };
+      setAboutMe(loaded.aboutMe);
+      setAboutPartner(loaded.aboutPartner);
+      setAboutRelationship(loaded.aboutRelationship);
+      savedSnapRef.current = JSON.stringify({
+        aboutMe: loaded.aboutMe.trim(),
+        aboutPartner: loaded.aboutPartner.trim(),
+        aboutRelationship: loaded.aboutRelationship.trim(),
+      });
     } else {
       setHasProfile(false);
+      savedSnapRef.current = JSON.stringify({
+        aboutMe: '',
+        aboutPartner: '',
+        aboutRelationship: '',
+      });
     }
     loadHandledRef.current = true;
     setProfileSyncing(false);
@@ -193,26 +210,31 @@ export function useOnboardingTextsForm({
     }
   }
 
-  async function handleSaveProgress() {
-    const ok = await persistTexts(false);
-    if (!ok) return;
-    onSaved?.();
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 2000);
+  function currentSnap(): string {
+    const v = valuesRef.current;
+    return JSON.stringify({
+      aboutMe: v.aboutMe.trim(),
+      aboutPartner: v.aboutPartner.trim(),
+      aboutRelationship: v.aboutRelationship.trim(),
+    });
   }
 
-  /** First-time Continue: save (empty OK) and go to facts. Edit/hub: save only. */
-  async function handleContinue() {
-    if (isHub || editMode) {
-      await handleSaveProgress();
-      return;
-    }
-    setContinuing(true);
-    const ok = await persistTexts(true);
-    setContinuing(false);
-    if (!ok) return;
-    onSaved?.();
-    router.push('/onboarding/basics');
+  /** Save when the field is left or a step tab is clicked. Skip if nothing changed. */
+  async function flushTexts(): Promise<boolean> {
+    if (profileSyncing) return false;
+    const snap = currentSnap();
+    if (savedSnapRef.current === snap) return true;
+    if (savingRef.current) return savingRef.current;
+    const pending = persistTexts(false).then((ok) => {
+      if (ok) {
+        savedSnapRef.current = snap;
+        onSaved?.();
+      }
+      savingRef.current = null;
+      return ok;
+    });
+    savingRef.current = pending;
+    return pending;
   }
 
   function applyVoiceDraft(draft: {
@@ -279,12 +301,9 @@ export function useOnboardingTextsForm({
     loadError,
     saveError,
     moderationDetails,
-    savedFlash,
-    continuing,
     editBasicsHref,
     clearModeration,
-    handleSaveProgress,
-    handleContinue,
+    flushTexts,
     applyVoiceDraft,
     applyVoiceModerationError,
     fieldsDirtyForRerecord,

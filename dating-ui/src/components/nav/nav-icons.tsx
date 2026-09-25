@@ -98,3 +98,22 @@ export function ProfileIcon({ filled = false, className = base }: IconProps) {
     </svg>
   );
 }
+
+/** Onboarding / update-details nav glyph. */
+export function DetailsIcon({ filled = false, className = base }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}

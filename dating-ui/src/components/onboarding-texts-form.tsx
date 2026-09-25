@@ -1,10 +1,12 @@
 'use client';
 
-import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { ContentModerationErrorAlert } from '@/components/content-moderation-error-alert';
 import { InlineError } from '@/components/errors';
+import { FieldSpeechButton } from '@/components/onboarding/field-speech-button';
 import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text-field-help';
-import { StoryVoiceRecorder } from '@/components/onboarding/story-voice-recorder';
+import { useOnboardingAutosave } from '@/components/onboarding/onboarding-autosave';
+import { appendTranscript } from '@/lib/speech/field-speech';
 import { useOnboardingTextsForm } from '@/hooks/use-onboarding-texts-form';
 
 function fieldLabelFor(
@@ -30,17 +32,19 @@ export function OnboardingTextsForm({
   onSaved?: () => void;
 } = {}) {
   const m = useOnboardingTextsForm({ variant, onSaved });
+  const autosave = useOnboardingAutosave();
+  const flushRef = useRef(m.flushTexts);
+  flushRef.current = m.flushTexts;
+
+  useEffect(() => {
+    if (!autosave) return;
+    return autosave.register(() => flushRef.current().then(() => undefined));
+  }, [autosave]);
 
   const inputClass =
-    'w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
+    'w-full resize-none rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm leading-5 text-zinc-900 placeholder-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500';
   const labelClass =
     'mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
-
-  const primaryLabel =
-    m.isHub || m.editMode
-      ? m.ob.saveProgress
-      : m.ob.basicForm.continueButton;
-  const busy = m.continuing || m.profileSyncing;
 
   return (
     <div className="space-y-6" data-testid="onboarding-story-form">
@@ -56,19 +60,19 @@ export function OnboardingTextsForm({
         className={`space-y-6 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{m.tf.intro}</p>
-
-        <StoryVoiceRecorder
-          copy={m.tf.voice}
-          fieldsDirtyForRerecord={m.fieldsDirtyForRerecord}
-          onDraft={(draft) => m.applyVoiceDraft(draft)}
-          onModerationError={(err) => m.applyVoiceModerationError(err)}
-        />
-
         <div>
           <label htmlFor="ot-about-me" className={labelClass}>
             {m.tf.aboutMeLabel}
           </label>
+          <FieldSpeechButton
+            fieldId="ot-about-me"
+            fieldLabel={m.tf.aboutMeLabel}
+            copy={m.tf.voice}
+            onAppend={(spoken) => {
+              m.setAboutMe((prev) => appendTranscript(prev, spoken));
+              m.clearModeration();
+            }}
+          >
           <textarea
             id="ot-about-me"
             ref={m.aboutMeRef}
@@ -78,9 +82,11 @@ export function OnboardingTextsForm({
               m.clearModeration();
             }}
             rows={4}
-            className={`${inputClass} min-h-[6rem]`}
+            className={`${inputClass} min-h-[4.25rem] w-full pb-9 pe-10`}
             placeholder={m.tf.aboutMePlaceholder}
+            onBlur={() => void m.flushTexts()}
           />
+          </FieldSpeechButton>
           <OnboardingTextFieldHelp
             value={m.aboutMe}
             field={m.prompts.aboutMe}
@@ -93,6 +99,15 @@ export function OnboardingTextsForm({
           <label htmlFor="ot-about-partner" className={labelClass}>
             {m.tf.aboutPartnerLabel}
           </label>
+          <FieldSpeechButton
+            fieldId="ot-about-partner"
+            fieldLabel={m.tf.aboutPartnerLabel}
+            copy={m.tf.voice}
+            onAppend={(spoken) => {
+              m.setAboutPartner((prev) => appendTranscript(prev, spoken));
+              m.clearModeration();
+            }}
+          >
           <textarea
             id="ot-about-partner"
             ref={m.aboutPartnerRef}
@@ -102,9 +117,11 @@ export function OnboardingTextsForm({
               m.clearModeration();
             }}
             rows={4}
-            className={`${inputClass} min-h-[6rem]`}
+            className={`${inputClass} min-h-[4.25rem] w-full pb-9 pe-10`}
             placeholder={m.tf.aboutPartnerPlaceholder}
+            onBlur={() => void m.flushTexts()}
           />
+          </FieldSpeechButton>
           <OnboardingTextFieldHelp
             value={m.aboutPartner}
             field={m.prompts.aboutPartner}
@@ -117,6 +134,15 @@ export function OnboardingTextsForm({
           <label htmlFor="ot-about-rel" className={labelClass}>
             {m.tf.aboutRelationshipLabel}
           </label>
+          <FieldSpeechButton
+            fieldId="ot-about-rel"
+            fieldLabel={m.tf.aboutRelationshipLabel}
+            copy={m.tf.voice}
+            onAppend={(spoken) => {
+              m.setAboutRelationship((prev) => appendTranscript(prev, spoken));
+              m.clearModeration();
+            }}
+          >
           <textarea
             id="ot-about-rel"
             ref={m.aboutRelationshipRef}
@@ -126,9 +152,11 @@ export function OnboardingTextsForm({
               m.clearModeration();
             }}
             rows={4}
-            className={`${inputClass} min-h-[6rem]`}
+            className={`${inputClass} min-h-[4.25rem] w-full pb-9 pe-10`}
             placeholder={m.tf.aboutRelationshipPlaceholder}
+            onBlur={() => void m.flushTexts()}
           />
+          </FieldSpeechButton>
           <OnboardingTextFieldHelp
             value={m.aboutRelationship}
             field={m.prompts.aboutRelationship}
@@ -136,46 +164,7 @@ export function OnboardingTextsForm({
             testIdPrefix="ot-about-rel"
           />
         </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {!m.isHub && !m.editMode ? (
-            <button
-              type="button"
-              onClick={() => void m.handleSaveProgress()}
-              disabled={busy}
-              className="inline-flex min-h-11 items-center rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              {m.ob.saveProgress}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            data-testid="onboarding-story-primary"
-            onClick={() => void m.handleContinue()}
-            disabled={busy}
-            className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
-          >
-            {m.continuing ? m.tf.submitting : primaryLabel}
-          </button>
-          {/** First-time story is screen 1 — "back to basics" only makes sense in edit mode. */}
-          {!m.isHub && m.editMode ? (
-            <Link
-              href={m.editBasicsHref}
-              prefetch
-              className={`inline-flex min-h-11 items-center text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100 ${m.profileSyncing ? 'pointer-events-none opacity-50' : ''}`}
-              aria-disabled={m.profileSyncing}
-            >
-              {m.tf.backToBasics}
-            </Link>
-          ) : null}
-        </div>
       </div>
-
-      {m.savedFlash ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">
-          {m.ob.savedFlash}
-        </p>
-      ) : null}
       {m.moderationDetails ? (
         <ContentModerationErrorAlert
           details={m.moderationDetails}

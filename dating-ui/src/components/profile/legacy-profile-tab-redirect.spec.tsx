@@ -66,7 +66,7 @@ describe('LegacyProfileTabRedirect', () => {
     window.location.hash = '#x';
     render(createElement(LegacyProfileTabRedirect, null, null));
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/profile#x');
+      expect(replaceMock).toHaveBeenCalledWith('/profile/overview#x');
     });
   });
 
@@ -74,7 +74,7 @@ describe('LegacyProfileTabRedirect', () => {
     mockSearch = 'tab=overview';
     render(createElement(LegacyProfileTabRedirect, null, null));
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/profile');
+      expect(replaceMock).toHaveBeenCalledWith('/profile/overview');
     });
   });
 });

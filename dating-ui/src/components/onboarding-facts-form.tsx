@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { InlineError } from '@/components/errors';
+import { useOnboardingAutosave } from '@/components/onboarding/onboarding-autosave';
 import { useOnboardingFactsForm } from '@/hooks/use-onboarding-facts-form';
 import type { LookingForTile } from '@/lib/profile/looking-for';
 
@@ -18,6 +20,14 @@ const labelClass =
 
 export function OnboardingFactsForm() {
   const m = useOnboardingFactsForm();
+  const autosave = useOnboardingAutosave();
+  const flushRef = useRef(m.flushFacts);
+  flushRef.current = m.flushFacts;
+
+  useEffect(() => {
+    if (!autosave) return;
+    return autosave.register(() => flushRef.current().then(() => undefined));
+  }, [autosave]);
   const lookingTiles: { id: LookingForTile; label: string }[] = [
     { id: 'men', label: m.ff.lookingForMen },
     { id: 'women', label: m.ff.lookingForWomen },
@@ -47,6 +57,21 @@ export function OnboardingFactsForm() {
         className={`space-y-8 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
+        <div>
+          <label htmlFor="facts-nickname" className={labelClass}>
+            {m.bf.nicknameLabel}
+          </label>
+          <input
+            id="facts-nickname"
+            type="text"
+            className={inputClass}
+            placeholder={m.bf.nicknamePlaceholder}
+            value={m.nickname}
+            onChange={(e) => m.setNickname(e.target.value)}
+            autoComplete="nickname"
+          />
+        </div>
+
         <fieldset>
           <legend className={labelClass}>{m.ff.iAmLabel}</legend>
           <div className="flex flex-wrap gap-2">
@@ -169,16 +194,6 @@ export function OnboardingFactsForm() {
         </div>
 
         <div className="space-y-2">
-          <button
-            type="button"
-            data-testid="onboarding-facts-continue"
-            disabled={!m.canContinue || m.continuing}
-            aria-describedby={showMissing ? missingId : undefined}
-            onClick={() => void m.handleContinue()}
-            className="inline-flex min-h-11 items-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
-          >
-            {m.continuing ? '…' : m.ff.continueButton}
-          </button>
           {showMissing ? (
             <p
               id={missingId}

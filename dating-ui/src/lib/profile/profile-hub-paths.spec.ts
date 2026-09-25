@@ -24,6 +24,7 @@ describe('profile-hub-paths', () => {
 
   it('resolves section from pathname', () => {
     expect(profileSectionFromPathname('/profile')).toBe('overview');
+    expect(profileSectionFromPathname('/profile/overview')).toBe('overview');
     expect(profileSectionFromPathname('/profile/edit')).toBe('edit');
     expect(profileSectionFromPathname('/profile/analysis')).toBe('analysis');
     expect(profileSectionFromPathname('/profile/settings')).toBe('settings');

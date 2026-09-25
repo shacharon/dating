@@ -12,7 +12,7 @@ export type ProfileSettingsHashId =
   | 'notifications';
 
 export const PROFILE_HREF = {
-  overview: '/profile',
+  overview: '/profile/overview',
   edit: '/profile/edit',
   analysis: '/profile/analysis',
   settings: '/profile/settings',
@@ -42,10 +42,16 @@ export function pathForLegacyTab(tab: string | null): string | null {
   return null;
 }
 
-/** Active section from pathname (`/profile` exact = overview). */
+/** Active section from pathname (`/profile` and `/profile/overview` = overview). */
 export function profileSectionFromPathname(
   pathname: string,
 ): ProfileHubSectionId {
+  if (
+    pathname === PROFILE_HREF.overview ||
+    pathname.startsWith(`${PROFILE_HREF.overview}/`)
+  ) {
+    return 'overview';
+  }
   if (pathname === PROFILE_HREF.edit || pathname.startsWith(`${PROFILE_HREF.edit}/`)) {
     return 'edit';
   }

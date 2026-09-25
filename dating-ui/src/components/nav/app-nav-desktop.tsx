@@ -1,13 +1,16 @@
 ﻿'use client';
 
 import type { AppCopySchema, AppLocale } from '@/lib/i18n';
+import { useProfile } from '@/hooks/use-profile';
+import { hasMinimumProfileFacts } from '@/lib/profile/minimum-profile';
 import { NavAuth } from '@/components/nav-auth';
 import {
   isConversationsActive,
+  isDetailsActive,
   isMatchesActive,
   isProfileActive,
 } from './nav-active';
-import { ConversationsIcon, MatchesIcon, ProfileIcon } from './nav-icons';
+import { ConversationsIcon, DetailsIcon, MatchesIcon, ProfileIcon } from './nav-icons';
 import { NavItem } from './nav-item';
 
 export type AppNavChromeProps = {
@@ -33,6 +36,13 @@ export function AppNavDesktop({
   const matchesActive = isMatchesActive(pathname);
   const conversationsActive = isConversationsActive(pathname);
   const profileActive = isProfileActive(pathname);
+  const detailsActive = isDetailsActive(pathname);
+  const { profile, isLoading } = useProfile();
+  const profileReady = !isLoading && hasMinimumProfileFacts(profile);
+  const detailsHref = profileReady ? '/profile/edit' : '/onboarding';
+  const detailsLabel = profileReady
+    ? copy.nav.updateDetails
+    : copy.nav.onboarding;
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:block">
@@ -78,11 +88,20 @@ export function AppNavDesktop({
           />
           <NavItem
             variant="desktop"
-            href="/profile"
+            href="/profile/overview"
             label={copy.nav.profile}
             active={profileActive}
             icon={<ProfileIcon filled={profileActive} />}
-            onClick={() => onNavClick('/profile')}
+            onClick={() => onNavClick('/profile/overview')}
+            pending={navPending}
+          />
+          <NavItem
+            variant="desktop"
+            href={detailsHref}
+            label={detailsLabel}
+            active={detailsActive}
+            icon={<DetailsIcon filled={detailsActive} />}
+            onClick={() => onNavClick(detailsHref)}
             pending={navPending}
           />
         </nav>

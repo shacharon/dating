@@ -1,15 +1,19 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { ProfileHubNav } from '@/components/profile/profile-hub-nav';
 import {
   ProfileQualityRefreshProvider,
 } from '@/components/profile/profile-quality-refresh-context';
 import { useAppLocale } from '@/lib/i18n';
+import { profileSectionFromPathname } from '@/lib/profile/profile-hub-paths';
 
 function ProfileHubShellInner({ children }: { children: ReactNode }) {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
+  const pathname = usePathname() || '';
+  const readOnlyOverview = profileSectionFromPathname(pathname) === 'overview';
 
   return (
     <div
@@ -23,7 +27,7 @@ function ProfileHubShellInner({ children }: { children: ReactNode }) {
           </h1>
         </header>
 
-        <ProfileHubNav copy={hub} />
+        {readOnlyOverview ? null : <ProfileHubNav copy={hub} />}
         <main id="profile-main" className="min-w-0">
           {children}
         </main>

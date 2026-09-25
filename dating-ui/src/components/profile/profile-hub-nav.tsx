@@ -13,13 +13,12 @@ type Props = {
   copy: AppCopySchema['profile']['hub'];
 };
 
-/** Section nav for profile routes (overview / edit / analysis / settings). */
+/** Section nav for profile work routes. Overview is the main-header route. */
 export function ProfileHubNav({ copy }: Props) {
-  const pathname = usePathname() || PROFILE_HREF.overview;
+  const pathname = usePathname() || PROFILE_HREF.edit;
   const active = profileSectionFromPathname(pathname);
 
-  const tabs: { id: ProfileHubSectionId; label: string; href: string }[] = [
-    { id: 'overview', label: copy.tabOverview, href: PROFILE_HREF.overview },
+  const tabs: { id: Exclude<ProfileHubSectionId, 'overview'>; label: string; href: string }[] = [
     { id: 'edit', label: copy.tabEdit, href: PROFILE_HREF.edit },
     { id: 'analysis', label: copy.tabAnalysis, href: PROFILE_HREF.analysis },
     { id: 'settings', label: copy.tabSettings, href: PROFILE_HREF.settings },

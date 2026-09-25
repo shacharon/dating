@@ -87,54 +87,57 @@ describe('OnboardingTextsForm', () => {
     renderForm();
 
     await waitFor(() => {
-      expect(screen.getByText(enCopy.onboarding.textsForm.intro)).toBeTruthy();
       expect(
         screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
       ).toBeTruthy();
     });
   });
 
-  it('renders story voice recorder on the story form', async () => {
+  it('does not render the story voice recorder on the story form', async () => {
     renderForm();
 
     await waitFor(() => {
-      expect(screen.getByTestId('story-voice-recorder')).toBeTruthy();
+      expect(
+        screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+      ).toBeTruthy();
     });
-    expect(
-      screen.getByRole('button', {
-        name: enCopy.onboarding.textsForm.voice.recordButton,
-      }),
-    ).toBeTruthy();
+    expect(screen.queryByTestId('story-voice-recorder')).toBeNull();
   });
 
-  it('renders Hebrew continue without back-to-basics on first-time story', async () => {
+  it('does not show save or continue buttons on first-time story', async () => {
     localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
     renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', {
-          name: heCopy.onboarding.basicForm.continueButton,
-        }),
+        screen.getByLabelText(heCopy.onboarding.textsForm.aboutMeLabel),
       ).toBeTruthy();
     });
+    expect(
+      screen.queryByRole('button', {
+        name: heCopy.onboarding.basicForm.continueButton,
+      }),
+    ).toBeNull();
     expect(
       screen.queryByRole('link', { name: heCopy.onboarding.textsForm.backToBasics }),
     ).toBeNull();
   });
 
-  it('shows back-to-basics only in edit mode', async () => {
+  it('does not show a back link in edit mode', async () => {
     searchParamsMock.mockReturnValue(new URLSearchParams('edit=1'));
     renderForm();
 
     await waitFor(() => {
       expect(
-        screen.getByRole('link', { name: enCopy.onboarding.textsForm.backToBasics }),
+        screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
       ).toBeTruthy();
     });
+    expect(
+      screen.queryByRole('link', { name: enCopy.onboarding.textsForm.backToBasics }),
+    ).toBeNull();
   });
 
-  it('Continue saves and navigates to /onboarding/basics (empty texts OK)', async () => {
+  it('saves when leaving a text area and stays on the page', async () => {
     fetchMyProfile.mockResolvedValue({
       ...storyProfile,
       aboutMe: null,
@@ -143,38 +146,40 @@ describe('OnboardingTextsForm', () => {
     });
     renderForm();
 
-    const primary = await screen.findByTestId('onboarding-story-primary');
+    const aboutMe = await screen.findByLabelText(
+      enCopy.onboarding.textsForm.aboutMeLabel,
+    );
     await waitFor(() => {
-      expect((primary as HTMLButtonElement).disabled).toBe(false);
+      expect((aboutMe as HTMLTextAreaElement).value).toBe('');
     });
 
-    fireEvent.click(primary);
+    fireEvent.change(aboutMe, { target: { value: 'A short story' } });
+    fireEvent.blur(aboutMe);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/basics');
+      expect(
+        patchMyProfile.mock.calls.length + createMyProfile.mock.calls.length,
+      ).toBeGreaterThan(0);
     });
-    expect(
-      patchMyProfile.mock.calls.length + createMyProfile.mock.calls.length,
-    ).toBeGreaterThan(0);
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('Continue creates a profile when none exists', async () => {
+  it('creates a profile when leaving a field and none exists', async () => {
     fetchMyProfile.mockResolvedValue(null);
     renderForm();
 
-    const primary = await screen.findByTestId('onboarding-story-primary');
-    await waitFor(() => {
-      expect((primary as HTMLButtonElement).disabled).toBe(false);
-    });
-
-    fireEvent.click(primary);
+    const aboutMe = await screen.findByLabelText(
+      enCopy.onboarding.textsForm.aboutMeLabel,
+    );
+    fireEvent.change(aboutMe, { target: { value: 'Hello there' } });
+    fireEvent.blur(aboutMe);
 
     await waitFor(() => {
       expect(createMyProfile).toHaveBeenCalledWith(
         expect.objectContaining({ onboardingStep: 'BASIC' }),
       );
-      expect(pushMock).toHaveBeenCalledWith('/onboarding/basics');
     });
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('shows writing help with word count and collapsed examples under each field', async () => {
@@ -248,8 +253,12 @@ describe('OnboardingTextsForm', () => {
       ).toBe('Hello');
     });
 
-    fireEvent.click(
-      screen.getByRole('button', { name: enCopy.onboarding.saveProgress }),
+    fireEvent.change(
+      screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
+      { target: { value: 'Hello there' } },
+    );
+    fireEvent.blur(
+      screen.getByLabelText(enCopy.onboarding.textsForm.aboutMeLabel),
     );
 
     await waitFor(() => {

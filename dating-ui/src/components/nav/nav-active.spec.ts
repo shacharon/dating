@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatNavBadgeCount,
   isConversationsActive,
+  isDetailsActive,
   isMatchesActive,
   isNavHrefCurrent,
   isProfileActive,
@@ -26,7 +27,16 @@ describe('nav-active', () => {
     expect(isProfileActive('/dating/profile')).toBe(true);
     expect(isProfileActive('/settings/profile/basic')).toBe(true);
     expect(isProfileActive('/profile')).toBe(true);
+    expect(isProfileActive('/profile/overview')).toBe(true);
+    expect(isProfileActive('/onboarding/story')).toBe(false);
+    expect(isProfileActive('/profile/edit')).toBe(false);
     expect(isProfileActive('/dating/analysis')).toBe(false);
+  });
+
+  it('details active routes', () => {
+    expect(isDetailsActive('/onboarding/story')).toBe(true);
+    expect(isDetailsActive('/profile/edit')).toBe(true);
+    expect(isDetailsActive('/profile/overview')).toBe(false);
   });
 
   it('formats badge counts', () => {

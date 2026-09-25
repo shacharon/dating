@@ -38,9 +38,11 @@ export function OnboardingTextFieldHelp({
   chrome,
   testIdPrefix,
 }: OnboardingTextFieldHelpProps) {
+  const [ideasOpen, setIdeasOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
   const words = countWords(value);
+  const ideasPanelId = useId();
   const examplesPanelId = useId();
   const tipsPanelId = useId();
 
@@ -61,14 +63,26 @@ export function OnboardingTextFieldHelp({
       </p>
 
       <div data-testid={`${testIdPrefix}-ideas`}>
-        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <button
+          type="button"
+          className={toggleClass}
+          aria-expanded={ideasOpen}
+          aria-controls={ideasPanelId}
+          data-testid={`${testIdPrefix}-ideas-toggle`}
+          onClick={() => setIdeasOpen((v) => !v)}
+        >
           {chrome.ideasHeading}
-        </p>
-        <ul className="mt-1 list-disc space-y-1 ps-5 text-sm text-zinc-600 dark:text-zinc-400">
-          {field.questions.map((q) => (
-            <li key={q}>{q}</li>
-          ))}
-        </ul>
+        </button>
+        {ideasOpen ? (
+          <ul
+            id={ideasPanelId}
+            className="mt-2 list-disc space-y-1 ps-5 text-sm text-zinc-600 dark:text-zinc-400"
+          >
+            {field.questions.map((q) => (
+              <li key={q}>{q}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
       <div>

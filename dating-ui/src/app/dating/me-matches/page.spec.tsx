@@ -230,18 +230,18 @@ describe('MeMatchesPage (not_ready no profile gate)', () => {
     expect(replaceMock).not.toHaveBeenCalled();
     expect(
       screen.getByTestId('match-no-profile-gate-cta').getAttribute('href'),
-    ).toBe('/onboarding/basics');
+    ).toBe('/onboarding');
     expect(screen.getByText('Finish your profile to see matches')).toBeTruthy();
     unmount();
   });
 });
 
-describe('MeMatchesPage (not_ready analysis redirect)', () => {
+describe('MeMatchesPage (not_ready stays on Matches)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('redirects to story when not_ready reason is not_analyzed', async () => {
+  it('stays on Matches when not_ready reason is not_analyzed', async () => {
     fetchMyMatches.mockResolvedValue({
       status: 'not_ready',
       reason: 'not_analyzed',
@@ -250,8 +250,9 @@ describe('MeMatchesPage (not_ready analysis redirect)', () => {
     const { unmount } = renderPage(<MeMatchesPage />);
 
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/onboarding/story');
+      expect(screen.getByTestId('match-list-no-profile-gate')).toBeTruthy();
     });
+    expect(replaceMock).not.toHaveBeenCalled();
     unmount();
   });
 });

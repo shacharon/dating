@@ -160,12 +160,9 @@ export function useAnalysisPage(loadFailedMessage: string): UseAnalysisPageResul
       try {
         const { latest, profile: p } = await loadAnalysisPageState();
         if (cancelled) return;
-        if (latest === null) {
-          router.replace('/onboarding');
-          return;
-        }
         setData(latest);
         setProfile(p);
+        if (!latest) return;
         const redirectOnComplete = computeAutoRedirectOnComplete(
           p,
           latest.evaluationId,

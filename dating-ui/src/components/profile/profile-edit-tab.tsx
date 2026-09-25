@@ -20,7 +20,7 @@ import { useAppLocale } from '@/lib/i18n';
 import { useProfile } from '@/hooks/use-profile';
 import { profileEditHash } from '@/lib/profile/profile-hub-paths';
 
-const SECTION_IDS: EditSectionId[] = ['basic', 'photos', 'story'];
+const SECTION_IDS: EditSectionId[] = ['story', 'basic', 'photos'];
 
 function sectionFromHash(): EditSectionId | null {
   if (typeof window === 'undefined') return null;
@@ -43,7 +43,7 @@ function sectionComplete(
 }
 
 /**
- * Profile hub Edit tab: sticky section nav; one pane at a time (Basics / Photos / Story).
+ * Profile hub Edit tab: sticky section nav; one pane at a time (Story / Basic / Photos).
  */
 export function ProfileEditTab({
   onProfileMutated,
@@ -57,7 +57,7 @@ export function ProfileEditTab({
   const [draft, setDraft] = useState<ProfileDraft>(emptyProfileFormState);
   const [approvedPhotoCount, setApprovedPhotoCount] = useState(0);
   const [active, setActive] = useState<EditSectionId>(
-    () => sectionFromHash() ?? 'basic',
+    () => sectionFromHash() ?? 'story',
   );
 
   useEffect(() => {

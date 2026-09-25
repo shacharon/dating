@@ -60,9 +60,9 @@ export function useOnboardingFactsForm() {
   const [profileSyncing, setProfileSyncing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [continuing, setContinuing] = useState(false);
 
   const [gender, setGender] = useState('');
+  const [nickname, setNickname] = useState('');
   const [lookingFor, setLookingFor] = useState<LookingForTile | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [countryCode, setCountryCode] = useState('');
@@ -77,6 +77,19 @@ export function useOnboardingFactsForm() {
 
   const loadHandledRef = useRef(false);
   const countryGuessedRef = useRef(false);
+  const savedSnapRef = useRef<string | null>(null);
+  const savingRef = useRef<Promise<boolean> | null>(null);
+  const valuesRef = useRef({
+    gender,
+    nickname,
+    lookingFor,
+    birthDate,
+    countryCode,
+    usStateCode,
+    cityId,
+    canContinue: false,
+    hasProfile: false,
+  });
 
   const desiredPartnerGenders = useMemo(
     () => (lookingFor ? partnerGendersFromLookingFor(lookingFor) : []),
@@ -103,6 +116,18 @@ export function useOnboardingFactsForm() {
   const missing = listFactsMissing(advanceFields);
   const canContinue = validateOnboardingFactsAdvance(advanceFields).ok;
 
+  valuesRef.current = {
+    gender,
+    nickname,
+    lookingFor,
+    birthDate,
+    countryCode,
+    usStateCode,
+    cityId,
+    canContinue,
+    hasProfile,
+  };
+
   useLayoutEffect(() => {
     if (isLoading || loadHandledRef.current) return;
 
@@ -127,6 +152,7 @@ export function useOnboardingFactsForm() {
           ? profile.gender
           : '',
       );
+      setNickname(profile.nickname ?? '');
       setLookingFor(
         lookingForFromPartnerGenders(profile.desiredPartnerGenders ?? []),
       );
@@ -146,6 +172,7 @@ export function useOnboardingFactsForm() {
 
     loadHandledRef.current = true;
     setProfileSyncing(false);
+    savedSnapRef.current = null;
   }, [profile, isLoading, profileLoadError, router, editMode]);
 
   useEffect(() => {
@@ -236,35 +263,77 @@ export function useOnboardingFactsForm() {
     return c.nameEn;
   }
 
-  async function handleContinue() {
-    if (!canContinue || continuing) return;
-    setSaveError(null);
-    setContinuing(true);
-
-    const body: PatchMeProfileBody = {
-      gender: gender as MeProfileGender,
-      desiredPartnerGenders,
-      birthDate,
-      country: countryCode,
-      usStateCode: countryCode === 'US' ? usStateCode || null : null,
-      cityId: cityId || null,
-      onboardingStep: 'TEXTS',
-    };
-
-    try {
-      if (hasProfile) {
-        await patchMutation.mutateAsync(body);
-      } else {
-        await createMutation.mutateAsync(body);
-        setHasProfile(true);
-      }
-      router.push('/onboarding/photos');
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : copy.onboarding.saveFailed);
-    } finally {
-      setContinuing(false);
-    }
+  function currentSnap(): string {
+    const v = valuesRef.current;
+    return JSON.stringify({
+      gender: v.gender,
+      nickname: v.nickname.trim(),
+      lookingFor: v.lookingFor,
+      birthDate: v.birthDate,
+      countryCode: v.countryCode,
+      usStateCode: v.usStateCode,
+      cityId: v.cityId,
+    });
   }
+
+  async function flushFacts(): Promise<boolean> {
+    if (profileSyncing) return false;
+    const snap = currentSnap();
+    if (savedSnapRef.current === snap) return true;
+    if (savingRef.current) return savingRef.current;
+    const v = valuesRef.current;
+    const partners = v.lookingFor
+      ? partnerGendersFromLookingFor(v.lookingFor)
+      : [];
+    const body: PatchMeProfileBody = {
+      gender: v.gender ? (v.gender as MeProfileGender) : null,
+      nickname: v.nickname.trim() ? v.nickname.trim() : null,
+      desiredPartnerGenders: partners,
+      birthDate: v.birthDate || null,
+      country: v.countryCode || null,
+      usStateCode: v.countryCode === 'US' ? v.usStateCode || null : null,
+      cityId: v.cityId || null,
+      onboardingStep: v.canContinue ? 'TEXTS' : 'BASIC',
+    };
+    const pending = (async () => {
+      setSaveError(null);
+      try {
+        if (v.hasProfile) {
+          await patchMutation.mutateAsync(body);
+        } else {
+          await createMutation.mutateAsync(body);
+          setHasProfile(true);
+        }
+        savedSnapRef.current = snap;
+        return true;
+      } catch (e) {
+        setSaveError(e instanceof Error ? e.message : copy.onboarding.saveFailed);
+        return false;
+      } finally {
+        savingRef.current = null;
+      }
+    })();
+    savingRef.current = pending;
+    return pending;
+  }
+
+  useEffect(() => {
+    if (profileSyncing) return;
+    if (savedSnapRef.current === null) {
+      savedSnapRef.current = currentSnap();
+      return;
+    }
+    void flushFacts();
+  }, [
+    profileSyncing,
+    gender,
+    nickname,
+    lookingFor,
+    birthDate,
+    countryCode,
+    usStateCode,
+    cityId,
+  ]);
 
   return {
     ff,
@@ -274,6 +343,8 @@ export function useOnboardingFactsForm() {
     selfGenders: SELF_GENDERS,
     gender,
     setGender,
+    nickname,
+    setNickname,
     lookingFor,
     setLookingFor,
     birthDate,
@@ -303,10 +374,9 @@ export function useOnboardingFactsForm() {
     countryHasCities,
     missing,
     canContinue,
-    continuing,
     profileSyncing,
     loadError,
     saveError,
-    handleContinue,
+    flushFacts,
   };
 }

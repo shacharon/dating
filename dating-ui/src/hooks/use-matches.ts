@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useMemo, useRef } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -18,7 +17,6 @@ import type {
   MeMatchesListDto,
 } from '@/lib/api-types/matches';
 import { queryKeys } from '@/lib/query/query-keys';
-import { PROFILE_HREF } from '@/lib/profile/profile-hub-paths';
 
 export const MATCHES_PAGE_LIMIT = 20;
 export const MATCHES_LIST_STALE_TIME_MS = 300_000;
@@ -105,7 +103,6 @@ function mergeListData(pages: MeMatchesListDto[]): MeMatchesListDto | null {
 export function useInfiniteMatches(
   loadFailedMessage: string,
 ): UseInfiniteMatchesResult {
-  const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const {
@@ -132,26 +129,6 @@ export function useInfiniteMatches(
   });
 
   const pages = data?.pages ?? [];
-  const firstPage = pages[0];
-
-  const handleNotReadyRedirect = useCallback(
-    (dto: MeMatchesListDto) => {
-      if (dto.reason === 'no_profile') return;
-      /** Story is the unlock for analysis — send there, not the analysis hub. */
-      if (dto.reason === 'not_analyzed') {
-        router.replace('/onboarding/story');
-        return;
-      }
-      router.replace(PROFILE_HREF.analysis);
-    },
-    [router],
-  );
-
-  useEffect(() => {
-    if (!firstPage || firstPage.status !== 'not_ready') return;
-    if (firstPage.reason === 'no_photo') return;
-    handleNotReadyRedirect(firstPage);
-  }, [firstPage, handleNotReadyRedirect]);
 
   const matches = useMemo(() => flattenReadyMatches(pages), [pages]);
   const listData = useMemo(() => mergeListData(pages), [pages]);

@@ -92,7 +92,7 @@ describe('ProfileEditTab', () => {
     cleanup();
   });
 
-  it('shows one pane at a time with Basics → Photos → Story nav order', async () => {
+  it('shows one pane at a time with Story → Basic → Photos nav order', async () => {
     renderEditTab();
     await waitFor(() => {
       expect(screen.getByTestId('profile-edit-tab')).toBeTruthy();
@@ -100,9 +100,9 @@ describe('ProfileEditTab', () => {
     });
 
     const navButtons = [
+      screen.getByTestId('profile-edit-nav-story'),
       screen.getByTestId('profile-edit-nav-basic'),
       screen.getByTestId('profile-edit-nav-photos'),
-      screen.getByTestId('profile-edit-nav-story'),
     ];
     expect(
       navButtons[0]!.compareDocumentPosition(navButtons[1]!) &
@@ -113,10 +113,10 @@ describe('ProfileEditTab', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    expect(screen.getByTestId('profile-edit-section-basic').hidden).toBe(false);
+    expect(screen.getByTestId('profile-edit-section-story').hidden).toBe(false);
+    expect(screen.getByTestId('profile-edit-section-basic').hidden).toBe(true);
     expect(screen.getByTestId('profile-edit-section-photos').hidden).toBe(true);
-    expect(screen.getByTestId('profile-edit-section-story').hidden).toBe(true);
-    expect(screen.getByTestId('mock-basic-form')).toBeTruthy();
+    expect(screen.getByTestId('mock-texts-form')).toBeTruthy();
   });
 
   it('marks progress dots complete from profile + photos', async () => {

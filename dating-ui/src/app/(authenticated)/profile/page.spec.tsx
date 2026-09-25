@@ -62,7 +62,7 @@ vi.mock('@/contexts/auth-context', () => ({
 }));
 
 let mockSearch = '';
-let mockPathname = '/profile';
+let mockPathname = '/profile/overview';
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(mockSearch),
@@ -114,7 +114,7 @@ describe('Profile overview route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearch = '';
-    mockPathname = '/profile';
+    mockPathname = '/profile/overview';
     window.location.hash = '';
     localStorage.clear();
     listMyProfilePhotos.mockResolvedValue([
@@ -176,12 +176,8 @@ describe('Profile overview route', () => {
       );
     });
     expect(screen.queryByTestId('profile-quality-meter')).toBeNull();
-    expect(
-      screen.getByTestId('profile-tab-overview').getAttribute('aria-current'),
-    ).toBe('page');
-    expect(screen.getByTestId('profile-tab-edit').getAttribute('href')).toBe(
-      '/profile/edit',
-    );
+    expect(screen.queryByTestId('profile-hub-tabs')).toBeNull();
+    expect(screen.queryByTestId('profile-tab-overview')).toBeNull();
     expect(
       screen.getByTestId('profile-overview-strip-photos').getAttribute('href'),
     ).toBe('/profile/edit#photos');
@@ -233,7 +229,7 @@ describe('Profile overview route', () => {
     window.location.hash = '';
     renderOverview();
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/profile');
+      expect(replaceMock).toHaveBeenCalledWith('/profile/overview');
     });
   });
 

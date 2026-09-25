@@ -13,9 +13,20 @@ export function isConversationsActive(pathname: string): boolean {
 
 export function isProfileActive(pathname: string): boolean {
   return (
+    pathname === '/profile' ||
+    pathname === '/profile/overview' ||
+    pathname.startsWith('/profile/overview/') ||
     pathname === '/dating/profile' ||
-    pathname.startsWith('/settings/profile') ||
-    pathname.startsWith('/profile')
+    pathname.startsWith('/settings/profile')
+  );
+}
+
+/** Onboarding, or profile edit once the minimum facts exist. */
+export function isDetailsActive(pathname: string): boolean {
+  return (
+    pathname.startsWith('/onboarding') ||
+    pathname === '/profile/edit' ||
+    pathname.startsWith('/profile/edit/')
   );
 }
 

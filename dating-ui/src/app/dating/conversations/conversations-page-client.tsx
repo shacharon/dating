@@ -39,15 +39,6 @@ export default function ConversationsPage() {
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
       <div className="mx-auto max-w-2xl space-y-8 px-6 py-10">
-        <nav className="flex flex-wrap gap-4 text-sm">
-          <Link
-            href="/dating/me-matches"
-            className="font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            {listCopy.backToMatches}
-          </Link>
-        </nav>
-
         <header>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             {listCopy.title}
