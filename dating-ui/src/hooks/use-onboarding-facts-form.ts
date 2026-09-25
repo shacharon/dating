@@ -313,7 +313,9 @@ export function useOnboardingFactsForm({
       : [];
     const body: PatchMeProfileBody = {
       gender: v.gender ? (v.gender as MeProfileGender) : null,
-      nickname: v.nickname.trim() ? v.nickname.trim() : null,
+      ...(isHub
+        ? {}
+        : { nickname: v.nickname.trim() ? v.nickname.trim() : null }),
       ...(partners.length > 0 ? { desiredPartnerGenders: partners } : {}),
       birthDate: v.birthDate || null,
       country: v.countryCode || null,

@@ -67,20 +67,22 @@ export function OnboardingFactsForm({
         className={`space-y-8 ${m.profileSyncing ? 'pointer-events-none opacity-60' : ''}`}
         aria-busy={m.profileSyncing}
       >
-        <div>
-          <label htmlFor="facts-nickname" className={labelClass}>
-            {m.bf.nicknameLabel}
-          </label>
-          <input
-            id="facts-nickname"
-            type="text"
-            className={inputClass}
-            placeholder={m.bf.nicknamePlaceholder}
-            value={m.nickname}
-            onChange={(e) => m.setNickname(e.target.value)}
-            autoComplete="nickname"
-          />
-        </div>
+        {m.isHub ? null : (
+          <div>
+            <label htmlFor="facts-nickname" className={labelClass}>
+              {m.bf.nicknameLabel}
+            </label>
+            <input
+              id="facts-nickname"
+              type="text"
+              className={inputClass}
+              placeholder={m.bf.nicknamePlaceholder}
+              value={m.nickname}
+              onChange={(e) => m.setNickname(e.target.value)}
+              autoComplete="nickname"
+            />
+          </div>
+        )}
 
         <fieldset>
           <legend className={labelClass}>{m.ff.iAmLabel}</legend>

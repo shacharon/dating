@@ -136,6 +136,33 @@ describe('OnboardingFactsForm', () => {
     expect(screen.queryByText(bf.datingChapter.question)).toBeNull();
   });
 
+  it('onboarding nickname change patches nickname', async () => {
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      nickname: 'Noa',
+      gender: 'MALE',
+      desiredPartnerGenders: ['FEMALE'],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+    const input = await screen.findByLabelText(
+      enCopy.onboarding.basicForm.nicknameLabel,
+    );
+    await waitFor(() => {
+      expect((input as HTMLInputElement).value).toBe('Noa');
+    });
+    fireEvent.change(input, { target: { value: 'Noa2' } });
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ nickname: 'Noa2' }),
+      );
+    });
+  });
+
   it('shows missing hints and no Continue button', async () => {
     renderForm();
     const ff = enCopy.onboarding.factsForm;
@@ -380,6 +407,7 @@ describe('OnboardingFactsForm', () => {
     expect(screen.getByText(ff.whereLabel)).toBeTruthy();
     expect(screen.queryByTestId('onboarding-facts-continue')).toBeNull();
     expect(document.getElementById('onb-gender')).toBeNull();
+    expect(screen.queryByLabelText(bf.nicknameLabel)).toBeNull();
     expect(screen.queryByText(bf.partnerGendersLegend)).toBeNull();
     expect(screen.queryByText(bf.partnerGendersRequiredHint)).toBeNull();
     expect(replaceMock).not.toHaveBeenCalled();
@@ -391,6 +419,7 @@ describe('OnboardingFactsForm', () => {
     });
     const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(body).not.toHaveProperty('onboardingStep');
+    expect(body).not.toHaveProperty('nickname');
     expect(body.desiredPartnerGenders).toEqual(['FEMALE']);
     expect(body.birthDate).toBe('1991-05-01');
     expect(pushMock).not.toHaveBeenCalled();
@@ -436,6 +465,7 @@ describe('OnboardingFactsForm', () => {
     const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(body.desiredPartnerGenders).toEqual(['MALE']);
     expect(body).not.toHaveProperty('onboardingStep');
+    expect(body).not.toHaveProperty('nickname');
     expect(onSaved).toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
     expect(replaceMock).not.toHaveBeenCalled();
