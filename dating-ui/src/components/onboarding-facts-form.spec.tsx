@@ -306,4 +306,50 @@ describe('OnboardingFactsForm', () => {
       expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences');
     });
   });
+
+  it('Continue in edit mode keeps the edit query', async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams('edit=1'));
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      gender: 'MALE',
+      desiredPartnerGenders: ['FEMALE'],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+    const continueButton = await screen.findByTestId('onboarding-facts-continue');
+    fireEvent.click(continueButton);
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/onboarding/preferences?edit=1');
+    });
+  });
+
+  it('does not open preferences when the facts save fails', async () => {
+    patchMyProfile.mockRejectedValue(new Error('nope'));
+    fetchMyProfile.mockResolvedValue({
+      ...emptyProfile,
+      gender: 'MALE',
+      desiredPartnerGenders: ['FEMALE'],
+      birthDate: '1990-05-01',
+      country: 'IL',
+      cityId: 'city_IL_na_tel_aviv',
+    });
+
+    renderForm();
+    const ff = enCopy.onboarding.factsForm;
+    const birth = await screen.findByLabelText(ff.birthDateLabel);
+    await waitFor(() => {
+      expect((birth as HTMLInputElement).value).toBe('1990-05-01');
+    });
+    fireEvent.change(birth, { target: { value: '1991-05-01' } });
+    fireEvent.click(await screen.findByTestId('onboarding-facts-continue'));
+
+    await waitFor(() => {
+      expect(patchMyProfile).toHaveBeenCalled();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+  });
 });
