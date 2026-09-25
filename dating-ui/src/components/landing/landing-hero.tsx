@@ -9,10 +9,12 @@ export function LandingHero({
   copy,
   languageSlot,
   ctaSlot,
+  showSignedOutHint = false,
 }: {
   copy: AppCopySchema['landing'];
   languageSlot?: ReactNode;
   ctaSlot?: ReactNode;
+  showSignedOutHint?: boolean;
 }) {
   return (
     <section className="relative isolate flex min-h-[100dvh] flex-col">
@@ -34,6 +36,11 @@ export function LandingHero({
           <h1 className="mb-3 font-sans text-2xl font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50 md:text-3xl">
             {copy.title}
           </h1>
+          {showSignedOutHint ? (
+            <p className="mb-3 max-w-prose text-base leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-lg">
+              {copy.analysisHint}
+            </p>
+          ) : null}
           <p className="mb-8 max-w-prose text-base leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-lg">
             {copy.subtitle}
           </p>

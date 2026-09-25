@@ -147,7 +147,12 @@ export function PublicLandingClient() {
 
   return (
     <main dir={dir} lang={lang} className="font-sans text-zinc-900 dark:text-zinc-50">
-      <LandingHero copy={copy} languageSlot={languageSlot} ctaSlot={ctaSlot} />
+      <LandingHero
+        copy={copy}
+        languageSlot={languageSlot}
+        ctaSlot={ctaSlot}
+        showSignedOutHint={showCta}
+      />
       <LandingTrustStrip copy={copy.trust} />
       <LandingHowItWorks copy={copy.how} />
       <LandingBenefits copy={copy.benefits} />

@@ -13,6 +13,7 @@ export const esCopy: AppCopySchema = {
     title: "Conexiones con sentido, no deslizamientos sin fin.",
     subtitle:
       "Emparejamiento por compatibilidad con conversaciones moderadas.",
+    analysisHint: "El análisis lee tu historia y busca personas que encajan.",
     checkingSession: "Comprobando inicio de sesion…",
     googleSignIn: "Iniciar sesion con Google",
     signingIn: "Iniciando sesion…",

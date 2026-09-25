@@ -1,7 +1,9 @@
 # Story 1: Hint on the page before login
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** —
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -23,7 +25,7 @@ they decide to sign in.
 
 ### Acceptance criteria
 
-- [ ] Logged-out landing shows the analysis sentence in en, he, and es
-- [ ] The sentence has no button and no link
-- [ ] The sentence is hidden while a session is loading and after sign-in
-- [ ] A test covers the logged-out sentence and the hidden loading state
+- [x] Logged-out landing shows the analysis sentence in en, he, and es
+- [x] The sentence has no button and no link
+- [x] The sentence is hidden while a session is loading and after sign-in
+- [x] A test covers the logged-out sentence and the hidden loading state
