@@ -240,8 +240,51 @@ describe('PublicLandingClient i18n', () => {
     expect(screen.queryByTestId('demo-language-links')).toBeNull();
   });
 
-  it('shows English and Spanish links on the Hebrew host when DEMO is on', async () => {
+  async function expectDemoHrefs(hostname: string, hrefs: string[]) {
     process.env.NEXT_PUBLIC_DEMO = '1';
+    process.env.NEXT_PUBLIC_HEBREW_HOST = 'brand.example.il';
+    process.env.NEXT_PUBLIC_COM_HOST = 'brand.example.com';
+    const original = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...original, hostname, pathname: '/' },
+    });
+    try {
+      render(<PublicLandingClient />);
+      const nav = await screen.findByTestId('demo-language-links');
+      expect([...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(hrefs);
+      expect(document.getElementById('landing-language-picker')).toBeNull();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+      delete process.env.NEXT_PUBLIC_DEMO;
+      delete process.env.NEXT_PUBLIC_HEBREW_HOST;
+      delete process.env.NEXT_PUBLIC_COM_HOST;
+    }
+  }
+
+  it('shows English and Spanish links on the Hebrew host when DEMO is on', async () => {
+    await expectDemoHrefs('brand.example.il', [
+      'https://brand.example.com/?locale=en',
+      'https://brand.example.com/?locale=es',
+    ]);
+  });
+
+  it('shows Hebrew and Spanish links on the English .com host', async () => {
+    await expectDemoHrefs('brand.example.com', [
+      'https://brand.example.il/?locale=he',
+      'https://brand.example.com/?locale=es',
+    ]);
+  });
+
+  it('shows Hebrew and English links on the Spanish .com host', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'es');
+    await expectDemoHrefs('brand.example.com', [
+      'https://brand.example.il/?locale=he',
+      'https://brand.example.com/?locale=en',
+    ]);
+  });
+
+  it('keeps the flag picker on the Hebrew host when DEMO is off', async () => {
     process.env.NEXT_PUBLIC_HEBREW_HOST = 'brand.example.il';
     process.env.NEXT_PUBLIC_COM_HOST = 'brand.example.com';
     const original = window.location;
@@ -251,16 +294,12 @@ describe('PublicLandingClient i18n', () => {
     });
     try {
       render(<PublicLandingClient />);
-      const nav = await screen.findByTestId('demo-language-links');
-      const hrefs = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
-      expect(hrefs).toEqual([
-        'https://brand.example.com/?locale=en',
-        'https://brand.example.com/?locale=es',
-      ]);
-      expect(document.getElementById('landing-language-picker')).toBeNull();
+      await waitFor(() => {
+        expect(document.getElementById('landing-language-picker')).toBeTruthy();
+      });
+      expect(screen.queryByTestId('demo-language-links')).toBeNull();
     } finally {
       Object.defineProperty(window, 'location', { configurable: true, value: original });
-      delete process.env.NEXT_PUBLIC_DEMO;
       delete process.env.NEXT_PUBLIC_HEBREW_HOST;
       delete process.env.NEXT_PUBLIC_COM_HOST;
     }
