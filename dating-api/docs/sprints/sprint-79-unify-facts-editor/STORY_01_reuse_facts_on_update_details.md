@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** `a0c0c56d`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -46,4 +48,4 @@ From `dating-ui`:
 - [x] No matching or API field changes
 - [x] Tests passing (`onboarding-facts-form.spec.tsx`, `profile-edit-tab.spec.tsx` — 23 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`a0c0c56d`). Feature tip ahead of main: 0
