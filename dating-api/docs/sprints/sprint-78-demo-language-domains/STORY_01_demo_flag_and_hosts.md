@@ -3,8 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
-**Shipped on main:** *(pending merge)*
-**Feature tip ahead of main:** *(pending)*
+**Shipped on main:** `7fb331d2`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
