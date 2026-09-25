@@ -3,6 +3,7 @@
  */
 
 import { getApiBase } from '@/lib/api/api-base';
+import { createMyProfile } from '@/lib/api-sdk/profile';
 import { authenticatedFetch } from '@/lib/auth/authenticated-fetch';
 import { captureRequestIdFromResponse } from '@/lib/observability/request-id';
 
@@ -92,26 +93,58 @@ export async function listMyProfilePhotos(): Promise<MeProfilePhotoDto[]> {
   return readJson<MeProfilePhotoDto[]>(res);
 }
 
+async function postProfilePhoto(file: File): Promise<Response> {
+  const path = '/api/v1/me/profile/photos';
+  const form = new FormData();
+  form.append('file', file);
+  return authenticatedFetch(path, {
+    method: 'POST',
+    body: form,
+  });
+}
+
+function isProfileNotFound(status: number, body: string): boolean {
+  if (status !== 404) return false;
+  try {
+    const parsed = JSON.parse(body) as { error?: unknown };
+    return parsed.error === 'profile_not_found';
+  } catch {
+    return body.includes('profile_not_found');
+  }
+}
+
 /**
  * Uploads a new photo to the authenticated user's profile.
+ * A first photo before Facts creates an empty profile, then retries once.
  */
 export async function uploadMyProfilePhoto(file: File): Promise<MeProfilePhotoDto> {
   const base = getApiBase();
   const path = '/api/v1/me/profile/photos';
-  const form = new FormData();
-  form.append('file', file);
   let res: Response;
   try {
-    res = await authenticatedFetch(path, {
-      method: 'POST',
-    body: form,
-    });
+    res = await postProfilePhoto(file);
   } catch {
     throw new Error(apiUnreachableMessage(base, path));
   }
   captureRequestIdFromResponse(res);
   if (!res.ok) {
     const errText = await res.text();
+    if (isProfileNotFound(res.status, errText)) {
+      await createMyProfile({});
+      try {
+        res = await postProfilePhoto(file);
+      } catch {
+        throw new Error(apiUnreachableMessage(base, path));
+      }
+      captureRequestIdFromResponse(res);
+      if (!res.ok) {
+        const retryText = await res.text();
+        throw new Error(
+          `POST ${path} failed: ${res.status} ${retryText || res.statusText}`,
+        );
+      }
+      return readJson<MeProfilePhotoDto>(res);
+    }
     throw new Error(
       `POST ${path} failed: ${res.status} ${errText || res.statusText}`,
     );
