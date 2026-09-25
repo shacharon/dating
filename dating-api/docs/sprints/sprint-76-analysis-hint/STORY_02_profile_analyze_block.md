@@ -1,7 +1,9 @@
 # Story 2: Profile hint, button, and result
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** —
+**Shipped on main:** *(pending merge)*
+**Feature tip ahead of main:** *(pending)*
 
 ## Why
 
@@ -30,7 +32,7 @@ Copy in English, Hebrew, and Spanish. Do not add a second analyze control on thi
 
 ### Acceptance criteria
 
-- [ ] A thin profile shows the explanation and no analyze button
-- [ ] A profile with a story and the four facts shows the button
-- [ ] After a successful submit, the block can show the result and hides the button
-- [ ] Tests cover the not-ready and ready states
+- [x] A thin profile shows the explanation and no analyze button
+- [x] A profile with a story and the four facts shows the button
+- [x] After a successful submit, the block can show the result and hides the button
+- [x] Tests cover the not-ready and ready states
