@@ -91,6 +91,11 @@ export const heCopy: AppCopySchema = {
         body: "הוסיפו את הפרטים הבסיסיים ונוכל לחפש אנשים כאן.",
         cta: "להמשך הפרופיל",
       },
+      notAnalyzedGate: {
+        title: "הפרופיל צריך ניתוח",
+        body: "אי אפשר לחפש אנשים לפני שהפרופיל מנותח.",
+        cta: "לניתוח",
+      },
       actionBadge: {
         liked: { label: "אהבתי", ariaLabel: "אהבת את ההתאמה הזו" },
         passed: { label: "דילגתי", ariaLabel: "דילגת על ההתאמה הזו" },

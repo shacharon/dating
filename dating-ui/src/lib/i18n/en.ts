@@ -98,6 +98,11 @@ export const enCopy: AppCopySchema = {
         body: "Add the basics and we can look for people here.",
         cta: "Continue profile",
       },
+      notAnalyzedGate: {
+        title: "Your profile needs analysis",
+        body: "We can't look for people until your profile has been analyzed.",
+        cta: "Go to analysis",
+      },
       actionBadge: {
         liked: { label: "Liked", ariaLabel: "You liked this match" },
         passed: { label: "Passed", ariaLabel: "You passed on this match" },

@@ -105,6 +105,11 @@ export type AppCopySchema = {
         body: string;
         cta: string;
       };
+      notAnalyzedGate: {
+        title: string;
+        body: string;
+        cta: string;
+      };
       actionBadge: {
         liked: { label: string; ariaLabel: string };
         passed: { label: string; ariaLabel: string };
