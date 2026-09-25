@@ -1,6 +1,6 @@
 # Story 3: One nickname editor
 
-**Status:** Parked
+**Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
 
@@ -20,10 +20,10 @@ Nickname is edited in **one** place. Facts and Settings must not both own it.
 
 ## Acceptance criteria
 
-- [ ] Hub Facts pane does not duplicate Settings nickname
-- [ ] First login still has a way to set nickname before Matches
-- [ ] Completeness “Add a nickname” still reaches the remaining editor
-- [ ] Specs for Facts + Settings
+- [x] Hub Facts pane does not duplicate Settings nickname
+- [x] First login still has a way to set nickname before Matches
+- [x] Completeness “Add a nickname” still reaches the remaining editor
+- [x] Specs for Facts + Settings
 
 ## Affected files
 
@@ -40,4 +40,8 @@ From `dating-ui`:
 
 ## Definition of done
 
-One editor. No matcher change.
+- [x] One editor after first login (Settings). Onboarding Facts keeps nickname for first login
+- [x] No matcher change
+- [x] Tests passing (facts form, nickname settings, settings tab — 20 passed)
+- [x] UX review approved (Agent 3.5)
+- [x] Landed on `main` (SHA recorded after merge)
