@@ -132,6 +132,20 @@ export async function fetchMyProfile(): Promise<MeProfileDto | null> {
   return dto;
 }
 
+function withoutEmptyPartnerGenders<T extends { desiredPartnerGenders?: unknown }>(
+  body: T,
+): T {
+  if (
+    !Array.isArray(body.desiredPartnerGenders) ||
+    body.desiredPartnerGenders.length > 0
+  ) {
+    return body;
+  }
+  const next = { ...body };
+  delete next.desiredPartnerGenders;
+  return next;
+}
+
 export async function createMyProfile(body: CreateMeProfileBody): Promise<MeProfileDto> {
   const base = getApiBase();
   const path = '/api/v1/me/profile';
@@ -141,7 +155,7 @@ export async function createMyProfile(body: CreateMeProfileBody): Promise<MeProf
     res = await authenticatedFetch(path, {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify(body),
+      body: JSON.stringify(withoutEmptyPartnerGenders(body)),
     });
   } catch {
     emitProductLog({
@@ -187,7 +201,7 @@ export async function patchMyProfile(body: PatchMeProfileBody): Promise<MeProfil
     res = await authenticatedFetch(path, {
       method: 'PATCH',
       headers: JSON_HEADERS,
-      body: JSON.stringify(body),
+      body: JSON.stringify(withoutEmptyPartnerGenders(body)),
     });
   } catch {
     emitProductLog({

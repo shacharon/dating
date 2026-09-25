@@ -108,21 +108,29 @@ describe('PublicLandingClient i18n', () => {
     expect(main?.getAttribute('lang')).toBe('he');
   });
 
-  it('shows language picker when Google CTA is visible', () => {
+  it('shows language flags when Google CTA is visible', () => {
     render(<PublicLandingClient />);
 
     expect(
-      screen.getByLabelText(enCopy.languageSettings.label),
+      screen.getByRole('group', { name: enCopy.languageSettings.label }),
     ).toBeTruthy();
-    expect(screen.getByRole('combobox').id).toBe('landing-language-picker');
+    expect(
+      screen.getByRole('button', { name: enCopy.languageSettings.optionHe }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: enCopy.languageSettings.optionEn }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: enCopy.languageSettings.optionEs }),
+    ).toBeTruthy();
   });
 
-  it('updates landing copy and storage when picker changes to Hebrew', () => {
+  it('updates landing copy and storage when the Hebrew flag is clicked', () => {
     render(<PublicLandingClient />);
 
-    fireEvent.change(screen.getByRole('combobox'), {
-      target: { value: 'he' },
-    });
+    fireEvent.click(
+      screen.getByRole('button', { name: enCopy.languageSettings.optionHe }),
+    );
 
     expect(
       screen.getByRole('heading', { name: heCopy.landing.title }),
@@ -146,7 +154,9 @@ describe('PublicLandingClient i18n', () => {
 
     render(<PublicLandingClient />);
 
-    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(
+      screen.queryByRole('group', { name: enCopy.languageSettings.label }),
+    ).toBeNull();
     expect(
       screen.getByText(
         (content) =>

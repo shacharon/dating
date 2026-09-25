@@ -793,6 +793,16 @@ export const esCopy: AppCopySchema = {
       meterLoading: "Comprobando la calidad del perfil…",
       meterUnavailable: "Puntuación no disponible",
       overviewFraming: "Así te ven los demás",
+      analyzeNeedTitle: "El análisis es cómo encontramos a tu gente",
+      analyzeNeedBody:
+        "Escribe tu historia y añade quién eres, a quién buscas, dónde estás y tu fecha de nacimiento. Después puedes ejecutarlo.",
+      analyzeReadyTitle: "Tu perfil está listo",
+      analyzeReadyBody:
+        "Esto lee tu historia y busca personas que encajan.",
+      analyzeButton: "Analizar tu perfil",
+      analyzeRunning: "Leyendo tu perfil…",
+      analyzeResultTitle: "Tu análisis",
+      analyzeFailed: "El análisis no terminó. Inténtalo de nuevo.",
       overviewPhotoEmptyTitle: "Añade una foto para que te vean",
       overviewPhotoEmptyCta: "Añadir foto",
       overviewStoryEmptyTitle: "Tu historia es cómo te conocen",

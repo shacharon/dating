@@ -1,4 +1,5 @@
 import { ProfileGender, UserProfileOnboardingStep, DatingChapter } from '@prisma/client';
+import { Transform } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -64,6 +65,11 @@ export class MeProfileWritableFieldsDto {
   gender?: ProfileGender | null;
 
   @IsOptional()
+  @Transform(({ value }) =>
+    value == null || (Array.isArray(value) && value.length === 0)
+      ? undefined
+      : value,
+  )
   @ValidateIf((_, v) => v !== undefined && v !== null)
   @IsArray()
   @ArrayNotEmpty({

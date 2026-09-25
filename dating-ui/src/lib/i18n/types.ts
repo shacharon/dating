@@ -555,6 +555,14 @@ export type AppCopySchema = {
       meterLoading: string;
       meterUnavailable: string;
       overviewFraming: string;
+      analyzeNeedTitle: string;
+      analyzeNeedBody: string;
+      analyzeReadyTitle: string;
+      analyzeReadyBody: string;
+      analyzeButton: string;
+      analyzeRunning: string;
+      analyzeResultTitle: string;
+      analyzeFailed: string;
       overviewPhotoEmptyTitle: string;
       overviewPhotoEmptyCta: string;
       overviewStoryEmptyTitle: string;

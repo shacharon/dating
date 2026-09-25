@@ -6,7 +6,7 @@ import type { ProfileDraft } from '@/app/dating/_lib/types';
 import { ProfileOverviewHero } from '@/components/profile/profile-overview-hero';
 import { ProfileOverviewStoryProse } from '@/components/profile/profile-overview-story-prose';
 import { ProfileOverviewTraitChips } from '@/components/profile/profile-overview-trait-chips';
-import { ProfileOverviewStatusStrip } from '@/components/profile/profile-overview-status-strip';
+import { ProfileAnalyzePrompt } from '@/components/profile/profile-analyze-prompt';
 import { useProfileQualityRefresh } from '@/components/profile/profile-quality-refresh-context';
 import {
   fetchMyLatestAnalysis,
@@ -21,15 +21,17 @@ import {
   type ProfileQualityDto,
 } from '@/lib/api/profile-quality-api';
 import { useAppLocale } from '@/lib/i18n';
+import type { MeProfileDto } from '@/lib/api-types/profile';
 import { mapEvaluationToViewModel } from '@/lib/matches/analysis-presentation';
 import { PROFILE_HREF } from '@/lib/profile/profile-hub-paths';
 
 type Props = {
   draft: ProfileDraft;
+  profile: MeProfileDto | null;
 };
 
 /** Profile hub Overview: framing, dating card, prose, chips, Edit, status strip. */
-export function ProfileOverviewTab({ draft }: Props) {
+export function ProfileOverviewTab({ draft, profile }: Props) {
   const { copy } = useAppLocale();
   const hub = copy.profile.hub;
   const { refreshKey } = useProfileQualityRefresh();
@@ -111,6 +113,15 @@ export function ProfileOverviewTab({ draft }: Props) {
       >
         {hub.overviewFraming}
       </p>
+
+      <ProfileAnalyzePrompt
+        profile={profile}
+        draft={draft}
+        analysis={analysis}
+        onFinished={() => {
+          void fetchMyLatestAnalysis().then((dto) => setAnalysis(dto));
+        }}
+      />
 
       <ProfileOverviewHero draft={draft} photos={photos} />
       <ProfileOverviewStoryProse draft={draft} />

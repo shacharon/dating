@@ -1,5 +1,5 @@
 ---
-description: When the user says push in Dating — git + both Docker images to ECR + ECS.
+description: When the user says push in Dating — git + both Docker images to ECR + prisma migrate + ECS.
 alwaysApply: false
 ---
 

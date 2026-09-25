@@ -785,6 +785,16 @@ export const enCopy: AppCopySchema = {
       meterLoading: "Checking profile quality…",
       meterUnavailable: "Quality score unavailable",
       overviewFraming: "This is how you look to others",
+      analyzeNeedTitle: "Analysis is how we find your people",
+      analyzeNeedBody:
+        "Write your story and add who you are, who you want, where you are, and your birth date. Then you can run it.",
+      analyzeReadyTitle: "Your profile is ready",
+      analyzeReadyBody:
+        "This reads your story and looks for people who fit.",
+      analyzeButton: "Analyze your profile",
+      analyzeRunning: "Reading your profile…",
+      analyzeResultTitle: "Your analysis",
+      analyzeFailed: "Analysis could not finish. Try again.",
       overviewPhotoEmptyTitle: "Add a photo so people can see you",
       overviewPhotoEmptyCta: "Add photo",
       overviewStoryEmptyTitle: "Your story is how people meet you",

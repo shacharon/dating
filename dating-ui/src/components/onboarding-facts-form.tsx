@@ -108,6 +108,7 @@ export function OnboardingFactsForm() {
 
         <fieldset className="space-y-3">
           <legend className={labelClass}>{m.ff.whereLabel}</legend>
+          {m.locale === 'he' ? null : (
           <div>
             <label htmlFor="facts-country" className={labelClass}>
               {m.bf.countryLabel}
@@ -126,6 +127,7 @@ export function OnboardingFactsForm() {
               ))}
             </select>
           </div>
+          )}
           {m.countryCode === 'US' ? (
             <div>
               <label htmlFor="facts-state" className={labelClass}>
@@ -148,17 +150,6 @@ export function OnboardingFactsForm() {
           ) : null}
           {m.countryCode && (m.countryCode !== 'US' || m.usStateCode) ? (
             <div className="space-y-2">
-              <label htmlFor="facts-city-search" className={labelClass}>
-                {m.ff.citySearchPlaceholder}
-              </label>
-              <input
-                id="facts-city-search"
-                type="search"
-                className={inputClass}
-                placeholder={m.ff.citySearchPlaceholder}
-                value={m.cityQuery}
-                onChange={(e) => m.setCityQuery(e.target.value)}
-              />
               <label htmlFor="facts-city" className={labelClass}>
                 {m.bf.cityLabel}
               </label>

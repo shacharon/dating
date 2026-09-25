@@ -53,10 +53,8 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
 
   useEffect(() => {
     if (!menuOpen) return;
-    router.prefetch(profileEditHash("basic"));
     router.prefetch("/onboarding/story?edit=1");
     router.prefetch("/settings/account");
-    router.prefetch("/settings/language");
   }, [menuOpen, router]);
 
   useEffect(() => {
@@ -176,15 +174,6 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             {copy.nav.accountSettings}
           </Link>
           <Link
-            href={profileEditHash("basic")}
-            prefetch
-            className={menuItemClass}
-            role="menuitem"
-            onClick={() => onAvatarMenuNavigate(profileEditHash("basic"))}
-          >
-            {copy.nav.editBasicProfile}
-          </Link>
-          <Link
             href={profileEditHash("story")}
             prefetch
             className={menuItemClass}
@@ -201,15 +190,6 @@ export function NavAuth({ locale = DEFAULT_LOCALE }: { locale?: AppLocale }) {
             onClick={() => onAvatarMenuNavigate('/settings/preferences')}
           >
             {copy.profile.matchPreferencesLink}
-          </Link>
-          <Link
-            href="/settings/language"
-            prefetch
-            className={menuItemClass}
-            role="menuitem"
-            onClick={() => onAvatarMenuNavigate("/settings/language")}
-          >
-            {copy.nav.language}
           </Link>
           <div className="my-1 border-t border-zinc-200 dark:border-zinc-700" />
           <button

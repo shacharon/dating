@@ -14,6 +14,16 @@ type LanguagePickerProps = {
   id?: string;
 };
 
+const FLAGS: {
+  locale: AppLocale;
+  flag: string;
+  optionKey: "optionEn" | "optionEs" | "optionHe";
+}[] = [
+  { locale: "he", flag: "🇮🇱", optionKey: "optionHe" },
+  { locale: "en", flag: "🇬🇧", optionKey: "optionEn" },
+  { locale: "es", flag: "🇪🇸", optionKey: "optionEs" },
+];
+
 export function LanguagePicker({
   locale,
   onLocaleChange,
@@ -23,29 +33,39 @@ export function LanguagePicker({
   const copy = getCopy(locale).languageSettings;
   const dir = getLocaleDirection(locale);
 
-  function onChange(nextLocale: AppLocale) {
+  function choose(nextLocale: AppLocale) {
     writeStoredLocale(nextLocale);
     onLocaleChange?.(nextLocale);
   }
 
   return (
-    <div dir={dir} className={className}>
-      <label
-        htmlFor={id}
-        className="mb-1 block text-center text-xs font-medium text-zinc-500 dark:text-zinc-400"
-      >
-        {copy.label}
-      </label>
-      <select
-        id={id}
-        value={locale}
-        onChange={(e) => onChange(e.target.value as AppLocale)}
-        className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-      >
-        <option value="en">{copy.optionEn}</option>
-        <option value="es">{copy.optionEs}</option>
-        <option value="he">{copy.optionHe}</option>
-      </select>
+    <div
+      dir={dir}
+      id={id}
+      role="group"
+      aria-label={copy.label}
+      className={`flex items-center justify-center gap-2 ${className}`}
+    >
+      {FLAGS.map((item) => {
+        const selected = locale === item.locale;
+        const name = copy[item.optionKey];
+        return (
+          <button
+            key={item.locale}
+            type="button"
+            aria-pressed={selected}
+            aria-label={name}
+            onClick={() => choose(item.locale)}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-2xl leading-none ${
+              selected
+                ? "ring-2 ring-zinc-900 dark:ring-zinc-100"
+                : "opacity-80 hover:opacity-100"
+            }`}
+          >
+            <span aria-hidden>{item.flag}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

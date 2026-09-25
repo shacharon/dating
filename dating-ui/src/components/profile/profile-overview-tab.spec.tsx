@@ -71,7 +71,7 @@ function renderTab(draft: ProfileDraft) {
     createElement(
       ProfileQualityRefreshProvider,
       null,
-      createElement(ProfileOverviewTab, { draft }),
+      createElement(ProfileOverviewTab, { draft, profile: null }),
     ),
   );
 }

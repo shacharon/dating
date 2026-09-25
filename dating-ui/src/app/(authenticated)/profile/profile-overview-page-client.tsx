@@ -59,7 +59,7 @@ export function ProfileOverviewPageClient() {
         )}
 
         {mounted && !loadError && draft && (
-          <ProfileOverviewTab draft={draft} />
+          <ProfileOverviewTab draft={draft} profile={profile} />
         )}
       </div>
     </LegacyProfileTabRedirect>

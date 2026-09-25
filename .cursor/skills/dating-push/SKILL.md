@@ -3,7 +3,8 @@ name: dating-push
 description: >-
   When the user says push (or push to git / docker / aws) in the Dating repo:
   git push, build and push dating-api and dating-ui Docker images to Frankfurt
-  ECR, then roll both ECS services. Never Going2Eat food-*.
+  ECR, run one-shot prisma migrate deploy, then roll both ECS services.
+  Never Going2Eat food-*.
 ---
 
 # Dating push (git + both images)
@@ -50,12 +51,33 @@ docker push "${reg}/dating-ui:latest"
 
 A Cursor hook may ask to approve `docker push`. Wait.
 
-## 3) Live ECS (required or the site stays on the old image)
+## 3) Register the API task def, then migrate (before any service roll)
 
-Services `ignore_changes` on `task_definition`. After push:
+The API image does not migrate on startup. A new image that expects new columns will 500 until `prisma migrate deploy` has run on RDS.
 
-- Register new task defs (or copy latest, set image to `${reg}/dating-api:${sha}` and `${reg}/dating-ui:${sha}`).
-- `aws ecs update-service` `dating-dev-cluster` / `dating-dev-api` and `dating-dev-ui` `--force-new-deployment`.
+Order is fixed: register the **API** task definition with `${reg}/dating-api:${sha}` first. Do **not** `update-service` yet.
+
+Then one Fargate task, same cluster, using that new API revision. Copy `networkConfiguration` from the live `dating-dev-api` service (subnets + security groups). Container override command is `./scripts/docker-migrate.sh` (that script runs `npx prisma migrate deploy`). `assignPublicIp` stays whatever the service already uses.
+
+```powershell
+$env:AWS_PROFILE = "pizza"
+$env:AWS_DEFAULT_REGION = "eu-central-1"
+$net = aws ecs describe-services --cluster dating-dev-cluster --services dating-dev-api --query "services[0].networkConfiguration" --output json
+$overrides = '{"containerOverrides":[{"name":"dating-api","command":["./scripts/docker-migrate.sh"]}]}'
+# $apiRev is the new family:revision from step 3, image already set to dating-api:$sha
+aws ecs run-task --cluster dating-dev-cluster --task-definition $apiRev --launch-type FARGATE --count 1 --network-configuration $net --overrides $overrides
+```
+
+Wait until that task is `STOPPED`. The `dating-api` container **exit code must be 0**. Read CloudWatch `/ecs/dating-dev/dating-api` for that task if it fails.
+
+**Fail closed:** if migrate does not exit 0, stop. Do not roll `dating-dev-api` or `dating-dev-ui`.
+
+## 4) Live ECS (required or the site stays on the old image)
+
+Only after migrate succeeds. Services `ignore_changes` on `task_definition`.
+
+- Register the UI task def (image `${reg}/dating-ui:${sha}`). The API revision is already registered from step 3.
+- `aws ecs update-service` `dating-dev-cluster` / `dating-dev-api` and `dating-dev-ui` to those revisions, `--force-new-deployment`.
 - `aws ecs wait services-stable` both.
 - Confirm `/health` on https://findyouraidate.com (if home DNS is GoDaddy, use `--resolve` to ALB or tell operator to use phone).
 
@@ -63,4 +85,4 @@ Do not scale food. Do not enable CloudFront unless asked.
 
 ## Report
 
-SHA tags, both ECR pushes, new API/UI task revisions, running 1/1. No secret values.
+SHA tags, both ECR pushes, migrate task ARN + exit code, new API/UI task revisions, running 1/1. No secret values.

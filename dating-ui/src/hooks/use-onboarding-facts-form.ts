@@ -199,6 +199,11 @@ export function useOnboardingFactsForm() {
   }, [countryCode, profileSyncing]);
 
   useEffect(() => {
+    if (locale !== 'he' || countryCode === 'IL') return;
+    setCountryCode('IL');
+  }, [locale, countryCode]);
+
+  useEffect(() => {
     if (countryCode !== 'US') {
       setUsStates([]);
       return;
@@ -250,13 +255,18 @@ export function useOnboardingFactsForm() {
 
   const filteredCities = useMemo(() => {
     const q = cityQuery.trim().toLowerCase();
-    if (!q) return cities;
-    return cities.filter((c) => {
-      const en = c.nameEn.toLowerCase();
-      const he = (c.nameHe ?? '').toLowerCase();
-      return en.includes(q) || he.includes(q);
-    });
-  }, [cities, cityQuery]);
+    const base = !q
+      ? cities
+      : cities.filter((c) => {
+          const en = c.nameEn.toLowerCase();
+          const he = (c.nameHe ?? '').toLowerCase();
+          return en.includes(q) || he.includes(q);
+        });
+    if (locale !== 'he') return base;
+    return [...base].sort((a, b) =>
+      (a.nameHe || a.nameEn).localeCompare(b.nameHe || b.nameEn, 'he'),
+    );
+  }, [cities, cityQuery, locale]);
 
   function cityLabel(c: PlaceCity): string {
     if (locale === 'he' && c.nameHe) return c.nameHe;
@@ -288,7 +298,7 @@ export function useOnboardingFactsForm() {
     const body: PatchMeProfileBody = {
       gender: v.gender ? (v.gender as MeProfileGender) : null,
       nickname: v.nickname.trim() ? v.nickname.trim() : null,
-      desiredPartnerGenders: partners,
+      ...(partners.length > 0 ? { desiredPartnerGenders: partners } : {}),
       birthDate: v.birthDate || null,
       country: v.countryCode || null,
       usStateCode: v.countryCode === 'US' ? v.usStateCode || null : null,
