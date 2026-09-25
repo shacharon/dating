@@ -3,6 +3,8 @@
 **Status:** Done
 **Depends on:** —
 **Repo:** `dating-ui`
+**Shipped on main:** `2db5b211`
+**Feature tip ahead of main:** 0
 
 ## Goal
 
@@ -47,4 +49,4 @@ From `dating-ui`:
 - [x] Preferences has an exit
 - [x] Tests passing (photos page spec + preferences form spec — 16 passed)
 - [x] UX review approved (Agent 3.5)
-- [x] Landed on `main` (SHA recorded after merge)
+- [x] Landed on `main` (`2db5b211`). Feature tip ahead of main: 0
