@@ -115,6 +115,9 @@ describe('ProfileEditPreferencesSection', () => {
     expect(body).not.toHaveProperty('desiredPartnerGenders');
     expect(body).not.toHaveProperty('onboardingStep');
     expect(onSaved).toHaveBeenCalled();
+    expect(screen.getByRole('status').textContent).toBe(
+      enCopy.onboarding.savedFlash,
+    );
   });
 
   it('clearing both ages and distance saves null', async () => {

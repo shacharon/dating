@@ -130,6 +130,12 @@ describe('ProfileEditTab', () => {
     expect(screen.getByTestId('profile-edit-progress-dots').getAttribute('aria-label')).toMatch(
       /of 4 sections complete/,
     );
+    expect(
+      screen.getByTestId('profile-edit-nav-story').getAttribute('aria-current'),
+    ).toBe('page');
+    expect(
+      screen.getByTestId('profile-edit-nav-preferences').hasAttribute('aria-current'),
+    ).toBe(false);
   });
 
   it('marks progress dots complete from profile + photos', async () => {

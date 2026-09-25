@@ -30,6 +30,7 @@ export function ProfileEditPreferencesSection({
   const [initialized, setInitialized] = useState(false);
   const [ageError, setAgeError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function ProfileEditPreferencesSection({
   async function onSave() {
     if (!profile) return;
     setSaveError(null);
+    setSavedFlash(false);
     if (matchPreferencesAgeRangeInvalid(form)) {
       setAgeError(mp.ageRangeInvalid);
       return;
@@ -52,6 +54,7 @@ export function ProfileEditPreferencesSection({
     try {
       const updated = await patchMutation.mutateAsync(ageDistanceToPatchBody(form));
       setForm(profileToMatchPreferencesForm(updated));
+      setSavedFlash(true);
       onSaved?.();
     } catch {
       setSaveError(mp.saveError);
@@ -85,10 +88,15 @@ export function ProfileEditPreferencesSection({
           {saveError}
         </p>
       ) : null}
+      {savedFlash ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
+          {copy.onboarding.savedFlash}
+        </p>
+      ) : null}
       <button
         type="button"
         data-testid="profile-edit-preferences-save"
-        className="inline-flex min-h-11 items-center justify-center rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        className="inline-flex min-h-11 items-center justify-center rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
         disabled={saving || !profile}
         onClick={() => void onSave()}
       >

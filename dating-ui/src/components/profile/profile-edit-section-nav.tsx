@@ -40,10 +40,11 @@ export function ProfileEditSectionNav({
               data-testid={`profile-edit-nav-${id}`}
               data-section={id}
               onClick={() => onNavigate(id)}
-              className={`min-h-10 border-b-2 px-2 py-2 text-sm transition-colors ${
+              aria-current={selected ? 'page' : undefined}
+              className={`min-h-11 border-b-2 px-2 py-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:focus-visible:outline-zinc-100 ${
                 selected
                   ? 'border-blue-600 font-semibold text-zinc-900 dark:border-blue-400 dark:text-zinc-100'
-                  : 'border-transparent font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  : 'border-transparent font-medium text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
               {labels[id]}
@@ -61,6 +62,7 @@ export function ProfileEditSectionNav({
             key={id}
             data-testid={`profile-edit-progress-${id}`}
             data-complete={complete[id] ? 'true' : 'false'}
+            aria-hidden="true"
             className={`h-2 w-2 rounded-full ${
               complete[id]
                 ? 'bg-emerald-500 dark:bg-emerald-400'
