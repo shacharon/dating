@@ -26,6 +26,7 @@ function landingUrlWithNext(): string {
   if (typeof window === "undefined") return "/";
   const next = `${window.location.pathname}${window.location.search}`;
   if (!next.startsWith("/") || next.startsWith("//")) return "/";
+  if (window.location.pathname.startsWith("/onboarding")) return "/";
   const u = new URL("/", window.location.origin);
   u.searchParams.set("next", next);
   return `${u.pathname}${u.search}`;

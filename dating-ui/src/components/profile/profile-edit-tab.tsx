@@ -39,7 +39,7 @@ function sectionComplete(
 ): Record<EditSectionId, boolean> {
   const flags = buildCompletenessFlags(draft, approvedPhotoCount > 0);
   return {
-    basic: flags.basicsComplete && flags.hasLocation,
+    basic: flags.basicsComplete,
     photos: approvedPhotoCount > 0,
     preferences:
       profile?.partnerAgeMin != null ||

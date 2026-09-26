@@ -31,6 +31,16 @@ vi.mock('@/lib/api/me-photos-api', () => ({
   listMyProfilePhotos,
 }));
 
+vi.mock('@/lib/api/places-api', () => ({
+  listPlaceCountries: vi.fn(async () => ({
+    countries: [{ code: 'IL', nameEn: 'Israel' }],
+  })),
+  listPlaceUsStates: vi.fn(async () => ({ states: [] })),
+  listPlaceCities: vi.fn(async () => ({
+    cities: [{ id: 'city_IL_na_tel_aviv', nameEn: 'Tel Aviv', nameHe: 'תל אביב' }],
+  })),
+}));
+
 vi.mock('@/contexts/auth-context', () => ({
   useAuth: () => ({
     user: { id: 'u1', displayName: 'Test User' },

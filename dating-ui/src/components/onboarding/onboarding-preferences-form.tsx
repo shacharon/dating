@@ -6,7 +6,9 @@ import {
   MatchPreferencesAgeSection,
   MatchPreferencesDistanceSection,
 } from '@/components/match-preferences-sections';
-import { usePatchProfile, useProfile } from '@/hooks/use-profile';
+import { PlaceLocationFields } from '@/components/onboarding/place-location-fields';
+import { useCreateProfile, usePatchProfile, useProfile } from '@/hooks/use-profile';
+import { usePlaceLocation } from '@/hooks/use-place-location';
 import { useAppLocale } from '@/lib/i18n';
 import {
   ageDistanceToPatchBody,
@@ -23,6 +25,7 @@ export function OnboardingPreferencesForm() {
   const mp = copy.matchPreferences;
   const { profile, isLoading, error: profileError } = useProfile();
   const patchMutation = usePatchProfile();
+  const createMutation = useCreateProfile();
   const [form, setForm] = useState<MatchPreferencesFormState>(
     emptyMatchPreferencesFormState(),
   );
@@ -34,6 +37,7 @@ export function OnboardingPreferencesForm() {
   formRef.current = form;
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  const location = usePlaceLocation(profile, initialized);
 
   useEffect(() => {
     if (isLoading || initialized) return;
@@ -57,7 +61,13 @@ export function OnboardingPreferencesForm() {
     savingRef.current = true;
     setSaving(true);
     try {
-      const updated = await patchMutation.mutateAsync(ageDistanceToPatchBody(current));
+      const body = {
+        ...ageDistanceToPatchBody(current),
+        ...(location.locationPatch() ?? {}),
+      };
+      const updated = profile?.id
+        ? await patchMutation.mutateAsync(body)
+        : await createMutation.mutateAsync(body);
       if (updated && typeof updated === 'object' && 'id' in updated) {
         setForm(profileToMatchPreferencesForm(updated));
       }
@@ -87,9 +97,9 @@ export function OnboardingPreferencesForm() {
   }
 
   return (
-    <div className="space-y-6" data-testid="onboarding-preferences-form">
+    <div className="space-y-8" data-testid="onboarding-preferences-form">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
           {stepCopy.title}
         </h1>
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -114,6 +124,10 @@ export function OnboardingPreferencesForm() {
         form={form}
         setForm={setForm}
         onBlur={() => void persistCurrent()}
+      />
+      <PlaceLocationFields
+        location={location}
+        onChange={() => void persistCurrent()}
       />
 
       {ageError ? (

@@ -5,7 +5,9 @@ import {
   MatchPreferencesAgeSection,
   MatchPreferencesDistanceSection,
 } from '@/components/match-preferences-sections';
+import { PlaceLocationFields } from '@/components/onboarding/place-location-fields';
 import { usePatchProfile, useProfile } from '@/hooks/use-profile';
+import { usePlaceLocation } from '@/hooks/use-place-location';
 import { useAppLocale } from '@/lib/i18n';
 import {
   ageDistanceToPatchBody,
@@ -32,6 +34,7 @@ export function ProfileEditPreferencesSection({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [saving, setSaving] = useState(false);
+  const location = usePlaceLocation(profile, initialized);
 
   useEffect(() => {
     if (isLoading || initialized) return;
@@ -52,7 +55,10 @@ export function ProfileEditPreferencesSection({
     setAgeError(null);
     setSaving(true);
     try {
-      const updated = await patchMutation.mutateAsync(ageDistanceToPatchBody(form));
+      const updated = await patchMutation.mutateAsync({
+        ...ageDistanceToPatchBody(form),
+        ...(location.locationPatch() ?? {}),
+      });
       setForm(profileToMatchPreferencesForm(updated));
       setSavedFlash(true);
       onSaved?.();
@@ -72,12 +78,13 @@ export function ProfileEditPreferencesSection({
   }
 
   return (
-    <div className="space-y-4" data-testid="profile-edit-preferences">
+    <div className="space-y-8" data-testid="profile-edit-preferences">
       <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
         {copy.onboarding.preferencesStep.optionalHint}
       </p>
       <MatchPreferencesAgeSection mp={mp} form={form} setForm={setForm} />
       <MatchPreferencesDistanceSection mp={mp} form={form} setForm={setForm} />
+      <PlaceLocationFields location={location} />
       {ageError ? (
         <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {ageError}

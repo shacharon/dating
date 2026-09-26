@@ -113,17 +113,10 @@ describe('onboarding-basic-validation', () => {
     ).toEqual({ ok: true });
   });
 
-  it('facts advance requires birth date', () => {
+  it('facts advance requires birth date and not a city', () => {
     const base = {
       gender: 'MALE' as const,
       desiredPartnerGenders: ['FEMALE' as const],
-      location: {
-        countryCode: 'JP',
-        usStateCode: '',
-        cityId: '',
-        countryHasCities: false,
-        stateHasCities: false,
-      },
     };
     expect(
       validateOnboardingFactsAdvance({ ...base, birthDate: '' }),
@@ -138,33 +131,19 @@ describe('onboarding-basic-validation', () => {
       validateOnboardingFactsAdvance({
         gender: 'PREFER_NOT_TO_SAY',
         desiredPartnerGenders: ['FEMALE'],
-        location: {
-          countryCode: 'JP',
-          usStateCode: '',
-          cityId: '',
-          countryHasCities: false,
-          stateHasCities: false,
-        },
         birthDate: '1990-05-01',
       }),
     ).toEqual({ ok: false, error: 'genderInvalidForAdvance' });
   });
 
-  it('treats unloaded cities as requiring a city (no early continue)', () => {
+  it('facts advance does not require a city', () => {
     expect(
       validateOnboardingFactsAdvance({
         gender: 'MALE',
         desiredPartnerGenders: ['FEMALE'],
-        location: {
-          countryCode: 'IL',
-          usStateCode: '',
-          cityId: '',
-          countryHasCities: true,
-          stateHasCities: false,
-        },
         birthDate: '1990-05-01',
       }),
-    ).toEqual({ ok: false, error: 'locationRequired' });
+    ).toEqual({ ok: true });
   });
 
   it('listFactsMissing lists all empty keys', () => {
@@ -172,15 +151,8 @@ describe('onboarding-basic-validation', () => {
       listFactsMissing({
         gender: '',
         desiredPartnerGenders: [],
-        location: {
-          countryCode: '',
-          usStateCode: '',
-          cityId: '',
-          countryHasCities: false,
-          stateHasCities: false,
-        },
         birthDate: '',
       }),
-    ).toEqual(['gender', 'lookingFor', 'location', 'birthDate']);
+    ).toEqual(['gender', 'lookingFor', 'birthDate']);
   });
 });

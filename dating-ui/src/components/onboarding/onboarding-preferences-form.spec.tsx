@@ -7,21 +7,21 @@ import {
   createTestQueryClient,
 } from '@/test/query-client-wrapper';
 
-const { fetchMyProfile, patchMyProfile, pushMock, searchParamsMock } = vi.hoisted(
-  () => ({
+const { fetchMyProfile, patchMyProfile, createMyProfile, pushMock, searchParamsMock } =
+  vi.hoisted(() => ({
     fetchMyProfile: vi.fn(),
     patchMyProfile: vi.fn(),
+    createMyProfile: vi.fn(),
     pushMock: vi.fn(),
     searchParamsMock: vi.fn(() => new URLSearchParams()),
-  }),
-);
+  }));
 
 vi.mock('@/lib/api-sdk', () => ({
   datingApi: {
     profile: {
       fetchMyProfile,
       patchMyProfile,
-      createMyProfile: vi.fn(),
+      createMyProfile,
       submitMyProfileForAnalysis: vi.fn(),
     },
   },
@@ -30,6 +30,20 @@ vi.mock('@/lib/api-sdk', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
   useSearchParams: () => searchParamsMock(),
+}));
+
+const { listPlaceCountries, listPlaceUsStates, listPlaceCities } = vi.hoisted(
+  () => ({
+    listPlaceCountries: vi.fn(),
+    listPlaceUsStates: vi.fn(),
+    listPlaceCities: vi.fn(),
+  }),
+);
+
+vi.mock('@/lib/api/places-api', () => ({
+  listPlaceCountries,
+  listPlaceUsStates,
+  listPlaceCities,
 }));
 
 import { OnboardingPreferencesForm } from '@/components/onboarding/onboarding-preferences-form';
@@ -53,6 +67,24 @@ describe('OnboardingPreferencesForm', () => {
     searchParamsMock.mockReturnValue(new URLSearchParams());
     fetchMyProfile.mockResolvedValue(null);
     patchMyProfile.mockResolvedValue({});
+    createMyProfile.mockImplementation(async (body) => ({
+      id: 'p1',
+      userId: 'u1',
+      ...body,
+    }));
+    listPlaceCountries.mockResolvedValue({
+      countries: [
+        { code: 'IL', nameEn: 'Israel' },
+        { code: 'US', nameEn: 'United States' },
+      ],
+    });
+    listPlaceUsStates.mockResolvedValue({ states: [] });
+    listPlaceCities.mockResolvedValue({
+      cities: [
+        { id: 'city_IL_na_tel_aviv', nameEn: 'Tel Aviv', nameHe: 'תל אביב-יפו' },
+        { id: 'city_US_ny_nyc', nameEn: 'New York', nameHe: null },
+      ],
+    });
   });
 
   afterEach(() => {
@@ -86,7 +118,7 @@ describe('OnboardingPreferencesForm', () => {
     fireEvent.blur(screen.getByTestId('pref-age-max'));
 
     await waitFor(() => {
-      expect(patchMyProfile).toHaveBeenCalledWith({
+      expect(createMyProfile).toHaveBeenCalledWith({
         partnerAgeMin: 25,
         partnerAgeMax: 40,
         maxDistanceKm: null,
@@ -110,7 +142,7 @@ describe('OnboardingPreferencesForm', () => {
     expect(screen.getByRole('alert').textContent).toBe(
       enCopy.matchPreferences.ageRangeInvalid,
     );
-    expect(patchMyProfile).not.toHaveBeenCalled();
+    expect(createMyProfile).not.toHaveBeenCalled();
   });
 
   it('saves one age on blur', async () => {
@@ -120,7 +152,7 @@ describe('OnboardingPreferencesForm', () => {
     });
     fireEvent.blur(screen.getByTestId('pref-age-min'));
     await waitFor(() => {
-      expect(patchMyProfile).toHaveBeenCalledWith({
+      expect(createMyProfile).toHaveBeenCalledWith({
         partnerAgeMin: 25,
         partnerAgeMax: null,
         maxDistanceKm: null,
@@ -163,7 +195,7 @@ describe('OnboardingPreferencesForm', () => {
   });
 
   it('shows a save error and stays on the page when the patch fails', async () => {
-    patchMyProfile.mockRejectedValue(new Error('nope'));
+    createMyProfile.mockRejectedValue(new Error('nope'));
     renderForm();
     fireEvent.blur(await screen.findByTestId('pref-age-min'));
     expect(await screen.findByRole('alert')).toBeTruthy();
@@ -180,7 +212,7 @@ describe('OnboardingPreferencesForm', () => {
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith('/dating/me-matches');
     });
-    const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    const body = createMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(body).toEqual({
       partnerAgeMin: null,
       partnerAgeMax: null,
@@ -193,7 +225,7 @@ describe('OnboardingPreferencesForm', () => {
   });
 
   it('Done stays on Preferences when the save fails', async () => {
-    patchMyProfile.mockRejectedValue(new Error('nope'));
+    createMyProfile.mockRejectedValue(new Error('nope'));
     renderForm();
     fireEvent.click(await screen.findByTestId('onboarding-preferences-done'));
 
@@ -218,7 +250,54 @@ describe('OnboardingPreferencesForm', () => {
     expect(screen.getByRole('alert').textContent).toBe(
       enCopy.matchPreferences.ageRangeInvalid,
     );
-    expect(patchMyProfile).not.toHaveBeenCalled();
+    expect(createMyProfile).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('Hebrew shows Israeli cities and no country list', async () => {
+    localStorage.setItem(APP_LOCALE_STORAGE_KEY, 'he');
+    renderForm();
+    const city = await screen.findByTestId('pref-city');
+    await waitFor(() => {
+      expect(listPlaceCities).toHaveBeenCalledWith('IL', undefined);
+    });
+    expect(screen.queryByTestId('pref-country')).toBeNull();
+    expect(await screen.findByRole('option', { name: 'תל אביב-יפו' })).toBeTruthy();
+    fireEvent.change(city, { target: { value: 'city_IL_na_tel_aviv' } });
+    await waitFor(() => {
+      expect(createMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          country: 'IL',
+          cityId: 'city_IL_na_tel_aviv',
+          usStateCode: null,
+        }),
+      );
+    });
+  });
+
+  it('English can pick a country and a city', async () => {
+    renderForm();
+    const country = await screen.findByTestId('pref-country');
+    await waitFor(() => {
+      expect((country as HTMLSelectElement).value).toBe('US');
+    });
+    fireEvent.change(country, { target: { value: 'IL' } });
+    const city = await screen.findByTestId('pref-city');
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Tel Aviv' })).toBeTruthy();
+    });
+    fireEvent.change(city, { target: { value: 'city_IL_na_tel_aviv' } });
+    await waitFor(() => {
+      const calls = [
+        ...createMyProfile.mock.calls,
+        ...patchMyProfile.mock.calls,
+      ];
+      expect(
+        calls.some(
+          (call) =>
+            call[0].country === 'IL' && call[0].cityId === 'city_IL_na_tel_aviv',
+        ),
+      ).toBe(true);
+    });
   });
 });

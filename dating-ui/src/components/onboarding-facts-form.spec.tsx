@@ -129,9 +129,9 @@ describe('OnboardingFactsForm', () => {
     await waitFor(() => {
       expect(screen.getByText(ff.iAmLabel)).toBeTruthy();
       expect(screen.getByText(ff.lookingForLabel)).toBeTruthy();
-      expect(screen.getByText(ff.whereLabel)).toBeTruthy();
       expect(screen.getByLabelText(ff.birthDateLabel)).toBeTruthy();
     });
+    expect(screen.queryByText(ff.whereLabel)).toBeNull();
 
     expect(screen.getByLabelText(bf.nicknameLabel)).toBeTruthy();
     expect(screen.queryByText(bf.datingChapter.question)).toBeNull();
@@ -201,8 +201,6 @@ describe('OnboardingFactsForm', () => {
           gender: 'MALE',
           desiredPartnerGenders: ['FEMALE'],
           birthDate: '1991-05-01',
-          country: 'IL',
-          cityId: 'city_IL_na_tel_aviv',
           onboardingStep: 'TEXTS',
         }),
       );
@@ -265,6 +263,7 @@ describe('OnboardingFactsForm', () => {
     });
     const body = patchMyProfile.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(body).not.toHaveProperty('desiredPartnerGenders');
+    expect(body).not.toHaveProperty('cityId');
     expect(body.birthDate).toBe('1991-05-01');
   });
 
@@ -273,7 +272,6 @@ describe('OnboardingFactsForm', () => {
 
     renderForm();
     const ff = enCopy.onboarding.factsForm;
-    const bf = enCopy.onboarding.basicForm;
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: enCopy.gender.MALE })).toBeTruthy();
@@ -281,20 +279,8 @@ describe('OnboardingFactsForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: enCopy.gender.MALE }));
     fireEvent.click(screen.getByRole('button', { name: ff.lookingForWomen }));
-    await waitFor(() => {
-      expect(screen.getByLabelText(bf.countryLabel)).toBeTruthy();
-    });
-    fireEvent.change(screen.getByLabelText(bf.countryLabel), {
-      target: { value: 'IL' },
-    });
     fireEvent.change(screen.getByLabelText(ff.birthDateLabel), {
       target: { value: '1990-05-01' },
-    });
-    await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Tel Aviv' })).toBeTruthy();
-    });
-    fireEvent.change(screen.getByLabelText(bf.cityLabel), {
-      target: { value: 'city_IL_na_tel_aviv' },
     });
 
     await waitFor(() => {
@@ -305,8 +291,9 @@ describe('OnboardingFactsForm', () => {
       const saved = calls.some(
         (call) =>
           call[0].gender === 'MALE' &&
-          call[0].cityId === 'city_IL_na_tel_aviv' &&
-          call[0].onboardingStep === 'TEXTS',
+          call[0].birthDate === '1990-05-01' &&
+          call[0].onboardingStep === 'TEXTS' &&
+          !('cityId' in call[0]),
       );
       expect(saved).toBe(true);
     });
@@ -405,7 +392,7 @@ describe('OnboardingFactsForm', () => {
     });
     expect(screen.getByText(ff.iAmLabel)).toBeTruthy();
     expect(screen.getByText(ff.lookingForLabel)).toBeTruthy();
-    expect(screen.getByText(ff.whereLabel)).toBeTruthy();
+    expect(screen.queryByText(ff.whereLabel)).toBeNull();
     expect(screen.queryByTestId('onboarding-facts-continue')).toBeNull();
     expect(document.getElementById('onb-gender')).toBeNull();
     expect(screen.queryByLabelText(bf.nicknameLabel)).toBeNull();

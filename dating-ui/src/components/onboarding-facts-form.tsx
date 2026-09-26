@@ -47,7 +47,6 @@ export function OnboardingFactsForm({
   const missingLabels: Record<string, string> = {
     gender: m.ff.missingGender,
     lookingFor: m.ff.missingLookingFor,
-    location: m.ff.missingLocation,
     birthDate: m.ff.missingBirthDate,
   };
 
@@ -116,70 +115,6 @@ export function OnboardingFactsForm({
               </button>
             ))}
           </div>
-        </fieldset>
-
-        <fieldset className="space-y-3">
-          <legend className={labelClass}>{m.ff.whereLabel}</legend>
-          {m.locale === 'he' ? null : (
-          <div>
-            <label htmlFor="facts-country" className={labelClass}>
-              {m.bf.countryLabel}
-            </label>
-            <select
-              id="facts-country"
-              className={inputClass}
-              value={m.countryCode}
-              onChange={(e) => m.setCountryCode(e.target.value)}
-            >
-              <option value="">{m.bf.countryPlaceholder}</option>
-              {m.countries.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.nameEn}
-                </option>
-              ))}
-            </select>
-          </div>
-          )}
-          {m.countryCode === 'US' ? (
-            <div>
-              <label htmlFor="facts-state" className={labelClass}>
-                {m.bf.stateLabel}
-              </label>
-              <select
-                id="facts-state"
-                className={inputClass}
-                value={m.usStateCode}
-                onChange={(e) => m.setUsStateCode(e.target.value)}
-              >
-                <option value="">{m.bf.stateLabel}</option>
-                {m.usStates.map((s) => (
-                  <option key={s.code} value={s.code}>
-                    {s.nameEn}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-          {m.countryCode && (m.countryCode !== 'US' || m.usStateCode) ? (
-            <div className="space-y-2">
-              <label htmlFor="facts-city" className={labelClass}>
-                {m.bf.cityLabel}
-              </label>
-              <select
-                id="facts-city"
-                className={inputClass}
-                value={m.cityId}
-                onChange={(e) => m.setCityId(e.target.value)}
-              >
-                <option value="">{m.bf.cityLabel}</option>
-                {m.filteredCities.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {m.cityLabel(c)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
         </fieldset>
 
         <div>

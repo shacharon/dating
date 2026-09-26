@@ -57,10 +57,20 @@ export function PublicLandingClient() {
   const dir = getLocaleDirection(locale);
   const lang = getLocaleHtmlLang(locale);
 
-  const requestedNext = useMemo(
-    () => safeNextPath(searchParams.get("next")),
-    [searchParams],
-  );
+  const requestedNext = useMemo(() => {
+    const next = safeNextPath(searchParams.get("next"));
+    if (next?.startsWith("/onboarding")) return null;
+    return next;
+  }, [searchParams]);
+
+  useEffect(() => {
+    const next = searchParams.get("next");
+    if (!next?.startsWith("/onboarding")) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("next");
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `/?${qs}` : "/");
+  }, [searchParams]);
 
   const goAfterLogin = useCallback(async () => {
     try {

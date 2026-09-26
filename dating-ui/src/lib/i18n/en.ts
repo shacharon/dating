@@ -10,10 +10,10 @@ export const enCopy: AppCopySchema = {
   },
   landing: {
     brand: "Dating",
-    title: "Match on meaning, not endless swiping.",
-    subtitle:
-      "Compatibility-first matching with moderated conversations.",
-    analysisHint: "Analysis reads your story and looks for people who fit.",
+    title: "Write who you are. We'll find who fits.",
+    subtitle: "No long form. No endless swiping.",
+    analysisHint:
+      "Three boxes: you, the person you want, and the relationship you want. We read it.",
     checkingSession: "Checking sign-in…",
     googleSignIn: "Sign in with Google",
     signingIn: "Signing in…",
@@ -21,37 +21,36 @@ export const enCopy: AppCopySchema = {
     privacyLink: "Privacy",
     termsLink: "Terms",
     trust: {
-      privacy: "Private by default",
-      moderation: "Moderated conversations",
-      compatibility: "Compatibility-first matches",
+      privacy: "What you write stays private",
+      moderation: "Chats are looked after",
+      compatibility: "Matches from what you wrote",
     },
     how: {
       title: "How it works",
-      step1Title: "Tell your story",
+      step1Title: "Write it",
       step1Body:
-        "Share the basics and what matters to you — save progress anytime.",
-      step2Title: "Get thoughtful matches",
+        "You, them, and the relationship. In your words.",
+      step2Title: "We read it",
       step2Body:
-        "We surface compatible people using your profile, not endless card spam.",
-      step3Title: "Start a real conversation",
+        "The match looks for people who want the same thing, not just the same age range.",
+      step3Title: "Then you talk",
       step3Body:
-        "When both sides are interested, talk in a moderated messaging space.",
+        "If it's mutual, you message. Chats are moderated.",
     },
     benefits: {
-      title: "Why Dating",
-      depthTitle: "Depth over volume",
+      title: "Why this",
+      depthTitle: "Your words, not a quiz",
       depthBody:
-        "Fewer, better matches — built for compatibility, not swipe fatigue.",
-      signalsTitle: "Clear matching signals",
+        "The match comes from what you wrote, not 50 dropdowns.",
+      signalsTitle: "You can see why",
       signalsBody:
-        "Understand why someone surfaced — not a black-box “for you” feed.",
-      safetyTitle: "Safer conversations",
-      safetyBody:
-        "Reporting and moderation tools keep chats grounded and respectful.",
+        "We show what lined up. Not a mystery feed.",
+      safetyTitle: "Not a free-for-all",
+      safetyBody: "You can report. We review it.",
     },
     closing: {
-      title: "Ready when you are",
-      subtitle: "Sign in with Google to build your profile and see matches.",
+      title: "Your turn",
+      subtitle: "Sign in with Google and write the three boxes.",
       cta: "Back to sign in",
     },
   },
@@ -547,11 +546,14 @@ export const enCopy: AppCopySchema = {
       intro:
         "A few short paragraphs help us understand you. You can save and come back, or continue without writing yet.",
       aboutMeLabel: "About me",
-      aboutMePlaceholder: "Describe yourself…",
+      aboutMePlaceholder:
+        "e.g. I'm 29, I like slow mornings, and I say what I mean.",
       aboutPartnerLabel: "About partner",
-      aboutPartnerPlaceholder: "What you look for in a partner…",
+      aboutPartnerPlaceholder:
+        "e.g. Someone kind, curious, and fine with a quiet night in.",
       aboutRelationshipLabel: "About relationship",
-      aboutRelationshipPlaceholder: "What you want from a relationship…",
+      aboutRelationshipPlaceholder:
+        "e.g. Something steady. We check in. No games.",
       finishAndAnalyze: "Finish & analyze",
       submitting: "Submitting…",
       backToBasics: "Back to basics",

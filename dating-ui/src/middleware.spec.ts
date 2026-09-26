@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { middleware } from './middleware';
 
 describe('middleware (Phase 2 profile routes)', () => {
-  it('redirects unauthenticated /onboarding to / with next param', () => {
+  it('redirects unauthenticated /onboarding to / without a next param', () => {
     const req = new NextRequest(new URL('http://localhost:3000/onboarding'));
     const res = middleware(req);
     expect(res.status).toBeGreaterThanOrEqual(300);
@@ -12,7 +12,7 @@ describe('middleware (Phase 2 profile routes)', () => {
     expect(loc).toBeTruthy();
     const u = new URL(loc!);
     expect(u.pathname).toBe('/');
-    expect(u.searchParams.get('next')).toBe('/onboarding');
+    expect(u.search).toBe('');
   });
 
   it('redirects unauthenticated /dating/profile to / with next', () => {
@@ -92,14 +92,14 @@ describe('middleware (Phase 2 profile routes)', () => {
     expect(u.pathname).toBe('/dating/me-matches/match-123');
   });
 
-  it('redirects unauthenticated /onboarding/basic to / with next', () => {
+  it('redirects unauthenticated /onboarding/basic to / without a next param', () => {
     const req = new NextRequest(new URL('http://localhost:3000/onboarding/basic'));
     const res = middleware(req);
     const loc = res.headers.get('location');
     expect(loc).toBeTruthy();
     const u = new URL(loc!);
     expect(u.pathname).toBe('/');
-    expect(u.searchParams.get('next')).toBe('/onboarding/basic');
+    expect(u.search).toBe('');
   });
 
   it('redirects unauthenticated /profile to / with next param', () => {

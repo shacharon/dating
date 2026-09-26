@@ -124,6 +124,10 @@ export class ProfileCrudService {
       if (body.gender === undefined) {
         writable.gender = ProfileGender.PREFER_NOT_TO_SAY;
       }
+      // Live column is still NOT NULL until the nullable migration runs.
+      if (writable.aboutMe == null) {
+        writable.aboutMe = '';
+      }
       applyOnboardingCompletionToWriteData(writable, body, null);
       const row = await this.profiles.createWithPreference({
         userId,

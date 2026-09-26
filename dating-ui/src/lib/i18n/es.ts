@@ -10,10 +10,10 @@ export const esCopy: AppCopySchema = {
   },
   landing: {
     brand: "Dating",
-    title: "Conexiones con sentido, no deslizamientos sin fin.",
-    subtitle:
-      "Emparejamiento por compatibilidad con conversaciones moderadas.",
-    analysisHint: "El análisis lee tu historia y busca personas que encajan.",
+    title: "Escribe quién eres. Encontramos a quien encaja.",
+    subtitle: "Sin formulario eterno. Sin deslizar sin parar.",
+    analysisHint:
+      "Tres textos: tú, la persona que quieres y la relación que quieres. Lo leemos.",
     checkingSession: "Comprobando inicio de sesion…",
     googleSignIn: "Iniciar sesion con Google",
     signingIn: "Iniciando sesion…",
@@ -21,39 +21,33 @@ export const esCopy: AppCopySchema = {
     privacyLink: "Privacidad",
     termsLink: "Terminos",
     trust: {
-      privacy: "Privacidad por defecto",
-      moderation: "Conversaciones moderadas",
-      compatibility: "Matches por compatibilidad",
+      privacy: "Lo que escribes se queda privado",
+      moderation: "Los chats están cuidados",
+      compatibility: "Matches a partir de lo que escribiste",
     },
     how: {
-      title: "Como funciona",
-      step1Title: "Cuenta tu historia",
-      step1Body:
-        "Comparte lo basico y lo que te importa — guarda el progreso cuando quieras.",
-      step2Title: "Recibe matches pensados",
+      title: "Cómo va",
+      step1Title: "Lo escribes",
+      step1Body: "Tú, esa persona y la relación. Con tus palabras.",
+      step2Title: "Lo leemos",
       step2Body:
-        "Mostramos personas compatibles segun tu perfil, no un aluvion de tarjetas.",
-      step3Title: "Empieza una conversacion real",
-      step3Body:
-        "Cuando hay interes mutuo, hablan en un espacio de mensajeria moderado.",
+        "El análisis busca gente que quiere lo mismo, no solo el mismo rango de edad.",
+      step3Title: "Y hablan",
+      step3Body: "Si es mutuo, escriben. Los chats están moderados.",
     },
     benefits: {
-      title: "Por que Dating",
-      depthTitle: "Profundidad sobre volumen",
-      depthBody:
-        "Menos matches, mejores — pensados para compatibilidad, no para fatiga.",
-      signalsTitle: "Senales de match claras",
-      signalsBody:
-        "Entiende por que alguien aparecio — no un feed opaco ”para ti“.",
-      safetyTitle: "Conversaciones mas seguras",
-      safetyBody:
-        "Reportes y moderacion mantienen las charlas respetuosas.",
+      title: "Por qué aquí",
+      depthTitle: "Tus palabras, no un test",
+      depthBody: "El match sale de lo que escribiste, no de 50 menús.",
+      signalsTitle: "Ves el porqué",
+      signalsBody: "Mostramos qué coincidió. No un feed misterioso.",
+      safetyTitle: "No es un caos",
+      safetyBody: "Puedes reportar. Lo revisamos.",
     },
     closing: {
-      title: "Cuando estes listo/a",
-      subtitle:
-        "Inicia sesion con Google para crear tu perfil y ver matches.",
-      cta: "Volver al inicio de sesion",
+      title: "Te toca",
+      subtitle: "Entra con Google y escribe los tres textos.",
+      cta: "Volver a entrar",
     },
   },
   languageSettings: {
@@ -552,11 +546,14 @@ export const esCopy: AppCopySchema = {
       intro:
         "Unos parrafos cortos nos ayudan a entenderte. Puedes guardar y volver, o continuar sin escribir todavia.",
       aboutMeLabel: "Sobre mi",
-      aboutMePlaceholder: "Describe quien eres…",
+      aboutMePlaceholder:
+        "p. ej. Tengo 29, me gustan las mañanas tranquilas y digo lo que pienso.",
       aboutPartnerLabel: "Sobre la pareja",
-      aboutPartnerPlaceholder: "Que buscas en una pareja…",
+      aboutPartnerPlaceholder:
+        "p. ej. Alguien cercano, curioso, y bien con una noche en casa.",
       aboutRelationshipLabel: "Sobre la relacion",
-      aboutRelationshipPlaceholder: "Que quieres de una relacion…",
+      aboutRelationshipPlaceholder:
+        "p. ej. Algo estable. Nos escribimos. Sin juegos.",
       finishAndAnalyze: "Finalizar y analizar",
       submitting: "Enviando…",
       backToBasics: "Volver a lo basico",

@@ -20,7 +20,9 @@ export type OnboardingBasicAdvanceFields = {
   location: OnboardingLocationAdvance;
 };
 
-export type OnboardingFactsAdvanceFields = OnboardingBasicAdvanceFields & {
+export type OnboardingFactsAdvanceFields = {
+  gender: string;
+  desiredPartnerGenders: MeProfileGender[];
   birthDate: string;
 };
 
@@ -69,19 +71,17 @@ export function validateOnboardingBasicAdvance(
 export function validateOnboardingFactsAdvance(
   fields: OnboardingFactsAdvanceFields,
 ): { ok: true } | { ok: false; error: OnboardingFactsAdvanceValidationError } {
-  const base = validateOnboardingBasicAdvance(fields);
-  if (!base.ok) return base;
+  const genderResult = validateGenderForOnboardingAdvance(fields.gender);
+  if (!genderResult.ok) return genderResult;
+  const partnerResult = validatePartnerGendersNonEmpty(fields.desiredPartnerGenders);
+  if (!partnerResult.ok) return partnerResult;
   if (!birthDateSatisfied(fields.birthDate)) {
     return { ok: false, error: 'birthDateRequired' };
   }
   return { ok: true };
 }
 
-export type FactsMissingKey =
-  | 'gender'
-  | 'lookingFor'
-  | 'location'
-  | 'birthDate';
+export type FactsMissingKey = 'gender' | 'lookingFor' | 'birthDate';
 
 export function listFactsMissing(
   fields: OnboardingFactsAdvanceFields,
@@ -92,9 +92,6 @@ export function listFactsMissing(
   }
   if (!validatePartnerGendersNonEmpty(fields.desiredPartnerGenders).ok) {
     missing.push('lookingFor');
-  }
-  if (!locationSatisfied(fields.location)) {
-    missing.push('location');
   }
   if (!birthDateSatisfied(fields.birthDate)) {
     missing.push('birthDate');

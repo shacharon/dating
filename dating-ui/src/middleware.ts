@@ -45,7 +45,10 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(getSessionCookieName())?.value;
   if (!token?.trim()) {
     const landing = new URL('/', request.url);
-    landing.searchParams.set('next', `${pathname}${search}`);
+    // Onboarding destination is chosen after login. Do not park it on the homepage URL.
+    if (!pathname.startsWith('/onboarding')) {
+      landing.searchParams.set('next', `${pathname}${search}`);
+    }
     const incomingRid = request.headers.get('x-request-id')?.trim() ?? null;
     emitProductLog({
       level: 'trace',
