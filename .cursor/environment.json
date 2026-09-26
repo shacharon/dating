@@ -1,0 +1,12 @@
+{
+  "name": "dating",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "dev (api+ui)",
+      "command": "bash .cursor/start.sh && npm run dev"
+    }
+  ],
+  "ports": [3000, 3001]
+}
