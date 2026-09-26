@@ -8,6 +8,8 @@ import { OnboardingTextFieldHelp } from '@/components/onboarding/onboarding-text
 import { useOnboardingAutosave } from '@/components/onboarding/onboarding-autosave';
 import { appendTranscript } from '@/lib/speech/field-speech';
 import { useOnboardingTextsForm } from '@/hooks/use-onboarding-texts-form';
+import { useStoryPlaceholderStep } from '@/hooks/use-story-placeholder-step';
+import { storyPlaceholder, storyPlaceholderDir } from '@/lib/onboarding/story-placeholder-cycle';
 
 function fieldLabelFor(
   field: string | undefined,
@@ -32,6 +34,7 @@ export function OnboardingTextsForm({
   onSaved?: () => void;
 } = {}) {
   const m = useOnboardingTextsForm({ variant, onSaved });
+  const placeholderStep = useStoryPlaceholderStep();
   const autosave = useOnboardingAutosave();
   const flushRef = useRef(m.flushTexts);
   flushRef.current = m.flushTexts;
@@ -82,8 +85,9 @@ export function OnboardingTextsForm({
               m.clearModeration();
             }}
             rows={4}
+            dir={m.aboutMe.trim() ? 'auto' : storyPlaceholderDir(placeholderStep)}
             className={`${inputClass} min-h-[4.25rem] w-full pb-9 pe-10`}
-            placeholder={m.tf.aboutMePlaceholder}
+            placeholder={storyPlaceholder('aboutMe', placeholderStep)}
             onBlur={() => void m.flushTexts()}
           />
           </FieldSpeechButton>
@@ -117,8 +121,9 @@ export function OnboardingTextsForm({
               m.clearModeration();
             }}
             rows={4}
+            dir={m.aboutPartner.trim() ? 'auto' : storyPlaceholderDir(placeholderStep)}
             className={`${inputClass} min-h-[4.25rem] w-full pb-9 pe-10`}
-            placeholder={m.tf.aboutPartnerPlaceholder}
+            placeholder={storyPlaceholder('aboutPartner', placeholderStep)}
             onBlur={() => void m.flushTexts()}
           />
           </FieldSpeechButton>
@@ -152,8 +157,9 @@ export function OnboardingTextsForm({
               m.clearModeration();
             }}
             rows={4}
+            dir={m.aboutRelationship.trim() ? 'auto' : storyPlaceholderDir(placeholderStep)}
             className={`${inputClass} min-h-[4.25rem] w-full pb-9 pe-10`}
-            placeholder={m.tf.aboutRelationshipPlaceholder}
+            placeholder={storyPlaceholder('aboutRelationship', placeholderStep)}
             onBlur={() => void m.flushTexts()}
           />
           </FieldSpeechButton>
