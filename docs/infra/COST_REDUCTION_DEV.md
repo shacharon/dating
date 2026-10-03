@@ -1,4 +1,4 @@
-# Dating-dev AWS cost reduction
+﻿# Dating-dev AWS cost reduction
 
 **Status: PLANNED. Nothing has been applied. Documentation only.**
 Written: 2026-10-03. Account `907390934996` (profile `pizza`), region `eu-central-1`.
@@ -267,3 +267,4 @@ Decision pending (see options in chat): A) accept replacement + immediately repo
 | Dating CI **migration step** (`ecs-run-migrate.sh`) | **RISK.** It starts a one-off task using GitHub variables `ECS_SUBNET_IDS` (documented as "private subnets") and `ECS_ASSIGN_PUBLIC_IP` (default `DISABLED`). With the NAT removed, a task in private subnets without a public IP cannot pull from ECR or read secrets, so the migration step (and the deploy) will fail. The variable values could not be read (no repo-level variables; `dev` environment returned 404). Fix: set `ECS_ASSIGN_PUBLIC_IP=ENABLED` and `ECS_SUBNET_IDS` to the public subnets `subnet-08702ce87ad2a209c,subnet-0b93dbcd01f2e6cce`. NOT done yet. |
 | `terraform apply` from `main` or another machine | Would bring the NAT back and revert tasks to private subnets, because the settings are in the gitignored `terraform.tfvars`. Merge branch `infra/dev-cost-reduction`; the example file has the values. |
 | Going2Eat deploy (`going2eat-deploy`) | Copies the live task definition, so 0.5 vCPU / 1 GB (rev 39) carries forward. Safe. |
+
