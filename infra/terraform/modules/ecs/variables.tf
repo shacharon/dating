@@ -18,6 +18,24 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
+variable "task_subnet_ids" {
+  description = "Subnets for Fargate tasks. Empty = use private_subnet_ids. Set to public subnets when running without a NAT gateway (dev cost saving)."
+  type        = list(string)
+  default     = []
+}
+
+variable "use_fargate_spot" {
+  description = "Run api/ui services on FARGATE_SPOT (about 60-70% cheaper, can be interrupted with 2 min notice). Dev only."
+  type        = bool
+  default     = false
+}
+
+variable "assign_public_ip" {
+  description = "Assign a public IP to Fargate tasks. Required when tasks run in public subnets without NAT. Inbound stays limited by security groups (ALB only)."
+  type        = bool
+  default     = false
+}
+
 variable "api_security_group_id" {
   description = "API task security group"
   type        = string

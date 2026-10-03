@@ -240,14 +240,24 @@ resource "aws_ecs_service" "api" {
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.api_desired_count
-  launch_type     = "FARGATE"
+  # On-demand Fargate by default; Fargate Spot (dev cost saving) when use_fargate_spot = true.
+  launch_type = var.use_fargate_spot ? null : "FARGATE"
+
+  dynamic "capacity_provider_strategy" {
+    for_each = var.use_fargate_spot ? [1] : []
+    content {
+      capacity_provider = "FARGATE_SPOT"
+      weight            = 1
+      base              = 0
+    }
+  }
 
   platform_version = "LATEST"
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = length(var.task_subnet_ids) > 0 ? var.task_subnet_ids : var.private_subnet_ids
     security_groups  = [var.api_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_public_ip
   }
 
   load_balancer {
@@ -284,14 +294,24 @@ resource "aws_ecs_service" "ui" {
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.ui.arn
   desired_count   = var.ui_desired_count
-  launch_type     = "FARGATE"
+  # On-demand Fargate by default; Fargate Spot (dev cost saving) when use_fargate_spot = true.
+  launch_type = var.use_fargate_spot ? null : "FARGATE"
+
+  dynamic "capacity_provider_strategy" {
+    for_each = var.use_fargate_spot ? [1] : []
+    content {
+      capacity_provider = "FARGATE_SPOT"
+      weight            = 1
+      base              = 0
+    }
+  }
 
   platform_version = "LATEST"
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = length(var.task_subnet_ids) > 0 ? var.task_subnet_ids : var.private_subnet_ids
     security_groups  = [var.ui_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_public_ip
   }
 
   load_balancer {

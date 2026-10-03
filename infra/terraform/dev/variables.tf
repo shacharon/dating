@@ -34,6 +34,24 @@ variable "single_nat_gateway" {
   default     = true
 }
 
+variable "enable_nat_gateway" {
+  description = "Create NAT gateway(s) for private subnet egress. Set false only when ecs_assign_public_ip = true (dev cost saving)."
+  type        = bool
+  default     = true
+}
+
+variable "ecs_use_fargate_spot" {
+  description = "Run api/ui on FARGATE_SPOT (dev cost saving, tasks can be interrupted with 2 min notice)."
+  type        = bool
+  default     = false
+}
+
+variable "ecs_assign_public_ip" {
+  description = "Run api/ui Fargate tasks in public subnets with a public IP (allows enable_nat_gateway=false). Inbound still limited to the ALB by security groups."
+  type        = bool
+  default     = false
+}
+
 variable "enable_vpc_endpoints" {
   description = "Create VPC endpoints for ECR/SSM/Secrets/Logs/Rekognition/S3"
   type        = bool
