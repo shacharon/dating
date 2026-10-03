@@ -9,7 +9,12 @@ project     = "dating"
 vpc_cidr           = "10.20.0.0/16"
 az_count           = 2
 single_nat_gateway = true
-enable_vpc_endpoints = true
+# Dev cost saving (see docs/infra/COST_REDUCTION_DEV.md): no NAT (~$48/mo), no VPC endpoints (~$100/mo),
+# tasks in public subnets with a public IP (inbound still limited to the ALB by security groups).
+# For production use enable_nat_gateway = true and ecs_assign_public_ip = false.
+enable_vpc_endpoints = false
+enable_nat_gateway   = false
+ecs_assign_public_ip = true
 
 # Public origin — leave empty for ALB-DNS-only bootstrap
 domain_name         = "" # e.g. "dev.example.com"

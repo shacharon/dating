@@ -27,6 +27,7 @@ module "networking" {
   vpc_cidr           = var.vpc_cidr
   az_count           = var.az_count
   single_nat_gateway = var.single_nat_gateway
+  enable_nat_gateway = var.enable_nat_gateway
   tags               = local.common_tags
 }
 
@@ -146,6 +147,8 @@ module "ecs" {
   aws_region            = var.aws_region
   vpc_id                = module.networking.vpc_id
   private_subnet_ids    = module.networking.private_subnet_ids
+  task_subnet_ids       = var.ecs_assign_public_ip ? module.networking.public_subnet_ids : []
+  assign_public_ip      = var.ecs_assign_public_ip
   api_security_group_id = module.security_groups.api_security_group_id
   ui_security_group_id  = module.security_groups.ui_security_group_id
   api_target_group_arn  = module.alb.api_target_group_arn
