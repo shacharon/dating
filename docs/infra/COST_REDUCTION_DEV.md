@@ -268,3 +268,48 @@ Decision pending (see options in chat): A) accept replacement + immediately repo
 | `terraform apply` from `main` or another machine | Would bring the NAT back and revert tasks to private subnets, because the settings are in the gitignored `terraform.tfvars`. Merge branch `infra/dev-cost-reduction`; the example file has the values. |
 | Going2Eat deploy (`going2eat-deploy`) | Copies the live task definition, so 0.5 vCPU / 1 GB (rev 39) carries forward. Safe. |
 
+
+---
+
+# Phase 4: dating RDS db.t4g.small -> db.t4g.micro (PLANNED, nothing applied)
+
+Written: 2026-10-03. Account `907390934996`, `eu-central-1`. Instance `dating-dev-postgres`.
+
+## Existing (verified read-only)
+- `db.t4g.small` (2 vCPU, 2 GB RAM), PostgreSQL 16.13, 20 GB gp3, single-AZ, backups 7 days, maintenance window Sun 06:00-07:00 (UTC), deletion protection off.
+- Class is set by `rds_instance_class` in the local `terraform.tfvars` (and the default in `dev/variables.tf`).
+- Parameter group `dating-dev-pg16-...` has **no custom parameters** (all defaults), so Postgres memory settings scale with the instance size automatically.
+- Cost: about $27/month for the instance (about $0.036/hour).
+
+## Measured over the last 14 days
+| Metric | Value |
+|---|---|
+| Freeable memory | minimum 1,025 MB, average 1,057 MB (of 2 GB, so about 1 GB in use) |
+| Swap | max 1 MB |
+| Connections | max 5 |
+| CPU | max 32% |
+| IOPS | read max 14, write max 51 |
+| CPU credits | balance full (576) since Sep 21; usage about 110 credits/day; **no surplus credits charged** |
+
+## Planned change
+`rds_instance_class = "db.t4g.micro"` (1 GB RAM, same 2 vCPU, baseline 10% CPU, credit cap 288, earns 288/day).
+Credits: usage 110/day is well under 288/day, so no throttling expected. Memory: Postgres sizes `shared_buffers` to 25% of RAM, so about 256 MB on micro; current total use of about 1 GB should shrink to roughly 600-700 MB, leaving roughly 300 MB free. Tight but workable for 5 connections.
+
+## Reason / expected saving
+Instance cost halves: about $27 -> about $13.5/month. **Saving about $13/month.** If the schedule (13 h/day) is added later, the saving would overlap (about $7).
+
+## Risks
+- **Downtime about 5-10 minutes** while the instance class is modified (single-AZ). The api will return errors during that time and reconnect afterwards.
+- **Memory too tight** under heavier use (migrations, many connections, `prisma migrate deploy`): possible out-of-memory restart or slow queries. Mitigation: watch `FreeableMemory`; rollback = set `db.t4g.small` again (another 5-10 minutes of downtime).
+- A snapshot is taken first (manual, cheap: 20 GB) so data is safe either way.
+
+## To-do (each step needs explicit approval)
+- [ ] 1. Approve this plan (and pick a time: now or during the Sunday maintenance window).
+- [ ] 2. Take a manual snapshot `dating-dev-before-micro-20261003`.
+- [ ] 3. Set `rds_instance_class = "db.t4g.micro"` in local tfvars; `terraform plan`: expect only the instance modified in place.
+- [ ] 4. Show the plan, get approval, apply targeted to the RDS instance from a saved plan (check `apply_immediately`).
+- [ ] 5. Verify: instance available, api healthy, site 200, no DB errors in `/ecs/dating-dev/dating-api`, FreeableMemory stays above about 150 MB over the next days.
+- [ ] 6. Update this document; commit.
+
+## Rollback
+Set `rds_instance_class = "db.t4g.small"`, plan, apply (5-10 minutes downtime). The manual snapshot is the data safety net.
