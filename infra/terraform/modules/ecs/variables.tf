@@ -24,6 +24,12 @@ variable "task_subnet_ids" {
   default     = []
 }
 
+variable "use_fargate_spot" {
+  description = "Run api/ui services on FARGATE_SPOT (about 60-70% cheaper, can be interrupted with 2 min notice). Dev only."
+  type        = bool
+  default     = false
+}
+
 variable "assign_public_ip" {
   description = "Assign a public IP to Fargate tasks. Required when tasks run in public subnets without NAT. Inbound stays limited by security groups (ALB only)."
   type        = bool

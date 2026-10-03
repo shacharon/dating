@@ -15,6 +15,7 @@ single_nat_gateway = true
 enable_vpc_endpoints = false
 enable_nat_gateway   = false
 ecs_assign_public_ip = true
+ecs_use_fargate_spot = true # dev only: ~60-70% cheaper Fargate, tasks may be interrupted
 
 # Public origin — leave empty for ALB-DNS-only bootstrap
 domain_name         = "" # e.g. "dev.example.com"

@@ -149,6 +149,7 @@ module "ecs" {
   private_subnet_ids    = module.networking.private_subnet_ids
   task_subnet_ids       = var.ecs_assign_public_ip ? module.networking.public_subnet_ids : []
   assign_public_ip      = var.ecs_assign_public_ip
+  use_fargate_spot      = var.ecs_use_fargate_spot
   api_security_group_id = module.security_groups.api_security_group_id
   ui_security_group_id  = module.security_groups.ui_security_group_id
   api_target_group_arn  = module.alb.api_target_group_arn

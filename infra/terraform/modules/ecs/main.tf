@@ -240,7 +240,17 @@ resource "aws_ecs_service" "api" {
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.api_desired_count
-  launch_type     = "FARGATE"
+  # On-demand Fargate by default; Fargate Spot (dev cost saving) when use_fargate_spot = true.
+  launch_type = var.use_fargate_spot ? null : "FARGATE"
+
+  dynamic "capacity_provider_strategy" {
+    for_each = var.use_fargate_spot ? [1] : []
+    content {
+      capacity_provider = "FARGATE_SPOT"
+      weight            = 1
+      base              = 0
+    }
+  }
 
   platform_version = "LATEST"
 
@@ -284,7 +294,17 @@ resource "aws_ecs_service" "ui" {
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.ui.arn
   desired_count   = var.ui_desired_count
-  launch_type     = "FARGATE"
+  # On-demand Fargate by default; Fargate Spot (dev cost saving) when use_fargate_spot = true.
+  launch_type = var.use_fargate_spot ? null : "FARGATE"
+
+  dynamic "capacity_provider_strategy" {
+    for_each = var.use_fargate_spot ? [1] : []
+    content {
+      capacity_provider = "FARGATE_SPOT"
+      weight            = 1
+      base              = 0
+    }
+  }
 
   platform_version = "LATEST"
 

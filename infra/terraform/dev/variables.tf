@@ -40,6 +40,12 @@ variable "enable_nat_gateway" {
   default     = true
 }
 
+variable "ecs_use_fargate_spot" {
+  description = "Run api/ui on FARGATE_SPOT (dev cost saving, tasks can be interrupted with 2 min notice)."
+  type        = bool
+  default     = false
+}
+
 variable "ecs_assign_public_ip" {
   description = "Run api/ui Fargate tasks in public subnets with a public IP (allows enable_nat_gateway=false). Inbound still limited to the ALB by security groups."
   type        = bool
