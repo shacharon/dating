@@ -379,3 +379,7 @@ The ALB, Redis, their IPs and secrets (about $44) cannot be switched off.
 
 ## Rollback
 Set `enable_night_schedule = false`, plan, apply: removes the schedules and the ui target. Then start the environment once by hand (RDS start; api min/max 1/2).
+
+## Status update 2026-10-04 09:11
+- Phase 4 DONE: RDS is db.t4g.micro (snapshot dating-dev-before-micro-20261004 kept for rollback). Verified: API/UI 1/1, site 200, no DB errors. Local tfvars rds_apply_immediately set back to false.
+- Phase 5 DONE: enable_night_schedule=true applied (9 resources). ECS off 23:00, on 08:00; RDS stop 23:15, start 07:45 (Asia/Jerusalem). Rollback: set enable_night_schedule=false and apply.

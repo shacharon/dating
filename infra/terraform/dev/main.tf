@@ -63,6 +63,7 @@ module "rds" {
   private_subnet_ids  = module.networking.private_subnet_ids
   security_group_id   = module.security_groups.rds_security_group_id
   instance_class      = var.rds_instance_class
+  apply_immediately   = var.rds_apply_immediately
   deletion_protection = false
   skip_final_snapshot = true
   tags                = local.common_tags
@@ -201,4 +202,22 @@ module "ecs" {
   tags = local.common_tags
 
   depends_on = [aws_iam_role_policy_attachment.ecs_execution_secrets]
+}
+
+# Nightly shutdown 23:00-08:00 Israel time (dev cost saving). Off by default. See docs/infra/COST_REDUCTION_DEV.md, Phase 5.
+module "scheduler" {
+  count  = var.enable_night_schedule ? 1 : 0
+  source = "../modules/scheduler"
+
+  name_prefix      = local.name_prefix
+  aws_region       = var.aws_region
+  cluster_name     = module.ecs.cluster_name
+  api_service_name = module.ecs.api_service_name
+  ui_service_name  = module.ecs.ui_service_name
+  db_instance_id   = module.rds.db_instance_id
+  api_on_min       = var.api_min_count
+  api_on_max       = var.api_max_count
+  tags             = local.common_tags
+
+  depends_on = [module.ecs]
 }

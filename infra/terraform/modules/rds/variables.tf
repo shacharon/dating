@@ -31,6 +31,12 @@ variable "engine_version" {
   default     = "16"
 }
 
+variable "apply_immediately" {
+  description = "Apply modifications (e.g. instance class) right away instead of in the maintenance window"
+  type        = bool
+  default     = false
+}
+
 variable "instance_class" {
   description = "RDS instance class"
   type        = string

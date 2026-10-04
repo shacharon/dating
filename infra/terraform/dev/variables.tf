@@ -88,6 +88,12 @@ variable "redis_transit_encryption" {
   default     = false
 }
 
+variable "rds_apply_immediately" {
+  description = "Apply RDS modifications immediately (true only for a planned change, e.g. resizing at night)."
+  type        = bool
+  default     = false
+}
+
 variable "rds_instance_class" {
   description = "RDS instance class"
   type        = string
@@ -160,4 +166,10 @@ variable "additional_tags" {
   description = "Extra tags merged into all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "enable_night_schedule" {
+  description = "Stop ECS and RDS 23:00-08:00 Israel time (dev cost saving). Turn on only after the RDS resize is done."
+  type        = bool
+  default     = false
 }
