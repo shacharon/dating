@@ -42,6 +42,9 @@ resource "aws_db_instance" "this" {
   engine_version = var.engine_version
   instance_class = var.instance_class
 
+  # false = changes wait for the maintenance window. Set true only for a planned change (e.g. resizing at night).
+  apply_immediately = var.apply_immediately
+
   allocated_storage     = var.allocated_storage
   max_allocated_storage = var.max_allocated_storage
   storage_type          = "gp3"

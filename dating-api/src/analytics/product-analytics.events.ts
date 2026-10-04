@@ -17,6 +17,7 @@ export const ProductAnalyticsEvents = {
   MATCH_FEEDBACK: 'match.feedback',
   REFERRAL_LANDING_VIEWED: 'referral.landing_viewed',
   REFERRAL_SIGNUP_COMPLETED: 'referral.signup_completed',
+  LANDING_OPENED: 'landing.opened',
 } as const;
 
 export type ProductAnalyticsEventName =

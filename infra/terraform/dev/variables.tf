@@ -88,6 +88,12 @@ variable "redis_transit_encryption" {
   default     = false
 }
 
+variable "rds_apply_immediately" {
+  description = "Apply RDS modifications immediately (true only for a planned change, e.g. resizing at night)."
+  type        = bool
+  default     = false
+}
+
 variable "rds_instance_class" {
   description = "RDS instance class"
   type        = string
@@ -160,4 +166,22 @@ variable "additional_tags" {
   description = "Extra tags merged into all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "enable_night_schedule" {
+  description = "Stop ECS and RDS 23:00-08:00 Israel time (dev cost saving). Turn on only after the RDS resize is done."
+  type        = bool
+  default     = false
+}
+
+variable "night_schedule_api_on_max" {
+  description = "API max task count restored at 08:00 by the night schedule. Null = use api_max_count. Set to 1 while Redis runs as a sidecar in the API task."
+  type        = number
+  default     = null
+}
+
+variable "enable_elasticache" {
+  description = "Create the ElastiCache Redis node. Set false when Redis runs as a sidecar container in the API task (REDIS_URL=redis://localhost:6379)."
+  type        = bool
+  default     = true
 }

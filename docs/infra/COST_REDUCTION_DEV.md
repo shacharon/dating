@@ -313,3 +313,118 @@ Instance cost halves: about $27 -> about $13.5/month. **Saving about $13/month.*
 
 ## Rollback
 Set `rds_instance_class = "db.t4g.small"`, plan, apply (5-10 minutes downtime). The manual snapshot is the data safety net.
+
+---
+
+# Phase 4 timing update (2026-10-03)
+Approved by the user. To be executed in the night window **23:00-08:00 Israel time** (not during the day), after the manual snapshot. Phase 4 must be finished BEFORE the Phase 5 schedule is turned on (both touch the RDS instance).
+
+---
+
+# Phase 5: nightly shutdown of dating-dev, 23:00 to 08:00 Israel time (PLANNED, nothing applied)
+
+Written: 2026-10-03. Account `907390934996`, `eu-central-1`. Companion plan for Going2Eat: `angular-piza/docs/infra/COST_REDUCTION_GOING2EAT.md` (Step 2). Replaces the earlier parked 08:00-21:00 idea with a longer "on" window (15 hours on, 9 hours off).
+
+## Existing (verified read-only)
+- Everything runs 24/7: ECS api + ui on Fargate Spot, RDS `dating-dev-postgres`, ALB, Redis, 2 task public IPs.
+- API has an Application Auto Scaling target (`service/dating-dev-cluster/dating-dev-api`, min 1 / max 2, CPU policy). The UI has none.
+- Only autoscaling's own CloudWatch alarms exist. No EventBridge rules or Route 53 health checks.
+- The installed AWS CLI (2.6.3) has no `scheduler` command, so the RDS schedule must be created through Terraform.
+- Services have `ignore_changes = [task_definition, desired_count]` in Terraform.
+
+## Planned design
+Times in `Asia/Jerusalem` (daylight saving handled by the service).
+
+| Time | Action | How |
+|---|---|---|
+| 07:45 | Start RDS | EventBridge Scheduler -> `rds:startDBInstance` |
+| 08:00 | api min/max 1/2, ui min/max 1/1 | Application Auto Scaling scheduled action |
+| 23:00 | api min/max 0/0, ui min/max 0/0 | Application Auto Scaling scheduled action |
+| 23:15 | Stop RDS | EventBridge Scheduler -> `rds:stopDBInstance` |
+
+Terraform: new `modules/scheduler`, switch `enable_night_schedule` (default false, set in local tfvars + example like the other cost settings). New resources: `aws_appautoscaling_target.ui` (min 1 / max 1), 4 `aws_appautoscaling_scheduled_action`, 2 `aws_scheduler_schedule`, one IAM role limited to start/stop this DB. Why autoscaling and not desired count: the api target has min 1, so a plain "desired 0" would be reversed by autoscaling.
+
+## Cost (pre-tax, per month; dating-dev after Phases 1-4 = about $78 running 24/7)
+| Item | 24/7 | 23:00-08:00 off |
+|---|---|---|
+| Fargate Spot api + ui | 10.5 | 6.6 |
+| RDS micro (instance) | 13.5 | 8.7 (on 15.5 h/day) |
+| RDS storage | 2.7 | 2.7 |
+| Task public IPv4 | 7.3 | 4.6 |
+| ALB + ALB IPv4 | 26.8 | 26.8 |
+| Redis | 12.9 | 12.9 |
+| Secrets | 3.9 | 3.9 |
+| **Total** | **~78** | **~66** |
+| **Saving** | | **~11-12** |
+
+The ALB, Redis, their IPs and secrets (about $44) cannot be switched off.
+
+## Risks
+- **Nobody can use dating-dev 23:00-08:00** (load balancer answers 503). A one-command "start now" is part of the plan for demos at night.
+- **Cold start at 08:00**: RDS 07:45 (about 5-10 min), tasks about 1-2 min. Site is up by about 08:05.
+- **Deploys at night** via `dating-push`: the rolling update waits for stable; with 0 tasks it finishes immediately and the new image only starts in the morning.
+- **RDS 7-day auto-start**: a daily stop/start cycle means it never triggers.
+- **Holidays**: if the schedule is off for weeks while RDS is stopped, AWS restarts it after 7 days; disable the schedule on purpose or leave it on.
+- **Phase 4 first**: do not enable this schedule while the RDS class change is pending.
+
+## To-do (each step needs explicit approval)
+- [ ] 1. Approve this plan (hours 23:00-08:00, Asia/Jerusalem; 7 days a week unless told otherwise).
+- [ ] 2. Phase 4 done (RDS micro) and verified.
+- [ ] 3. Write `modules/scheduler` (default off), `terraform validate`.
+- [ ] 4. Set `enable_night_schedule = true` locally; `terraform plan`: expect only new resources (ui scalable target, 4 scheduled actions, 2 schedules, IAM role).
+- [ ] 5. Show the plan, get approval, apply from a saved plan file.
+- [ ] 6. Verify at the first 23:00 stop and the next 08:00 start: ECS 0/0 then 1/1, RDS stopped then available, site 200 by 08:10.
+- [ ] 7. Add `start-now` / `stop-now` helper commands; update this document and commit.
+- [ ] 8. Next day: check cost (target dating about $2.2/day).
+
+## Rollback
+Set `enable_night_schedule = false`, plan, apply: removes the schedules and the ui target. Then start the environment once by hand (RDS start; api min/max 1/2).
+
+## Status update 2026-10-04 09:11
+- Phase 4 DONE: RDS is db.t4g.micro (snapshot dating-dev-before-micro-20261004 kept for rollback). Verified: API/UI 1/1, site 200, no DB errors. Local tfvars rds_apply_immediately set back to false.
+- Phase 5 DONE: enable_night_schedule=true applied (9 resources). ECS off 23:00, on 08:00; RDS stop 23:15, start 07:45 (Asia/Jerusalem). Rollback: set enable_night_schedule=false and apply.
+
+## Phase 6 (PLAN, not applied): Redis as sidecar container instead of ElastiCache  [2026-10-04]
+
+### Existing
+- ElastiCache `dating-dev-redis` (cache.t4g.micro, 1 node, TLS depends on `redis_transit_encryption`), about $14/month, cannot be stopped at night.
+- API task: 0.5 vCPU / 1 GB, one container `dating-api`. UI does not use Redis.
+- App uses `REDIS_URL` for: Bull queues (push-notifications, profile-analysis, photo-moderation, match-list-rank), cron leader lock (mute-expiry), auth rate limits, email debounce, cache.
+- Code check: when `REDIS_URL` is unset or connect fails, the workers fall back to inline mode (degraded, not crashing). `redis://` (no TLS) is supported (Terraform output already switches between `redis://` and `rediss://`).
+
+### Change
+1. Add a second container `redis` to the API task definition: image `public.ecr.aws/docker/library/redis:7-alpine` (ECR Public, avoids Docker Hub rate limits), `--maxmemory 128mb --maxmemory-policy noeviction --save ""`, non-essential=false (essential=true so the task restarts together), 128 MB soft reservation.
+2. Set `REDIS_URL=redis://localhost:6379` on the API container (awsvpc: containers share localhost).
+3. Pin API autoscaling max to 1 (two tasks would each have their own Redis, so the cron leader lock and rate limits would be per task).
+4. Later (after a few safe days): remove ElastiCache (`module.redis`) and its security group rule via Terraform, after a final snapshot.
+
+### Reason
+- Saves about $14/month for dating. Demo only, no real users.
+
+### Risks
+- Queued jobs, rate-limit counters, cache are lost on every deploy/restart/night shutdown. Acceptable for demo.
+- Redis memory comes from the same 1 GB task as the API (capped at 128 MB).
+- Deploy path: task definition is cloned from live, so the sidecar must be added in the dating-push flow too, otherwise a deploy would drop it (to verify before applying).
+
+### To-do
+1. Snapshot ElastiCache (rollback).
+2. Register new task definition revision (api + redis sidecar, new REDIS_URL), update service, verify health, logs and site.
+3. Update the deploy flow (dating-push) to keep the sidecar.
+4. After 3-7 days: terraform destroy of ElastiCache only (targeted), update this document.
+
+### Rollback
+- Put back the previous task definition revision (REDIS_URL pointing at ElastiCache) while the ElastiCache node still exists. After deletion: restore from the snapshot.
+
+### Phase 6 status 2026-10-04 09:35 - DONE for dating API
+- Task definition dating-dev-api:17 = api + redis sidecar (REDIS_URL=redis://localhost:6379). Verified: Redis ready, 'Redis cache connected', 4 Bull queues ready, site 200.
+- API pinned to 1 task (scalable target min1/max1; new tfvar night_schedule_api_on_max=1 so the 08:00 action keeps max 1).
+- ElastiCache dating-dev-redis still exists (snapshot dating-dev-redis-before-sidecar-20261004). Delete it after 3-7 safe days.
+- Rollback: update service to task definition dating-dev-api:15 (old ElastiCache REDIS_URL) and set night_schedule_api_on_max back to null/2.
+
+### Phase 6b 2026-10-04 11:01 - ElastiCache DELETED (dating)
+- New tfvar enable_elasticache=false: module.redis count 0; local.redis_url falls back to redis://localhost:6379. Destroyed: replication group dating-dev-redis, parameter group, subnet group (about 14 USD/month saved).
+- Verified: API 1/1 on a task definition with the redis sidecar, site 200, no Redis errors, terraform plan: No changes.
+- Rollback data: snapshot dating-dev-redis-before-sidecar-20261004 (ElastiCache). To go back: enable_elasticache=true, apply, point REDIS_URL to the new endpoint in the task definition.
+
+## Phase 7 (decided: no change) 2026-10-04
+- 7-day usage: API memory about 11 percent of 1 GB, CPU average about 1 percent, one 86 percent spike during a deploy. Shrinking the API to 0.25 vCPU / 0.5 GB would save only about 2-3 USD/month on Spot, with slower startup. Not done. UI is already 0.25 vCPU / 0.5 GB.

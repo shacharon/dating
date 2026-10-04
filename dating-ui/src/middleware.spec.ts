@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { NextRequest } from 'next/server';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest, type NextFetchEvent } from 'next/server';
 import { middleware } from './middleware';
 
 describe('middleware (Phase 2 profile routes)', () => {
@@ -297,5 +297,23 @@ describe('middleware (admin routes prod gate)', () => {
     const res = middleware(req);
     expect(res.status).toBe(404);
     expect(res.headers.get('location')).toBeNull();
+  });
+});
+
+describe('middleware /reg landing counter', () => {
+  it('counts the open and redirects /reg to / keeping the query', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const waitUntil = vi.fn();
+    const req = new NextRequest(new URL('http://localhost:3000/reg?ref=abc'));
+    const res = middleware(req, { waitUntil } as unknown as NextFetchEvent);
+    const u = new URL(res.headers.get('location')!);
+    expect(u.pathname).toBe('/');
+    expect(u.search).toBe('?ref=abc');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/v1/public/funnel/landing-open');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ entry: 'reg' });
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 });

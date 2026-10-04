@@ -27,6 +27,15 @@ describe('PublicFunnelController', () => {
     expect(analytics.track.mock.calls[0]?.[2]).toEqual({ refPresent: true });
   });
 
+  it('tracks landing.opened with the entry only', () => {
+    controller.landingOpen({ entry: 'reg' });
+    expect(analytics.track).toHaveBeenCalledWith(
+      ANONYMOUS_ANALYTICS_USER_ID,
+      ProductAnalyticsEvents.LANDING_OPENED,
+      { entry: 'reg' },
+    );
+  });
+
   it('tracks refPresent false without extra properties', () => {
     controller.referralLandingView({ refPresent: false });
     expect(analytics.track).toHaveBeenCalledWith(

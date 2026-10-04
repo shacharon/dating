@@ -1,6 +1,9 @@
 locals {
   name_prefix = "${var.project}-${var.environment}"
 
+  # ElastiCache URL, or the in-task Redis sidecar when ElastiCache is disabled.
+  redis_url = var.enable_elasticache ? module.redis[0].redis_url : "redis://localhost:6379"
+
   common_tags = merge(
     {
       Project     = var.project
@@ -63,12 +66,14 @@ module "rds" {
   private_subnet_ids  = module.networking.private_subnet_ids
   security_group_id   = module.security_groups.rds_security_group_id
   instance_class      = var.rds_instance_class
+  apply_immediately   = var.rds_apply_immediately
   deletion_protection = false
   skip_final_snapshot = true
   tags                = local.common_tags
 }
 
 module "redis" {
+  count  = var.enable_elasticache ? 1 : 0
   source = "../modules/redis"
 
   name_prefix                = local.name_prefix
@@ -165,7 +170,7 @@ module "ecs" {
   api_max_count         = var.api_max_count
   ui_desired_count      = var.ui_desired_count
   photo_bucket_name     = module.s3_photos.bucket_id
-  redis_url             = module.redis.redis_url
+  redis_url             = local.redis_url
   cors_origin           = local.cors_origin
   photo_cdn_domain      = var.enable_cloudfront ? module.cloudfront[0].domain_name : ""
   alb_dns_name          = module.alb.alb_dns_name
@@ -201,4 +206,22 @@ module "ecs" {
   tags = local.common_tags
 
   depends_on = [aws_iam_role_policy_attachment.ecs_execution_secrets]
+}
+
+# Nightly shutdown 23:00-08:00 Israel time (dev cost saving). Off by default. See docs/infra/COST_REDUCTION_DEV.md, Phase 5.
+module "scheduler" {
+  count  = var.enable_night_schedule ? 1 : 0
+  source = "../modules/scheduler"
+
+  name_prefix      = local.name_prefix
+  aws_region       = var.aws_region
+  cluster_name     = module.ecs.cluster_name
+  api_service_name = module.ecs.api_service_name
+  ui_service_name  = module.ecs.ui_service_name
+  db_instance_id   = module.rds.db_instance_id
+  api_on_min       = var.api_min_count
+  api_on_max       = coalesce(var.night_schedule_api_on_max, var.api_max_count)
+  tags             = local.common_tags
+
+  depends_on = [module.ecs]
 }

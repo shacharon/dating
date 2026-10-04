@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ANONYMOUS_ANALYTICS_USER_ID } from './analytics.constants';
 import { AnalyticsService } from './analytics.service';
+import { LandingOpenDto } from './dto/landing-open.dto';
 import { ReferralLandingViewDto } from './dto/referral-landing-view.dto';
 import { ProductAnalyticsEvents } from './product-analytics.events';
 
@@ -24,6 +25,17 @@ export class PublicFunnelController {
       ANONYMOUS_ANALYTICS_USER_ID,
       ProductAnalyticsEvents.REFERRAL_LANDING_VIEWED,
       { refPresent: body.refPresent },
+    );
+  }
+
+  @Post('landing-open')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  landingOpen(@Body() body: LandingOpenDto): void {
+    this.analytics.track(
+      ANONYMOUS_ANALYTICS_USER_ID,
+      ProductAnalyticsEvents.LANDING_OPENED,
+      { entry: body.entry },
     );
   }
 }
