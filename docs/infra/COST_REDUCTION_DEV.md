@@ -383,3 +383,34 @@ Set `enable_night_schedule = false`, plan, apply: removes the schedules and the 
 ## Status update 2026-10-04 09:11
 - Phase 4 DONE: RDS is db.t4g.micro (snapshot dating-dev-before-micro-20261004 kept for rollback). Verified: API/UI 1/1, site 200, no DB errors. Local tfvars rds_apply_immediately set back to false.
 - Phase 5 DONE: enable_night_schedule=true applied (9 resources). ECS off 23:00, on 08:00; RDS stop 23:15, start 07:45 (Asia/Jerusalem). Rollback: set enable_night_schedule=false and apply.
+
+## Phase 6 (PLAN, not applied): Redis as sidecar container instead of ElastiCache  [2026-10-04]
+
+### Existing
+- ElastiCache `dating-dev-redis` (cache.t4g.micro, 1 node, TLS depends on `redis_transit_encryption`), about $14/month, cannot be stopped at night.
+- API task: 0.5 vCPU / 1 GB, one container `dating-api`. UI does not use Redis.
+- App uses `REDIS_URL` for: Bull queues (push-notifications, profile-analysis, photo-moderation, match-list-rank), cron leader lock (mute-expiry), auth rate limits, email debounce, cache.
+- Code check: when `REDIS_URL` is unset or connect fails, the workers fall back to inline mode (degraded, not crashing). `redis://` (no TLS) is supported (Terraform output already switches between `redis://` and `rediss://`).
+
+### Change
+1. Add a second container `redis` to the API task definition: image `public.ecr.aws/docker/library/redis:7-alpine` (ECR Public, avoids Docker Hub rate limits), `--maxmemory 128mb --maxmemory-policy noeviction --save ""`, non-essential=false (essential=true so the task restarts together), 128 MB soft reservation.
+2. Set `REDIS_URL=redis://localhost:6379` on the API container (awsvpc: containers share localhost).
+3. Pin API autoscaling max to 1 (two tasks would each have their own Redis, so the cron leader lock and rate limits would be per task).
+4. Later (after a few safe days): remove ElastiCache (`module.redis`) and its security group rule via Terraform, after a final snapshot.
+
+### Reason
+- Saves about $14/month for dating. Demo only, no real users.
+
+### Risks
+- Queued jobs, rate-limit counters, cache are lost on every deploy/restart/night shutdown. Acceptable for demo.
+- Redis memory comes from the same 1 GB task as the API (capped at 128 MB).
+- Deploy path: task definition is cloned from live, so the sidecar must be added in the dating-push flow too, otherwise a deploy would drop it (to verify before applying).
+
+### To-do
+1. Snapshot ElastiCache (rollback).
+2. Register new task definition revision (api + redis sidecar, new REDIS_URL), update service, verify health, logs and site.
+3. Update the deploy flow (dating-push) to keep the sidecar.
+4. After 3-7 days: terraform destroy of ElastiCache only (targeted), update this document.
+
+### Rollback
+- Put back the previous task definition revision (REDIS_URL pointing at ElastiCache) while the ElastiCache node still exists. After deletion: restore from the snapshot.
