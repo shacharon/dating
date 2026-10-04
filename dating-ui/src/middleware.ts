@@ -3,7 +3,8 @@ import { UiErrorCodes } from '@/lib/observability/ui-error-codes';
 import { isAdminRouteBlocked } from '@/lib/admin/admin-routes-gate';
 import { isInternalRouteBlocked } from '@/lib/admin/internal-routes-gate';
 import { getSessionCookieName } from '@/lib/auth/session-cookie';
-import type { NextRequest } from 'next/server';
+import { landingEntryForPath, reportLandingOpen } from '@/lib/analytics/landing-open';
+import type { NextFetchEvent, NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 function needsAuthSession(pathname: string): boolean {
@@ -19,7 +20,7 @@ function needsAuthSession(pathname: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function middleware(request: NextRequest, event?: NextFetchEvent) {
   const { pathname, search } = request.nextUrl;
 
   if (isInternalRouteBlocked(pathname)) {
@@ -28,6 +29,13 @@ export function middleware(request: NextRequest) {
 
   if (isAdminRouteBlocked(pathname)) {
     return new NextResponse(null, { status: 404 });
+  }
+
+  const landingEntry = landingEntryForPath(pathname);
+  if (landingEntry) {
+    const counted = reportLandingOpen(landingEntry);
+    if (event) event.waitUntil(counted);
+    return NextResponse.redirect(new URL(`/${search}`, request.url));
   }
 
   if (pathname === '/login') {
@@ -83,6 +91,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/reg',
     '/login',
     '/dating',
     '/dating/:path*',
