@@ -428,3 +428,27 @@ Set `enable_night_schedule = false`, plan, apply: removes the schedules and the 
 
 ## Phase 7 (decided: no change) 2026-10-04
 - 7-day usage: API memory about 11 percent of 1 GB, CPU average about 1 percent, one 86 percent spike during a deploy. Shrinking the API to 0.25 vCPU / 0.5 GB would save only about 2-3 USD/month on Spot, with slower startup. Not done. UI is already 0.25 vCPU / 0.5 GB.
+
+## Phase 8 (reviewed, NO CHANGE): load balancer  [2026-10-04]
+### Existing
+- dating-dev-alb (eu-central-1): HTTPS 443 + HTTP 80 redirect. Default -> dating-dev-ui:3000; /health and /socket.io/* -> dating-dev-api:3001. About 600-1400 requests/day.
+- Cost: about 18 USD/month ALB hourly + about 7 USD public IPv4 on the ALB subnets (shown under VPC). Cannot be stopped.
+### Options reviewed
+- Remove ALB and expose the task directly: no stable DNS/HTTPS (task IP changes on every restart). Needs Route53 update automation + certificates on the task. Not worth it.
+- API Gateway HTTP API + VPC Link + Cloud Map: cheap, but HTTP API does not support WebSocket; the app uses socket.io, so realtime would break.
+- Delete/recreate the ALB each night with the schedule: saves about 6-9 USD/month, but DNS alias must follow the new ALB every morning. Medium complexity, low value.
+- One ALB for both apps: not possible (different regions).
+### Decision
+- Keep the ALB (demo, tiny saving versus risk). Revisit only if the app stays a demo for months (then consider the nightly delete/recreate automation).
+
+## Sprint summary  [2026-10-04]
+| Change | Status | Est. saving / month |
+|---|---|---|
+| NAT gateway removed | done | 33 |
+| ECS on Fargate Spot | done | 15-20 |
+| RDS small -> micro | done | 12 |
+| Night schedule ECS + RDS 23:00-08:00 | done, first night 2026-10-04 | 25-30 |
+| Redis as sidecar, ElastiCache deleted | done | 14 |
+| ALB | reviewed, kept | 0 |
+Rollback snapshots: dating-dev-before-micro-20261004 (RDS), dating-dev-redis-before-sidecar-20261004 (Redis).
+Settings live in the gitignored terraform.tfvars (enable_nat_gateway=false, ecs_assign_public_ip=true, ecs_use_fargate_spot=true, rds_instance_class=db.t4g.micro, enable_night_schedule=true, night_schedule_api_on_max=1, enable_elasticache=false).
