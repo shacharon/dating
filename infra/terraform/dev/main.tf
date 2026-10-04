@@ -216,7 +216,7 @@ module "scheduler" {
   ui_service_name  = module.ecs.ui_service_name
   db_instance_id   = module.rds.db_instance_id
   api_on_min       = var.api_min_count
-  api_on_max       = var.api_max_count
+  api_on_max       = coalesce(var.night_schedule_api_on_max, var.api_max_count)
   tags             = local.common_tags
 
   depends_on = [module.ecs]

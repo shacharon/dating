@@ -173,3 +173,9 @@ variable "enable_night_schedule" {
   type        = bool
   default     = false
 }
+
+variable "night_schedule_api_on_max" {
+  description = "API max task count restored at 08:00 by the night schedule. Null = use api_max_count. Set to 1 while Redis runs as a sidecar in the API task."
+  type        = number
+  default     = null
+}

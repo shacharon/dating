@@ -414,3 +414,9 @@ Set `enable_night_schedule = false`, plan, apply: removes the schedules and the 
 
 ### Rollback
 - Put back the previous task definition revision (REDIS_URL pointing at ElastiCache) while the ElastiCache node still exists. After deletion: restore from the snapshot.
+
+### Phase 6 status 2026-10-04 09:35 - DONE for dating API
+- Task definition dating-dev-api:17 = api + redis sidecar (REDIS_URL=redis://localhost:6379). Verified: Redis ready, 'Redis cache connected', 4 Bull queues ready, site 200.
+- API pinned to 1 task (scalable target min1/max1; new tfvar night_schedule_api_on_max=1 so the 08:00 action keeps max 1).
+- ElastiCache dating-dev-redis still exists (snapshot dating-dev-redis-before-sidecar-20261004). Delete it after 3-7 safe days.
+- Rollback: update service to task definition dating-dev-api:15 (old ElastiCache REDIS_URL) and set night_schedule_api_on_max back to null/2.
