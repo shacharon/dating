@@ -420,3 +420,8 @@ Set `enable_night_schedule = false`, plan, apply: removes the schedules and the 
 - API pinned to 1 task (scalable target min1/max1; new tfvar night_schedule_api_on_max=1 so the 08:00 action keeps max 1).
 - ElastiCache dating-dev-redis still exists (snapshot dating-dev-redis-before-sidecar-20261004). Delete it after 3-7 safe days.
 - Rollback: update service to task definition dating-dev-api:15 (old ElastiCache REDIS_URL) and set night_schedule_api_on_max back to null/2.
+
+### Phase 6b 2026-10-04 11:01 - ElastiCache DELETED (dating)
+- New tfvar enable_elasticache=false: module.redis count 0; local.redis_url falls back to redis://localhost:6379. Destroyed: replication group dating-dev-redis, parameter group, subnet group (about 14 USD/month saved).
+- Verified: API 1/1 on a task definition with the redis sidecar, site 200, no Redis errors, terraform plan: No changes.
+- Rollback data: snapshot dating-dev-redis-before-sidecar-20261004 (ElastiCache). To go back: enable_elasticache=true, apply, point REDIS_URL to the new endpoint in the task definition.

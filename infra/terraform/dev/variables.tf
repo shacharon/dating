@@ -179,3 +179,9 @@ variable "night_schedule_api_on_max" {
   type        = number
   default     = null
 }
+
+variable "enable_elasticache" {
+  description = "Create the ElastiCache Redis node. Set false when Redis runs as a sidecar container in the API task (REDIS_URL=redis://localhost:6379)."
+  type        = bool
+  default     = true
+}

@@ -31,12 +31,12 @@ output "rds_secrets_manager_arn" {
 
 output "redis_endpoint" {
   description = "ElastiCache Redis hostname"
-  value       = module.redis.primary_endpoint_address
+  value       = var.enable_elasticache ? module.redis[0].primary_endpoint_address : null
 }
 
 output "redis_url" {
   description = "REDIS_URL (redis:// or rediss://)"
-  value       = module.redis.redis_url
+  value       = local.redis_url
 }
 
 output "photo_bucket_name" {

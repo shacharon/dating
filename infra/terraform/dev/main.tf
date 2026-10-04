@@ -1,6 +1,9 @@
 locals {
   name_prefix = "${var.project}-${var.environment}"
 
+  # ElastiCache URL, or the in-task Redis sidecar when ElastiCache is disabled.
+  redis_url = var.enable_elasticache ? module.redis[0].redis_url : "redis://localhost:6379"
+
   common_tags = merge(
     {
       Project     = var.project
@@ -70,6 +73,7 @@ module "rds" {
 }
 
 module "redis" {
+  count  = var.enable_elasticache ? 1 : 0
   source = "../modules/redis"
 
   name_prefix                = local.name_prefix
@@ -166,7 +170,7 @@ module "ecs" {
   api_max_count         = var.api_max_count
   ui_desired_count      = var.ui_desired_count
   photo_bucket_name     = module.s3_photos.bucket_id
-  redis_url             = module.redis.redis_url
+  redis_url             = local.redis_url
   cors_origin           = local.cors_origin
   photo_cdn_domain      = var.enable_cloudfront ? module.cloudfront[0].domain_name : ""
   alb_dns_name          = module.alb.alb_dns_name

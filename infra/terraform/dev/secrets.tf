@@ -9,7 +9,7 @@ module "secrets" {
   tags        = local.common_tags
 
   database_url_secret_arn = module.rds.secrets_manager_secret_arn
-  redis_url               = module.redis.redis_url
+  redis_url               = local.redis_url
   photo_s3_bucket         = module.s3_photos.bucket_id
   photo_s3_region         = var.aws_region
 
