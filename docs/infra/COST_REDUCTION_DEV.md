@@ -425,3 +425,6 @@ Set `enable_night_schedule = false`, plan, apply: removes the schedules and the 
 - New tfvar enable_elasticache=false: module.redis count 0; local.redis_url falls back to redis://localhost:6379. Destroyed: replication group dating-dev-redis, parameter group, subnet group (about 14 USD/month saved).
 - Verified: API 1/1 on a task definition with the redis sidecar, site 200, no Redis errors, terraform plan: No changes.
 - Rollback data: snapshot dating-dev-redis-before-sidecar-20261004 (ElastiCache). To go back: enable_elasticache=true, apply, point REDIS_URL to the new endpoint in the task definition.
+
+## Phase 7 (decided: no change) 2026-10-04
+- 7-day usage: API memory about 11 percent of 1 GB, CPU average about 1 percent, one 86 percent spike during a deploy. Shrinking the API to 0.25 vCPU / 0.5 GB would save only about 2-3 USD/month on Spot, with slower startup. Not done. UI is already 0.25 vCPU / 0.5 GB.
